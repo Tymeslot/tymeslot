@@ -1,0 +1,95 @@
+/* Reusable UI Components */
+
+/* Buttons */
+.submit-button {
+  padding: 12px 24px;
+  background: var(--theme-primary);
+  border: 1px solid var(--theme-primary);
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-button:hover {
+  background: var(--theme-primary-hover);
+  border-color: var(--theme-primary-hover);
+  transform: translateY(-1px);
+}
+
+.prev-button,
+.next-button {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: var(--theme-text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.prev-button:hover,
+.next-button:hover {
+  background: var(--theme-surface);
+  border-color: var(--theme-primary);
+  transform: translateY(-1px);
+}
+
+.action-button-primary {
+  padding: 14px 28px;
+  background: var(--theme-primary);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3);
+}
+
+.action-button-primary:hover {
+  background: var(--theme-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+}
+
+/* Loading States */
+.loading-slots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--theme-text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Error States */
+.calendar-error {
+  padding: 20px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #fca5a5;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* Performance Optimizations */
+@media (prefers-reduced-motion: reduce) {
+  .duration-card,
+  .calendar-day,
+  .time-slot,
+  .prev-button,
+  .next-button,
+  .submit-button,
+  .action-button-primary {
+    transition: none;
+  }
+  
+  .success-badge {
+    animation: none;
+  }
+}

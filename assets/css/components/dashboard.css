@@ -1,0 +1,500 @@
+/* ===================================
+   DASHBOARD COMPONENTS
+   =================================== */
+
+/* Section Header */
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.section-icon {
+  width: 2rem;
+  height: 2rem;
+  margin-right: 0.75rem;
+  color: var(--color-text-glass-secondary);
+}
+
+.page-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--color-text-glass-primary);
+}
+
+/* Integration Card Components */
+.integration-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.integration-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.integration-details {
+  flex: 1;
+}
+
+.integration-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.integration-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text-glass-primary);
+}
+
+.status-badge {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+}
+
+.status-badge--active {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--color-primary-600);
+}
+
+.status-badge--inactive {
+  background: rgba(107, 114, 128, 0.2);
+  color: var(--color-text-glass-secondary);
+}
+
+.integration-provider {
+  font-size: 0.875rem;
+  color: var(--color-text-glass-secondary);
+}
+
+/* Status Toggle */
+.status-toggle {
+  position: relative;
+  display: inline-flex;
+  height: 1.5rem;
+  width: 2.75rem;
+  flex-shrink: 0;
+  cursor: pointer;
+  border-radius: 9999px;
+  border: 2px solid;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-toggle:focus {
+  ring: 2px solid var(--color-primary-500);
+  ring-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-primary-500), 0 0 0 4px rgba(20, 184, 166, 0.1);
+}
+
+.status-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.status-toggle--active {
+  background: var(--color-primary-500);
+  border-color: var(--color-primary-500);
+  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
+}
+
+.status-toggle--active:hover {
+  background: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4);
+}
+
+.status-toggle--inactive {
+  background: var(--color-glass-bg-overlay);
+  border-color: var(--color-border-glass-dark);
+}
+
+.status-toggle--inactive:hover {
+  border-color: var(--color-primary-300);
+  background: rgba(20, 184, 166, 0.05);
+}
+
+.status-toggle-slider {
+  pointer-events: none;
+  position: relative;
+  display: inline-block;
+  height: 1.25rem;
+  width: 1.25rem;
+  transform: translateX(0);
+  border-radius: 9999px;
+  background: white;
+  box-shadow: var(--shadow-glass-sm);
+  transition: transform 0.2s ease-in-out;
+}
+
+.status-toggle-slider--active {
+  transform: translateX(1.25rem);
+}
+
+.status-toggle-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.status-toggle-icon--visible {
+  opacity: 1;
+}
+
+.status-toggle-icon--hidden {
+  opacity: 0;
+}
+
+.status-icon {
+  height: 0.75rem;
+  width: 0.75rem;
+  color: var(--color-text-glass-secondary);
+}
+
+.status-icon--white {
+  color: white;
+}
+
+/* Integration Content */
+.integration-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.calendar-details {
+  margin-bottom: 1rem;
+}
+
+.calendar-details-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-glass-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.calendar-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.calendar-badge {
+  padding: 0.25rem 0.5rem;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--color-primary-600);
+  font-size: 0.75rem;
+  border-radius: 9999px;
+}
+
+.calendar-details-empty,
+.integration-disabled-note {
+  font-size: 0.875rem;
+  color: var(--color-text-glass-light);
+  font-style: italic;
+}
+
+.integration-disabled-note {
+  margin-top: 0.5rem;
+}
+
+/* Integration Actions */
+.integration-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.action-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: 0.25rem;
+}
+
+
+.action-icon--spinning {
+  animation: spin 1s linear infinite;
+}
+
+.spinner-circle {
+  opacity: 0.25;
+}
+
+.spinner-path {
+  opacity: 0.75;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Dashboard Sidebar */
+.dashboard-sidebar {
+  background: var(--color-glass-bg-card);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  border-right: 1px solid var(--color-border-glass-medium);
+  box-shadow: var(--shadow-glass-card);
+  position: relative;
+}
+
+/* Dashboard Navigation Links */
+.dashboard-nav-link {
+  color: var(--color-text-glass-primary);
+  text-decoration: none;
+  font-weight: var(--font-weight-medium);
+  transition: var(--transition-glass-smooth);
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-nav-link:hover {
+  color: var(--color-primary-700);
+  background: var(--color-glass-bg-light);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  border-color: var(--color-border-glass-light);
+  transform: translateX(2px);
+  box-shadow: var(--shadow-glass-sm);
+}
+
+.dashboard-nav-link--active {
+  color: #ffffff;
+  background: var(--glass-gradient-primary);
+  backdrop-filter: var(--glass-blur-medium);
+  -webkit-backdrop-filter: var(--glass-blur-medium);
+  border-color: var(--color-primary-500);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: 
+    var(--shadow-glass-button),
+    0 0 16px rgba(20, 184, 166, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Subtle shimmer effect for active links */
+.dashboard-nav-link--active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.1), 
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.dashboard-nav-link--active:hover::before {
+  left: 100%;
+}
+
+/* Icon enhancements within nav links */
+.dashboard-nav-link svg {
+  transition: var(--transition-glass-fast);
+  flex-shrink: 0;
+}
+
+.dashboard-nav-link:hover svg {
+  transform: scale(1.05);
+  color: var(--color-primary-600);
+}
+
+.dashboard-nav-link--active svg {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Focus states for accessibility */
+.dashboard-nav-link:focus {
+  outline: none;
+  box-shadow: 
+    0 0 0 2px var(--color-primary-500),
+    0 0 0 4px var(--color-primary-100);
+}
+
+/* Mobile/Tablet optimization - Sidebar as overlay */
+@media (max-width: 1024px) {
+  .dashboard-sidebar {
+    backdrop-filter: var(--glass-blur-light);
+    -webkit-backdrop-filter: var(--glass-blur-light);
+    height: 100vh;
+    height: 100dvh;
+    /* Ensure sidebar doesn't take up layout space */
+    position: fixed !important;
+    width: 320px;
+    max-width: 85vw;
+  }
+  
+  .dashboard-sidebar.dashboard-sidebar-open {
+    transform: translateX(0);
+  }
+  
+  .dashboard-nav-link:hover {
+    backdrop-filter: var(--glass-blur-light);
+    -webkit-backdrop-filter: var(--glass-blur-light);
+    transform: none;
+  }
+  
+  .dashboard-nav-link--active {
+    backdrop-filter: var(--glass-blur-medium);
+    -webkit-backdrop-filter: var(--glass-blur-medium);
+  }
+  
+  /* Ensure sidebar overlay is properly positioned */
+  .dashboard-sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+  
+  /* Touch-optimized navigation links */
+  .dashboard-nav-link {
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+  
+  /* Improved mobile menu buttons */
+  .dashboard-mobile-menu-toggle,
+  .dashboard-sidebar-close {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Mobile phone specific adjustments */
+@media (max-width: 768px) {
+  .dashboard-sidebar {
+    width: 280px;
+    max-width: 80vw;
+  }
+  
+  .dashboard-nav-link {
+    padding: 14px 20px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-nav-link,
+  .dashboard-nav-link::before,
+  .dashboard-nav-link svg {
+    transition: none;
+  }
+  
+  .dashboard-nav-link:hover {
+    transform: none;
+  }
+  
+  .dashboard-nav-link--active::before {
+    display: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .dashboard-nav-link {
+    border: 2px solid transparent;
+  }
+  
+  .dashboard-nav-link:hover {
+    border-color: var(--color-primary-500);
+  }
+  
+  .dashboard-nav-link--active {
+    border-color: var(--color-primary-700);
+    border-width: 2px;
+  }
+}
+
+/* Dashboard Navigation Notification Badge */
+.dashboard-nav-notification {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 
+    0 1px 4px rgba(59, 130, 246, 0.2),
+    0 0 0 1px rgba(37, 99, 235, 0.1);
+  z-index: 10;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.dashboard-nav-notification--warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 
+    0 1px 4px rgba(245, 158, 11, 0.2),
+    0 0 0 1px rgba(217, 119, 6, 0.1);
+}
+
+.dashboard-nav-notification--info {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  box-shadow: 
+    0 1px 4px rgba(107, 114, 128, 0.2),
+    0 0 0 1px rgba(75, 85, 99, 0.1);
+}
+
+/* Subtle hover effect for badges */
+.dashboard-nav-link:hover .dashboard-nav-notification {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.05);
+}
+
+
+/* Ensure parent nav link has position relative for badge positioning */
+.dashboard-nav-link {
+  position: relative;
+}
+
+/* Reduced motion support for notifications */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-nav-notification {
+    animation: none;
+  }
+}

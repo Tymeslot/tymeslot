@@ -1,0 +1,782 @@
+/* Video Background Theme CSS */
+
+/* Video Background */
+.video-background-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: -10;
+}
+
+.video-background-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+}
+
+/* Main container with video background */
+.video-background-theme {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.3); /* Subtle overlay */
+}
+
+/* Glass morphism scheduling box */
+.scheduling-box {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  width: 520px;
+  min-height: 650px;
+  max-height: 650px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Glass morphism slide system */
+.slide-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+  position: relative;
+  background: transparent;
+}
+
+/* Glass morphism header with user profile */
+.slide-header {
+  margin-bottom: 32px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slide-header:not(:has(.user-avatar)) {
+  text-align: center;
+}
+
+.slide-header:not(:has(.user-avatar)) .header-content {
+  text-align: center;
+  width: 100%;
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.header-content {
+  flex: 1;
+}
+
+.slide-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #ffffff;
+  margin-bottom: 4px;
+  font-family: 'Roboto', sans-serif;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.slide-subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
+}
+
+/* Glass morphism progress indicator */
+.progress-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 10;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.8) 100%);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Glass morphism step indicator */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 0 24px;
+}
+
+.step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  margin: 0 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-dot.active {
+  background: rgba(255, 255, 255, 0.8);
+  transform: scale(1.2);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
+}
+
+.step-dot.completed {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.step-line {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  flex: 1;
+  margin: 0 4px;
+  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-line.completed {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* Slide content */
+.slide-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Glass morphism navigation */
+.slide-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.slide-nav-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  min-width: 88px;
+  backdrop-filter: blur(10px);
+}
+
+.slide-nav-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+
+.slide-nav-button.secondary {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.slide-nav-button.secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.slide-nav-button:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Material Design Cards */
+.material-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.material-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.material-card.selectable {
+  cursor: pointer;
+  border: 2px solid #e0e0e0;
+}
+
+.material-card.selectable:hover {
+  border-color: #1976d2;
+}
+
+.material-card.selected {
+  border-color: #1976d2;
+  background: #e3f2fd;
+  box-shadow: 0 4px 8px rgba(25, 118, 210, 0.2);
+}
+
+/* Glass morphism form elements */
+.material-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+}
+
+.material-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.material-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.material-input-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+}
+
+/* Progress indicator */
+.progress-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #f3f4f6;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #3b82f6;
+  transition: width 0.3s ease;
+}
+
+/* Glass morphism overview profile */
+.overview-profile {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.overview-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 16px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.overview-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.overview-title {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.duration-options {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.duration-option {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 16px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+}
+
+.duration-option:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+}
+
+.duration-option.selected {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.25);
+}
+
+.duration-option.selected:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.duration-time {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.duration-label {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Schedule slide specific styles */
+.schedule-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.calendar-section {
+  flex: 1;
+}
+
+.timezone-section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.timezone-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+}
+
+.timezone-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+}
+
+.compact-calendar {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+  backdrop-filter: blur(10px);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.calendar-nav {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.calendar-nav:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px;
+}
+
+.calendar-cell {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.calendar-cell.available:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.calendar-cell.selected {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.calendar-cell.unavailable {
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+}
+
+.time-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.time-slot {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.time-slot:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.time-slot.selected {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Glass morphism details form */
+.details-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 6px;
+}
+
+.form-input {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.form-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.form-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-error {
+  color: #fecaca;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Confirmation slide specific styles */
+.confirmation-success {
+  text-align: center;
+  color: #059669;
+  margin-bottom: 24px;
+}
+
+.confirmation-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  background: #d1fae5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #059669;
+  font-size: 24px;
+}
+
+.confirmation-message {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.confirmation-details {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.confirmation-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.confirmation-label {
+  color: #6b7280;
+}
+
+.confirmation-value {
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.confirmation-button {
+  flex: 1;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirmation-button.primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.confirmation-button.primary:hover {
+  background: #2563eb;
+}
+
+.confirmation-button.secondary {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.confirmation-button.secondary:hover {
+  background: #e5e7eb;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .scheduling-box {
+    width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+  
+  .slide-container {
+    padding: 24px;
+  }
+  
+  .duration-options {
+    flex-direction: column;
+  }
+  
+  .time-slots {
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  }
+}
+
+/* Animation for slide transitions */
+.slide-enter {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.slide-enter-active {
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.slide-exit {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.slide-exit-active {
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* Rhythm Theme Content Container */
+.rhythm-content-container {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.rhythm-content-container:hover {
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Override default text colors for rhythm theme */
+.rhythm-content-container .section-header {
+  color: #1f2937 !important;
+}
+
+.rhythm-content-container p {
+  color: #374151 !important;
+}
+
+.rhythm-content-container .text-white {
+  color: #1f2937 !important;
+}
+
+/* Override calendar-day styles for Rhythm theme */
+.calendar-day--available:not(:disabled):not(.calendar-day--selected) {
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.calendar-day--available:not(:disabled):not(.calendar-day--selected):hover {
+  background: #e5e7eb !important;
+  color: #1f2937 !important;
+}
+
+.calendar-day--selected {
+  background: #3b82f6 !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
+}
+
+.calendar-day--selected:hover {
+  background: #2563eb !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4) !important;
+}
+
+.calendar-day--unavailable {
+  background: #f9fafb !important;
+  color: #9ca3af !important;
+}
+
+/* Override duration card styles for Rhythm theme */
+.duration-card-rhythm {
+  background: #f8fafc !important;
+  border: 2px solid #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.duration-card-rhythm:hover {
+  background: #f1f5f9 !important;
+  border-color: #3b82f6 !important;
+}
+
+.duration-card-rhythm.selected {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: white !important;
+}
+
+/* Hide the glass morphism and page layout from rhythm theme */
+.glass-morphism-card,
+.page-layout {
+  display: none;
+}

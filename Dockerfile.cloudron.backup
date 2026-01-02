@@ -1,0 +1,123 @@
+FROM cloudron/base:5.0.0@sha256:04fd70dbd8ad6149c19de39e35718e024417c3e01dc9c6637eaf4a41ec4e596c
+
+# Avoid prompts from apt and configure debconf
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBCONF_NONINTERACTIVE_SEEN=true
+
+# Set the locale to UTF-8
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# Configure debconf and install dependencies
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
+    apt-get update && apt-get install -y \
+    apt-utils \
+    git \
+    curl \
+    build-essential \
+    autoconf \
+    m4 \
+    libncurses5-dev \
+    libwxgtk3.2-dev \
+    libgl1-mesa-dev \
+    libglu1-mesa-dev \
+    libpng-dev \
+    libssh-dev \
+    unixodbc-dev \
+    xsltproc \
+    fop \
+    libxml2-utils \
+    libncurses-dev \
+    openjdk-11-jdk \
+    nodejs \
+    npm \
+    locales \
+    tzdata \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up UTF-8 locale
+RUN locale-gen C.UTF-8 && update-locale LANG=C.UTF-8 LC_ALL=C.UTF-8
+RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
+
+# Install asdf
+RUN git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.10.2
+RUN echo '. $HOME/.asdf/asdf.sh' >> ~/.bashrc
+RUN echo '. $HOME/.asdf/completions/asdf.bash' >> ~/.bashrc
+
+# Set up shell
+SHELL ["/bin/bash", "-l", "-c"]
+
+# Set up asdf in the current shell
+ENV PATH="/root/.asdf/shims:/root/.asdf/bin:$PATH"
+
+# Install Erlang and Elixir using asdf
+RUN asdf plugin add erlang && \
+    asdf plugin add elixir && \
+    asdf install erlang 28.1.1 && \
+    asdf install elixir 1.19.3-otp-28 && \
+    asdf global erlang 28.1.1 && \
+    asdf global elixir 1.19.3-otp-28
+
+# Set the working directory
+WORKDIR /app
+
+# Copy mix.exs and mix.lock files
+COPY mix.exs mix.lock ./
+
+# Install hex with fallback to GitHub
+RUN (mix local.hex --force || mix archive.install github hexpm/hex branch latest --force)
+RUN (mix local.rebar --force || mix archive.install github hexpm/rebar3 branch latest --force)
+
+# Get dependencies with retry mechanism
+RUN for i in 1 2 3 4 5; do \
+        echo "Attempt $i: Running mix deps.get" && \
+        mix deps.get && break || sleep 5; \
+    done
+
+# Copy the rest of the application code
+COPY . .
+
+# Set build ENV
+ENV MIX_ENV=prod
+ENV DOCKER_ENV=true
+ENV DEPLOYMENT_TYPE=cloudron
+ENV PORT=4000
+EXPOSE 4000
+
+# Set ELIXIR_ERL_OPTIONS environment variable
+ENV ELIXIR_ERL_OPTIONS="+fnu"
+
+# Compile the project
+RUN mix do deps.compile + compile
+
+# Install Tailwind and esbuild with retry mechanism
+RUN for i in 1 2 3 4 5; do \
+        echo "Attempt $i: Installing tailwind and esbuild" && \
+        mix do tailwind.install + esbuild.install && break || sleep 5; \
+    done  
+
+# Compile assets
+RUN mix assets.deploy
+
+# Create the release
+RUN mix release
+
+# Create needed directories (for build verification - will be overridden by volume mount)
+RUN echo "Creating directories: /data/logs /app/data/uploads /app/data/tzdata" && \
+    mkdir -p /data/logs /app/data/uploads /app/data/tzdata && \
+    echo "Directories created. Checking they exist:" && \
+    ls -la /app/data/ && \
+    echo "Checking upload subdirectory:" && \
+    ls -la /app/data/uploads/ && \
+    echo "Setting permissions..." && \
+    chmod -R 777 /data /app/data && \
+    echo "Final verification:" && \
+    ls -la /app/data/
+
+# Copy start script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]

@@ -1,0 +1,202 @@
+/* ===================================
+   BUTTON COMPONENTS
+   =================================== */
+
+/* Base Button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-3) var(--spacing-6);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  border-radius: var(--radius-lg);
+  transition: var(--transition-all);
+  cursor: pointer;
+  border: none;
+  outline: none;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Button Variants - Glass Theme Enhanced */
+.btn-primary {
+  background: var(--glass-gradient-primary);
+  backdrop-filter: var(--glass-blur-light);
+  -webkit-backdrop-filter: var(--glass-blur-light);
+  border: 2px solid var(--color-border-glass-dark-strong);
+  border-radius: 12px;
+  color: var(--color-text-on-glass) !important;
+  font-weight: 700;
+  padding: 14px 24px;
+  transition: var(--transition-glass-smooth);
+  box-shadow: 
+    var(--shadow-glass-button),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ripple effect on click */
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-primary:active::after {
+  width: 200px;
+  height: 200px;
+}
+
+.btn-primary:hover {
+  background: var(--glass-gradient-secondary);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 16px var(--color-primary-300),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--color-text-on-glass) !important;
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: var(--color-glass-bg-medium);
+  backdrop-filter: var(--glass-blur-light);
+  border: 2px solid var(--color-border-glass-dark-medium);
+  border-radius: 12px;
+  color: var(--color-text-glass-primary);
+  font-weight: 600;
+  padding: 12px 20px;
+  transition: var(--transition-glass-transform);
+  box-shadow: var(--shadow-glass-sm);
+}
+
+.btn-secondary:hover {
+  background: var(--color-glass-bg-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glass-md);
+  border-color: var(--color-border-glass-dark-strong);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-text-glass-primary);
+  border: 1px solid transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--color-glass-bg-light);
+  backdrop-filter: var(--glass-blur-light);
+  border-color: var(--color-border-glass-dark);
+}
+
+/* Button Sizes */
+.btn-sm {
+  padding: var(--spacing-2) var(--spacing-4);
+  font-size: var(--font-size-xs);
+}
+
+.btn-lg {
+  padding: var(--spacing-4) var(--spacing-8);
+  font-size: var(--font-size-base);
+}
+
+.btn-xl {
+  padding: var(--spacing-5) var(--spacing-10);
+  font-size: var(--font-size-lg);
+}
+
+/* Button States */
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Additional Glass Button Variants */
+.btn-link {
+  background: var(--glass-gradient-primary);
+  backdrop-filter: var(--glass-blur-light);
+  border: 2px solid var(--color-border-glass-dark-strong);
+  border-radius: 12px;
+  color: var(--color-text-on-glass) !important;
+  font-weight: 700;
+  padding: 14px 24px;
+  transition: var(--transition-glass-transform);
+  box-shadow: var(--shadow-glass-button);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-link:hover {
+  background: var(--glass-gradient-secondary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glass-lg);
+  color: var(--color-text-on-glass) !important;
+}
+
+.btn-auth {
+  background: var(--color-glass-bg-medium);
+  backdrop-filter: var(--glass-blur-light);
+  border: 2px solid var(--color-border-glass-dark-medium);
+  border-radius: 12px;
+  color: var(--color-text-glass-primary);
+  font-weight: 600;
+  padding: 12px 16px;
+  transition: var(--transition-glass-transform);
+  box-shadow: var(--shadow-glass-sm);
+}
+
+.btn-auth:hover {
+  background: var(--color-glass-bg-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glass-md);
+  border-color: var(--color-border-glass-dark-strong);
+}
+
+.btn-auth:focus {
+  outline: none;
+  ring: 2px solid var(--color-border-glass-dark-strong);
+  ring-offset: 2px;
+}
+
+.btn-danger {
+  background: var(--color-glass-bg-medium);
+  backdrop-filter: var(--glass-blur-light);
+  border: 2px solid rgba(239, 68, 68, 0.6);
+  border-radius: 12px;
+  color: rgba(239, 68, 68, 0.9);
+  font-weight: 600;
+  padding: 12px 16px;
+  transition: var(--transition-glass-transform);
+  box-shadow: var(--shadow-glass-sm);
+}
+
+.btn-danger:hover {
+  background: rgba(254, 242, 242, 0.4);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glass-md);
+  border-color: rgba(239, 68, 68, 0.8);
+  color: rgba(239, 68, 68, 1);
+}

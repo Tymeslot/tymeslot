@@ -1,0 +1,259 @@
+/* Booking Flow - Forms, steps, navigation, confirmation */
+
+/* Step Indicator */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.step-indicator__step {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.step-indicator__circle {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.3s ease;
+}
+
+.step-indicator__step--active .step-indicator__circle {
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+  color: white;
+}
+
+.step-indicator__step--completed .step-indicator__circle {
+  background: var(--theme-accent);
+  border-color: var(--theme-accent);
+  color: white;
+}
+
+.step-indicator__connector {
+  width: 2rem;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.step-indicator__step--completed + .step-indicator__connector {
+  background: var(--theme-accent);
+}
+
+/* Step Navigation Override - Always show labels in Quill theme */
+.quill-theme-wrapper .hidden.sm\\:block {
+  display: block;
+}
+
+/* Step labels styling for glassmorphism theme */
+.quill-theme-wrapper [class*="flex flex-col items-center"] > span:last-child {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 1;
+}
+
+/* Active step label */
+.quill-theme-wrapper .text-white.font-bold.drop-shadow-md {
+  color: var(--theme-text);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Completed step label */
+.quill-theme-wrapper .text-gray-200.drop-shadow-md {
+  color: var(--theme-text-secondary);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Upcoming step label */
+.quill-theme-wrapper .text-gray-300.drop-shadow-md {
+  color: rgba(255, 255, 255, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Hover effects for clickable steps */
+.quill-theme-wrapper button [class*="cursor-pointer"]:hover {
+  transform: scale(1.1);
+}
+
+.quill-theme-wrapper button span.group-hover\\:text-purple-200 {
+  transition: color 0.3s ease;
+}
+
+.quill-theme-wrapper button:hover span.group-hover\\:text-purple-200 {
+  color: var(--theme-primary);
+}
+
+/* Form field styling for glassmorphism theme - Override global styles */
+.form-field__label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.9);
+}
+
+.form-field__input,
+.form-field textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: var(--input-border-radius);
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  color: white;
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.form-field__input:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  background: rgba(0,0,0,0.4);
+  box-shadow: 0 0 0 3px var(--theme-primary), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.form-field__input::placeholder,
+.form-field textarea::placeholder {
+  color: rgba(255,255,255,0.5);
+}
+
+.form-field__input--error {
+  border-color: rgba(239,68,68,0.6);
+  background: rgba(254,226,226,0.08);
+}
+
+.form-field__input--error:focus {
+  border-color: rgba(239,68,68,0.8);
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.15), 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.form-field__error {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+/* Textarea specific */
+.form-field textarea {
+  resize: vertical;
+  min-height: 4rem;
+}
+
+/* Booking Detail Styling */
+.booking-detail-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--theme-text-secondary, #94a3b8);
+  margin: 0;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.booking-detail-value {
+  font-weight: 600;
+  font-size: var(--theme-font-size-base);
+  color: var(--theme-text, #e2e8f0);
+  margin: 0;
+}
+
+/* Ensure email addresses are visible with good contrast */
+.booking-detail-value a {
+  color: var(--theme-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.booking-detail-value a:hover {
+  color: var(--theme-primary-hover);
+  text-decoration: underline;
+}
+
+/* Booking container */
+.booking-container {
+  overflow-y: auto;
+  flex: 1;
+}
+
+@media (max-height: 600px) {
+  .booking-container {
+    max-height: calc(100vh - 6rem);
+  }
+}
+
+/* Booking form layout - flex column with buttons at bottom */
+.glass-morphism-card:has(form[phx-change="validate"]) > div {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.glass-morphism-card form[phx-change="validate"] {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.glass-morphism-card form[phx-change="validate"] .space-y-2 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Push buttons to bottom */
+.glass-morphism-card form[phx-change="validate"] .mt-3 {
+  margin-top: auto;
+  padding-top: 2rem;
+}
+
+/* Larger message field on desktop */
+@media (min-width: 768px) {
+  .form-field textarea[name="booking[message]"],
+  textarea[phx-value-field="message"] {
+    min-height: 8rem;
+    resize: vertical;
+  }
+}
+
+@media (min-width: 1024px) {
+  .form-field textarea[name="booking[message]"],
+  textarea[phx-value-field="message"] {
+    min-height: 10rem;
+  }
+}
+
+/* Duration card styling helper */
+@supports (selector(:has(*))) {
+  .duration-card:has(button[phx-click="select_duration"]) {
+    /* Modern browsers with :has() support */
+  }
+}
+
+/* Detail row helper */
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}

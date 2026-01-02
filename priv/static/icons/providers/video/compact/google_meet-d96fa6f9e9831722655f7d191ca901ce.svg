@@ -1,0 +1,9 @@
+<svg width="24" height="24" viewBox="0 0 24 24">
+  <rect width="24" height="24" rx="6" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+  <g transform="scale(0.833) translate(2.4, 2.4)">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#EA4335"/>
+    <path d="M12 2v10l8.66 5c1.35-1.85 2.14-4.1 2.14-6.54C22.8 5.8 18.51 2 12 2z" fill="#FBBC04"/>
+    <path d="M12 12L3.34 7C2 8.85 1.2 11.1 1.2 13.46 1.2 18.2 5.49 22 12 22V12z" fill="#34A853"/>
+    <path d="M12 12l8.66-5C18.8 4.55 15.7 2.8 12 2.8c-2.35 0-4.5.7-6.34 1.9L12 12z" fill="#4285F4"/>
+  </g>
+</svg>

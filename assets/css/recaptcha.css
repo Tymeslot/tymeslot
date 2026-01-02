@@ -1,0 +1,9 @@
+/* Hide reCAPTCHA v3 badge as per Google's terms (must include disclaimer) */
+.grecaptcha-badge {
+  visibility: hidden;
+}
+
+/* Override any potential display properties */
+.grecaptcha-badge * {
+  visibility: hidden !important;
+}

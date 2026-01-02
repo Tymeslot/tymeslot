@@ -1,0 +1,15 @@
+/* Rhythm Theme - Self-Contained Video Background with Sliding Interface */
+
+/* Import only the minimal shared utilities */
+@import "../../shared/reset.css";
+@import "../../shared/variables.css";
+@import "../../shared/utilities.css";
+
+/* Import Rhythm Theme Modules */
+@import "./modules/variables.css";
+@import "./modules/base.css";
+@import "./modules/typography.css";
+@import "./modules/video.css";
+@import "./modules/slides.css";
+@import "./modules/components.css";
+@import "./modules/responsive.css";

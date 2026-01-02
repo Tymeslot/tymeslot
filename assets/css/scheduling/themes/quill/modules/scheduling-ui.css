@@ -1,0 +1,354 @@
+/* Scheduling UI - Calendar, time slots, date/time selection */
+
+/* Calendar Components */
+.calendar-slots-container {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+  .calendar-slots-container {
+    flex-direction: row;
+  }
+}
+
+/* Calendar section sizing */
+.calendar-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem; /* Add padding for better spacing */
+}
+
+.calendar-grid-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive calendar section padding */
+@media (min-width: 768px) {
+  .calendar-section {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .calendar-section {
+    padding: 2rem;
+  }
+}
+
+/* Calendar grid proper sizing */
+.grid.grid-cols-7 {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  gap: 0.25rem; /* Add small gap between calendar days */
+}
+
+.grid.grid-cols-7 > * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* Responsive grid gaps */
+@media (min-width: 640px) {
+  .grid.grid-cols-7 {
+    gap: 0.375rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid.grid-cols-7 {
+    gap: 0.5rem;
+  }
+}
+
+.calendar-day {
+  width: 100%;
+  height: 2.5rem; /* Increased base height for better mobile tap targets */
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem; /* Slightly larger text */
+  box-sizing: border-box;
+  padding: 0.375rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.calendar-day:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--theme-primary);
+  transform: translateY(-1px);
+}
+
+.calendar-day--selected {
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+  color: white;
+}
+
+.calendar-day--unavailable {
+  color: rgba(255,255,255,0.3);
+  cursor: not-allowed;
+}
+
+.calendar-day--other-month {
+  opacity: 0.5;
+}
+
+.calendar-day--today {
+  border-color: var(--theme-accent);
+  border-width: 2px;
+}
+
+.calendar-day--past {
+  opacity: 0.6;
+}
+
+.calendar-day__number {
+  font-weight: 500;
+}
+
+/* Calendar day color overrides for theme1 - make text white instead of black */
+.calendar-day--available:not(:disabled):not(.calendar-day--selected) {
+  color: white;
+}
+
+.calendar-day--other-month.calendar-day--available {
+  color: rgba(255,255,255,0.8);
+}
+
+/* Ensure all calendar day states have white text */
+.calendar-day {
+  color: white;
+}
+
+.calendar-day--unavailable {
+  color: rgba(255,255,255,0.3);
+}
+
+.calendar-day--today:not(.calendar-day--selected) {
+  color: white;
+}
+
+/* Responsive calendar day sizing */
+@media (min-width: 640px) {
+  .calendar-day {
+    height: 2.75rem; /* Larger for tablets */
+    min-height: 2.75rem;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .calendar-day {
+    height: 3rem; /* Comfortable size for desktop */
+    min-height: 3rem;
+    font-size: 0.95rem;
+  }
+  
+  .glass-morphism-card {
+    border-radius: 2rem;
+  }
+  
+  /* Calendar container - natural height */
+  .calendar-slots-container {
+    /* Removed height constraints */
+  }
+}
+
+@media (min-width: 1024px) {
+  .calendar-day {
+    height: 3.25rem; /* Larger for desktop */
+    min-height: 3.25rem;
+    font-size: 1rem;
+  }
+  
+  .calendar-slots-container {
+    flex-direction: row;
+  }
+}
+
+/* Override max-height media query for short screens */
+@media (max-height: 800px) {
+  .calendar-day {
+    height: 2.25rem; /* Still usable on short screens */
+    min-height: 2.25rem;
+    padding: 0.25rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Time Slots */
+.time-slots-panel {
+  flex: 1;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .time-slots-panel {
+    margin-top: 0;
+  }
+}
+
+/* Slots box - responsive height */
+.slots-box {
+  overflow-x: hidden;
+  height: 100%;
+}
+
+/* No scrollbars on mobile - let page scroll naturally */
+@media (max-width: 767px) {
+  .slots-box {
+    overflow-y: visible;
+    height: auto;
+    max-height: none;
+  }
+}
+
+/* Constrain with scrollbars on larger screens */
+@media (min-width: 768px) {
+  .slots-box {
+    overflow-y: auto;
+    min-height: 150px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .slots-box {
+    min-height: 200px;
+  }
+}
+
+/* Time Slot Buttons - Touch-friendly layout */
+.time-slot-button {
+  width: 100%;
+  padding: 0.75rem 0.5rem; /* More padding for better touch targets */
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.5rem;
+  color: var(--theme-text);
+  font-weight: 500;
+  font-size: 0.875rem; /* Slightly larger text */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  white-space: nowrap;
+  min-height: 2.75rem; /* Larger minimum height for mobile */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.time-slot-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.time-slot-button--selected {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  border-color: var(--theme-primary);
+  color: white;
+  font-weight: 600;
+  box-shadow: 
+    0 4px 16px rgba(6, 182, 212, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.time-slot-button--selected:hover {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.time-slot-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive adjustments for time slot grid */
+@media (max-width: 640px) {
+  .time-slot-button {
+    font-size: 0.8rem; /* Keep readable on mobile */
+    padding: 0.625rem 0.375rem;
+    min-height: 2.5rem; /* Ensure 44px+ for iOS tap targets */
+  }
+}
+
+@media (min-width: 1024px) {
+  .time-slot-button {
+    font-size: 0.9rem;
+    padding: 0.625rem 0.5rem;
+    min-height: 2.5rem;
+  }
+}
+
+/* Calendar and slots grid responsive layout */
+.calendar-slots-grid {
+  display: block;
+}
+
+.calendar-slots-grid > div {
+  margin-bottom: 1.5rem;
+}
+
+/* Large screens - side by side layout */
+@media (min-width: 1024px) {
+  .calendar-slots-grid.lg\:grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+    margin: 0 auto;
+    max-width: 100%;
+  }
+  
+  .calendar-slots-grid > div {
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .calendar-slots-grid.lg\:grid {
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .calendar-slots-grid.lg\:grid {
+    gap: 2rem;
+  }
+}
+
+/* Timezone Selector - removed fixed sizes, now handled by responsive Tailwind classes */
+
+/* Prevent calendar and content overflow */
+.max-h-96 {
+  max-height: 24rem;
+}
+
+/* Max width utilities - responsive overrides */
+.max-w-5xl {
+  max-width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .max-w-5xl {
+    max-width: 64rem; /* 1024px */
+  }
+}

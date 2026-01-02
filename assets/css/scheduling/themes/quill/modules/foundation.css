@@ -1,0 +1,217 @@
+/* Foundation - Variables, base setup, core theme identity */
+
+/* Import Inter font - Modern, clean, and free for commercial use */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Quill Theme Variables */
+:root {
+  /* Typography */
+  --theme-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --theme-font-size-base: 1.0625rem; /* 17px - one level bigger */
+  --theme-font-size-sm: 0.9375rem;  /* 15px */
+  --theme-font-size-lg: 1.1875rem;  /* 19px */
+  --theme-font-size-xl: 1.375rem;   /* 22px */
+  --theme-font-size-2xl: 1.625rem;  /* 26px */
+  
+  /* Theme Colors */
+  --theme-primary: #06b6d4;
+  --theme-primary-hover: #0891b2;
+  --theme-secondary: #14b8a6;
+  --theme-accent: #10b981;
+  --theme-background-color: #0f172a;
+  --theme-surface: rgba(30, 41, 59, 0.5);
+  --theme-text: #e2e8f0;
+  --theme-text-secondary: #94a3b8;
+  
+  /* Background gradients */
+  --theme-background: linear-gradient(135deg, #1a1b3a 0%, #2d1b69 100%);
+  --theme-background-image: none;
+  
+  /* Glass morphism effects */
+  --glass-blur: 20px;
+  --glass-opacity: 0.1;
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  
+  /* Component specific */
+  --button-hover-transform: translateY(-2px);
+  --card-border-radius: 1.5rem;
+  --input-border-radius: 0.75rem;
+}
+
+/* Base Theme Styles */
+body.quill-theme {
+  font-family: var(--theme-font-family);
+  font-size: var(--theme-font-size-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.quill-theme-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.quill-theme-wrapper > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main gradient background */
+.main-gradient {
+  background: var(--theme-background);
+  background-attachment: fixed;
+  min-width: 100%;
+  width: 100%;
+  position: relative;
+}
+
+/* Video background support */
+.main-gradient.has-video-background {
+  background: transparent;
+}
+
+.main-gradient[style*="--theme-background-image"] {
+  background-image: var(--theme-background-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Video Background */
+.video-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: -1;
+  background: var(--theme-background);
+}
+
+/* Apply custom background image if set */
+.video-background[style*="--theme-background-image"],
+.video-background[style*="background-image"] {
+  background-image: var(--theme-background-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.video-background video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  opacity: 1;
+}
+
+/* Scale video to prevent edges showing on different aspect ratios */
+@media (min-aspect-ratio: 16/9) {
+  .video-background video {
+    width: 100vw;
+    height: auto;
+    min-height: 100vh;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+
+@media (max-aspect-ratio: 16/9) {
+  .video-background video {
+    width: auto;
+    height: 100vh;
+    min-width: 100vw;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* Hide video for users with reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .video-background video {
+    display: none;
+  }
+}
+
+/* Performance optimization for low-end devices */
+@media (max-device-memory: 4) {
+  .video-background video {
+    display: none;
+  }
+}
+
+/* Ensure content is properly layered above video */
+.quill-theme-wrapper > div:not(.video-background) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Override glass gradient colors with theme colors */
+.theme-1 {
+  --glass-gradient-primary: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  --glass-gradient-secondary: linear-gradient(135deg, var(--theme-primary-hover) 0%, var(--theme-secondary) 100%);
+  --color-primary-500: var(--theme-primary);
+  --color-primary-600: var(--theme-primary-hover);
+}
+
+/* Footer styling */
+.footer-gradient {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  background: var(--theme-background);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--theme-text);
+}
+
+/* Container sizing - flexible and responsive */
+.container {
+  width: 100%;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Core Typography */
+.section-header {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Text utilities */
+/* Use attribute selector for higher specificity */
+[class~="text-glass-primary"] {
+  color: var(--theme-text);
+}
+
+[class~="text-glass-secondary"] {
+  color: var(--theme-text-secondary);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

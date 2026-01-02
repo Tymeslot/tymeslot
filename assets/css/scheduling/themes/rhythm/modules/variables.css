@@ -1,0 +1,31 @@
+/* Rhythm Theme Variables */
+:root {
+  /* Typography */
+  --theme-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --theme-font-size-base: 1.0625rem; /* 17px - one level bigger */
+  --theme-font-size-sm: 0.9375rem;  /* 15px */
+  --theme-font-size-lg: 1.1875rem;  /* 19px */
+  --theme-font-size-xl: 1.375rem;   /* 22px */
+  --theme-font-size-2xl: 1.625rem;  /* 26px */
+  
+  /* Theme Colors */
+  --theme-primary: #06b6d4;
+  --theme-primary-hover: #0891b2;
+  --theme-secondary: #14b8a6;
+  --theme-accent: #10b981;
+  --theme-background-color: #0f172a;
+  --theme-surface: rgba(30, 41, 59, 0.5);
+  --theme-text: #e2e8f0;
+  --theme-text-secondary: #94a3b8;
+  --theme-text-muted: #64748b; /* Better contrast for subtle text */
+  
+  /* Background gradients */
+  --theme-background: linear-gradient(135deg, #1a1f2e 0%, #2d3561 50%, #1a1f2e 100%);
+  --theme-background-image: none;
+  
+  /* Sliding box effects */
+  --box-blur: 36px;
+  --box-opacity: 0.55;
+  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --slide-transition: all 0.4s ease-in-out;
+}

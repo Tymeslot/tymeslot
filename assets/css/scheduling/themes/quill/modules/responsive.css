@@ -1,0 +1,229 @@
+/* Responsive - All breakpoints and mobile adaptations */
+
+/* Base responsive container adjustments - Fixed breakpoint ranges */
+@media (min-width: 640px) and (max-width: 767px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 1536px;
+  }
+}
+
+/* Responsive step indicator adjustments */
+@media (max-width: 640px) {
+  .quill-theme-wrapper [class*="flex items-center space-x-"] {
+    gap: 0.75rem;
+  }
+  
+  .quill-theme-wrapper [class*="flex flex-col items-center"] > span:last-child {
+    font-size: 0.625rem;
+    margin-top: 0.375rem;
+  }
+  
+  /* Smaller circles on mobile */
+  .quill-theme-wrapper .w-8.h-8 {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  
+  /* Shorter connectors on mobile */
+  .quill-theme-wrapper [class*="w-4"][class*="sm:w-8"][class*="md:w-12"] {
+    width: 1rem;
+  }
+}
+
+/* Mobile-specific fixes for booking flow */
+@media (max-width: 640px) {
+  /* Adjust glassmorphism padding on mobile */
+  div[style*="backdrop-filter"] > div {
+    padding: 1rem;
+  }
+  
+  /* Fix body overflow on mobile */
+  body {
+    overflow-x: hidden;
+    position: relative;
+  }
+  
+  /* Ensure footer stays at bottom without extra space */
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height */
+    min-height: 100svh; /* Small viewport height for mobile */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Fix step indicator spacing on mobile */
+  .step-indicator {
+    padding: 0 0.5rem;
+  }
+  
+  /* Fix button group spacing */
+  .flex.gap-2 {
+    gap: 0.5rem;
+  }
+  
+  /* Ensure forms don't overflow */
+  form {
+    max-width: 100%;
+  }
+  
+  /* Fix timezone dropdown on mobile */
+  .relative .absolute {
+    max-width: calc(100vw - 2rem);
+  }
+  
+  /* Make timezone selector more compact on mobile */
+  .relative.w-full.md\:w-auto label {
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+  }
+  
+  .relative.w-full.md\:w-auto .group > div {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .relative.w-full.md\:w-auto .group .text-sm {
+    font-size: 0.813rem;
+  }
+  
+  .relative.w-full.md\:w-auto .group .text-xs {
+    display: none;
+  }
+  
+  .relative.w-full.md\:w-auto .group svg.w-4 {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  
+  .relative.w-full.md\:w-auto .group .px-2.py-1 {
+    padding: 0.125rem 0.375rem;
+    font-size: 0.625rem;
+  }
+}
+
+/* Responsive adjustments for short screens */
+@media (max-height: 700px) and (min-height: 601px) {
+  .py-8 {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .py-12 {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+  .p-8 {
+    padding: 1rem;
+  }
+  .p-12 {
+    padding: 1.5rem;
+  }
+  .max-h-96 {
+    max-height: 16rem;
+  }
+  
+  /* Make form more compact on short screens */
+  .space-y-4 > * + * {
+    margin-top: 0.75rem;
+  }
+  
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+  
+  /* Reduce margins */
+  .mb-4 {
+    margin-bottom: 0.75rem;
+  }
+  
+  .mb-6 {
+    margin-bottom: 1rem;
+  }
+  
+  .mb-8 {
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Extra compact for very short screens */
+@media (max-height: 600px) {
+  .py-4 {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+  
+  .p-4 {
+    padding: 0.75rem;
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 0.5rem;
+  }
+  
+  .mb-3 {
+    margin-bottom: 0.5rem;
+  }
+  
+  .mb-4 {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .video-background {
+    display: none;
+  }
+  
+  .glass-morphism-card {
+    background: white;
+    color: black;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  
+  button {
+    display: none;
+  }
+}

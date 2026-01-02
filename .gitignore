@@ -1,0 +1,155 @@
+# The directory Mix will write compiled artifacts to.
+/_build/
+
+# If you run "mix test --cover", coverage assets end up here.
+/cover/
+
+# The directory Mix downloads your dependencies sources to.
+/deps/
+
+# Where 3rd-party dependencies like ExDoc output generated docs.
+/doc/
+
+# Ignore .fetch files in case you like to edit your project deps locally.
+/.fetch
+
+# If the VM crashes, it generates a dump, let's ignore it too.
+erl_crash.dump
+
+# Also ignore archive artifacts (built via "mix archive.build").
+*.ez
+
+# Temporary files, for example, from tests.
+/tmp/
+
+# Ignore package tarball (built via "mix hex.build").
+tymeslot-*.tar
+
+# Ignore assets that are produced by build tools and digested assets cache.
+# (These are handled below in Phoenix specific section)
+
+# In case you use Node.js/npm, you want to ignore these.
+npm-debug.log
+/assets/node_modules/
+
+# Environment variables and configuration
+.env
+.env.*
+!.env.example
+env.sh
+cloudron_env_set
+cloudron_env_set.txt
+config/*.secret.exs
+config/prod.secret.exs
+
+# Phoenix specific
+/priv/static/assets/
+/priv/static/cache_manifest.json
+/priv/cert/
+/.elixir_ls/
+/.dialyzer/
+*.beam
+
+# Dialyzer PLT files
+/priv/plts/
+*.plt
+*.plt.hash
+
+# Logs
+*.log
+
+# Database dumps
+*.dump
+
+# Test artifacts
+/screenshots/
+/test/reports/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-*
+.atom/
+.elixir-ls/
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Local scripts and debug files
+debug_*.exs
+test_*.exs
+check_*.exs
+fetch_*.exs
+
+# Node/npm/yarn
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# Mix dependencies lock for libraries
+mix.lock.backup
+
+# Local SSL certificates
+*.pem
+*.key
+*.crt
+
+# Docker volumes
+.docker/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+test/backup_tests/
+
+# User uploads and data
+/data/
+/uploads/
+
+# Claude AI assistant files
+claude.md
+coveralls.json
+
+# Planning documents
+UMBRELLA_SPLIT_PLAN.md

@@ -1,0 +1,128 @@
+/* Theme-Agnostic Layout Utilities */
+/* Only structural helpers - no colors or theme-specific styles */
+
+/* Import Tailwind CSS for full utility access across all themes */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Display utilities - Higher specificity without !important */
+[class~="hidden"] { display: none; }
+[class~="block"] { display: block; }
+[class~="inline-block"] { display: inline-block; }
+[class~="flex"] { display: flex; }
+[class~="inline-flex"] { display: inline-flex; }
+[class~="grid"] { display: grid; }
+
+/* Flexbox utilities - Higher specificity without !important */
+[class~="flex-row"] { flex-direction: row; }
+[class~="flex-col"] { flex-direction: column; }
+[class~="flex-wrap"] { flex-wrap: wrap; }
+[class~="items-start"] { align-items: flex-start; }
+[class~="items-center"] { align-items: center; }
+[class~="items-end"] { align-items: flex-end; }
+[class~="justify-start"] { justify-content: flex-start; }
+[class~="justify-center"] { justify-content: center; }
+[class~="justify-end"] { justify-content: flex-end; }
+[class~="justify-between"] { justify-content: space-between; }
+[class~="flex-1"] { flex: 1 1 0%; }
+[class~="flex-shrink-0"] { flex-shrink: 0; }
+
+/* Grid utilities - Higher specificity without !important */
+[class~="grid-cols-1"] { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+[class~="grid-cols-2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+[class~="grid-cols-7"] { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+
+/* Gap utilities - Higher specificity without !important */
+[class~="gap-1"] { gap: 0.25rem; }
+[class~="gap-2"] { gap: 0.5rem; }
+[class~="gap-3"] { gap: 0.75rem; }
+[class~="gap-4"] { gap: 1rem; }
+[class~="gap-6"] { gap: 1.5rem; }
+[class~="gap-8"] { gap: 2rem; }
+
+/* Width/Height utilities - Higher specificity without !important */
+[class~="w-full"] { width: 100%; }
+[class~="h-full"] { height: 100%; }
+[class~="min-h-0"] { min-height: 0; }
+[class~="min-w-0"] { min-width: 0; }
+
+/* Position utilities - Higher specificity without !important */
+[class~="relative"] { position: relative; }
+[class~="absolute"] { position: absolute; }
+[class~="fixed"] { position: fixed; }
+[class~="sticky"] { position: sticky; }
+.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+
+/* Overflow utilities - Higher specificity without !important */
+[class~="overflow-auto"] { overflow: auto; }
+[class~="overflow-hidden"] { overflow: hidden; }
+[class~="overflow-x-hidden"] { overflow-x: hidden; }
+[class~="overflow-y-auto"] { overflow-y: auto; }
+
+/* Text alignment - Higher specificity without !important */
+[class~="text-left"] { text-align: left; }
+[class~="text-center"] { text-align: center; }
+[class~="text-right"] { text-align: right; }
+
+/* Responsive utilities - Higher specificity without !important */
+@media (min-width: 640px) {
+  [class~="sm:flex"] { display: flex; }
+  [class~="sm:hidden"] { display: none; }
+  [class~="sm:grid-cols-2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 768px) {
+  [class~="md:flex"] { display: flex; }
+  [class~="md:hidden"] { display: none; }
+  [class~="md:flex-row"] { flex-direction: row; }
+  [class~="md:grid-cols-2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  [class~="lg:flex"] { display: flex; }
+  [class~="lg:hidden"] { display: none; }
+  [class~="lg:grid"] { display: grid; }
+  [class~="lg:grid-cols-2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Spacing scale variables for consistency */
+:root {
+  --spacing-0: 0;
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-20: 5rem;
+}
+
+/* Breakpoint variables */
+:root {
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* Z-index scale */
+:root {
+  --z-negative: -1;
+  --z-0: 0;
+  --z-10: 10;
+  --z-20: 20;
+  --z-30: 30;
+  --z-40: 40;
+  --z-50: 50;
+  --z-60: 60;
+  --z-70: 70;
+  --z-80: 80;
+  --z-90: 90;
+  --z-100: 100;
+}

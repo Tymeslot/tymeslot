@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html
+  lang="en"
+  class={"scheduling-app theme-#{assigns[:theme_id] || "1"} #{theme_class(assigns[:theme_id] || "1")}"}
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <.live_title suffix=" · Tymeslot">
+      {assigns[:page_title] || "Schedule a Meeting"}
+    </.live_title>
+    <link rel="icon" type="image/svg+xml" href={~p"/images/brand/favicon.svg"} />
+    <link rel="alternate icon" href={~p"/images/brand/favicon.ico"} />
+    
+<!-- Theme-specific CSS -->
+    {render_theme_css(assigns[:theme_id] || "1")}
+
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
+    </script>
+    <%= if System.get_env("UMAMI_SCRIPT_URL") && System.get_env("UMAMI_WEBSITE_ID") do %>
+      <script
+        defer
+        src={System.get_env("UMAMI_SCRIPT_URL")}
+        data-website-id={System.get_env("UMAMI_WEBSITE_ID")}
+      >
+      </script>
+    <% end %>
+  </head>
+  <body class={"theme-#{assigns[:theme_id] || "1"} #{theme_class(assigns[:theme_id] || "1")}"}>
+    <.noscript_warning message="This scheduling page requires JavaScript to book meetings. Please enable it to continue." />
+    <.flash_group flash={@flash} id="scheduling-flash-group" />
+    {@inner_content}
+  </body>
+</html>

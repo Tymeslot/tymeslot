@@ -1,0 +1,368 @@
+/* Modal System - Glass Theme
+ * Comprehensive modal styling that integrates with the overall glassmorphism design
+ * Supports confirmation dialogs, forms, and content modals
+ */
+
+/* Modal Overlay & Container */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow-y: auto;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: all 0.3s ease-in-out;
+}
+
+.modal-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+  position: relative;
+  z-index: 10;
+}
+
+/* Backdrop removed - click handling now done via LiveView */
+
+/* Modal Content */
+.modal-content {
+  position: relative;
+  max-width: 28rem;
+  width: 100%;
+  z-index: 20;
+  margin: auto;
+  background: var(--color-glass-bg-card-enhanced);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  border-radius: 16px;
+  border: 1px solid var(--color-border-glass-light);
+  box-shadow: var(--shadow-glass-card-enhanced);
+  padding: 1.5rem;
+  color: var(--color-text-glass-primary);
+  transform: scale(0.95);
+  opacity: 0;
+  animation: modalFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes modalFadeIn {
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border-glass-light);
+  margin-bottom: 1rem;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text-glass-primary);
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.modal-close-button {
+  background: none;
+  border: none;
+  color: var(--color-text-glass-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: var(--transition-glass);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+}
+
+.modal-close-button:hover {
+  background: var(--color-glass-bg-medium);
+  color: var(--color-text-glass-primary);
+  transform: scale(1.1);
+}
+
+.modal-close-button:active {
+  transform: scale(0.95);
+}
+
+.modal-close-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke-width: 2;
+}
+
+/* Modal Body */
+.modal-body {
+  padding: 0.5rem 0;
+  color: var(--color-text-glass-primary);
+  line-height: 1.6;
+}
+
+.modal-body p {
+  margin-bottom: 1rem;
+}
+
+.modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Modal Footer */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border-glass-light);
+  margin-top: 1rem;
+}
+
+/* Modal Variants */
+
+/* Size Variants */
+.modal-content--small {
+  max-width: 20rem; /* 320px */
+}
+
+.modal-content--medium {
+  max-width: 28rem; /* 448px - default */
+}
+
+.modal-content--large {
+  max-width: 42rem; /* 672px */
+}
+
+.modal-content--xlarge {
+  max-width: 64rem; /* 1024px */
+}
+
+.modal-content--full {
+  max-width: calc(100vw - 2rem);
+  width: calc(100vw - 2rem);
+  margin: 1rem;
+}
+
+/* Confirmation Modal */
+.modal-content--confirmation {
+  max-width: 24rem;
+}
+
+.modal-content--confirmation .modal-body {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.modal-content--confirmation .modal-title {
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-content--confirmation .modal-title svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #ef4444;
+}
+
+/* Form Modal */
+.modal-content--form {
+  max-width: 32rem;
+}
+
+.modal-content--form .modal-body {
+  padding: 1rem 0;
+}
+
+/* Full Screen Modal on Mobile */
+@media (max-width: 640px) {
+  .modal-container {
+    align-items: flex-end;
+    padding: 0;
+  }
+  
+  .modal-content {
+    max-width: 100%;
+    border-radius: 1rem 1rem 0 0;
+    margin: 0;
+    min-height: 50vh;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  /* Override size classes on mobile for better UX */
+  .modal-content--small,
+  .modal-content--medium,
+  .modal-content--large,
+  .modal-content--xlarge {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  /* Full modal takes entire screen on mobile */
+  .modal-content--full {
+    border-radius: 0;
+    min-height: 100vh;
+    max-height: 100vh;
+  }
+  
+  .modal-backdrop {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* Modal Animation Utilities */
+.modal-overlay[style*="display: none"] {
+  display: none !important;
+}
+
+.modal-overlay[style*="display: flex"] {
+  display: flex !important;
+}
+
+/* Focus Management */
+.modal-content:focus {
+  outline: none;
+}
+
+.modal-content *:focus {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Accessibility */
+.modal-content[aria-hidden="true"] {
+  display: none;
+}
+
+/* Loading State for Modal Content */
+.modal-content--loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.modal-content--loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-glass-bg-overlay);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border-radius: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal Spinner */
+.modal-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--color-border-glass-light);
+  border-top: 2px solid var(--color-primary-500);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Success/Error States */
+.modal-content--success .modal-title {
+  color: #10b981;
+}
+
+.modal-content--error .modal-title {
+  color: #ef4444;
+}
+
+.modal-content--warning .modal-title {
+  color: #f59e0b;
+}
+
+/* Enhanced Glass Effect for Important Modals */
+.modal-content--important {
+  background: var(--color-glass-bg-card);
+  border: 2px solid var(--color-border-glass-strong);
+  box-shadow: 
+    var(--shadow-glass-lg),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+.modal-content--important::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.1) 0%, 
+    rgba(255, 255, 255, 0.05) 50%, 
+    rgba(255, 255, 255, 0.1) 100%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Modal Stack Management */
+.modal-overlay[data-modal-stack="1"] {
+  z-index: 9999;
+}
+
+.modal-overlay[data-modal-stack="2"] {
+  z-index: 10001;
+}
+
+.modal-overlay[data-modal-stack="3"] {
+  z-index: 10003;
+}
+
+/* Responsive Adjustments */
+@media (min-width: 768px) {
+  .modal-content {
+    border-radius: 2rem;
+    padding: 2rem;
+  }
+  
+  .modal-header {
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .modal-footer {
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
+  }
+}
+
+@media (max-height: 600px) {
+  .modal-container {
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+  
+  .modal-content {
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .modal-overlay {
+    display: none !important;
+  }
+}

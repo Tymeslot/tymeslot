@@ -1,0 +1,357 @@
+/* ===================================
+   BASE STYLES & RESET
+   =================================== */
+
+/* Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Prevent horizontal overflow globally */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family-sans);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-primary-200);
+  color: var(--color-primary-900);
+}
+
+/* Focus Visible */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-dark);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-600);
+}
+
+/* Print Utilities */
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+}
+
+/* Screen Reader Only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ===================================
+   GLASS MORPHISM BASE STYLES
+   =================================== */
+
+/* Video Background Support */
+/* Video background styles moved to auth/auth-video.css */
+
+/* Glass Theme Main Container */
+.glass-theme {
+  position: relative;
+  min-height: 100dvh;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  color: var(--color-text-glass-primary);
+}
+
+/* Glass Theme Text Color Overrides */
+.glass-theme * {
+  color: inherit;
+}
+
+.glass-theme .text-gray-500 {
+  color: var(--color-text-glass-light) !important;
+}
+
+.glass-theme .text-gray-600 {
+  color: var(--color-text-glass-secondary) !important;
+}
+
+.glass-theme .text-gray-700 {
+  color: var(--color-text-glass-primary) !important;
+}
+
+.glass-theme .text-gray-800 {
+  color: var(--color-text-glass-primary) !important;
+}
+
+.glass-theme .text-purple-600 {
+  color: var(--color-text-glass-primary) !important;
+}
+
+.glass-theme .text-purple-700 {
+  color: var(--color-text-glass-primary) !important;
+}
+
+/* Preserve gradient text */
+.glass-theme .bg-clip-text {
+  color: transparent !important;
+}
+
+/* Button text colors - Ensure proper contrast */
+.glass-theme .btn-primary,
+.glass-theme .btn-link,
+.glass-theme button[class*="bg-gradient"],
+.glass-theme a[class*="bg-gradient"],
+.glass-theme button.text-white,
+.glass-theme a.text-white {
+  color: var(--color-text-on-glass) !important;
+}
+
+.glass-theme .btn-primary:hover,
+.glass-theme .btn-link:hover,
+.glass-theme button[class*="bg-gradient"]:hover,
+.glass-theme a[class*="bg-gradient"]:hover,
+.glass-theme button.text-white:hover,
+.glass-theme a.text-white:hover {
+  color: var(--color-text-on-glass) !important;
+}
+
+.glass-theme .btn-secondary,
+.glass-theme .btn-auth {
+  color: var(--color-text-glass-primary) !important;
+}
+
+.glass-theme .btn-secondary:hover,
+.glass-theme .btn-auth:hover {
+  color: var(--color-text-glass-primary) !important;
+}
+
+.glass-theme button {
+  color: inherit;
+}
+
+.glass-theme a {
+  color: var(--color-text-glass-primary);
+}
+
+.glass-theme a:hover {
+  color: var(--color-glass-dark-variant);
+}
+
+/* Auth footer links */
+.glass-theme .auth-footer a,
+.glass-theme .auth-footer button {
+  color: var(--color-text-on-glass);
+  background: var(--glass-gradient-primary);
+  backdrop-filter: var(--glass-blur-light);
+  border-radius: 20px;
+  padding: 8px 16px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--transition-glass);
+  display: inline-block;
+  box-shadow: var(--shadow-glass-sm);
+  border: none;
+  cursor: pointer;
+}
+
+.glass-theme .auth-footer a:hover,
+.glass-theme .auth-footer button:hover {
+  background: var(--glass-gradient-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glass-md);
+  color: var(--color-text-on-glass);
+}
+
+/* Input and form styling in glass theme */
+.glass-theme input,
+.glass-theme textarea,
+.glass-theme select {
+  color: var(--color-text-glass-primary) !important;
+}
+
+.glass-theme input::placeholder,
+.glass-theme textarea::placeholder {
+  color: var(--color-text-glass-light) !important;
+}
+
+/* Override for buttons with specific Tailwind classes */
+.glass-theme .text-white {
+  color: white !important;
+}
+
+.glass-theme .text-white:hover {
+  color: white !important;
+}
+
+/* Glass Container */
+.glass-container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  flex: 1;
+  min-height: 100dvh;
+  height: fit-content;
+  box-sizing: border-box;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Glass Card Base - Enhanced */
+.glass-card-base {
+  background: var(--color-glass-bg-card-enhanced);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  border-radius: clamp(16px, 2vw, 20px);
+  box-shadow: var(--shadow-glass-card-enhanced);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: clamp(20px, 4vw, 32px);
+  width: clamp(300px, 90vw, 480px);
+  max-width: 100%;
+  margin: clamp(10px, 5vh, 40px) clamp(10px, 5vw, 40px);
+  box-sizing: border-box;
+  transition: var(--transition-glass-smooth);
+  transition: var(--transition-glass);
+  /* Responsive typography */
+  font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+/* Glass Card Base - Wide variant for onboarding */
+.glass-card-base-wide {
+  background: var(--color-glass-bg-card-enhanced);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  border-radius: clamp(16px, 2vw, 20px);
+  box-shadow: var(--shadow-glass-card-enhanced);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: clamp(20px, 4vw, 32px);
+  width: clamp(300px, 90vw, 1024px);
+  max-width: 100%;
+  margin: clamp(10px, 5vh, 40px) clamp(10px, 5vw, 40px);
+  box-sizing: border-box;
+  transition: var(--transition-glass-smooth);
+  transition: var(--transition-glass);
+  /* Responsive typography */
+  font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+/* Glass Navigation Link */
+.glass-nav-link {
+  position: fixed;
+  top: max(20px, env(safe-area-inset-top, 20px));
+  left: max(20px, env(safe-area-inset-left, 20px));
+  z-index: 10;
+  background: var(--color-glass-bg-medium);
+  backdrop-filter: var(--glass-blur-light);
+  border: 1px solid var(--color-border-glass-light);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  transition: var(--transition-glass);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.glass-nav-link:hover {
+  background: var(--color-glass-bg-strong);
+  transform: translateY(-2px);
+}
+
+/* Responsive Glass Styles */
+@media (max-width: 768px) {
+  .glass-theme {
+    min-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  .glass-container {
+    padding: 0;
+    min-height: 100dvh;
+    height: fit-content;
+    justify-content: center;
+  }
+  
+  .glass-card-base {
+    /* Card adapts fully to mobile viewport */
+    width: clamp(280px, 95vw, 100%);
+    padding: clamp(16px, 5vw, 24px);
+    border-radius: clamp(14px, 2vw, 16px);
+    margin: clamp(8px, 3vh, 30px) clamp(8px, 3vw, 30px);
+  }
+  
+  .glass-nav-link {
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top, 10px));
+    left: max(10px, env(safe-area-inset-left, 10px));
+    padding: 8px 12px;
+    font-size: 14px;
+    z-index: 20;
+  }
+}
+
+@media (max-width: 480px) {
+  .glass-container {
+    padding: 0;
+    min-height: 100dvh;
+    height: fit-content;
+  }
+  
+  .glass-card-base {
+    /* Maximum utilization on small screens */
+    width: clamp(260px, 98vw, 100%);
+    padding: clamp(12px, 4vw, 20px);
+    border-radius: clamp(12px, 3vw, 16px);
+    margin: clamp(4px, 2vh, 20px) clamp(4px, 2vw, 20px);
+  }
+  
+  .glass-nav-link {
+    top: max(5px, env(safe-area-inset-top, 5px));
+    left: max(5px, env(safe-area-inset-left, 5px));
+  }
+}

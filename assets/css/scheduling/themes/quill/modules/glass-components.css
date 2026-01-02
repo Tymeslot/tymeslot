@@ -1,0 +1,284 @@
+/* Glass Components - All glassmorphism effects and cards */
+
+/* Glass Morphism Components */
+.glass-morphism-card {
+  background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.3) 100%);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--card-border-radius);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--theme-text);
+}
+
+/* Calendar and booking form cards need more height */
+.glass-morphism-card.calendar-card,
+.glass-morphism-card.booking-form-card {
+  min-height: 500px; /* Ensure minimum height on desktop */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive height adjustments for calendar and form cards */
+@media (min-width: 768px) {
+  .glass-morphism-card.calendar-card,
+  .glass-morphism-card.booking-form-card {
+    min-height: 600px; /* More vertical space on tablets and up */
+  }
+}
+
+@media (min-width: 1024px) {
+  .glass-morphism-card.calendar-card,
+  .glass-morphism-card.booking-form-card {
+    min-height: 650px; /* Comfortable height for desktop */
+  }
+}
+
+@media (min-width: 1440px) {
+  .glass-morphism-card.calendar-card,
+  .glass-morphism-card.booking-form-card {
+    min-height: 700px; /* Even more space on large screens */
+  }
+}
+
+/* Mobile - let content determine height */
+@media (max-width: 767px) {
+  .glass-morphism-card:not(.step-navigation-card) {
+    min-height: auto;
+  }
+}
+
+/* Prevent content overflow within glass cards */
+.glass-morphism-card > div {
+  box-sizing: border-box;
+}
+
+/* Step navigation card */
+.step-navigation-card {
+  width: auto;
+  max-width: none;
+}
+
+/* Legacy card-glass for backward compatibility */
+.card-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* Meeting Details Card - Glassmorphism style */
+.meeting-details-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  color: var(--theme-text);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.meeting-details-card h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--theme-text);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Action Buttons */
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: var(--theme-font-size-base);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.action-button--primary {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+}
+
+.action-button--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+}
+
+.action-button--secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--theme-text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.action-button--secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--theme-primary);
+}
+
+.action-button--danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.action-button--danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Loading Button */
+.loading-button {
+  position: relative;
+}
+
+.loading-button__spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Button Components */
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  background: var(--theme-primary);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: var(--theme-primary-hover);
+  transform: var(--button-hover-transform);
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--theme-text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--theme-primary);
+  transform: var(--button-hover-transform);
+}
+
+/* Info Box */
+.info-box {
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* Empty State */
+.empty-state {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state__content {
+  text-align: center;
+  padding: 1rem;
+}
+
+.empty-state__icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 0.5rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.empty-state__message {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.empty-state__secondary {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 0.25rem;
+}
+
+/* Glass morphism card for step navigation - High specificity selector */
+.quill-theme-wrapper .step-navigation-card {
+  background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.3) 100%);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Step circles with glassmorphism effect */
+.quill-theme-wrapper [class*="rounded-full"][class*="flex items-center"] {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Active/completed step enhancement */
+.quill-theme-wrapper [class*="from-purple-800"][class*="to-purple-900"] {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  box-shadow: 
+    0 4px 16px rgba(6, 182, 212, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-color: var(--theme-primary);
+}
+
+/* Step connectors with gradient */
+.quill-theme-wrapper [class*="from-purple-800"][class*="to-purple-900"][class*="h-0.5"] {
+  background: linear-gradient(90deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  box-shadow: 0 1px 4px rgba(6, 182, 212, 0.2);
+}
+
+/* Utility background class */
+[class~="bg-glass"] {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}

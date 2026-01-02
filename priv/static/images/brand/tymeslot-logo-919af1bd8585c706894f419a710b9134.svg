@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="90" fill="#3B82F6" />
+  
+  <!-- Calendar icon -->
+  <rect x="50" y="60" width="100" height="80" rx="8" fill="white" />
+  <rect x="50" y="60" width="100" height="20" fill="#1E40AF" />
+  
+  <!-- Calendar header dots -->
+  <circle cx="70" cy="55" r="3" fill="#1E40AF" />
+  <circle cx="130" cy="55" r="3" fill="#1E40AF" />
+  
+  <!-- Calendar grid -->
+  <rect x="60" y="90" width="15" height="10" rx="2" fill="#E5E7EB" />
+  <rect x="85" y="90" width="15" height="10" rx="2" fill="#E5E7EB" />
+  <rect x="110" y="90" width="15" height="10" rx="2" fill="#E5E7EB" />
+  <rect x="60" y="110" width="15" height="10" rx="2" fill="#E5E7EB" />
+  <rect x="85" y="110" width="15" height="10" rx="2" fill="#10B981" />
+  <rect x="110" y="110" width="15" height="10" rx="2" fill="#E5E7EB" />
+  
+  <!-- Clock overlay -->
+  <circle cx="120" cy="120" r="25" fill="#F59E0B" stroke="white" stroke-width="3" />
+  <circle cx="120" cy="120" r="2" fill="white" />
+  <line x1="120" y1="120" x2="120" y2="105" stroke="white" stroke-width="2" stroke-linecap="round" />
+  <line x1="120" y1="120" x2="130" y2="125" stroke="white" stroke-width="2" stroke-linecap="round" />
+</svg>

@@ -1,0 +1,132 @@
+/* ===================================
+   TYPOGRAPHY SYSTEM
+   =================================== */
+
+/* Base Typography */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+}
+
+/* Font Families */
+.font-sans {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono',
+    Menlo, monospace;
+}
+
+/* Responsive Typography Scale */
+.text-xs { font-size: var(--font-size-xs); line-height: var(--line-height-normal); }
+.text-sm { font-size: var(--font-size-sm); line-height: var(--line-height-normal); }
+.text-base { font-size: var(--font-size-base); line-height: var(--line-height-normal); }
+.text-lg { font-size: var(--font-size-lg); line-height: var(--line-height-relaxed); }
+.text-xl { font-size: var(--font-size-xl); line-height: var(--line-height-relaxed); }
+.text-2xl { font-size: var(--font-size-2xl); line-height: var(--line-height-relaxed); }
+.text-3xl { font-size: var(--font-size-3xl); line-height: var(--line-height-snug); }
+.text-4xl { font-size: var(--font-size-4xl); line-height: var(--line-height-tight); }
+.text-5xl { font-size: var(--font-size-5xl); line-height: var(--line-height-tight); }
+.text-6xl { font-size: var(--font-size-6xl); line-height: var(--line-height-none); }
+.text-7xl { font-size: var(--font-size-7xl); line-height: var(--line-height-none); }
+
+/* Responsive Typography - Mobile First */
+@media (min-width: 768px) {
+  .md\:text-xs { font-size: var(--font-size-xs); }
+  .md\:text-sm { font-size: var(--font-size-sm); }
+  .md\:text-base { font-size: var(--font-size-base); }
+  .md\:text-lg { font-size: var(--font-size-lg); }
+  .md\:text-xl { font-size: var(--font-size-xl); }
+  .md\:text-2xl { font-size: var(--font-size-2xl); }
+  .md\:text-3xl { font-size: var(--font-size-3xl); }
+  .md\:text-4xl { font-size: var(--font-size-4xl); }
+  .md\:text-5xl { font-size: var(--font-size-5xl); }
+  .md\:text-6xl { font-size: var(--font-size-6xl); }
+  .md\:text-7xl { font-size: var(--font-size-7xl); }
+}
+
+@media (min-width: 1024px) {
+  .lg\:text-xs { font-size: var(--font-size-xs); }
+  .lg\:text-sm { font-size: var(--font-size-sm); }
+  .lg\:text-base { font-size: var(--font-size-base); }
+  .lg\:text-lg { font-size: var(--font-size-lg); }
+  .lg\:text-xl { font-size: var(--font-size-xl); }
+  .lg\:text-2xl { font-size: var(--font-size-2xl); }
+  .lg\:text-3xl { font-size: var(--font-size-3xl); }
+  .lg\:text-4xl { font-size: var(--font-size-4xl); }
+  .lg\:text-5xl { font-size: var(--font-size-5xl); }
+  .lg\:text-6xl { font-size: var(--font-size-6xl); }
+  .lg\:text-7xl { font-size: var(--font-size-7xl); }
+}
+
+/* Headings */
+h1, .h1 {
+  font-size: clamp(var(--font-size-3xl), 5vw, var(--font-size-5xl));
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+h2, .h2 {
+  font-size: clamp(var(--font-size-2xl), 4vw, var(--font-size-4xl));
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+h3, .h3 {
+  font-size: clamp(var(--font-size-xl), 3vw, var(--font-size-3xl));
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+}
+
+h4, .h4 {
+  font-size: clamp(var(--font-size-lg), 2.5vw, var(--font-size-2xl));
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-snug);
+}
+
+h5, .h5 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+}
+
+h6, .h6 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+}
+
+/* Text Colors */
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+.text-inverse { color: var(--color-text-inverse); }
+.text-brand { color: var(--color-primary-600); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+.text-info { color: var(--color-info); }
+
+/* Font Weights */
+.font-light { font-weight: var(--font-weight-light); }
+.font-normal { font-weight: var(--font-weight-normal); }
+.font-medium { font-weight: var(--font-weight-medium); }
+.font-semibold { font-weight: var(--font-weight-semibold); }
+.font-bold { font-weight: var(--font-weight-bold); }
+.font-extrabold { font-weight: var(--font-weight-extrabold); }

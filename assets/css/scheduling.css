@@ -1,0 +1,38 @@
+/* 
+ * Scheduling CSS Loader
+ * This file loads theme-specific CSS based on the active theme
+ * 
+ * Usage:
+ * 1. For Quill theme: add class="quill-theme" to <html> or <body>
+ * 2. For Rhythm theme: add class="rhythm-theme" to <html> or <body>
+ * 
+ * The theme-specific CSS files are self-contained and include:
+ * - Shared reset and utilities
+ * - Theme-specific variables
+ * - All component styles
+ * - Responsive design
+ * - Print styles
+ */
+
+/* 
+ * Note: In production, you should conditionally load only the CSS 
+ * for the active theme to improve performance. This can be done
+ * via Phoenix/Elixir by including the appropriate stylesheet link
+ * in your layout based on the selected theme.
+ * 
+ * Example in your Phoenix template:
+ * <%= if @theme == "quill" do %>
+ *   <link rel="stylesheet" href="/css/scheduling/themes/quill/theme.css">
+ * <% else %>
+ *   <link rel="stylesheet" href="/css/scheduling/themes/rhythm/theme.css">
+ * <% end %>
+ */
+
+/* For development/testing, you can import both themes */
+/* The theme classes on html/body will activate the appropriate styles */
+
+/* Quill Theme - Glassmorphism */
+@import url("./scheduling/themes/quill/theme.css");
+
+/* Rhythm Theme - Video Background with Sliding Interface */
+@import url("./scheduling/themes/rhythm/theme.css");

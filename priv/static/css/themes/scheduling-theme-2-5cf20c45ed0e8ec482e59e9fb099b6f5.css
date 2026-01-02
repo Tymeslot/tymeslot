@@ -1,0 +1,884 @@
+/* Video Background Theme CSS */
+
+/* Video Background */
+.video-background-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: -10;
+}
+
+.video-background-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+  transition: opacity 0.8s ease-in-out;
+}
+
+/* Crossfade video states */
+.video-background-video.active {
+  opacity: 1;
+  z-index: 1;
+}
+
+.video-background-video.inactive {
+  opacity: 0;
+  z-index: 2;
+}
+
+.video-background-video.crossfade-in {
+  opacity: 1;
+  z-index: 2;
+}
+
+/* Hide video background for users with reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .video-background-video {
+    display: none;
+  }
+}
+
+/* Main container with video background */
+.video-background-theme {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.3); /* Subtle overlay */
+}
+
+/* Glass morphism scheduling box */
+.scheduling-box {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  width: 640px;
+  min-height: 750px;
+  max-height: 750px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Removed progress indicator */
+
+/* Slide container */
+.slide-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: all 0.4s ease-in-out;
+}
+
+.booking-slide .slide-content {
+  padding: 0;
+}
+
+.slide.active {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Slide content */
+.slide-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: white;
+}
+
+.slide-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+  color: white;
+}
+
+/* Overview slide */
+.overview-slide .organizer-profile {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 30px;
+  gap: 20px;
+}
+
+.organizer-avatar {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+}
+
+.avatar-checkmark {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 24px;
+  height: 24px;
+  background: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.organizer-info {
+  flex: 1;
+  text-align: left;
+}
+
+.organizer-greeting {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.organizer-instruction {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.duration-grid {
+  display: grid;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.duration-card {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.duration-card:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.duration-card.selected {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.7);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+}
+
+.duration-button {
+  width: 100%;
+  padding: 15px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-radius: 12px;
+}
+
+.duration-icon {
+  font-size: 1.5rem;
+}
+
+.duration-info {
+  text-align: left;
+  flex: 1;
+}
+
+.duration-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.duration-time {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.duration-description {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+}
+
+/* Schedule slide */
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.organizer-profile-small {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-image-small {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.organizer-info-small {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.organizer-name {
+  font-weight: 600;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.organizer-name-full {
+  font-weight: 700;
+  color: white;
+  font-size: 1rem;
+  margin-top: 2px;
+}
+
+.meeting-duration {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+}
+
+.timezone-selector-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.timezone-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+}
+
+.timezone-dropdown-wrapper {
+  position: relative;
+}
+
+.timezone-trigger {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
+  backdrop-filter: blur(10px);
+  color: white;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timezone-trigger:hover {
+  background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.15) 100%);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.timezone-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.timezone-flag {
+  width: 16px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.timezone-text {
+  font-weight: 500;
+}
+
+.timezone-arrow {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  transition: transform 0.3s ease;
+}
+
+.timezone-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 9999;
+  margin-top: 4px;
+  background: linear-gradient(135deg, rgba(20,20,35,0.98) 0%, rgba(15,15,25,0.96) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  max-height: 200px;
+  overflow: hidden;
+  width: 300px;
+  min-width: 300px;
+}
+
+.timezone-search-wrapper {
+  padding: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timezone-search {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2d3436;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.timezone-search:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.timezone-options {
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.timezone-option {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.timezone-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.timezone-option-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timezone-option-flag {
+  width: 16px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.timezone-option-text {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timezone-option-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.timezone-option-offset {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.schedule-grid {
+  display: grid;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.schedule-grid h3 {
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: white;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.calendar-nav-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: white;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.calendar-nav-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calendar-day {
+  padding: 12px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-day:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.calendar-day.selected {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.calendar-day:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.calendar-day:disabled:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Rhythm theme cross-out styling for unavailable dates */
+.calendar-day--unavailable {
+  background: rgba(255, 255, 255, 0.05) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.calendar-day--unavailable::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%) rotate(-45deg);
+  opacity: 0.7;
+}
+
+.calendar-day--unavailable .day-number {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+
+
+.day-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.day-number {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: white;
+}
+
+.time-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.time-slot {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.time-slot:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.time-slot.selected {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Booking slide */
+.meeting-summary {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meeting-summary.compact {
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.summary-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.summary-item {
+  color: white;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.summary-item.duration {
+  margin-top: 6px;
+}
+
+.summary-item strong {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+}
+
+.booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group.compact {
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.form-group.compact:last-child {
+  margin-bottom: 0;
+}
+
+.form-group.compact label {
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.form-group.compact .form-input,
+.form-group.compact .form-textarea {
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.form-group.compact .form-textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.form-group label {
+  color: white;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.form-input,
+.form-textarea {
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 0.9rem;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.submit-button {
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Confirmation slide */
+.confirmation-slide {
+  text-align: center;
+  justify-content: center;
+}
+
+.success-icon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.confirmation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.confirmation-details p {
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+}
+
+.meeting-details {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.detail-item {
+  color: white;
+  font-size: 0.9rem;
+}
+
+.schedule-another-button {
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.schedule-another-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Slide actions */
+.slide-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+  padding-top: 10px;
+}
+
+.slide-actions.horizontal {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.slide-actions.horizontal .prev-button,
+.slide-actions.horizontal .submit-button {
+  flex: 1;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slide-actions.horizontal .submit-button {
+  font-size: 0.9rem;
+  min-width: 100px;
+}
+
+.prev-button,
+.next-button {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.prev-button:hover,
+.next-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.prev-button {
+  margin-right: auto;
+}
+
+.next-button {
+  margin-left: auto;
+}
+
+.next-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.next-button.disabled:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: none;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .scheduling-box {
+    width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+  
+  .slide {
+    padding: 20px;
+  }
+  
+  .slide-title {
+    font-size: 1.3rem;
+  }
+  
+  .calendar-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .time-slots-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .overview-slide .organizer-profile {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .organizer-info {
+    text-align: center;
+  }
+  
+  .avatar-image {
+    width: 70px;
+    height: 70px;
+  }
+
+  .schedule-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+
+  .timezone-selector {
+    align-self: stretch;
+  }
+
+  .calendar-grid {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+
+  .calendar-day {
+    padding: 8px 4px;
+  }
+
+  .day-name {
+    font-size: 0.6rem;
+  }
+
+  .day-number {
+    font-size: 0.8rem;
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" fill="#e5e7eb"/>
+  <circle cx="100" cy="80" r="30" fill="#9ca3af"/>
+  <path d="M 50 150 Q 100 120 150 150" fill="#9ca3af"/>
+  <text x="100" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#6b7280">Luka Breitig</text>
+</svg>

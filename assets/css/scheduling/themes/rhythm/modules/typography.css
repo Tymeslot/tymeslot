@@ -1,0 +1,76 @@
+/* Typography module for Rhythm theme */
+
+/* Responsive font sizes using clamp() for smooth scaling */
+.slide-title {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  line-height: 1.2;
+}
+
+.organizer-greeting {
+  font-size: clamp(1.125rem, 2vw, 1.25rem);
+  line-height: 1.3;
+}
+
+.organizer-instruction,
+.form-group label,
+.booking-detail-value {
+  font-size: clamp(0.875rem, 1.5vw, 1rem);
+  line-height: 1.5;
+}
+
+.timezone-label,
+.duration-description,
+.summary-label,
+.ticket-sublabel,
+.booking-detail-label {
+  font-size: clamp(0.7rem, 1.2vw, 0.875rem);
+  line-height: 1.4;
+}
+
+/* Responsive heading sizes */
+.confirmation-headline {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.1;
+}
+
+/* Input and textarea font sizes for better mobile usability */
+.form-input,
+.form-textarea {
+  font-size: max(16px, 1rem); /* Prevents zoom on iOS */
+}
+
+/* Time slot and small interactive elements */
+.time-slot,
+.timezone-trigger,
+.timezone-search,
+.timezone-option {
+  font-size: clamp(0.75rem, 1.3vw, 0.875rem);
+}
+
+/* Ensure minimum tap target sizes on mobile */
+@media (max-width: 767px) {
+  .duration-button,
+  .time-slot,
+  .calendar-day {
+    min-height: 44px; /* iOS minimum tap target */
+  }
+  
+  .timezone-trigger {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+}
+
+/* Better readability on large screens */
+@media (min-width: 1440px) {
+  .slide-content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .booking-form {
+    max-width: 500px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}

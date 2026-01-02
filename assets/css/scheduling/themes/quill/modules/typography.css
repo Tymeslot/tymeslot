@@ -1,0 +1,109 @@
+/* Typography module for Quill theme */
+
+/* Responsive font sizes using clamp() for smooth scaling */
+.section-header {
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  line-height: 1.2;
+}
+
+.glass-morphism-card h3,
+.meeting-details-card h3 {
+  font-size: clamp(1rem, 2vw, 1.125rem);
+  line-height: 1.3;
+}
+
+.form-field__label,
+.booking-detail-label {
+  font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+  line-height: 1.4;
+}
+
+.booking-detail-value,
+.action-button {
+  font-size: clamp(0.875rem, 1.5vw, 1rem);
+  line-height: 1.5;
+}
+
+.empty-state__message,
+.step-indicator__circle {
+  font-size: clamp(0.75rem, 1.3vw, 0.875rem);
+  line-height: 1.4;
+}
+
+.empty-state__secondary,
+.calendar-day__number {
+  font-size: clamp(0.7rem, 1.2vw, 0.875rem);
+  line-height: 1.3;
+}
+
+/* Input and textarea font sizes for better mobile usability */
+.form-field__input,
+.form-field textarea {
+  font-size: max(16px, 1rem); /* Prevents zoom on iOS */
+}
+
+/* Time slot and small interactive elements */
+.time-slot-button,
+.calendar-day {
+  font-size: clamp(0.7rem, 1.3vw, 0.875rem);
+}
+
+/* Responsive heading sizes */
+h1, .text-3xl {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.1;
+}
+
+h2, .text-2xl {
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  line-height: 1.2;
+}
+
+h3, .text-xl {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  line-height: 1.3;
+}
+
+/* Ensure minimum tap target sizes on mobile */
+@media (max-width: 767px) {
+  .action-button,
+  .btn-primary,
+  .btn-secondary,
+  .time-slot-button,
+  .calendar-day {
+    min-height: 44px; /* iOS minimum tap target */
+  }
+  
+  .form-field__input,
+  .form-field textarea {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+}
+
+/* Better readability on large screens */
+@media (min-width: 1440px) {
+  .glass-morphism-card {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .booking-container {
+    max-width: 600px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+
+/* Font weight utilities */
+.font-medium {
+  font-weight: 500;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.font-bold {
+  font-weight: 700;
+}

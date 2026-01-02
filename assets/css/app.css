@@ -1,0 +1,184 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* Import design tokens */
+@import "./base/variables.css";
+@import "./base/typography.css";
+@import "./base/base.css";
+
+/* Import layout utilities */
+@import "./layout/utilities.css";
+
+/* Import animations */
+@import "./animations/keyframes.css";
+@import "./animations/hero_preview.css";
+
+/* Import components */
+@import "./components.css";
+@import "./components/buttons.css";
+@import "./components/forms.css";
+@import "./components/cards.css";
+@import "./components/misc.css";
+@import "./components/dashboard.css";
+@import "./components/theme-customization.css";
+@import "./modal.css";
+
+/* Import glass morphism components */
+@import "./components/glass-morphism.css";
+
+/* Import auth-specific styles */
+@import "./auth/auth-video.css";
+@import "./auth/auth-buttons.css";
+
+/* Import reCAPTCHA styles */
+@import "./recaptcha.css";
+
+/* Hero booking demo styles (extracted from scheduling themes) */
+.scheduling-box {
+  background: linear-gradient(
+    135deg,
+    rgba(20, 20, 35, 0.7) 0%,
+    rgba(15, 15, 25, 0.6) 100%
+  );
+  backdrop-filter: blur(30px) saturate(150%);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.slide-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.slide {
+  display: none;
+  width: 100%;
+  padding: 20px;
+  animation: slideIn 0.4s ease-out;
+}
+
+.slide.active {
+  display: block;
+}
+
+.slide.inactive {
+  display: none;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: white;
+  overflow: hidden;
+}
+
+.slide-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+  color: white;
+}
+
+.overview-slide .organizer-profile {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 30px;
+  gap: 20px;
+}
+
+.organizer-avatar {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+}
+
+.avatar-checkmark {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 24px;
+  height: 24px;
+  background: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.duration-grid {
+  display: grid;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.duration-card {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.duration-card:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.duration-card.selected {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.7);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+}
+
+.duration-button {
+  width: 100%;
+  padding: 15px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-radius: 12px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}

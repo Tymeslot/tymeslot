@@ -1,0 +1,273 @@
+/* ===================================
+   CARD COMPONENTS
+   =================================== */
+
+/* Base Card - Glass Theme Enhanced */
+.card {
+  background: var(--color-glass-bg-card-enhanced);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  border: 1px solid var(--color-border-glass-light);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  box-shadow: var(--shadow-glass-card-enhanced);
+  transition: var(--transition-glass-smooth);
+  color: var(--color-text-glass-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle shine effect */
+.card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 70%
+  );
+  transform: rotate(45deg);
+  transition: all 0.6s;
+  opacity: 0;
+}
+
+.card:hover::before {
+  opacity: 1;
+  transform: rotate(45deg) translate(50%, 50%);
+}
+
+.card:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--color-primary-300);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.1),
+    0 0 16px var(--color-primary-100);
+}
+
+/* Card Variants */
+.card-compact {
+  padding: var(--spacing-4);
+}
+
+.card-spacious {
+  padding: var(--spacing-8);
+}
+
+/* Enhanced Glass Morphism Card */
+.card-glass {
+  background: var(--color-glass-bg-light);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  border: 1px solid var(--color-border-glass-light);
+  border-radius: 16px;
+  padding: var(--spacing-6);
+  box-shadow: var(--shadow-glass-card);
+  color: var(--color-text-glass-primary);
+  transition: var(--transition-glass);
+}
+
+.card-glass:hover {
+  background: var(--color-glass-bg-light);
+  border-color: var(--color-border-glass-light);
+  transform: none;
+  box-shadow: var(--shadow-glass-card);
+}
+
+/* Auth Glass Card */
+.auth-glass-card {
+  background: var(--color-glass-bg-light);
+  backdrop-filter: var(--glass-blur-strong);
+  border-radius: 16px;
+  box-shadow: var(--shadow-glass-card);
+  border: 1px solid var(--color-border-glass-light);
+  padding: 30px;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.auth-glass-card:hover {
+  background: var(--color-glass-bg-light);
+  border-color: var(--color-border-glass-light);
+  transform: none;
+  box-shadow: var(--shadow-glass-card);
+}
+
+/* Flash Message Cards */
+.flash-card {
+  background: var(--color-glass-bg-medium);
+  backdrop-filter: var(--glass-blur-light);
+  border: 2px solid var(--color-border-glass-dark);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  color: var(--color-text-glass-primary);
+  box-shadow: var(--shadow-glass-md);
+  font-weight: 600;
+}
+
+.flash-card.flash-info {
+  border-color: rgba(59, 130, 246, 0.6);
+  background: rgba(200, 220, 255, 0.3);
+}
+
+.flash-card.flash-error {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(255, 200, 200, 0.3);
+}
+
+.flash-card.flash-success {
+  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(200, 255, 220, 0.3);
+}
+
+/* Selected State Glass Gradient */
+.glass-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(20, 184, 166, 0.15) 0%,
+    rgba(13, 148, 136, 0.1) 100%
+  ) !important;
+  border-color: var(--color-primary-500) !important;
+  position: relative;
+  /* Ensure box sizing doesn't change */
+  box-sizing: border-box !important;
+}
+
+/* Ensure icon sizing remains consistent */
+[class*="hero-"] {
+  display: inline-block !important;
+  flex-shrink: 0;
+}
+
+.glass-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(20, 184, 166, 0.1) 0%,
+    transparent 50%,
+    rgba(13, 148, 136, 0.05) 100%
+  );
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Availability Day Cards */
+.card-glass-available {
+  /* Ensure border is visible for available cards */
+  border-color: var(--color-border-glass-dark);
+}
+
+
+.card-glass-unavailable {
+  background: rgba(107, 114, 128, 0.25);
+  border-color: rgba(156, 163, 175, 0.5);
+  opacity: 0.7;
+  transition: var(--transition-glass);
+  position: relative;
+}
+
+.card-glass-unavailable::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, 
+    rgba(107, 114, 128, 0.1) 0%, 
+    rgba(75, 85, 99, 0.05) 100%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.card-glass-primary {
+  /* Primary calendar with enhanced turquoise styling */
+  border-color: var(--color-turquoise-400);
+  background: linear-gradient(135deg, 
+    rgba(var(--color-turquoise-50-rgb), 0.15), 
+    rgba(var(--color-turquoise-100-rgb), 0.10));
+  box-shadow: 0 0 20px rgba(var(--color-turquoise-500-rgb), 0.25), 
+              var(--shadow-glass-md);
+}
+
+
+.card-glass-calendar-secondary {
+  /* Matches the standard available card border style */
+  border-color: var(--color-border-glass-dark);
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.04), 
+    rgba(255, 255, 255, 0.02));
+  box-shadow: var(--shadow-glass-card);
+}
+
+
+
+.card-glass-unavailable h3,
+.card-glass-unavailable span,
+.card-glass-unavailable label {
+  color: rgba(107, 114, 128, 0.8) !important;
+}
+
+/* Keep toggle button visible and clickable on unavailable days */
+.card-glass-unavailable button[role="switch"] {
+  opacity: 1 !important;
+}
+
+.card-glass-unavailable button[role="switch"] span {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Make unavailable text turquoise */
+.card-glass-unavailable .availability-status {
+  color: var(--color-primary-600) !important;
+  font-weight: 600 !important;
+}
+
+/* Password Requirements Card */
+.password-requirements-card {
+  background: var(--color-glass-bg-overlay);
+  backdrop-filter: var(--glass-blur-light);
+  border: 2px solid var(--color-border-glass-dark);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.password-requirements-card p {
+  color: var(--color-text-glass-primary);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.password-requirements-card ul li {
+  color: var(--color-text-glass-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.password-requirements-card ul li svg {
+  color: var(--color-text-glass-primary);
+}
+
+/* Disabled Glass Card for Social Login */
+.card-glass-disabled {
+  background: rgba(156, 163, 175, 0.1);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  border: 1px solid rgba(156, 163, 175, 0.3);
+  border-radius: 16px;
+  padding: var(--spacing-6);
+  box-shadow: var(--shadow-glass-card);
+  color: var(--color-text-glass-primary);
+  transition: var(--transition-glass);
+}

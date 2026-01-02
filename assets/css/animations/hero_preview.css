@@ -1,0 +1,158 @@
+/* 
+ * Hero Preview Animations - Quill Re-interpretation
+ * Optimized for smooth, professional step-by-step demonstration
+ */
+
+:root {
+  --quill-cyan: #06b6d4;
+  --quill-teal: #14b8a6;
+  --quill-glass-bg: rgba(15, 23, 42, 0.6);
+  --quill-glass-border: rgba(255, 255, 255, 0.15);
+  --quill-glass-blur: 24px;
+}
+
+@keyframes step-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes step-highlight {
+  0% { 
+    transform: scale(1); 
+    border-color: var(--quill-glass-border);
+  }
+  100% { 
+    transform: scale(1); 
+    border-color: var(--quill-cyan);
+    background: rgba(6, 182, 212, 0.08);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+  }
+}
+
+@keyframes step-exit {
+  from { opacity: 1; }
+  to { opacity: 0; pointer-events: none; }
+}
+
+@keyframes typing-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes text-reveal {
+  from { 
+    width: 0; 
+    opacity: 0;
+  }
+  to { 
+    width: 100%; 
+    opacity: 1;
+  }
+}
+
+.hero-preview [data-preview-anim="step"] {
+  animation: step-fade-in 0.6s ease-out forwards;
+  animation-delay: var(--preview-delay, 0s);
+  opacity: 0;
+}
+
+.hero-preview [data-preview-anim="click"] {
+  animation: step-highlight 0.4s ease-out forwards;
+  animation-delay: var(--preview-delay, 0s);
+}
+
+.hero-preview [data-preview-anim="step-with-exit"] {
+  animation-name: step-fade-in, step-exit;
+  animation-duration: 0.6s, 0.4s;
+  animation-fill-mode: forwards, forwards;
+  animation-delay: var(--preview-delay, 0s), var(--preview-exit-delay, 5s);
+  animation-timing-function: ease-out, ease-in;
+  opacity: 0;
+}
+
+.hero-preview [data-preview-anim="typing"] {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: text-reveal var(--typing-duration, 1s) steps(30, end) forwards;
+  animation-delay: var(--preview-delay, 0s);
+  width: 0;
+}
+
+.hero-preview [data-preview-anim="typing"]::after {
+  content: '|';
+  animation: typing-cursor 0.7s infinite;
+  animation-delay: var(--preview-delay, 0s);
+}
+
+.hero-preview .step-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-preview .booking-step-wrapper {
+  position: absolute;
+  inset: 0;
+  padding: 2rem; /* Consistent internal margin */
+}
+
+@media (min-width: 640px) {
+  .hero-preview .booking-step-wrapper {
+    padding: 2.5rem;
+  }
+}
+
+/* Quill-inspired Glass Components for Preview */
+.hero-preview .quill-glass-card {
+  background: var(--quill-glass-bg);
+  backdrop-filter: blur(var(--quill-glass-blur));
+  -webkit-backdrop-filter: blur(var(--quill-glass-blur));
+  border: 1px solid var(--quill-glass-border);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.hero-preview .quill-accent-text {
+  color: var(--quill-cyan);
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+}
+
+.hero-preview .quill-button-primary {
+  background: linear-gradient(135deg, var(--quill-cyan) 0%, var(--quill-teal) 100%);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+  transition: all 0.3s ease;
+}
+
+.hero-preview .quill-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--quill-cyan);
+  box-shadow: 0 0 12px var(--quill-cyan);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.95); }
+}
+
+/* Success animation */
+@keyframes success-bounce {
+  0% { transform: scale(0) rotate(-10deg); }
+  50% { transform: scale(1.1) rotate(5deg); }
+  100% { transform: scale(1) rotate(3deg); }
+}
+
+.hero-preview .success-icon {
+  animation: success-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}

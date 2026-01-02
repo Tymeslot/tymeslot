@@ -1,0 +1,168 @@
+/* ===================================
+   MISCELLANEOUS COMPONENTS
+   =================================== */
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-none);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.badge-primary {
+  background: rgba(64, 224, 208, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(64, 224, 208, 0.3);
+  color: var(--color-primary-600);
+  text-shadow: none;
+}
+
+.badge-success {
+  background: rgba(16, 185, 129, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.badge-error {
+  background: rgba(239, 68, 68, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: var(--spacing-8) 0;
+}
+
+/* Link Styles */
+.link {
+  color: var(--color-primary-600);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  text-shadow: none;
+}
+
+.link:hover {
+  color: var(--color-primary-700);
+  text-decoration: underline;
+  text-shadow: none;
+}
+
+.link:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Hero Section Styles */
+.hero-gradient-bg {
+  background: linear-gradient(135deg, 
+    var(--color-primary-400) 0%, 
+    var(--color-primary-600) 50%, 
+    var(--color-primary-500) 100%);
+  box-shadow: 
+    0 20px 40px rgba(20, 184, 166, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.hero-bg-pattern {
+  background-image: 
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 40% 60%, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px, 30px 30px, 70px 70px;
+  animation: patternFloat 20s linear infinite;
+}
+
+.fullscreen-booking-container {
+  animation: fadeInScale 1s ease-out;
+}
+
+
+/* Floating decorative elements */
+.floating-elements {
+  pointer-events: none;
+}
+
+.floating-element {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  backdrop-filter: blur(10px);
+}
+
+.floating-element-1 {
+  width: 80px;
+  height: 80px;
+  top: 15%;
+  left: 10%;
+  animation: floatSlow 12s ease-in-out infinite;
+}
+
+.floating-element-2 {
+  width: 120px;
+  height: 120px;
+  top: 60%;
+  right: 15%;
+  animation: floatSlow 16s ease-in-out infinite reverse;
+}
+
+.floating-element-3 {
+  width: 60px;
+  height: 60px;
+  bottom: 20%;
+  left: 20%;
+  animation: floatSlow 10s ease-in-out infinite;
+}
+
+/* Hover Effects */
+.hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.1),
+    0 0 16px rgba(64, 224, 208, 0.1);
+}
+
+.hover-grow {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-grow:hover {
+  transform: scale(1.05);
+}
+
+/* Homepage Section Spacing */
+.glass-content {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(64, 224, 208, 0.1);
+  border-bottom: 1px solid rgba(64, 224, 208, 0.1);
+}

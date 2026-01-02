@@ -1,0 +1,95 @@
+/* Authentication Video Background Styles */
+/* Extracted from base.css for better organization */
+
+/* Main video background container */
+.video-background-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  z-index: -10;
+}
+
+/* Video element styling */
+.video-background-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+  opacity: 1;
+  transition: opacity 0.8s ease-in-out;
+}
+
+/* Crossfade video states for seamless transitions */
+.video-background-video.active {
+  opacity: 1;
+  z-index: 1;
+}
+
+.video-background-video.inactive {
+  opacity: 0;
+  z-index: 2;
+}
+
+.video-background-video.crossfade-in {
+  opacity: 1;
+  z-index: 2;
+}
+
+/* Accessibility: Hide video for users with reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .video-background-video {
+    display: none;
+  }
+}
+
+/* Performance: Hide video on slow connections */
+@media (max-width: 768px) and (prefers-reduced-data: reduce) {
+  .video-background-video {
+    display: none;
+  }
+}
+
+/* Mobile optimization */
+@media (max-width: 480px) {
+  .video-background-video {
+    will-change: transform;
+  }
+}
+
+/* Fallback gradient when video is not available */
+.video-background-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--glass-gradient-fallback);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.video-background-container.fallback::before {
+  opacity: 1;
+}
+
+/* Auth-specific video overlay for better text readability */
+.video-background-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: -1;
+}

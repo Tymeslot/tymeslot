@@ -1,0 +1,589 @@
+/* Glass Morphism Card - Global enhanced for glass theme */
+.glass-morphism-card {
+  background: var(--color-glass-bg-light);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  border-radius: 1.5rem;
+  border: 1px solid var(--color-border-glass-light);
+  box-shadow: var(--shadow-glass-lg);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-text-glass-primary);
+}
+
+@media (min-width: 768px) {
+  .glass-morphism-card {
+    border-radius: 2rem;
+  }
+}
+
+/* Meeting Details Card */
+.meeting-details-card {
+  background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  border: none;
+}
+
+@media (min-width: 640px) {
+  .meeting-details-card {
+    padding: 1rem;
+  }
+}
+
+/* Action Buttons - Glass Theme Enhanced */
+.action-button {
+  @apply px-6 py-3 rounded-xl font-semibold text-white transition-all duration-300 transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2;
+  backdrop-filter: var(--glass-blur-light);
+  box-shadow: var(--shadow-glass-button);
+}
+
+.action-button:hover:not(:disabled) {
+  @apply scale-105;
+}
+
+.action-button--primary {
+  background: var(--glass-gradient-primary);
+  box-shadow: var(--shadow-glass-button);
+  border: 2px solid var(--color-border-glass-dark-strong);
+}
+
+.action-button--primary:hover:not(:disabled) {
+  background: var(--glass-gradient-secondary);
+  box-shadow: var(--shadow-glass-lg);
+  transform: translateY(-2px) scale(1.05);
+}
+
+.action-button--secondary {
+  background: var(--color-glass-bg-medium);
+  box-shadow: var(--shadow-glass-sm);
+  border: 2px solid var(--color-border-glass-dark-medium);
+  color: var(--color-text-glass-primary);
+}
+
+.action-button--secondary:hover:not(:disabled) {
+  background: var(--color-glass-bg-strong);
+  box-shadow: var(--shadow-glass-md);
+  border-color: var(--color-border-glass-dark-strong);
+  transform: translateY(-1px) scale(1.05);
+}
+
+.action-button--danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+}
+
+.action-button--danger:hover:not(:disabled) {
+  box-shadow: 0 6px 30px rgba(239, 68, 68, 0.4);
+}
+
+/* Loading Spinner */
+.spinner {
+  @apply animate-spin h-5 w-5;
+}
+
+/* Field Error */
+.field-error {
+  @apply text-red-600 text-sm mt-1;
+}
+
+
+/* Time Slot Button - Glass Theme */
+.time-slot-button {
+  @apply px-3 py-1.5 rounded-md border font-medium transition-all duration-200 hover:scale-105 text-white text-xs;
+  border-color: var(--color-border-glass-light);
+  background: var(--color-glass-bg-medium);
+  backdrop-filter: var(--glass-blur-light);
+}
+
+@media (min-width: 768px) {
+  .time-slot-button {
+    @apply px-4 py-2 text-sm;
+  }
+}
+
+.time-slot-button:hover {
+  border-color: var(--color-border-glass-strong);
+  background: var(--color-glass-bg-strong);
+}
+
+.time-slot-button--selected {
+  @apply text-white;
+  background: var(--glass-gradient-primary);
+  border: 2px solid white;
+  box-shadow: var(--shadow-glass-button);
+  backdrop-filter: var(--glass-blur-light);
+}
+
+/* Calendar Day */
+.calendar-day {
+  @apply w-full flex items-center justify-center rounded-md transition-all duration-200 relative font-semibold;
+  padding: 0.375rem;
+  min-height: 2.5rem;
+  font-size: 0.875rem; /* 14px */
+}
+
+/* Slightly smaller for limited height */
+@media (max-height: 800px) {
+  .calendar-day {
+    min-height: 2rem;
+    padding: 0.25rem;
+    font-size: 0.75rem; /* 12px */
+  }
+}
+
+@media (min-width: 1024px) {
+  .calendar-day {
+    min-height: 2.75rem;
+    padding: 0.5rem;
+  }
+}
+
+.calendar-day__number {
+  font-size: inherit;
+}
+
+/* Available days - clear visual indication */
+.calendar-day--available:not(:disabled):not(.calendar-day--selected) {
+  @apply cursor-pointer hover:scale-105;
+  background: var(--color-glass-bg-medium);
+  color: white;
+  backdrop-filter: var(--glass-blur-light);
+}
+
+.calendar-day--available:not(:disabled):not(.calendar-day--selected):hover {
+  background: var(--color-glass-bg-strong);
+}
+
+/* Selected day */
+.calendar-day--selected {
+  background: var(--glass-gradient-primary);
+  color: white;
+  box-shadow: var(--shadow-glass-button);
+  @apply scale-105;
+  backdrop-filter: var(--glass-blur-light);
+}
+
+.calendar-day--selected:hover {
+  box-shadow: var(--shadow-glass-lg);
+}
+
+/* Unavailable days */
+.calendar-day--unavailable {
+  @apply cursor-not-allowed opacity-30;
+  background: var(--color-glass-bg-overlay);
+  color: rgba(255,255,255,0.3);
+}
+
+/* Past days */
+.calendar-day--unavailable.calendar-day--past {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.2);
+}
+
+/* Other month days */
+.calendar-day--other-month {
+  @apply opacity-50;
+}
+
+.calendar-day--other-month.calendar-day--available {
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.8);
+}
+
+/* Today indicator */
+.calendar-day--today {
+  @apply ring-1 ring-white ring-offset-1 ring-offset-transparent;
+}
+
+.calendar-day--today:not(.calendar-day--selected) {
+  @apply font-bold;
+}
+
+
+/* Form Field - Glass Theme */
+.form-field {
+  @apply mb-3;
+}
+
+.form-field__label {
+  @apply block text-sm font-bold mb-0.5;
+  color: var(--color-text-glass-primary);
+  margin-bottom: 8px;
+}
+
+.form-field__input {
+  @apply w-full px-3 py-2 rounded-lg border-0 transition-all duration-200;
+  background: var(--color-glass-bg-card);
+  color: var(--color-text-glass-primary);
+  backdrop-filter: var(--glass-blur-light);
+  border: 2px solid var(--color-border-glass-dark-medium);
+  font-weight: 600;
+}
+
+.form-field__input:focus {
+  outline: none;
+  border-color: var(--color-border-glass-dark-strong);
+  background: var(--color-glass-bg-strong);
+  box-shadow: 0 4px 16px var(--color-glass-dark-light);
+}
+
+.form-field__input--error {
+  border-color: #ef4444;
+  background-color: rgba(254, 242, 242, 0.8);
+}
+
+.form-field__input--error:focus {
+  outline: none;
+  border-color: #ef4444;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .action-button {
+    @apply px-4 py-2 text-sm;
+  }
+  
+  .step-indicator__connector {
+    @apply w-8;
+  }
+  
+  .time-slot-button {
+    @apply px-3 py-2 text-sm;
+  }
+}
+
+/* Modern scrollbar styling - Targeted to body and main scrollable areas */
+body::-webkit-scrollbar,
+.scrollable::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body::-webkit-scrollbar-track,
+.scrollable::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  margin: 4px;
+}
+
+body::-webkit-scrollbar-thumb,
+.scrollable::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.5), rgba(247, 37, 133, 0.5));
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+body::-webkit-scrollbar-thumb:hover,
+.scrollable::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.7), rgba(247, 37, 133, 0.7));
+}
+
+/* Firefox scrollbar styling - Targeted to body and main scrollable areas */
+body,
+.scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.5) rgba(255, 255, 255, 0.4);
+}
+
+/* Onboarding Progress Indicator */
+.progress-indicator {
+  margin-bottom: 2rem;
+}
+
+.progress-indicator-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+}
+
+.progress-step-circle {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 2px solid;
+  transition: var(--transition-glass);
+}
+
+.progress-step-circle--completed {
+  background: var(--color-glass-dark-strong);
+  border-color: var(--color-glass-dark-strong);
+  color: white;
+}
+
+.progress-step-circle--active {
+  background: rgba(107, 114, 128, 0.2);
+  border-color: #4b5563;
+  color: var(--color-text-glass-primary);
+}
+
+.progress-step-circle--inactive {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #9ca3af;
+  color: #6b7280;
+}
+
+.progress-step-connector {
+  width: 3rem;
+  height: 2px;
+  transition: var(--transition-glass);
+}
+
+.progress-step-connector--completed {
+  background: var(--color-glass-dark-strong);
+}
+
+.progress-step-connector--inactive {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+/* Onboarding Step Containers */
+.onboarding-step {
+  text-align: center;
+  color: var(--color-text-glass-primary);
+}
+
+.onboarding-welcome-icon {
+  width: 5rem;
+  height: 5rem;
+  background: rgba(31, 41, 55, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.onboarding-feature-icon {
+  width: 2rem;
+  height: 2rem;
+  background: rgba(31, 41, 55, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+.onboarding-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: left;
+}
+
+.onboarding-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.onboarding-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--color-text-glass-primary);
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-400) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.onboarding-subtitle {
+  color: var(--color-text-glass-secondary);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.onboarding-step-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-glass-primary);
+  margin-bottom: 0.5rem;
+}
+
+.onboarding-step-description {
+  color: var(--color-text-glass-secondary);
+  font-weight: 600;
+}
+
+.onboarding-feature-title {
+  font-weight: 600;
+  color: var(--color-text-glass-primary);
+}
+
+.onboarding-feature-description {
+  color: var(--color-text-glass-secondary);
+  font-weight: 500;
+}
+
+
+/* Onboarding Modal - Legacy (keeping for backwards compatibility) */
+.onboarding-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow-y: auto;
+}
+
+.onboarding-modal-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.onboarding-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.onboarding-modal-content {
+  position: relative;
+  max-width: 28rem;
+  width: 100%;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.onboarding-modal-icon {
+  width: 3rem;
+  height: 3rem;
+  background: rgba(245, 158, 11, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.onboarding-modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text-glass-primary);
+  margin-bottom: 0.5rem;
+}
+
+.onboarding-modal-message {
+  color: var(--color-text-glass-secondary);
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.onboarding-modal-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Provider Selection Buttons */
+.provider-select-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.provider-select-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.provider-select-button:hover::before {
+  left: 100%;
+}
+
+/* Onboarding Form Styling */
+.onboarding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.onboarding-form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.onboarding-form-label {
+  color: var(--color-text-glass-primary);
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+.onboarding-form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--color-border-glass-dark-medium);
+  border-radius: 8px;
+  background: var(--color-glass-bg-medium);
+  backdrop-filter: var(--glass-blur-light);
+  color: var(--color-text-glass-primary);
+  font-weight: 600;
+  transition: var(--transition-glass);
+  min-height: 2.5rem;
+}
+
+.onboarding-form-input::placeholder {
+  color: var(--color-text-glass-light);
+  font-weight: 500;
+}
+
+.onboarding-form-input:focus {
+  outline: none;
+  border-color: var(--color-border-glass-dark-strong);
+  background: var(--color-glass-bg-strong);
+  box-shadow: 0 4px 16px var(--color-glass-dark-light);
+}
+
+.onboarding-form-input:hover {
+  border-color: var(--color-border-glass-dark-strong);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.onboarding-form-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--color-border-glass-dark-medium);
+  border-radius: 8px;
+  background: var(--color-glass-bg-medium);
+  backdrop-filter: var(--glass-blur-light);
+  color: var(--color-text-glass-primary);
+  font-weight: 600;
+  transition: var(--transition-glass);
+  min-height: 2.5rem;
+}
+
+.onboarding-form-select:focus {
+  outline: none;
+  border-color: var(--color-border-glass-dark-strong);
+  background: var(--color-glass-bg-strong);
+  box-shadow: 0 4px 16px var(--color-glass-dark-light);
+}
+
+@media (min-width: 640px) {
+  .onboarding-form-input,
+  .onboarding-form-select {
+    min-height: 2.75rem;
+  }
+}

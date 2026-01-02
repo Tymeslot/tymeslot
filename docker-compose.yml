@@ -1,0 +1,70 @@
+# Tymeslot Docker Compose Configuration
+#
+# IMPORTANT: Create a .env file from .env.example before starting:
+#   cp .env.example .env
+#
+# Then generate required secrets:
+#   openssl rand -base64 64 | tr -d '\n'
+#
+# Fill in the required values in .env, then run:
+#   docker-compose up -d
+
+services:
+  tymeslot:
+    build:
+      context: .
+      dockerfile: Dockerfile.docker
+    image: tymeslot:latest
+    container_name: tymeslot
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      # Required environment variables (MUST be set in .env file)
+      DEPLOYMENT_TYPE: docker
+      PHX_HOST: ${PHX_HOST}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      LIVE_VIEW_SIGNING_SALT: ${LIVE_VIEW_SIGNING_SALT}
+      SESSION_SIGNING_SALT: ${SESSION_SIGNING_SALT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      
+      # Optional configurations
+      PORT: ${PORT:-4000}
+      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
+      
+      # Email configuration (optional)
+      EMAIL_ADAPTER: ${EMAIL_ADAPTER:-test}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Tymeslot}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-hello@localhost}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      POSTMARK_API_KEY: ${POSTMARK_API_KEY:-}
+      
+      # OAuth providers (optional)
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    volumes:
+      - tymeslot_data:/app/data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  tymeslot_data:
+    driver: local
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: tymeslot_network

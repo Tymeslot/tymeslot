@@ -1,0 +1,136 @@
+# Version control
+.git/
+.gitignore
+
+# Elixir/Phoenix artifacts
+_build/
+deps/
+.fetch
+.elixir_ls/
+.dialyzer/
+*.beam
+erl_crash.dump
+*.ez
+
+# Dialyzer PLT files
+/priv/plts/
+*.plt
+*.plt.hash
+
+# Mix artifacts
+mix.lock.backup
+tymeslot-*.tar
+
+# Test files and coverage
+test/
+cover/
+.coverdata
+/screenshots/
+/test/reports/
+
+# Documentation
+doc/
+README.md
+*.md
+docs/
+
+# Configuration files (use runtime config in production)
+config/dev.exs
+config/test.exs
+
+# Environment and secrets
+.env
+.env.*
+env.sh
+cloudron_env_set
+*.secret.exs
+
+# Assets and node modules (should be built during docker build)
+/assets/node_modules/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# Static assets (will be built during docker build)
+/priv/static/assets/
+/priv/static/cache_manifest.json
+
+# Development and debug scripts
+debug_*.exs
+test_*.exs
+check_*.exs
+fetch_*.exs
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.atom/
+*.sublime-*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+.Spotlight-V100
+.Trashes
+Desktop.ini
+$RECYCLE.BIN/
+.directory
+.Trash-*
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Logs
+*.log
+logs/
+/tmp/
+
+# SSL certificates (should be mounted as volumes)
+*.pem
+*.key
+*.crt
+/priv/cert/
+
+# Docker files (avoid recursive copies)
+docker-compose*
+.dockerignore*
+Dockerfile*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Other unnecessary files
+*.dump
+*.tar
+*.zip
+*.gz
+LICENSE
+CHANGELOG*
+
+# User uploads and data
+/data/
+/uploads/
+
+# Cloudron-specific files (exclude from Docker deployment)
+CloudronManifest.json
+start.sh
+README-Cloudron.md

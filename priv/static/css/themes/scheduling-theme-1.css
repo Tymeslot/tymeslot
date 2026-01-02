@@ -1,0 +1,582 @@
+/* Theme 1 - Quill (Glassmorphism) */
+/* Extracted from app.css for scheduling pages */
+
+/* Default theme variables - can be overridden by custom themes */
+:root {
+  --theme-background: linear-gradient(135deg, #1a1b3a 0%, #2d1b69 100%);
+  --theme-background-image: none;
+}
+
+/* Main gradient background */
+.main-gradient {
+  background: var(--theme-background);
+  background-attachment: fixed;
+  min-width: 100%;
+  width: 100%;
+  position: relative;
+}
+
+/* Apply custom background image if set */
+.main-gradient::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: var(--theme-background-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.7;
+  z-index: -1;
+}
+
+/* Glass Morphism Card */
+.glass-morphism-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255,255,255,0.3);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Prevent content overflow within glass cards */
+.glass-morphism-card > div {
+  box-sizing: border-box;
+}
+
+/* Only constrain on larger screens */
+@media (min-width: 768px) {
+  .glass-morphism-card > div {
+    overflow: hidden;
+    max-height: 100%;
+  }
+}
+
+/* Calendar responsive sizing - prevent overflow */
+.calendar-slots-container {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Only constrain height on larger screens */
+@media (min-width: 768px) {
+  .calendar-slots-container {
+    max-height: calc(100vh - 360px);
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 1024px) {
+  .calendar-slots-container {
+    flex-direction: row;
+    max-height: calc(100vh - 380px);
+  }
+}
+
+/* Calendar grid proper sizing */
+.grid.grid-cols-7 {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.grid.grid-cols-7 > * {
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Calendar section sizing */
+.calendar-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Only constrain on larger screens */
+@media (min-width: 768px) {
+  .calendar-section {
+    min-height: 0;
+    overflow: hidden;
+    max-height: 100%;
+  }
+}
+
+/* Calendar grid container - constrain the actual calendar */
+.calendar-grid-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Only constrain on larger screens */
+@media (min-width: 768px) {
+  .calendar-grid-container {
+    min-height: 0;
+    overflow: hidden;
+    max-height: 100%;
+  }
+  
+  /* Make the calendar grid itself scrollable if needed (last resort) */
+  .calendar-grid-container .grid.grid-cols-7:last-child {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    max-height: 100%;
+  }
+}
+
+/* Time slots panel sizing */
+.time-slots-panel {
+  flex: 1;
+  margin-top: 0.5rem;
+}
+
+/* Only constrain on larger screens */
+@media (min-width: 768px) {
+  .time-slots-panel {
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 1024px) {
+  .time-slots-panel {
+    margin-top: 0;
+  }
+}
+
+/* Calendar day buttons responsive sizing - override components.css */
+.calendar-day {
+  width: 100% !important;
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.75rem !important;
+  box-sizing: border-box !important;
+  padding: 0.25rem !important;
+}
+
+/* Calendar day color overrides for theme1 - make text white instead of black */
+.calendar-day--available:not(:disabled):not(.calendar-day--selected) {
+  color: white !important;
+}
+
+.calendar-day--other-month.calendar-day--available {
+  color: rgba(255,255,255,0.8) !important;
+}
+
+/* Ensure all calendar day states have white text */
+.calendar-day {
+  color: white !important;
+}
+
+.calendar-day--unavailable {
+  color: rgba(255,255,255,0.3) !important;
+}
+
+.calendar-day--today:not(.calendar-day--selected) {
+  color: white !important;
+}
+
+
+@media (min-width: 640px) {
+  .calendar-day {
+    height: 2rem !important;
+    min-height: 2rem !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .calendar-day {
+    height: 2.25rem !important;
+    min-height: 2.25rem !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .calendar-day {
+    height: 2.5rem !important;
+    min-height: 2.5rem !important;
+    font-size: 1rem !important;
+  }
+}
+
+/* Override max-height media query from components.css */
+@media (max-height: 800px) {
+  .calendar-day {
+    height: 1.5rem !important;
+    min-height: 1.5rem !important;
+    padding: 0.125rem !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .glass-morphism-card {
+    border-radius: 2rem;
+  }
+}
+
+/* Legacy card-glass for backward compatibility */
+.card-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* Footer styling */
+.footer-gradient {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  background: linear-gradient(90deg, #1a1b3a 0%, #2d1b69 50%, #1f1246 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Container sizing - flexible and responsive */
+.container {
+  width: 100%;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 1536px;
+  }
+}
+
+/* Mobile-specific fixes for booking flow */
+@media (max-width: 640px) {
+  /* Adjust glassmorphism padding on mobile */
+  div[style*="backdrop-filter"] > div {
+    padding: 1rem !important;
+  }
+}
+
+/* Ensure booking forms are scrollable on short screens */
+.booking-container {
+  overflow-y: auto;
+  flex: 1;
+}
+
+@media (max-height: 600px) {
+  .booking-container {
+    max-height: calc(100vh - 6rem);
+  }
+}
+
+/* Slots box - responsive height */
+.slots-box {
+  overflow-x: hidden;
+  height: 100%;
+}
+
+/* No scrollbars on mobile - let page scroll naturally */
+@media (max-width: 767px) {
+  .slots-box {
+    overflow-y: visible;
+    height: auto;
+    max-height: none;
+  }
+}
+
+/* Constrain with scrollbars on larger screens */
+@media (min-width: 768px) {
+  .slots-box {
+    overflow-y: auto;
+    min-height: 150px;
+    max-height: calc(100vh - 450px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .slots-box {
+    max-height: calc(100vh - 500px);
+    min-height: 200px;
+  }
+}
+
+
+/* Calendar and slots grid responsive layout */
+.calendar-slots-grid {
+  display: block;
+}
+
+.calendar-slots-grid > div {
+  margin-bottom: 1.5rem;
+}
+
+/* Large screens - side by side layout */
+@media (min-width: 1024px) {
+  .calendar-slots-grid.lg\:grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+    margin: 0 auto;
+    max-width: 100%;
+  }
+  
+  .calendar-slots-grid > div {
+    margin-bottom: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .calendar-slots-grid.lg\:grid {
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .calendar-slots-grid.lg\:grid {
+    gap: 2rem;
+  }
+}
+
+/* Responsive adjustments for short screens */
+@media (max-height: 700px) {
+  .py-8 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  .py-12 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+  .p-8 {
+    padding: 1rem !important;
+  }
+  .p-12 {
+    padding: 1.5rem !important;
+  }
+  .max-h-96 {
+    max-height: 16rem !important;
+  }
+  
+  /* Make form more compact on short screens */
+  .space-y-4 > * + * {
+    margin-top: 0.75rem !important;
+  }
+  
+  .space-y-6 > * + * {
+    margin-top: 1rem !important;
+  }
+  
+  /* Reduce margins */
+  .mb-4 {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .mb-6 {
+    margin-bottom: 1rem !important;
+  }
+  
+  .mb-8 {
+    margin-bottom: 1.5rem !important;
+  }
+}
+
+/* Extra compact for very short screens */
+@media (max-height: 600px) {
+  .py-4 {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+  
+  .p-4 {
+    padding: 0.75rem !important;
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 0.5rem !important;
+  }
+  
+  .mb-3 {
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .mb-4 {
+    margin-bottom: 0.5rem !important;
+  }
+}
+
+/* Mobile-specific fixes for booking flow */
+@media (max-width: 640px) {
+  /* Fix body overflow on mobile */
+  body {
+    overflow-x: hidden;
+    position: relative;
+  }
+  
+  /* Ensure footer stays at bottom without extra space */
+  .min-h-screen {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Fix step indicator spacing on mobile */
+  .step-indicator {
+    padding: 0 0.5rem;
+  }
+  
+  /* Fix button group spacing */
+  .flex.gap-2 {
+    gap: 0.5rem;
+  }
+  
+  /* Ensure forms don't overflow */
+  form {
+    max-width: 100%;
+  }
+  
+  /* Fix timezone dropdown on mobile */
+  .relative .absolute {
+    max-width: calc(100vw - 2rem);
+  }
+}
+
+/* Prevent calendar and content overflow */
+.max-h-96 {
+  max-height: 24rem;
+}
+
+/* Max width utilities - responsive overrides */
+.max-w-5xl {
+  max-width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .max-w-5xl {
+    max-width: 64rem; /* 1024px */
+  }
+}
+
+/* Form field styling for glassmorphism theme - Override global styles */
+.form-field__label {
+  display: block !important;
+  margin-bottom: 0.5rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+.form-field__input {
+  width: 100% !important;
+  padding: 0.75rem 1rem !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  border-radius: 0.75rem !important;
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+  color: white !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+.form-field__input:focus {
+  outline: none !important;
+  border-color: rgba(147,51,234,0.6) !important;
+  background: rgba(255,255,255,0.12) !important;
+  box-shadow: 0 0 0 3px rgba(147,51,234,0.15), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+}
+
+.form-field__input::placeholder {
+  color: rgba(255,255,255,0.5) !important;
+}
+
+.form-field__input--error {
+  border-color: rgba(239,68,68,0.6) !important;
+  background: rgba(254,226,226,0.08) !important;
+}
+
+.form-field__input--error:focus {
+  border-color: rgba(239,68,68,0.8) !important;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.15), 0 4px 12px rgba(0,0,0,0.2) !important;
+}
+
+/* Textarea styling - Override global styles */
+.form-field textarea {
+  width: 100% !important;
+  padding: 0.75rem 1rem !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  border-radius: 0.75rem !important;
+  background: rgba(255,255,255,0.08) !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+  color: white !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+  resize: vertical !important;
+  min-height: 4rem !important;
+}
+
+.form-field textarea:focus {
+  outline: none !important;
+  border-color: rgba(147,51,234,0.6) !important;
+  background: rgba(255,255,255,0.12) !important;
+  box-shadow: 0 0 0 3px rgba(147,51,234,0.15), 0 4px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+}
+
+.form-field textarea::placeholder {
+  color: rgba(255,255,255,0.5) !important;
+}
+
+/* Mobile viewport fixes */
+@media (max-width: 640px) {
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+  }
+}
