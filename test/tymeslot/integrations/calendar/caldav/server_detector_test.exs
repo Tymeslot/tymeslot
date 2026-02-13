@@ -369,7 +369,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
       assert profile.discovery_path == "/{username}/"
       assert profile.calendar_path_pattern == "/{username}/{calendar}/"
       assert profile.event_path_pattern == "/{username}/{calendar}/{uid}.ics"
-      assert profile.supports_oauth == false
+      refute profile.supports_oauth
       assert profile.supports_calendar_color == true
       assert profile.requires_calendar_suffix == true
     end
@@ -388,7 +388,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
 
       assert profile.supports_oauth == true
       assert profile.supports_calendar_color == true
-      assert profile.requires_calendar_suffix == false
+      refute profile.requires_calendar_suffix
     end
 
     test "returns ownCloud profile with correct paths" do
@@ -405,7 +405,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
       assert profile.type == :baikal
       assert profile.discovery_path == "/dav.php/calendars/{username}/"
       assert profile.calendar_path_pattern == "/dav.php/calendars/{username}/{calendar}/"
-      assert profile.supports_oauth == false
+      refute profile.supports_oauth
     end
 
     test "returns Baikal legacy profile with correct paths" do
@@ -415,7 +415,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
       assert profile.discovery_path == "/cal.php/calendars/{username}/"
       assert profile.calendar_path_pattern == "/cal.php/calendars/{username}/{calendar}/"
       assert profile.event_path_pattern == "/cal.php/calendars/{username}/{calendar}/{uid}.ics"
-      assert profile.supports_oauth == false
+      refute profile.supports_oauth
     end
 
     test "returns SabreDAV profile with correct paths" do
@@ -433,7 +433,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
       assert profile.discovery_path == "/dav/{username}/"
       assert profile.calendar_path_pattern == "/dav/{username}/{calendar}/"
       assert profile.event_path_pattern == "/dav/{username}/{calendar}/{uid}.ics"
-      assert profile.supports_oauth == false
+      refute profile.supports_oauth
       assert profile.supports_calendar_color == true
     end
 
@@ -441,10 +441,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
       profile = ServerDetector.get_server_profile(:unknown)
 
       assert profile.type == :generic
-      assert profile.discovery_path == "/calendars/{username}/"
-      assert profile.calendar_path_pattern == "/calendars/{username}/{calendar}/"
-      assert profile.supports_oauth == false
-      assert profile.supports_calendar_color == false
+      assert profile.discovery_path == "/"
+      assert profile.calendar_path_pattern == "/{calendar}/"
+      refute profile.supports_oauth
+      assert profile.supports_calendar_color
     end
   end
 
@@ -482,7 +482,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
 
     test "builds correct URL for generic CalDAV" do
       url = ServerDetector.build_discovery_url("https://caldav.example.com", "user", :generic)
-      assert url == "https://caldav.example.com/calendars/user/"
+      assert url == "https://caldav.example.com/"
     end
 
     test "removes trailing slash from base URL" do
@@ -549,7 +549,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
           :generic
         )
 
-      assert url == "https://caldav.example.com/calendars/user/personal/"
+      assert url == "https://caldav.example.com/personal/"
     end
   end
 
@@ -617,7 +617,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
           :generic
         )
 
-      assert url == "https://caldav.example.com/calendars/user/personal/event-123.ics"
+      assert url == "https://caldav.example.com/personal/event-123.ics"
     end
 
     test "does not duplicate .ics extension" do
@@ -630,7 +630,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
           :generic
         )
 
-      assert url == "https://caldav.example.com/calendars/user/personal/event-123.ics"
+      assert url == "https://caldav.example.com/personal/event-123.ics"
     end
   end
 end
