@@ -22,39 +22,41 @@ Enterprise-grade meeting scheduling platform built with Elixir & Phoenix LiveVie
 
 <table>
 <tr>
-<td width="33%" align="center">
+<td width="50%" align="center">
 
 ### 🔓 Truly Open Source
 Fork, audit, contribute—or just use it. No vendor lock-in, ever.
 
 </td>
-<td width="33%" align="center">
+<td width="50%" align="center">
 
 ### 🏠 Your Data, Your Rules
 Self-host on Docker/Cloudron or use our managed cloud.
 
 </td>
-<td width="33%" align="center">
+</tr>
+<tr>
+<td align="center">
 
 ### 🆓 Full-Featured Free Tier
 Everything you need to get started. Forever. No credit card required.
 
 </td>
-</tr>
-<tr>
-<td width="33%" align="center">
+<td align="center">
 
 ### 🔒 Privacy-First
 No tracking pixels, no data mining, no selling your data.
 
 </td>
-<td width="33%" align="center">
+</tr>
+<tr>
+<td align="center">
 
 ### 🎨 Professional Templates
 Responsive email designs with calendar attachments.
 
 </td>
-<td width="33%" align="center">
+<td align="center">
 
 ### ⚡ Built for Performance
 Real-time updates with Phoenix LiveView. Blazing fast.
@@ -67,28 +69,64 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 
 ### Calendar Providers (5)
 <div align="center">
-  <img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="48" title="Google Calendar" />
-  &nbsp;&nbsp;
-  <img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook Calendar" height="48" title="Outlook Calendar" />
-  &nbsp;&nbsp;
-  <img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="48" title="CalDAV" />
-  &nbsp;&nbsp;
-  <img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="48" title="Nextcloud Calendar" />
-  &nbsp;&nbsp;
-  <img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="48" title="Radicale" />
+  <table>
+    <tr>
+      <td align="center" width="33%">
+        <img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="48" title="Google Calendar" /><br/>
+        <sub>Google Calendar</sub>
+      </td>
+      <td align="center" width="33%">
+        <img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook Calendar" height="48" title="Outlook Calendar" /><br/>
+        <sub>Outlook</sub>
+      </td>
+      <td align="center" width="33%">
+        <img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="48" title="CalDAV" /><br/>
+        <sub>CalDAV</sub>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="48" title="Nextcloud Calendar" /><br/>
+        <sub>Nextcloud</sub>
+      </td>
+      <td align="center">
+        <img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="48" title="Radicale" /><br/>
+        <sub>Radicale</sub>
+      </td>
+      <td></td>
+    </tr>
+  </table>
 </div>
 
 ### Video Conferencing (5)
 <div align="center">
-  <img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="48" title="Google Meet" />
-  &nbsp;&nbsp;
-  <img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="48" title="Microsoft Teams" />
-  &nbsp;&nbsp;
-  <img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="48" title="MiroTalk P2P" />
-  &nbsp;&nbsp;
-  <img src="./priv/static/icons/providers/video/medium/local.png" alt="Local Meeting" height="48" title="In-Person / Phone" />
-  &nbsp;&nbsp;
-  <img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom Links" height="48" title="Custom Video Links" />
+  <table>
+    <tr>
+      <td align="center" width="33%">
+        <img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="48" title="Google Meet" /><br/>
+        <sub>Google Meet</sub>
+      </td>
+      <td align="center" width="33%">
+        <img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="48" title="Microsoft Teams" /><br/>
+        <sub>Microsoft Teams</sub>
+      </td>
+      <td align="center" width="33%">
+        <img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="48" title="MiroTalk P2P" /><br/>
+        <sub>MiroTalk P2P</sub>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="./priv/static/icons/providers/video/medium/local.png" alt="Local Meeting" height="48" title="In-Person / Phone" /><br/>
+        <sub>In-Person / Phone</sub>
+      </td>
+      <td align="center">
+        <img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom Links" height="48" title="Custom Video Links" /><br/>
+        <sub>Custom Links</sub>
+      </td>
+      <td></td>
+    </tr>
+  </table>
 </div>
 
 ## 💰 Simple, Transparent Pricing
@@ -135,7 +173,7 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 
 <table>
 <tr>
-<td>
+<td width="50%">
 
 ### 🔐 Authentication & Users
 - Multi-provider OAuth (Google, GitHub)
@@ -144,7 +182,7 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - 4-step onboarding flow
 
 </td>
-<td>
+<td width="50%">
 
 ### 🧠 Smart Scheduling
 - 90+ timezone-aware cities
@@ -153,6 +191,8 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - Configurable meeting types
 
 </td>
+</tr>
+<tr>
 <td>
 
 ### 📅 Calendar Sync
@@ -162,8 +202,6 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - Calendar discovery
 
 </td>
-</tr>
-<tr>
 <td>
 
 ### 🎥 Video Conferencing
@@ -173,6 +211,8 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - OAuth integration
 
 </td>
+</tr>
+<tr>
 <td>
 
 ### 📧 Email System
@@ -211,6 +251,8 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - Customizable pages
 
 </td>
+</tr>
+<tr>
 <td>
 
 ### ⏰ Reminders
@@ -220,14 +262,39 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - Automatic retry
 
 </td>
+<td></td>
 </tr>
 </table>
 
 ## 📸 Screenshots
 
-| Dashboard & Management | Availability & Scheduling | Embedded Booking Widget |
-|:---:|:---:|:---:|
-| ![Dashboard](./priv/static/images/screenshots/dashboard.png) | ![Availability](./priv/static/images/screenshots/availability.png) | ![Embedding](./priv/static/images/screenshots/embedding.png) |
+<table>
+<tr>
+<td align="center" width="50%">
+
+**Dashboard & Management**
+
+![Dashboard](./priv/static/images/screenshots/dashboard.png)
+
+</td>
+<td align="center" width="50%">
+
+**Availability & Scheduling**
+
+![Availability](./priv/static/images/screenshots/availability.png)
+
+</td>
+</tr>
+<tr>
+<td align="center" colspan="2">
+
+**Embedded Booking Widget**
+
+![Embedding](./priv/static/images/screenshots/embedding.png)
+
+</td>
+</tr>
+</table>
 
 ## 🆚 Tymeslot vs Calendly
 
@@ -247,39 +314,41 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 
 <table>
 <tr>
-<td width="33%">
+<td width="50%">
 
 ### 👨‍💼 Freelancers & Consultants
 Replace endless email chains with professional booking pages
 
 </td>
-<td width="33%">
+<td width="50%">
 
 ### 🏢 Small Businesses
 Coordinate team availability without enterprise pricing
 
 </td>
-<td width="33%">
+</tr>
+<tr>
+<td>
 
 ### 🔒 Privacy-Conscious Orgs
 Keep scheduling data on your own infrastructure
 
 </td>
-</tr>
-<tr>
-<td width="33%">
+<td>
 
 ### 🌍 International Teams
 Multi-language support for global customer bases
 
 </td>
-<td width="33%">
+</tr>
+<tr>
+<td>
 
 ### 💻 Developers & Tech Teams
 Extensible platform with webhook integrations
 
 </td>
-<td width="33%">
+<td>
 
 ### 📖 Open Source Projects
 Embed booking widgets in your documentation
@@ -304,40 +373,38 @@ Embed booking widgets in your documentation
 
 <table>
 <tr>
-<td width="25%" align="center">
+<td width="50%" align="center">
 
 ### ☁️ Cloud
 [Try Now →](https://tymeslot.app)
 
-Zero setup
-Start in 60 seconds
+Zero setup · Start in 60 seconds
 
 </td>
-<td width="25%" align="center">
+<td width="50%" align="center">
 
 ### 🐳 Docker
 [Guide →](README-Docker.md)
 
-Self-hosting
-Full control
+Self-hosting · Full control
 
 </td>
-<td width="25%" align="center">
+</tr>
+<tr>
+<td align="center">
 
 ### 📦 Cloudron
 [Guide →](README-Cloudron.md)
 
-One-click install
-Managed platform
+One-click install · Managed platform
 
 </td>
-<td width="25%" align="center">
+<td align="center">
 
 ### 💻 Development
 [Docs →](CONTRIBUTING.md)
 
-Local setup
-Contribute code
+Local setup · Contribute code
 
 </td>
 </tr>
@@ -363,7 +430,7 @@ This command pulls the image automatically if it is not present locally. For a f
 
 <table>
 <tr>
-<td width="25%" align="center">
+<td width="50%" align="center">
 
 ### ⭐ Star
 [Star Repo →](https://github.com/tymeslot/tymeslot/stargazers)
@@ -371,7 +438,7 @@ This command pulls the image automatically if it is not present locally. For a f
 Help others discover Tymeslot
 
 </td>
-<td width="25%" align="center">
+<td width="50%" align="center">
 
 ### 💰 Support
 [Subscribe →](https://tymeslot.app)
@@ -379,7 +446,9 @@ Help others discover Tymeslot
 Fund open-source development
 
 </td>
-<td width="25%" align="center">
+</tr>
+<tr>
+<td align="center">
 
 ### 🐛 Report
 [Open Issue →](https://github.com/tymeslot/tymeslot/issues)
@@ -387,7 +456,7 @@ Fund open-source development
 Bugs & feature requests
 
 </td>
-<td width="25%" align="center">
+<td align="center">
 
 ### 💻 Code
 [Guidelines →](CONTRIBUTING.md)
