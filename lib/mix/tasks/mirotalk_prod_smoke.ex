@@ -152,14 +152,14 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
     exp_param = Map.get(query_params, "exp")
 
     opts = [
-      follow_redirect: true,
-      timeout: @probe_timeout_ms,
-      recv_timeout: @probe_timeout_ms
+      redirect: true,
+      receive_timeout: @probe_timeout_ms,
+      connect_options: [timeout: @probe_timeout_ms]
     ]
 
     result =
-      case HTTPoison.get(url, @probe_headers, opts) do
-        {:ok, %HTTPoison.Response{status_code: status, body: body, headers: headers}} ->
+      case Req.request([method: :get, url: url, headers: @probe_headers, decode_body: false] ++ opts) do
+        {:ok, %Req.Response{status: status, body: body, headers: headers}} ->
           invalid_token? = Regex.match?(~r/invalid token/i, body || "")
 
           %{
@@ -175,7 +175,7 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
             invalid_token_context: extract_match_context(body || "", ~r/invalid token/i, 80)
           }
 
-        {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error, exception} when is_exception(exception) ->
           %{
             role: role,
             url: url,
@@ -186,7 +186,21 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
             token_len: if(is_binary(token), do: String.length(token), else: 0),
             role_param: role_param,
             exp_param: exp_param,
-            error: reason
+            error: Exception.message(exception)
+          }
+
+        {:error, reason} ->
+          %{
+            role: role,
+            url: url,
+            status: :http_error,
+            invalid_token?: false,
+            body_bytes: 0,
+            content_type: nil,
+            token_len: if(is_binary(token), do: String.length(token), else: 0),
+            role_param: role_param,
+            exp_param: exp_param,
+            error: inspect(reason)
           }
       end
 
@@ -223,16 +237,11 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
     _ -> %{}
   end
 
-  defp header_value(headers, name) when is_list(headers) and is_binary(name) do
-    name_down = String.downcase(name)
-
-    Enum.find_value(headers, fn
-      {k, v} when is_binary(k) ->
-        if String.downcase(k) == name_down, do: v, else: nil
-
-      _ ->
-        nil
-    end)
+  defp header_value(headers, name) when is_map(headers) and is_binary(name) do
+    case Map.get(headers, String.downcase(name)) do
+      [value | _] -> value
+      _ -> nil
+    end
   end
 
   defp header_value(_, _), do: nil
