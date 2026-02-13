@@ -137,7 +137,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   """
   @spec maybe_discover_calendars(map()) :: {:ok, map()}
   def maybe_discover_calendars(%{"provider" => provider} = attrs)
-      when provider in ["caldav", "radicale"] do
+      when provider in ["caldav", "radicale", "zimbra"] do
     case discover_caldav_calendar_paths(attrs) do
       {:ok, paths} when is_list(paths) and paths != [] ->
         {:ok, Map.put(attrs, "calendar_paths", paths)}

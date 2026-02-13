@@ -10,9 +10,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
 
-  @providers [:caldav, :radicale, :nextcloud, :google, :outlook, :demo]
+  @providers [:caldav, :radicale, :nextcloud, :zimbra, :google, :outlook, :demo]
   @oauth_providers [:google, :outlook]
-  @caldav_based_providers [:caldav, :radicale, :nextcloud]
+  @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra]
   @dev_only_providers [:debug]
 
   # Read provider settings from config
@@ -125,6 +125,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def display_name(:caldav), do: "CalDAV"
   def display_name(:radicale), do: "Radicale"
   def display_name(:nextcloud), do: "Nextcloud"
+  def display_name(:zimbra), do: "Zimbra"
   def display_name(:google), do: "Google Calendar"
   def display_name(:outlook), do: "Outlook Calendar"
   def display_name(:debug), do: "Debug Provider"
@@ -138,6 +139,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def get_provider_module(:caldav), do: Tymeslot.Integrations.Calendar.CalDAV.Provider
   def get_provider_module(:radicale), do: Tymeslot.Integrations.Calendar.Radicale.Provider
   def get_provider_module(:nextcloud), do: Tymeslot.Integrations.Calendar.Nextcloud.Provider
+  def get_provider_module(:zimbra), do: Tymeslot.Integrations.Calendar.Zimbra.Provider
   def get_provider_module(:google), do: Tymeslot.Integrations.Calendar.Google.Provider
   def get_provider_module(:outlook), do: Tymeslot.Integrations.Calendar.Outlook.Provider
   def get_provider_module(:debug), do: Tymeslot.Integrations.Calendar.DebugCalendarProvider

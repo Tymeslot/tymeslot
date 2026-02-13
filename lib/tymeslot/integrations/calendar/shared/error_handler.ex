@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
 
   @type error_category ::
           :auth | :network | :config | :permission | :timeout | :rate_limit | :unknown
-  @type provider :: :caldav | :nextcloud | :google | :outlook | :radicale | :generic
+  @type provider :: :caldav | :nextcloud | :google | :outlook | :radicale | :zimbra | :generic
 
   @doc """
   Sanitizes error messages to remove sensitive server information.

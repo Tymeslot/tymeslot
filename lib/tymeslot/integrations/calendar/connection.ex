@@ -37,7 +37,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   end
 
   def validate_connection(%{provider: provider} = integration, _user_id)
-      when provider in ["caldav", "nextcloud", "radicale"] do
+      when provider in ["caldav", "nextcloud", "radicale", "zimbra"] do
     client_config = %{
       base_url: integration.base_url,
       username: integration.username,

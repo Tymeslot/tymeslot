@@ -556,22 +556,45 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   defp build_discovery_url(client) do
     base_url = String.trim_trailing(client.base_url, "/")
 
-    case client.provider do
-      :radicale ->
-        "#{base_url}/#{client.username}/"
+    # If URL already looks like a full CalDAV principal URL, use it as-is
+    if looks_like_full_caldav_url?(base_url) do
+      "#{base_url}/"
+    else
+      # Use server-specific path construction
+      case client.provider do
+        :radicale ->
+          "#{base_url}/#{client.username}/"
 
-      :nextcloud ->
-        # Check if base_url already contains a calendar path
-        if String.contains?(base_url, "/calendars/#{client.username}") do
-          # Already a calendar URL - use as is
-          "#{base_url}/"
-        else
-          # base_url already includes /remote.php/dav from normalization
+        :nextcloud ->
+          # Check if base_url already contains a calendar path
+          if String.contains?(base_url, "/calendars/#{client.username}") do
+            # Already a calendar URL - use as is
+            "#{base_url}/"
+          else
+            # base_url already includes /remote.php/dav from normalization
+            "#{base_url}/calendars/#{client.username}/"
+          end
+
+        :zimbra ->
+          "#{base_url}/dav/#{client.username}/"
+
+        _ ->
           "#{base_url}/calendars/#{client.username}/"
-        end
+      end
+    end
+  end
 
-      _ ->
-        "#{base_url}/calendars/#{client.username}/"
+  # Detects if a URL already looks like a full CalDAV principal URL
+  # (e.g., /dav/user@example.com or /remote.php/dav/calendars/user)
+  defp looks_like_full_caldav_url?(base_url) do
+    uri = URI.parse(base_url)
+
+    # If path has multiple segments (depth >= 2), assume it's a full CalDAV URL
+    # This allows users to provide complete principal URLs for any server
+    case uri.path do
+      nil -> false
+      "/" -> false
+      path -> length(String.split(path, "/", trim: true)) >= 2
     end
   end
 

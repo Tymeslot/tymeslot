@@ -338,14 +338,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
   end
 
   def get_server_profile(_) do
-    # Generic CalDAV profile
+    # Generic CalDAV profile - works with full principal URLs
+    # When users provide a full CalDAV URL (e.g., https://server.com/dav/user@domain.com),
+    # this profile uses it as-is without adding additional path segments
     %{
       type: :generic,
-      discovery_path: "/calendars/{username}/",
-      calendar_path_pattern: "/calendars/{username}/{calendar}/",
-      event_path_pattern: "/calendars/{username}/{calendar}/{uid}.ics",
+      discovery_path: "/",
+      calendar_path_pattern: "/{calendar}/",
+      event_path_pattern: "/{calendar}/{uid}.ics",
       supports_oauth: false,
-      supports_calendar_color: false,
+      supports_calendar_color: true,
       supports_calendar_order: false,
       requires_calendar_suffix: false
     }

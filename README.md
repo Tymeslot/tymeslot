@@ -67,7 +67,7 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 
 ## 🔌 Integrations
 
-### Calendar Providers (5)
+### Calendar Providers (6)
 <div align="center">
   <table>
     <tr>
@@ -93,7 +93,10 @@ Real-time updates with Phoenix LiveView. Blazing fast.
         <img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="48" title="Radicale" /><br/>
         <sub>Radicale</sub>
       </td>
-      <td></td>
+      <td align="center">
+        <img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="48" title="Zimbra" /><br/>
+        <sub>Zimbra</sub>
+      </td>
     </tr>
   </table>
 </div>
@@ -139,7 +142,7 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 **Self-Hosted or Cloud**
 
 - ✅ Unlimited bookings & meeting types
-- ✅ All 5 calendar providers
+- ✅ All 6 calendar providers
 - ✅ All 5 video platforms
 - ✅ Multi-language (EN, DE, UK)
 - ✅ Webhooks & embedding
@@ -196,7 +199,7 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 <td>
 
 ### 📅 Calendar Sync
-- 5 calendar providers
+- 6 calendar providers
 - Full CRUD operations
 - Auto token refresh
 - Calendar discovery
@@ -304,7 +307,7 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 | **Self-Hosting** | ✅ Free Forever | ❌ Not Available |
 | **Data Privacy** | ✅ Your Infrastructure | ❌ Their Servers |
 | **Unlimited Bookings** | ✅ Free Tier | ❌ Paid Only |
-| **Calendar Providers** | 5 Providers | 3 Providers |
+| **Calendar Providers** | 6 Providers | 3 Providers |
 | **Video Providers** | 5 Providers | 3 Providers |
 | **Multi-Language** | ✅ 3 Languages | ✅ Multiple |
 | **Webhooks** | ✅ Free Tier | ❌ Paid Only |

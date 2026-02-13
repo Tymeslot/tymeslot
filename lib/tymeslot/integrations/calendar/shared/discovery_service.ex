@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   Discovers calendars with caching support.
 
   ## Parameters
-  - `provider` - The provider type (:caldav, :nextcloud, :radicale)
+  - `provider` - The provider type (:caldav, :nextcloud, :radicale, :zimbra)
   - `config` - Configuration map with base_url, username, password
   - `opts` - Options including :force_refresh to bypass cache
 
