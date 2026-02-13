@@ -78,7 +78,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
         assert params["code"] == "auth-code"
         assert params["client_id"] == @client_id
         assert params["client_secret"] == @client_secret
-        {:ok, %{status_code: 200, body: resp_body}}
+        {:ok, %{status: 200, body: resp_body}}
       end)
 
       assert {:ok, tokens} =
@@ -90,7 +90,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
 
     test "handles error from Google" do
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
-        {:ok, %{status_code: 400, body: "error_msg"}}
+        {:ok, %{status: 400, body: "error_msg"}}
       end)
 
       assert {:error, msg} = GoogleOAuthHelper.exchange_code_for_tokens("code", "uri")
@@ -110,7 +110,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
         params = URI.decode_query(body)
         assert params["refresh_token"] == "old-rt"
         assert params["grant_type"] == "refresh_token"
-        {:ok, %{status_code: 200, body: resp_body}}
+        {:ok, %{status: 200, body: resp_body}}
       end)
 
       assert {:ok, tokens} = GoogleOAuthHelper.refresh_access_token("old-rt")
@@ -129,7 +129,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
       expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _, headers, _ ->
         assert url == "https://www.googleapis.com/oauth2/v1/tokeninfo"
         assert {"Authorization", "Bearer token"} in headers
-        {:ok, %{status_code: 200, body: resp_body}}
+        {:ok, %{status: 200, body: resp_body}}
       end)
 
       assert {:ok, _} = GoogleOAuthHelper.validate_token_scope("token", [:calendar])
@@ -139,7 +139,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
       resp_body = Jason.encode!(%{"scope" => "https://www.googleapis.com/auth/userinfo.email"})
 
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _, _, _, _ ->
-        {:ok, %{status_code: 200, body: resp_body}}
+        {:ok, %{status: 200, body: resp_body}}
       end)
 
       assert {:error, msg} = GoogleOAuthHelper.validate_token_scope("token", [:calendar])

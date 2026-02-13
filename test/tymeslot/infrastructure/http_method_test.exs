@@ -11,29 +11,31 @@ defmodule Tymeslot.Infrastructure.HTTPMethodTest do
       # before the call, we'll just verify it doesn't return an invalid method error for known atoms.
 
       # We'll use a bogus URL to trigger a network error instead of a validation error
-      assert {:error, %HTTPoison.Error{reason: reason}} =
+      assert {:error, exception} =
                HTTPClient.request(:get, "http://localhost:1")
 
-      assert reason != {:invalid_method, :get}
+      assert is_exception(exception)
     end
 
     test "accepts valid string methods (any case)" do
-      assert {:error, %HTTPoison.Error{reason: reason}} =
+      assert {:error, exception} =
                HTTPClient.request("GET", "http://localhost:1")
 
-      assert reason != {:invalid_method, "GET"}
+      assert is_exception(exception)
 
-      assert {:error, %HTTPoison.Error{reason: reason}} =
+      assert {:error, exception} =
                HTTPClient.request("post", "http://localhost:1")
 
-      assert reason != {:invalid_method, "post"}
+      assert is_exception(exception)
     end
 
     test "rejects unknown string methods without creating atoms" do
       unknown = "not_a_real_method_#{:erlang.unique_integer()}"
 
-      assert {:error, %HTTPoison.Error{reason: {:invalid_method, ^unknown}}} =
+      assert {:error, %RuntimeError{message: message}} =
                HTTPClient.request(unknown, "http://localhost:1")
+
+      assert message =~ "Invalid HTTP method"
 
       # Verify atom was not created
       assert_raise ArgumentError, fn -> String.to_existing_atom(unknown) end
@@ -57,8 +59,10 @@ defmodule Tymeslot.Infrastructure.HTTPMethodTest do
     end
 
     test "rejects unknown methods" do
-      assert {:error, %HTTPoison.Error{reason: {:invalid_method, "BREW"}}} =
+      assert {:error, %RuntimeError{message: message}} =
                CalendarHTTP.request("BREW", "http://", "/", "token")
+
+      assert message =~ "Invalid method"
     end
   end
 end

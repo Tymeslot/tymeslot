@@ -64,7 +64,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200}}
+        {:ok, %Req.Response{status: 200}}
       end)
 
       assert :ok = MiroTalkProvider.validate_config(config)
@@ -74,7 +74,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
       expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
-        {:error, %HTTPoison.Error{reason: :econnrefused}}
+        {:error, %Mint.TransportError{reason: :econnrefused}}
       end)
 
       assert {:error, message} = MiroTalkProvider.validate_config(config)
@@ -87,8 +87,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 500,
+         %Req.Response{
+           status: 500,
            body:
              "{\"secret_error\": \"token=ya29.secret\", \"long\": \"#{String.duplicate("a", 3000)}\"}"
          }}
@@ -328,8 +328,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body: Jason.encode!(%{"meeting" => "https://mirotalk.example.com/join/room123"})
          }}
       end)
@@ -343,7 +343,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 401, body: "Unauthorized"}}
+        {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
       end)
 
       assert {:error, {:http_error, 401, _}} = MiroTalkProvider.create_meeting_room(config)
@@ -359,8 +359,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body: Jason.encode!(%{"join" => "https://mirotalk.example.com/join/room123?token=abc"})
          }}
       end)
@@ -385,7 +385,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
 
       # Mock API failure
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 500, body: "Error"}}
+        {:ok, %Req.Response{status: 500, body: "Error"}}
       end)
 
       assert {:ok, join_url} =

@@ -61,8 +61,8 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
       # Also mock the HTTP client for the actual meeting creation
       stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "conferenceData" => %{
@@ -132,8 +132,8 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
       # Mock Teams API call
       stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 201,
+         %Req.Response{
+           status: 201,
            body:
              Jason.encode!(%{
                "id" => "teams-123",

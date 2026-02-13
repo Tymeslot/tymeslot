@@ -116,7 +116,7 @@ defmodule Tymeslot.WorkerTestHelpers do
   @spec expect_http_success(integer(), String.t()) :: :ok
   def expect_http_success(status_code \\ 200, body \\ "OK") do
     expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-      {:ok, %HTTPoison.Response{status_code: status_code, body: body}}
+      {:ok, %Req.Response{status: status_code, body: body}}
     end)
   end
 
@@ -140,13 +140,13 @@ defmodule Tymeslot.WorkerTestHelpers do
           "{}"
         end
 
-      {:ok, %HTTPoison.Response{status_code: 200, body: body}}
+      {:ok, %Req.Response{status: 200, body: body}}
     end)
     # Next two calls: join token generation for organizer and participant
     |> expect(:post, 2, fn _url, _body, _headers, _opts ->
       {:ok,
-       %HTTPoison.Response{
-         status_code: 200,
+       %Req.Response{
+         status: 200,
          body: Jason.encode!(%{"join" => "#{room_url}?token=abc"})
        }}
     end)

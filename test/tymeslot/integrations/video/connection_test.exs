@@ -17,7 +17,7 @@ defmodule Tymeslot.Integrations.Video.ConnectionTest do
       # MiroTalkProvider calls HTTPClient directly.
       # It might call it more than once due to HTTPS/HTTP fallback logic or multiple checks.
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: "{}"}}
+        {:ok, %Req.Response{status: 200, body: "{}"}}
       end)
 
       assert {:ok, "Connection successful - API key is valid"} =
@@ -39,7 +39,7 @@ defmodule Tymeslot.Integrations.Video.ConnectionTest do
       end)
 
       stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: "{\"items\": []}"}}
+        {:ok, %Req.Response{status: 200, body: "{\"items\": []}"}}
       end)
 
       assert {:ok, "Google Meet connection successful"} =

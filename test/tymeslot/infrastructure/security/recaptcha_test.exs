@@ -45,7 +45,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
         })
 
       expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: response_body}}
+        {:ok, %Req.Response{status: 200, body: response_body}}
       end)
 
       assert {:ok, %{score: 0.9, action: "login", hostname: "localhost"}} =
@@ -64,7 +64,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
         })
 
       expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: response_body}}
+        {:ok, %Req.Response{status: 200, body: response_body}}
       end)
 
       assert {:error, :recaptcha_score_too_low} = Recaptcha.verify(token, min_score: 0.5)
@@ -81,7 +81,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
         })
 
       expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: response_body}}
+        {:ok, %Req.Response{status: 200, body: response_body}}
       end)
 
       assert {:error, :recaptcha_action_mismatch} =
@@ -99,7 +99,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
         })
 
       expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: response_body}}
+        {:ok, %Req.Response{status: 200, body: response_body}}
       end)
 
       assert {:error, :recaptcha_hostname_mismatch} =
@@ -131,7 +131,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
         })
 
       expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: response_body}}
+        {:ok, %Req.Response{status: 200, body: response_body}}
       end)
 
       assert {:error, :recaptcha_verification_failed} = Recaptcha.verify(token)
@@ -139,7 +139,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
 
     test "handles network errors" do
       expect(HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:error, %HTTPoison.Error{reason: :timeout}}
+        {:error, %RuntimeError{message: "Network error"}}
       end)
 
       assert {:error, :recaptcha_network_error} = Recaptcha.verify("token")

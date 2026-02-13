@@ -29,8 +29,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
                end)
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "items" => [%{"id" => "primary", "summary" => "Primary Calendar"}]
@@ -53,7 +53,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
         )
 
       expect(Tymeslot.HTTPClientMock, :request, fn :get, _, _, _, _ ->
-        {:ok, %HTTPoison.Response{status_code: 401}}
+        {:ok, %Req.Response{status: 401}}
       end)
 
       assert {:error, :unauthorized, _} = CalendarAPI.list_calendars(integration)
@@ -92,8 +92,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
                )
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "items" => [%{"id" => "event1", "summary" => "Meeting"}]
@@ -131,8 +131,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
         assert decoded_body["summary"] == "New Meeting"
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body: Jason.encode!(%{"id" => "new_google_id"})
          }}
       end)
@@ -161,8 +161,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
         assert String.contains?(body, "refresh_token=old_refresh_token")
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "access_token" => "new_access_token",

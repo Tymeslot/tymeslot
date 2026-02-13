@@ -256,8 +256,8 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       # Mock HTTP client for video room creation
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "room_id" => "test-room-123",

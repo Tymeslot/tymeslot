@@ -145,7 +145,7 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
                                                    _body,
                                                    _headers,
                                                    _opts ->
-        {:ok, %{status_code: 400, body: Jason.encode!(%{"error" => "invalid_grant"})}}
+        {:ok, %{status: 400, body: Jason.encode!(%{"error" => "invalid_grant"})}}
       end)
 
       # Act: Attempt calendar callback with invalid code

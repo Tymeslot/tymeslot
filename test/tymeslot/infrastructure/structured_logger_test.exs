@@ -43,15 +43,15 @@ defmodule Tymeslot.Infrastructure.StructuredLoggerTest do
              end) =~ "API request initiated"
 
       assert capture_log(fn ->
-               StructuredLogger.log_api_call(:google_calendar, :response, %{status_code: 200})
+               StructuredLogger.log_api_call(:google_calendar, :response, %{status: 200})
              end) =~ "API request successful"
 
       assert capture_log(fn ->
-               StructuredLogger.log_api_call(:google_calendar, :response, %{status_code: 404})
+               StructuredLogger.log_api_call(:google_calendar, :response, %{status: 404})
              end) =~ "API client error"
 
       assert capture_log(fn ->
-               StructuredLogger.log_api_call(:google_calendar, :response, %{status_code: 500})
+               StructuredLogger.log_api_call(:google_calendar, :response, %{status: 500})
              end) =~ "API server error"
 
       assert capture_log(fn ->

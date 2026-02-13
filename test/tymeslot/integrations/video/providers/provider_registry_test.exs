@@ -118,7 +118,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       # test_provider_connection calls validate_config, which calls test_connection,
       # and then it calls test_connection again. So we expect 2 calls.
       expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200}}
+        {:ok, %Req.Response{status: 200}}
       end)
 
       result = ProviderRegistry.test_provider_connection(:mirotalk, config)

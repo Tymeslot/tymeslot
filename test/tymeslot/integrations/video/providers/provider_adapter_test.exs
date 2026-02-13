@@ -48,8 +48,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
       # Mock MiroTalk API call
       expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body: Jason.encode!(%{"meeting" => "https://mirotalk.test/room123"})
          }}
       end)

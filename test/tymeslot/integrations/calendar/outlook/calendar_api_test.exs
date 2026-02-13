@@ -29,8 +29,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
                end)
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "value" => [%{"id" => "cal1", "name" => "Work Calendar"}]
@@ -68,8 +68,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
                end)
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "value" => [
@@ -115,8 +115,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
         assert decoded_body["subject"] == "New Meeting"
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 201,
+         %Req.Response{
+           status: 201,
            body:
              Jason.encode!(%{
                "id" => "new_outlook_id",
@@ -152,8 +152,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
         assert decoded_body["subject"] == "Updated Meeting"
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "id" => "event123",
@@ -184,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
       expect(Tymeslot.HTTPClientMock, :request, fn :delete, url, _body, _headers, _opts ->
         assert String.contains?(url, "/me/calendars/primary/events/event123")
 
-        {:ok, %HTTPoison.Response{status_code: 204, body: ""}}
+        {:ok, %Req.Response{status: 204, body: ""}}
       end)
 
       assert :ok = CalendarAPI.delete_event(integration, "primary", "event123")
@@ -210,8 +210,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
         assert String.contains?(body, "refresh_token=old_refresh_token")
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "access_token" => "new_access_token",
@@ -238,13 +238,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
           token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
         )
 
-      # Expect 2 calls: first fails with 503, second succeeds
+      # Expect 2 calls: first fails with timeout, second succeeds
       Tymeslot.HTTPClientMock
       |> expect(:request, fn :get, _url, _body, _headers, _opts ->
-        {:error, %HTTPoison.Error{reason: :timeout}}
+        {:error, %Mint.TransportError{reason: :timeout}}
       end)
       |> expect(:request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: Jason.encode!(%{"value" => []})}}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"value" => []})}}
       end)
 
       # We need to reduce the retry delay for tests to run fast

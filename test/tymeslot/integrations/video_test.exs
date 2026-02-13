@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.VideoTest do
 
       # Mock connection test - called twice
       expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200}}
+        {:ok, %Req.Response{status: 200}}
       end)
 
       assert {:ok, integration} = Video.create_integration(user.id, :mirotalk, attrs)
@@ -50,7 +50,7 @@ defmodule Tymeslot.Integrations.VideoTest do
 
       # Mock connection failure
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 401, body: "Unauthorized"}}
+        {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
       end)
 
       assert {:error, "Invalid API key - Authentication failed"} =

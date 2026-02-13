@@ -233,11 +233,11 @@ defmodule Tymeslot.MeetingsTest do
       # Use setup_all_mocks to configure Mox correctly
       TestMocks.setup_all_mocks()
 
-      # Stub HTTP client to return HTTPoison.Response struct
+      # Stub HTTP client to return Req.Response struct
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              "{\"room_id\": \"test-room\", \"meeting_url\": \"https://test.mirotalk.com/join/test-room\", \"join\": \"https://test.mirotalk.com/join/test-room\"}"
          }}

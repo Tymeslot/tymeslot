@@ -52,8 +52,8 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
       # Mock MiroTalk API call
       expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body: Jason.encode!(%{"meeting" => "https://mirotalk.test/room123"})
          }}
       end)
@@ -90,8 +90,8 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
       # Mock Google API call
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "conferenceData" => %{
@@ -145,8 +145,8 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
 
       stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "conferenceData" => %{

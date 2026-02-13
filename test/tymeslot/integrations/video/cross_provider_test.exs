@@ -78,7 +78,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200}}
+        {:ok, %Req.Response{status: 200}}
       end)
 
       assert {:ok, _} = mirotalk.test_connection(config)
@@ -178,7 +178,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200}}
+        {:ok, %Req.Response{status: 200}}
       end)
 
       assert :ok = mirotalk.validate_config(config)

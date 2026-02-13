@@ -68,7 +68,7 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
 
       # Note: test_connection might be called more than once due to internal retries
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: "OK"}}
+        {:ok, %Req.Response{status: 200, body: "OK"}}
       end)
 
       {result, duration} = Assessor.assess(:video, integration)

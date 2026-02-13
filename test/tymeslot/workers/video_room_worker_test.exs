@@ -90,7 +90,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
 
       # MiroTalk provider tries both HTTPS and HTTP, so expect 2 calls
       expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: "not valid json"}}
+        {:ok, %Req.Response{status: 200, body: "not valid json"}}
       end)
 
       assert {:error, _reason} = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
@@ -105,8 +105,8 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       expect(Tymeslot.HTTPClientMock, :post, 4, fn _url, _body, _headers, _opts ->
         # Valid JSON but missing the "meeting" field that MiroTalk expects
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body: Jason.encode!(%{"unexpected" => "data"})
          }}
       end)
@@ -129,7 +129,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
 
       # MiroTalk provider tries both HTTPS and HTTP, so expect 2 calls
       expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: ""}}
+        {:ok, %Req.Response{status: 200, body: ""}}
       end)
 
       assert {:error, _reason} = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
@@ -139,7 +139,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       %{meeting: meeting} = setup_video_scenario()
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 429, body: "Too Many Requests"}}
+        {:ok, %Req.Response{status: 429, body: "Too Many Requests"}}
       end)
 
       assert {:error, reason} = perform_job(VideoRoomWorker, %{"meeting_id" => meeting.id})
@@ -150,7 +150,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
       %{meeting: meeting, meeting_type: _meeting_type} = setup_future_meeting_scenario()
 
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:error, %HTTPoison.Error{reason: :econnrefused}}
+        {:error, %Mint.TransportError{reason: :econnrefused}}
       end)
 
       # Meeting is 3 days away, but earliest reminder is 24h before.
@@ -218,7 +218,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
         })
 
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:error, %HTTPoison.Error{reason: :econnrefused}}
+        {:error, %Mint.TransportError{reason: :econnrefused}}
       end)
 
       assert {:discard, "Recovery deadline passed"} =
@@ -243,7 +243,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
         MeetingQueries.update_meeting(meeting, %{start_time: past_start})
 
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:error, %HTTPoison.Error{reason: :econnrefused}}
+        {:error, %Mint.TransportError{reason: :econnrefused}}
       end)
 
       # Should NOT snooze if meeting already started

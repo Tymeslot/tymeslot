@@ -39,13 +39,13 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
 
       # Mock token exchange
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
-        {:ok, %{status_code: 200, body: resp_body}}
+        {:ok, %{status: 200, body: resp_body}}
       end)
 
       # Mock profile fetch
       expect(Tymeslot.HTTPClientMock, :get, fn url, _headers, _opts ->
         assert url == "https://graph.microsoft.com/v1.0/me"
-        {:ok, %HTTPoison.Response{status_code: 200, body: profile_body}}
+        {:ok, %Req.Response{status: 200, body: profile_body}}
       end)
 
       assert {:ok, tokens} =
@@ -80,12 +80,12 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
 
       # Mock token exchange
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
-        {:ok, %{status_code: 200, body: resp_body}}
+        {:ok, %{status: 200, body: resp_body}}
       end)
 
       # Mock profile fetch
       expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: profile_body}}
+        {:ok, %Req.Response{status: 200, body: profile_body}}
       end)
 
       assert {:ok, tokens} =
@@ -101,12 +101,12 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
 
       # Mock token exchange
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
-        {:ok, %{status_code: 200, body: resp_body}}
+        {:ok, %{status: 200, body: resp_body}}
       end)
 
       # Mock profile fetch
       expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: profile_body}}
+        {:ok, %Req.Response{status: 200, body: profile_body}}
       end)
 
       assert {:error, "Microsoft profile missing unique ID"} =
@@ -123,16 +123,16 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
 
       # Mock token exchange
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
-        {:ok, %{status_code: 200, body: resp_body}}
+        {:ok, %{status: 200, body: resp_body}}
       end)
 
       # Mock profile fetch: failure then success
       Tymeslot.HTTPClientMock
       |> expect(:get, fn _url, _headers, _opts ->
-        {:error, %HTTPoison.Error{reason: :timeout}}
+        {:error, %Mint.TransportError{reason: :timeout}}
       end)
       |> expect(:get, fn _url, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: profile_body}}
+        {:ok, %Req.Response{status: 200, body: profile_body}}
       end)
 
       assert {:ok, tokens} =
@@ -151,7 +151,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
         })
 
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
-        {:ok, %{status_code: 200, body: resp_body}}
+        {:ok, %{status: 200, body: resp_body}}
       end)
 
       assert {:ok, tokens} = TeamsOAuthHelper.refresh_access_token("old-rt")

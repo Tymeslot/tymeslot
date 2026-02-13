@@ -218,7 +218,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       end)
 
       expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200}}
+        {:ok, %Req.Response{status: 200}}
       end)
 
       run_health_checks()

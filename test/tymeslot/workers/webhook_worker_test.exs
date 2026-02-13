@@ -104,7 +104,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       webhook = insert(:webhook)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %{status_code: 500, body: "Error"}}
+        {:ok, %{status: 500, body: "Error"}}
       end)
 
       assert {:error, {:http_error, 500}} =
@@ -176,7 +176,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       huge_body = String.duplicate("x", 10_000)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %{status_code: 200, body: huge_body}}
+        {:ok, %{status: 200, body: huge_body}}
       end)
 
       assert :ok =
@@ -201,7 +201,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       binary_body = <<0xFF, 0xFE, 0xFD, 0xFC>>
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %{status_code: 200, body: binary_body}}
+        {:ok, %{status: 200, body: binary_body}}
       end)
 
       assert :ok =
@@ -258,7 +258,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
         diff = DateTime.diff(DateTime.utc_now(), ts, :second)
         assert diff < 60, "Timestamp should be recent (within 60 seconds)"
 
-        {:ok, %{status_code: 200, body: "OK"}}
+        {:ok, %{status: 200, body: "OK"}}
       end)
 
       assert :ok =
@@ -279,7 +279,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
 
       # HTTP client should never be called
       expect(Tymeslot.HTTPClientMock, :post, 0, fn _, _, _, _ ->
-        {:ok, %{status_code: 200, body: "Should not reach here"}}
+        {:ok, %{status: 200, body: "Should not reach here"}}
       end)
 
       # In production, the URL is validated before delivery and returns {:error, :blocked_by_ssrf}
@@ -322,7 +322,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       webhook = insert(:webhook, failure_count: 0)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %{status_code: 500, body: "Internal Server Error"}}
+        {:ok, %{status: 500, body: "Internal Server Error"}}
       end)
 
       assert {:error, {:http_error, 500}} =

@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       _integration = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
 
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: "{}"}}
+        {:ok, %Req.Response{status: 200, body: "{}"}}
       end)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/video")
@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
     test "adds a new mirotalk integration", %{conn: conn} do
       # Mock connection test for creation
       stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: "{}"}}
+        {:ok, %Req.Response{status: 200, body: "{}"}}
       end)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/video")

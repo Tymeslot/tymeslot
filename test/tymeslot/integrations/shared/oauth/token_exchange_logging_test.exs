@@ -14,7 +14,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
       secret_body = "{\"access_token\": \"secret-123\", \"error\": \"invalid_request\"}"
 
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 400, body: secret_body}}
+        {:ok, %Req.Response{status: 400, body: secret_body}}
       end)
 
       log =
@@ -31,7 +31,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
       long_error = String.duplicate("error_msg_content ", 500)
 
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 500, body: long_error}}
+        {:ok, %Req.Response{status: 500, body: long_error}}
       end)
 
       log =

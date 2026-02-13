@@ -142,8 +142,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
                end)
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 201,
+         %Req.Response{
+           status: 201,
            body:
              Jason.encode!(%{
                "id" => "meeting123",
@@ -202,8 +202,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
                end)
 
         {:ok,
-         %HTTPoison.Response{
-           status_code: 201,
+         %Req.Response{
+           status: 201,
            body: Jason.encode!(%{"id" => "m1", "onlineMeetingUrl" => "url"})
          }}
       end)
@@ -228,7 +228,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       # Missing joinUrl
       expect(HTTPClientMock, :request, fn :post, _, _, _, _ ->
-        {:ok, %HTTPoison.Response{status_code: 201, body: Jason.encode!(%{"id" => "m1"})}}
+        {:ok, %Req.Response{status: 201, body: Jason.encode!(%{"id" => "m1"})}}
       end)
 
       assert {:error, message} = TeamsProvider.create_meeting_room(config)
@@ -239,8 +239,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
 
       expect(HTTPClientMock, :request, fn :post, _, _, _, _ ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 201,
+         %Req.Response{
+           status: 201,
            body: Jason.encode!(%{"id" => "m2", "onlineMeetingUrl" => "url2"})
          }}
       end)

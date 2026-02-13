@@ -114,7 +114,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       }
 
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: Jason.encode!(%{"items" => []})}}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"items" => []})}}
       end)
 
       assert {:ok, message} = GoogleMeetProvider.test_connection(config)
@@ -129,7 +129,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       }
 
       expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 401, body: "Unauthorized"}}
+        {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
       end)
 
       assert {:error, message} = GoogleMeetProvider.test_connection(config)
@@ -159,7 +159,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
 
       expect(HTTPClientMock, :request, fn :get, _url, _body, headers, _opts ->
         assert {"Authorization", "Bearer new_token"} in headers
-        {:ok, %HTTPoison.Response{status_code: 200, body: Jason.encode!(%{"items" => []})}}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"items" => []})}}
       end)
 
       assert {:ok, _} = GoogleMeetProvider.test_connection(config)
@@ -184,7 +184,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       }
 
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: Jason.encode!(event_response)}}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(event_response)}}
       end)
 
       assert {:ok, room_data} = GoogleMeetProvider.create_meeting_room(config)
@@ -196,7 +196,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       config = valid_token_config()
 
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-        {:ok, %HTTPoison.Response{status_code: 200, body: Jason.encode!(%{"id" => "event123"})}}
+        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"id" => "event123"})}}
       end)
 
       assert {:error, message} = GoogleMeetProvider.create_meeting_room(config)
@@ -209,8 +209,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       # Case 1: entryPoints is not a list
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body: Jason.encode!(%{"conferenceData" => %{"entryPoints" => "not_a_list"}})
          }}
       end)
@@ -221,8 +221,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       # Case 2: entryPoints is empty list
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body: Jason.encode!(%{"conferenceData" => %{"entryPoints" => []}})
          }}
       end)
@@ -233,8 +233,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       # Case 3: entryPoints lacks video type
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "conferenceData" => %{
@@ -282,8 +282,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
 
       expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
-         %HTTPoison.Response{
-           status_code: 200,
+         %Req.Response{
+           status: 200,
            body:
              Jason.encode!(%{
                "conferenceData" => %{

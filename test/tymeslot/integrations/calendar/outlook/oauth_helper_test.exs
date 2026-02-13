@@ -43,7 +43,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
         {:ok,
          %{
-           status_code: 200,
+           status: 200,
            body:
              Jason.encode!(%{
                "access_token" => "at-123",
@@ -75,7 +75,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
         {:ok,
          %{
-           status_code: 200,
+           status: 200,
            body:
              Jason.encode!(%{
                "access_token" => "at",
@@ -91,7 +91,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
       expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
         {:ok,
          %{
-           status_code: 200,
+           status: 200,
            body:
              Jason.encode!(%{
                "access_token" => "new",
