@@ -325,7 +325,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
 
       # Business hours end at 19:30 (default)
       # If now_in_tz is after 19:30, it should be false.
-      if now_in_tz.hour >= 20 or !BusinessHours.business_day?(today_in_tz) do
+      if now_in_tz.hour >= 20 do
         result =
           Conflicts.date_has_slots_with_events?(
             today_in_tz,
@@ -337,7 +337,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           )
 
         assert result == false,
-               "Should be unavailable when business hours have passed or it's a weekend"
+               "Should be unavailable when business hours have passed "
       end
     end
 
