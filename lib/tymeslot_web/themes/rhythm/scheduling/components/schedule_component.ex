@@ -143,7 +143,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                   >
                     <div class="timezone-display">
                       <%= if country_code = TimezoneUtils.get_country_code_for_timezone(@user_timezone || "America/New_York") do %>
-                        <Flagpack.flag name={country_code} class="timezone-flag" />
+                        <%= if TimezoneUtils.flag_exists?(country_code) do %>
+                          <Flagpack.flag name={country_code} class="timezone-flag" />
+                        <% else %>
+                          <span class="timezone-flag" style="opacity: 0.6;">🌐</span>
+                        <% end %>
                       <% end %>
                       <span class="timezone-text">
                         {TimezoneUtils.format_timezone(@user_timezone || "America/New_York")}
@@ -181,7 +185,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                           >
                             <div class="timezone-option-content">
                               <%= if country_code = TimezoneUtils.get_country_code_for_timezone(value) do %>
-                                <Flagpack.flag name={country_code} class="timezone-option-flag" />
+                                <%= if TimezoneUtils.flag_exists?(country_code) do %>
+                                  <Flagpack.flag name={country_code} class="timezone-option-flag" />
+                                <% else %>
+                                  <span class="timezone-option-flag" style="opacity: 0.6;">🌐</span>
+                                <% end %>
                               <% end %>
                               <div class="timezone-option-text">
                                 <div class="timezone-option-label">{label}</div>
