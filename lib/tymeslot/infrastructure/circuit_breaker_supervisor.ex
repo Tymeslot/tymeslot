@@ -13,7 +13,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
                             {p, :"calendar_breaker_#{p}"}
                           end)
 
-  @video_providers [:zoom, :teams, :jitsi, :whereby, :mirotalk]
+  @video_providers [:mirotalk, :google_meet, :teams]
   @video_breaker_names Enum.into(@video_providers, %{}, fn p ->
                          {p, :"video_breaker_#{p}"}
                        end)

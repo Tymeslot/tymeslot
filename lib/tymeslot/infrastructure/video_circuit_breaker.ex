@@ -15,7 +15,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
   alias Tymeslot.Infrastructure.CircuitBreaker
   require Logger
 
-  @video_providers [:zoom, :teams, :jitsi, :whereby, :mirotalk]
+  @video_providers [:mirotalk, :google_meet, :teams]
   @video_breaker_names Enum.into(@video_providers, %{}, fn p ->
                          {p, :"video_breaker_#{p}"}
                        end)
@@ -28,21 +28,13 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
   }
 
   @provider_configs %{
-    zoom: %{
+    google_meet: %{
       failure_threshold: 5,
       recovery_timeout: :timer.minutes(5)
     },
     teams: %{
       failure_threshold: 5,
       recovery_timeout: :timer.minutes(5)
-    },
-    jitsi: %{
-      failure_threshold: 3,
-      recovery_timeout: :timer.minutes(2)
-    },
-    whereby: %{
-      failure_threshold: 3,
-      recovery_timeout: :timer.minutes(2)
     },
     mirotalk: %{
       failure_threshold: 3,
@@ -55,8 +47,8 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
 
   ## Examples
 
-      iex> VideoCircuitBreaker.call(:zoom, fn ->
-      ...>   # Perform Zoom API call
+      iex> VideoCircuitBreaker.call(:google_meet, fn ->
+      ...>   # Perform Google Meet API call
       ...>   {:ok, room}
       ...> end)
       {:ok, room}

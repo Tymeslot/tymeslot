@@ -8,7 +8,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
   describe "call/2" do
     test "executes function successfully for valid provider" do
       result =
-        VideoCircuitBreaker.call(:zoom, fn ->
+        VideoCircuitBreaker.call(:google_meet, fn ->
           {:ok, "success"}
         end)
 
@@ -26,18 +26,18 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
 
     test "returns error when function is not arity 0" do
       result =
-        VideoCircuitBreaker.call(:zoom, fn _arg ->
+        VideoCircuitBreaker.call(:google_meet, fn _arg ->
           {:ok, "should not match"}
         end)
 
-      assert {:error, {:invalid_provider, :zoom}} = result
+      assert {:error, {:invalid_provider, :google_meet}} = result
     end
 
     test "propagates circuit open error" do
       # Trigger circuit breaker to open by causing failures
-      # The zoom config has failure_threshold: 5
+      # The google_meet config has failure_threshold: 5
       for _ <- 1..5 do
-        VideoCircuitBreaker.call(:zoom, fn ->
+        VideoCircuitBreaker.call(:google_meet, fn ->
           {:error, :simulated_failure}
         end)
       end
@@ -46,7 +46,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
       log =
         capture_log(fn ->
           result =
-            VideoCircuitBreaker.call(:zoom, fn ->
+            VideoCircuitBreaker.call(:google_meet, fn ->
               {:ok, "should not execute"}
             end)
 
@@ -54,17 +54,17 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
         end)
 
       assert log =~ "Video circuit breaker open"
-      assert log =~ "zoom"
+      assert log =~ "google_meet"
 
       # Reset for other tests
-      VideoCircuitBreaker.reset(:zoom)
+      VideoCircuitBreaker.reset(:google_meet)
     end
 
     test "propagates operation failure" do
       log =
         capture_log(fn ->
           result =
-            VideoCircuitBreaker.call(:jitsi, fn ->
+            VideoCircuitBreaker.call(:teams, fn ->
               {:error, :api_timeout}
             end)
 
@@ -72,14 +72,14 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
         end)
 
       assert log =~ "Video operation failed"
-      assert log =~ "jitsi"
+      assert log =~ "teams"
     end
 
     test "catches exceptions and returns error" do
       log =
         capture_log(fn ->
           result =
-            VideoCircuitBreaker.call(:whereby, fn ->
+            VideoCircuitBreaker.call(:mirotalk, fn ->
               raise "unexpected error"
             end)
 
@@ -89,11 +89,11 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
 
       # The circuit breaker logs "Video operation failed" when an exception occurs
       assert log =~ "Video operation failed"
-      assert log =~ "whereby"
+      assert log =~ "mirotalk"
     end
 
     test "works for all valid video providers" do
-      providers = [:zoom, :teams, :jitsi, :whereby, :mirotalk]
+      providers = [:mirotalk, :google_meet, :teams]
 
       for provider <- providers do
         result =
@@ -108,7 +108,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
 
   describe "status/1" do
     test "returns status map for valid provider" do
-      status = VideoCircuitBreaker.status(:zoom)
+      status = VideoCircuitBreaker.status(:google_meet)
 
       assert is_map(status)
       assert Map.has_key?(status, :status)
@@ -174,8 +174,8 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
   end
 
   describe "get_config/1" do
-    test "returns configuration for zoom with custom values" do
-      config = VideoCircuitBreaker.get_config(:zoom)
+    test "returns configuration for google_meet with custom values" do
+      config = VideoCircuitBreaker.get_config(:google_meet)
 
       assert config.failure_threshold == 5
       assert config.time_window == :timer.minutes(1)
@@ -188,20 +188,6 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
 
       assert config.failure_threshold == 5
       assert config.recovery_timeout == :timer.minutes(5)
-    end
-
-    test "returns configuration for jitsi with default values" do
-      config = VideoCircuitBreaker.get_config(:jitsi)
-
-      assert config.failure_threshold == 3
-      assert config.recovery_timeout == :timer.minutes(2)
-    end
-
-    test "returns configuration for whereby" do
-      config = VideoCircuitBreaker.get_config(:whereby)
-
-      assert config.failure_threshold == 3
-      assert config.recovery_timeout == :timer.minutes(2)
     end
 
     test "returns configuration for mirotalk" do
@@ -226,7 +212,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
     test "supervisor and wrapper use same configuration" do
       # This test verifies that the supervisor gets config from the wrapper
       # by checking that get_config returns expected values
-      providers = [:zoom, :teams, :jitsi, :whereby, :mirotalk]
+      providers = [:mirotalk, :google_meet, :teams]
 
       for provider <- providers do
         config = VideoCircuitBreaker.get_config(provider)
