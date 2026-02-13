@@ -157,13 +157,14 @@ defmodule Tymeslot.Integrations.Providers.Directory do
 
   defp build_descriptor(domain, type) do
     mod = domain_provider_module(domain, type)
+    provider_config = domain_provider_config_module(domain)
 
     %Descriptor{
       domain: domain,
       type: type,
       display_name: display_name(domain, type, mod),
-      icon: icon_for(type),
-      description: nil,
+      icon: icon_for(domain, type, provider_config),
+      description: description_for(domain, type, provider_config),
       oauth: oauth_flag(domain, type, mod),
       capabilities: capabilities_for(mod),
       config_schema: schema_for(mod),
@@ -232,14 +233,14 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   defp registry_for(:video), do: Tymeslot.Integrations.Video.Providers.ProviderRegistry
   defp registry_for(:calendar), do: Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
 
-  defp icon_for(type) do
-    # Placeholder; can be customized per provider type
-    case type do
-      :mirotalk -> "hero-video-camera"
-      :google_meet -> "hero-video-camera"
-      :teams -> "hero-users"
-      :custom -> "hero-link"
-      _ -> nil
-    end
+  defp domain_provider_config_module(:video), do: Tymeslot.Integrations.Video.ProviderConfig
+  defp domain_provider_config_module(:calendar), do: Tymeslot.Integrations.Calendar.ProviderConfig
+
+  defp icon_for(_domain, type, provider_config) do
+    provider_config.icon(type)
+  end
+
+  defp description_for(_domain, type, provider_config) do
+    provider_config.description(type)
   end
 end

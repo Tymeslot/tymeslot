@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Helpers do
   Helper functions for calendar settings dashboard.
   """
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   @spec format_provider_name(String.t() | atom()) :: String.t()
   def format_provider_name(provider) do
@@ -20,54 +21,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Helpers do
   end
 
   @doc """
-  Centralized provider metadata for rendering provider cards
+  Centralized provider metadata for rendering provider cards.
+  Queries ProviderConfig as single source of truth.
   """
   @spec provider_card_info(atom()) :: map()
-  def provider_card_info(:google),
-    do: %{
-      provider: "google",
-      click: "connect_google_calendar",
-      btn: "Connect Google",
-      desc: "Full OAuth integration with Google Meet support"
+  def provider_card_info(provider) when is_atom(provider) do
+    %{
+      provider: Atom.to_string(provider),
+      click: ProviderConfig.click_event(provider),
+      btn: ProviderConfig.button_text(provider),
+      desc: ProviderConfig.description(provider)
     }
-
-  def provider_card_info(:outlook),
-    do: %{
-      provider: "outlook",
-      click: "connect_outlook_calendar",
-      btn: "Connect Outlook",
-      desc: "Microsoft 365 and Outlook.com integration"
-    }
-
-  def provider_card_info(:nextcloud),
-    do: %{
-      provider: "nextcloud",
-      click: "connect_nextcloud_calendar",
-      btn: "Connect Nextcloud",
-      desc: "Self-hosted Nextcloud calendar sync"
-    }
-
-  def provider_card_info(:caldav),
-    do: %{
-      provider: "caldav",
-      click: "connect_caldav_calendar",
-      btn: "Connect CalDAV",
-      desc: "Universal CalDAV server support"
-    }
-
-  def provider_card_info(:radicale),
-    do: %{
-      provider: "radicale",
-      click: "connect_radicale_calendar",
-      btn: "Connect Radicale",
-      desc: "Lightweight self-hosted calendar server"
-    }
-
-  def provider_card_info(:demo),
-    do: %{provider: "demo", click: nil, btn: "Demo Enabled", desc: "Homepage demo provider"}
-
-  def provider_card_info(type),
-    do: %{provider: Atom.to_string(type), click: nil, btn: "Connect", desc: ""}
+  end
 
   @doc """
   Helper to extract a friendly display name from a calendar

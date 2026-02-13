@@ -15,6 +15,59 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra]
   @dev_only_providers [:debug]
 
+  # Provider metadata - single source of truth for all provider information
+  @provider_metadata %{
+    caldav: %{
+      icon: "caldav",
+      description: "Universal CalDAV server support",
+      button_text: "Connect CalDAV",
+      click_event: "connect_caldav_calendar",
+      circuit_breaker_enabled: true
+    },
+    radicale: %{
+      icon: "radicale",
+      description: "Lightweight self-hosted calendar server",
+      button_text: "Connect Radicale",
+      click_event: "connect_radicale_calendar",
+      circuit_breaker_enabled: true
+    },
+    nextcloud: %{
+      icon: "nextcloud",
+      description: "Self-hosted Nextcloud calendar sync",
+      button_text: "Connect Nextcloud",
+      click_event: "connect_nextcloud_calendar",
+      circuit_breaker_enabled: true
+    },
+    zimbra: %{
+      icon: "zimbra",
+      description: "Enterprise Zimbra calendar integration",
+      button_text: "Connect Zimbra",
+      click_event: "connect_zimbra_calendar",
+      circuit_breaker_enabled: true
+    },
+    google: %{
+      icon: "google",
+      description: "Full OAuth integration with Google Meet support",
+      button_text: "Connect Google",
+      click_event: "connect_google_calendar",
+      circuit_breaker_enabled: true
+    },
+    outlook: %{
+      icon: "outlook",
+      description: "Microsoft 365 and Outlook.com integration",
+      button_text: "Connect Outlook",
+      click_event: "connect_outlook_calendar",
+      circuit_breaker_enabled: true
+    },
+    demo: %{
+      icon: "demo",
+      description: "Homepage demo provider",
+      button_text: "Demo Enabled",
+      click_event: nil,
+      circuit_breaker_enabled: false
+    }
+  }
+
   # Read provider settings from config
   @doc false
   @spec provider_settings() :: map()
@@ -92,6 +145,52 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   end
 
   def caldav_based?(_), do: false
+
+  @doc """
+  Gets full metadata for a provider.
+
+  Returns a map with icon, description, button_text, click_event, and circuit_breaker_enabled fields.
+  """
+  @spec metadata(atom()) :: map()
+  def metadata(provider) when is_atom(provider) do
+    Map.get(@provider_metadata, provider, %{
+      icon: Atom.to_string(provider),
+      description: "",
+      button_text: "Connect",
+      click_event: nil,
+      circuit_breaker_enabled: false
+    })
+  end
+
+  @doc """
+  Gets icon identifier for a provider.
+  """
+  @spec icon(atom()) :: String.t()
+  def icon(provider), do: metadata(provider).icon
+
+  @doc """
+  Gets description for a provider.
+  """
+  @spec description(atom()) :: String.t()
+  def description(provider), do: metadata(provider).description
+
+  @doc """
+  Gets button text for a provider.
+  """
+  @spec button_text(atom()) :: String.t()
+  def button_text(provider), do: metadata(provider).button_text
+
+  @doc """
+  Gets click event name for a provider.
+  """
+  @spec click_event(atom()) :: String.t() | nil
+  def click_event(provider), do: metadata(provider).click_event
+
+  @doc """
+  Checks if provider requires circuit breaker monitoring.
+  """
+  @spec circuit_breaker_enabled?(atom()) :: boolean()
+  def circuit_breaker_enabled?(provider), do: metadata(provider).circuit_breaker_enabled
 
   @doc """
   Validates and normalizes a provider type.

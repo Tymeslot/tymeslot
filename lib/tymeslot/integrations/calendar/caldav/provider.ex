@@ -25,6 +25,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   @impl true
   def display_name, do: "CalDAV"
 
+  @doc "Returns the LiveComponent module for provider configuration UI"
+  @spec setup_component() :: module()
+  def setup_component, do: TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavConfig
+
   @impl true
   def config_schema do
     %{

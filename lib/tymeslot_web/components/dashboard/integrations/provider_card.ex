@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ProviderCard do
   attr :title, :string, required: true
   attr :description, :string, required: true
   attr :button_text, :string, required: true
-  attr :click_event, :string, required: true
+  attr :click_event, :string, default: nil
   attr :target, :any, required: true
   attr :provider_value, :string, default: nil
   attr :icon_size, :string, default: "medium", values: ["compact", "medium", "large", "mini"]
@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ProviderCard do
         </div>
       </div>
       <button
+        :if={@click_event}
         phx-click={@click_event}
         phx-target={@target}
         phx-value-provider={@provider_value}
@@ -37,6 +38,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ProviderCard do
       >
         {@button_text}
       </button>
+      <div :if={!@click_event} class="btn btn-secondary w-full opacity-50 cursor-not-allowed">
+        {@button_text}
+      </div>
     </div>
     """
   end

@@ -14,6 +14,38 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   @oauth_providers [:google_meet, :teams]
   @dev_only_providers []
 
+  # Provider metadata - single source of truth for all provider information
+  @provider_metadata %{
+    mirotalk: %{
+      icon: "mirotalk",
+      description: "Free, open-source video conferencing",
+      button_text: "Connect MiroTalk",
+      click_event: "connect_mirotalk",
+      circuit_breaker_enabled: true
+    },
+    google_meet: %{
+      icon: "google_meet",
+      description: "Google Meet video conferencing",
+      button_text: "Connect Google Meet",
+      click_event: "connect_google_meet",
+      circuit_breaker_enabled: true
+    },
+    teams: %{
+      icon: "teams",
+      description: "Microsoft Teams meetings",
+      button_text: "Connect Teams",
+      click_event: "connect_teams",
+      circuit_breaker_enabled: true
+    },
+    custom: %{
+      icon: "custom",
+      description: "Use your own video conferencing link",
+      button_text: "Add Custom Link",
+      click_event: "connect_custom",
+      circuit_breaker_enabled: false
+    }
+  }
+
   # Read provider settings from config
   @doc false
   @spec provider_settings() :: map()
@@ -63,6 +95,52 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   end
 
   def valid_provider?(_), do: false
+
+  @doc """
+  Gets full metadata for a provider.
+
+  Returns a map with icon, description, button_text, click_event, and circuit_breaker_enabled fields.
+  """
+  @spec metadata(atom()) :: map()
+  def metadata(provider) when is_atom(provider) do
+    Map.get(@provider_metadata, provider, %{
+      icon: Atom.to_string(provider),
+      description: "",
+      button_text: "Connect",
+      click_event: nil,
+      circuit_breaker_enabled: false
+    })
+  end
+
+  @doc """
+  Gets icon identifier for a provider.
+  """
+  @spec icon(atom()) :: String.t()
+  def icon(provider), do: metadata(provider).icon
+
+  @doc """
+  Gets description for a provider.
+  """
+  @spec description(atom()) :: String.t()
+  def description(provider), do: metadata(provider).description
+
+  @doc """
+  Gets button text for a provider.
+  """
+  @spec button_text(atom()) :: String.t()
+  def button_text(provider), do: metadata(provider).button_text
+
+  @doc """
+  Gets click event name for a provider.
+  """
+  @spec click_event(atom()) :: String.t() | nil
+  def click_event(provider), do: metadata(provider).click_event
+
+  @doc """
+  Checks if provider requires circuit breaker monitoring.
+  """
+  @spec circuit_breaker_enabled?(atom()) :: boolean()
+  def circuit_breaker_enabled?(provider), do: metadata(provider).circuit_breaker_enabled
 
   @doc """
   Validates and normalizes a provider type.

@@ -13,9 +13,14 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
   """
 
   alias Tymeslot.Infrastructure.CircuitBreaker
+  alias Tymeslot.Integrations.Video.ProviderConfig
   require Logger
 
-  @video_providers [:mirotalk, :google_meet, :teams]
+  # Query providers with circuit breaker enabled from ProviderConfig
+  @video_providers Enum.filter(
+                     ProviderConfig.all_providers(),
+                     &ProviderConfig.circuit_breaker_enabled?/1
+                   )
   @video_breaker_names Enum.into(@video_providers, %{}, fn p ->
                          {p, :"video_breaker_#{p}"}
                        end)
