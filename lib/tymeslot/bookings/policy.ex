@@ -53,29 +53,17 @@ defmodule Tymeslot.Bookings.Policy do
   @spec build_meeting_attributes(map()) :: map()
   def build_meeting_attributes(params) do
     meeting_uid = params.meeting_uid
-    start_datetime = params.start_datetime
-    end_datetime = params.end_datetime
-    duration_minutes = params.duration_minutes
-    form_data = params.form_data
     organizer_user_id = Map.get(params, :organizer_user_id)
     meeting_type_id = Map.get(params, :meeting_type_id)
+    form_data = params.form_data
 
     # Resolve meeting type if ID provided
-    meeting_type_record =
-      if meeting_type_id && organizer_user_id do
-        case MeetingTypes.get_meeting_type(meeting_type_id, organizer_user_id) do
-          %{is_active: true} = type -> type
-          _ -> nil
-        end
-      else
-        nil
-      end
+    meeting_type_record = resolve_meeting_type_record(meeting_type_id, organizer_user_id)
 
     # Get organizer details from profile if available
     {org_name, org_email, org_username} = get_organizer_details(organizer_user_id)
 
-    # Ensure we always have a timezone for the attendee
-    # Fallback to organizer's timezone if not provided (e.g., browser detection failed)
+    # Resolve attendee timezone
     config = scheduling_config(organizer_user_id)
     user_timezone = params.user_timezone || config.owner_timezone
 
@@ -83,79 +71,90 @@ defmodule Tymeslot.Bookings.Policy do
     {calendar_integration_id, calendar_path} =
       get_calendar_integration_info(meeting_type_record || organizer_user_id)
 
-    # Resolve meeting type name and video integration
+    # Resolve meeting type details
     {meeting_type_name, resolved_meeting_type_id, video_integration_id} =
-      case meeting_type_record do
-        nil ->
-          # Fallback if no meeting type record found
-          {"General Meeting", nil, resolve_video_integration_id(params, organizer_user_id)}
+      resolve_meeting_type_details(meeting_type_record, params, organizer_user_id)
 
-        type ->
-          # Prefer params video_integration_id over meeting type's (allows per-booking override)
-          # Fall back to meeting type's video_integration_id if not specified in params
-          resolved_video_id =
-            resolve_video_integration_id(params, organizer_user_id) || type.video_integration_id
+    # Get reminder configuration
+    reminders = get_meeting_reminders(meeting_type_record)
 
-          {type.name, type.id, resolved_video_id}
+    # Build complete meeting attributes map
+    Map.merge(
+      %{
+        uid: meeting_uid,
+        title: "#{meeting_type_name} with #{form_data["name"]}",
+        summary: "#{meeting_type_name} with #{form_data["name"]}",
+        description: form_data["message"] || "",
+        start_time: params.start_datetime,
+        end_time: params.end_datetime,
+        duration: params.duration_minutes,
+        location: "To be determined",
+        meeting_type: meeting_type_name,
+        meeting_type_id: resolved_meeting_type_id,
+        organizer_name: org_name,
+        organizer_email: org_email,
+        organizer_title: nil,
+        organizer_user_id: organizer_user_id,
+        calendar_integration_id: calendar_integration_id,
+        calendar_path: calendar_path,
+        video_integration_id: video_integration_id,
+        attendee_name: form_data["name"],
+        attendee_email: form_data["email"],
+        attendee_message: form_data["message"],
+        attendee_phone: nil,
+        attendee_company: nil,
+        attendee_timezone: TimezoneUtils.normalize_timezone(user_timezone),
+        status: "confirmed",
+        reminders: reminders
+      },
+      build_meeting_action_urls(meeting_uid, org_username)
+    )
+  end
+
+  # Resolves the meeting type record if available and active
+  defp resolve_meeting_type_record(meeting_type_id, organizer_user_id) do
+    if meeting_type_id && organizer_user_id do
+      case MeetingTypes.get_meeting_type(meeting_type_id, organizer_user_id) do
+        %{is_active: true} = type -> type
+        _ -> nil
       end
+    else
+      nil
+    end
+  end
 
-    reminders =
-      case meeting_type_record do
-        %{reminder_config: reminder_config} when not is_nil(reminder_config) ->
-          normalized = ReminderUtils.normalize_reminders(reminder_config)
-          # Respect empty list as "no reminders" - only default when config is nil/missing
-          normalized
+  # Resolves meeting type name, ID, and video integration
+  defp resolve_meeting_type_details(meeting_type_record, params, organizer_user_id) do
+    case meeting_type_record do
+      nil ->
+        {"General Meeting", nil, resolve_video_integration_id(params, organizer_user_id)}
 
-        _ ->
-          # Default for legacy meetings or missing config
-          [%{value: 30, unit: "minutes"}]
-      end
+      type ->
+        resolved_video_id =
+          resolve_video_integration_id(params, organizer_user_id) || type.video_integration_id
 
+        {type.name, type.id, resolved_video_id}
+    end
+  end
+
+  # Gets reminder configuration from meeting type or returns defaults
+  defp get_meeting_reminders(meeting_type_record) do
+    case meeting_type_record do
+      %{reminder_config: reminder_config} when not is_nil(reminder_config) ->
+        ReminderUtils.normalize_reminders(reminder_config)
+
+      _ ->
+        [%{value: 30, unit: "minutes"}]
+    end
+  end
+
+  # Builds URLs for meeting actions (view, reschedule, cancel)
+  defp build_meeting_action_urls(meeting_uid, org_username) do
     %{
-      uid: meeting_uid,
-      title: "#{meeting_type_name} with #{form_data["name"]}",
-      summary: "#{meeting_type_name} with #{form_data["name"]}",
-      description: form_data["message"] || "",
-      start_time: start_datetime,
-      end_time: end_datetime,
-      duration: duration_minutes,
-      location: "To be determined",
-      meeting_type: meeting_type_name,
-      meeting_type_id: resolved_meeting_type_id,
-
-      # Organizer details (from profile or config)
-      organizer_name: org_name,
-      organizer_email: org_email,
-      organizer_title: nil,
-      organizer_user_id: organizer_user_id,
-
-      # Calendar integration tracking
-      calendar_integration_id: calendar_integration_id,
-      calendar_path: calendar_path,
-
-      # Video integration tracking
-      video_integration_id: video_integration_id,
-
-      # Attendee details
-      attendee_name: form_data["name"],
-      attendee_email: form_data["email"],
-      attendee_message: form_data["message"],
-      attendee_phone: nil,
-      attendee_company: nil,
-      # Always normalize and ensure we have a valid timezone
-      attendee_timezone: TimezoneUtils.normalize_timezone(user_timezone),
-
-      # URLs
       view_url: build_meeting_url(meeting_uid, "", org_username),
       reschedule_url: build_meeting_url(meeting_uid, "/reschedule", org_username),
       cancel_url: build_meeting_url(meeting_uid, "/cancel", org_username),
-      meeting_url: nil,
-
-      # Status
-      status: "confirmed",
-
-      # Reminder snapshot
-      reminders: reminders
+      meeting_url: nil
     }
   end
 

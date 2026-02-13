@@ -97,9 +97,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   defp process_template(url, config) do
     if String.contains?(url, TemplateConfig.template_variable()) do
       # Validate template position before processing
-      with :ok <- validate_template_position(url),
-           {:ok, processed} <- process_template_with_meeting_id(url, config) do
-        {:ok, processed}
+      with :ok <- validate_template_position(url) do
+        process_template_with_meeting_id(url, config)
       end
     else
       # Static URL - no template processing needed

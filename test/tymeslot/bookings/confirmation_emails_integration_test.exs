@@ -25,6 +25,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
   import Swoosh.TestAssertions
   import Tymeslot.Factory
 
+  alias Ecto.UUID
   alias Tymeslot.Bookings.Create
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Repo
@@ -211,7 +212,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
     end
 
     test "handles missing meeting gracefully", %{} do
-      fake_id = Ecto.UUID.generate()
+      fake_id = UUID.generate()
 
       # Execute job with non-existent meeting ID
       # The worker returns :discard for missing meetings
