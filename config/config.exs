@@ -132,14 +132,6 @@ config :tymeslot, :locales,
 # SHARED INFRASTRUCTURE CONFIGURATION
 # =============================================================================
 
-# Configure HTTP client timeouts
-config :tymeslot, :http_timeouts, %{
-  get: [timeout: 30_000, recv_timeout: 30_000],
-  put: [timeout: 45_000, recv_timeout: 45_000],
-  delete: [timeout: 45_000, recv_timeout: 45_000],
-  report: [timeout: 60_000, recv_timeout: 60_000]
-}
-
 # Configures the endpoint
 config :tymeslot, TymeslotWeb.Endpoint,
   url: [host: "localhost", scheme: "http"],
