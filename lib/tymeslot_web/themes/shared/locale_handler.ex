@@ -57,10 +57,12 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
 
   @doc """
   Returns the list of supported locale codes.
+  Derived from the locale metadata configuration.
   """
   @spec supported_locales() :: [String.t()]
   def supported_locales do
-    Application.get_env(:tymeslot, TymeslotWeb.Gettext)[:locales] || ["en"]
+    get_locales_with_metadata()
+    |> Enum.map(& &1.code)
   end
 
   @doc """

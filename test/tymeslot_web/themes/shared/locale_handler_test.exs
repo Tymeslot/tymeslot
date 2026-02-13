@@ -144,11 +144,12 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
       assert "fr" in locales
     end
 
-    test "supported locales match configuration" do
+    test "supported locales are derived from metadata configuration" do
       locales = LocaleHandler.supported_locales()
-      configured = Application.get_env(:tymeslot, TymeslotWeb.Gettext)[:locales]
+      metadata = LocaleHandler.get_locales_with_metadata()
+      expected_codes = Enum.map(metadata, & &1.code)
 
-      assert locales == configured
+      assert locales == expected_codes
     end
   end
 

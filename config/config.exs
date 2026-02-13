@@ -114,12 +114,12 @@ config :tymeslot, :webhook_idempotency,
 # INTERNATIONALIZATION (I18N) CONFIGURATION
 # =============================================================================
 
-# Configure Gettext locales
+# Configure Gettext default locale
 config :tymeslot, TymeslotWeb.Gettext,
-  default_locale: "en",
-  locales: ~w(en de uk fr)
+  default_locale: "en"
 
-# Locale metadata for UI rendering
+# Locale configuration (single source of truth)
+# All supported languages with their metadata for UI rendering
 config :tymeslot, :locales,
   supported: [
     %{code: "en", name: "English", country_code: :gbr},
