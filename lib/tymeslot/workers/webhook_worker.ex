@@ -256,9 +256,9 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   defp perform_http_request(url, payload, headers) do
     case http_client().post(url, Jason.encode!(payload), headers,
-           recv_timeout: @delivery_timeout_ms
+           receive_timeout: @delivery_timeout_ms
          ) do
-      {:ok, %{status_code: status, body: response_body}} ->
+      {:ok, %{status: status, body: response_body}} ->
         {:ok, status, response_body}
 
       {:error, %{reason: reason}} ->

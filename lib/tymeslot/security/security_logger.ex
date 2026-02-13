@@ -295,11 +295,14 @@ defmodule Tymeslot.Security.SecurityLogger do
     headers = [{"Content-Type", "application/json"}]
     body = Jason.encode!(metadata)
 
-    case HTTPoison.post(webhook_url, body, headers) do
-      {:ok, %HTTPoison.Response{status_code: status}} when status < 300 ->
+    case http_client().post(webhook_url, body, headers,
+           receive_timeout: 10_000,
+           connect_options: [timeout: 5_000]
+         ) do
+      {:ok, %{status: status}} when status < 300 ->
         Logger.debug("Security event sent to monitoring service")
 
-      {:ok, %HTTPoison.Response{status_code: status}} ->
+      {:ok, %{status: status}} ->
         Logger.warning("Failed to send security event to monitoring service", status: status)
 
       {:error, reason} ->
@@ -310,5 +313,9 @@ defmodule Tymeslot.Security.SecurityLogger do
       Logger.error("Exception sending security event to monitoring service",
         error: inspect(error)
       )
+  end
+
+  defp http_client do
+    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 end

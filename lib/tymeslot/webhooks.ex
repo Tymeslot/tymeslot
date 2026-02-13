@@ -146,11 +146,11 @@ defmodule Tymeslot.Webhooks do
     payload = PayloadBuilder.build_test_payload()
     headers = build_headers(payload, token)
 
-    case http_client().post(url, Jason.encode!(payload), headers, recv_timeout: 10_000) do
-      {:ok, %{status_code: status}} when status >= 200 and status < 300 ->
+    case http_client().post(url, Jason.encode!(payload), headers, receive_timeout: 10_000) do
+      {:ok, %{status: status}} when status >= 200 and status < 300 ->
         :ok
 
-      {:ok, %{status_code: status}} ->
+      {:ok, %{status: status}} ->
         {:error, "Webhook returned status #{status}"}
 
       {:error, %{reason: reason}} ->

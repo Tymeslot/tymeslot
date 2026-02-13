@@ -60,8 +60,11 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
 
     headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
 
-    case http_client().post(@verify_url, body, headers, timeout: 5000, recv_timeout: 5000) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: response_body}} ->
+    case http_client().post(@verify_url, body, headers,
+           receive_timeout: 5000,
+           connect_options: [timeout: 5000]
+         ) do
+      {:ok, %Req.Response{status: 200, body: response_body}} ->
         handle_verification_response(
           response_body,
           min_score,
@@ -69,12 +72,12 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
           expected_hostnames
         )
 
-      {:ok, %HTTPoison.Response{status_code: status_code}} ->
+      {:ok, %Req.Response{status: status_code}} ->
         Logger.error("reCAPTCHA verification failed with status: #{status_code}")
         {:error, :recaptcha_request_failed}
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
-        Logger.error("reCAPTCHA verification request error: #{inspect(reason)}")
+      {:error, exception} ->
+        Logger.error("reCAPTCHA verification request error: #{inspect(exception)}")
         {:error, :recaptcha_network_error}
     end
   end

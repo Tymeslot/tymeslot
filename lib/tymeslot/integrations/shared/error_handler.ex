@@ -206,16 +206,10 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
   Handles common HTTP client error patterns and converts them to standardized formats.
   Optional provider name can be used for provider-specific error parsing.
   """
-  @spec handle_http_error({:error, HTTPoison.Error.t()}, String.t() | atom() | nil) ::
+  @spec handle_http_error({:error, Exception.t()}, String.t() | atom() | nil) ::
           {:error, String.t()}
-  def handle_http_error({:error, %HTTPoison.Error{reason: reason}}, _provider) do
-    {:error, "HTTP request failed: #{inspect(reason)}"}
-  end
-
-  @spec handle_http_error({:error, Finch.Error.t()}, String.t() | atom() | nil) ::
-          {:error, String.t()}
-  def handle_http_error({:error, %Finch.Error{reason: reason}}, _provider) do
-    {:error, "HTTP request failed: #{inspect(reason)}"}
+  def handle_http_error({:error, exception}, _provider) when is_exception(exception) do
+    {:error, "HTTP request failed: #{Exception.message(exception)}"}
   end
 
   @spec handle_http_error({:ok, map()}, String.t() | atom() | nil) ::

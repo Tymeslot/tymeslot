@@ -477,7 +477,7 @@ defmodule Tymeslot.Emails.EmailService do
     Enum.any?(retriable_patterns, fn pattern -> String.contains?(down, pattern) end)
   end
 
-  defp email_retriable?(%{status_code: code}) when code in [500, 502, 503, 504] do
+  defp email_retriable?(%{status: code}) when code in [500, 502, 503, 504] do
     true
   end
 
