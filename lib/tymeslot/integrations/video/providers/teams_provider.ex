@@ -319,10 +319,10 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     url = "#{@graph_api_base_url}/me/events"
 
     case http_client().request(:post, url, Jason.encode!(meeting_payload), headers, []) do
-      {:ok, %HTTPoison.Response{status_code: 201, body: body}} ->
+      {:ok, %Req.Response{status: 201, body: body}} ->
         parse_meeting_response(body)
 
-      {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+      {:ok, %Req.Response{status: status, body: body}} ->
         decode_and_format_error(status, body)
 
       {:error, reason} ->

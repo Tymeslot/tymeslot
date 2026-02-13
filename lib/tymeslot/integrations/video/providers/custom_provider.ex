@@ -338,21 +338,20 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
 
   defp check_reachable(url) do
     opts = [
-      timeout: 3_000,
-      recv_timeout: 3_000,
-      follow_redirect: true,
-      max_redirect: 3,
-      ssl: [{:versions, [:"tlsv1.2", :"tlsv1.3"]}]
+      receive_timeout: 3_000,
+      connect_options: [timeout: 3_000],
+      redirect: true,
+      max_redirects: 3
     ]
 
-    case HTTPoison.head(url, [], opts) do
-      {:ok, %HTTPoison.Response{status_code: status}} when status in 200..399 ->
+    case http_client().head(url, [], opts) do
+      {:ok, %{status: status}} when status in 200..399 ->
         {:ok, status}
 
-      {:ok, %HTTPoison.Response{status_code: 405}} ->
+      {:ok, %{status: 405}} ->
         do_get(url, opts)
 
-      {:ok, %HTTPoison.Response{status_code: status}} ->
+      {:ok, %{status: status}} ->
         {:error, "URL responded with HTTP #{status}"}
 
       {:error, _} ->
@@ -361,18 +360,31 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
   end
 
   defp do_get(url, opts) do
-    case HTTPoison.get(url, [], opts) do
-      {:ok, %HTTPoison.Response{status_code: status}} when status in 200..399 ->
+    case http_client().get(url, [], opts) do
+      {:ok, %{status: status}} when status in 200..399 ->
         {:ok, status}
 
-      {:ok, %HTTPoison.Response{status_code: status}} ->
+      {:ok, %{status: status}} ->
         {:error, "URL responded with HTTP #{status}"}
 
-      {:error, %HTTPoison.Error{reason: :timeout}} ->
-        {:error, "Connection timeout while reaching the URL"}
+      {:error, exception} when is_exception(exception) ->
+        case exception do
+          %Mint.TransportError{reason: :timeout} ->
+            {:error, "Connection timeout while reaching the URL"}
 
-      {:error, %HTTPoison.Error{reason: reason}} ->
+          %Req.TransportError{reason: :timeout} ->
+            {:error, "Connection timeout while reaching the URL"}
+
+          _ ->
+            {:error, "Failed to reach URL: #{Exception.message(exception)}"}
+        end
+
+      {:error, reason} ->
         {:error, "Failed to reach URL: #{inspect(reason)}"}
     end
+  end
+
+  defp http_client do
+    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 end

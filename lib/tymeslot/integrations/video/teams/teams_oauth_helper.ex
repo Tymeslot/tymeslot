@@ -110,7 +110,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
 
     Retry.with_backoff(fn ->
       case http_client().get("https://graph.microsoft.com/v1.0/me", headers, []) do
-        {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+        {:ok, %Req.Response{status: 200, body: body}} ->
           case Jason.decode(body) do
             {:ok, %{"id" => id} = profile} when is_binary(id) and id != "" ->
               {:ok, profile}
@@ -122,11 +122,14 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
               {:error, "Invalid JSON response from Microsoft profile API"}
           end
 
-        {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+        {:ok, %Req.Response{status: status, body: body}} ->
           Logger.error("Failed to fetch Microsoft user profile", status: status, body: body)
           {:error, "Failed to fetch user profile: HTTP #{status}"}
 
-        {:error, %HTTPoison.Error{reason: reason}} ->
+        {:error, exception} when is_exception(exception) ->
+          {:error, "Network error fetching profile: #{Exception.message(exception)}"}
+
+        {:error, reason} ->
           {:error, "Network error fetching profile: #{inspect(reason)}"}
       end
     end)

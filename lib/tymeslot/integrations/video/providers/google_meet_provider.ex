@@ -376,13 +376,13 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     body = Jason.encode!(event_data)
 
     case http_client().request(:post, url, body, headers, []) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: response_body}} ->
+      {:ok, %Req.Response{status: 200, body: response_body}} ->
         event = Jason.decode!(response_body)
         {:ok, event}
 
-      {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+      {:ok, %Req.Response{status: status, body: body}} ->
         Logger.error("Google Calendar API error in Google Meet provider",
-          status_code: status,
+          status: status,
           body: Redactor.redact_and_truncate(body)
         )
 
@@ -404,13 +404,13 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     url = "https://www.googleapis.com/calendar/v3/users/me/calendarList"
 
     case http_client().request(:get, url, "", headers, []) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: response_body}} ->
+      {:ok, %Req.Response{status: 200, body: response_body}} ->
         list = Jason.decode!(response_body)
         {:ok, list}
 
-      {:ok, %HTTPoison.Response{status_code: status, body: body}} ->
+      {:ok, %Req.Response{status: status, body: body}} ->
         Logger.error("Google Calendar API error fetching calendar list",
-          status_code: status,
+          status: status,
           body: Redactor.redact_and_truncate(body)
         )
 

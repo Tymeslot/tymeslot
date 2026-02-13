@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   defp test_api_connection(base_url, api_key) do
     headers = build_api_headers(api_key)
-    options = [recv_timeout: 5_000, timeout: 5_000]
+    options = [timeout: 5_000]
 
     # Always try HTTPS first; if it fails due to network/connection, fall back to HTTP
     handle_api_response(
@@ -114,39 +114,39 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   defp handle_api_response({:ok, response}), do: handle_http_response(response)
   defp handle_api_response({:error, error}), do: handle_http_error(error)
 
-  defp handle_http_response(%HTTPoison.Response{status_code: 200}) do
+  defp handle_http_response(%Req.Response{status: 200}) do
     {:ok, "Connection successful - API key is valid"}
   end
 
-  defp handle_http_response(%HTTPoison.Response{status_code: 401, body: body}) do
+  defp handle_http_response(%Req.Response{status: 401, body: body}) do
     handle_auth_error(body, "Authentication failed - Please check your API key")
   end
 
-  defp handle_http_response(%HTTPoison.Response{status_code: 403, body: body}) do
+  defp handle_http_response(%Req.Response{status: 403, body: body}) do
     handle_auth_error(body, "Access forbidden - API key may lack required permissions")
   end
 
-  defp handle_http_response(%HTTPoison.Response{status_code: 404}) do
+  defp handle_http_response(%Req.Response{status: 404}) do
     {:error, "API endpoint not found - Please verify the base URL is correct"}
   end
 
-  defp handle_http_response(%HTTPoison.Response{status_code: 406}) do
+  defp handle_http_response(%Req.Response{status: 406}) do
     {:error,
      "Not Acceptable - The MiroTalk server rejected the request. Please verify your base URL and API configuration"}
   end
 
-  defp handle_http_response(%HTTPoison.Response{status_code: status, body: body})
+  defp handle_http_response(%Req.Response{status: status, body: body})
        when status >= 500 do
     redacted_body = Redactor.redact_and_truncate(body)
 
     Logger.error("MiroTalk server error: #{redacted_body}",
-      status_code: status
+      status: status
     )
 
     {:error, "MiroTalk server error (status #{status}) - Please try again later"}
   end
 
-  defp handle_http_response(%HTTPoison.Response{status_code: status}) do
+  defp handle_http_response(%Req.Response{status: status}) do
     {:error, "Unexpected response (status #{status}) - Please verify your configuration"}
   end
 
@@ -158,30 +158,33 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     end
   end
 
-  defp handle_http_error(%HTTPoison.Error{reason: :nxdomain}) do
-    {:error, "Domain not found - Please check the URL"}
-  end
+  defp handle_http_error(exception) when is_exception(exception) do
+    case exception do
+      # Mint transport errors with specific reasons
+      %Mint.TransportError{reason: :nxdomain} ->
+        {:error, "Domain not found - Please check the URL"}
 
-  defp handle_http_error(%HTTPoison.Error{reason: :econnrefused}) do
-    {:error, "Connection refused - Server may be down or URL incorrect"}
-  end
+      %Mint.TransportError{reason: :econnrefused} ->
+        {:error, "Connection refused - Server may be down or URL incorrect"}
 
-  defp handle_http_error(%HTTPoison.Error{reason: :timeout}) do
-    {:error, "Connection timeout - Server took too long to respond"}
-  end
+      %Mint.TransportError{reason: :timeout} ->
+        {:error, "Connection timeout - Server took too long to respond"}
 
-  defp handle_http_error(%HTTPoison.Error{reason: reason}) do
-    {:error, "Connection failed: #{format_connection_error(reason)}"}
-  end
+      # Req transport errors (may wrap Mint errors)
+      %Req.TransportError{reason: :nxdomain} ->
+        {:error, "Domain not found - Please check the URL"}
 
-  defp format_connection_error(reason) when is_atom(reason) do
-    reason
-    |> Atom.to_string()
-    |> String.replace("_", " ")
-    |> String.capitalize()
-  end
+      %Req.TransportError{reason: :econnrefused} ->
+        {:error, "Connection refused - Server may be down or URL incorrect"}
 
-  defp format_connection_error(reason), do: inspect(reason)
+      %Req.TransportError{reason: :timeout} ->
+        {:error, "Connection timeout - Server took too long to respond"}
+
+      # Generic fallback with message
+      _ ->
+        {:error, "Connection failed: #{Exception.message(exception)}"}
+    end
+  end
 
   @doc """
   Creates a new MiroTalk meeting room.
@@ -201,7 +204,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     case try_https_then_http(base_url, "/api/v1/meeting", fn url ->
            http_client().post(url, "", headers, [])
          end) do
-      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+      {:ok, %Req.Response{status: 200, body: body}} ->
         try do
           response = Jason.decode!(body)
           # Return room data in standardized format
@@ -218,14 +221,14 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
             {:error, :invalid_json}
         end
 
-      {:ok, %HTTPoison.Response{status_code: status_code, body: body}} ->
+      {:ok, %Req.Response{status: status, body: body}} ->
         redacted_body = Redactor.redact_and_truncate(body)
 
         Logger.error("MiroTalk API error: #{redacted_body}",
-          status_code: status_code
+          status: status
         )
 
-        {:error, {:http_error, status_code, "MiroTalk API error (see logs for details)"}}
+        {:error, {:http_error, status, "MiroTalk API error (see logs for details)"}}
 
       {:error, reason} ->
         Logger.error("Failed to create MiroTalk room: #{Redactor.redact(reason)}")
@@ -507,7 +510,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   # Handle MiroTalk join API response
   defp handle_join_api_response(http_result, mode) do
     case http_result do
-      {:ok, %HTTPoison.Response{status_code: 200, body: response_body}} ->
+      {:ok, %Req.Response{status: 200, body: response_body}} ->
         try do
           response = Jason.decode!(response_body)
 
@@ -537,7 +540,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
             {:error, :invalid_json}
         end
 
-      {:ok, %HTTPoison.Response{status_code: status_code, body: body}} ->
+      {:ok, %Req.Response{status: status, body: body}} ->
         error_msg =
           if mode == :with_validation,
             do: "MiroTalk join API error",
@@ -546,10 +549,10 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
         redacted_body = Redactor.redact_and_truncate(body)
 
         Logger.error("#{error_msg}: #{redacted_body}",
-          status_code: status_code
+          status: status
         )
 
-        {:error, {:http_error, status_code, "#{error_msg} (see logs for details)"}}
+        {:error, {:http_error, status, "#{error_msg} (see logs for details)"}}
 
       {:error, reason} ->
         error_msg =
@@ -567,17 +570,21 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     https_url = force_https(base_url) <> path
 
     case fun.(https_url) do
-      {:ok, %HTTPoison.Response{} = resp} ->
+      {:ok, %Req.Response{} = resp} ->
         {:ok, resp}
 
-      {:error, %HTTPoison.Error{} = _err} ->
+      {:error, exception} when is_exception(exception) ->
         # Fallback to original base_url on network/connection error
         fallback_url = base_url <> path
 
         case fun.(fallback_url) do
-          {:ok, %HTTPoison.Response{} = resp2} -> {:ok, resp2}
-          {:error, %HTTPoison.Error{} = err2} -> {:error, err2}
+          {:ok, %Req.Response{} = resp2} -> {:ok, resp2}
+          {:error, exception2} when is_exception(exception2) -> {:error, exception2}
+          {:error, reason} -> {:error, reason}
         end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
