@@ -7,13 +7,23 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
+  alias Tymeslot.Integrations.Calendar.ProviderConfig, as: CalendarProviderConfig
+  alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
 
-  @calendar_providers [:caldav, :radicale, :nextcloud, :google, :outlook]
+  # Query providers with circuit breaker enabled from ProviderConfig
+  @calendar_providers Enum.filter(
+                        CalendarProviderConfig.all_providers(),
+                        &CalendarProviderConfig.circuit_breaker_enabled?/1
+                      )
   @calendar_breaker_names Enum.into(@calendar_providers, %{}, fn p ->
                             {p, :"calendar_breaker_#{p}"}
                           end)
 
-  @video_providers [:mirotalk, :google_meet, :teams]
+  # Query video providers with circuit breaker enabled from ProviderConfig
+  @video_providers Enum.filter(
+                     VideoProviderConfig.all_providers(),
+                     &VideoProviderConfig.circuit_breaker_enabled?/1
+                   )
   @video_breaker_names Enum.into(@video_providers, %{}, fn p ->
                          {p, :"video_breaker_#{p}"}
                        end)
