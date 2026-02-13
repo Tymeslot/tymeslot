@@ -115,8 +115,7 @@ config :tymeslot, :webhook_idempotency,
 # =============================================================================
 
 # Configure Gettext default locale
-config :tymeslot, TymeslotWeb.Gettext,
-  default_locale: "en"
+config :tymeslot, TymeslotWeb.Gettext, default_locale: "en"
 
 # Locale configuration (single source of truth)
 # All supported languages with their metadata for UI rendering
