@@ -101,7 +101,7 @@ defmodule Tymeslot.Infrastructure.Retry do
 
     if opts[:jitter] do
       # Add random jitter (±25% of delay)
-      jitter_range = round(delay * 0.25)
+      jitter_range = max(round(delay * 0.25), 1)
       delay + :rand.uniform(jitter_range * 2) - jitter_range
     else
       delay
@@ -126,17 +126,21 @@ defmodule Tymeslot.Infrastructure.Retry do
     Enum.any?(retriable_patterns, fn pattern -> String.contains?(down, pattern) end)
   end
 
-  defp default_retriable?(%HTTPoison.Error{reason: reason}) do
-    retriable_reasons = [
-      :timeout,
-      :connect_timeout,
-      :closed,
-      :econnrefused,
-      :ehostunreach,
-      :enetunreach
-    ]
+  defp default_retriable?(exception) when is_exception(exception) do
+    # Handle Req/Finch/Mint exceptions - only retry transient errors
+    case exception do
+      %Mint.TransportError{reason: reason} ->
+        reason in [:timeout, :closed, :econnrefused, :ehostunreach, :enetunreach]
 
-    reason in retriable_reasons
+      %Req.TransportError{reason: reason} when is_atom(reason) ->
+        reason in [:timeout, :closed, :econnrefused, :ehostunreach, :enetunreach]
+
+      %Finch.Error{reason: reason} when is_atom(reason) ->
+        reason in [:timeout, :closed, :econnrefused, :ehostunreach, :enetunreach]
+
+      _ ->
+        false
+    end
   end
 
   defp default_retriable?(_), do: false

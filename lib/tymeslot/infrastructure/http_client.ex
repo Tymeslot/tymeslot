@@ -1,105 +1,83 @@
 defmodule Tymeslot.Infrastructure.HTTPClient do
   @moduledoc """
   Standardized HTTP client for the application.
-  Wraps HTTPoison and provides support for custom HTTP methods.
+  Wraps Req and provides consistent interface for all HTTP requests.
   """
 
   @behaviour Tymeslot.Infrastructure.HTTPClientBehaviour
 
   require Logger
-  alias Tymeslot.Infrastructure.{ConnectionPool, Metrics}
-
-  @default_options [
-    timeout: 30_000,
-    recv_timeout: 30_000
-  ]
+  alias Tymeslot.Infrastructure.{Metrics, ProxyConfig}
 
   @operation_timeouts %{
     # Read operations get standard timeout
-    get: [timeout: 30_000, recv_timeout: 30_000],
+    get: 30_000,
+    head: 30_000,
+    options: 30_000,
 
     # Write operations get longer timeout
-    post: [timeout: 45_000, recv_timeout: 45_000],
-    put: [timeout: 45_000, recv_timeout: 45_000],
-    delete: [timeout: 45_000, recv_timeout: 45_000],
+    post: 45_000,
+    put: 45_000,
+    delete: 45_000,
+    patch: 45_000,
 
-    # REPORT can be slow with large calendars
-    report: [timeout: 60_000, recv_timeout: 60_000]
+    # CalDAV operations can be slow with large calendars
+    report: 60_000,
+    propfind: 60_000
   }
 
   @doc """
   Performs a GET request.
   """
   @spec get(String.t(), list(), keyword()) ::
-          {:ok, HTTPoison.Response.t()} | {:error, HTTPoison.Error.t()}
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
   def get(url, headers \\ [], options \\ []) do
-    options = merge_options(options, :get, url)
-    track_request(:get, url, fn -> HTTPoison.get(url, headers, options) end)
+    request(:get, url, "", headers, options)
   end
 
   @doc """
   Performs a POST request.
   """
   @spec post(String.t(), any(), list(), keyword()) ::
-          {:ok, HTTPoison.Response.t()} | {:error, HTTPoison.Error.t()}
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
   def post(url, body, headers \\ [], options \\ []) do
-    options = merge_options(options, :post, url)
-    track_request(:post, url, fn -> HTTPoison.post(url, body, headers, options) end)
+    request(:post, url, body, headers, options)
   end
 
   @doc """
   Performs a PUT request.
   """
   @spec put(String.t(), any(), list(), keyword()) ::
-          {:ok, HTTPoison.Response.t()} | {:error, HTTPoison.Error.t()}
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
   def put(url, body, headers \\ [], options \\ []) do
-    options = merge_options(options, :put, url)
-    track_request(:put, url, fn -> HTTPoison.put(url, body, headers, options) end)
+    request(:put, url, body, headers, options)
   end
 
   @doc """
   Performs a DELETE request.
   """
   @spec delete(String.t(), list(), keyword()) ::
-          {:ok, HTTPoison.Response.t()} | {:error, HTTPoison.Error.t()}
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
   def delete(url, headers \\ [], options \\ []) do
-    options = merge_options(options, :delete, url)
-    track_request(:delete, url, fn -> HTTPoison.delete(url, headers, options) end)
+    request(:delete, url, "", headers, options)
+  end
+
+  @doc """
+  Performs a HEAD request.
+  """
+  @spec head(String.t(), list(), keyword()) ::
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
+  def head(url, headers \\ [], options \\ []) do
+    request(:head, url, "", headers, options)
   end
 
   @doc """
   Performs a REPORT request (CalDAV specific).
-  Uses hackney directly as HTTPoison doesn't support custom methods.
   """
   @spec report(String.t(), any(), list(), keyword()) ::
-          {:ok, HTTPoison.Response.t()} | {:error, HTTPoison.Error.t()}
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
   def report(url, body, headers \\ [], options \\ []) do
-    options = merge_options(options, :report, url)
-    hackney_opts = convert_to_hackney_options(options)
-
-    track_request(:report, url, fn ->
-      case :hackney.request("REPORT", url, headers, body, [{:with_body, true} | hackney_opts]) do
-        {:ok, status_code, response_headers, response_body} ->
-          # Convert to HTTPoison-like response format
-          {:ok,
-           %HTTPoison.Response{
-             status_code: status_code,
-             headers: response_headers,
-             body: response_body,
-             request_url: url,
-             request: %HTTPoison.Request{
-               method: :report,
-               url: url,
-               headers: headers,
-               body: body,
-               options: options
-             }
-           }}
-
-        {:error, reason} ->
-          {:error, %HTTPoison.Error{reason: reason}}
-      end
-    end)
+    request(:report, url, body, headers, options)
   end
 
   @allowed_methods %{
@@ -110,19 +88,24 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     "delete" => :delete,
     "head" => :head,
     "options" => :options,
-    "report" => :report
+    "report" => :report,
+    "propfind" => :propfind
   }
 
   @doc """
-  Performs any custom HTTP method request.
+  Performs any HTTP method request.
+  Supports both atom and string method names.
   """
   @spec request(atom() | String.t(), String.t(), any(), list(), keyword()) ::
-          {:ok, HTTPoison.Response.t()} | {:error, HTTPoison.Error.t()}
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
   def request(method, url, body \\ "", headers \\ [], options \\ [])
 
   def request(method, url, body, headers, options) when is_atom(method) do
-    options = merge_options(options, method, url)
-    track_request(method, url, fn -> HTTPoison.request(method, url, body, headers, options) end)
+    req_options = build_req_options(method, url, body, headers, options)
+
+    track_request(method, url, fn ->
+      Req.request(req_options)
+    end)
   end
 
   def request(method, url, body, headers, options) when is_binary(method) do
@@ -133,19 +116,94 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         request(atom_method, url, body, headers, options)
 
       :error ->
-        {:error, %HTTPoison.Error{reason: {:invalid_method, method}}}
+        {:error, %RuntimeError{message: "Invalid HTTP method: #{method}"}}
     end
   end
 
   def request(method, _url, _body, _headers, _options) do
-    {:error, %HTTPoison.Error{reason: {:invalid_method, method}}}
+    {:error, %RuntimeError{message: "Invalid HTTP method: #{inspect(method)}"}}
   end
 
   # Private functions
 
-  @spec track_request(atom(), String.t(), (-> {:ok, HTTPoison.Response.t()}
-                                              | {:error, HTTPoison.Error.t()})) ::
-          {:ok, HTTPoison.Response.t()} | {:error, HTTPoison.Error.t()}
+  @spec build_req_options(atom(), String.t(), any(), list(), keyword()) :: keyword()
+  defp build_req_options(method, url, body, headers, user_options) do
+    # Get timeout for this operation
+    timeout = get_timeout(method, user_options)
+
+    # Get proxy configuration for this URL (considers NO_PROXY, HTTP vs HTTPS)
+    proxy_options = get_proxy_options(url)
+
+    # Build base request options
+    base_options = [
+      method: method,
+      url: url,
+      headers: headers,
+      finch: Tymeslot.Finch,
+      receive_timeout: timeout,
+      # Disable automatic JSON decoding to match HTTPoison behavior
+      # Callers handle JSON parsing explicitly with Jason.decode!
+      decode_body: false
+    ]
+
+    # Add body if present (and not empty)
+    options_with_body =
+      if body != "" and body != nil do
+        Keyword.put(base_options, :body, body)
+      else
+        base_options
+      end
+
+    # Add proxy options if configured
+    options_with_proxy = Keyword.merge(options_with_body, proxy_options)
+
+    # Merge with user options (user options take precedence)
+    # Special handling for connect_options to deep merge with proxy config
+    # Strip HTTPoison-style timeout keys that were handled by get_timeout/2
+    user_opts_clean = user_options |> Keyword.delete(:timeout) |> Keyword.delete(:recv_timeout)
+
+    case Keyword.get(user_opts_clean, :connect_options) do
+      nil ->
+        Keyword.merge(options_with_proxy, user_opts_clean)
+
+      user_connect_opts ->
+        proxy_connect_opts = Keyword.get(options_with_proxy, :connect_options, [])
+        merged_connect_opts = Keyword.merge(proxy_connect_opts, user_connect_opts)
+
+        options_with_proxy
+        |> Keyword.delete(:connect_options)
+        |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
+        |> Keyword.put(:connect_options, merged_connect_opts)
+    end
+  end
+
+  @spec get_proxy_options(String.t()) :: keyword()
+  defp get_proxy_options(url) do
+    # Get proxy config for this URL (considers NO_PROXY and URL scheme)
+    proxy_config = ProxyConfig.get_proxy_for_url(url)
+
+    # Build Req-compatible proxy options
+    ProxyConfig.build_req_proxy_options(proxy_config)
+  end
+
+  @spec get_timeout(atom(), keyword()) :: non_neg_integer()
+  defp get_timeout(method, user_options) do
+    cond do
+      # User-provided timeout takes highest precedence
+      user_options[:timeout] ->
+        user_options[:timeout]
+
+      user_options[:receive_timeout] ->
+        user_options[:receive_timeout]
+
+      # Otherwise use operation-specific timeout
+      true ->
+        Map.get(@operation_timeouts, method, 30_000)
+    end
+  end
+
+  @spec track_request(atom(), String.t(), (-> {:ok, Req.Response.t()} | {:error, Exception.t()})) ::
+          {:ok, Req.Response.t()} | {:error, Exception.t()}
   defp track_request(method, url, request_fn) when is_atom(method) do
     start_time = System.monotonic_time()
 
@@ -156,80 +214,12 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
 
     status_code =
       case result do
-        {:ok, %{status_code: code}} -> code
+        {:ok, %{status: code}} -> code
         _ -> 0
       end
 
     Metrics.track_http_request(to_string(method), url, status_code, duration_ms)
 
     result
-  end
-
-  @doc """
-  Merges user-provided options with operation-specific defaults.
-
-  Applies the following precedence (highest to lowest):
-  1. User-provided options
-  2. Connection pool configuration
-  3. Configured operation-specific timeouts
-  4. Default operation timeouts
-  5. Base defaults
-  """
-  @spec merge_options(keyword(), atom(), String.t()) :: keyword()
-  def merge_options(user_options, operation, url) do
-    # Get configured timeouts if available
-    configured_timeouts = Application.get_env(:tymeslot, :http_timeouts, %{})
-
-    # Start with operation-specific timeouts, fall back to defaults
-    base_options = Map.get(@operation_timeouts, operation, @default_options)
-
-    # Apply configured timeouts for this operation if any
-    operation_config = Map.get(configured_timeouts, operation, [])
-
-    # Add connection pool based on URL
-    pool = ConnectionPool.get_pool(url)
-    pool_options = [hackney: [pool: pool]]
-
-    # User options override everything
-    @default_options
-    |> Keyword.merge(base_options)
-    |> Keyword.merge(operation_config)
-    |> Keyword.merge(pool_options)
-    |> Keyword.merge(user_options)
-  end
-
-  defp convert_to_hackney_options(httpoison_options) do
-    hackney_opts = []
-
-    hackney_opts =
-      if httpoison_options[:timeout] do
-        [{:connect_timeout, httpoison_options[:timeout]} | hackney_opts]
-      else
-        hackney_opts
-      end
-
-    hackney_opts =
-      if httpoison_options[:recv_timeout] do
-        [{:recv_timeout, httpoison_options[:recv_timeout]} | hackney_opts]
-      else
-        hackney_opts
-      end
-
-    hackney_opts =
-      if httpoison_options[:ssl] do
-        [{:ssl_options, httpoison_options[:ssl]} | hackney_opts]
-      else
-        hackney_opts
-      end
-
-    # Extract pool from hackney options if present
-    hackney_opts =
-      if httpoison_options[:hackney] && httpoison_options[:hackney][:pool] do
-        [{:pool, httpoison_options[:hackney][:pool]} | hackney_opts]
-      else
-        [{:pool, :default} | hackney_opts]
-      end
-
-    hackney_opts
   end
 end
