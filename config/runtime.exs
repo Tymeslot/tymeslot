@@ -56,6 +56,69 @@ end
 # any compile-time configuration in here, as it won't be applied.
 # The block below contains prod specific runtime configuration.
 
+# =============================================================================
+# HTTP PROXY CONFIGURATION
+# =============================================================================
+# Parse HTTP/HTTPS proxy configuration from standard environment variables.
+# Supports: HTTP_PROXY, HTTPS_PROXY, NO_PROXY (case-insensitive)
+# This configuration applies to all outbound HTTP requests (CalDAV, Google API, etc.)
+
+# Helper to parse a proxy URL into structured config
+parse_proxy_url = fn proxy_url ->
+  if proxy_url && proxy_url != "" do
+    uri = URI.parse(proxy_url)
+
+    # Parse authentication from URL userinfo
+    proxy_auth =
+      case uri.userinfo do
+        nil ->
+          nil
+
+        userinfo ->
+          case String.split(userinfo, ":", parts: 2) do
+            [user, pass] -> {URI.decode(user), URI.decode(pass)}
+            [user] -> {URI.decode(user), ""}
+          end
+      end
+
+    %{
+      host: uri.host || raise("Proxy URL must include a valid host (check HTTP_PROXY/HTTPS_PROXY format)"),
+      port: uri.port || 8080,
+      auth: proxy_auth,
+      scheme: uri.scheme || "http"
+    }
+  else
+    nil
+  end
+end
+
+# Read proxy environment variables (case-insensitive, uppercase takes precedence)
+http_proxy_url = System.get_env("HTTP_PROXY") || System.get_env("http_proxy")
+https_proxy_url = System.get_env("HTTPS_PROXY") || System.get_env("https_proxy")
+no_proxy_raw = System.get_env("NO_PROXY") || System.get_env("no_proxy") || ""
+
+# Parse NO_PROXY into list of patterns
+no_proxy_list =
+  no_proxy_raw
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.trim/1)
+  |> Enum.reject(&(&1 == ""))
+
+# Build proxy configuration
+proxy_config =
+  if http_proxy_url || https_proxy_url do
+    %{
+      http_proxy: parse_proxy_url.(http_proxy_url),
+      https_proxy: parse_proxy_url.(https_proxy_url),
+      no_proxy: no_proxy_list
+    }
+  else
+    nil
+  end
+
+# Store proxy config for use by Req
+config :tymeslot, :http_proxy, proxy_config
+
 # ## Using releases
 #
 # If you use `mix release`, you need to explicitly enable the server

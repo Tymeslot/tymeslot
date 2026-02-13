@@ -7,7 +7,7 @@ defmodule Tymeslot.Application do
   require Logger
 
   alias Phoenix.PubSub
-  alias Tymeslot.Infrastructure.{ConnectionPool, Metrics}
+  alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
   alias Tymeslot.Integrations.Shared.Lock
@@ -17,9 +17,6 @@ defmodule Tymeslot.Application do
   def start(_type, _args) do
     validate_config!()
     Logger.info("Starting Tymeslot application")
-
-    # Set up connection pools before starting other services
-    ConnectionPool.setup_pools()
 
     # Set up telemetry handlers for metrics
     Metrics.setup_handlers()
@@ -38,7 +35,7 @@ defmodule Tymeslot.Application do
       Tymeslot.Repo,
       {DNSCluster, query: Application.get_env(:tymeslot, :dns_cluster_query) || :ignore},
       {PubSub, name: Tymeslot.PubSub},
-      # Start the Finch HTTP client for sending emails and external HTTP calls
+      # Start the Finch HTTP client (used by Req for all HTTP requests)
       {Finch, name: Tymeslot.Finch},
       # Start token refresh lock manager
       {Lock, []},
@@ -136,11 +133,59 @@ defmodule Tymeslot.Application do
       end
     end
 
+    # Log HTTP proxy configuration if enabled
+    log_proxy_config()
+
     # Validate Oban Cron plugin configuration for critical workers
     validate_oban_cron_config!()
 
-    # Validate connection pool configuration
-    validate_connection_pool_config!()
+    # Validate database connection pool configuration
+    validate_db_pool_config!()
+  end
+
+  # Logs HTTP proxy configuration for visibility
+  defp log_proxy_config do
+    case Application.get_env(:tymeslot, :http_proxy) do
+      nil ->
+        :ok
+
+      config ->
+        http_info =
+          case config.http_proxy do
+            nil ->
+              "Not configured"
+
+            %{host: host, port: port, auth: auth} ->
+              auth_status = if auth, do: " (authenticated)", else: ""
+              "#{host}:#{port}#{auth_status}"
+          end
+
+        https_info =
+          case config.https_proxy do
+            nil ->
+              "Not configured"
+
+            %{host: host, port: port, auth: auth} ->
+              auth_status = if auth, do: " (authenticated)", else: ""
+              "#{host}:#{port}#{auth_status}"
+          end
+
+        no_proxy_info =
+          if config.no_proxy == [] do
+            "None"
+          else
+            Enum.join(config.no_proxy, ", ")
+          end
+
+        Logger.info("""
+        HTTP/HTTPS PROXY CONFIGURED FOR OUTBOUND REQUESTS:
+        HTTP Proxy:  #{http_info}
+        HTTPS Proxy: #{https_info}
+        NO_PROXY:    #{no_proxy_info}
+        """)
+
+        :ok
+    end
   end
 
   # Validates that Oban Cron plugin is configured with critical maintenance workers
@@ -194,8 +239,8 @@ defmodule Tymeslot.Application do
     :ok
   end
 
-  # Validates connection pool size against database max_connections
-  defp validate_connection_pool_config! do
+  # Validates database connection pool size against database max_connections
+  defp validate_db_pool_config! do
     repo_config = Application.get_env(:tymeslot, Tymeslot.Repo, [])
     pool_size = Keyword.get(repo_config, :pool_size, 10)
 
