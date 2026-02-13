@@ -4,7 +4,7 @@
 }
 
 .brand-card:hover {
-  @apply border-turquoise-100 shadow-turquoise-200/30 -translate-y-1;
+  @apply border-turquoise-100 shadow-xl shadow-turquoise-500/10;
 }
 
 /* Glass Morphism Card - Refined for 2026 */
