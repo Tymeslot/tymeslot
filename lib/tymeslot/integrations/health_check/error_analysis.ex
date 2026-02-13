@@ -38,7 +38,10 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
   @spec classify_error(any()) :: error_class()
   def classify_error({:error, :rate_limited}), do: :transient
   def classify_error({:error, :rate_limited, _message}), do: :transient
-  def classify_error({:http_error, status, _message}) when status in [408, 425, 429], do: :transient
+
+  def classify_error({:http_error, status, _message}) when status in [408, 425, 429],
+    do: :transient
+
   def classify_error({:http_error, status, _message}) when status >= 500, do: :transient
 
   def classify_error(reason) when reason in [:timeout, :nxdomain, :econnrefused, :network_error],

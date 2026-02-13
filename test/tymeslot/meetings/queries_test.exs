@@ -34,14 +34,18 @@ defmodule Tymeslot.Meetings.QueriesTest do
     test "returns meeting when user is organizer" do
       meeting = insert(:meeting, organizer_email: "organizer@example.com")
 
-      assert {:ok, found} = Queries.get_meeting_by_uid_for_user(meeting.uid, "organizer@example.com")
+      assert {:ok, found} =
+               Queries.get_meeting_by_uid_for_user(meeting.uid, "organizer@example.com")
+
       assert found.uid == meeting.uid
     end
 
     test "returns meeting when user is attendee" do
       meeting = insert(:meeting, attendee_email: "attendee@example.com")
 
-      assert {:ok, found} = Queries.get_meeting_by_uid_for_user(meeting.uid, "attendee@example.com")
+      assert {:ok, found} =
+               Queries.get_meeting_by_uid_for_user(meeting.uid, "attendee@example.com")
+
       assert found.uid == meeting.uid
     end
 

@@ -86,7 +86,10 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
      socket
      |> assign(profile: updated_profile)
      |> assign(saving: false)
-     |> assign(:form_errors, FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :username))}
+     |> assign(
+       :form_errors,
+       FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :username)
+     )}
   end
 
   defp handle_username_update_error(socket, error) do

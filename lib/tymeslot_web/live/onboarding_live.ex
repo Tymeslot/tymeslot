@@ -293,7 +293,9 @@ defmodule TymeslotWeb.OnboardingLive do
           # Check if update was successful
           if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
             # Success - enable custom mode for this field
-            socket_with_mode = CustomInputModeHelper.enable_custom_mode(updated_socket, config.field)
+            socket_with_mode =
+              CustomInputModeHelper.enable_custom_mode(updated_socket, config.field)
+
             {:noreply, socket_with_mode}
           else
             # Validation or update failed - don't enable custom mode

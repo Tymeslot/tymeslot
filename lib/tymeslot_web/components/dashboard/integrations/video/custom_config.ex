@@ -6,8 +6,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplateAnalyzer
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplatePreviewBox
+
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
+
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @impl true

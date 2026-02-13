@@ -21,7 +21,9 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
     test "returns error for invalid formats" do
       assert {:error, "Invalid duration format"} == DateTimeUtils.parse_duration("invalid")
       assert {:error, "Invalid duration format"} == DateTimeUtils.parse_duration("")
-      assert {:error, "Unsupported or invalid duration format"} == DateTimeUtils.parse_duration("P")
+
+      assert {:error, "Unsupported or invalid duration format"} ==
+               DateTimeUtils.parse_duration("P")
     end
 
     property "never crashes and returns either ok or error for random strings" do

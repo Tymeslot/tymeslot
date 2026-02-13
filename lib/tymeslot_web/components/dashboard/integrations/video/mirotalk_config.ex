@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponents,
     as: SharedForm
+
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @impl true

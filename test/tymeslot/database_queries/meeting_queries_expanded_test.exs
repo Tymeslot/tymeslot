@@ -217,5 +217,4 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueriesExpandedTest do
       assert hd(meetings).id == meeting1.id
     end
   end
-
 end

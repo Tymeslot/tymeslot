@@ -24,8 +24,9 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
           last_error_class: :transient | :hard | nil
         }
 
-  @type transition :: {:initial_failure | :became_unhealthy | :became_healthy | :became_degraded | :no_change,
-                        health_status(), health_status()}
+  @type transition ::
+          {:initial_failure | :became_unhealthy | :became_healthy | :became_degraded | :no_change,
+           health_status(), health_status()}
 
   @doc """
   Creates an initial health state for a new integration.

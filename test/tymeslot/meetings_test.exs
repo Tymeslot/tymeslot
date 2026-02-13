@@ -325,7 +325,8 @@ defmodule Tymeslot.MeetingsTest do
 
       TestMocks.setup_all_mocks()
 
-      assert {:error, :video_integration_inactive} = Meetings.add_video_room_to_meeting(meeting.id)
+      assert {:error, :video_integration_inactive} =
+               Meetings.add_video_room_to_meeting(meeting.id)
     end
   end
 

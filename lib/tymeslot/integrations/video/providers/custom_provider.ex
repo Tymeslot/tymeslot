@@ -85,7 +85,10 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
             }
           )
 
-          Logger.info("Successfully created custom video meeting with URL: #{mask_url(processed_url)}")
+          Logger.info(
+            "Successfully created custom video meeting with URL: #{mask_url(processed_url)}"
+          )
+
           {:ok, room_data}
         else
           {:error, reason} -> {:error, reason}
@@ -110,7 +113,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     uri = URI.parse(url)
 
     if uri.fragment && String.contains?(uri.fragment, TemplateConfig.template_variable()) do
-      {:error, "Template variable cannot be used in URL fragment (#). Fragments are not sent to the server, so all meetings would use the same room. Use the template in the path instead: https://example.com/{{meeting_id}}"}
+      {:error,
+       "Template variable cannot be used in URL fragment (#). Fragments are not sent to the server, so all meetings would use the same room. Use the template in the path instead: https://example.com/{{meeting_id}}"}
     else
       :ok
     end
@@ -198,7 +202,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         # Validate template position first
         with :ok <- validate_template_position(url) do
           # Replace template variables with sample values for testing
-          test_url = String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
+          test_url =
+            String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
 
           with :ok <- assert_http_or_https(test_url),
                :ok <- assert_public_host(test_url),
@@ -244,7 +249,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         # Validate template position first
         with :ok <- validate_template_position(url) do
           # Test with a sample meeting_id to validate template URLs
-          test_url = String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
+          test_url =
+            String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
 
           if valid_url?(test_url),
             do: :ok,

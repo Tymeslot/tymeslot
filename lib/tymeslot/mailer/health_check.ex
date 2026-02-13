@@ -452,11 +452,19 @@ defmodule Tymeslot.Mailer.HealthCheck do
 
   # Translates Erlang error atoms to human-readable messages
   defp format_readable_reason(:econnrefused), do: "Connection refused"
-  defp format_readable_reason({:dns_failed, :nxdomain}), do: "Hostname not found (DNS resolution failed)"
-  defp format_readable_reason({:dns_failed, reason}), do: "DNS resolution failed: #{inspect(reason)}"
+
+  defp format_readable_reason({:dns_failed, :nxdomain}),
+    do: "Hostname not found (DNS resolution failed)"
+
+  defp format_readable_reason({:dns_failed, reason}),
+    do: "DNS resolution failed: #{inspect(reason)}"
+
   defp format_readable_reason(:timeout), do: "Connection timed out"
   defp format_readable_reason(:etimedout), do: "Connection timed out"
-  defp format_readable_reason({:tls_alert, {:handshake_failure, _}}), do: "SSL/TLS handshake failed"
+
+  defp format_readable_reason({:tls_alert, {:handshake_failure, _}}),
+    do: "SSL/TLS handshake failed"
+
   defp format_readable_reason({:tls_alert, alert}), do: "SSL/TLS alert: #{inspect(alert)}"
   defp format_readable_reason(:closed), do: "Connection closed by server"
   defp format_readable_reason(reason), do: inspect(reason)

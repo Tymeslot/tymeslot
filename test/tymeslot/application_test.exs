@@ -79,16 +79,16 @@ defmodule Tymeslot.ApplicationTest do
     end
 
     test "merges base and additional queues with additional taking precedence" do
-      Application.put_env(:tymeslot, :oban_queues, [
+      Application.put_env(:tymeslot, :oban_queues,
         default: 10,
         emails: 5,
         webhooks: 3
-      ])
+      )
 
-      Application.put_env(:tymeslot, :oban_additional_queues, [
+      Application.put_env(:tymeslot, :oban_additional_queues,
         emails: 20,
         saas_emails: 5
-      ])
+      )
 
       base_queues = Application.get_env(:tymeslot, :oban_queues, [])
       additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
@@ -104,15 +104,15 @@ defmodule Tymeslot.ApplicationTest do
     end
 
     test "detects conflicts when additional queues override base queue concurrency" do
-      Application.put_env(:tymeslot, :oban_queues, [
+      Application.put_env(:tymeslot, :oban_queues,
         default: 10,
         emails: 5
-      ])
+      )
 
-      Application.put_env(:tymeslot, :oban_additional_queues, [
+      Application.put_env(:tymeslot, :oban_additional_queues,
         emails: 20,
         saas_emails: 5
-      ])
+      )
 
       base_queues = Application.get_env(:tymeslot, :oban_queues, [])
       additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
@@ -147,7 +147,7 @@ defmodule Tymeslot.ApplicationTest do
     end
 
     test "loads base queues only when no additional queues configured" do
-      Application.put_env(:tymeslot, :oban_queues, [default: 10, emails: 5])
+      Application.put_env(:tymeslot, :oban_queues, default: 10, emails: 5)
       Application.delete_env(:tymeslot, :oban_additional_queues)
 
       base_queues = Application.get_env(:tymeslot, :oban_queues, [])
@@ -159,7 +159,7 @@ defmodule Tymeslot.ApplicationTest do
 
     test "loads additional queues when no base queues configured" do
       Application.delete_env(:tymeslot, :oban_queues)
-      Application.put_env(:tymeslot, :oban_additional_queues, [saas_emails: 5])
+      Application.put_env(:tymeslot, :oban_additional_queues, saas_emails: 5)
 
       base_queues = Application.get_env(:tymeslot, :oban_queues, [])
       additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
@@ -169,16 +169,16 @@ defmodule Tymeslot.ApplicationTest do
     end
 
     test "preserves all queues from both base and additional" do
-      Application.put_env(:tymeslot, :oban_queues, [
+      Application.put_env(:tymeslot, :oban_queues,
         default: 10,
         emails: 5,
         webhooks: 3
-      ])
+      )
 
-      Application.put_env(:tymeslot, :oban_additional_queues, [
+      Application.put_env(:tymeslot, :oban_additional_queues,
         payments: 2,
         saas_emails: 5
-      ])
+      )
 
       base_queues = Application.get_env(:tymeslot, :oban_queues, [])
       additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
@@ -211,13 +211,14 @@ defmodule Tymeslot.ApplicationTest do
     end
 
     test "raises clear error when oban_additional_queues is not a keyword list" do
-      Application.put_env(:tymeslot, :oban_queues, [default: 10])
+      Application.put_env(:tymeslot, :oban_queues, default: 10)
       Application.put_env(:tymeslot, :oban_additional_queues, %{not: "keyword list"})
 
       assert_raise ArgumentError,
                    ~r/:oban_additional_queues must be a keyword list/,
                    fn ->
-                     additional_queues = Application.get_env(:tymeslot, :oban_additional_queues, [])
+                     additional_queues =
+                       Application.get_env(:tymeslot, :oban_additional_queues, [])
 
                      unless Keyword.keyword?(additional_queues) do
                        raise ArgumentError,

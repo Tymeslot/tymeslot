@@ -77,7 +77,9 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
 
       # Click "Custom" button
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
+      )
       |> render_click()
 
       html = render(view)
@@ -93,7 +95,9 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
 
       # Set custom value (100 days)
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
+      )
       |> render_click()
 
       view
@@ -204,7 +208,8 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
 
       # The "15 min" preset button should NOT have the active class
       # Extract the section between the preset buttons
-      [_before, preset_section | _] = String.split(html, "<!-- Custom input or \"Custom\" button -->", parts: 2)
+      [_before, preset_section | _] =
+        String.split(html, "<!-- Custom input or \"Custom\" button -->", parts: 2)
 
       # In the preset section, "15 min" should not have the --active class nearby
       # (this is a bit fragile, but checks that preset buttons aren't highlighted)
@@ -217,7 +222,9 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
 
       # Click "Custom" for advance_booking_days
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
+      )
       |> render_click()
 
       # Type a value that matches a preset (30 days)
@@ -244,7 +251,9 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       |> render_click()
 
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
+      )
       |> render_click()
 
       view
@@ -292,7 +301,9 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
 
       # Switch to preset value (30)
       view
-      |> element("button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='30']")
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='30']"
+      )
       |> render_click()
 
       # Should now show Custom button again (30 is a preset)

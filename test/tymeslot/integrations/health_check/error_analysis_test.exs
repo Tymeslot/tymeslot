@@ -30,7 +30,9 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
   describe "classify_error/1 - transient errors" do
     test "classifies rate limit errors as transient" do
       assert ErrorAnalysis.classify_error({:error, :rate_limited}) == :transient
-      assert ErrorAnalysis.classify_error({:error, :rate_limited, "Too many requests"}) == :transient
+
+      assert ErrorAnalysis.classify_error({:error, :rate_limited, "Too many requests"}) ==
+               :transient
     end
 
     test "classifies HTTP 429 as transient" do

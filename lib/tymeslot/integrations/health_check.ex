@@ -38,7 +38,14 @@ defmodule Tymeslot.Integrations.HealthCheck do
   require Logger
 
   alias Tymeslot.DatabaseQueries.{CalendarIntegrationQueries, VideoIntegrationQueries}
-  alias Tymeslot.Integrations.HealthCheck.{Assessor, ErrorAnalysis, Monitor, ResponseHandler, Scheduler}
+
+  alias Tymeslot.Integrations.HealthCheck.{
+    Assessor,
+    ErrorAnalysis,
+    Monitor,
+    ResponseHandler,
+    Scheduler
+  }
 
   @check_interval :timer.minutes(5)
 

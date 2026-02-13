@@ -35,7 +35,9 @@ default_pool_size = min(max(System.schedulers_online() * 2, 5), 10)
 
 test_pool_size =
   case System.get_env("TEST_DB_POOL_SIZE") do
-    nil -> default_pool_size
+    nil ->
+      default_pool_size
+
     value ->
       case Integer.parse(value) do
         {int, _} -> int

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavConfig do
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
     as: SharedForm
+
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @impl true

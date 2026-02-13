@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
     as: SharedForm
+
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @impl true

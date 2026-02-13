@@ -61,7 +61,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
   # Valid template check
   defp check_valid_template(url) do
     if valid_template?(url) do
-      preview = String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
+      preview =
+        String.replace(url, TemplateConfig.template_variable(), TemplateConfig.sample_hash())
+
       {:ok, {:ok, :valid_template, preview, "Template variable detected: {{meeting_id}}"}}
     else
       :not_valid
@@ -96,8 +98,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
          "Unknown template variable. Only {{meeting_id}} is supported"}
 
       String.contains?(url, "meeting_id") ->
-        {:warning, :no_brackets, url,
-         "Found 'meeting_id' without brackets - use {{meeting_id}}"}
+        {:warning, :no_brackets, url, "Found 'meeting_id' without brackets - use {{meeting_id}}"}
 
       true ->
         {:ok, :static, url, "Static URL - all meetings will use the same room"}
@@ -134,12 +135,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
          "Mismatched brackets: {meeting_id}} should be {{meeting_id}}"}
 
       Regex.match?(~r/\{\{meeting_id\]\]/i, url) ->
-        {:mismatched_curly_square,
-         "Mismatched brackets: {{meeting_id]] should be {{meeting_id}}"}
+        {:mismatched_curly_square, "Mismatched brackets: {{meeting_id]] should be {{meeting_id}}"}
 
       Regex.match?(~r/\[\[meeting_id\}\}/i, url) ->
-        {:mismatched_square_curly,
-         "Mismatched brackets: [[meeting_id}} should be {{meeting_id}}"}
+        {:mismatched_square_curly, "Mismatched brackets: [[meeting_id}} should be {{meeting_id}}"}
 
       true ->
         {:mismatched_brackets, "Mismatched brackets detected - use {{meeting_id}}"}
@@ -148,7 +147,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
 
   # Missing brackets detection
   defp missing_brackets?(url) do
-    Regex.match?(~r/\{\{meeting_id\}?(?!\})/i, url) and not valid_template?(url) or
+    (Regex.match?(~r/\{\{meeting_id\}?(?!\})/i, url) and not valid_template?(url)) or
       Regex.match?(~r/(?<!\{)\{meeting_id\}\}/i, url) or
       Regex.match?(~r/meeting_id\}\}(?!\})/i, url)
   end

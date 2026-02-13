@@ -309,7 +309,9 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
       # Test minimum value (0)
       view
-      |> element("button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='0']")
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='0']"
+      )
       |> render_click()
 
       # Complete onboarding
@@ -332,7 +334,9 @@ defmodule TymeslotWeb.OnboardingValidationTest do
 
       # Set minimum valid custom value (1 day)
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
+      )
       |> render_click()
 
       view

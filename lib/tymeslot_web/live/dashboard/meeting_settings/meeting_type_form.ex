@@ -295,7 +295,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       |> assign(:selected_target_calendar_id, nil)
       |> assign(
         :form_errors,
-        FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :calendar_integration)
+        FormValidationHelpers.delete_field_error(
+          socket.assigns.form_errors,
+          :calendar_integration
+        )
       )
 
     {:noreply, socket}

@@ -349,10 +349,13 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
       assert {:ok, room_data} = CustomProvider.create_meeting_room(config)
 
       # Both instances should be replaced with the same 16-character hash
-      assert room_data.meeting_url =~ ~r|^https://jitsi.example.org/[a-f0-9]{16}/room-[a-f0-9]{16}$|
+      assert room_data.meeting_url =~
+               ~r|^https://jitsi.example.org/[a-f0-9]{16}/room-[a-f0-9]{16}$|
 
       # Extract both hashed values
-      [_, hash1, hash2] = Regex.run(~r|/([a-f0-9]{16})/room-([a-f0-9]{16})|, room_data.meeting_url)
+      [_, hash1, hash2] =
+        Regex.run(~r|/([a-f0-9]{16})/room-([a-f0-9]{16})|, room_data.meeting_url)
+
       assert hash1 == hash2
     end
 
@@ -429,6 +432,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
 
     test "handles very long meeting_id without issues" do
       long_id = String.duplicate("a", 10_000)
+
       config = %{
         custom_meeting_url: "https://jitsi.example.org/{{meeting_id}}",
         meeting_id: long_id
@@ -489,7 +493,9 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
     test "rejects URLs that exceed length limit after template processing" do
       # Create a very long URL that will exceed 255 chars after processing
       long_path = String.duplicate("very-long-subdomain-name.", 10)
-      template_url = "https://#{long_path}example.org/department/team/project/{{meeting_id}}/session?key=value&foo=bar"
+
+      template_url =
+        "https://#{long_path}example.org/department/team/project/{{meeting_id}}/session?key=value&foo=bar"
 
       config = %{
         custom_meeting_url: template_url,

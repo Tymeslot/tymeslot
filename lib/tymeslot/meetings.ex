@@ -424,7 +424,8 @@ defmodule Tymeslot.Meetings do
   """
   @spec delete_meeting_for_user(MeetingSchema.t(), String.t()) ::
           {:ok, MeetingSchema.t()} | {:error, :unauthorized | Ecto.Changeset.t()}
-  def delete_meeting_for_user(%MeetingSchema{} = meeting, user_email) when is_binary(user_email) do
+  def delete_meeting_for_user(%MeetingSchema{} = meeting, user_email)
+      when is_binary(user_email) do
     if meeting.organizer_email == user_email do
       MeetingQueries.delete_meeting(meeting)
     else

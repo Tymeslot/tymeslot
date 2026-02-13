@@ -151,7 +151,9 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       |> render_click()
 
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
+      )
       |> render_click()
 
       view

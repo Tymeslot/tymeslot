@@ -14,8 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
     meeting = insert(:meeting)
     event_data = %{summary: "Test"}
 
-    expect(Tymeslot.CalendarMock, :create_event, fn ^event_data,
-                                                  %MeetingSchema{} = meeting_arg ->
+    expect(Tymeslot.CalendarMock, :create_event, fn ^event_data, %MeetingSchema{} = meeting_arg ->
       assert meeting_arg.id == meeting.id
       {:ok, %{uid: "calendar-uid"}}
     end)
@@ -28,7 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
     event_data = %{summary: "Test"}
 
     expect(Tymeslot.CalendarMock, :create_event, fn ^event_data,
-                                                  %MeetingTypeSchema{} = meeting_type_arg ->
+                                                    %MeetingTypeSchema{} = meeting_type_arg ->
       assert meeting_type_arg.id == meeting_type.id
       {:ok, %{uid: "calendar-uid"}}
     end)

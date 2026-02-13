@@ -367,7 +367,11 @@ defmodule Tymeslot.MeetingsContextTest do
         )
 
       assert {:error, :unauthorized} =
-               Meetings.update_meeting_for_user(meeting, %{title: "New Title"}, "attendee@example.com")
+               Meetings.update_meeting_for_user(
+                 meeting,
+                 %{title: "New Title"},
+                 "attendee@example.com"
+               )
     end
 
     test "organizer can delete meeting" do

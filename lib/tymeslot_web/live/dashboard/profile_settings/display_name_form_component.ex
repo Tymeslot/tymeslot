@@ -30,6 +30,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
             :form_errors,
             FormValidationHelpers.delete_field_error(socket.assigns.form_errors, :full_name)
           )
+
         maybe_update_full_name(socket, sanitized_name)
 
       {:error, error} ->

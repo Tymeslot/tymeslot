@@ -115,7 +115,9 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       |> render_click()
 
       view
-      |> element("button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='15']")
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='15']"
+      )
       |> render_click()
 
       html = render(view)
@@ -131,7 +133,9 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       refute render(view) =~ ~s(name="buffer_minutes")
 
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
+      )
       |> render_click()
 
       assert render(view) =~ ~s(name="advance_booking_days")
@@ -171,7 +175,9 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       navigate_to_scheduling_preferences(view)
 
       view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']")
+      |> element(
+        "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
+      )
       |> render_click()
 
       view
@@ -190,7 +196,9 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       navigate_to_scheduling_preferences(view)
 
       view
-      |> element("button[phx-click='update_scheduling_preferences'][phx-value-advance_booking_days='365']")
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-advance_booking_days='365']"
+      )
       |> render_click()
 
       view |> element("button[phx-click='next_step']") |> render_click()
@@ -205,7 +213,9 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       navigate_to_scheduling_preferences(view)
 
       view
-      |> element("button[phx-click='update_scheduling_preferences'][phx-value-min_advance_hours='0']")
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-min_advance_hours='0']"
+      )
       |> render_click()
 
       view |> element("button[phx-click='next_step']") |> render_click()
@@ -241,15 +251,21 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       navigate_to_scheduling_preferences(view)
 
       view
-      |> element("button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='15']")
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='15']"
+      )
       |> render_click()
 
       view
-      |> element("button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='30']")
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='30']"
+      )
       |> render_click()
 
       view
-      |> element("button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='45']")
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='45']"
+      )
       |> render_click()
 
       assert render(view) =~ "Preferences"
@@ -264,7 +280,9 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       |> render_click()
 
       view
-      |> element("button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='30']")
+      |> element(
+        "button[phx-click='update_scheduling_preferences'][phx-value-buffer_minutes='30']"
+      )
       |> render_click()
 
       view

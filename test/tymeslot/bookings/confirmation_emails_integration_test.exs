@@ -37,7 +37,10 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
   setup do
     # Setup calendar mocks (booking flow checks for calendar conflicts)
     TestMocks.setup_calendar_mocks()
-    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start_date, _end_date ->
+
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id,
+                                                                _start_date,
+                                                                _end_date ->
       {:ok, []}
     end)
 
@@ -49,6 +52,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       # Restore the mock for other tests
       Application.put_env(:tymeslot, :email_service_module, Tymeslot.EmailServiceMock)
     end)
+
     # Create test user with profile
     user = insert(:user, email: "organizer@example.com", name: "Test Organizer")
     profile = insert(:profile, user: user, timezone: "America/New_York")
@@ -123,6 +127,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       # Step 4: Verify the meeting is marked as emails sent for BOTH parties
       # This is the key integration test - confirming the full flow worked
       updated_meeting = Repo.get!(MeetingSchema, meeting.id)
+
       assert updated_meeting.organizer_email_sent == true,
              "Organizer email should be marked as sent"
 

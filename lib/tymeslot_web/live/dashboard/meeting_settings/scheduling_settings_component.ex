@@ -117,7 +117,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
               )
               |> assign(:profile, updated_profile)
 
-            Flash.info("Advance booking window updated to #{updated_profile.advance_booking_days} days")
+            Flash.info(
+              "Advance booking window updated to #{updated_profile.advance_booking_days} days"
+            )
+
             send(self(), {:profile_updated, updated_profile})
             {:noreply, socket}
 
@@ -155,7 +158,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
               )
               |> assign(:profile, updated_profile)
 
-            Flash.info("Minimum booking notice updated to #{updated_profile.min_advance_hours} hours")
+            Flash.info(
+              "Minimum booking notice updated to #{updated_profile.min_advance_hours} hours"
+            )
+
             send(self(), {:profile_updated, updated_profile})
             {:noreply, socket}
 

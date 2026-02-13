@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Live.Shared.FormValidationHelpers do
 
   @spec current_form_params(map() | struct() | nil, [String.t()]) :: map()
   def current_form_params(nil, fields), do: base_form_params(fields)
+
   def current_form_params(%Phoenix.HTML.Form{params: params}, _fields) when is_map(params) do
     params
   end
@@ -42,7 +43,9 @@ defmodule TymeslotWeb.Live.Shared.FormValidationHelpers do
 
       {atom_field, msg}
     end)
-    |> Enum.reject(fn {field, _msg} -> is_nil(field) or not MapSet.member?(allowed_atoms, field) end)
+    |> Enum.reject(fn {field, _msg} ->
+      is_nil(field) or not MapSet.member?(allowed_atoms, field)
+    end)
     |> Enum.into(%{})
   end
 
@@ -62,8 +65,10 @@ defmodule TymeslotWeb.Live.Shared.FormValidationHelpers do
   @doc """
   Updates form errors for a specific field based on validation results.
   """
-  @spec update_field_errors(map(), atom() | nil, {:ok, any()} | {:error, map()}, (map() -> map())) :: map()
-  def update_field_errors(current_errors, nil, _validation_result, _normalize_fn), do: current_errors
+  @spec update_field_errors(map(), atom() | nil, {:ok, any()} | {:error, map()}, (map() -> map())) ::
+          map()
+  def update_field_errors(current_errors, nil, _validation_result, _normalize_fn),
+    do: current_errors
 
   def update_field_errors(current_errors, atom_field, {:ok, _}, _normalize_fn) do
     delete_field_error(current_errors, atom_field)

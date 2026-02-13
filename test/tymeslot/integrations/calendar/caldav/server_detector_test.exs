@@ -37,14 +37,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
 
   describe "detect_by_path/2" do
     test "detects Radicale from exact port 5232 only" do
-      assert ServerDetector.detect_by_path("https://cal.example.com:5232", "https://cal.example.com:5232") ==
+      assert ServerDetector.detect_by_path(
+               "https://cal.example.com:5232",
+               "https://cal.example.com:5232"
+             ) ==
                :radicale
 
       # Should NOT match ports containing 5232 as substring
-      assert ServerDetector.detect_by_path("https://cal.example.com:15232", "https://cal.example.com:15232") ==
+      assert ServerDetector.detect_by_path(
+               "https://cal.example.com:15232",
+               "https://cal.example.com:15232"
+             ) ==
                nil
 
-      assert ServerDetector.detect_by_path("https://cal.example.com:52320", "https://cal.example.com:52320") ==
+      assert ServerDetector.detect_by_path(
+               "https://cal.example.com:52320",
+               "https://cal.example.com:52320"
+             ) ==
                nil
     end
 
@@ -461,7 +470,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
     end
 
     test "builds correct URL for Zimbra" do
-      url = ServerDetector.build_discovery_url("https://mail.example.com", "user@example.com", :zimbra)
+      url =
+        ServerDetector.build_discovery_url(
+          "https://mail.example.com",
+          "user@example.com",
+          :zimbra
+        )
+
       assert url == "https://mail.example.com/dav/user@example.com/"
     end
 
@@ -562,7 +577,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
           :nextcloud
         )
 
-      assert url == "https://cloud.example.com/remote.php/dav/calendars/user/personal/event-123.ics"
+      assert url ==
+               "https://cloud.example.com/remote.php/dav/calendars/user/personal/event-123.ics"
     end
 
     test "builds correct event URL for Baikal legacy" do

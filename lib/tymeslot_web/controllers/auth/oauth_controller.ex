@@ -254,7 +254,9 @@ defmodule TymeslotWeb.OAuthController do
 
         case validate_oauth_completion_data(oauth_data) do
           :ok ->
-            case OAuthHelper.create_oauth_user(provider, oauth_data, profile_params, metadata: metadata) do
+            case OAuthHelper.create_oauth_user(provider, oauth_data, profile_params,
+                   metadata: metadata
+                 ) do
               {:ok, user} ->
                 handle_oauth_user_creation(conn, user, oauth_data)
 
