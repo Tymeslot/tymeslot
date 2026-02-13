@@ -27,10 +27,10 @@ defmodule Tymeslot.Integrations.Shared.OAuth.TokenFlow do
     headers = Keyword.get(opts, :headers, @default_headers)
 
     case http_client().request(:post, token_url, URI.encode_query(params), headers, []) do
-      {:ok, %{status_code: 200, body: body}} ->
+      {:ok, %{status: 200, body: body}} ->
         {:ok, Jason.decode!(body)}
 
-      {:ok, %{status_code: status, body: body}} ->
+      {:ok, %{status: status, body: body}} ->
         {:error, {:http_error, status, body}}
 
       {:error, reason} ->

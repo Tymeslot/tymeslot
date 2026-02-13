@@ -172,7 +172,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     headers = [{"Authorization", "Bearer #{access_token}"}]
 
     case http_client().request(:get, url, "", headers, []) do
-      {:ok, %{status_code: 200, body: response_body}} ->
+      {:ok, %{status: 200, body: response_body}} ->
         response = Jason.decode!(response_body)
         actual_scope = response["scope"] || ""
         actual_scopes = String.split(actual_scope, " ")
@@ -187,10 +187,10 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
           {:error, "Token missing required scopes: #{Enum.join(missing_scopes, ", ")}"}
         end
 
-      {:ok, %{status_code: 400, body: _}} ->
+      {:ok, %{status: 400, body: _}} ->
         {:error, "Invalid or expired access token"}
 
-      {:ok, %{status_code: status, body: body}} ->
+      {:ok, %{status: status, body: body}} ->
         {:error, "Token validation failed: HTTP #{status} - #{body}"}
 
       {:error, reason} ->

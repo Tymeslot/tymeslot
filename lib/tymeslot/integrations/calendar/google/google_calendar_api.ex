@@ -176,16 +176,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     )
   end
 
-  defp handle_http_response({:ok, %HTTPoison.Response{status_code: status, body: body}})
+  defp handle_http_response({:ok, %Req.Response{status: status, body: body}})
        when status in [200, 201, 204] do
     if body == "", do: {:ok, %{}}, else: {:ok, Jason.decode!(body)}
   end
 
-  defp handle_http_response({:ok, %HTTPoison.Response{status_code: 401}}) do
+  defp handle_http_response({:ok, %Req.Response{status: 401}}) do
     {:error, :unauthorized, "Token expired or invalid"}
   end
 
-  defp handle_http_response({:ok, %HTTPoison.Response{status_code: 403, body: body}}) do
+  defp handle_http_response({:ok, %Req.Response{status: 403, body: body}}) do
     response = Jason.decode!(body)
     error_msg = get_in(response, ["error", "message"]) || "Forbidden"
     reasons = get_in(response, ["error", "errors"]) || []
@@ -202,17 +202,17 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     end
   end
 
-  defp handle_http_response({:ok, %HTTPoison.Response{status_code: 404}}) do
+  defp handle_http_response({:ok, %Req.Response{status: 404}}) do
     {:error, :not_found, "Calendar not found"}
   end
 
-  defp handle_http_response({:ok, %HTTPoison.Response{status_code: 410}}) do
+  defp handle_http_response({:ok, %Req.Response{status: 410}}) do
     {:error, :gone, "Resource no longer available"}
   end
 
-  defp handle_http_response({:ok, %HTTPoison.Response{status_code: status, body: body}}) do
+  defp handle_http_response({:ok, %Req.Response{status: status, body: body}}) do
     Logger.error("Google Calendar API error",
-      status_code: status,
+      status: status,
       body: Redactor.redact_and_truncate(body)
     )
 

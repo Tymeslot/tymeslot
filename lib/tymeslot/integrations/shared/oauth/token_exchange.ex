@@ -49,7 +49,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
 
     case http_client().request(:post, token_url, URI.encode_query(body), @default_headers, []) do
       {:ok, response} ->
-        %{status_code: status, body: resp_body} = normalize_response(response)
+        %{status: status, body: resp_body} = normalize_response(response)
 
         case status do
           200 ->
@@ -85,7 +85,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
 
     case http_client().request(:post, token_url, URI.encode_query(body), headers, []) do
       {:ok, response} ->
-        %{status_code: status, body: resp_body} = normalize_response(response)
+        %{status: status, body: resp_body} = normalize_response(response)
 
         case status do
           200 ->
@@ -127,5 +127,5 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
      }}
   end
 
-  defp normalize_response(%{status_code: _status} = resp), do: resp
+  defp normalize_response(%{status: _status} = resp), do: resp
 end

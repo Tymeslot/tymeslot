@@ -257,16 +257,16 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     )
   end
 
-  defp handle_response({:ok, %{status_code: status, body: body}})
+  defp handle_response({:ok, %{status: status, body: body}})
        when status in [200, 201, 204] do
     if body == "", do: {:ok, %{}}, else: {:ok, Jason.decode!(body)}
   end
 
-  defp handle_response({:ok, %{status_code: 401}}) do
+  defp handle_response({:ok, %{status: 401}}) do
     {:error, :unauthorized, "Token expired or invalid"}
   end
 
-  defp handle_response({:ok, %{status_code: 403, body: body} = resp}) do
+  defp handle_response({:ok, %{status: 403, body: body} = resp}) do
     response = Jason.decode!(body)
     msg = get_in(response, ["error", "message"]) || "Forbidden"
     code = String.downcase(to_string(get_in(response, ["error", "code"]) || ""))
@@ -277,17 +277,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     handle_403_reason(reason, msg, retry_after)
   end
 
-  defp handle_response({:ok, %{status_code: 404}}) do
+  defp handle_response({:ok, %{status: 404}}) do
     {:error, :not_found, "Calendar not found"}
   end
 
-  defp handle_response({:ok, %{status_code: 429}}) do
+  defp handle_response({:ok, %{status: 429}}) do
     {:error, :rate_limited, "Too many requests"}
   end
 
-  defp handle_response({:ok, %{status_code: status, body: body}}) do
+  defp handle_response({:ok, %{status: status, body: body}}) do
     Logger.error("Outlook Calendar API error",
-      status_code: status,
+      status: status,
       body: Redactor.redact_and_truncate(body)
     )
 
@@ -324,20 +324,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   defp parse_retry_after(resp) do
-    header = Map.get(resp, :headers, [])
+    headers = Map.get(resp, :headers, %{})
 
-    value =
-      Enum.find_value(header, fn {k, v} -> if String.downcase(k) == "retry-after", do: v end)
-
-    case value do
-      nil ->
-        nil
-
-      v ->
-        case Integer.parse(to_string(v)) do
+    case Map.get(headers, "retry-after") do
+      [value | _] ->
+        case Integer.parse(value) do
           {n, _} -> n
           _ -> nil
         end
+
+      _ ->
+        nil
     end
   end
 

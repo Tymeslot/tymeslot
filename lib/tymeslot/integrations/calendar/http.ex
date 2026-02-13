@@ -63,11 +63,11 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
       "head" -> {:ok, :head}
       "options" -> {:ok, :options}
       "report" -> {:ok, :report}
-      _ -> {:error, %HTTPoison.Error{reason: {:invalid_method, method}}}
+      _ -> {:error, %RuntimeError{message: "Invalid method: #{method}"}}
     end
   end
 
-  defp normalize_method(method), do: {:error, %HTTPoison.Error{reason: {:invalid_method, method}}}
+  defp normalize_method(method), do: {:error, %RuntimeError{message: "Invalid method: #{method}"}}
 
   defp do_request(method, base_url, path, token, body, opts) do
     params = Keyword.get(opts, :params, %{})
