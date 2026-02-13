@@ -197,7 +197,14 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   # Loads castore certificates with safety check
   defp load_castore_certs do
     if Code.ensure_loaded?(:castore) do
-      :castore.cacerts()
+      # Get path to castore's CA bundle (PEM format)
+      ca_bundle_path = :castore.file_path()
+
+      # Read and parse PEM file to extract DER-encoded certificates
+      ca_bundle_path
+      |> File.read!()
+      |> :public_key.pem_decode()
+      |> Enum.map(fn {:Certificate, der, _} -> der end)
     else
       raise """
       No CA certificates available:
