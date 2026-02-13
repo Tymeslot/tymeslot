@@ -119,7 +119,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
     ArgumentError ->
       Logger.warning("Provider name not recognized, check for typos",
         value: value,
-        hint: "Valid providers: google, outlook, caldav, nextcloud, radicale, zoom, teams, etc."
+        hint: "Valid providers: google, outlook, caldav, nextcloud, radicale, teams, etc."
       )
 
       nil

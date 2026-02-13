@@ -312,9 +312,6 @@ defmodule Tymeslot.Meetings.VideoRooms do
           "teams" ->
             {:ok, :teams}
 
-          "zoom" ->
-            {:ok, :zoom}
-
           "custom" ->
             {:ok, :custom}
 

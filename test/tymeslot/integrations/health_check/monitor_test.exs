@@ -292,7 +292,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "builds report for user with calendar and video integrations" do
       user = insert(:user)
       cal_int = insert(:calendar_integration, user: user, provider: "google", is_active: true)
-      vid_int = insert(:video_integration, user: user, provider: "zoom", is_active: true)
+      vid_int = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
 
       cal_health = %{Monitor.initial_state() | failures: 1, status: :degraded}
       vid_health = %{Monitor.initial_state() | failures: 3, status: :unhealthy}
@@ -313,7 +313,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       assert cal_report.health == cal_health
 
       vid_report = Enum.find(report.video_integrations, &(&1.id == vid_int.id))
-      assert vid_report.provider == "zoom"
+      assert vid_report.provider == "mirotalk"
       assert vid_report.is_active == true
       assert vid_report.health == vid_health
 

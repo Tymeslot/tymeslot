@@ -135,7 +135,7 @@ defmodule Tymeslot.Emails.Templates.SystemEmailsTest do
     test "includes meeting details" do
       meeting =
         insert(:meeting,
-          location: "Zoom Meeting",
+          location: "Video Conference",
           duration: 45,
           meeting_type: "Consultation"
         )

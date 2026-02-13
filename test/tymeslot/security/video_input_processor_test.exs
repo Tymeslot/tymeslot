@@ -45,19 +45,19 @@ defmodule Tymeslot.Security.VideoInputProcessorTest do
     test "accepts valid custom input" do
       params = %{
         "provider" => "custom",
-        "name" => "Personal Zoom",
-        "custom_meeting_url" => "https://zoom.us/j/123456789"
+        "name" => "Personal Meeting Room",
+        "custom_meeting_url" => "https://meet.example.com/my-room"
       }
 
       assert {:ok, sanitized} = VideoInputProcessor.validate_video_integration_form(params)
-      assert sanitized["name"] == "Personal Zoom"
-      assert sanitized["custom_meeting_url"] == "https://zoom.us/j/123456789"
+      assert sanitized["name"] == "Personal Meeting Room"
+      assert sanitized["custom_meeting_url"] == "https://meet.example.com/my-room"
     end
 
     test "rejects invalid URL" do
       params = %{
         "provider" => "custom",
-        "name" => "Personal Zoom",
+        "name" => "Personal Meeting Room",
         "custom_meeting_url" => "not-a-url"
       }
 
@@ -68,7 +68,7 @@ defmodule Tymeslot.Security.VideoInputProcessorTest do
 
   describe "validate_video_integration_form/2 with unknown provider" do
     test "rejects unknown provider" do
-      params = %{"provider" => "zoom"}
+      params = %{"provider" => "unknown_provider"}
 
       assert {:error, %{provider: "Unknown video provider"}} =
                VideoInputProcessor.validate_video_integration_form(params)

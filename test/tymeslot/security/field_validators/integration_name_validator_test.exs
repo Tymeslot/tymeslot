@@ -5,7 +5,7 @@ defmodule Tymeslot.Security.FieldValidators.IntegrationNameValidatorTest do
   describe "validate/2" do
     test "returns :ok for valid integration names" do
       assert :ok = IntegrationNameValidator.validate("Google Calendar")
-      assert :ok = IntegrationNameValidator.validate("Zoom")
+      assert :ok = IntegrationNameValidator.validate("MiroTalk")
     end
 
     test "returns error for nil or empty string" do

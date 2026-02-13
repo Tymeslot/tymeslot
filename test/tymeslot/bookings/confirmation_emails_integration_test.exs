@@ -291,7 +291,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
           user: user,
           provider: "custom",
           is_active: true,
-          custom_meeting_url: "https://zoom.us/j/123456789"
+          custom_meeting_url: "https://meet.example.com/room/123456789"
         )
 
       meeting_params =
@@ -324,7 +324,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
       updated_meeting = Repo.get!(MeetingSchema, meeting.id)
 
       # Verify the custom URL was attached to the meeting
-      assert updated_meeting.meeting_url == "https://zoom.us/j/123456789"
+      assert updated_meeting.meeting_url == "https://meet.example.com/room/123456789"
       assert updated_meeting.video_room_enabled == true
 
       # Now execute the email job that was scheduled by the video room worker

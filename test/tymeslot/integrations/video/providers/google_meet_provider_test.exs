@@ -407,7 +407,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
     end
 
     test "returns nil for non-Google Meet URL" do
-      assert GoogleMeetProvider.extract_room_id("https://zoom.us/j/123456") == nil
+      assert GoogleMeetProvider.extract_room_id("https://example.com/meeting/123456") == nil
     end
 
     test "returns nil for malformed Google Meet URL" do
@@ -440,7 +440,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
     end
 
     test "rejects URL with wrong host" do
-      refute GoogleMeetProvider.valid_meeting_url?("https://zoom.us/j/123456")
+      refute GoogleMeetProvider.valid_meeting_url?("https://example.com/meeting/123456")
     end
 
     test "rejects URL with wrong format (not xxx-xxxx-xxx)" do

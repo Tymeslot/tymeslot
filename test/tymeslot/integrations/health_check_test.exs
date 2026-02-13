@@ -448,7 +448,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       # Verify that valid providers work (atoms that exist)
       assert String.to_existing_atom("google") == :google
       assert String.to_existing_atom("outlook") == :outlook
-      assert String.to_existing_atom("zoom") == :zoom
+      assert String.to_existing_atom("mirotalk") == :mirotalk
     end
   end
 

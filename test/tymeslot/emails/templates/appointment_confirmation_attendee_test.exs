@@ -122,14 +122,14 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
       details =
         build_appointment_details(%{
           organizer_name: "Sarah Johnson",
-          location: "Zoom Call"
+          location: "Video Call"
         })
 
       email = AppointmentConfirmationAttendee.confirmation_email("attendee@example.com", details)
 
       assert email.text_body =~ "Confirmed"
       assert email.text_body =~ "Sarah Johnson"
-      assert email.text_body =~ "Zoom Call"
+      assert email.text_body =~ "Video Call"
     end
 
     test "text body includes action links" do

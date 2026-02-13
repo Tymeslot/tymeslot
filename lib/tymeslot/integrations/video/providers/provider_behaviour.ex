@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   @moduledoc """
-  Behaviour for video conferencing provider implementations (MiroTalk, Zoom, Google Meet, etc.).
+  Behaviour for video conferencing provider implementations (MiroTalk, Google Meet, etc.).
 
   This defines the contract that all video providers must implement to enable
   seamless switching between different video conferencing platforms.

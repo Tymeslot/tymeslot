@@ -264,7 +264,7 @@ defmodule Tymeslot.MeetingsTest do
           user: user,
           provider: "custom",
           is_active: true,
-          custom_meeting_url: "https://zoom.us/j/123456789"
+          custom_meeting_url: "https://meet.example.com/room/123456789"
         )
 
       meeting =

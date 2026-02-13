@@ -339,9 +339,6 @@ defmodule Tymeslot.Integrations.Common.UserResolver do
       attrs[:provider] in ["google_meet", "teams"] and not Map.has_key?(attrs, :access_token) ->
         {:error, "OAuth video providers require access_token"}
 
-      attrs[:provider] == "zoom" and not Map.has_key?(attrs, :api_key) ->
-        {:error, "Zoom provider requires api_key"}
-
       true ->
         :ok
     end

@@ -165,7 +165,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       details =
         build_appointment_details(%{
           meeting_type: "Technical Review",
-          location: "Zoom"
+          location: "Video Conference"
         })
 
       email = AppointmentReminderAttendee.reminder_email("attendee@example.com", details)
