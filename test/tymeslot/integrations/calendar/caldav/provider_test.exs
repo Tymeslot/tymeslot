@@ -179,7 +179,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       assert client.provider == :baikal
     end
 
-    test "auto-detects Baikal from cal.php path" do
+    test "auto-detects Baikal legacy from cal.php path" do
       config = %{
         base_url: "https://example.com/cal.php",
         username: "testuser",
@@ -188,7 +188,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
 
       client = Provider.new(config)
 
-      assert client.provider == :baikal
+      assert client.provider == :baikal_legacy
     end
 
     test "auto-detects SabreDAV from URL" do

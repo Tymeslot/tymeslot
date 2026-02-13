@@ -71,7 +71,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
       if is_binary(base_url) do
         case ServerDetector.detect_from_url(base_url) do
           # Use detected server types for proper path handling
-          server_type when server_type in [:radicale, :nextcloud, :owncloud, :baikal, :sabredav] ->
+          server_type
+          when server_type in [
+                 :radicale,
+                 :nextcloud,
+                 :owncloud,
+                 :baikal,
+                 :baikal_legacy,
+                 :sabredav,
+                 :zimbra
+               ] ->
             server_type
 
           # Fall back to generic caldav for unknown servers
