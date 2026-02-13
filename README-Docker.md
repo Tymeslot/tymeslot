@@ -214,6 +214,71 @@ POSTMARK_API_KEY=your-postmark-api-key
 
 **Development/Testing Only**: You can use `EMAIL_ADAPTER=test` to skip email configuration during development. Emails will be logged to console instead of being sent.
 
+### HTTP Proxy Configuration
+
+If your environment requires outbound HTTP requests to go through a proxy (common in corporate/secured environments), Tymeslot supports standard proxy environment variables:
+
+**Standard Configuration (Recommended)**
+```bash
+# For HTTPS requests (most external APIs)
+HTTPS_PROXY=http://username:password@proxy.example.com:3128
+
+# For HTTP requests (if different from HTTPS)
+HTTP_PROXY=http://username:password@proxy.example.com:3128
+
+# Bypass proxy for specific hosts (comma-separated)
+NO_PROXY=localhost,127.0.0.1,*.internal.company.com,10.0.0.0/8
+```
+
+**Environment Variable Details:**
+- `HTTPS_PROXY` / `https_proxy` - Proxy for HTTPS requests (recommended)
+- `HTTP_PROXY` / `http_proxy` - Proxy for HTTP requests
+- `NO_PROXY` / `no_proxy` - Comma-separated list of hosts/patterns to bypass proxy
+
+**NO_PROXY Patterns:**
+- Exact hostname: `internal.example.com`
+- Wildcard domain: `*.example.com` (matches any subdomain)
+- CIDR notation: `10.0.0.0/8`, `192.168.0.0/16`
+- Special: `*` (bypass proxy for all hosts)
+
+**Example Configurations:**
+
+Same proxy for HTTP and HTTPS:
+```bash
+HTTPS_PROXY=http://user:pass@proxy.company.com:3128
+NO_PROXY=localhost,*.internal.company.com
+```
+
+Different proxies for HTTP and HTTPS:
+```bash
+HTTP_PROXY=http://user:pass@http-proxy.company.com:3128
+HTTPS_PROXY=http://user:pass@https-proxy.company.com:3129
+NO_PROXY=localhost,127.0.0.1,10.0.0.0/8
+```
+
+No authentication:
+```bash
+HTTPS_PROXY=http://proxy.company.com:8080
+NO_PROXY=localhost,*.internal.company.com
+```
+
+**What Uses the Proxy:**
+
+All outbound HTTP/HTTPS requests including:
+- CalDAV calendar integrations (Nextcloud, Radicale, etc.)
+- Google Calendar API
+- Microsoft Outlook/Office 365 API
+- Video provider APIs (Google Meet, Microsoft Teams)
+- OAuth token exchanges
+- All other external API calls
+
+**Important**: If your proxy uses a whitelist-based access control, ensure the following domains are allowed:
+- `www.googleapis.com` (Google Calendar, Google Meet)
+- `graph.microsoft.com` (Outlook Calendar, Microsoft Teams)
+- `oauth2.googleapis.com` (OAuth)
+- Your CalDAV server domains
+- Any custom video provider endpoints
+
 ### Using an External Database
 
 By default, Tymeslot uses an embedded PostgreSQL database in the Docker container. To use an external database (e.g., from a cloud provider like AWS RDS, Azure Database, or DigitalOcean), set these variables:
@@ -244,6 +309,11 @@ PORT=4000                    # HTTP port (default: 4000)
 DATABASE_HOST=localhost      # Database host (default: localhost)
 DATABASE_PORT=5432          # Database port (default: 5432)
 DATABASE_POOL_SIZE=10        # DB pool size (default: 10)
+
+# HTTP Proxy (for environments with restricted outbound access)
+HTTP_PROXY=                  # Proxy for HTTP requests (e.g., http://user:pass@proxy.example.com:3128)
+HTTPS_PROXY=                 # Proxy for HTTPS requests (e.g., http://user:pass@proxy.example.com:3128)
+NO_PROXY=                    # Bypass proxy for these hosts (e.g., localhost,*.internal.com,10.0.0.0/8)
 
 # OAuth Providers (optional - configure through dashboard after setup)
 GITHUB_CLIENT_ID=
