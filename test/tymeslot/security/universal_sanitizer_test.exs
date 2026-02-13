@@ -97,5 +97,44 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
       refute sanitized =~ "UNION"
       refute sanitized =~ "SELECT"
     end
+
+    test "preserves CalDAV calendar paths with @ symbols and slashes" do
+      # CalDAV paths often contain @ symbols (from email addresses) and slashes
+      caldav_paths = [
+        "/dav/user@example.com/Calendar/",
+        "/remote.php/dav/calendars/admin@domain.org/personal/",
+        "/caldav/principals/test@company.com/calendars/primary/",
+        "/dav/user@zimbra.example.org/Calendar/Tasks/"
+      ]
+
+      for path <- caldav_paths do
+        assert {:ok, sanitized} =
+                 UniversalSanitizer.sanitize_and_validate(path, log_events: false)
+
+        # CalDAV paths should remain unchanged
+        assert sanitized == path,
+               "Expected CalDAV path #{path} to remain unchanged, got #{sanitized}"
+      end
+    end
+
+    test "preserves Zimbra-style CalDAV paths" do
+      # Specific test for Zimbra format (related to issue #8)
+      zimbra_path = "/dav/alice@example.org/Calendar/"
+
+      assert {:ok, sanitized} =
+               UniversalSanitizer.sanitize_and_validate(zimbra_path, log_events: false)
+
+      assert sanitized == zimbra_path
+    end
+
+    test "preserves Nextcloud CalDAV paths" do
+      # Nextcloud uses a different path structure
+      nextcloud_path = "/remote.php/dav/calendars/user@nextcloud.com/personal/"
+
+      assert {:ok, sanitized} =
+               UniversalSanitizer.sanitize_and_validate(nextcloud_path, log_events: false)
+
+      assert sanitized == nextcloud_path
+    end
   end
 end

@@ -273,6 +273,90 @@ defmodule Tymeslot.MeetingTypesContextTest do
       assert {:error, :invalid_reminder_config} =
                MeetingTypes.create_meeting_type_from_form(user.id, form_params, ui_state)
     end
+
+    test "successfully creates with CalDAV calendar containing @ symbol and slashes" do
+      user = insert(:user)
+
+      # CalDAV paths often contain @ symbols (email) and slashes
+      caldav_path = "/dav/#{user.email}/Calendar/"
+
+      calendar_integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_list: [
+            %{
+              "id" => caldav_path,
+              "name" => "Calendar",
+              "selected" => true
+            }
+          ]
+        )
+
+      form_params = %{
+        "name" => "CalDAV Meeting",
+        "duration" => "30",
+        "description" => "Meeting with CalDAV calendar",
+        "is_active" => "true",
+        "calendar_integration_id" => calendar_integration.id,
+        "target_calendar_id" => caldav_path
+      }
+
+      ui_state = %{
+        meeting_mode: "personal",
+        selected_icon: "hero-clock",
+        selected_video_integration_id: nil
+      }
+
+      assert {:ok, meeting_type} =
+               MeetingTypes.create_meeting_type_from_form(user.id, form_params, ui_state)
+
+      # Verify CalDAV path is preserved exactly
+      assert meeting_type.target_calendar_id == caldav_path
+      assert meeting_type.calendar_integration_id == calendar_integration.id
+    end
+
+    test "successfully creates with Nextcloud CalDAV path format" do
+      user = insert(:user)
+
+      # Nextcloud uses a different path format
+      nextcloud_path = "/remote.php/dav/calendars/#{user.email}/personal/"
+
+      calendar_integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_list: [
+            %{
+              "id" => nextcloud_path,
+              "name" => "Personal",
+              "selected" => true
+            }
+          ]
+        )
+
+      form_params = %{
+        "name" => "Nextcloud Meeting",
+        "duration" => "45",
+        "description" => "Meeting with Nextcloud calendar",
+        "is_active" => "true",
+        "calendar_integration_id" => calendar_integration.id,
+        "target_calendar_id" => nextcloud_path
+      }
+
+      ui_state = %{
+        meeting_mode: "personal",
+        selected_icon: "hero-bolt",
+        selected_video_integration_id: nil
+      }
+
+      assert {:ok, meeting_type} =
+               MeetingTypes.create_meeting_type_from_form(user.id, form_params, ui_state)
+
+      assert meeting_type.target_calendar_id == nextcloud_path
+    end
   end
 
   # =====================================
@@ -323,6 +407,48 @@ defmodule Tymeslot.MeetingTypesContextTest do
 
       assert updated.name == "Updated Meeting"
       assert updated.duration_minutes == 90
+    end
+
+    test "successfully updates to use CalDAV calendar" do
+      user = insert(:user)
+      meeting_type = insert(:meeting_type, user: user, calendar_integration_id: nil)
+
+      caldav_path = "/dav/#{user.email}/Calendar/"
+
+      calendar_integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_list: [
+            %{
+              "id" => caldav_path,
+              "name" => "Calendar",
+              "selected" => true
+            }
+          ]
+        )
+
+      form_params = %{
+        "name" => meeting_type.name,
+        "duration" => to_string(meeting_type.duration_minutes),
+        "description" => meeting_type.description || "",
+        "is_active" => "true",
+        "calendar_integration_id" => calendar_integration.id,
+        "target_calendar_id" => caldav_path
+      }
+
+      ui_state = %{
+        meeting_mode: "personal",
+        selected_icon: meeting_type.icon || "hero-clock",
+        selected_video_integration_id: nil
+      }
+
+      assert {:ok, updated} =
+               MeetingTypes.update_meeting_type_from_form(meeting_type, form_params, ui_state)
+
+      assert updated.calendar_integration_id == calendar_integration.id
+      assert updated.target_calendar_id == caldav_path
     end
   end
 
