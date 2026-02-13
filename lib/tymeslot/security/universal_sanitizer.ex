@@ -168,23 +168,14 @@ defmodule Tymeslot.Security.UniversalSanitizer do
   end
 
   defp sanitize_input(input, allow_html, log_events, metadata) do
-    original_input = input
-
-    sanitized =
-      input
-      |> decode_url_recursive(3)
-      |> remove_null_bytes()
-      |> sanitize_html(allow_html)
-      |> remove_sql_injection_patterns(log_events, metadata)
-      |> prevent_path_traversal(log_events, metadata)
-      |> remove_dangerous_protocols(log_events, metadata)
-
-    # Log if malicious content was removed
-    if log_events and sanitized != original_input do
-      SecurityLogger.log_blocked_input(:universal, "sanitization", metadata)
-    end
-
-    {:ok, sanitized}
+    input
+    |> decode_url_recursive(3)
+    |> remove_null_bytes()
+    |> sanitize_html(allow_html)
+    |> remove_sql_injection_patterns(log_events, metadata)
+    |> prevent_path_traversal(log_events, metadata)
+    |> remove_dangerous_protocols(log_events, metadata)
+    |> then(&{:ok, &1})
   end
 
   defp decode_url_recursive(input, 0), do: input
