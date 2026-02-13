@@ -335,12 +335,10 @@ defmodule Tymeslot.Integrations.Common.UserResolver do
 
   defp validate_integration_specific_attrs(attrs, :video) do
     # Video-specific validation
-    cond do
-      attrs[:provider] in ["google_meet", "teams"] and not Map.has_key?(attrs, :access_token) ->
-        {:error, "OAuth video providers require access_token"}
-
-      true ->
-        :ok
+    if attrs[:provider] in ["google_meet", "teams"] and not Map.has_key?(attrs, :access_token) do
+      {:error, "OAuth video providers require access_token"}
+    else
+      :ok
     end
   end
 end

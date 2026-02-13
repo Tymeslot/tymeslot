@@ -61,8 +61,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandler do
   """
   @spec supported_locales() :: [String.t()]
   def supported_locales do
-    get_locales_with_metadata()
-    |> Enum.map(& &1.code)
+    Enum.map(get_locales_with_metadata(), & &1.code)
   end
 
   @doc """
