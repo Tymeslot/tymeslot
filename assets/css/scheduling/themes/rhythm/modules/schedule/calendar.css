@@ -8,12 +8,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-base);
+  margin-bottom: var(--space-md);
 }
 
 .calendar-nav-button {
   background: var(--surface-light);
-  border: 1px solid var(--border-medium);
+  border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-sm);
   color: var(--theme-text);
   padding: var(--space-sm) var(--space-md);
@@ -36,7 +36,7 @@
 .calendar-day {
   padding: var(--space-sm) var(--space-2xs);
   background: var(--surface-light);
-  border: 1px solid var(--border-medium);
+  border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-md);
   color: var(--theme-text);
   cursor: pointer;

@@ -14,11 +14,11 @@
 }
 
 .schedule-grid {
-  margin-top: 12px;
+  margin-top: var(--space-sm);
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-base);
+  gap: var(--space-md);
   min-height: 0;
   overflow-y: auto;
 }

@@ -14,7 +14,7 @@
 .time-slots-grid {
   display: flex;
   flex-direction: column;
-  gap: var(--space-base);
+  gap: var(--space-md);
   padding: var(--space-2xs) var(--space-sm) var(--space-2xs) 0; /* Add right padding for scrollbar */
   flex: 1 1 auto;
   min-height: 0; /* Allow proper flex shrinking */
@@ -36,7 +36,7 @@
   margin: 0;
   margin-bottom: var(--space-sm);
   padding-bottom: var(--space-2xs);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: var(--border-width-thin) solid var(--border-subtle);
 }
 
 .time-period-slots {
@@ -48,7 +48,7 @@
 .time-slot {
   padding: var(--space-sm) var(--space-md);
   background: var(--surface-medium);
-  border: 1px solid var(--border-strong);
+  border: var(--border-width-thin) solid var(--border-strong);
   border-radius: var(--radius-sm);
   color: var(--theme-text);
   cursor: pointer;

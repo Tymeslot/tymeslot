@@ -6,7 +6,7 @@
   align-items: center;
   margin-bottom: var(--space-md);
   padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: var(--border-width-thin) solid var(--border-light);
   position: relative;
   gap: var(--space-md);
   flex-wrap: wrap;
@@ -26,13 +26,13 @@
   height: var(--avatar-size-md);
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border: var(--border-width-medium) solid rgba(255, 255, 255, 0.8);
 }
 
 .organizer-info-small {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-3xs);
 }
 
 .organizer-name {

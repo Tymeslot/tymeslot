@@ -54,7 +54,7 @@
 
 .summary-label {
   color: var(--theme-text-secondary);
-  margin-top: 2px;
+  margin-top: var(--space-3xs);
 }
 
 .booking-form {
@@ -79,7 +79,7 @@
 
 .rhythm-theme-wrapper .booking-form .label {
   color: var(--theme-text);
-  margin-bottom: 8px;
+  margin-bottom: var(--space-xs);
   text-transform: none;
   letter-spacing: normal;
 }
@@ -93,8 +93,7 @@
 .rhythm-theme-wrapper .booking-form textarea.input {
   width: 100%;
   padding: var(--space-sm);
-  border: 1px solid var(--border-strong);
-  border-width: 1px;
+  border: var(--border-width-thin) solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface-light);
   color: var(--theme-text);
@@ -135,5 +134,5 @@
 /* Target the actual error message div by its core component classes */
 .rhythm-theme-wrapper .booking-form .form-field-wrapper > div.mt-2.flex.items-center {
   color: var(--theme-error);
-  margin-top: 4px;
+  margin-top: var(--space-3xs);
 }

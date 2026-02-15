@@ -251,7 +251,7 @@
   padding: var(--button-padding-y) var(--button-padding-x);
   background: var(--theme-primary);
   color: white;
-  border: 1px solid var(--theme-primary);
+  border: var(--border-width-thin) solid var(--theme-primary);
 }
 
 .submit-button:hover,
@@ -312,7 +312,7 @@
 .next-button {
   padding: var(--button-padding-y-sm) var(--button-padding-x-sm);
   background: var(--surface-light);
-  border: 1px solid var(--border-medium);
+  border: var(--border-width-thin) solid var(--border-medium);
   color: var(--theme-text);
 }
 
@@ -371,7 +371,7 @@
 .calendar-error {
   padding: var(--space-lg);
   background: var(--theme-error-bg);
-  border: 1px solid var(--theme-error-border);
+  border: var(--border-width-thin) solid var(--theme-error-border);
   border-radius: var(--radius-md);
   color: var(--theme-error-light);
   text-align: center;

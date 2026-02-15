@@ -91,7 +91,7 @@ body.rhythm-theme {
   flex-direction: column;
   overflow: visible;
   position: relative;
-  border: 1px solid var(--border-medium);
+  border: var(--border-width-thin) solid var(--border-medium);
   color: var(--theme-text);
   box-sizing: border-box;
 }

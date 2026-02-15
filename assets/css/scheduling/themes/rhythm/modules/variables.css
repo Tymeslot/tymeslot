@@ -78,7 +78,14 @@
   --radius-xl: 12px;
   --radius-2xl: 16px;
 
+  /* Border width scale */
+  --border-width-thin: 1px;
+  --border-width-medium: 2px;
+  --border-width-thick: 3px;
+
   /* Spacing scale - fluid responsive */
+  --space-3xs: 4px;
+  --space-2xs: 6px;
   --space-xs: clamp(8px, 1.2vw, 12px);
   --space-sm: clamp(12px, 1.8vw, 16px);
   --space-md: clamp(16px, 2.5vw, 20px);
@@ -139,6 +146,9 @@
   --icon-xl: 40px;
   --icon-2xl: 48px;
 
+  /* Flag dimensions */
+  --flag-height: 14px;
+
   /* Elevation shadows */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
@@ -151,11 +161,6 @@
   --shadow-success-lg: 0 8px 24px rgba(16, 185, 129, 0.3);
   --shadow-danger-sm: 0 4px 16px rgba(239, 68, 68, 0.3);
   --shadow-danger-md: 0 6px 20px rgba(239, 68, 68, 0.4);
-
-  /* Additional spacing for common patterns */
-  --space-base: 20px;
-  --space-3xs: 4px;
-  --space-2xs: 6px;
 
   /* Scrollbar styling */
   --scrollbar-width: 6px;

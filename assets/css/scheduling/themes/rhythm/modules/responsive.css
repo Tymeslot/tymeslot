@@ -37,7 +37,7 @@
   .booking-form {
     display: flex;
     flex-direction: column;
-    gap: var(--space-base);
+    gap: var(--space-md);
   }
 
   .booking-form .form-field-wrapper {
@@ -51,8 +51,8 @@
   /* Timezone dropdown - fixed positioning */
   .timezone-dropdown {
     position: fixed;
-    left: var(--space-base);
-    right: var(--space-base);
+    left: var(--space-md);
+    right: var(--space-md);
     width: auto;
     max-width: none;
     min-width: auto;
@@ -70,8 +70,8 @@
   .booking-form {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    column-gap: var(--space-base);
-    row-gap: var(--space-base);
+    column-gap: var(--space-md);
+    row-gap: var(--space-md);
     flex: 1;
   }
 
@@ -275,7 +275,7 @@
     padding: var(--space-2xs) var(--space-3xs);
     min-height: var(--calendar-day-min-height);
     aspect-ratio: auto;
-    border-width: 1px;
+    border-width: var(--border-width-thin);
     box-sizing: border-box;
   }
 
@@ -355,7 +355,7 @@
   .time-slot {
     padding: var(--space-sm) var(--space-xs);
     min-height: var(--min-touch-target);
-    border-width: 1px;
+    border-width: var(--border-width-thin);
     box-sizing: border-box;
   }
 
@@ -552,14 +552,14 @@
   .video-background-container {
     display: none;
   }
-  
+
   .scheduling-box {
     background: white;
     color: black;
     box-shadow: none;
-    border: 1px solid #ccc;
+    border: var(--border-width-thin) solid #ccc;
   }
-  
+
   button {
     display: none;
   }

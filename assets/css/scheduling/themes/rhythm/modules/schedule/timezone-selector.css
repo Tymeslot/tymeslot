@@ -19,7 +19,7 @@
 .timezone-trigger {
   width: 100%;
   padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--border-medium);
+  border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, var(--surface-medium) 0%, var(--surface-subtle) 100%);
   backdrop-filter: blur(10px);
@@ -30,7 +30,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  min-height: 36px;
+  min-height: calc(var(--space-2xl) + var(--space-3xs));
 }
 
 .timezone-trigger:hover {
@@ -48,7 +48,7 @@
   background: linear-gradient(135deg, rgba(20,20,35,0.98) 0%, rgba(15,15,25,0.96) 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-medium);
+  border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   max-height: var(--dropdown-max-height);
@@ -67,9 +67,9 @@
 
 .timezone-flag {
   width: var(--icon-sm);
-  height: 14px;
+  height: var(--flag-height);
   flex-shrink: 0;
-  border-radius: 2px;
+  border-radius: var(--space-3xs);
   object-fit: cover;
 }
 
@@ -91,14 +91,14 @@
 
 .timezone-search-wrapper {
   padding: var(--space-sm);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: var(--border-width-thin) solid var(--border-subtle);
 }
 
 .timezone-search {
   width: 100%;
   padding: var(--space-xs) var(--space-sm);
   background: var(--surface-medium);
-  border: 1px solid var(--border-light);
+  border: var(--border-width-thin) solid var(--border-light);
   border-radius: var(--radius-sm);
   color: var(--theme-text);
   transition: all var(--transition-normal);
@@ -129,7 +129,7 @@
   cursor: pointer;
   transition: all var(--transition-normal);
   text-align: left;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: var(--border-width-thin) solid var(--border-subtle);
 }
 
 .timezone-option:hover {
@@ -148,9 +148,9 @@
 
 .timezone-option-flag {
   width: var(--icon-sm);
-  height: 14px;
+  height: var(--flag-height);
   flex-shrink: 0;
-  border-radius: 2px;
+  border-radius: var(--space-3xs);
   object-fit: cover;
 }
 

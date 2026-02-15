@@ -85,7 +85,7 @@
   width: 100%;
   max-width: 100%;
   background: linear-gradient(135deg, var(--surface-light) 0%, var(--surface-subtle) 100%);
-  border: 1px solid var(--border-medium);
+  border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-2xl);
   overflow: hidden;
   box-shadow: var(--shadow-lg);
@@ -97,7 +97,7 @@
   align-items: center;
   padding: var(--space-md) var(--space-lg);
   background: var(--surface-subtle);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: var(--border-width-thin) solid var(--border-subtle);
 }
 
 .ticket-label {
@@ -121,7 +121,7 @@
 .ticket-row {
   display: flex;
   align-items: center;
-  gap: var(--space-base);
+  gap: var(--space-md);
 }
 
 .ticket-icon {
@@ -150,9 +150,9 @@
 }
 
 .ticket-footer {
-  padding: var(--space-base) var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
   background: rgba(255, 255, 255, 0.03);
-  border-top: 1px solid var(--border-subtle);
+  border-top: var(--border-width-thin) solid var(--border-subtle);
 }
 
 .ticket-footer-message {
@@ -193,9 +193,9 @@
 
 .confirmation-actions {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-md);
   justify-content: center;
-  margin-top: 2rem;
+  margin-top: var(--space-2xl);
 }
 
 .confirmation-actions.centered {
@@ -211,7 +211,7 @@
 .booking-detail-label {
   color: var(--theme-text-secondary, #94a3b8);
   margin: 0;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-3xs);
 }
 
 .booking-detail-value {
