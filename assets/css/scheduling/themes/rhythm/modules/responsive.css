@@ -130,7 +130,7 @@
   }
 
   .calendar-day {
-    padding: var(--space-sm) 4px;
+    padding: var(--space-sm) var(--space-2xs);
     min-height: var(--calendar-day-min-height-tablet);
   }
 
@@ -190,13 +190,13 @@
 
   /* Timezone selector - full width */
   .timezone-dropdown {
-    left: 10px;
-    right: 10px;
-    max-width: calc(100vw - 20px);
+    left: var(--space-sm);
+    right: var(--space-sm);
+    max-width: calc(100vw - calc(var(--space-sm) * 2));
   }
 
   .timezone-trigger {
-    padding: 10px;
+    padding: var(--space-sm);
     min-height: var(--min-touch-target);
   }
 
@@ -241,7 +241,7 @@
   }
 
   .slide {
-    padding: 12px 10px;
+    padding: var(--space-md) var(--space-sm);
     min-height: auto; /* Remove forced full height */
     display: flex;
     flex-direction: column;
@@ -272,7 +272,7 @@
   }
 
   .calendar-day {
-    padding: 4px 2px;
+    padding: var(--space-2xs) var(--space-3xs);
     min-height: var(--calendar-day-min-height);
     aspect-ratio: auto;
     border-width: 1px;
@@ -280,7 +280,7 @@
   }
 
   .slide-title {
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
   }
 
   /* Language switcher positioning */
@@ -336,7 +336,7 @@
   .time-slots-grid {
     gap: var(--space-sm);
     max-height: var(--time-slots-max-height-mobile);
-    padding-right: 4px;
+    padding-right: var(--space-2xs);
   }
 
   .time-period-section {
@@ -344,7 +344,7 @@
   }
 
   .time-period-header {
-    padding-bottom: 2px;
+    padding-bottom: var(--space-3xs);
   }
 
   .time-period-slots {
@@ -383,7 +383,7 @@
   }
 
   .rhythm-theme-wrapper .slide .booking-form .label {
-    margin-bottom: 4px;
+    margin-bottom: var(--space-2xs);
   }
 
   /* Slide actions mobile */

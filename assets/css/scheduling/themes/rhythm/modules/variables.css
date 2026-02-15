@@ -4,16 +4,16 @@
   --theme-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* Font size scale - fluid responsive using clamp() */
-  --theme-font-size-3xs: clamp(0.625rem, 1vw, 0.7rem);        /* ~10-11px - tiny labels */
-  --theme-font-size-2xs: clamp(0.65rem, 1.1vw, 0.75rem);      /* ~10-12px - smallest interactive */
-  --theme-font-size-xs: clamp(0.7rem, 1.2vw, 0.875rem);       /* ~11-14px - small labels */
-  --theme-font-size-sm: clamp(0.75rem, 1.3vw, 0.875rem);      /* ~12-14px - small text */
-  --theme-font-size-base: clamp(0.875rem, 1.5vw, 1rem);       /* ~14-16px - body text */
-  --theme-font-size-md: clamp(0.9rem, 1.6vw, 1.0625rem);      /* ~14-17px - emphasized body */
-  --theme-font-size-lg: clamp(1.125rem, 2vw, 1.25rem);        /* ~18-20px - subheadings */
-  --theme-font-size-xl: clamp(1.375rem, 2.5vw, 1.5rem);       /* ~22-24px - headings */
-  --theme-font-size-2xl: clamp(1.5rem, 3vw, 2rem);            /* ~24-32px - large headings */
-  --theme-font-size-3xl: clamp(1.75rem, 3.5vw, 2.5rem);       /* ~28-40px - hero text */
+  --theme-font-size-3xs: clamp(0.688rem, 1.1vw, 0.75rem);     /* ~11-12px - tiny labels */
+  --theme-font-size-2xs: clamp(0.75rem, 1.2vw, 0.813rem);     /* ~12-13px - smallest interactive */
+  --theme-font-size-xs: clamp(0.813rem, 1.3vw, 0.938rem);     /* ~13-15px - small labels */
+  --theme-font-size-sm: clamp(0.875rem, 1.4vw, 0.938rem);     /* ~14-15px - small text */
+  --theme-font-size-base: clamp(0.938rem, 1.6vw, 1.063rem);   /* ~15-17px - body text */
+  --theme-font-size-md: clamp(1rem, 1.7vw, 1.125rem);         /* ~16-18px - emphasized body */
+  --theme-font-size-lg: clamp(1.188rem, 2.1vw, 1.313rem);     /* ~19-21px - subheadings */
+  --theme-font-size-xl: clamp(1.438rem, 2.6vw, 1.563rem);     /* ~23-25px - headings */
+  --theme-font-size-2xl: clamp(1.625rem, 3.2vw, 2.125rem);    /* ~26-34px - large headings */
+  --theme-font-size-3xl: clamp(1.875rem, 3.7vw, 2.625rem);    /* ~30-42px - hero text */
 
   /* Line heights */
   --theme-line-height-tight: 1.1;
@@ -79,12 +79,12 @@
   --radius-2xl: 16px;
 
   /* Spacing scale - fluid responsive */
-  --space-xs: clamp(4px, 1vw, 8px);
-  --space-sm: clamp(8px, 1.5vw, 12px);
-  --space-md: clamp(12px, 2vw, 16px);
-  --space-lg: clamp(16px, 2.5vw, 20px);
-  --space-xl: clamp(20px, 3vw, 24px);
-  --space-2xl: clamp(24px, 4vw, 32px);
+  --space-xs: clamp(8px, 1.2vw, 12px);
+  --space-sm: clamp(12px, 1.8vw, 16px);
+  --space-md: clamp(16px, 2.5vw, 20px);
+  --space-lg: clamp(20px, 3vw, 28px);
+  --space-xl: clamp(28px, 3.5vw, 32px);
+  --space-2xl: clamp(32px, 4.5vw, 40px);
 
   /* Transition speeds */
   --transition-fast: 0.15s ease;
@@ -99,11 +99,11 @@
   --slide-transition: all var(--transition-slow);
 
   /* Component-specific sizing */
-  --avatar-size-sm: 32px;
-  --avatar-size-md: 36px;
-  --avatar-size-lg: 48px;
-  --avatar-size-xl: 64px;
-  --min-touch-target: 44px;
+  --avatar-size-sm: 36px;
+  --avatar-size-md: 40px;
+  --avatar-size-lg: 52px;
+  --avatar-size-xl: 68px;
+  --min-touch-target: 48px;
 
   /* Container widths */
   --container-xs: 280px;
@@ -118,18 +118,18 @@
   --dropdown-max-height-mobile: 60vh;
 
   /* Calendar specific */
-  --calendar-gap: clamp(4px, 1vw, 8px);
-  --calendar-gap-tablet: clamp(4px, 1vw, 6px);
-  --calendar-gap-mobile: 3px;
-  --calendar-day-min-height: 48px;
-  --calendar-day-min-height-tablet: 50px;
+  --calendar-gap: clamp(8px, 1.2vw, 12px);
+  --calendar-gap-tablet: clamp(6px, 1.1vw, 10px);
+  --calendar-gap-mobile: 5px;
+  --calendar-day-min-height: 52px;
+  --calendar-day-min-height-tablet: 54px;
 
   /* Time slots specific */
-  --time-slot-min-width: 80px;
-  --time-slot-min-width-tablet: 90px;
-  --time-slot-min-height: 36px;
-  --time-slots-max-height: 400px;
-  --time-slots-max-height-mobile: 250px;
+  --time-slot-min-width: 88px;
+  --time-slot-min-width-tablet: 96px;
+  --time-slot-min-height: 40px;
+  --time-slots-max-height: 420px;
+  --time-slots-max-height-mobile: 280px;
 
   /* Icon sizes */
   --icon-xs: 16px;
@@ -153,9 +153,9 @@
   --shadow-danger-md: 0 6px 20px rgba(239, 68, 68, 0.4);
 
   /* Additional spacing for common patterns */
-  --space-base: 16px;
-  --space-3xs: 2px;
-  --space-2xs: 4px;
+  --space-base: 20px;
+  --space-3xs: 4px;
+  --space-2xs: 6px;
 
   /* Scrollbar styling */
   --scrollbar-width: 6px;
@@ -164,8 +164,8 @@
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
 
   /* Button sizing */
-  --button-padding-y: 12px;
-  --button-padding-x: 24px;
-  --button-padding-y-sm: 10px;
-  --button-padding-x-sm: 20px;
+  --button-padding-y: 14px;
+  --button-padding-x: 28px;
+  --button-padding-y-sm: 12px;
+  --button-padding-x-sm: 24px;
 }
