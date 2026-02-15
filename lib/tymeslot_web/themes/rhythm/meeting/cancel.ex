@@ -163,24 +163,22 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                 
     <!-- Action Buttons -->
                 <%= if assigns[:meeting_kept] do %>
-                  <div class="confirmation-actions" style="display: flex; justify-content: center;">
+                  <div class="confirmation-actions centered">
                     <button
                       phx-click={JS.navigate("/")}
-                      class="action-button-primary"
+                      class="action-button-primary action-button-success"
                       type="button"
-                      style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); display: inline-flex; align-items: center; gap: 0.5rem;"
                     >
                       Done
                     </button>
                   </div>
                 <% else %>
-                  <div class="confirmation-actions" style="display: flex; gap: 1rem;">
+                  <div class="confirmation-actions">
                     <button
                       phx-click="cancel_meeting"
-                      class="action-button-primary"
+                      class="action-button-primary action-button-danger"
                       type="button"
                       data-testid="cancel-meeting"
-                      style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); display: inline-flex; align-items: center; gap: 0.5rem;"
                       disabled={@loading}
                     >
                       <%= if @loading do %>
@@ -192,11 +190,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
 
                     <button
                       phx-click="keep_meeting"
-                      class="action-button-primary"
+                      class="action-button-primary action-button-secondary"
                       type="button"
                       data-testid="keep-meeting"
                       disabled={@loading}
-                      style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); display: inline-flex; align-items: center; gap: 0.5rem;"
                     >
                       Keep Meeting
                     </button>

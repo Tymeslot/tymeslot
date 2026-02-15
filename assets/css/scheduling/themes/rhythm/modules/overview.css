@@ -1,0 +1,155 @@
+/* Overview Slide Components */
+.organizer-profile {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 15px;
+}
+
+.organizer-avatar {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar-image {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+}
+
+.avatar-checkmark {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 24px;
+  height: 24px;
+  background: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.organizer-info {
+  flex: 1;
+  text-align: left;
+}
+
+.organizer-greeting {
+  margin: 0 0 6px 0;
+  color: var(--theme-text);
+}
+
+.organizer-instruction {
+  margin: 0;
+  color: var(--theme-text-secondary);
+}
+
+/* Duration Cards */
+.duration-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(8px, 2vw, 12px);
+  margin-top: clamp(12px, 3vw, 20px);
+  flex: 0 0 auto;
+  padding: 8px 4px 4px 0;
+}
+
+/* Adaptive layout for many meeting types */
+.duration-grid:has(.duration-card:nth-child(5)) {
+  grid-template-columns: 1fr;
+}
+
+.duration-grid:has(.duration-card:nth-child(5)) .duration-description {
+  display: none;
+}
+
+.duration-grid:has(.duration-card:nth-child(5)) .duration-button {
+  padding: 8px 12px;
+}
+
+/* Adaptive layout for short containers */
+@media (max-height: 600px) {
+  .duration-grid {
+    grid-template-columns: 1fr; /* Stack cards to save width/simplify */
+    margin-top: 10px;
+  }
+
+  .duration-button {
+    padding: 8px 12px;
+  }
+
+  .duration-description {
+    display: none; /* Hide description to save vertical space */
+  }
+
+  .organizer-profile {
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+
+  .avatar-image {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+.duration-card {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.duration-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--theme-primary);
+  transform: translateY(-2px);
+}
+
+.duration-card.selected {
+  background: var(--theme-surface);
+  border-color: var(--theme-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.duration-button {
+  width: 100%;
+  padding: 12px;
+  background: none;
+  border: none;
+  color: var(--theme-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+}
+
+.duration-icon {
+  flex-shrink: 0;
+}
+
+.duration-info {
+  text-align: left;
+  flex: 1;
+}
+
+.duration-name {
+  margin-bottom: 4px;
+}
+
+.duration-time {
+  color: var(--theme-text-secondary);
+  margin-bottom: 4px;
+}
+
+.duration-description {
+  color: var(--theme-text-secondary);
+  opacity: 0.9;
+}

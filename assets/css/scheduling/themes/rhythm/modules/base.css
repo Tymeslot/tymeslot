@@ -4,33 +4,42 @@
 /* Global resets for Rhythm theme */
 html.rhythm-theme {
   height: 100%;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
+  position: relative;
 }
 
 body.rhythm-theme {
   height: 100%;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   margin: 0;
   padding: 0;
   font-family: var(--theme-font-family);
-  font-size: var(--theme-font-size-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  position: relative;
 }
 
 /* Main theme container */
 .video-background-theme {
   position: relative;
   width: 100%;
+  max-width: 100%;
   min-height: 100vh;
   min-height: -webkit-fill-available;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   background: rgba(0, 0, 0, 0.3);
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* Grid layout for integrated footer */
@@ -75,8 +84,8 @@ body.rhythm-theme {
   -webkit-backdrop-filter: blur(var(--box-blur)) saturate(150%);
   border-radius: 16px;
   box-shadow: var(--box-shadow);
-  /* Restore older centered card sizing */
   width: 520px;
+  max-width: 96vw;
   height: auto;
   display: flex;
   flex-direction: column;
@@ -84,12 +93,7 @@ body.rhythm-theme {
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--theme-text);
-}
-
-/* Wide variant for content-heavy steps (e.g., schedule) */
-.scheduling-box.wide {
-  width: 760px;
-  max-width: 96vw;
+  box-sizing: border-box;
 }
 
 /* Slide System */
@@ -133,8 +137,6 @@ body.rhythm-theme {
 }
 
 .slide-title {
-  font-size: var(--theme-font-size-2xl);
-  font-weight: 600;
   margin-bottom: clamp(12px, 3vw, 20px);
   text-align: center;
   color: var(--theme-text);

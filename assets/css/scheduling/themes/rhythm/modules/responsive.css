@@ -6,8 +6,19 @@
     max-width: 640px;
     height: auto;
   }
-  .scheduling-box.wide {
-    max-width: 820px;
+}
+
+/* Extra Large Desktop - Better readability */
+@media (min-width: 1440px) {
+  .slide-content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .booking-form {
+    max-width: 500px;
+    margin: 0 auto;
+    width: 100%;
   }
 }
 
@@ -18,18 +29,15 @@
     max-width: 580px;
     height: auto;
   }
-  .scheduling-box.wide {
-    max-width: 700px;
-  }
 }
 
 /* Tablet */
 @media (min-width: 480px) and (max-width: 767px) {
   .video-background-theme {
-    padding: 15px;
+    padding: 16px;
     align-items: center;
   }
-  
+
   .scheduling-box {
     width: 100%;
     max-width: 100%;
@@ -37,70 +45,95 @@
     min-height: auto;
     border-radius: 12px;
   }
-  .scheduling-box.wide {
-    max-width: 100%;
+
+  .slide {
+    padding: 20px;
   }
-  
+
   .slide-actions {
-    padding-top: 15px;
+    padding-top: 16px;
   }
-  
+
+  /* Language switcher - reduce overlap */
+  .language-switcher-container {
+    top: 12px;
+    right: 12px;
+  }
+
   .timezone-dropdown {
     position: fixed;
-    left: 10px;
-    right: 10px;
+    left: 16px;
+    right: 16px;
     width: auto;
     max-width: none;
     min-width: auto;
-    max-height: 50vh;
+    max-height: 60vh;
   }
-  
+
   .timezone-selector-container {
     max-width: none;
     width: 100%;
   }
-  
+
+  .timezone-trigger {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
   .schedule-header {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
-  
+
+  /* Better spacing for calendar */
   .calendar-grid {
-    gap: 4px;
-  }
-  
-  .calendar-day {
-    padding: 6px 2px;
-    min-height: 42px;
-  }
-  
-  .day-name {
-    font-size: 0.6rem;
-  }
-  
-  .day-number {
-    font-size: 0.9rem;
-  }
-  
-  .time-period-slots {
-    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-    gap: 4px;
-  }
-  
-  .time-slot {
-    padding: 6px 8px;
-    font-size: 0.75rem;
-    min-height: 32px;
-  }
-  
-  .summary-row {
-    flex-direction: column;
     gap: 6px;
   }
-  
+
+  .calendar-day {
+    padding: 8px 4px;
+    min-height: 50px; /* Increased for better touch targets */
+  }
+
+  .day-name {
+    /* Size handled by typography.css */
+  }
+
+  /* Better spacing for time slots */
+  .time-period-slots {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 6px;
+  }
+
+  .time-slot {
+    padding: 10px 12px;
+    min-height: 44px; /* iOS minimum tap target */
+  }
+
+  .duration-button {
+    min-height: 44px;
+  }
+
+  /* Stack summary items vertically */
+  .summary-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
   .summary-item {
     width: 100%;
+  }
+
+  /* Better duration grid on tablet */
+  .duration-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Ensure booking form has proper spacing */
+  .booking-form {
+    gap: 16px;
   }
 }
 
@@ -109,57 +142,346 @@
   .video-background-theme {
     padding: 0;
     background: rgba(0, 0, 0, 0.4);
-    align-items: stretch;
+    align-items: flex-start;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
-  
+
+  .video-background-theme.theme-grid .content-area {
+    padding: 0;
+  }
+
+  .video-background-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   .scheduling-box {
     width: 100%;
-    height: 100%;
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
-    min-height: 100dvh;
-    min-height: 100svh;
+    max-width: 100%;
+    height: auto;
+    min-height: auto;
     max-height: none;
     border-radius: 0;
     border: none;
+    padding: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
-  
-  /* Reset min-height for mobile to allow full-screen behavior */
-  @media (max-width: 479px) {
-    .scheduling-box {
-      min-height: 100vh !important;
-    }
-  }
-  
+
   .slide {
-    padding: 15px;
+    padding: 12px 10px;
+    min-height: auto; /* Remove forced full height */
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
   }
-  
+
+  .slide-content {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    overflow-y: visible;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Ensure calendar doesn't overflow */
+  .calendar-section {
+    width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .calendar-grid {
+    width: 100%;
+    gap: 3px;
+    box-sizing: border-box;
+  }
+
+  .calendar-day {
+    padding: 4px 2px;
+    min-height: 48px;
+    aspect-ratio: auto;
+    border-width: 1px;
+    box-sizing: border-box;
+  }
+
+  .slide-title {
+    margin-bottom: 8px;
+  }
+
+  /* Language switcher positioning */
+  .language-switcher-container {
+    top: 8px;
+    right: 8px;
+  }
+
+  /* Organizer profile mobile optimization */
+  .organizer-profile {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .avatar-image {
+    width: 48px;
+    height: 48px;
+  }
+
+  .organizer-greeting {
+    margin-bottom: 4px;
+  }
+
+  /* Duration grid - single column on mobile */
+  .duration-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .duration-card {
+    min-height: 44px;
+  }
+
+  .duration-button {
+    padding: 10px 12px;
+    min-height: 44px;
+  }
+
+  /* Schedule header mobile */
+  .schedule-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+  }
+
+  .organizer-profile-small {
+    gap: 6px;
+  }
+
+  .avatar-image-small {
+    width: 32px;
+    height: 32px;
+  }
+
+  .timezone-selector-container {
+    max-width: none;
+    width: 100%;
+  }
+
+  .timezone-dropdown {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: calc(100vw - 20px);
+    min-width: auto;
+    max-height: 60vh;
+  }
+
+  .timezone-trigger {
+    padding: 10px;
+    min-height: 44px;
+  }
+
+  /* Calendar section margins */
+  .calendar-section {
+    margin-bottom: 8px;
+  }
+
+  .calendar-header {
+    margin-bottom: 8px;
+  }
+
+  .calendar-nav-button {
+    padding: 6px 10px;
+  }
+
+  /* calendar-month-year size handled by typography.css */
+
+  /* Time slots mobile */
+  .time-slots-section {
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .time-slots-grid {
+    gap: 8px;
+    max-height: 250px;
+    padding-right: 4px;
+  }
+
+  .time-period-section {
+    gap: 5px;
+  }
+
+  .time-period-header {
+    padding-bottom: 2px;
+  }
+
+  .time-period-slots {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 5px;
+  }
+
+  .time-slot {
+    padding: 8px 6px;
+    min-height: 44px;
+    border-width: 1px;
+    box-sizing: border-box;
+  }
+
+  /* Meeting summary mobile */
+  .meeting-summary {
+    padding: 8px 10px;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .summary-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .summary-item {
+    width: 100%;
+    gap: 8px;
+  }
+
+  /* Booking form mobile */
+  .booking-form {
+    gap: 10px;
+  }
+
+  .rhythm-theme-wrapper .slide .booking-form .input,
+  .rhythm-theme-wrapper .slide .booking-form input.input,
+  .rhythm-theme-wrapper .slide .booking-form textarea.input {
+    padding: 10px 8px;
+    min-height: 44px;
+  }
+
+  .rhythm-theme-wrapper .slide .booking-form textarea.input {
+    min-height: 80px;
+  }
+
+  .rhythm-theme-wrapper .slide .booking-form .label {
+    margin-bottom: 4px;
+  }
+
+  /* Slide actions mobile */
+  .slide-actions {
+    padding-top: 12px;
+    gap: 8px;
+    margin-top: auto;
+    flex-shrink: 0;
+  }
+
+  .prev-button,
+  .next-button {
+    padding: 10px 16px;
+    min-height: 44px;
+  }
+
+  .submit-button {
+    padding: 12px 20px;
+    min-height: 44px;
+  }
+
+  /* Confirmation mobile */
   .confirmation-container {
-    padding: 24px 16px;
-    gap: 20px;
+    padding: 16px 10px;
+    gap: 12px;
+    justify-content: flex-start;
   }
-  
-  .confirmation-headline {
-    font-size: 1.5rem;
+
+  .confirmation-header-section {
+    gap: 8px;
   }
-  
+
   .meeting-ticket {
     max-width: 100%;
+    width: 100%;
   }
-  
+
   .ticket-body {
-    padding: 16px;
+    padding: 12px;
+    gap: 10px;
   }
-  
+
+  .ticket-header {
+    padding: 10px 12px;
+  }
+
+  .ticket-footer {
+    padding: 10px 12px;
+  }
+
+  .ticket-row {
+    gap: 10px;
+  }
+
+  .ticket-icon {
+    width: 32px;
+    height: 32px;
+  }
+
   .success-badge {
     width: 56px;
     height: 56px;
   }
-  
+
   .success-icon {
     width: 28px;
     height: 28px;
+  }
+
+  .confirmation-actions-section {
+    gap: 8px;
+  }
+
+  .action-button-primary {
+    padding: 10px 20px;
+    min-height: 44px;
+  }
+
+  /* Comprehensive mobile overflow prevention */
+  html.rhythm-theme,
+  body.rhythm-theme {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .rhythm-theme-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .video-background-theme.theme-grid {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .content-area {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Ensure all child elements respect container width */
+  .slide > *,
+  .slide-content > * {
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }
 

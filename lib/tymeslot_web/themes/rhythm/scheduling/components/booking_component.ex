@@ -52,12 +52,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
     <div class="scheduling-box" data-locale={@locale}>
       <div class="slide-container">
         <div class="slide active">
-          <div
-            class="slide-content booking-slide"
-            style="display: flex; flex-direction: column; height: 100%;"
-          >
+          <div class="slide-content booking-slide">
             <!-- Organizer Header -->
-            <div class="schedule-header" style="flex-shrink: 0;">
+            <div class="schedule-header">
               <div class="organizer-profile-small">
                 <img
                   src={Demo.avatar_url(@organizer_profile, :thumb)}
@@ -117,7 +114,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               phx-target={@myself}
               data-testid="booking-form"
               class="booking-form"
-              style="flex: 1;"
               as={:booking}
             >
               <.input
@@ -159,7 +155,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   phx-target={@myself}
                   data-testid="back-step"
                   disabled={@submitting}
-                  style="flex: 1;"
                 >
                   ← {gettext("back")}
                 </button>
@@ -168,7 +163,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   class="submit-button"
                   data-testid="submit-booking"
                   disabled={@submitting || !Helpers.form_valid?(@form)}
-                  style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
                 >
                   <%= if @submitting do %>
                     <svg

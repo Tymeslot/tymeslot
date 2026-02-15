@@ -10,7 +10,10 @@
 @import "./modules/base.css";
 @import "./modules/typography.css";
 @import "./modules/video.css";
-@import "./modules/slides.css";
+@import "./modules/overview.css";
+@import "./modules/schedule.css";
+@import "./modules/booking.css";
+@import "./modules/confirmation.css";
 @import "./modules/components.css";
 @import "./modules/language-switcher.css";
 @import "./modules/responsive.css";

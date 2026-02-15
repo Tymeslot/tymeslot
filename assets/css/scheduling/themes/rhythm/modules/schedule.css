@@ -1,0 +1,418 @@
+/* Schedule Components */
+
+.schedule-slide {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.schedule-grid {
+  margin-top: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.calendar-section-wrapper {
+  flex-shrink: 0;
+}
+
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  position: relative;
+  gap: 15px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.organizer-profile-small {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.avatar-image-small {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.organizer-info-small {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.organizer-name {
+  color: var(--theme-text-secondary);
+}
+
+.organizer-name-full {
+  color: var(--theme-text);
+}
+
+.meeting-duration {
+  color: var(--theme-text-secondary);
+}
+
+/* Timezone Selector */
+.timezone-selector-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 220px;
+}
+
+.timezone-label {
+  color: var(--theme-text-secondary);
+  margin-bottom: 2px;
+}
+
+.timezone-dropdown-wrapper {
+  position: relative;
+}
+
+.timezone-trigger {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%);
+  backdrop-filter: blur(10px);
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.timezone-trigger:hover {
+  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%);
+  border-color: var(--theme-primary);
+  transform: translateY(-1px);
+}
+
+.timezone-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 9999;
+  margin-top: 4px;
+  background: linear-gradient(135deg, rgba(20,20,35,0.98) 0%, rgba(15,15,25,0.96) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  max-height: 280px;
+  overflow: hidden;
+  width: 280px;
+  min-width: 280px;
+}
+
+.timezone-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.timezone-flag {
+  width: 20px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  object-fit: cover;
+}
+
+.timezone-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timezone-arrow {
+  color: var(--theme-text-secondary);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.timezone-trigger:hover .timezone-arrow {
+  transform: translateY(1px);
+}
+
+.timezone-search-wrapper {
+  padding: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timezone-search {
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: var(--theme-text);
+  transition: all 0.2s ease;
+}
+
+.timezone-search:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--theme-primary);
+}
+
+.timezone-search::placeholder {
+  color: var(--theme-text-secondary);
+}
+
+.timezone-options {
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.timezone-option {
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.timezone-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.timezone-option:last-child {
+  border-bottom: none;
+}
+
+.timezone-option-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timezone-option-flag {
+  width: 20px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  object-fit: cover;
+}
+
+.timezone-option-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timezone-option-label {
+  color: var(--theme-text);
+}
+
+.timezone-option-offset {
+  color: var(--theme-text-secondary);
+}
+
+/* Calendar Components */
+.calendar-section {
+  flex-shrink: 0;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.calendar-nav-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: var(--theme-text);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.calendar-nav-button:hover {
+  background: var(--theme-surface);
+  border-color: var(--theme-primary);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: clamp(4px, 1vw, 8px);
+  width: 100%;
+}
+
+.calendar-day {
+  padding: 8px 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 48px;
+  justify-content: center;
+  aspect-ratio: 1;
+}
+
+.day-name {
+  color: var(--theme-text-secondary);
+}
+
+.day-number {
+  color: var(--theme-text);
+}
+
+.calendar-day:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--theme-primary);
+}
+
+.calendar-day.selected {
+  background: var(--theme-surface);
+  border-color: var(--theme-primary);
+}
+
+.calendar-day:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.calendar-day--loading {
+  opacity: 0.5;
+  cursor: wait;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Time Slots */
+.time-slots-section {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.time-slots-section-heading {
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.time-slots-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 8px 4px 0; /* Add right padding for scrollbar */
+  flex: 1 1 auto;
+  min-height: 0; /* Allow proper flex shrinking */
+  max-height: 400px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for webkit browsers */
+.time-slots-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.time-slots-grid::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.time-slots-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.time-slots-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.time-period-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.time-period-header {
+  color: var(--theme-text-secondary);
+  margin: 0;
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.time-period-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 6px;
+}
+
+.time-slot {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.time-slot:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: var(--theme-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.time-slot.selected {
+  background: var(--theme-surface);
+  border-color: var(--theme-primary);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}

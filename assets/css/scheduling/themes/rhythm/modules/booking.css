@@ -1,0 +1,180 @@
+/* Booking Form */
+.booking-slide {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.slide-actions.horizontal {
+  display: flex;
+  gap: 12px;
+}
+
+.slide-actions.horizontal button {
+  flex: 1;
+}
+
+/* Single column on mobile and tablet for better usability */
+@media (max-width: 767px) {
+  .booking-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .booking-form .form-field-wrapper {
+    width: 100%;
+  }
+
+  .rhythm-theme-wrapper .booking-form textarea.input {
+    min-height: 100px;
+  }
+}
+
+/* Make booking form use horizontal space better on medium+ screens */
+@media (min-width: 768px) {
+  .slide-content.booking-slide {
+    max-width: 820px; /* wider content inside the fixed card */
+    margin: 0 auto;
+  }
+  .booking-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+    row-gap: 16px;
+    flex: 1;
+  }
+  .booking-form .form-field-wrapper:nth-child(1),
+  .booking-form .form-field-wrapper:nth-child(2) {
+    grid-column: span 1;
+  }
+  .booking-form .form-field-wrapper:nth-child(3) {
+    grid-column: 1 / -1; /* message full width */
+  }
+  .booking-form .slide-actions {
+    grid-column: 1 / -1; /* buttons full width */
+  }
+}
+
+.meeting-summary {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.meeting-summary.compact {
+  padding: 10px 12px;
+  gap: 6px;
+}
+
+.summary-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.summary-item {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--theme-text);
+}
+
+.summary-icon {
+  flex-shrink: 0;
+}
+
+.summary-value {
+  color: var(--theme-text);
+}
+
+.summary-label {
+  color: var(--theme-text-secondary);
+  margin-top: 2px;
+}
+
+.booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 2vw, 16px);
+  flex: 0 0 auto;
+  overflow: visible;
+  margin-bottom: 0;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+/* Form Field Styling
+ * Theme-specific form styling that naturally overrides @tailwindcss/forms plugin
+ * via higher specificity selectors (.rhythm-theme-wrapper .booking-form input.input)
+ */
+.rhythm-theme-wrapper .booking-form .form-field-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.rhythm-theme-wrapper .booking-form .label {
+  color: var(--theme-text);
+  margin-bottom: 8px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.rhythm-theme-wrapper .booking-form .label span {
+  color: var(--theme-error);
+}
+
+.rhythm-theme-wrapper .booking-form .input,
+.rhythm-theme-wrapper .booking-form input.input,
+.rhythm-theme-wrapper .booking-form textarea.input {
+  width: 100%;
+  padding: clamp(10px, 2vw, 12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-width: 1px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--theme-text);
+  min-height: 44px;
+}
+
+.rhythm-theme-wrapper .booking-form .input::placeholder,
+.rhythm-theme-wrapper .booking-form input.input::placeholder,
+.rhythm-theme-wrapper .booking-form textarea.input::placeholder {
+  color: var(--theme-text-secondary);
+}
+
+.rhythm-theme-wrapper .booking-form .input:hover,
+.rhythm-theme-wrapper .booking-form input.input:hover,
+.rhythm-theme-wrapper .booking-form textarea.input:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.rhythm-theme-wrapper .booking-form .input:focus,
+.rhythm-theme-wrapper .booking-form input.input:focus,
+.rhythm-theme-wrapper .booking-form textarea.input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+}
+
+.rhythm-theme-wrapper .booking-form .input-error,
+.rhythm-theme-wrapper .booking-form input.input-error,
+.rhythm-theme-wrapper .booking-form textarea.input-error {
+  border-color: var(--theme-error-border);
+  background: var(--theme-error-bg);
+}
+
+/* Error message styling for Rhythm theme */
+/* Target the actual error message div by its core component classes */
+.rhythm-theme-wrapper .booking-form .form-field-wrapper > div.mt-2.flex.items-center {
+  color: var(--theme-error);
+  margin-top: 4px;
+}

@@ -100,22 +100,18 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                 </div>
                 
     <!-- Action Buttons -->
-                <div
-                  class="confirmation-actions"
-                  style="display: flex; justify-content: center; margin-top: 2rem;"
-                >
+                <div class="confirmation-actions centered">
                   <button
                     phx-click={JS.navigate(get_base_url(assigns))}
                     class="action-button-primary"
                     type="button"
-                    style="display: inline-flex; align-items: center; gap: 0.5rem;"
                   >
                     <span>Go to Calendar</span>
                     <svg
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
-                      style="width: 1.25rem; height: 1.25rem;"
+                      class="w-5 h-5"
                     >
                       <path
                         stroke-linecap="round"
