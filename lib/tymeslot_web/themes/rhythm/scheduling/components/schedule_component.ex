@@ -6,11 +6,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Demo
-  alias Tymeslot.Profiles
   alias Tymeslot.Utils.TimezoneUtils
   alias TymeslotWeb.Components.MeetingComponents
   alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @impl true
@@ -108,26 +107,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
           <div class="slide-content schedule-slide">
             <!-- Organizer Header -->
             <div class="schedule-header">
-              <div class="organizer-profile-small">
-                <img
-                  src={Demo.avatar_url(@organizer_profile, :thumb)}
-                  alt={Demo.avatar_alt_text(@organizer_profile)}
-                  class="avatar-image-small"
-                />
-                <div class="organizer-info-small">
-                  <div class="organizer-name">{gettext("Schedule with")}</div>
-                  <div class="organizer-name-full">
-                    {Profiles.display_name(@organizer_profile) || ""}
-                  </div>
-                  <div class="meeting-duration">
-                    <%= if @meeting_type do %>
-                      {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)}
-                    <% else %>
-                      {LocalizationHelpers.format_duration(@selected_duration)}
-                    <% end %>
-                  </div>
-                </div>
-              </div>
+              <OrganizerHeader.organizer_header_small
+                organizer_profile={@organizer_profile}
+                meeting_type={@meeting_type}
+                selected_duration={@selected_duration}
+              />
               <!-- Timezone Selector -->
               <div class="timezone-selector-container">
                 <label class="timezone-label">{gettext("Your timezone")}:</label>
@@ -143,7 +127,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                         <%= if TimezoneUtils.flag_exists?(country_code) do %>
                           <Flagpack.flag name={country_code} class="timezone-flag" />
                         <% else %>
-                          <span class="timezone-flag" style="opacity: 0.6;">🌐</span>
+                          <span class="timezone-flag timezone-flag--fallback">🌐</span>
                         <% end %>
                       <% end %>
                       <span class="timezone-text">
@@ -171,7 +155,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                           phx-hook="AutoFocus"
                         />
                       </div>
-                      <div class="timezone-options">
+                      <div class="timezone-options scroll-y">
                         <%= for {label, value, offset} <- TimezoneUtils.get_filtered_timezone_options(@timezone_search) do %>
                           <button
                             class="timezone-option"
@@ -185,7 +169,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                 <%= if TimezoneUtils.flag_exists?(country_code) do %>
                                   <Flagpack.flag name={country_code} class="timezone-option-flag" />
                                 <% else %>
-                                  <span class="timezone-option-flag" style="opacity: 0.6;">🌐</span>
+                                  <span class="timezone-option-flag timezone-flag--fallback">🌐</span>
                                 <% end %>
                               <% end %>
                               <div class="timezone-option-text">
@@ -217,13 +201,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     ←
                   </button>
                   <h3 class="calendar-month-year">{get_week_display(@current_week_start)}</h3>
-                  <div class="flex items-center gap-2">
+                  <div class="cluster cluster-xs">
                     <%= if @availability_status in [:error, :timeout] do %>
-                      <div
-                        class="calendar-error-inline"
-                        style="font-size: 11px; color: #fbbf24; background: rgba(0,0,0,0.4); padding: 2px 6px; rounded: 4px; display: flex; align-items: center; gap: 4px;"
-                      >
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="calendar-error-inline">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                         {gettext("Service slow")}
@@ -267,7 +248,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
               <div class="time-slots-section">
                 <h3 class="time-slots-section-heading">{gettext("Available Times")}</h3>
                 <% normalized_slots = MeetingComponents.normalize_slot_list(@available_slots) %>
-                <div class="time-slots-grid">
+                <div class="time-slots-grid scroll-y">
                   <%= if @selected_date do %>
                     <%= if @loading_slots do %>
                       <div class="loading-slots">

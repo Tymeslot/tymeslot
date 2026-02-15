@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   use Gettext, backend: TymeslotWeb.Gettext
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
+  import TymeslotWeb.Components.CoreComponents
+
   @impl true
   def update(assigns, socket) do
     # Filter out reserved assigns that can't be set directly
@@ -70,7 +72,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
                   <div class="ticket-body">
                     <div class="ticket-row">
-                      <div class="ticket-icon">📅</div>
+                      <div class="ticket-icon">
+                        <.icon name="hero-calendar" class="hero-icon hero-icon--md" />
+                      </div>
                       <div class="ticket-info">
                         <span class="ticket-value">{LocalizationHelpers.format_date(@selected_date)}</span>
                         <span class="ticket-sublabel">{gettext("Date")}</span>
@@ -78,7 +82,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                     </div>
 
                     <div class="ticket-row">
-                      <div class="ticket-icon">🕐</div>
+                      <div class="ticket-icon">
+                        <.icon name="hero-clock" class="hero-icon hero-icon--md" />
+                      </div>
                       <div class="ticket-info">
                         <span class="ticket-value">{@selected_time}</span>
                         <span class="ticket-sublabel">{format_timezone_display(@user_timezone)}</span>
@@ -87,7 +93,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
                     <%= if @organizer_profile do %>
                       <div class="ticket-row">
-                        <div class="ticket-icon">👤</div>
+                        <div class="ticket-icon">
+                          <.icon name="hero-user" class="hero-icon hero-icon--md" />
+                        </div>
                         <div class="ticket-info">
                           <span class="ticket-value">
                             {@organizer_profile.user.name || @organizer_profile.full_name}

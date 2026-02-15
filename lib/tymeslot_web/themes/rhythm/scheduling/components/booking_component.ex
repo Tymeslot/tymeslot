@@ -6,10 +6,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Demo
-  alias Tymeslot.Profiles
   alias Tymeslot.Utils.TimezoneUtils
   alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.CoreComponents
@@ -55,40 +54,25 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
           <div class="slide-content booking-slide">
             <!-- Organizer Header -->
             <div class="schedule-header">
-              <div class="organizer-profile-small">
-                <img
-                  src={Demo.avatar_url(@organizer_profile, :thumb)}
-                  alt={Demo.avatar_alt_text(@organizer_profile)}
-                  class="avatar-image-small"
-                />
-                <div class="organizer-info-small">
-                  <div class="organizer-name">{gettext("Schedule with")}</div>
-                  <div class="organizer-name-full">
-                    {Profiles.display_name(@organizer_profile) || ""}
-                  </div>
-                  <div class="meeting-duration">
-                    <%= if @meeting_type do %>
-                      {LocalizationHelpers.format_duration(@meeting_type.duration_minutes)}
-                    <% else %>
-                      {LocalizationHelpers.format_duration(@duration)}
-                    <% end %>
-                  </div>
-                </div>
-              </div>
+              <OrganizerHeader.organizer_header_small
+                organizer_profile={@organizer_profile}
+                meeting_type={@meeting_type}
+                selected_duration={@duration}
+              />
             </div>
 
     <!-- Meeting Summary -->
             <div class="meeting-summary compact">
               <div class="summary-row">
                 <div class="summary-item">
-                  <span class="summary-icon">📅</span>
+                  <.icon name="hero-calendar" class="summary-icon hero-icon hero-icon--md" />
                   <div>
                     <div class="summary-value">{LocalizationHelpers.format_date(@selected_date)}</div>
                     <div class="summary-label">{@selected_time || gettext("No time selected")}</div>
                   </div>
                 </div>
                 <div class="summary-item">
-                  <span class="summary-icon">🌍</span>
+                  <.icon name="hero-globe-alt" class="summary-icon hero-icon hero-icon--md" />
                   <div>
                     <div class="summary-value">
                       {TimezoneUtils.format_timezone(@user_timezone || "America/New_York")}
@@ -166,13 +150,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 >
                   <%= if @submitting do %>
                     <svg
-                      class="animate-spin h-4 w-4"
+                      class="loading-spinner icon-sm"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
                     >
                       <circle
-                        class="opacity-25"
+                        class="loading-spinner-track"
                         cx="12"
                         cy="12"
                         r="10"
@@ -181,7 +165,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                       >
                       </circle>
                       <path
-                        class="opacity-75"
+                        class="loading-spinner-path"
                         fill="currentColor"
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       >

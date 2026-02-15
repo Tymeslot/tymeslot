@@ -31,6 +31,64 @@
   }
 }
 
+/* Tablet & Mobile Shared Styles */
+@media (max-width: 767px) {
+  /* Booking form - single column layout */
+  .booking-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-base);
+  }
+
+  .booking-form .form-field-wrapper {
+    width: 100%;
+  }
+
+  .rhythm-theme-wrapper .booking-form textarea.input {
+    min-height: 100px;
+  }
+
+  /* Timezone dropdown - fixed positioning */
+  .timezone-dropdown {
+    position: fixed;
+    left: var(--space-base);
+    right: var(--space-base);
+    width: auto;
+    max-width: none;
+    min-width: auto;
+    max-height: var(--dropdown-max-height-mobile);
+  }
+}
+
+/* Desktop Medium+ - Better Booking Form Layout */
+@media (min-width: 768px) {
+  .slide-content.booking-slide {
+    max-width: var(--container-xl);
+    margin: 0 auto;
+  }
+
+  .booking-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--space-base);
+    row-gap: var(--space-base);
+    flex: 1;
+  }
+
+  .booking-form .form-field-wrapper:nth-child(1),
+  .booking-form .form-field-wrapper:nth-child(2) {
+    grid-column: span 1;
+  }
+
+  .booking-form .form-field-wrapper:nth-child(3) {
+    grid-column: 1 / -1; /* message full width */
+  }
+
+  .booking-form .slide-actions {
+    grid-column: 1 / -1; /* buttons full width */
+  }
+}
+
 /* Tablet */
 @media (min-width: 480px) and (max-width: 767px) {
   .video-background-theme {
@@ -68,17 +126,17 @@
 
   /* Better spacing for calendar */
   .calendar-grid {
-    gap: var(--space-xs);
+    gap: var(--calendar-gap-tablet);
   }
 
   .calendar-day {
     padding: var(--space-sm) 4px;
-    min-height: 50px;
+    min-height: var(--calendar-day-min-height-tablet);
   }
 
   /* Better spacing for time slots */
   .time-period-slots {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(var(--time-slot-min-width-tablet), 1fr));
     gap: var(--space-xs);
   }
 
@@ -110,6 +168,44 @@
 
 /* Mobile */
 @media (max-width: 479px) {
+  /* Avatar sizing - small variant */
+  .avatar-image {
+    width: var(--avatar-size-lg);
+    height: var(--avatar-size-lg);
+  }
+
+  .avatar-image-small {
+    width: var(--avatar-size-sm);
+    height: var(--avatar-size-sm);
+  }
+
+  .organizer-profile {
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+  }
+
+  .organizer-profile-small {
+    gap: var(--space-xs);
+  }
+
+  /* Timezone selector - full width */
+  .timezone-dropdown {
+    left: 10px;
+    right: 10px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .timezone-trigger {
+    padding: 10px;
+    min-height: var(--min-touch-target);
+  }
+
+  .timezone-selector-container {
+    max-width: none;
+    width: 100%;
+  }
+
+  /* General mobile styles */
   .video-background-theme {
     padding: 0;
     background: rgba(0, 0, 0, 0.4);
@@ -171,13 +267,13 @@
 
   .calendar-grid {
     width: 100%;
-    gap: 3px;
+    gap: var(--calendar-gap-mobile);
     box-sizing: border-box;
   }
 
   .calendar-day {
     padding: 4px 2px;
-    min-height: 48px;
+    min-height: var(--calendar-day-min-height);
     aspect-ratio: auto;
     border-width: 1px;
     box-sizing: border-box;
@@ -239,7 +335,7 @@
 
   .time-slots-grid {
     gap: var(--space-sm);
-    max-height: 250px;
+    max-height: var(--time-slots-max-height-mobile);
     padding-right: 4px;
   }
 
@@ -252,7 +348,7 @@
   }
 
   .time-period-slots {
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(var(--time-slot-min-width), 1fr));
     gap: var(--space-xs);
   }
 
@@ -343,8 +439,8 @@
   }
 
   .ticket-icon {
-    width: 32px;
-    height: 32px;
+    width: var(--icon-lg);
+    height: var(--icon-lg);
   }
 
   .success-badge {
@@ -400,12 +496,40 @@
   }
 }
 
+/* Short Viewports - Compact Mode */
+@media (max-height: 600px) {
+  /* Avatar sizing */
+  .avatar-image {
+    width: var(--avatar-size-lg);
+    height: var(--avatar-size-lg);
+  }
+
+  .organizer-profile {
+    margin-bottom: var(--space-sm);
+    gap: var(--space-sm);
+  }
+
+  /* Duration grid - single column for space efficiency */
+  .duration-grid {
+    grid-template-columns: 1fr;
+    margin-top: var(--space-sm);
+  }
+
+  .duration-button {
+    padding: var(--space-sm);
+  }
+
+  .duration-description {
+    display: none;
+  }
+}
+
 /* Low Memory Devices */
 @media (max-device-memory: 4) {
   .video-background-video {
     display: none;
   }
-  
+
   .scheduling-box {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);

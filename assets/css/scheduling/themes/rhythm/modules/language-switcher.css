@@ -1,15 +1,24 @@
 /* Language Switcher - Rhythm Theme */
+
+/* Language switcher container positioning */
+.language-switcher-container {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 50;
+}
+
 .language-switcher-button-rhythm {
   background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
 }
 
 .language-switcher-button-rhythm:hover {
   background: rgba(0, 0, 0, 0.7);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
@@ -19,16 +28,16 @@
 
 .language-dropdown-rhythm {
   background: rgba(0, 0, 0, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-  animation: slideDown 0.2s ease-out;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-md);
+  animation: slideDown var(--transition-normal);
   max-height: 300px;
   overflow-y: auto;
 }
 
 .language-dropdown-item-rhythm {
-  color: rgba(255, 255, 255, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--theme-text);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .language-dropdown-item-rhythm:last-child {
@@ -36,14 +45,14 @@
 }
 
 .language-dropdown-item-rhythm:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-light);
   color: #ffffff;
 }
 
 .language-dropdown-item-rhythm.active {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--surface-medium);
   color: #ffffff;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 @keyframes slideDown {

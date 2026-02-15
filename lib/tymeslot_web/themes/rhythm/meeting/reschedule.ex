@@ -3,6 +3,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
   Rhythm theme reschedule component with modern sliding style.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  import TymeslotWeb.Components.CoreComponents
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
@@ -29,10 +32,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                 <!-- Header with Icon -->
                 <div class="confirmation-header-section">
                   <div class="success-badge">
-                    <div
-                      class="success-badge-inner"
-                      style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);"
-                    >
+                    <div class="success-badge-inner success-badge-inner--info">
                       <svg class="success-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           stroke-linecap="round"
@@ -45,11 +45,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                   </div>
 
                   <h1 class="confirmation-headline">
-                    Reschedule Appointment
+                    {gettext("Reschedule Appointment")}
                   </h1>
 
                   <p class="confirmation-message">
-                    Select a new time for your meeting
+                    {gettext("Select a new time for your meeting")}
                   </p>
                 </div>
                 
@@ -62,7 +62,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
 
                   <div class="ticket-body">
                     <div class="ticket-row">
-                      <div class="ticket-icon">📅</div>
+                      <div class="ticket-icon">
+                        <.icon name="hero-calendar" class="hero-icon hero-icon--md" />
+                      </div>
                       <div class="ticket-info">
                         <span class="ticket-value">
                           {Calendar.strftime(@meeting.start_time, "%B %d, %Y")}
@@ -72,7 +74,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                     </div>
 
                     <div class="ticket-row">
-                      <div class="ticket-icon">🕐</div>
+                      <div class="ticket-icon">
+                        <.icon name="hero-clock" class="hero-icon hero-icon--md" />
+                      </div>
                       <div class="ticket-info">
                         <span class="ticket-value">
                           {Calendar.strftime(@meeting.start_time, "%I:%M %p")}
@@ -82,7 +86,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                     </div>
 
                     <div class="ticket-row">
-                      <div class="ticket-icon">👤</div>
+                      <div class="ticket-icon">
+                        <.icon name="hero-user" class="hero-icon hero-icon--md" />
+                      </div>
                       <div class="ticket-info">
                         <span class="ticket-sublabel">Meeting with</span>
                         <span class="ticket-value">{@meeting.organizer_name}</span>
@@ -92,7 +98,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
 
                   <div class="ticket-footer">
                     <div class="email-confirmation">
-                      <p style="text-align: center; color: var(--theme-text-secondary); margin: 0;">
+                      <p class="ticket-footer-message">
                         Ready to pick a new time? Let's find one that works better for you.
                       </p>
                     </div>
@@ -111,7 +117,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
-                      class="w-5 h-5"
+                      class="icon-sm"
                     >
                       <path
                         stroke-linecap="round"

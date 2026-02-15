@@ -3,6 +3,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
   Rhythm theme cancel component with modern sliding style.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  import TymeslotWeb.Components.CoreComponents
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
@@ -29,11 +32,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                 <!-- Header with Icon -->
                 <div class="confirmation-header-section">
                   <%= if assigns[:meeting_kept] do %>
-                    <div
-                      class="success-badge"
-                      style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"
-                    >
-                      <div class="success-badge-inner">
+                    <div class="success-badge success-badge--transparent">
+                      <div class="success-badge-inner success-badge-inner--success">
                         <svg
                           class="success-icon"
                           fill="none"
@@ -51,21 +51,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                     </div>
 
                     <h1 class="confirmation-headline">
-                      Meeting Confirmed
+                      {gettext("Meeting Confirmed")}
                     </h1>
 
                     <p class="confirmation-message">
-                      Great! Your meeting is still scheduled as planned.
+                      {gettext("Great! Your meeting is still scheduled as planned.")}
                     </p>
                   <% else %>
-                    <div class="success-badge" style="background: transparent;">
-                      <div class="success-badge-inner">
+                    <div class="success-badge success-badge--transparent">
+                      <div class="success-badge-inner success-badge-inner--danger">
                         <svg
                           class="success-icon"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
-                          style="color: #ef4444;"
                         >
                           <path
                             stroke-linecap="round"
@@ -78,11 +77,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                     </div>
 
                     <h1 class="confirmation-headline">
-                      Cancel Appointment
+                      {gettext("Cancel Appointment")}
                     </h1>
 
                     <p class="confirmation-message">
-                      Are you sure you want to cancel this appointment?
+                      {gettext("Are you sure you want to cancel this appointment?")}
                     </p>
                   <% end %>
                 </div>
@@ -90,13 +89,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
     <!-- Meeting Ticket Card -->
                 <div class="meeting-ticket">
                   <div class="ticket-header">
-                    <span class="ticket-label">Meeting Details</span>
+                    <span class="ticket-label">{gettext("Meeting Details")}</span>
                     <span class="ticket-badge">{@meeting.duration} min</span>
                   </div>
 
                   <div class="ticket-body">
                     <div class="ticket-row">
-                      <div class="ticket-icon">📅</div>
+                      <div class="ticket-icon">
+                        <.icon name="hero-calendar" class="hero-icon hero-icon--md" />
+                      </div>
                       <div class="ticket-info">
                         <span class="ticket-value">
                           {Calendar.strftime(@meeting.start_time, "%B %d, %Y")}
@@ -106,7 +107,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                     </div>
 
                     <div class="ticket-row">
-                      <div class="ticket-icon">🕐</div>
+                      <div class="ticket-icon">
+                        <.icon name="hero-clock" class="hero-icon hero-icon--md" />
+                      </div>
                       <div class="ticket-info">
                         <span class="ticket-value">
                           {Calendar.strftime(@meeting.start_time, "%I:%M %p")}
@@ -116,7 +119,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                     </div>
 
                     <div class="ticket-row">
-                      <div class="ticket-icon">👤</div>
+                      <div class="ticket-icon">
+                        <.icon name="hero-user" class="hero-icon hero-icon--md" />
+                      </div>
                       <div class="ticket-info">
                         <span class="ticket-sublabel">Meeting with</span>
                         <span class="ticket-value">{@meeting.organizer_name}</span>
@@ -128,11 +133,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                     <div class="ticket-footer">
                       <div class="email-confirmation">
                         <svg
-                          class="email-icon"
+                          class="email-icon email-icon--success"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
-                          style="color: #10b981;"
                         >
                           <path
                             stroke-linecap="round"

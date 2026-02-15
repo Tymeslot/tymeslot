@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
   Rhythm theme cancel confirmed component with modern sliding style.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
@@ -42,17 +43,17 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                   </div>
 
                   <h1 class="confirmation-headline">
-                    Meeting Cancelled
+                    {gettext("Meeting Cancelled")}
                   </h1>
 
                   <p class="confirmation-message">
-                    Your meeting has been successfully cancelled.
+                    {gettext("Your meeting has been successfully cancelled.")}
                   </p>
                 </div>
                 
     <!-- Info Box -->
                 <div class="meeting-ticket">
-                  <div class="ticket-body" style="padding: 1.5rem;">
+                  <div class="ticket-body">
                     <div class="email-confirmation">
                       <svg class="email-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
@@ -73,9 +74,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                 <div class="confirmation-actions">
                   <button
                     phx-click={JS.navigate("/")}
-                    class="action-button-primary"
+                    class="action-button-primary action-button-full-width"
                     type="button"
-                    style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;"
                   >
                     Schedule a New Meeting
                   </button>

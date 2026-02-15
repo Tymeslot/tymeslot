@@ -376,6 +376,7 @@ msgstr "Schedule with"
 #, elixir-autogen, elixir-format
 msgid "Schedule with %{name}"
 msgstr "Schedule with %{name}"
+
 msgid "1 day in advance"
 msgstr "1 day in advance"
 
@@ -673,3 +674,27 @@ msgstr "You're All Set!"
 msgid "Your timezone"
 msgstr "Your timezone"
 
+# Meeting action pages
+msgid "Meeting Confirmed"
+msgstr "Meeting Confirmed"
+
+msgid "Great! Your meeting is still scheduled as planned."
+msgstr "Great! Your meeting is still scheduled as planned."
+
+msgid "Cancel Appointment"
+msgstr "Cancel Appointment"
+
+msgid "Are you sure you want to cancel this appointment?"
+msgstr "Are you sure you want to cancel this appointment?"
+
+msgid "Meeting Cancelled"
+msgstr "Meeting Cancelled"
+
+msgid "Your meeting has been successfully cancelled."
+msgstr "Your meeting has been successfully cancelled."
+
+msgid "Reschedule Appointment"
+msgstr "Reschedule Appointment"
+
+msgid "Select a new time for your meeting"
+msgstr "Select a new time for your meeting"

@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                     data-testid="duration-option"
                     data-duration={slug}
                   >
-                    <div class="duration-icon" style="flex-shrink: 0;">
+                    <div class="duration-icon flex-shrink-0">
                       {render_icon(meeting_type.icon || get_default_icon(meeting_type))}
                     </div>
                     <div class="duration-info">
@@ -152,12 +152,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
 
       "hero-" <> _ ->
         raw(
-          "<span class='#{icon} w-6 h-6 inline-block' style='color: var(--theme-text);'></span>"
+          "<span class='#{icon} hero-icon hero-icon--md'></span>"
         )
 
       _ ->
         raw(
-          "<span class='hero-clock w-6 h-6 inline-block' style='color: var(--theme-text);'></span>"
+          "<span class='hero-clock hero-icon hero-icon--md'></span>"
         )
     end
   end

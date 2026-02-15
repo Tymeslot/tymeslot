@@ -7,53 +7,11 @@
 
 .slide-actions.horizontal {
   display: flex;
-  gap: 12px;
+  gap: var(--space-md);
 }
 
 .slide-actions.horizontal button {
   flex: 1;
-}
-
-/* Single column on mobile and tablet for better usability */
-@media (max-width: 767px) {
-  .booking-form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .booking-form .form-field-wrapper {
-    width: 100%;
-  }
-
-  .rhythm-theme-wrapper .booking-form textarea.input {
-    min-height: 100px;
-  }
-}
-
-/* Make booking form use horizontal space better on medium+ screens */
-@media (min-width: 768px) {
-  .slide-content.booking-slide {
-    max-width: 820px; /* wider content inside the fixed card */
-    margin: 0 auto;
-  }
-  .booking-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: 16px;
-    row-gap: 16px;
-    flex: 1;
-  }
-  .booking-form .form-field-wrapper:nth-child(1),
-  .booking-form .form-field-wrapper:nth-child(2) {
-    grid-column: span 1;
-  }
-  .booking-form .form-field-wrapper:nth-child(3) {
-    grid-column: 1 / -1; /* message full width */
-  }
-  .booking-form .slide-actions {
-    grid-column: 1 / -1; /* buttons full width */
-  }
 }
 
 .meeting-summary {

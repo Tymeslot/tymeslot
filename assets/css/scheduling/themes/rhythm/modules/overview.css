@@ -52,31 +52,6 @@
   color: var(--theme-text-secondary);
 }
 
-/* Responsive avatar sizes */
-@media (max-height: 600px) {
-  .avatar-image {
-    width: var(--avatar-size-lg);
-    height: var(--avatar-size-lg);
-  }
-
-  .organizer-profile {
-    margin-bottom: var(--space-sm);
-    gap: var(--space-sm);
-  }
-}
-
-@media (max-width: 479px) {
-  .avatar-image {
-    width: var(--avatar-size-lg);
-    height: var(--avatar-size-lg);
-  }
-
-  .organizer-profile {
-    gap: var(--space-sm);
-    margin-bottom: var(--space-sm);
-  }
-}
-
 /* Duration Cards */
 .duration-grid {
   display: grid;
@@ -100,22 +75,6 @@
   padding: var(--space-sm);
 }
 
-/* Adaptive layout for short containers */
-@media (max-height: 600px) {
-  .duration-grid {
-    grid-template-columns: 1fr;
-    margin-top: var(--space-sm);
-  }
-
-  .duration-button {
-    padding: var(--space-sm);
-  }
-
-  .duration-description {
-    display: none;
-  }
-}
-
 .duration-card {
   background: var(--surface-light);
   border: 1px solid var(--border-medium);
@@ -133,7 +92,7 @@
   background: var(--theme-surface);
   border-color: var(--theme-primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .duration-button {

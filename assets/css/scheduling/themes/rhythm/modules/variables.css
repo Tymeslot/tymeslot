@@ -22,14 +22,32 @@
   --theme-line-height-relaxed: 1.5;
   --theme-line-height-loose: 1.6;
 
+  /* Font weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Letter spacing */
+  --letter-spacing-tight: 0.025em;
+  --letter-spacing-normal: 0.05em;
+  --letter-spacing-wide: 0.075em;
+
   /* Theme Colors */
   --theme-primary: #06b6d4;
   --theme-primary-hover: #0891b2;
   --theme-secondary: #14b8a6;
   --theme-accent: #10b981;
+  --theme-accent-dark: #059669;
+  --theme-warning: #fbbf24;
+  --theme-info: #6366f1;
+  --theme-info-dark: #4f46e5;
   --theme-error: rgba(239, 68, 68, 0.95);
   --theme-error-bg: rgba(239, 68, 68, 0.1);
   --theme-error-border: rgba(239, 68, 68, 0.6);
+  --theme-error-light: #fca5a5;
+  --theme-danger: #ef4444;
+  --theme-danger-dark: #dc2626;
   --theme-background-color: #0f172a;
   --theme-surface: rgba(30, 41, 59, 0.5);
   --theme-text: #e2e8f0;
@@ -86,4 +104,68 @@
   --avatar-size-lg: 48px;
   --avatar-size-xl: 64px;
   --min-touch-target: 44px;
+
+  /* Container widths */
+  --container-xs: 280px;
+  --container-sm: 360px;
+  --container-md: 520px;
+  --container-lg: 640px;
+  --container-xl: 820px;
+
+  /* Dropdown/Popover specific */
+  --dropdown-width: var(--container-xs);
+  --dropdown-max-height: 280px;
+  --dropdown-max-height-mobile: 60vh;
+
+  /* Calendar specific */
+  --calendar-gap: clamp(4px, 1vw, 8px);
+  --calendar-gap-tablet: clamp(4px, 1vw, 6px);
+  --calendar-gap-mobile: 3px;
+  --calendar-day-min-height: 48px;
+  --calendar-day-min-height-tablet: 50px;
+
+  /* Time slots specific */
+  --time-slot-min-width: 80px;
+  --time-slot-min-width-tablet: 90px;
+  --time-slot-min-height: 36px;
+  --time-slots-max-height: 400px;
+  --time-slots-max-height-mobile: 250px;
+
+  /* Icon sizes */
+  --icon-xs: 16px;
+  --icon-sm: 20px;
+  --icon-md: 24px;
+  --icon-lg: 32px;
+  --icon-xl: 40px;
+  --icon-2xl: 48px;
+
+  /* Elevation shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.25);
+  --shadow-xl: 0 10px 40px rgba(0, 0, 0, 0.3);
+  --shadow-primary-sm: 0 4px 16px rgba(6, 182, 212, 0.3);
+  --shadow-primary-md: 0 6px 20px rgba(6, 182, 212, 0.4);
+  --shadow-success-sm: 0 4px 16px rgba(16, 185, 129, 0.3);
+  --shadow-success-md: 0 6px 20px rgba(16, 185, 129, 0.4);
+  --shadow-success-lg: 0 8px 24px rgba(16, 185, 129, 0.3);
+  --shadow-danger-sm: 0 4px 16px rgba(239, 68, 68, 0.3);
+  --shadow-danger-md: 0 6px 20px rgba(239, 68, 68, 0.4);
+
+  /* Additional spacing for common patterns */
+  --space-base: 16px;
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+
+  /* Scrollbar styling */
+  --scrollbar-width: 6px;
+  --scrollbar-track: rgba(255, 255, 255, 0.05);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+
+  /* Button sizing */
+  --button-padding-y: 12px;
+  --button-padding-x: 24px;
+  --button-padding-y-sm: 10px;
+  --button-padding-x-sm: 20px;
 }

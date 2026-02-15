@@ -671,3 +671,28 @@ msgstr "%{day}. %{month} %{year}"
 
 msgid "%{month} %{year}"
 msgstr "%{month} %{year}"
+
+# Meeting action pages
+msgid "Meeting Confirmed"
+msgstr "Termin bestätigt"
+
+msgid "Great! Your meeting is still scheduled as planned."
+msgstr "Großartig! Ihr Termin ist weiterhin wie geplant."
+
+msgid "Cancel Appointment"
+msgstr "Termin absagen"
+
+msgid "Are you sure you want to cancel this appointment?"
+msgstr "Sind Sie sicher, dass Sie diesen Termin absagen möchten?"
+
+msgid "Meeting Cancelled"
+msgstr "Termin abgesagt"
+
+msgid "Your meeting has been successfully cancelled."
+msgstr "Ihr Termin wurde erfolgreich abgesagt."
+
+msgid "Reschedule Appointment"
+msgstr "Termin verschieben"
+
+msgid "Select a new time for your meeting"
+msgstr "Wählen Sie eine neue Zeit für Ihren Termin"

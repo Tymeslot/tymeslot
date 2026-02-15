@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
         <div class="content-area">
           <!-- Language Switcher -->
           <%= if assigns[:locale] && assigns[:language_dropdown_open] != nil do %>
-            <div class="absolute top-6 right-6 z-50 language-switcher-container">
+            <div class="language-switcher-container">
               <.language_switcher
                 locale={@locale}
                 locales={TymeslotWeb.Themes.Shared.LocaleHandler.get_locales_with_metadata()}

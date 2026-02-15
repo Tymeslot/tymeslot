@@ -602,3 +602,27 @@ msgstr "Tout est prêt !"
 msgid "Your timezone"
 msgstr "Votre fuseau horaire"
 
+# Meeting action pages
+msgid "Meeting Confirmed"
+msgstr "Réunion confirmée"
+
+msgid "Great! Your meeting is still scheduled as planned."
+msgstr "Parfait ! Votre réunion est toujours prévue comme prévu."
+
+msgid "Cancel Appointment"
+msgstr "Annuler le rendez-vous"
+
+msgid "Are you sure you want to cancel this appointment?"
+msgstr "Êtes-vous sûr de vouloir annuler ce rendez-vous?"
+
+msgid "Meeting Cancelled"
+msgstr "Réunion annulée"
+
+msgid "Your meeting has been successfully cancelled."
+msgstr "Votre réunion a été annulée avec succès."
+
+msgid "Reschedule Appointment"
+msgstr "Reprogrammer le rendez-vous"
+
+msgid "Select a new time for your meeting"
+msgstr "Sélectionnez une nouvelle heure pour votre réunion"

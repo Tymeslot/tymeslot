@@ -621,7 +621,6 @@ msgstr "%{time} за UTC"
 msgid "With"
 msgstr "З"
 
-
 msgid "User Not Found"
 msgstr "Користувача не знайдено"
 
@@ -672,3 +671,28 @@ msgstr "Пт"
 
 msgid "Sat"
 msgstr "Сб"
+
+# Meeting action pages
+msgid "Meeting Confirmed"
+msgstr "Зустріч підтверджена"
+
+msgid "Great! Your meeting is still scheduled as planned."
+msgstr "Чудово! Ваша зустріч все ще заплановано як і раніше."
+
+msgid "Cancel Appointment"
+msgstr "Скасувати зустріч"
+
+msgid "Are you sure you want to cancel this appointment?"
+msgstr "Ви впевнені, що хочете скасувати цю зустріч?"
+
+msgid "Meeting Cancelled"
+msgstr "Зустріч скасовано"
+
+msgid "Your meeting has been successfully cancelled."
+msgstr "Вашу зустріч успішно скасовано."
+
+msgid "Reschedule Appointment"
+msgstr "Перенести зустріч"
+
+msgid "Select a new time for your meeting"
+msgstr "Виберіть новий час для вашої зустрічі"

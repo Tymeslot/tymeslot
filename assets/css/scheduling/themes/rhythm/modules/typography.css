@@ -8,13 +8,13 @@
 .slide-title {
   font-size: var(--theme-font-size-2xl);
   line-height: var(--theme-line-height-snug);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .confirmation-headline {
   font-size: var(--theme-font-size-2xl);
   line-height: var(--theme-line-height-tight);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 /* ============================================
@@ -24,7 +24,7 @@
 .organizer-greeting {
   font-size: var(--theme-font-size-lg);
   line-height: var(--theme-line-height-normal);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .organizer-instruction,
@@ -36,7 +36,7 @@
 
 .booking-detail-value,
 .booking-detail-value a {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .duration-icon {
@@ -61,17 +61,17 @@
 }
 
 .day-name {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--letter-spacing-normal);
 }
 
 .booking-detail-label {
   font-size: var(--theme-font-size-xs);
   line-height: var(--theme-line-height-normal);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   text-transform: uppercase;
-  letter-spacing: 0.025em;
+  letter-spacing: var(--letter-spacing-tight);
 }
 
 .organizer-name,
@@ -93,20 +93,20 @@
 
 .organizer-name-full {
   font-size: var(--theme-font-size-md);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   line-height: var(--theme-line-height-snug);
 }
 
 .day-number {
   font-size: var(--theme-font-size-base);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .time-period-header {
   font-size: var(--theme-font-size-xs);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--letter-spacing-normal);
 }
 
 .time-slot,
@@ -129,7 +129,7 @@
 
 .rhythm-theme-wrapper .booking-form .label {
   font-size: var(--theme-font-size-md);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 /* Error messages */
@@ -151,7 +151,7 @@
 
 .summary-value {
   font-size: var(--theme-font-size-md);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   line-height: var(--theme-line-height-snug);
 }
 
@@ -161,14 +161,14 @@
 
 .ticket-label {
   font-size: var(--theme-font-size-sm);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--letter-spacing-normal);
 }
 
 .ticket-badge {
   font-size: var(--theme-font-size-xs);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .ticket-icon {
@@ -177,7 +177,7 @@
 
 .ticket-value {
   font-size: var(--theme-font-size-base);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .email-icon {
@@ -190,16 +190,16 @@
 
 .action-button-primary {
   font-size: var(--theme-font-size-base);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .submit-button {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .prev-button,
 .next-button {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .loading-slots,
@@ -218,20 +218,20 @@
 
 .timezone-text,
 .timezone-option-label {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .time-slot {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .time-slot.selected {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .calendar-month-year {
   font-size: var(--theme-font-size-md);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 /* ============================================
@@ -239,7 +239,7 @@
    ============================================ */
 
 .duration-name {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 /* ============================================
@@ -249,7 +249,7 @@
 .rhythm-theme-wrapper .booking-form .input,
 .rhythm-theme-wrapper .booking-form input.input,
 .rhythm-theme-wrapper .booking-form textarea.input {
-  font-weight: 400;
+  font-weight: var(--font-weight-normal);
 }
 
 /* ============================================

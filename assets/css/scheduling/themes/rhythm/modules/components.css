@@ -1,5 +1,234 @@
 /* Reusable UI Components */
 
+/* ============================================
+   SURFACE & ELEVATION SYSTEM
+   ============================================ */
+
+/* Surface utilities for glassmorphism effects */
+.surface-subtle {
+  background: var(--surface-subtle);
+}
+
+.surface-light {
+  background: var(--surface-light);
+}
+
+.surface-medium {
+  background: var(--surface-medium);
+}
+
+.surface-strong {
+  background: var(--surface-strong);
+}
+
+.surface-intense {
+  background: var(--surface-intense);
+}
+
+/* Elevation utilities combining surface + shadow */
+.elevation-1 {
+  background: var(--surface-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.elevation-2 {
+  background: var(--surface-medium);
+  box-shadow: var(--shadow-md);
+}
+
+.elevation-3 {
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-lg);
+}
+
+.elevation-4 {
+  background: var(--surface-intense);
+  box-shadow: var(--shadow-xl);
+}
+
+/* ============================================
+   INTERACTIVE STATE BASE PATTERNS
+   ============================================ */
+
+/* Base interactive element */
+.interactive {
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.interactive:hover {
+  transform: translateY(-1px);
+}
+
+.interactive:active {
+  transform: translateY(0);
+}
+
+/* Hover lift utility - subtle elevation on hover */
+.hover-lift {
+  transition: all var(--transition-smooth);
+}
+
+.hover-lift:hover {
+  transform: translateY(-1px);
+}
+
+.hover-lift:active {
+  transform: translateY(0);
+}
+
+.interactive:disabled,
+.interactive[disabled],
+.interactive.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  pointer-events: none;
+}
+
+/* Selection state pattern */
+.selectable {
+  transition: all var(--transition-smooth);
+}
+
+.selectable:hover {
+  background: var(--surface-medium);
+  border-color: var(--theme-primary);
+}
+
+.selectable.is-selected,
+.selectable[aria-selected="true"] {
+  background: var(--theme-surface);
+  border-color: var(--theme-primary);
+  box-shadow: var(--shadow-md);
+}
+
+/* Focus visible for keyboard navigation */
+.interactive:focus-visible,
+.selectable:focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   ICON UTILITIES
+   ============================================ */
+
+/* Icon wrapper for proper styling */
+.icon-wrapper {
+  display: inline-block;
+  color: var(--theme-text);
+}
+
+/* Icon sizing utilities */
+.icon-xs {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.icon-sm {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.icon-md {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+.icon-lg {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+}
+
+.icon-xl {
+  width: var(--icon-xl);
+  height: var(--icon-xl);
+}
+
+/* Hero icon specific (for Heroicons) */
+.hero-icon {
+  display: inline-block;
+  color: var(--theme-text);
+}
+
+.hero-icon--xs {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.hero-icon--sm {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.hero-icon--md {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+.hero-icon--lg {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+}
+
+/* ============================================
+   FLAG UTILITIES
+   ============================================ */
+
+.timezone-flag--fallback {
+  opacity: 0.6;
+}
+
+/* ============================================
+   LOADING SPINNER
+   ============================================ */
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner-track {
+  opacity: 0.25;
+}
+
+.loading-spinner-path {
+  opacity: 0.75;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   CALENDAR ERROR STATES
+   ============================================ */
+
+.calendar-error-inline {
+  font-size: var(--theme-font-size-xs);
+  color: var(--theme-warning);
+  background: rgba(0, 0, 0, 0.4);
+  padding: var(--space-3xs) var(--space-xs);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.calendar-error-inline svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
+
 /* Base Button Styles */
 .theme-button,
 .submit-button,
@@ -19,7 +248,7 @@
 /* Primary Button (Submit & Action Primary) */
 .submit-button,
 .action-button-primary {
-  padding: 12px 24px;
+  padding: var(--button-padding-y) var(--button-padding-x);
   background: var(--theme-primary);
   color: white;
   border: 1px solid var(--theme-primary);
@@ -34,34 +263,34 @@
 
 /* Action button specific (larger, with shadow) */
 .action-button-primary {
-  padding: 14px 28px;
+  padding: var(--space-md) var(--space-xl);
   border-radius: var(--radius-lg);
   border: none;
-  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3);
+  box-shadow: var(--shadow-primary-sm);
 }
 
 .action-button-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+  box-shadow: var(--shadow-primary-md);
 }
 
 /* Action button variants */
 .action-button-primary.action-button-success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+  background: linear-gradient(135deg, var(--theme-accent) 0%, var(--theme-accent-dark) 100%);
+  box-shadow: var(--shadow-success-sm);
 }
 
 .action-button-primary.action-button-success:hover {
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  box-shadow: var(--shadow-success-md);
 }
 
 .action-button-primary.action-button-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, var(--theme-danger) 0%, var(--theme-danger-dark) 100%);
+  box-shadow: var(--shadow-danger-sm);
 }
 
 .action-button-primary.action-button-danger:hover {
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  box-shadow: var(--shadow-danger-md);
 }
 
 .action-button-primary.action-button-secondary {
@@ -70,10 +299,18 @@
   box-shadow: none;
 }
 
+.action-button-primary.action-button-full-width {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
 /* Secondary Buttons (Prev/Next Navigation) */
 .prev-button,
 .next-button {
-  padding: 10px 20px;
+  padding: var(--button-padding-y-sm) var(--button-padding-x-sm);
   background: var(--surface-light);
   border: 1px solid var(--border-medium);
   color: var(--theme-text);
@@ -110,7 +347,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: var(--space-2xl);
   color: var(--theme-text-secondary);
 }
 
@@ -119,10 +356,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: var(--space-2xl) var(--space-lg);
   color: var(--theme-text-secondary);
   text-align: center;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .no-slots p {
@@ -132,11 +369,11 @@
 /* Error States - Unified Pattern */
 .theme-error,
 .calendar-error {
-  padding: 20px;
+  padding: var(--space-lg);
   background: var(--theme-error-bg);
   border: 1px solid var(--theme-error-border);
   border-radius: var(--radius-md);
-  color: #fca5a5;
+  color: var(--theme-error-light);
   text-align: center;
 }
 
