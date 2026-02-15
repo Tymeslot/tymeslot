@@ -36,7 +36,7 @@ body.rhythm-theme {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: var(--space-lg);
   background: rgba(0, 0, 0, 0.3);
   overflow-x: hidden;
   box-sizing: border-box;
@@ -68,7 +68,7 @@ body.rhythm-theme {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: var(--space-lg);
   min-height: 0;
   position: relative;
 }
@@ -82,7 +82,7 @@ body.rhythm-theme {
   );
   backdrop-filter: blur(var(--box-blur)) saturate(150%);
   -webkit-backdrop-filter: blur(var(--box-blur)) saturate(150%);
-  border-radius: 16px;
+  border-radius: var(--radius-2xl);
   box-shadow: var(--box-shadow);
   width: 520px;
   max-width: 96vw;
@@ -91,7 +91,7 @@ body.rhythm-theme {
   flex-direction: column;
   overflow: visible;
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-medium);
   color: var(--theme-text);
   box-sizing: border-box;
 }
@@ -107,8 +107,8 @@ body.rhythm-theme {
 
 .slide {
   grid-area: 1 / 1;
-  padding: 24px;
-  padding-bottom: 20px;
+  padding: var(--space-xl);
+  padding-bottom: var(--space-lg);
   display: flex;
   flex-direction: column;
   opacity: 0;
@@ -137,7 +137,7 @@ body.rhythm-theme {
 }
 
 .slide-title {
-  margin-bottom: clamp(12px, 3vw, 20px);
+  margin-bottom: var(--space-lg);
   text-align: center;
   color: var(--theme-text);
 }
@@ -148,10 +148,10 @@ body.rhythm-theme {
   justify-content: flex-end;
   align-items: center;
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: var(--space-lg);
   flex-shrink: 0;
   position: relative;
   bottom: 0;
   padding-bottom: 0;
-  gap: 10px;
+  gap: var(--space-sm);
 }

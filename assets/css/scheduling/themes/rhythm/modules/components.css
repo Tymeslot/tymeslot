@@ -1,93 +1,108 @@
 /* Reusable UI Components */
 
-/* Buttons */
-.submit-button {
-  padding: 12px 24px;
-  background: var(--theme-primary);
-  border: 1px solid var(--theme-primary);
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
+/* Base Button Styles */
+.theme-button,
+.submit-button,
+.prev-button,
+.next-button,
+.action-button-primary {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+  border-radius: var(--radius-md);
+  font-family: var(--theme-font-family);
 }
 
-.submit-button:hover {
+/* Primary Button (Submit & Action Primary) */
+.submit-button,
+.action-button-primary {
+  padding: 12px 24px;
+  background: var(--theme-primary);
+  color: white;
+  border: 1px solid var(--theme-primary);
+}
+
+.submit-button:hover,
+.action-button-primary:hover {
   background: var(--theme-primary-hover);
   border-color: var(--theme-primary-hover);
   transform: translateY(-1px);
 }
 
+/* Action button specific (larger, with shadow) */
+.action-button-primary {
+  padding: 14px 28px;
+  border-radius: var(--radius-lg);
+  border: none;
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3);
+}
+
+.action-button-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+}
+
+/* Action button variants */
+.action-button-primary.action-button-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+}
+
+.action-button-primary.action-button-success:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.action-button-primary.action-button-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+}
+
+.action-button-primary.action-button-danger:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+.action-button-primary.action-button-secondary {
+  background: var(--surface-light);
+  backdrop-filter: blur(10px);
+  box-shadow: none;
+}
+
+/* Secondary Buttons (Prev/Next Navigation) */
 .prev-button,
 .next-button {
   padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  background: var(--surface-light);
+  border: 1px solid var(--border-medium);
   color: var(--theme-text);
-  cursor: pointer;
-  transition: all 0.3s ease;
 }
 
 .prev-button:hover,
 .next-button:hover {
-  background: var(--theme-surface);
+  background: var(--surface-medium);
   border-color: var(--theme-primary);
   transform: translateY(-1px);
 }
 
-.prev-button.disabled,
-.next-button.disabled,
+/* Disabled button states */
 .prev-button:disabled,
-.next-button:disabled {
+.next-button:disabled,
+.prev-button.disabled,
+.next-button.disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
 
-.prev-button.disabled:hover,
-.next-button.disabled:hover,
 .prev-button:disabled:hover,
-.next-button:disabled:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+.next-button:disabled:hover,
+.prev-button.disabled:hover,
+.next-button.disabled:hover {
+  background: var(--surface-light);
+  border-color: var(--border-medium);
   transform: none;
-}
-
-.action-button-primary {
-  padding: 14px 28px;
-  background: var(--theme-primary);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.action-button-primary:hover {
-  background: var(--theme-primary-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
-}
-
-.action-button-primary.action-button-success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-}
-
-.action-button-primary.action-button-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-}
-
-.action-button-primary.action-button-secondary {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
 }
 
 /* Loading States */
@@ -114,12 +129,13 @@
   margin: 0;
 }
 
-/* Error States */
+/* Error States - Unified Pattern */
+.theme-error,
 .calendar-error {
   padding: 20px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 8px;
+  background: var(--theme-error-bg);
+  border: 1px solid var(--theme-error-border);
+  border-radius: var(--radius-md);
   color: #fca5a5;
   text-align: center;
 }
@@ -129,38 +145,36 @@
   /* Ensure buttons are large enough for touch */
   .submit-button,
   .action-button-primary {
-    padding: 12px 24px;
-    min-height: 44px;
+    padding: var(--space-md) var(--space-xl);
+    min-height: var(--min-touch-target);
     width: 100%;
   }
 
   .prev-button,
   .next-button {
-    padding: 10px 16px;
-    min-height: 44px;
+    padding: var(--space-sm) var(--space-md);
+    min-height: var(--min-touch-target);
     flex: 1;
   }
 
   /* Loading and error states */
   .loading-slots {
-    padding: 30px 20px;
+    padding: var(--space-2xl) var(--space-lg);
   }
 
-  .calendar-error {
-    padding: 16px;
+  .calendar-error,
+  .theme-error {
+    padding: var(--space-md);
   }
 }
 
 /* Tablet-specific component optimizations */
 @media (min-width: 480px) and (max-width: 767px) {
   .submit-button,
-  .action-button-primary {
-    min-height: 44px;
-  }
-
+  .action-button-primary,
   .prev-button,
   .next-button {
-    min-height: 44px;
+    min-height: var(--min-touch-target);
   }
 }
 

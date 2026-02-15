@@ -34,7 +34,7 @@
 /* Tablet */
 @media (min-width: 480px) and (max-width: 767px) {
   .video-background-theme {
-    padding: 16px;
+    padding: var(--space-md);
     align-items: center;
   }
 
@@ -43,82 +43,58 @@
     max-width: 100%;
     height: auto;
     min-height: auto;
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
   }
 
   .slide {
-    padding: 20px;
+    padding: var(--space-lg);
   }
 
   .slide-actions {
-    padding-top: 16px;
+    padding-top: var(--space-md);
   }
 
   /* Language switcher - reduce overlap */
   .language-switcher-container {
-    top: 12px;
-    right: 12px;
-  }
-
-  .timezone-dropdown {
-    position: fixed;
-    left: 16px;
-    right: 16px;
-    width: auto;
-    max-width: none;
-    min-width: auto;
-    max-height: 60vh;
-  }
-
-  .timezone-selector-container {
-    max-width: none;
-    width: 100%;
-  }
-
-  .timezone-trigger {
-    min-height: 44px;
-    padding: 10px 12px;
+    top: var(--space-md);
+    right: var(--space-md);
   }
 
   .schedule-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
+    gap: var(--space-md);
   }
 
   /* Better spacing for calendar */
   .calendar-grid {
-    gap: 6px;
+    gap: var(--space-xs);
   }
 
   .calendar-day {
-    padding: 8px 4px;
-    min-height: 50px; /* Increased for better touch targets */
-  }
-
-  .day-name {
-    /* Size handled by typography.css */
+    padding: var(--space-sm) 4px;
+    min-height: 50px;
   }
 
   /* Better spacing for time slots */
   .time-period-slots {
     grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 6px;
+    gap: var(--space-xs);
   }
 
   .time-slot {
-    padding: 10px 12px;
-    min-height: 44px; /* iOS minimum tap target */
+    padding: var(--space-sm);
+    min-height: var(--min-touch-target);
   }
 
   .duration-button {
-    min-height: 44px;
+    min-height: var(--min-touch-target);
   }
 
   /* Stack summary items vertically */
   .summary-row {
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-sm);
   }
 
   .summary-item {
@@ -128,12 +104,7 @@
   /* Better duration grid on tablet */
   .duration-grid {
     grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  /* Ensure booking form has proper spacing */
-  .booking-form {
-    gap: 16px;
+    gap: var(--space-sm);
   }
 }
 
@@ -218,108 +189,62 @@
 
   /* Language switcher positioning */
   .language-switcher-container {
-    top: 8px;
-    right: 8px;
-  }
-
-  /* Organizer profile mobile optimization */
-  .organizer-profile {
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-
-  .avatar-image {
-    width: 48px;
-    height: 48px;
-  }
-
-  .organizer-greeting {
-    margin-bottom: 4px;
+    top: var(--space-sm);
+    right: var(--space-sm);
   }
 
   /* Duration grid - single column on mobile */
   .duration-grid {
     grid-template-columns: 1fr;
-    gap: 6px;
-    margin-top: 8px;
+    gap: var(--space-xs);
+    margin-top: var(--space-sm);
   }
 
   .duration-card {
-    min-height: 44px;
+    min-height: var(--min-touch-target);
   }
 
   .duration-button {
-    padding: 10px 12px;
-    min-height: 44px;
+    padding: var(--space-sm);
+    min-height: var(--min-touch-target);
   }
 
   /* Schedule header mobile */
   .schedule-header {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-  }
-
-  .organizer-profile-small {
-    gap: 6px;
-  }
-
-  .avatar-image-small {
-    width: 32px;
-    height: 32px;
-  }
-
-  .timezone-selector-container {
-    max-width: none;
-    width: 100%;
-  }
-
-  .timezone-dropdown {
-    position: fixed;
-    left: 10px;
-    right: 10px;
-    width: auto;
-    max-width: calc(100vw - 20px);
-    min-width: auto;
-    max-height: 60vh;
-  }
-
-  .timezone-trigger {
-    padding: 10px;
-    min-height: 44px;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-sm);
   }
 
   /* Calendar section margins */
   .calendar-section {
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
   }
 
   .calendar-header {
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
   }
 
   .calendar-nav-button {
-    padding: 6px 10px;
+    padding: var(--space-xs) var(--space-sm);
   }
-
-  /* calendar-month-year size handled by typography.css */
 
   /* Time slots mobile */
   .time-slots-section {
-    margin-top: 8px;
+    margin-top: var(--space-sm);
     overflow: hidden;
   }
 
   .time-slots-grid {
-    gap: 8px;
+    gap: var(--space-sm);
     max-height: 250px;
     padding-right: 4px;
   }
 
   .time-period-section {
-    gap: 5px;
+    gap: var(--space-xs);
   }
 
   .time-period-header {
@@ -328,43 +253,33 @@
 
   .time-period-slots {
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-    gap: 5px;
+    gap: var(--space-xs);
   }
 
   .time-slot {
-    padding: 8px 6px;
-    min-height: 44px;
+    padding: var(--space-sm) var(--space-xs);
+    min-height: var(--min-touch-target);
     border-width: 1px;
     box-sizing: border-box;
   }
 
-  /* Meeting summary mobile */
-  .meeting-summary {
-    padding: 8px 10px;
-    gap: 6px;
-    margin-bottom: 8px;
-  }
-
+  /* Meeting summary mobile - handled by base styles + tokens */
   .summary-row {
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-xs);
   }
 
   .summary-item {
     width: 100%;
-    gap: 8px;
+    gap: var(--space-sm);
   }
 
   /* Booking form mobile */
-  .booking-form {
-    gap: 10px;
-  }
-
   .rhythm-theme-wrapper .slide .booking-form .input,
   .rhythm-theme-wrapper .slide .booking-form input.input,
   .rhythm-theme-wrapper .slide .booking-form textarea.input {
-    padding: 10px 8px;
-    min-height: 44px;
+    padding: var(--space-sm);
+    min-height: var(--min-touch-target);
   }
 
   .rhythm-theme-wrapper .slide .booking-form textarea.input {
@@ -377,32 +292,32 @@
 
   /* Slide actions mobile */
   .slide-actions {
-    padding-top: 12px;
-    gap: 8px;
+    padding-top: var(--space-md);
+    gap: var(--space-sm);
     margin-top: auto;
     flex-shrink: 0;
   }
 
   .prev-button,
   .next-button {
-    padding: 10px 16px;
-    min-height: 44px;
+    padding: var(--space-sm) var(--space-md);
+    min-height: var(--min-touch-target);
   }
 
   .submit-button {
-    padding: 12px 20px;
-    min-height: 44px;
+    padding: var(--space-md) var(--space-lg);
+    min-height: var(--min-touch-target);
   }
 
   /* Confirmation mobile */
   .confirmation-container {
-    padding: 16px 10px;
-    gap: 12px;
+    padding: var(--space-md) var(--space-sm);
+    gap: var(--space-md);
     justify-content: flex-start;
   }
 
   .confirmation-header-section {
-    gap: 8px;
+    gap: var(--space-sm);
   }
 
   .meeting-ticket {
@@ -411,20 +326,20 @@
   }
 
   .ticket-body {
-    padding: 12px;
-    gap: 10px;
+    padding: var(--space-md);
+    gap: var(--space-sm);
   }
 
   .ticket-header {
-    padding: 10px 12px;
+    padding: var(--space-sm) var(--space-md);
   }
 
   .ticket-footer {
-    padding: 10px 12px;
+    padding: var(--space-sm) var(--space-md);
   }
 
   .ticket-row {
-    gap: 10px;
+    gap: var(--space-sm);
   }
 
   .ticket-icon {
@@ -443,12 +358,12 @@
   }
 
   .confirmation-actions-section {
-    gap: 8px;
+    gap: var(--space-sm);
   }
 
   .action-button-primary {
-    padding: 10px 20px;
-    min-height: 44px;
+    padding: var(--space-sm) var(--space-lg);
+    min-height: var(--min-touch-target);
   }
 
   /* Comprehensive mobile overflow prevention */

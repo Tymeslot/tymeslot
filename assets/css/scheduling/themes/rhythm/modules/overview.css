@@ -1,10 +1,12 @@
 /* Overview Slide Components */
+
+/* Organizer Profile - Unified with size variants */
 .organizer-profile {
   display: flex;
   flex-direction: row;
   align-items: center;
-  margin-bottom: 20px;
-  gap: 15px;
+  margin-bottom: var(--space-lg);
+  gap: var(--space-md);
 }
 
 .organizer-avatar {
@@ -12,9 +14,10 @@
   flex-shrink: 0;
 }
 
+/* Default large size */
 .avatar-image {
-  width: 64px;
-  height: 64px;
+  width: var(--avatar-size-xl);
+  height: var(--avatar-size-xl);
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid rgba(255, 255, 255, 0.8);
@@ -26,7 +29,7 @@
   right: -5px;
   width: 24px;
   height: 24px;
-  background: #10b981;
+  background: var(--theme-accent);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -49,14 +52,39 @@
   color: var(--theme-text-secondary);
 }
 
+/* Responsive avatar sizes */
+@media (max-height: 600px) {
+  .avatar-image {
+    width: var(--avatar-size-lg);
+    height: var(--avatar-size-lg);
+  }
+
+  .organizer-profile {
+    margin-bottom: var(--space-sm);
+    gap: var(--space-sm);
+  }
+}
+
+@media (max-width: 479px) {
+  .avatar-image {
+    width: var(--avatar-size-lg);
+    height: var(--avatar-size-lg);
+  }
+
+  .organizer-profile {
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+  }
+}
+
 /* Duration Cards */
 .duration-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: clamp(8px, 2vw, 12px);
-  margin-top: clamp(12px, 3vw, 20px);
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
   flex: 0 0 auto;
-  padding: 8px 4px 4px 0;
+  padding: var(--space-sm) 4px 4px 0;
 }
 
 /* Adaptive layout for many meeting types */
@@ -69,44 +97,34 @@
 }
 
 .duration-grid:has(.duration-card:nth-child(5)) .duration-button {
-  padding: 8px 12px;
+  padding: var(--space-sm);
 }
 
 /* Adaptive layout for short containers */
 @media (max-height: 600px) {
   .duration-grid {
-    grid-template-columns: 1fr; /* Stack cards to save width/simplify */
-    margin-top: 10px;
+    grid-template-columns: 1fr;
+    margin-top: var(--space-sm);
   }
 
   .duration-button {
-    padding: 8px 12px;
+    padding: var(--space-sm);
   }
 
   .duration-description {
-    display: none; /* Hide description to save vertical space */
-  }
-
-  .organizer-profile {
-    margin-bottom: 10px;
-    gap: 10px;
-  }
-
-  .avatar-image {
-    width: 48px;
-    height: 48px;
+    display: none;
   }
 }
 
 .duration-card {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  transition: all 0.3s ease;
+  background: var(--surface-light);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-smooth);
 }
 
 .duration-card:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--surface-strong);
   border-color: var(--theme-primary);
   transform: translateY(-2px);
 }
@@ -120,15 +138,15 @@
 
 .duration-button {
   width: 100%;
-  padding: 12px;
+  padding: var(--space-md);
   background: none;
   border: none;
   color: var(--theme-text);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 12px;
-  border-radius: 10px;
+  gap: var(--space-md);
+  border-radius: var(--radius-lg);
 }
 
 .duration-icon {

@@ -21,7 +21,7 @@
   --theme-line-height-normal: 1.4;
   --theme-line-height-relaxed: 1.5;
   --theme-line-height-loose: 1.6;
-  
+
   /* Theme Colors */
   --theme-primary: #06b6d4;
   --theme-primary-hover: #0891b2;
@@ -34,15 +34,56 @@
   --theme-surface: rgba(30, 41, 59, 0.5);
   --theme-text: #e2e8f0;
   --theme-text-secondary: #94a3b8;
-  --theme-text-muted: #64748b; /* Better contrast for subtle text */
-  
+  --theme-text-muted: #64748b;
+
   /* Background gradients */
   --theme-background: linear-gradient(135deg, #1a1f2e 0%, #2d3561 50%, #1a1f2e 100%);
   --theme-background-image: none;
-  
+
+  /* Glassmorphism surface opacity levels */
+  --surface-subtle: rgba(255, 255, 255, 0.06);
+  --surface-light: rgba(255, 255, 255, 0.10);
+  --surface-medium: rgba(255, 255, 255, 0.12);
+  --surface-strong: rgba(255, 255, 255, 0.15);
+  --surface-intense: rgba(255, 255, 255, 0.18);
+
+  /* Border opacity levels */
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --border-light: rgba(255, 255, 255, 0.15);
+  --border-medium: rgba(255, 255, 255, 0.20);
+  --border-strong: rgba(255, 255, 255, 0.30);
+
+  /* Border radius scale */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+
+  /* Spacing scale - fluid responsive */
+  --space-xs: clamp(4px, 1vw, 8px);
+  --space-sm: clamp(8px, 1.5vw, 12px);
+  --space-md: clamp(12px, 2vw, 16px);
+  --space-lg: clamp(16px, 2.5vw, 20px);
+  --space-xl: clamp(20px, 3vw, 24px);
+  --space-2xl: clamp(24px, 4vw, 32px);
+
+  /* Transition speeds */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-smooth: 0.3s ease;
+  --transition-slow: 0.4s ease-in-out;
+
   /* Sliding box effects */
   --box-blur: 36px;
   --box-opacity: 0.55;
-  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  --slide-transition: all 0.4s ease-in-out;
+  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 var(--border-subtle);
+  --slide-transition: all var(--transition-slow);
+
+  /* Component-specific sizing */
+  --avatar-size-sm: 32px;
+  --avatar-size-md: 36px;
+  --avatar-size-lg: 48px;
+  --avatar-size-xl: 64px;
+  --min-touch-target: 44px;
 }

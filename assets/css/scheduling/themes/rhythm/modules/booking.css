@@ -57,31 +57,31 @@
 }
 
 .meeting-summary {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
+  background: var(--surface-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-sm);
   flex-shrink: 0;
 }
 
 .meeting-summary.compact {
-  padding: 10px 12px;
-  gap: 6px;
+  padding: var(--space-sm);
+  gap: var(--space-xs);
 }
 
 .summary-row {
   display: flex;
-  gap: 16px;
+  gap: var(--space-md);
   align-items: center;
 }
 
 .summary-item {
   flex: 1;
   display: flex;
-  gap: 10px;
+  gap: var(--space-sm);
   align-items: center;
   color: var(--theme-text);
 }
@@ -102,7 +102,7 @@
 .booking-form {
   display: flex;
   flex-direction: column;
-  gap: clamp(12px, 2vw, 16px);
+  gap: var(--space-md);
   flex: 0 0 auto;
   overflow: visible;
   margin-bottom: 0;
@@ -134,13 +134,14 @@
 .rhythm-theme-wrapper .booking-form input.input,
 .rhythm-theme-wrapper .booking-form textarea.input {
   width: 100%;
-  padding: clamp(10px, 2vw, 12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: var(--space-sm);
+  border: 1px solid var(--border-strong);
   border-width: 1px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  background: var(--surface-light);
   color: var(--theme-text);
-  min-height: 44px;
+  min-height: var(--min-touch-target);
+  transition: all var(--transition-normal);
 }
 
 .rhythm-theme-wrapper .booking-form .input::placeholder,
@@ -152,8 +153,8 @@
 .rhythm-theme-wrapper .booking-form .input:hover,
 .rhythm-theme-wrapper .booking-form input.input:hover,
 .rhythm-theme-wrapper .booking-form textarea.input:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--border-strong);
+  background: var(--surface-medium);
 }
 
 .rhythm-theme-wrapper .booking-form .input:focus,
@@ -161,7 +162,7 @@
 .rhythm-theme-wrapper .booking-form textarea.input:focus {
   outline: none;
   border-color: var(--theme-primary);
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--surface-strong);
   box-shadow: none;
 }
 
