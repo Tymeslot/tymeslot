@@ -366,7 +366,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
             <div class="cluster cluster-sm flex-1 min-w-0">
               <.timezone_flag
                 timezone={@user_timezone}
-                class="w-6 h-4 flex-shrink-0 rounded-sm shadow-sm"
+                class="timezone-flag shadow-sm"
                 fallback_icon="🌐"
               />
               <div class="flex-1 min-w-0">

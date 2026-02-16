@@ -60,3 +60,20 @@
 .timezone-dropdown-item:hover {
   background: var(--surface-medium);
 }
+
+/* Timezone flag styling */
+.timezone-flag {
+  width: var(--icon-sm);
+  height: var(--flag-height);
+  flex-shrink: 0;
+  border-radius: var(--space-3xs);
+  object-fit: cover;
+}
+
+.timezone-option-flag {
+  width: var(--icon-sm);
+  height: var(--flag-height);
+  flex-shrink: 0;
+  border-radius: var(--space-3xs);
+  object-fit: cover;
+}

@@ -169,6 +169,9 @@
   --icon-xl: 32px;
   --icon-2xl: 48px;
 
+  /* Component-Specific Tokens - Flag Dimensions */
+  --flag-height: 14px;
+
   /* Component-Specific Tokens - Touch Targets */
   --min-touch-target: 44px;
   --min-touch-target-ios: 48px;
