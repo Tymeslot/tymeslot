@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   require Logger
 
-  @impl true
+  @impl Phoenix.LiveView
   def mount(params, session, socket) do
     # Initialize locale dropdown state
     socket = assign(socket, :language_dropdown_open, false)
@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_params(params, url, socket) do
     # Sync locale from params if present
     socket =
@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_event("toggle_language_dropdown", _params, socket) do
     EventHandlers.handle_toggle_language_dropdown(socket)
   end
@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     delegate_to_theme(theme_id, :handle_event, [event, params, socket])
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:theme_event, _event} = msg, socket) do
     # Handle theme events
     socket = EventBus.handle_event(elem(msg, 1), socket)
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     delegate_to_theme(theme_id, :handle_info, [msg, socket])
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def render(assigns) do
     # Ensure Gettext locale is set correctly for this render cycle
     if locale = assigns[:locale] do

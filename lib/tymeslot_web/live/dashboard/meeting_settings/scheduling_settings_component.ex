@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
   alias TymeslotWeb.Dashboard.MeetingSettings.Components
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     socket =
       socket
@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="card-glass shadow-2xl shadow-tymeslot-200/50">
@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
 
   # Events migrated from parent ServiceSettingsComponent
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("update_buffer_minutes", params, socket) do
     buffer_str = params["buffer_minutes"] || params["value"] || "0"
     metadata = Helpers.get_security_metadata(socket)
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("update_advance_booking_days", params, socket) do
     days_str = params["advance_booking_days"] || params["value"] || "90"
     metadata = Helpers.get_security_metadata(socket)
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("update_min_advance_hours", params, socket) do
     hours_str = params["min_advance_hours"] || params["value"] || "24"
     metadata = Helpers.get_security_metadata(socket)
@@ -179,7 +179,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("focus_custom_input", %{"setting" => "buffer_minutes"}, socket) do
     current_value = if socket.assigns.profile, do: socket.assigns.profile.buffer_minutes, else: 0
     custom_value = if current_value in [0, 5, 10, 15, 30, 60], do: 45, else: current_value

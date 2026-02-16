@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
   require Logger
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
      socket
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:available_video_providers, Directory.list(:video))}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     socket =
       socket
@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:noreply, assign(socket, :form_values, params)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("back_to_providers", _params, socket) do
     {:noreply,
      socket
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">

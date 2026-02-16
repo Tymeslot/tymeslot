@@ -40,13 +40,13 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
 
   # Server Callbacks
 
-  @impl true
+  @impl GenServer
   def init(_opts) do
     # State structure: %{requests: %{key => %{task_ref: ref, waiters: [from], start_time: timestamp}}}
     {:ok, %{requests: %{}}}
   end
 
-  @impl true
+  @impl GenServer
   def handle_call({:coalesce, key, fetch_fn}, from, state) do
     case Map.get(state.requests, key) do
       nil ->
@@ -77,14 +77,14 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
     end
   end
 
-  @impl true
+  @impl GenServer
   def handle_info({ref, _result}, state) when is_reference(ref) do
     # Consume unexpected task messages to avoid warnings
     Process.demonitor(ref, [:flush])
     {:noreply, state}
   end
 
-  @impl true
+  @impl GenServer
   def handle_info({:DOWN, ref, :process, _pid, reason}, state) do
     # Task process died - find and clean up the request
     case find_key_by_ref(state.requests, ref) do
@@ -112,7 +112,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
     end
   end
 
-  @impl true
+  @impl GenServer
   def handle_info({:coalescer_result, key, _pid, result}, state) do
     case Map.pop(state.requests, key) do
       {nil, _} ->
@@ -135,7 +135,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
     end
   end
 
-  @impl true
+  @impl GenServer
   def handle_info(msg, state) do
     Logger.warning("RequestCoalescer received unexpected message: #{inspect(msg)}")
     {:noreply, state}

@@ -7,10 +7,10 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionExpiredHandler do
   require Logger
   alias Tymeslot.Payments
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type), do: event_type == "checkout.session.expired"
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(session) do
     case Map.get(session, "id") do
       nil -> {:error, :missing_field, "Session ID missing"}
@@ -19,7 +19,7 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionExpiredHandler do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(_event, session) do
     session_id = Map.get(session, "id")
     Logger.info("Processing checkout.session.expired", session_id: session_id)

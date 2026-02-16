@@ -20,7 +20,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   alias Tymeslot.Mailer
   alias Tymeslot.Payments.Config
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type)
       when event_type in [
              "charge.dispute.created",
@@ -32,7 +32,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
 
   def can_handle?(_), do: false
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(%{"type" => "charge.dispute.created"} = event, dispute) do
     handle_created(event, dispute)
   end
@@ -45,7 +45,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     handle_closed(event, dispute)
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(dispute) when is_map(dispute) do
     required_fields = ["id", "charge", "amount", "status"]
 

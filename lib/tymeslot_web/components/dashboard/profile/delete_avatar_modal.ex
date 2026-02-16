@@ -11,27 +11,27 @@ defmodule TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal do
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Live.Shared.Flash
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok, assign(socket, :show, false)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok, assign(socket, assigns)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("show", _params, socket) do
     {:noreply, assign(socket, :show, true)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("hide", _params, socket) do
     {:noreply, assign(socket, :show, false)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("confirm", _params, socket) do
     profile = socket.assigns.profile
 
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Components.Dashboard.Profile.DeleteAvatarModal do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id={@id}>

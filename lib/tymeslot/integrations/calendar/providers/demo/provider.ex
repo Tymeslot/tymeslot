@@ -13,43 +13,43 @@ defmodule Tymeslot.Integrations.Calendar.DemoCalendarProvider do
   # Reuse most functionality from debug provider
   alias Tymeslot.Integrations.Calendar.DebugCalendarProvider
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   defdelegate new(config), to: DebugCalendarProvider
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   defdelegate get_events(client), to: DebugCalendarProvider
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   defdelegate get_events(client, start_time, end_time), to: DebugCalendarProvider
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def create_event(_client, _event_data) do
     # Demo mode: pretend to create the event but don't actually do anything
     {:ok, %{uid: "demo-event-#{:rand.uniform(999_999)}"}}
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def update_event(_client, _uid, _event_data) do
     # Demo mode: pretend to update successfully
     :ok
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def delete_event(_client, _uid) do
     # Demo mode: pretend to delete successfully
     :ok
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def provider_type, do: :demo
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def display_name, do: "Demo Calendar"
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   defdelegate config_schema, to: DebugCalendarProvider
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   defdelegate validate_config(config), to: DebugCalendarProvider
 
   @doc """

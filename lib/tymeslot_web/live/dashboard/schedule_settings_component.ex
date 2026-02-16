@@ -8,13 +8,13 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
   alias Tymeslot.Availability.{AvailabilityActions, WeeklySchedule}
   alias TymeslotWeb.Dashboard.Availability.{GridComponent, ListComponent}
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec mount(Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(socket) do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec update(map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def update(assigns, socket) do
     socket =
@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("toggle_input_mode", %{"option" => option}, socket) do
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
     load_schedule(socket)
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""

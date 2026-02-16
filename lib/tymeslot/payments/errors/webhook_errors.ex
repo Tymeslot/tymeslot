@@ -17,7 +17,7 @@ defmodule Tymeslot.Payments.Errors.WebhookError do
           }
     defexception [:message, :reason, :details]
 
-    @impl true
+    @impl Exception
     def message(%__MODULE__{message: message}), do: message
   end
 
@@ -30,7 +30,7 @@ defmodule Tymeslot.Payments.Errors.WebhookError do
           }
     defexception [:message, :reason, :details]
 
-    @impl true
+    @impl Exception
     def message(%__MODULE__{message: message}), do: message
   end
 
@@ -44,7 +44,7 @@ defmodule Tymeslot.Payments.Errors.WebhookError do
           }
     defexception [:message, :reason, :event_type, :details]
 
-    @impl true
+    @impl Exception
     def message(%__MODULE__{message: message}), do: message
   end
 end

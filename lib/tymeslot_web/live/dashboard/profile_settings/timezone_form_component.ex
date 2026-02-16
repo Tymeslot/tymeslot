@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
   alias TymeslotWeb.Components.TimezoneDropdown
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     timezone_options = TimezoneUtils.get_all_timezone_options()
 
@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
      |> assign(:form_errors, %{})}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_timezone_dropdown", _params, socket) do
     {:noreply, assign(socket, timezone_dropdown_open: !socket.assigns.timezone_dropdown_open)}
   end
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id="timezone-form-container">

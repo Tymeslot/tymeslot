@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   alias TymeslotWeb.Dashboard.Automation.WebhookFormComponent
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec mount(Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def mount(socket) do
     modal_configs = [
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
      |> assign(:webhook_form_timestamp, nil)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec update(map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def update(assigns, socket) do
     socket =
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_event("show_webhook_form", _params, socket) do
@@ -398,7 +398,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
      |> assign(:delivery_stats, nil)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""

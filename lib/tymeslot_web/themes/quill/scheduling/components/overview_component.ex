@@ -13,26 +13,26 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   import TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.MeetingComponents
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # Filter out reserved assigns that can't be set directly
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
     {:ok, assign(socket, filtered_assigns)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("select_duration", %{"duration" => duration}, socket) do
     send(self(), {:step_event, :overview, :select_duration, duration})
     {:noreply, assign(socket, :selected_duration, duration)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("next_step", _params, socket) do
     send(self(), {:step_event, :overview, :next_step, nil})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="stack flex-1" data-locale={@locale}>

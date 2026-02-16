@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
 
   alias Tymeslot.Demo
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
 
@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
      |> assign_new(:selected_duration, fn -> nil end)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("select_duration", %{"duration" => duration}, socket) do
     # duration is already a string like "30min" from the button
     new_duration =
@@ -41,13 +41,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
     {:noreply, assign(socket, :selected_duration, new_duration)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("next_slide", _params, socket) do
     send(self(), {:step_event, :overview, :next_step, nil})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="scheduling-box" data-locale={@locale}>

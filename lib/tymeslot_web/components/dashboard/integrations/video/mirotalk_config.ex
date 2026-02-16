@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
 
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
      socket
@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
      |> assign(:saving, false)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok,
      socket
@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig do
      |> assign_new(:saving, fn -> false end)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id="mirotalk-config-modal" class="space-y-6">

@@ -25,7 +25,7 @@ defmodule TymeslotWeb.AuthLive do
 
   require Logger
 
-  @impl true
+  @impl Phoenix.LiveView
   def mount(_params, session, socket) do
     csrf_token = Controller.get_csrf_token()
     client_ip = ClientIP.get_from_mount(socket)
@@ -49,7 +49,7 @@ defmodule TymeslotWeb.AuthLive do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_params(params, uri, socket) do
     socket =
       socket
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.AuthLive do
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_event("navigate_to", %{"state" => state}, socket) do
     Logger.info("AuthLive: navigate_to event received with state: #{state}")
 
@@ -497,7 +497,7 @@ defmodule TymeslotWeb.AuthLive do
 
   defp normalize_ip_for_security(ip), do: ip
 
-  @impl true
+  @impl Phoenix.LiveView
   def render(assigns) do
     ~H"""
     <div id="auth-live" class="brand-container !bg-transparent" data-state={@current_state}>

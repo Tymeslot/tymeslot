@@ -7,12 +7,12 @@ defmodule TymeslotWeb.Themes.Shared.Components.ErrorComponent do
 
   alias TymeslotWeb.Components.CoreComponents
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok, assign(socket, assigns)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="container flex-1 flex flex-col items-center justify-center py-12 px-4">

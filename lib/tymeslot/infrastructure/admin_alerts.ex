@@ -65,7 +65,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.Default do
 
   require Logger
 
-  @impl true
+  @impl Tymeslot.Infrastructure.AdminAlerts
   def send_alert(type, metadata, opts) do
     level = Keyword.get(opts, :level, :warning)
 

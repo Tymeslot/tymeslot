@@ -80,7 +80,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   # Server Callbacks
 
-  @impl true
+  @impl GenServer
   def init({name, user_config}) do
     config = Map.merge(@default_config, user_config)
 
@@ -98,7 +98,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     {:ok, state, @idle_timeout}
   end
 
-  @impl true
+  @impl GenServer
   def handle_call({:call, fun}, _from, state) do
     result =
       case state.status do
@@ -117,7 +117,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     end
   end
 
-  @impl true
+  @impl GenServer
   def handle_call(:status, _from, state) do
     status_info = %{
       status: state.status,
@@ -129,7 +129,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     {:reply, status_info, state, @idle_timeout}
   end
 
-  @impl true
+  @impl GenServer
   def handle_cast(:reset, state) do
     Logger.info("Circuit breaker reset", name: state.name)
 
@@ -280,7 +280,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     %{state | failure_count: state.failure_count + 1, last_failure_time: now}
   end
 
-  @impl true
+  @impl GenServer
   def handle_info(:timeout, state) do
     Logger.info("Circuit breaker #{inspect(state.name)} stopping due to inactivity",
       name: state.name
@@ -289,7 +289,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     {:stop, :normal, state}
   end
 
-  @impl true
+  @impl GenServer
   def handle_info(msg, state) do
     # In tests, Swoosh's TestAdapter sends {:email, email} messages to the process that calls deliver.
     # When deliver is wrapped in a circuit breaker, this GenServer receives those messages.
@@ -297,7 +297,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     {:noreply, state, @idle_timeout}
   end
 
-  @impl true
+  @impl GenServer
   def format_status(_reason, [_pdict, state]) do
     [
       data: [

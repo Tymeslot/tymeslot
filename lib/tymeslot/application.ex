@@ -13,7 +13,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Integrations.Shared.Lock
   alias TymeslotWeb.Endpoint
 
-  @impl true
+  @impl Application
   def start(_type, _args) do
     validate_config!()
     Logger.info("Starting Tymeslot application")
@@ -276,7 +276,7 @@ defmodule Tymeslot.Application do
 
   # Tell Phoenix to update the endpoint configuration
   # whenever the application is updated.
-  @impl true
+  @impl Application
   def config_change(changed, _new, removed) do
     Logger.info("Application configuration changed",
       changed: inspect(changed),

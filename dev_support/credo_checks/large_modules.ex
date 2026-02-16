@@ -36,7 +36,7 @@ defmodule CredoChecks.LargeModules do
   alias Credo.SourceFile
 
   @doc false
-  @impl true
+  @impl Credo.Check
   @spec run(SourceFile.t(), any) :: list()
   def run(%SourceFile{} = source_file, params) do
     issue_meta = IssueMeta.for(source_file, params)

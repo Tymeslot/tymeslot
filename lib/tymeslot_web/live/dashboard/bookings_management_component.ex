@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   require Logger
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
      socket
@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
      |> ModalHook.mount_modal(cancel_meeting: false, reschedule_request: false)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # Apply incoming assigns first
     socket = assign(socket, assigns)
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("filter_meetings", %{"filter" => filter}, socket) do
     metadata = DashboardHelpers.get_security_metadata(socket)
 
@@ -281,7 +281,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">

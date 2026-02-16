@@ -50,7 +50,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
 
   @behaviour ProviderBehaviour
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
     Logger.info("Creating custom video meeting room")
 
@@ -178,18 +178,18 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
 
   defp mask_url(_), do: "..."
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, _participant_name, _participant_email, _role, _meeting_time) do
     {:ok, room_data.meeting_url}
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def extract_room_id(meeting_url), do: generate_room_id(meeting_url)
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def valid_meeting_url?(meeting_url), do: valid_url?(meeting_url)
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def test_connection(config) do
     case Map.get(config, :custom_meeting_url) do
       nil ->
@@ -216,13 +216,13 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :custom
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Custom Video Link"
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
     %{
       custom_meeting_url: %{
@@ -236,7 +236,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     }
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def validate_config(config) do
     case Map.get(config, :custom_meeting_url) do
       nil ->
@@ -259,7 +259,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def capabilities do
     %{
       supports_instant_meetings: true,
@@ -279,10 +279,10 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     }
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(_event, _room_data, _additional_data), do: :ok
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def generate_meeting_metadata(room_data) do
     %{
       provider: "custom",

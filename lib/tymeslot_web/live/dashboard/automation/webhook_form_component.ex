@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
      socket
@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
      |> assign(:available_events, Webhooks.available_events())}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     mode = assigns[:mode] || :create
     webhook = assigns[:webhook]
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
      |> assign(:form_errors, assigns[:form_errors] || %{})}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     assigns = assign(assigns, :can_submit, can_submit?(assigns))
 

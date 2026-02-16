@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
 
   alias TymeslotWeb.Themes.Shared.Components.ErrorComponent
 
-  @impl true
+  @impl Phoenix.LiveView
   def mount(params, _session, socket) do
     # Determine initial state from route
     initial_state = StateMachine.determine_initial_state(socket.assigns[:live_action])
@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_params(params, _url, socket) do
     # Handle URL changes (back/forward navigation)
     new_state = StateMachine.determine_initial_state(socket.assigns[:live_action])
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
   end
 
   # Info handlers
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:step_event, step, event, data}, socket) do
     case step do
       :overview -> handle_overview_events(socket, event, data)
@@ -78,49 +78,49 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info(:close_dropdown, socket), do: InfoHandlers.handle_close_dropdown(socket)
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:fetch_available_slots, date, duration, timezone}, socket) do
     InfoHandlers.handle_fetch_available_slots(socket, date, duration, timezone)
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:load_slots, date}, socket) do
     InfoHandlers.handle_load_slots(socket, date)
   end
 
   # Handle month availability fetch completion (success)
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({ref, {:ok, availability_map}}, socket) when is_reference(ref) do
     InfoHandlers.handle_availability_ok(socket, ref, availability_map)
   end
 
   # Handle month availability fetch completion (error)
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({ref, {:error, reason}}, socket) when is_reference(ref) do
     InfoHandlers.handle_availability_error(socket, ref, reason)
   end
 
   # Handle task crash or timeout
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:DOWN, ref, :process, _pid, reason}, socket) do
     InfoHandlers.handle_availability_down(socket, ref, reason)
   end
 
   # Event handlers
-  @impl true
+  @impl Phoenix.LiveView
   def handle_event("toggle_language_dropdown", _params, socket) do
     EventHandlers.handle_toggle_language_dropdown(socket)
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_event("close_language_dropdown", _params, socket) do
     EventHandlers.handle_close_language_dropdown(socket)
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_event("change_locale", %{"locale" => locale}, socket) do
     EventHandlers.handle_change_locale(socket, locale, PathHandlers)
   end
@@ -334,7 +334,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
   end
 
   # Template rendering - delegates to theme-specific step components
-  @impl true
+  @impl Phoenix.LiveView
   def render(assigns) do
     # Extract organizer user ID safely
     organizer_user_id =

@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import TymeslotWeb.Components.CoreComponents
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok,
      socket
@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
      |> assign(:form_errors, %{})}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("validate_full_name", %{"full_name" => full_name}, socket) do
     metadata = DashboardHelpers.get_security_metadata(socket)
 
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id="display-name-form-container">

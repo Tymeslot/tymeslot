@@ -15,22 +15,22 @@ defmodule Tymeslot.Infrastructure.AppConfig do
   """
   @behaviour Tymeslot.Infrastructure.AppConfigBehaviour
 
-  @impl true
+  @impl Tymeslot.Infrastructure.AppConfigBehaviour
   def enforce_legal_agreements? do
     Application.get_env(:tymeslot, :enforce_legal_agreements, false)
   end
 
-  @impl true
+  @impl Tymeslot.Infrastructure.AppConfigBehaviour
   def show_marketing_links? do
     Application.get_env(:tymeslot, :show_marketing_links, false)
   end
 
-  @impl true
+  @impl Tymeslot.Infrastructure.AppConfigBehaviour
   def logo_links_to_marketing? do
     Application.get_env(:tymeslot, :logo_links_to_marketing, false)
   end
 
-  @impl true
+  @impl Tymeslot.Infrastructure.AppConfigBehaviour
   def site_home_path do
     Application.get_env(:tymeslot, :site_home_path, "/dashboard")
   end

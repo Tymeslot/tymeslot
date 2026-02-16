@@ -18,11 +18,11 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
   alias Tymeslot.Payments.Config
   alias Tymeslot.Payments.Webhooks.WebhookUtils
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?("customer.subscription.trial_will_end"), do: true
   def can_handle?(_), do: false
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, subscription_object) do
     subscription_id = subscription_object["id"]
     # customer_id = subscription_object["customer"]
@@ -75,7 +75,7 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(subscription_object) when is_map(subscription_object) do
     required_fields = ["id", "customer", "trial_end"]
 

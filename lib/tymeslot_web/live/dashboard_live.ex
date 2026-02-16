@@ -74,12 +74,12 @@ defmodule TymeslotWeb.DashboardLive do
       defmodule ExternalApp.Dashboard.MyFeatureComponent do
         use Phoenix.LiveComponent
 
-        @impl true
+        @impl Phoenix.LiveView
         def update(assigns, socket) do
           {:ok, assign(socket, assigns)}
         end
 
-        @impl true
+        @impl Phoenix.LiveView
         def render(assigns) do
           ~H\"\"\"
           <div>
@@ -166,14 +166,14 @@ defmodule TymeslotWeb.DashboardLive do
 
   require Logger
 
-  @impl true
+  @impl Phoenix.LiveView
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()} | {:ok, Phoenix.LiveView.Socket.t(), keyword()}
   def mount(_params, _session, socket) do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_params(params, _url, socket) do
@@ -188,7 +188,7 @@ defmodule TymeslotWeb.DashboardLive do
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   # Handle events from child components
-  @impl true
+  @impl Phoenix.LiveView
   @spec handle_info({:profile_updated, map()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:profile_updated, profile}, socket) do
@@ -275,12 +275,12 @@ defmodule TymeslotWeb.DashboardLive do
     {:noreply, assign(socket, :current_user, user)}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info(:hide_saving, socket) do
     {:noreply, assign(socket, saving: false)}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:clear_reminder_confirmation, component_id}, socket) do
     send_update(TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm,
       id: component_id,
@@ -290,14 +290,14 @@ defmodule TymeslotWeb.DashboardLive do
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:refresh_calendar_list, component_id, integration_id}, socket) do
     user_id = socket.assigns.current_user.id
     Calendar.refresh_calendar_list_async(integration_id, user_id, component_id)
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:calendar_list_refreshed, component_id, _integration_id, calendars}, socket) do
     send_update(TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm,
       id: component_id,

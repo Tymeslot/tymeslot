@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
 
   alias Tymeslot.Profiles
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     assigns =
       assign(assigns, :display_name, get_display_name(assigns.profile, assigns.current_user))
@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
     """
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_user_dropdown", _params, socket) do
     new_state = !socket.assigns.dropdown_open
     {:noreply, assign(socket, :dropdown_open, new_state)}
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
      |> push_navigate(to: path)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok, assign(socket, :dropdown_open, false)}
   end

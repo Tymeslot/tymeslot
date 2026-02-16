@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
   alias Tymeslot.Integrations.Video
   alias TymeslotWeb.Dashboard.{CalendarSettingsComponent, VideoSettingsComponent}
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
      socket
@@ -18,12 +18,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
      |> assign(:integration_id, nil)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok, assign(socket, assigns)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("show", %{"id" => id}, socket) do
     case parse_integration_id(id) do
       {:ok, integration_id} ->
@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("hide", _params, socket) do
     {:noreply,
      socket
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
      |> assign(:integration_id, nil)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("confirm", _params, socket) do
     # Guard against nil or invalid integration_id
     case socket.assigns.integration_id do
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id={@id}>

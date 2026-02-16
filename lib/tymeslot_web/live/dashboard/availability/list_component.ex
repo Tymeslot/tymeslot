@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
   # UI Helper Functions
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
      socket
@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
      |> assign(show_add_break_form: nil)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # Get timezone info from profile
     profile = assigns.profile
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_day_available", %{"day" => day_str}, socket) do
     with {:ok, day} <- parse_day(day_str),
          %{} = current_availability <-
@@ -410,7 +410,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div>

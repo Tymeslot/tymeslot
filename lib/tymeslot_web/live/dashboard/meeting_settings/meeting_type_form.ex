@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # - saving: parent's saving state to control the button disabled state
   # - current_user: used for security metadata in validation
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
      socket
@@ -44,13 +44,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:__initialized__, false)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     socket = assign(socket, assigns)
     {:ok, maybe_initialize(socket)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <form phx-submit="save_meeting_type" phx-target={@parent_myself} class="space-y-4">
@@ -218,7 +218,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     """
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("validate_meeting_type", %{"meeting_type" => params}, socket) do
     metadata = Helpers.get_security_metadata(socket)
 
@@ -239,7 +239,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply, assign(socket, form_data: updated_data, form_errors: updated_errors)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_meeting_mode", %{"mode" => mode}, socket) do
     socket =
       socket
@@ -252,12 +252,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("select_icon", %{"icon" => icon}, socket) do
     {:noreply, assign(socket, :selected_icon, icon)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("select_video_integration", %{"id" => id}, socket) do
     integration_id =
       case id do
@@ -276,7 +276,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("select_calendar_integration", %{"id" => id}, socket) do
     integration_id =
       case id do
@@ -304,7 +304,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("select_target_calendar", %{"id" => id}, socket) do
     socket =
       socket
@@ -317,7 +317,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("update_reminder_input", %{"reminder" => reminder_params}, socket) do
     reminder_value = Map.get(reminder_params, "value", socket.assigns.new_reminder_value)
     reminder_unit = Map.get(reminder_params, "unit", socket.assigns.new_reminder_unit)
@@ -330,7 +330,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      )}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_custom_reminder", _params, socket) do
     {:noreply,
      assign(socket,
@@ -339,7 +339,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      )}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("add_quick_reminder", params, socket) do
     # Handle map from JS.push
     {amount, unit} =
@@ -369,7 +369,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("add_reminder", _params, socket) do
     value = socket.assigns.new_reminder_value
     unit = socket.assigns.new_reminder_unit
@@ -395,7 +395,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("remove_reminder", params, socket) do
     # Handle both JS.push map and individual phx-value-params
     {value, unit} =

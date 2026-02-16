@@ -7,16 +7,16 @@ defmodule Tymeslot.Payments.Webhooks.ChargeHandler do
 
   require Logger
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type), do: event_type in ["charge.succeeded", "charge.failed"]
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(_charge) do
     # Trust Stripe's data
     :ok
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(%{type: "charge.succeeded"}, charge) do
     Logger.info("Processing charge.succeeded", charge_id: Map.get(charge, "id"))
 
@@ -26,7 +26,7 @@ defmodule Tymeslot.Payments.Webhooks.ChargeHandler do
     {:ok, :charge_logged}
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(%{type: "charge.failed"}, charge) do
     Logger.info("Processing charge.failed", charge_id: Map.get(charge, "id"))
 

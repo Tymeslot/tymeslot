@@ -18,13 +18,13 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :google_meet
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Google Meet"
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
     %{
       access_token: %{type: :string, required: true, description: "Google OAuth access token"},
@@ -38,7 +38,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     }
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def validate_config(config) do
     ProviderConfigHelper.validate_required_fields(config, [
       :access_token,
@@ -47,7 +47,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     ])
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def capabilities do
     %{
       recording: true,
@@ -64,7 +64,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     }
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
     Logger.info("Creating Google Meet room")
 
@@ -80,7 +80,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, _meeting_time) do
     base_url = room_data[:meeting_url] || room_data["meeting_url"]
 
@@ -108,7 +108,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) and meeting_url != "" do
     uri = URI.parse(meeting_url)
 
@@ -126,7 +126,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   def extract_room_id(_), do: nil
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def valid_meeting_url?(url) when is_binary(url) and url != "" do
     uri = URI.parse(url)
 
@@ -140,7 +140,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   def valid_meeting_url?(_), do: false
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def test_connection(config) do
     Logger.info("Testing Google Meet connection")
 
@@ -154,7 +154,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(event, room_data, additional_data) do
     Logger.info("Handling Google Meet event",
       event: event,
@@ -181,7 +181,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def generate_meeting_metadata(room_data) do
     room_id = room_data[:room_id] || room_data["room_id"]
     meeting_url = room_data[:meeting_url] || room_data["meeting_url"]

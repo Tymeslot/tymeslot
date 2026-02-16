@@ -16,7 +16,7 @@ defmodule TymeslotWeb.OnboardingLive do
   alias TymeslotWeb.OnboardingLive.TimezoneHandlers
   alias TymeslotWeb.OnboardingLive.WelcomeStep
 
-  @impl true
+  @impl Phoenix.LiveView
   @spec mount(map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()} | {:ok, Phoenix.LiveView.Socket.t(), keyword()}
   def mount(_params, _session, socket) do
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.OnboardingLive do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   @spec handle_params(map(), String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_params(%{"step" => step}, _uri, socket) do
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.OnboardingLive do
     {:noreply, assign(socket, :current_step, :welcome)}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.OnboardingLive do
   end
 
   # Event handlers - Navigation
-  @impl true
+  @impl Phoenix.LiveView
   def handle_event("next_step", _params, socket) do
     NavigationHandlers.handle_next_step(socket)
   end
@@ -327,7 +327,7 @@ defmodule TymeslotWeb.OnboardingLive do
   end
 
   # Handle flash messages from components
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:flash, {type, message}}, socket) do
     {:noreply, put_flash(socket, type, message)}
   end

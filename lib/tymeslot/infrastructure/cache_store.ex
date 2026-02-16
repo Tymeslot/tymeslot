@@ -75,34 +75,34 @@ defmodule Tymeslot.Infrastructure.CacheStore do
 
       # Server Callbacks
 
-      @impl true
+      @impl GenServer
       def init(_opts) do
         CacheStore.init_cache(@table_name, @cleanup_interval)
       end
 
-      @impl true
+      @impl GenServer
       def handle_call({:compute_coalesced, key, fun, ttl}, from, state) do
         CacheStore.handle_compute_coalesced(@table_name, key, fun, ttl, from, state)
       end
 
-      @impl true
+      @impl GenServer
       def handle_info({:computation_done, key, value, ttl}, state) do
         CacheStore.handle_computation_done(@table_name, key, value, ttl, state)
       end
 
-      @impl true
+      @impl GenServer
       def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
         CacheStore.handle_task_down(state, ref)
       end
 
-      @impl true
+      @impl GenServer
       def handle_info(:cleanup, state) do
         CacheStore.cleanup_expired(@table_name)
         CacheStore.schedule_cleanup(@cleanup_interval)
         {:noreply, state}
       end
 
-      @impl true
+      @impl GenServer
       def handle_info(_msg, state) do
         {:noreply, state}
       end

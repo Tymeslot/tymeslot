@@ -10,7 +10,7 @@ defmodule TymeslotWeb.AccountLive do
 
   import TymeslotWeb.AccountLive.Components
 
-  @impl true
+  @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
     {:ok,
      socket
@@ -18,12 +18,12 @@ defmodule TymeslotWeb.AccountLive do
      |> Helpers.init_form_state()}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_params(_params, _url, socket) do
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def render(assigns) do
     ~H"""
     <div class="min-h-screen">
@@ -71,13 +71,13 @@ defmodule TymeslotWeb.AccountLive do
   end
 
   # Delegate all events to handler module
-  @impl true
+  @impl Phoenix.LiveView
   def handle_event(event, params, socket) do
     Handlers.handle_event(event, params, socket)
   end
 
   # Handle events from child components
-  @impl true
+  @impl Phoenix.LiveView
   def handle_info({:user_updated, user}, socket) do
     {:noreply, assign(socket, :current_user, user)}
   end

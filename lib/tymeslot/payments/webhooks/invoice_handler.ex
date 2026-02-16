@@ -7,7 +7,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
   require Logger
   alias Tymeslot.Payments.DatabaseOperations
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type) do
     event_type in [
       "invoice.created",
@@ -19,10 +19,10 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
     ]
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(invoice), do: validate(nil, invoice)
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(event_type, invoice) do
     case Map.get(invoice, "id") do
       nil when event_type == "invoice.upcoming" ->
@@ -39,7 +39,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, invoice) do
     event_type = event["type"] || event[:type]
     subscription_id = invoice["subscription"]

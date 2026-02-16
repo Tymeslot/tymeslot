@@ -24,7 +24,7 @@ defmodule CredoChecks.UseCoreInputs do
   alias Credo.SourceFile
 
   @doc false
-  @impl true
+  @impl Credo.Check
   @spec run(SourceFile.t(), any) :: list()
   def run(%SourceFile{} = source_file, params) do
     # Skip the file that defines the core components themselves to avoid circular issues

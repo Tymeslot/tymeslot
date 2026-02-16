@@ -13,25 +13,25 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
   import TymeslotWeb.Components.CoreComponents
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
     {:ok, assign(socket, filtered_assigns)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("validate", %{"booking" => booking_params}, socket) do
     send(self(), {:step_event, :booking, :validate, booking_params})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("field_blur", %{"field" => field_name}, socket) do
     send(self(), {:step_event, :booking, :field_blur, field_name})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("submit", %{"booking" => booking_params}, socket) do
     # Set submitting state immediately for instant UI feedback
     socket = assign(socket, :submitting, true)
@@ -39,13 +39,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("prev_slide", _params, socket) do
     send(self(), {:step_event, :booking, :back_step, nil})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="scheduling-box" data-locale={@locale}>

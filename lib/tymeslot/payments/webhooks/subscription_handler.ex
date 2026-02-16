@@ -7,7 +7,7 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandler do
   require Logger
   alias Tymeslot.Payments.PubSub
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type) do
     event_type in [
       "customer.subscription.created",
@@ -16,7 +16,7 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandler do
     ]
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(subscription) do
     validate_id(subscription)
   end
@@ -29,7 +29,7 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandler do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, subscription) do
     event_type = event["type"] || event[:type]
     subscription_id = subscription["id"]

@@ -123,7 +123,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
 
   # Server Callbacks
 
-  @impl true
+  @impl GenServer
   def init(opts) do
     interval = Keyword.get(opts, :check_interval, @check_interval)
     initial_delay = Keyword.get(opts, :initial_delay, 1000)
@@ -142,7 +142,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
     {:ok, state}
   end
 
-  @impl true
+  @impl GenServer
   def handle_call(:check_all, _from, state) do
     Logger.info("Manual health check triggered for all integrations")
     {new_state, _scheduled} = Scheduler.schedule_all(state, force: true)
@@ -164,7 +164,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
     {:reply, report, state}
   end
 
-  @impl true
+  @impl GenServer
   def handle_info(:scheduled_check, state) do
     Logger.debug("Scheduling health check jobs for all integrations")
 

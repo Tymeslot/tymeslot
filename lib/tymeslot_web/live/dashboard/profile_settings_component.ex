@@ -17,17 +17,17 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
     UsernameFormComponent
   }
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok, assign(socket, saving: false)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok, assign(socket, assigns)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">

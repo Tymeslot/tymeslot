@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
 
   alias TymeslotWeb.Components.DashboardComponents
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div>
@@ -27,13 +27,13 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
     """
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     form = assigns[:form] || to_form(%{})
     {:ok, assign(socket, Map.merge(%{form: form}, Map.take(assigns, [:id, :schema, :action])))}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("save", %{"_target" => _target} = params, socket) do
     send(self(), {:provider_form_submit, params})
     {:noreply, socket}

@@ -64,7 +64,7 @@ defmodule Tymeslot.Auth.Verification do
   ## When passing a user_id (Integer)
   Directly marks the user as verified without token validation (useful for testing).
   """
-  @impl true
+  @impl Tymeslot.Infrastructure.VerificationBehaviour
   @spec verify_user(String.t() | integer()) :: verification_result()
   def verify_user(token) when is_binary(token) do
     with {:ok, user} <- fetch_user_by_token(token),
@@ -97,7 +97,7 @@ defmodule Tymeslot.Auth.Verification do
   @doc """
   Initiates the email verification process for a user, rate-limited by IP.
   """
-  @impl true
+  @impl Tymeslot.Infrastructure.VerificationBehaviour
   @spec verify_user_email(socket_or_conn(), term(), map()) :: verification_result()
   def verify_user_email(socket_or_conn, user, _profile_params) do
     ip_address = extract_ip_address(socket_or_conn)
@@ -115,14 +115,14 @@ defmodule Tymeslot.Auth.Verification do
   Handles the verification token submitted by the user (controller action).
   Returns only tagged tuples, no Plug.Conn.
   """
-  @impl true
+  @impl Tymeslot.Infrastructure.VerificationBehaviour
   @spec verify_user_token(String.t()) :: {:ok, term()} | {:error, atom()}
   def verify_user_token(token), do: verify_user(token)
 
   @doc """
   Resends the verification email, rate-limited by IP.
   """
-  @impl true
+  @impl Tymeslot.Infrastructure.VerificationBehaviour
   @spec resend_verification_email(socket_or_conn(), term()) :: verification_result()
   def resend_verification_email(socket_or_conn, user) do
     ip_address = extract_ip_address(socket_or_conn)

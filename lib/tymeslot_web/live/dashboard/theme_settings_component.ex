@@ -13,12 +13,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemePreview
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     customization_theme_id =
       if assigns.live_action == :theme_customization do
@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
@@ -225,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
     """
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("show_customization", %{"theme" => theme_id}, socket) do
     {:noreply, push_patch(socket, to: ~p"/dashboard/theme/customize/#{theme_id}")}
   end

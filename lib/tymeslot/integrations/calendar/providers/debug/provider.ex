@@ -8,7 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
 
   @behaviour Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def new(config) when is_map(config) do
     case validate_config(config) do
       :ok -> {:ok, config}
@@ -16,41 +16,41 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def get_events(client) do
     start_time = DateTime.add(DateTime.utc_now(), -7, :day)
     end_time = DateTime.add(DateTime.utc_now(), 30, :day)
     get_events(client, start_time, end_time)
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def get_events(_client, start_time, end_time) do
     events = generate_debug_events(start_time, end_time)
     {:ok, events}
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def create_event(_client, _event_data) do
     {:error, "Debug calendar provider does not support event creation"}
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def update_event(_client, _uid, _event_data) do
     {:error, "Debug calendar provider does not support event updates"}
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def delete_event(_client, _uid) do
     {:error, "Debug calendar provider does not support event deletion"}
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def provider_type, do: :debug
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def display_name, do: "Debug Calendar (Development Only)"
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def config_schema do
     %{
       user_id: %{
@@ -61,7 +61,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     }
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def validate_config(config) do
     if Map.has_key?(config, :user_id) do
       :ok

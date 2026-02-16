@@ -132,12 +132,12 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
       defmodule TymeslotWeb.DashboardExtensionsTest.TestComponent do
         use Phoenix.LiveComponent
 
-        @impl true
+        @impl Phoenix.LiveComponent
         def update(assigns, socket) do
           {:ok, assign(socket, assigns)}
         end
 
-        @impl true
+        @impl Phoenix.LiveComponent
         def render(assigns) do
           ~H"""
           <div data-test="test-extension">

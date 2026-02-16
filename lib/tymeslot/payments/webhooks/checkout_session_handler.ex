@@ -10,10 +10,10 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
   alias Tymeslot.Payments
   alias Tymeslot.Payments.TaxExtractor
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type), do: event_type == "checkout.session.completed"
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(session) do
     # Trust Stripe's data - just ensure we have an ID
     case Map.get(session, "id") do
@@ -23,7 +23,7 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(_event, session) do
     session_id = Map.get(session, "id")
     mode = Map.get(session, "mode")

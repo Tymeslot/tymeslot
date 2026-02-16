@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
   @spec format_meeting_time(map(), String.t() | nil) :: String.t()
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">

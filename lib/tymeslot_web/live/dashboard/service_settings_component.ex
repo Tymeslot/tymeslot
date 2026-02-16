@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent
   require Logger
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
      socket
@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> ModalHook.mount_modal(delete_meeting_type: false)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # Merge new assigns into socket
     socket = assign(socket, assigns)
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_add_form", _params, socket) do
     {:noreply,
      socket
@@ -263,7 +263,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">

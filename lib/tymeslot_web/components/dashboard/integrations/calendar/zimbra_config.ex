@@ -11,12 +11,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ZimbraConfig do
 
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok, assign_config_defaults(socket)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok,
      socket
@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ZimbraConfig do
      |> assign_config_defaults()}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id={"zimbra-config-#{@id}"} class="space-y-6">

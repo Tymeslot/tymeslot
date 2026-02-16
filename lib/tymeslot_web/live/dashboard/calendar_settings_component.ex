@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   require Logger
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok,
      socket
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
      |> assign(:available_calendar_providers, Calendar.list_available_providers(:calendar))}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     socket =
       socket
@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   # --- Event Handlers ---
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("back_to_providers", _params, socket) do
     {:noreply, reset_integration_form_state(socket)}
   end
@@ -327,7 +327,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   # --- Async Handlers ---
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_async(:refresh_calendars, {:ok, results}, socket) do
     {successes, failures} =
       Enum.reduce(results, {0, 0}, fn
@@ -400,7 +400,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   defp parse_int(_), do: :error
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-12 pb-24">

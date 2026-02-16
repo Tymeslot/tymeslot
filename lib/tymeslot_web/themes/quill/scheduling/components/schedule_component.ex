@@ -14,68 +14,68 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   import TymeslotWeb.Components.FlagHelpers
   import TymeslotWeb.Components.MeetingComponents
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # Filter out reserved assigns that can't be set directly
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
     {:ok, assign(socket, filtered_assigns)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("select_date", %{"date" => date}, socket) do
     send(self(), {:step_event, :schedule, :select_date, date})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("select_time", %{"time" => time}, socket) do
     send(self(), {:step_event, :schedule, :select_time, time})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("change_timezone", %{"timezone" => timezone}, socket) do
     send(self(), {:step_event, :schedule, :change_timezone, timezone})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("search_timezone", params, socket) do
     send(self(), {:step_event, :schedule, :search_timezone, params})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("toggle_timezone_dropdown", _params, socket) do
     send(self(), {:step_event, :schedule, :toggle_timezone_dropdown, nil})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("close_timezone_dropdown", _params, socket) do
     send(self(), {:step_event, :schedule, :close_timezone_dropdown, nil})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("prev_month", _params, socket) do
     send(self(), {:step_event, :schedule, :prev_month, nil})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("next_month", _params, socket) do
     send(self(), {:step_event, :schedule, :next_month, nil})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("back_step", _params, socket) do
     send(self(), {:step_event, :schedule, :back_step, nil})
     {:noreply, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("next_step", _params, socket) do
     send(self(), {:step_event, :schedule, :next_step, nil})
     {:noreply, socket}
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
   defp format_years_advance(days), do: gettext("%{years} years in advance", years: div(days, 365))
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div data-locale={@locale}>

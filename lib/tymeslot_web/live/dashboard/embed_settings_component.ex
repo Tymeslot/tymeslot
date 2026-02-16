@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
   require Logger
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # Extract props from parent
     profile = assigns.profile
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     """
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("switch_tab", %{"tab" => tab}, socket) do
     {:noreply, assign(socket, :active_tab, tab)}
   end

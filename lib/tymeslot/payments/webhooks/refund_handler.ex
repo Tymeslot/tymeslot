@@ -30,14 +30,14 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   alias Tymeslot.Payments.CustomerLookup
   alias Tymeslot.Payments.Webhooks.WebhookUtils
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type) when event_type in ["charge.refunded", "charge.refund.updated"] do
     true
   end
 
   def can_handle?(_), do: false
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(%{"type" => "charge.refunded"} = event, charge) do
     handle_refunded(event, charge)
   end
@@ -46,7 +46,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     handle_refund_updated(event, refund)
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(refund_object) when is_map(refund_object) do
     required_fields = ["id"]
 

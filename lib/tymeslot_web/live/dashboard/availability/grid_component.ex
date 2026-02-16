@@ -7,12 +7,12 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
 
   alias TymeslotWeb.Dashboard.Availability.Helpers
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def mount(socket) do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # Use profile data passed from parent component
     profile = assigns.profile
@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-8 animate-in fade-in duration-500">

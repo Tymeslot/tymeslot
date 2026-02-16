@@ -20,7 +20,7 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
   alias Credo.IssueMeta
   alias Credo.SourceFile
 
-  @impl true
+  @impl Credo.Check
   def run(%SourceFile{filename: filename} = source_file, params) do
     if dashboard_page_component?(filename) do
       content = SourceFile.source(source_file)

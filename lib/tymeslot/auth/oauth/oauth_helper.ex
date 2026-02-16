@@ -28,38 +28,38 @@ defmodule Tymeslot.Auth.OAuth.Helper do
 
   # --- Client & Token ---
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def build_oauth_client(provider, redirect_uri, state) do
     Client.build(provider, redirect_uri, state)
   end
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def build_oauth_client(provider, redirect_uri) do
     Logger.warning("OAuth client built without state parameter - this is insecure!")
     build_oauth_client(provider, redirect_uri, "")
   end
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def exchange_code_for_token(client, code) do
     Client.exchange_code_for_token(client, code)
   end
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def parse_access_token(json_string), do: Client.parse_access_token(json_string)
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def update_client_headers(client, provider) do
     Client.with_auth_header(client, provider)
   end
 
   # --- User Info & Processing ---
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def get_user_info(client, provider) do
     Client.get_user_info(client, provider)
   end
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def get_github_user_emails(client) do
     # Delegating to UserProcessor which now handles this logic
     # But for the sake of the behaviour, we keep it here.
@@ -75,61 +75,61 @@ defmodule Tymeslot.Auth.OAuth.Helper do
   defp decode_oauth_body(body) when is_map(body), do: {:ok, body}
   defp decode_oauth_body(other), do: {:error, {:unexpected_body, other}}
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def process_user(provider, user_info) do
     UserProcessor.process_user(provider, user_info)
   end
 
   # --- Registration & Requirements ---
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def registration_complete?(provider, user) do
     UserRegistration.registration_complete?(provider, user)
   end
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def check_oauth_requirements(provider, user) do
     UserRegistration.check_oauth_requirements(provider, user)
   end
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def find_existing_user(provider, user) do
     UserRegistration.find_existing_user(provider, user)
   end
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def create_oauth_user(provider, oauth_user, profile_params \\ %{}, opts \\ []) do
     UserRegistration.create_oauth_user(provider, oauth_user, profile_params, opts)
   end
 
   # --- State Management ---
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def generate_and_store_state(conn), do: State.generate_and_store_state(conn)
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def validate_state(conn, received_state), do: State.validate_state(conn, received_state)
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def clear_oauth_state(conn), do: State.clear_oauth_state(conn)
 
   # --- URL Helpers ---
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def get_callback_url(provider), do: URLs.callback_path(provider)
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def get_full_callback_url_from_conn(conn, relative_path),
     do: URLs.callback_url(conn, relative_path)
 
   # --- Flow Handling ---
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def handle_oauth_callback(conn, params) when is_map(params) do
     FlowHandler.handle_oauth_callback(conn, params)
   end
 
-  @impl true
+  @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def handle_oauth_callback(conn, code, state, provider, opts) do
     params = %{code: code, state: state, provider: provider, opts: opts}
     handle_oauth_callback(conn, params)

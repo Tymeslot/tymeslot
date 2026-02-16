@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ChangesetUtils
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     socket = assign(socket, assigns)
 
@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("validate_avatar", _params, socket) do
     {:noreply, socket}
   end
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
     socket
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id="avatar-upload-container" class="lg:col-span-1 space-y-8 text-center pt-4">

@@ -13,13 +13,13 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Security.RateLimiter
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :mirotalk
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "MiroTalk P2P"
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
     %{
       api_key: %{type: :string, required: true, description: "API key for MiroTalk server"},
@@ -27,7 +27,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     }
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def validate_config(config) do
     required_fields = [:api_key, :base_url]
     missing_fields = required_fields -- Map.keys(config)
@@ -43,7 +43,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def capabilities do
     %{
       recording: false,
@@ -61,7 +61,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   @doc """
   Tests the connection to the MiroTalk API.
   """
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def test_connection(config, opts \\ []) do
     # Extract IP address for rate limiting
     ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
@@ -191,7 +191,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   Returns {:ok, meeting_url} on success or {:error, reason} on failure.
   """
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
     base_url = Map.get(config, :base_url)
 
@@ -236,7 +236,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, participant_email, role, meeting_time) do
     room_id = room_data[:room_id] || room_data["room_id"]
     config = room_data[:provider_config] || room_data["provider_config"]
@@ -455,7 +455,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   @spec sanitize_input(term()) :: String.t()
   def sanitize_input(_), do: ""
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) and meeting_url != "" do
     # MiroTalk API returns the full meeting URL, but the 'room' parameter
     # and JWT payload expect only the room name (the last part of the URL).
@@ -473,7 +473,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   def extract_room_id(_), do: nil
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def valid_meeting_url?(meeting_url) do
     case URI.parse(meeting_url) do
       %URI{scheme: scheme, host: host}
@@ -485,12 +485,12 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(_event, _room_data, _additional_data) do
     :ok
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def generate_meeting_metadata(room_data) do
     %{
       provider: "mirotalk",

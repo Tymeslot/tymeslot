@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Telemetry do
     Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
   end
 
-  @impl true
+  @impl Supervisor
   @spec init(term()) :: {:ok, {Supervisor.sup_flags(), [Supervisor.child_spec()]}} | :ignore
   def init(_arg) do
     children = [

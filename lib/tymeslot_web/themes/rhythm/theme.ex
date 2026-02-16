@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
 
   alias TymeslotWeb.Themes.Rhythm.Meeting.{Cancel, CancelConfirmed, Reschedule}
 
-  @impl true
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def states do
     %{
       overview: %{step: 1, next: :schedule, prev: nil},
@@ -24,10 +24,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
     }
   end
 
-  @impl true
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def css_file, do: "/assets/scheduling-theme-rhythm.css"
 
-  @impl true
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def components do
     %{
       overview: OverviewComponent,
@@ -37,12 +37,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
     }
   end
 
-  @impl true
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def live_view_module do
     TymeslotWeb.Themes.Rhythm.Scheduling.Live
   end
 
-  @impl true
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def theme_config do
     %{
       name: "Rhythm",
@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
     }
   end
 
-  @impl true
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def validate_theme do
     required_components = [:overview, :schedule, :booking, :confirmation]
 
@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
     end
   end
 
-  @impl true
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def initial_state_for_action(live_action) do
     case live_action do
       :index -> :overview
@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
     end
   end
 
-  @impl true
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def supports_feature?(feature) do
     case feature do
       :duration_selection -> true
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Theme do
     end
   end
 
-  @impl true
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def render_meeting_action(assigns, action) do
     case action do
       :reschedule -> Reschedule.render(assigns)

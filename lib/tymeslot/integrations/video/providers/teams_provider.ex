@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   @graph_api_base_url "https://graph.microsoft.com/v1.0"
   @teams_url_pattern ~r/teams\.microsoft\.com\/l\/meetup-join\//
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
     Logger.info("Creating Microsoft Teams meeting room")
 
@@ -50,7 +50,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, participant_name, _participant_email, _role, _meeting_time) do
     base_url = room_data.meeting_url
 
@@ -64,7 +64,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     {:ok, url}
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) do
     case Regex.run(~r/meetup-join\/([^\/\?]+)/, meeting_url) do
       [_, encoded_id] -> String.slice(encoded_id, 0, 20)
@@ -78,12 +78,12 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
   def extract_room_id(_), do: nil
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def valid_meeting_url?(meeting_url) do
     meeting_url =~ @teams_url_pattern
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def test_connection(config) do
     case get_access_token(config) do
       {:ok, _token} ->
@@ -94,13 +94,13 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :teams
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def display_name, do: "Microsoft Teams"
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def config_schema do
     %{
       access_token: %{type: :string, required: true, description: "Microsoft OAuth access token"},
@@ -113,7 +113,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     }
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def validate_config(config) do
     ProviderConfigHelper.validate_required_fields(config, [
       :access_token,
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     ])
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def capabilities do
     %{
       supports_instant_meetings: false,
@@ -141,7 +141,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     }
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def handle_meeting_event(:meeting_ended, room_data, _additional_data) do
     Logger.info("Teams meeting ended: #{room_data.room_id}")
     :ok
@@ -151,7 +151,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     :ok
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def generate_meeting_metadata(room_data) do
     %{
       provider: "teams",

@@ -158,31 +158,31 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
       @display_name unquote(display_name)
       @base_url unquote(base_url)
 
-      @impl true
+      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
       def provider_type, do: String.to_existing_atom(@provider_name)
 
-      @impl true
+      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
       def display_name, do: @display_name
 
-      @impl true
+      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
       def config_schema, do: OAuthBase.config_schema()
 
-      @impl true
+      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
       def new(config) do
         OAuthBase.new(config, &validate_oauth_scope/1)
       end
 
-      @impl true
+      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
       def validate_config(config) do
         OAuthBase.validate_config(config, &validate_oauth_scope/1)
       end
 
-      @impl true
+      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
       def get_events(integration) do
         get_events(integration, nil, nil)
       end
 
-      @impl true
+      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
       def get_events(integration, start_time, end_time) do
         start_time = start_time || default_start_time()
         end_time = end_time || default_end_time()
@@ -193,7 +193,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         )
       end
 
-      @impl true
+      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
       def create_event(integration, event_attrs) do
         OAuthBase.handle_api_call(
           fn -> call_create_event(integration, event_attrs) end,
@@ -201,7 +201,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         )
       end
 
-      @impl true
+      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
       def update_event(integration, event_id, event_attrs) do
         OAuthBase.handle_api_call(
           fn -> call_update_event(integration, event_id, event_attrs) end,
@@ -209,7 +209,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         )
       end
 
-      @impl true
+      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
       def delete_event(integration, event_id) do
         OAuthBase.handle_api_call(fn -> call_delete_event(integration, event_id) end)
       end

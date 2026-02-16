@@ -7,10 +7,10 @@ defmodule TymeslotWeb.Plugs.ThemeProtectionPlug do
   """
   @behaviour Plug
 
-  @impl true
+  @impl Plug
   def init(opts), do: opts
 
-  @impl true
+  @impl Plug
   def call(conn, _opts) do
     # Get any extra protection plugs from configuration
     plugs = Application.get_env(:tymeslot, :extra_theme_protection_plugs, [])

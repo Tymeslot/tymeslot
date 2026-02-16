@@ -43,7 +43,7 @@ defmodule CredoChecks.Phoenix.UsePSigil do
   alias Credo.SourceFile
 
   @doc false
-  @impl true
+  @impl Credo.Check
   def run(%SourceFile{} = source_file, params) do
     mode = params[:mode] || :moderate
     check_href? = params[:check_href?] || false

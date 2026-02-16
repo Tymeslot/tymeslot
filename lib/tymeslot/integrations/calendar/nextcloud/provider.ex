@@ -18,17 +18,17 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Security.RateLimiter
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def provider_type, do: :nextcloud
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def display_name, do: "Nextcloud"
 
   @doc "Returns the LiveComponent module for provider configuration UI"
   @spec setup_component() :: module()
   def setup_component, do: TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def config_schema do
     %{
       base_url: %{
@@ -54,7 +54,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
     }
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def validate_config(config) do
     # Extract username from URL if it's a calendar URL
     config = maybe_extract_username_from_url(config)
@@ -101,7 +101,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def new(config) do
     # Extract username from URL if it's a calendar URL
     config = maybe_extract_username_from_url(config)
@@ -190,19 +190,19 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   end
 
   # Delegate CalDAV operations to the generic CalDAV provider
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   defdelegate get_events(client), to: CalDAVProvider
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   defdelegate get_events(client, start_time, end_time), to: CalDAVProvider
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   defdelegate create_event(client, event_data), to: CalDAVProvider
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   defdelegate update_event(client, uid, event_data), to: CalDAVProvider
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   defdelegate delete_event(client, uid), to: CalDAVProvider
 
   # Private helper functions

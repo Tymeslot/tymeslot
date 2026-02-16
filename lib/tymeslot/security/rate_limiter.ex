@@ -16,7 +16,7 @@ defmodule Tymeslot.Security.RateLimiter do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  @impl true
+  @impl GenServer
   @spec init(term()) :: {:ok, map()}
   def init(_) do
     Logger.info("Starting RateLimiter with ETS table", table: @table_name)
@@ -24,7 +24,7 @@ defmodule Tymeslot.Security.RateLimiter do
     {:ok, %{}}
   end
 
-  @impl true
+  @impl GenServer
   @spec handle_call(
           {:check_rate, bucket_key(), pos_integer(), pos_integer(), integer(), integer()},
           GenServer.from(),
@@ -69,7 +69,7 @@ defmodule Tymeslot.Security.RateLimiter do
     {:reply, result, state}
   end
 
-  @impl true
+  @impl GenServer
   @spec handle_call({:clear_bucket, bucket_key()}, GenServer.from(), map()) ::
           {:reply, :ok, map()}
   def handle_call({:clear_bucket, bucket_key}, _from, state) do
@@ -77,7 +77,7 @@ defmodule Tymeslot.Security.RateLimiter do
     {:reply, :ok, state}
   end
 
-  @impl true
+  @impl GenServer
   @spec handle_call(:clear_all, GenServer.from(), map()) :: {:reply, :ok, map()}
   def handle_call(:clear_all, _from, state) do
     :ets.delete_all_objects(@table_name)

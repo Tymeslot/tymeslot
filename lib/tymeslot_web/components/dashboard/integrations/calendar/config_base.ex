@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
 
   defp track_form_change_handler_quote do
     quote do
-      @impl true
+      @impl Phoenix.LiveComponent
       def handle_event("track_form_change", %{"integration" => params}, socket) do
         {:noreply, Component.assign(socket, :form_values, params)}
       end
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
 
   defp validate_field_handler_quote do
     quote do
-      @impl true
+      @impl Phoenix.LiveComponent
       def handle_event("validate_field", %{"field" => field} = params, socket) do
         form_values = socket.assigns.form_values || %{}
         integration_params = params["integration"] || form_values
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
 
   defp discover_calendars_handler_quote do
     quote do
-      @impl true
+      @impl Phoenix.LiveComponent
       def handle_event("discover_calendars", %{"integration" => params}, socket) do
         socket = Component.assign(socket, :saving, true)
 

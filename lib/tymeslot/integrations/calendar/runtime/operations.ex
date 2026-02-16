@@ -16,42 +16,42 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
   alias Tymeslot.Integrations.Calendar.Runtime.EventOperations
   alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def list_events_in_range(user_id, start_date_or_dt, end_date_or_dt) do
     EventQueries.list_events_in_range(user_id, start_date_or_dt, end_date_or_dt)
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_events_for_range_fresh(user_id, start_date, end_date) do
     EventQueries.get_events_for_range_fresh(user_id, start_date, end_date)
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_events_for_month(user_id, year, month, timezone) do
     EventQueries.get_events_for_month(user_id, year, month, timezone)
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_event(uid, user_id \\ nil) do
     EventOperations.get_event(uid, user_id)
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def create_event(event_data, context) do
     EventOperations.create_event(event_data, context)
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def update_event(uid, event_data, context) do
     EventOperations.update_event(uid, event_data, context)
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def delete_event(uid, context) do
     EventOperations.delete_event(uid, context)
   end
 
-  @impl true
+  @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_booking_integration_info(context) do
     ClientManager.get_booking_integration_info(context)
   end

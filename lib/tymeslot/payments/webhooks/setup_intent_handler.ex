@@ -6,12 +6,12 @@ defmodule Tymeslot.Payments.Webhooks.SetupIntentHandler do
 
   require Logger
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type) do
     event_type in ["setup_intent.created", "setup_intent.succeeded"]
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(setup_intent) do
     case Map.get(setup_intent, "id") do
       nil -> {:error, :missing_field, "Setup intent ID missing"}
@@ -20,7 +20,7 @@ defmodule Tymeslot.Payments.Webhooks.SetupIntentHandler do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, setup_intent) do
     event_type = event["type"] || event[:type]
     setup_intent_id = setup_intent["id"]

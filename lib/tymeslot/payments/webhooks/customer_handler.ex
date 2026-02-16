@@ -7,10 +7,10 @@ defmodule Tymeslot.Payments.Webhooks.CustomerHandler do
 
   require Logger
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type), do: event_type in ["customer.created", "customer.updated"]
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def validate(customer) do
     # Check for id field with both string and atom keys
     case Map.get(customer, "id") || Map.get(customer, :id) do
@@ -22,13 +22,13 @@ defmodule Tymeslot.Payments.Webhooks.CustomerHandler do
     end
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(%{type: "customer.created"}, customer) do
     Logger.info("Processing customer.created", customer_id: Map.get(customer, "id"))
     {:ok, :customer_created}
   end
 
-  @impl true
+  @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(%{type: "customer.updated"}, customer) do
     Logger.info("Processing customer.updated", customer_id: Map.get(customer, "id"))
     {:ok, :customer_updated}

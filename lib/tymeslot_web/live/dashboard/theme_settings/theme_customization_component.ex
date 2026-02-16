@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
           optional(:parent_component) => term()
         }
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec mount(Socket.t()) :: {:ok, Socket.t()}
   def mount(socket) do
     socket =
@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec update(map(), Socket.t()) :: {:ok, Socket.t()}
   def update(%{consume_upload: type}, socket) do
     # Handle async consumption from progress handlers
@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
      |> assign_new(:browsing_type, fn -> customization.background_type end)}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-8" phx-hook="AutoUpload" id="theme-customization-uploads">
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     """
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   @spec handle_event(String.t(), map(), Socket.t()) :: {:noreply, Socket.t()}
   def handle_event("theme:select_color_scheme", %{"scheme" => scheme_id}, socket) do
     case ThemeCustomizations.apply_color_scheme_change(

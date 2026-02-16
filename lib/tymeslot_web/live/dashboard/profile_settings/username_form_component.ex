@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     {:ok,
      socket
@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
      |> assign(:form_errors, %{})}
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def handle_event("check_username_availability", %{"username" => username}, socket) do
     metadata = DashboardHelpers.get_security_metadata(socket)
     socket = update_username_availability(socket, username, metadata)
@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     end
   end
 
-  @impl true
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div id="username-form-container">

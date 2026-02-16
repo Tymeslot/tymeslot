@@ -116,13 +116,13 @@ defmodule Tymeslot.Integrations.Shared.Lock do
 
   # Server Callbacks
 
-  @impl true
+  @impl GenServer
   def init(_opts) do
     :ets.new(@table, [:set, :protected, :named_table, {:read_concurrency, true}])
     {:ok, %{monitors: %{}, refs: %{}}}
   end
 
-  @impl true
+  @impl GenServer
   def handle_call({:acquire, key}, {from_pid, _tag}, state) do
     ensure_table_exists()
     now = System.monotonic_time(:millisecond)
@@ -172,7 +172,7 @@ defmodule Tymeslot.Integrations.Shared.Lock do
     end
   end
 
-  @impl true
+  @impl GenServer
   def handle_call({:test_put_lock, key, timestamp, pid}, _from, state) do
     ensure_table_exists()
 
@@ -186,7 +186,7 @@ defmodule Tymeslot.Integrations.Shared.Lock do
     {:reply, :ok, state}
   end
 
-  @impl true
+  @impl GenServer
   def handle_cast({:release, key, pid}, state) do
     ensure_table_exists()
 
@@ -201,7 +201,7 @@ defmodule Tymeslot.Integrations.Shared.Lock do
     end
   end
 
-  @impl true
+  @impl GenServer
   def handle_info({:DOWN, ref, :process, pid, _reason}, state) do
     ensure_table_exists()
 
