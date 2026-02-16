@@ -80,7 +80,7 @@ defmodule Tymeslot.Themes.Theme do
     theme_id = to_string(id)
 
     with true <- Registry.valid_theme_id?(theme_id),
-         module when not is_nil(module) <- get_theme_module(theme_id),
+         module when is_atom(module) <- get_theme_module(theme_id),
          :ok <- module.validate_theme() do
       true
     else

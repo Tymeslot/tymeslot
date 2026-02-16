@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
       socket = Helpers.handle_username_resolution(socket, params["username"])
 
       case socket.assigns do
-        %{organizer_profile: profile} when not is_nil(profile) ->
+        %{organizer_profile: %{} = profile} ->
           mount_with_profile(profile, params, session, socket)
 
         %{error: error} ->

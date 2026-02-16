@@ -318,8 +318,8 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       oauth_scope: Map.get(new_config, :oauth_scope)
     }
 
-    with id when not is_nil(id) <- integration_id,
-         uid when not is_nil(uid) <- user_id,
+    with id when is_integer(id) <- integration_id,
+         uid when is_integer(uid) <- user_id,
          {:ok, integration} <- VideoIntegrationQueries.get_for_user(id, uid),
          {:ok, _} <- VideoIntegrationQueries.update(integration, attrs) do
       :ok

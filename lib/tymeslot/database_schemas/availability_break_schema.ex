@@ -55,9 +55,9 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityBreakSchema do
   end
 
   defp validate_within_work_hours(changeset) do
-    with id when not is_nil(id) <- get_field(changeset, :weekly_availability_id),
-         start_time when not is_nil(start_time) <- get_field(changeset, :start_time),
-         end_time when not is_nil(end_time) <- get_field(changeset, :end_time),
+    with id when is_integer(id) <- get_field(changeset, :weekly_availability_id),
+         %Time{} = start_time <- get_field(changeset, :start_time),
+         %Time{} = end_time <- get_field(changeset, :end_time),
          {wa_start, wa_end} <- AvailabilityBreakQueries.get_work_hours(id) do
       changeset =
         if wa_start && Time.compare(start_time, wa_start) == :lt do

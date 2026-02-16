@@ -82,7 +82,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   defp validate_url_format(url) do
     case URI.parse(url) do
-      %URI{scheme: scheme, host: host} when scheme in ["http", "https"] and not is_nil(host) ->
+      %URI{scheme: scheme, host: host} when scheme in ["http", "https"] and is_binary(host) ->
         :ok
 
       _ ->

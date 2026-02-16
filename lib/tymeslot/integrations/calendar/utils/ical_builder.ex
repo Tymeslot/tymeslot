@@ -246,41 +246,41 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   end
 
   defp maybe_add_property(properties, :description, %{description: description})
-       when not is_nil(description) do
+       when is_binary(description) do
     properties ++ ["DESCRIPTION:#{escape_text(description)}"]
   end
 
   defp maybe_add_property(properties, :location, %{location: location})
-       when not is_nil(location) do
+       when is_binary(location) do
     properties ++ ["LOCATION:#{escape_text(location)}"]
   end
 
-  defp maybe_add_property(properties, :status, %{status: status}) when not is_nil(status) do
+  defp maybe_add_property(properties, :status, %{status: status}) when is_binary(status) do
     properties ++ ["STATUS:#{status}"]
   end
 
   defp maybe_add_property(properties, :transparency, %{transparency: transparency})
-       when not is_nil(transparency) do
+       when is_binary(transparency) do
     properties ++ ["TRANSP:#{transparency}"]
   end
 
   defp maybe_add_property(properties, :categories, %{categories: categories})
-       when not is_nil(categories) do
+       when is_list(categories) do
     categories_str = Enum.join(categories, ",")
     properties ++ ["CATEGORIES:#{escape_text(categories_str)}"]
   end
 
-  defp maybe_add_property(properties, :url, %{url: url}) when not is_nil(url) do
+  defp maybe_add_property(properties, :url, %{url: url}) when is_binary(url) do
     properties ++ ["URL:#{url}"]
   end
 
   defp maybe_add_property(properties, :organizer, %{organizer: organizer})
-       when not is_nil(organizer) do
+       when is_binary(organizer) do
     properties ++ ["ORGANIZER:mailto:#{organizer}"]
   end
 
   defp maybe_add_property(properties, :recurrence, %{recurrence: recurrence})
-       when not is_nil(recurrence) do
+       when is_map(recurrence) do
     case build_rrule(recurrence) do
       nil -> properties
       rrule -> properties ++ [rrule]

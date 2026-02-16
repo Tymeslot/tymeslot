@@ -75,7 +75,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
           {:ok, %{integration_id: integration_id(), calendar_path: String.t()}}
           | {:error, atom()}
   def get_booking_integration_info(%MeetingSchema{} = meeting) do
-    if not is_nil(meeting.calendar_integration_id) and not is_nil(meeting.calendar_path) do
+    if is_integer(meeting.calendar_integration_id) and is_binary(meeting.calendar_path) do
       case CalendarIntegrationQueries.get_for_user(
              meeting.calendar_integration_id,
              meeting.organizer_user_id
@@ -96,7 +96,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   end
 
   def get_booking_integration_info(%MeetingTypeSchema{} = mt) do
-    if not is_nil(mt.calendar_integration_id) and not is_nil(mt.target_calendar_id) do
+    if is_integer(mt.calendar_integration_id) and is_binary(mt.target_calendar_id) do
       case CalendarIntegrationQueries.get_for_user(mt.calendar_integration_id, mt.user_id) do
         {:ok, integration} when integration.is_active ->
           {:ok,
@@ -171,7 +171,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   def resolve_client(context) do
     case context do
       %MeetingSchema{calendar_integration_id: integration_id, organizer_user_id: user_id}
-      when not is_nil(integration_id) ->
+      when is_integer(integration_id) ->
         get_client_by_integration_id(integration_id, user_id)
 
       {integration_id, user_id} when is_integer(integration_id) and is_integer(user_id) ->
@@ -295,7 +295,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
 
   defp resolve_booking_integration(%MeetingSchema{} = meeting) do
     cond do
-      not is_nil(meeting.calendar_integration_id) ->
+      is_integer(meeting.calendar_integration_id) ->
         case CalendarIntegrationQueries.get_for_user(
                meeting.calendar_integration_id,
                meeting.organizer_user_id
@@ -308,7 +308,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
             resolve_booking_integration(meeting.organizer_user_id)
         end
 
-      not is_nil(meeting.organizer_user_id) ->
+      is_integer(meeting.organizer_user_id) ->
         resolve_booking_integration(meeting.organizer_user_id)
 
       true ->
@@ -318,7 +318,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
 
   defp resolve_booking_integration(%MeetingTypeSchema{} = meeting_type) do
     cond do
-      not is_nil(meeting_type.calendar_integration_id) ->
+      is_integer(meeting_type.calendar_integration_id) ->
         case CalendarIntegrationQueries.get_for_user(
                meeting_type.calendar_integration_id,
                meeting_type.user_id
@@ -331,7 +331,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
             resolve_booking_integration(meeting_type.user_id)
         end
 
-      not is_nil(meeting_type.user_id) ->
+      is_integer(meeting_type.user_id) ->
         resolve_booking_integration(meeting_type.user_id)
 
       true ->
@@ -341,7 +341,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
 
   defp resolve_booking_integration(user_id) when is_integer(user_id) do
     case CalendarPrimary.get_primary_calendar_integration(user_id) do
-      {:ok, integration} when not is_nil(integration.default_booking_calendar_id) ->
+      {:ok, %{default_booking_calendar_id: cal_id} = integration} when is_binary(cal_id) ->
         integration
 
       {:ok, integration} ->

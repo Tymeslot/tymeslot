@@ -60,8 +60,7 @@ defmodule Tymeslot.Availability.Calculate do
           end
 
         case result do
-          {:ok, %{start_datetime: start_dt, end_datetime: end_dt}}
-          when not is_nil(start_dt) and not is_nil(end_dt) ->
+          {:ok, %{start_datetime: %DateTime{} = start_dt, end_datetime: %DateTime{} = end_dt}} ->
             # Only include windows that overlap with the user's selected date
             if DateTime.to_date(start_dt) == date or DateTime.to_date(end_dt) == date do
               [%{start_dt: start_dt, end_dt: end_dt, date: d}]
@@ -314,7 +313,7 @@ defmodule Tymeslot.Availability.Calculate do
   # Private functions
 
   defp get_breaks_for_day(date, config) do
-    with profile_id when not is_nil(profile_id) <- Map.get(config, :profile_id),
+    with profile_id when is_integer(profile_id) <- Map.get(config, :profile_id),
          day_of_week <- Date.day_of_week(date),
          %{breaks: breaks} when is_list(breaks) <-
            WeeklySchedule.get_day_availability(profile_id, day_of_week) do
@@ -399,7 +398,7 @@ defmodule Tymeslot.Availability.Calculate do
       end
 
     case result do
-      {:ok, %{end_datetime: end_dt}} when not is_nil(end_dt) ->
+      {:ok, %{end_datetime: %DateTime{} = end_dt}} ->
         # Today is available if current time is before business end time (minus min_advance_hours)
         min_advance_hours = Map.get(config, :min_advance_hours, 0)
         latest_start = DateTime.add(end_dt, -min_advance_hours * 60, :minute)

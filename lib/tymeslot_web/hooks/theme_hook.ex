@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Hooks.ThemeHook do
       # For username-based routes, resolve from profile
       params["username"] ->
         case Profiles.get_profile_by_username(params["username"]) do
-          %{booking_theme: theme} when not is_nil(theme) -> theme
+          %{booking_theme: theme} when is_binary(theme) -> theme
           _ -> "1"
         end
 

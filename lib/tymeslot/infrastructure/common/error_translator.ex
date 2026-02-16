@@ -284,7 +284,7 @@ defmodule Tymeslot.Infrastructure.Common.ErrorTranslator do
   """
   @spec should_retry?(translated_error()) :: boolean()
   def should_retry?(%{severity: :transient, retry_after: retry_after})
-      when not is_nil(retry_after) do
+      when is_integer(retry_after) do
     true
   end
 

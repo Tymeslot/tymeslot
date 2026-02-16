@@ -270,8 +270,8 @@ defmodule TymeslotWeb.OnboardingLive do
   """
   def handle_event("focus_custom_input", %{"setting" => setting}, socket) do
     # Defensive nil checks to prevent crashes with invalid settings or missing profile
-    with config when not is_nil(config) <- StepConfig.custom_input_config()[setting],
-         profile when not is_nil(profile) <- socket.assigns[:profile] do
+    with %{} = config <- StepConfig.custom_input_config()[setting],
+         %{} = profile <- socket.assigns[:profile] do
       current = Map.get(profile, config.field) || config.constraints.default_custom
 
       # If current is a preset, use custom default; otherwise keep current custom value

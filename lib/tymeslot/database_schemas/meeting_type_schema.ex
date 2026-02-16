@@ -122,14 +122,14 @@ defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchema do
     target_id = get_field(changeset, :target_calendar_id)
 
     case {integration_id, target_id} do
-      {id, nil} when not is_nil(id) ->
+      {id, nil} when is_integer(id) ->
         add_error(
           changeset,
           :target_calendar_id,
           "is required when a calendar integration is selected"
         )
 
-      {nil, tid} when not is_nil(tid) ->
+      {nil, tid} when is_binary(tid) ->
         add_error(
           changeset,
           :calendar_integration_id,

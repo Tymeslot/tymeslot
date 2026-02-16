@@ -118,8 +118,9 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
 
     {calendar_integration_id, target_calendar_id} =
       case CalendarPrimary.get_primary_calendar_integration(user_id) do
-        {:ok, integration} when not is_nil(integration.default_booking_calendar_id) ->
-          {integration.id, integration.default_booking_calendar_id}
+        {:ok, %{default_booking_calendar_id: cal_id} = integration}
+        when is_binary(cal_id) ->
+          {integration.id, cal_id}
 
         _ ->
           {nil, nil}

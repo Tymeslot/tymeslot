@@ -194,7 +194,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     slug = normalize_duration_param(params)
 
     with {:username_context, true} <- {:username_context, !!socket.assigns[:username_context]},
-         {:slug, slug} when not is_nil(slug) <- {:slug, slug},
+         {:slug, slug} when is_binary(slug) <- {:slug, slug},
          {:meeting_type, nil} <-
            {:meeting_type,
             ThemeFlow.resolve_meeting_type_for_slug(socket.assigns[:organizer_user_id], slug)} do

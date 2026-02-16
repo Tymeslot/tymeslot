@@ -178,14 +178,14 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   @spec format_meeting_time(map()) :: String.t()
   def format_meeting_time(details) do
     case details do
-      %{start_time: start_time, timezone: timezone} when not is_nil(start_time) ->
+      %{start_time: %DateTime{} = start_time, timezone: timezone} ->
         formatted_time = SharedHelpers.format_time(start_time)
 
         if timezone && timezone != "UTC",
           do: "#{formatted_time} (#{timezone})",
           else: formatted_time
 
-      %{start_time: start_time} when not is_nil(start_time) ->
+      %{start_time: %DateTime{} = start_time} ->
         SharedHelpers.format_time(start_time)
 
       _ ->
