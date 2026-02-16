@@ -1,0 +1,598 @@
+/* Reusable UI Components for Quill Theme */
+
+/* ============================================
+   SURFACE & ELEVATION SYSTEM
+   ============================================ */
+
+/* Surface utilities for glassmorphism effects */
+.surface-transparent {
+  background: var(--surface-transparent);
+}
+
+.surface-subtle {
+  background: var(--surface-subtle);
+}
+
+.surface-very-light {
+  background: var(--surface-very-light);
+}
+
+.surface-light {
+  background: var(--surface-light);
+}
+
+.surface-medium-light {
+  background: var(--surface-medium-light);
+}
+
+.surface-medium {
+  background: var(--surface-medium);
+}
+
+.surface-strong {
+  background: var(--surface-strong);
+}
+
+.surface-intense {
+  background: var(--surface-intense);
+}
+
+/* Backdrop blur utilities */
+.blur-none {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.blur-sm {
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+}
+
+.blur-md {
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+}
+
+.blur-lg {
+  backdrop-filter: blur(var(--glass-blur-lg));
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+}
+
+.blur-xl {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+/* Elevation utilities combining surface + shadow + blur */
+.elevation-1 {
+  background: var(--surface-light);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  box-shadow: var(--shadow-sm);
+  border: var(--border-width-thin) solid var(--border-subtle);
+}
+
+.elevation-2 {
+  background: var(--surface-medium);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  box-shadow: var(--shadow-md);
+  border: var(--border-width-thin) solid var(--border-medium);
+}
+
+.elevation-3 {
+  background: var(--surface-strong);
+  backdrop-filter: blur(var(--glass-blur-lg));
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+  box-shadow: var(--shadow-lg);
+  border: var(--border-width-thin) solid var(--border-strong);
+}
+
+.elevation-4 {
+  background: var(--surface-intense);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-xl);
+  border: var(--border-width-medium) solid var(--border-intense);
+}
+
+/* ============================================
+   INTERACTIVE STATE BASE PATTERNS
+   ============================================ */
+
+/* Base interactive element */
+.interactive {
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.interactive:hover {
+  transform: translateY(-1px);
+}
+
+.interactive:active {
+  transform: translateY(0);
+}
+
+/* Hover lift utility - subtle elevation on hover */
+.hover-lift {
+  transition: all var(--transition-smooth);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.hover-lift:active {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Hover scale utility */
+.hover-scale {
+  transition: transform var(--transition-normal);
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+.hover-scale:active {
+  transform: scale(0.98);
+}
+
+/* Hover glow utility */
+.hover-glow:hover {
+  box-shadow:
+    var(--shadow-md),
+    0 0 20px var(--theme-primary-focus);
+}
+
+/* Disabled states */
+.interactive:disabled,
+.interactive[disabled],
+.interactive.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  pointer-events: none;
+}
+
+/* Selection state pattern */
+.selectable {
+  transition: all var(--transition-smooth);
+  cursor: pointer;
+}
+
+.selectable:hover {
+  background: var(--surface-medium);
+  border-color: var(--theme-primary);
+}
+
+.selectable.is-selected,
+.selectable[aria-selected="true"] {
+  background: linear-gradient(135deg, var(--theme-primary-focus) 0%, var(--theme-primary) 100%);
+  border-color: var(--theme-primary);
+  box-shadow: var(--shadow-primary-md);
+  color: white;
+}
+
+/* Focus visible for keyboard navigation */
+.interactive:focus-visible,
+.selectable:focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
+}
+
+/* Remove focus outline for mouse users */
+.interactive:focus:not(:focus-visible),
+.selectable:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================
+   ICON UTILITIES
+   ============================================ */
+
+/* Icon wrapper for proper styling */
+.icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+}
+
+/* Icon sizing utilities */
+.icon-2xs {
+  width: var(--icon-2xs);
+  height: var(--icon-2xs);
+}
+
+.icon-xs {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.icon-sm {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.icon-md {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+.icon-lg {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+}
+
+.icon-xl {
+  width: var(--icon-xl);
+  height: var(--icon-xl);
+}
+
+.icon-2xl {
+  width: var(--icon-2xl);
+  height: var(--icon-2xl);
+}
+
+/* ============================================
+   BADGE COMPONENTS
+   ============================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3xs) var(--space-xs);
+  border-radius: var(--radius-full);
+  font-size: var(--theme-font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.badge-primary {
+  background: var(--theme-primary);
+  color: white;
+  box-shadow: var(--shadow-primary-sm);
+}
+
+.badge-success {
+  background: var(--theme-success);
+  color: white;
+  box-shadow: var(--shadow-success-sm);
+}
+
+.badge-warning {
+  background: var(--theme-warning);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.badge-danger {
+  background: var(--theme-danger);
+  color: white;
+  box-shadow: var(--shadow-danger-sm);
+}
+
+.badge-neutral {
+  background: var(--surface-strong);
+  color: var(--text-opacity-high);
+  border: var(--border-width-thin) solid var(--border-medium);
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.loading-bounce {
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Loading container */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  color: var(--text-opacity-medium);
+}
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-light) 0%,
+    var(--surface-medium) 50%,
+    var(--surface-light) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ============================================
+   EMPTY & ERROR STATES
+   ============================================ */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3xl) var(--space-lg);
+  text-align: center;
+  color: var(--text-opacity-medium);
+}
+
+.empty-state-icon {
+  width: var(--icon-2xl);
+  height: var(--icon-2xl);
+  margin-bottom: var(--space-md);
+  color: var(--text-opacity-subtle);
+  opacity: 0.6;
+}
+
+.empty-state-title {
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-opacity-high);
+  margin-bottom: var(--space-xs);
+}
+
+.empty-state-description {
+  font-size: var(--theme-font-size-sm);
+  color: var(--text-opacity-medium);
+  max-width: 400px;
+}
+
+/* Error state */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+  background: var(--theme-error-bg);
+  border: var(--border-width-thin) solid var(--theme-error-border);
+  border-radius: var(--radius-lg);
+  color: var(--theme-error-light);
+  text-align: center;
+}
+
+.error-state-icon {
+  width: var(--icon-xl);
+  height: var(--icon-xl);
+  color: var(--theme-danger);
+}
+
+.error-state-title {
+  font-size: var(--theme-font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: white;
+}
+
+.error-state-message {
+  font-size: var(--theme-font-size-sm);
+  color: var(--text-opacity-medium-high);
+}
+
+/* ============================================
+   DIVIDER
+   ============================================ */
+
+.divider {
+  height: var(--border-width-thin);
+  background: var(--border-subtle);
+  margin: var(--space-md) 0;
+}
+
+.divider-vertical {
+  width: var(--border-width-thin);
+  height: auto;
+  background: var(--border-subtle);
+  margin: 0 var(--space-md);
+}
+
+.divider-strong {
+  background: var(--border-medium);
+}
+
+/* ============================================
+   CARD COMPONENTS
+   ============================================ */
+
+.card {
+  background: var(--surface-light);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-smooth);
+}
+
+.card-interactive {
+  cursor: pointer;
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--theme-primary);
+}
+
+.card-header {
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-opacity-high);
+  margin-bottom: var(--space-md);
+}
+
+.card-body {
+  font-size: var(--theme-font-size-base);
+  color: var(--text-opacity-medium-high);
+  line-height: var(--theme-line-height-relaxed);
+}
+
+.card-footer {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: var(--border-width-thin) solid var(--border-subtle);
+}
+
+/* ============================================
+   TEXT UTILITIES
+   ============================================ */
+
+.text-primary {
+  color: var(--theme-primary);
+}
+
+.text-success {
+  color: var(--theme-success);
+}
+
+.text-warning {
+  color: var(--theme-warning);
+}
+
+.text-danger {
+  color: var(--theme-danger);
+}
+
+.text-muted {
+  color: var(--text-opacity-medium);
+}
+
+.text-subtle {
+  color: var(--text-opacity-low);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+.fade-in {
+  animation: fadeIn var(--transition-smooth);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp var(--transition-smooth);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scale-in {
+  animation: scaleIn var(--transition-normal);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================
+   TRUNCATE UTILITIES
+   ============================================ */
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

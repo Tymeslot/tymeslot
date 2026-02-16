@@ -1,81 +1,83 @@
 /* Responsive - All breakpoints and mobile adaptations */
+/* Organized by breakpoint with semantic selectors replacing fragile Tailwind class-string matchers */
 
-/* Base responsive container adjustments - Fixed breakpoint ranges */
-@media (min-width: 640px) and (max-width: 767px) {
-  .container {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  .container {
-    padding-left: 2rem;
-    padding-right: 2rem;
-  }
-}
-
-@media (min-width: 1024px) and (max-width: 1279px) {
-  .container {
-    padding-left: 2rem;
-    padding-right: 2rem;
-    max-width: 1024px;
-  }
-}
-
-@media (min-width: 1280px) and (max-width: 1535px) {
-  .container {
-    padding-left: 2rem;
-    padding-right: 2rem;
-    max-width: 1280px;
-  }
-}
-
-@media (min-width: 1536px) {
-  .container {
-    padding-left: 2rem;
-    padding-right: 2rem;
-    max-width: 1536px;
-  }
-}
-
-/* Responsive step indicator adjustments */
+/* ============================================================================
+   MOBILE (max-width: 640px)
+   ============================================================================ */
 @media (max-width: 640px) {
-  .quill-theme-wrapper [class*="flex items-center space-x-"] {
-    gap: 0.75rem;
+  /* Container */
+  .container {
+    padding-left: var(--space-lg);
+    padding-right: var(--space-lg);
   }
-  
-  .quill-theme-wrapper [class*="flex flex-col items-center"] > span:last-child {
-    font-size: 0.625rem;
-    margin-top: 0.375rem;
+
+  /* Step indicators */
+  .step-indicator-container {
+    gap: var(--space-md);
   }
-  
-  /* Smaller circles on mobile */
-  .quill-theme-wrapper .w-8.h-8 {
+
+  .step-item-wrapper .step-label {
+    font-size: var(--theme-font-size-2xs);
+    margin-top: var(--space-2xs);
+  }
+
+  /* Smaller step circles on mobile */
+  .step-circle {
     width: 1.75rem;
     height: 1.75rem;
   }
-  
-  /* Shorter connectors on mobile */
-  .quill-theme-wrapper [class*="w-4"][class*="sm:w-8"][class*="md:w-12"] {
+
+  /* Shorter step connectors on mobile */
+  .step-connector {
     width: 1rem;
   }
-}
 
-/* Mobile-specific fixes for booking flow */
-@media (max-width: 640px) {
-  /* Adjust glassmorphism padding on mobile */
-  div[style*="backdrop-filter"] > div {
-    padding: 1rem;
+  /* Step indicator container padding */
+  .step-indicator {
+    padding: 0 var(--space-xs);
   }
-  
-  /* Fix body overflow on mobile */
+
+  /* Calendar and scheduling */
+  .time-slot-button {
+    font-size: var(--theme-font-size-xs);
+    padding: var(--time-slot-padding-sm);
+    min-height: var(--time-slot-min-height-sm);
+  }
+
+  /* Time slots - no scrollbars on mobile, let page scroll naturally */
+  .slots-box {
+    overflow-y: visible;
+    height: auto;
+    max-height: none;
+  }
+
+  /* Language switcher */
+  .language-switcher {
+    position: fixed;
+    top: var(--space-lg);
+    right: var(--space-lg);
+    z-index: 1000;
+  }
+
+  .language-dropdown-quill {
+    width: var(--dropdown-width-sm);
+  }
+
+  /* Minimum tap target sizes on mobile */
+  .action-button,
+  .btn-primary,
+  .btn-secondary,
+  .time-slot-button,
+  .calendar-day {
+    min-height: var(--min-touch-target);
+  }
+
+  /* Layout and spacing */
   body {
     overflow-x: hidden;
     position: relative;
   }
-  
-  /* Ensure footer stays at bottom without extra space */
+
   .min-h-screen {
     min-height: 100vh;
     min-height: 100dvh; /* Dynamic viewport height */
@@ -83,124 +85,329 @@
     display: flex;
     flex-direction: column;
   }
-  
-  /* Fix step indicator spacing on mobile */
-  .step-indicator {
-    padding: 0 0.5rem;
+
+  /* Glass cards - let content determine height */
+  .glass-morphism-card:not(.step-navigation-card) {
+    min-height: auto;
   }
-  
-  /* Fix button group spacing */
-  .flex.gap-2 {
-    gap: 0.5rem;
-  }
-  
-  /* Ensure forms don't overflow */
+
+  /* Forms */
   form {
     max-width: 100%;
   }
-  
-  /* Fix timezone dropdown on mobile */
-  .relative .absolute {
+
+  /* Timezone selector compact on mobile */
+  .timezone-selector-wrapper {
     max-width: calc(100vw - 2rem);
   }
-  
-  /* Make timezone selector more compact on mobile */
-  .relative.w-full.md\:w-auto label {
-    margin-bottom: 0.25rem;
-    font-size: 0.75rem;
+}
+
+/* ============================================================================
+   TABLET (640px - 767px)
+   ============================================================================ */
+@media (min-width: 640px) and (max-width: 767px) {
+  .container {
+    padding-left: var(--space-xl);
+    padding-right: var(--space-xl);
   }
-  
-  .relative.w-full.md\:w-auto .group > div {
-    padding: 0.5rem 0.75rem;
+
+  /* Calendar */
+  .grid.grid-cols-7 {
+    gap: var(--calendar-gap-sm);
   }
-  
-  .relative.w-full.md\:w-auto .group .text-sm {
-    font-size: 0.813rem;
+
+  .calendar-day {
+    height: var(--calendar-day-height-sm);
+    min-height: var(--calendar-day-height-sm);
+    font-size: var(--theme-font-size-sm);
+    padding: var(--space-xs);
   }
-  
-  .relative.w-full.md\:w-auto .group .text-xs {
-    display: none;
-  }
-  
-  .relative.w-full.md\:w-auto .group svg.w-4 {
-    width: 0.875rem;
-    height: 0.875rem;
-  }
-  
-  .relative.w-full.md\:w-auto .group .px-2.py-1 {
-    padding: 0.125rem 0.375rem;
-    font-size: 0.625rem;
+
+  /* Language switcher */
+  .language-dropdown-quill {
+    width: var(--dropdown-width-md);
   }
 }
 
-/* Responsive adjustments for short screens */
+/* ============================================================================
+   DESKTOP (768px - 1023px)
+   ============================================================================ */
+@media (min-width: 768px) {
+  .container {
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+  }
+
+  /* Calendar */
+  .calendar-section {
+    padding: var(--space-2xl);
+  }
+
+  .calendar-day {
+    height: var(--calendar-day-height-md);
+    min-height: var(--calendar-day-height-md);
+    font-size: var(--theme-font-size-base);
+  }
+
+  /* Glass cards */
+  .glass-morphism-card.calendar-card {
+    min-height: var(--card-height-lg);
+  }
+
+  /* Time slots with scrollbars */
+  .slots-box {
+    overflow-y: auto;
+    min-height: 150px;
+  }
+
+  /* Form fields */
+  .form-field textarea[name="booking[message]"],
+  textarea[phx-value-field="message"] {
+    min-height: 8rem;
+    resize: vertical;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    max-width: none;
+  }
+
+  /* Language switcher */
+  .language-dropdown-quill {
+    width: var(--dropdown-width-md);
+  }
+}
+
+/* ============================================================================
+   LARGE DESKTOP (1024px+)
+   ============================================================================ */
+@media (min-width: 1024px) {
+  .container {
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+    max-width: 1024px;
+  }
+
+  /* Calendar and scheduling */
+  .calendar-slots-container {
+    flex-direction: row;
+  }
+
+  .calendar-section {
+    padding: var(--space-3xl);
+  }
+
+  .grid.grid-cols-7 {
+    gap: var(--calendar-gap-md);
+  }
+
+  .calendar-day {
+    height: var(--calendar-day-height-lg);
+    min-height: var(--calendar-day-height-lg);
+    font-size: var(--theme-font-size-md);
+  }
+
+  .time-slots-panel {
+    margin-top: 0;
+  }
+
+  .time-slot-button {
+    font-size: var(--theme-font-size-sm);
+    padding: var(--time-slot-padding-lg);
+    min-height: var(--time-slot-min-height-sm);
+  }
+
+  /* Glass cards */
+  .glass-morphism-card.calendar-card {
+    min-height: var(--card-height-xl);
+  }
+
+  .glass-morphism-card.booking-form-card {
+    min-height: var(--card-height-sm);
+  }
+
+  /* Time slots */
+  .slots-box {
+    min-height: 200px;
+  }
+
+  /* Side by side layout */
+  .calendar-slots-grid.lg\:grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-lg);
+    align-items: start;
+  }
+
+  /* Container constraints */
+  .max-w-5xl {
+    max-width: var(--container-xl);
+  }
+
+  /* Form fields */
+  .form-field textarea[name="booking[message]"],
+  textarea[phx-value-field="message"] {
+    min-height: 10rem;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+/* ============================================================================
+   EXTRA LARGE DESKTOP (1280px+)
+   ============================================================================ */
+@media (min-width: 1280px) {
+  .container {
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+    max-width: 1280px;
+  }
+
+  .calendar-slots-grid.lg\:grid {
+    gap: var(--space-2xl);
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+/* ============================================================================
+   ULTRA WIDE (1440px+)
+   ============================================================================ */
+@media (min-width: 1440px) {
+  .glass-morphism-card {
+    max-width: var(--container-lg);
+    margin: 0 auto;
+  }
+
+  .glass-morphism-card.calendar-card {
+    min-height: var(--card-height-2xl);
+  }
+
+  .booking-container {
+    max-width: var(--container-md);
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+    max-width: 1536px;
+  }
+
+  .calendar-slots-grid.lg\:grid {
+    gap: var(--space-3xl);
+  }
+}
+
+/* ============================================================================
+   SHORT VIEWPORTS
+   ============================================================================ */
+
+/* Medium short screens */
 @media (max-height: 700px) and (min-height: 601px) {
+  /* Reduce vertical spacing */
   .py-8 {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    padding-top: var(--space-xs);
+    padding-bottom: var(--space-xs);
   }
+
   .py-12 {
-    padding-top: 1rem;
-    padding-bottom: 1rem;
+    padding-top: var(--space-lg);
+    padding-bottom: var(--space-lg);
   }
+
   .p-8 {
-    padding: 1rem;
+    padding: var(--space-lg);
   }
+
   .p-12 {
-    padding: 1.5rem;
+    padding: var(--space-xl);
   }
-  .max-h-96 {
-    max-height: 16rem;
-  }
-  
-  /* Make form more compact on short screens */
-  .space-y-4 > * + * {
-    margin-top: 0.75rem;
-  }
-  
-  .space-y-6 > * + * {
-    margin-top: 1rem;
-  }
-  
-  /* Reduce margins */
+
   .mb-4 {
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--space-md);
   }
-  
+
   .mb-6 {
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-lg);
   }
-  
+
   .mb-8 {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--space-xl);
+  }
+
+  .space-y-4 > * + * {
+    margin-top: var(--space-md);
+  }
+
+  .space-y-6 > * + * {
+    margin-top: var(--space-lg);
   }
 }
 
-/* Extra compact for very short screens */
+/* Very short screens */
 @media (max-height: 600px) {
   .py-4 {
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
+    padding-top: var(--space-3xs);
+    padding-bottom: var(--space-3xs);
   }
-  
+
   .p-4 {
-    padding: 0.75rem;
+    padding: var(--space-md);
   }
-  
-  .space-y-4 > * + * {
-    margin-top: 0.5rem;
-  }
-  
+
   .mb-3 {
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-xs);
   }
-  
+
   .mb-4 {
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--space-xs);
+  }
+
+  .space-y-4 > * + * {
+    margin-top: var(--space-xs);
+  }
+
+  .booking-container {
+    max-height: calc(100vh - 6rem);
   }
 }
 
-/* Reduced Motion Support */
+/* Constrain height on taller screens (standalone page, not iframe) */
+@media (min-height: 600px) {
+  .main-gradient.theme-grid {
+    max-height: 100vh;
+    max-height: 100dvh;
+  }
+
+  .main-gradient.theme-grid .content-area {
+    overflow-y: auto;
+  }
+}
+
+/* Short screens with calendar */
+@media (max-height: 800px) {
+  .calendar-day {
+    height: var(--calendar-day-height-mobile);
+    min-height: var(--calendar-day-height-mobile);
+    padding: var(--space-3xs);
+    font-size: var(--theme-font-size-xs);
+  }
+}
+
+/* ============================================================================
+   REDUCED MOTION
+   ============================================================================ */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
@@ -210,19 +417,21 @@
   }
 }
 
-/* Print Styles */
+/* ============================================================================
+   PRINT
+   ============================================================================ */
 @media print {
   .video-background {
     display: none;
   }
-  
+
   .glass-morphism-card {
     background: white;
     color: black;
     box-shadow: none;
-    border: 1px solid #ccc;
+    border: var(--border-width-thin) solid #cccccc;
   }
-  
+
   button {
     display: none;
   }

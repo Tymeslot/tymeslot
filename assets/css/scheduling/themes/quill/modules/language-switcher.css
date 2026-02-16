@@ -1,16 +1,16 @@
 /* Language Switcher - Quill Theme */
 .language-switcher-button-quill {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--surface-light);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  border: var(--border-width-thin) solid var(--border-medium);
 }
 
 .language-switcher-button-quill:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--surface-medium);
+  border-color: var(--border-intense);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .language-switcher-button-quill:active {
@@ -19,16 +19,16 @@
 
 .language-dropdown-quill {
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  animation: fadeInDown 0.2s ease-out;
-  max-height: 300px;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: var(--border-width-thin) solid rgba(0, 0, 0, 0.1);
+  animation: fadeInDown var(--transition-normal) ease-out;
+  max-height: var(--dropdown-max-height);
   overflow-y: auto;
 }
 
 .language-dropdown-item-quill {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: var(--border-width-thin) solid rgba(0, 0, 0, 0.05);
 }
 
 .language-dropdown-item-quill:last-child {
@@ -41,7 +41,7 @@
 
 .language-dropdown-item-quill.active {
   background: rgba(59, 130, 246, 0.15);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 @keyframes fadeInDown {
@@ -55,27 +55,4 @@
   }
 }
 
-/* Mobile responsive */
-@media (max-width: 640px) {
-  .language-switcher {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 1000;
-  }
-
-  .language-dropdown-quill {
-    width: 160px;
-  }
-  
-  .language-switcher-button-quill {
-    padding: 0.5rem 0.75rem;
-  }
-}
-
-/* Tablet */
-@media (min-width: 641px) and (max-width: 1024px) {
-  .language-dropdown-quill {
-    width: 180px;
-  }
-}
+/* Responsive positioning and widths moved to responsive.css */

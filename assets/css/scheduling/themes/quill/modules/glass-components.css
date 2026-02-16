@@ -2,11 +2,11 @@
 
 /* Glass Morphism Components */
 .glass-morphism-card {
-  background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.3) 100%);
+  background: linear-gradient(135deg, var(--surface-dark-medium) 0%, var(--surface-dark-light) 100%);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border-radius: var(--card-border-radius);
-  border: 1px solid var(--glass-border);
+  border: var(--border-width-thin) solid var(--glass-border);
   box-shadow: var(--glass-shadow);
   width: 100%;
   max-width: 100%;
@@ -16,7 +16,7 @@
 
 /* Calendar card needs more height for the month grid */
 .glass-morphism-card.calendar-card {
-  min-height: 500px;
+  min-height: var(--card-height-md);
   display: flex;
   flex-direction: column;
 }
@@ -28,36 +28,7 @@
   flex-direction: column;
 }
 
-/* Responsive height adjustments for calendar card */
-@media (min-width: 768px) {
-  .glass-morphism-card.calendar-card {
-    min-height: 600px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .glass-morphism-card.calendar-card {
-    min-height: 650px;
-  }
-  
-  /* Add reasonable min-height for booking form on desktop to prevent too-short appearance */
-  .glass-morphism-card.booking-form-card {
-    min-height: 450px;
-  }
-}
-
-@media (min-width: 1440px) {
-  .glass-morphism-card.calendar-card {
-    min-height: 700px;
-  }
-}
-
-/* Mobile - let content determine height */
-@media (max-width: 767px) {
-  .glass-morphism-card:not(.step-navigation-card) {
-    min-height: auto;
-  }
-}
+/* Responsive height adjustments moved to responsive.css */
 
 /* Prevent content overflow within glass cards */
 .glass-morphism-card > div {
@@ -72,35 +43,35 @@
 
 /* Legacy card-glass for backward compatibility */
 .card-glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--surface-light);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-xl);
-  padding: var(--spacing-6);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  padding: var(--space-2xl);
+  box-shadow: var(--shadow-xl);
 }
 
 /* Meeting Details Card - Glassmorphism style */
 .meeting-details-card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 1rem;
-  padding: 1.5rem;
+  background: linear-gradient(135deg, var(--surface-light) 0%, var(--surface-subtle) 100%);
+  backdrop-filter: blur(var(--glass-blur-lg));
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
   color: var(--theme-text);
-  box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    var(--shadow-lg),
+    var(--inset-highlight-subtle);
 }
 
 .meeting-details-card h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-lg);
   color: var(--theme-text);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  text-shadow: var(--shadow-xs);
 }
 
 /* Action Buttons */
@@ -108,11 +79,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
+  padding: var(--button-padding);
+  border-radius: var(--button-radius);
+  font-weight: var(--font-weight-semibold);
   font-size: var(--theme-font-size-base);
-  transition: all 0.3s ease;
+  transition: var(--transition-smooth);
   cursor: pointer;
   border: none;
   text-decoration: none;
@@ -121,33 +92,33 @@
 .action-button--primary {
   background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+  box-shadow: var(--shadow-primary-sm);
 }
 
 .action-button--primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+  transform: var(--button-hover-transform);
+  box-shadow: var(--shadow-primary-md);
 }
 
 .action-button--secondary {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-light);
   color: var(--theme-text);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: var(--border-width-thin) solid var(--border-medium);
 }
 
 .action-button--secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--surface-strong);
   border-color: var(--theme-primary);
 }
 
 .action-button--danger {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(135deg, var(--theme-danger) 0%, var(--theme-danger-dark) 100%);
   color: white;
 }
 
 .action-button--danger:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  transform: var(--button-hover-transform);
+  box-shadow: var(--shadow-danger-md);
 }
 
 .action-button:disabled {
@@ -170,9 +141,9 @@
 
 .spinner {
   display: inline-block;
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid transparent;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border: var(--border-width-medium) solid transparent;
   border-top-color: currentColor;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
@@ -180,14 +151,14 @@
 
 /* Button Components */
 .btn-primary {
-  padding: 0.75rem 1.5rem;
+  padding: var(--button-padding);
   background: var(--theme-primary);
   color: white;
   border: none;
-  border-radius: 0.5rem;
-  font-weight: 600;
+  border-radius: var(--button-radius-sm);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--transition-smooth);
 }
 
 .btn-primary:hover {
@@ -196,27 +167,27 @@
 }
 
 .btn-secondary {
-  padding: 0.75rem 1.5rem;
-  background: rgba(255, 255, 255, 0.1);
+  padding: var(--button-padding);
+  background: var(--surface-light);
   color: var(--theme-text);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.5rem;
-  font-weight: 600;
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--button-radius-sm);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--transition-smooth);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--surface-strong);
   border-color: var(--theme-primary);
   transform: var(--button-hover-transform);
 }
 
 /* Info Box */
 .info-box {
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 2rem;
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-3xl);
 }
 
 /* Empty State */
@@ -229,64 +200,106 @@
 
 .empty-state__content {
   text-align: center;
-  padding: 1rem;
+  padding: var(--space-lg);
 }
 
 .empty-state__icon {
-  width: 3rem;
-  height: 3rem;
-  margin: 0 auto 0.5rem;
-  color: rgba(255, 255, 255, 0.4);
+  width: var(--icon-2xl);
+  height: var(--icon-2xl);
+  margin: 0 auto var(--space-xs);
+  color: var(--text-opacity-subtle);
 }
 
 .empty-state__message {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-low);
 }
 
 .empty-state__secondary {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-top: 0.25rem;
+  font-size: var(--theme-font-size-xs);
+  color: var(--text-opacity-subtle);
+  margin-top: var(--space-3xs);
 }
 
 /* Glass morphism card for step navigation - High specificity selector */
 .quill-theme-wrapper .step-navigation-card {
-  background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.3) 100%);
+  background: linear-gradient(135deg, var(--surface-dark-medium) 0%, var(--surface-dark-light) 100%);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
+  border: var(--border-width-thin) solid var(--glass-border);
   box-shadow: var(--glass-shadow);
 }
 
 /* Step circles with glassmorphism effect */
 .quill-theme-wrapper [class*="rounded-full"][class*="flex items-center"] {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  box-shadow:
+    var(--shadow-md),
+    var(--inset-highlight-subtle);
 }
 
 /* Active/completed step enhancement */
 .quill-theme-wrapper [class*="from-purple-800"][class*="to-purple-900"] {
   background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
-  box-shadow: 
-    0 4px 16px rgba(6, 182, 212, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow:
+    var(--shadow-primary-md),
+    var(--inset-highlight-strong);
   border-color: var(--theme-primary);
 }
 
 /* Step connectors with gradient */
 .quill-theme-wrapper [class*="from-purple-800"][class*="to-purple-900"][class*="h-0.5"] {
   background: linear-gradient(90deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
-  box-shadow: 0 1px 4px rgba(6, 182, 212, 0.2);
+  box-shadow: var(--shadow-xs);
 }
 
 /* Utility background class */
 [class~="bg-glass"] {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--surface-light);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+}
+
+/* Confirmation Component Styles */
+.confirmation-badge {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  box-shadow: var(--shadow-primary-lg);
+}
+
+.confirmation-badge-dot {
+  background: var(--theme-success);
+  box-shadow: var(--shadow-success-md);
+}
+
+.confirmation-icon-wrapper {
+  background: var(--theme-primary-focus);
+}
+
+.confirmation-border-top {
+  border-color: var(--border-medium);
+}
+
+.confirmation-email-link {
+  color: var(--theme-primary);
+}
+
+.confirmation-help-text {
+  color: var(--text-opacity-low);
+}
+
+/* Overview Component Styles */
+.overview-success-badge {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+}
+
+/* Text Color Utilities */
+.text-quill-primary {
+  color: var(--text-opacity-medium-high);
+  line-height: var(--theme-line-height-relaxed);
+}
+
+.text-quill-secondary {
+  color: var(--text-opacity-low);
 }

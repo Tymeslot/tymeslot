@@ -1,0 +1,75 @@
+/* Time Slot Buttons and Slots Panel */
+
+/* Time Slots */
+.time-slots-panel {
+  flex: 1;
+  margin-top: var(--space-xs);
+}
+
+/* Responsive margin moved to responsive.css */
+
+/* Slots box - responsive height */
+.slots-box {
+  overflow-x: hidden;
+  height: 100%;
+}
+
+/* Responsive scrolling behavior moved to responsive.css */
+
+/* Time Slot Buttons - Touch-friendly layout */
+.time-slot-button {
+  width: 100%;
+  padding: var(--time-slot-padding); /* More padding for better touch targets */
+  background: var(--surface-very-light);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-md);
+  color: var(--theme-text);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--theme-font-size-sm); /* Slightly larger text */
+  cursor: pointer;
+  transition: var(--transition-normal);
+  text-align: center;
+  white-space: nowrap;
+  min-height: var(--time-slot-min-height); /* Larger minimum height for mobile */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.time-slot-button:hover {
+  background: var(--surface-medium-light);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+  box-shadow:
+    var(--shadow-md),
+    var(--inset-highlight-subtle);
+}
+
+.time-slot-button--selected {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  border-color: var(--theme-primary);
+  color: white;
+  font-weight: var(--font-weight-semibold);
+  box-shadow:
+    var(--shadow-primary-sm),
+    var(--inset-highlight-strong);
+}
+
+.time-slot-button--selected:hover {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.time-slot-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive adjustments for time slot grid moved to responsive.css */
+
+/* Time Period Labels (Morning, Afternoon, Evening) */
+.time-period-label {
+  color: var(--text-opacity-medium-low);
+}

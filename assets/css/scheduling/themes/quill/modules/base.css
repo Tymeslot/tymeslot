@@ -1,0 +1,112 @@
+/* Base - Theme setup, containers, and core structure */
+
+/* Base Theme Styles */
+body.quill-theme {
+  font-family: var(--theme-font-family);
+  font-size: var(--theme-font-size-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--theme-background-color);
+}
+
+.quill-theme-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.quill-theme-wrapper > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main gradient background */
+.main-gradient {
+  background: var(--theme-background);
+  background-attachment: fixed;
+  min-width: 100%;
+  width: 100%;
+  position: relative;
+}
+
+/* Grid layout for integrated footer */
+.main-gradient.theme-grid {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Height constraints moved to responsive.css */
+
+.main-gradient.theme-grid .content-area {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+/* Override glass gradient colors with theme colors */
+.theme-1 {
+  --glass-gradient-primary: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  --glass-gradient-secondary: linear-gradient(135deg, var(--theme-primary-hover) 0%, var(--theme-secondary) 100%);
+  --color-primary-500: var(--theme-primary);
+  --color-primary-600: var(--theme-primary-hover);
+}
+
+/* Footer styling */
+.footer-gradient {
+  padding: var(--space-2xl) var(--space-lg);
+  text-align: center;
+  font-size: var(--theme-font-size-sm);
+  background: var(--theme-background);
+  border-top: var(--border-width-thin) solid var(--border-subtle);
+  color: var(--theme-text);
+}
+
+/* Container sizing - flexible and responsive */
+.container {
+  width: 100%;
+  margin: 0 auto;
+  padding-left: var(--space-lg);
+  padding-right: var(--space-lg);
+}
+
+/* Core Typography */
+.section-header {
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-xs);
+  color: var(--text-opacity-high);
+  text-shadow: var(--shadow-xs);
+}
+
+/* Text utilities */
+/* Use attribute selector for higher specificity */
+[class~="text-glass-primary"] {
+  color: var(--theme-text);
+}
+
+[class~="text-glass-secondary"] {
+  color: var(--theme-text-secondary);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(var(--animation-slide-distance));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

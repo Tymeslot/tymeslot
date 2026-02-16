@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
         slug={@duration}
         username_context={@username_context}
       >
-        <div class="container flex-1 flex flex-col">
+        <div class="container stack flex-1">
           <div class="flex-1 flex items-center justify-center px-2 sm:px-4 py-2 md:py-4 lg:py-8">
             <div class="w-full max-w-4xl lg:max-w-6xl">
               <.glass_morphism_card>
@@ -41,10 +41,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     <!-- Success Icon on left side -->
                     <div class="flex-shrink-0">
                       <div class="relative">
-                        <div
-                          class="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full flex items-center justify-center"
-                          style="background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%); box-shadow: 0 12px 32px rgba(6, 182, 212, 0.3);"
-                        >
+                        <div class="confirmation-badge w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full flex items-center justify-center">
                           <svg
                             class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-white"
                             fill="none"
@@ -55,10 +52,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
                         </div>
-                        <div
-                          class="absolute -bottom-1 -right-1 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
-                          style="background: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);"
-                        >
+                        <div class="confirmation-badge-dot absolute -bottom-1 -right-1 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center">
                           <svg
                             class="w-4 h-4 sm:w-5 sm:h-5 text-white"
                             fill="currentColor"
@@ -85,10 +79,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                         </.section_header>
                       </div>
 
-                      <p
-                        class="text-sm sm:text-base md:text-lg mb-3 sm:mb-4"
-                        style="color: rgba(255,255,255,0.9);"
-                      >
+                      <p class="text-quill-primary text-sm sm:text-base md:text-lg mb-3 sm:mb-4">
                         <%= if @is_rescheduling do %>
                           {gettext("%{name}, your meeting %{organizer} has been rescheduled.", name: @name, organizer: get_organizer_text(@organizer_profile))}
                         <% else %>
@@ -105,18 +96,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           variant={:compact}
                         />
 
-                        <div
-                          class="mt-4 pt-4 border-t"
-                          style="border-color: rgba(255, 255, 255, 0.2);"
-                        >
-                          <div class="flex items-center gap-2">
-                            <div
-                              class="w-8 h-8 rounded-full flex items-center justify-center"
-                              style="background: rgba(6, 182, 212, 0.2);"
-                            >
+                        <div class="confirmation-border-top mt-4 pt-4 border-t">
+                          <div class="cluster cluster-xs">
+                            <div class="confirmation-icon-wrapper w-8 h-8 rounded-full center-content">
                               <svg
-                                class="w-4 h-4"
-                                style="color: var(--theme-primary);"
+                                class="confirmation-email-link w-4 h-4"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
@@ -124,12 +108,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                                 <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                               </svg>
                             </div>
-                            <p class="text-sm" style="color: var(--theme-text, #e2e8f0);">
+                            <p class="text-sm text-white">
                               {gettext("Confirmation sent to")}
-                              <span
-                                class="font-semibold"
-                                style="color: var(--theme-primary, #06b6d4);"
-                              >
+                              <span class="confirmation-email-link font-semibold">
                                 {@email}
                               </span>
                             </p>
@@ -148,10 +129,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                         </.action_button>
                       </div>
 
-                      <p
-                        class="mt-4 text-xs text-center lg:text-left"
-                        style="color: rgba(255,255,255,0.7);"
-                      >
+                      <p class="confirmation-help-text mt-4 text-xs text-center lg:text-left">
                         {gettext("Need to reschedule? Check your confirmation email.")}
                       </p>
                     </div>

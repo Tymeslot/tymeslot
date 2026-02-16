@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="flex-1 flex flex-col" data-locale={@locale}>
+    <div class="stack flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
         current_step={1}
@@ -54,10 +54,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                         alt={Demo.avatar_alt_text(@organizer_profile)}
                         class="w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 rounded-full object-cover shadow-2xl border-4 border-white/50 transition-all duration-300 hover:scale-105 cursor-pointer"
                       />
-                      <div
-                        class="absolute -bottom-2 -right-2 md:-bottom-4 md:-right-4 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center shadow-lg"
-                        style="background: var(--glass-gradient-primary);"
-                      >
+                      <div class="overview-success-badge absolute -bottom-2 -right-2 md:-bottom-4 md:-right-4 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center shadow-lg">
                         <span class="text-white text-xl sm:text-2xl md:text-4xl">✅</span>
                       </div>
                     </div>

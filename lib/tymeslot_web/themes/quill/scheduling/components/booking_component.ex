@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
         slug={@duration}
         username_context={@username_context}
       >
-        <div class="container flex-1 flex flex-col">
+        <div class="container stack flex-1">
           <div class="flex-1 flex items-center justify-center px-4 py-4">
             <div class="w-full max-w-3xl">
               <.glass_morphism_card class="booking-form-card">
@@ -68,21 +68,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     {gettext("Enter Your Details")}
                   </.section_header>
 
-                  <p
-                    class="text-base md:text-lg lg:text-xl mb-4"
-                    style="color: rgba(255,255,255,0.85); line-height: 1.5;"
-                  >
+                  <p class="text-quill-primary text-base md:text-lg lg:text-xl mb-4">
                     <%= if @organizer_profile do %>
-                      {gettext("You're booking a %{duration} meeting with %{name}", 
-                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: TimezoneUtils.format_duration(@duration)), 
+                      {gettext("You're booking a %{duration} meeting with %{name}",
+                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: TimezoneUtils.format_duration(@duration)),
                         name: get_organizer_name(@organizer_profile, @username_context))}
                     <% else %>
-                      {gettext("You're booking a %{duration} meeting", 
+                      {gettext("You're booking a %{duration} meeting",
                         duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: TimezoneUtils.format_duration(@duration)))}
                     <% end %>
                   </p>
 
-                  <p class="text-xs md:text-sm mb-6" style="color: rgba(255,255,255,0.7);">
+                  <p class="text-quill-secondary text-xs md:text-sm mb-6">
                     {LocalizationHelpers.format_booking_datetime(@selected_date, @selected_time, @user_timezone)}
                   </p>
 
@@ -131,7 +128,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       phx-target={@myself}
                     />
 
-                    <div class="mt-3 flex gap-2">
+                    <div class="cluster cluster-xs mt-3">
                       <.action_button
                         type="button"
                         phx-click="back_step"

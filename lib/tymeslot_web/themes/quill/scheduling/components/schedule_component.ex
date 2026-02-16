@@ -122,7 +122,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
         slug={@duration}
         username_context={@username_context}
       >
-        <div class="container flex-1 flex flex-col">
+        <div class="container stack flex-1">
           <div class="flex-1 flex items-start justify-center px-4 py-2 md:py-4">
             <div class="w-full max-w-5xl min-h-0">
               <.glass_morphism_card class="calendar-card">
@@ -169,8 +169,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
                   <div class="flex flex-col lg:flex-row lg:gap-4 xl:gap-6 calendar-slots-container">
                     <div class="flex-1 calendar-section">
-                      <div class="flex items-center justify-between mb-1 md:mb-2">
-                        <h2 class="text-sm md:text-base lg:text-lg font-bold flex items-center gap-2 text-glass-primary">
+                      <div class="cluster cluster-between mb-1 md:mb-2">
+                        <h2 class="text-sm md:text-base lg:text-lg font-bold cluster cluster-xs text-glass-primary">
                           {gettext("Select a Date")}
                           <%= if @availability_status == :loading do %>
                             <svg
@@ -197,7 +197,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             </svg>
                           <% end %>
                         </h2>
-                        <div class="flex items-center gap-1 md:gap-2">
+                        <div class="cluster cluster-3xs md:cluster-2xs">
                           <%= if @availability_status in [:error, :timeout] do %>
                             <div class="text-xs text-amber-300 bg-amber-900/40 px-2 py-1 rounded border border-amber-700/50 flex items-center gap-1">
                               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,15 +217,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                   @user_timezone
                                 )
                             }
-                            class="p-1 md:p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
-                            style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); hover:background: rgba(255,255,255,0.2);"
+                            class="calendar-nav-button p-1 md:p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                           >
                             ←
                           </button>
-                          <div
-                            class="text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3"
-                            style="color: white;"
-                          >
+                          <div class="text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3 text-white">
                             {LocalizationHelpers.get_month_year_display(@current_year, @current_month)}
                           </div>
                           <button
@@ -239,8 +235,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                   @user_timezone
                                 )
                             }
-                            class="p-1 md:p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
-                            style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); hover:background: rgba(255,255,255,0.2);"
+                            class="calendar-nav-button p-1 md:p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                           >
                             →
                           </button>
@@ -250,8 +245,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         <div class="grid grid-cols-7 gap-0.5 text-center mb-1">
                           <div
                             :for={day <- [gettext("Sun"), gettext("Mon"), gettext("Tue"), gettext("Wed"), gettext("Thu"), gettext("Fri"), gettext("Sat")]}
-                            class="text-xs font-medium"
-                            style="color: rgba(255,255,255,0.8);"
+                            class="calendar-weekday text-xs font-medium"
                           >
                             {String.slice(day, 0, 3)}
                           </div>
@@ -346,8 +340,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   defp timezone_selector(assigns) do
     ~H"""
     <div class="relative w-full md:w-auto md:max-w-xs lg:max-w-sm" data-locale={@locale}>
-      <label class="text-sm font-medium block mb-2" style="color: rgba(255,255,255,0.9);">
-        <div class="flex items-center gap-2">
+      <label class="timezone-label text-sm font-medium block mb-2">
+        <div class="cluster cluster-xs">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -367,14 +361,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
         phx-click="toggle_timezone_dropdown"
         phx-target={@target}
       >
-        <div
-          class="px-4 py-3 rounded-xl transition-all duration-200 ease-out hover:scale-[1.01] hover:shadow-lg"
-          style="background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
-                 border: 1px solid rgba(255,255,255,0.2);
-                 backdrop-filter: blur(20px);"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3 flex-1 min-w-0">
+        <div class="timezone-trigger px-4 py-3 rounded-xl transition-all duration-200 ease-out hover:scale-[1.01] hover:shadow-lg">
+          <div class="cluster cluster-between">
+            <div class="cluster cluster-sm flex-1 min-w-0">
               <.timezone_flag
                 timezone={@user_timezone}
                 class="w-6 h-4 flex-shrink-0 rounded-sm shadow-sm"
@@ -384,23 +373,19 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                 <div class="text-sm font-medium text-white truncate">
                   {TimezoneUtils.format_timezone(@user_timezone)}
                 </div>
-                <div class="text-xs mt-1" style="color: rgba(255,255,255,0.7);">
+                <div class="timezone-time-display text-xs mt-1">
                   {get_current_time_display(@user_timezone)}
                 </div>
               </div>
             </div>
-            <div class="flex items-center gap-2 ml-3">
-              <div
-                class="text-sm px-3 py-1.5 rounded-full font-medium"
-                style="background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.9);"
-              >
+            <div class="cluster cluster-xs ml-3">
+              <div class="timezone-offset-badge text-sm px-3 py-1.5 rounded-full font-medium">
                 {get_timezone_offset(@user_timezone)}
               </div>
               <svg
-                class={"w-4 h-4 transition-transform duration-200 #{if @timezone_dropdown_open, do: "rotate-180", else: "rotate-0"}"}
+                class={"timezone-chevron w-4 h-4 transition-transform duration-200 #{if @timezone_dropdown_open, do: "rotate-180", else: "rotate-0"}"}
                 fill="none"
                 stroke="currentColor"
-                style="color: rgba(255,255,255,0.7);"
                 viewBox="0 0 24 24"
               >
                 <path
@@ -418,14 +403,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
     <!-- Dropdown with search input at top - no layout shift -->
       <%= if @timezone_dropdown_open do %>
-        <div
-          class="absolute top-full left-0 right-0 md:left-auto md:right-0 w-full md:min-w-[16rem] md:max-w-sm mt-1 max-h-64 md:max-h-72 z-[9999] rounded-xl shadow-2xl border overflow-hidden"
-          style="background: linear-gradient(135deg, rgba(45,25,70,0.9) 0%, rgba(30,15,50,0.85) 100%);
-                 backdrop-filter: blur(20px);
-                 border: 1px solid rgba(255,255,255,0.3);"
-        >
+        <div class="timezone-dropdown absolute top-full left-0 right-0 md:left-auto md:right-0 w-full md:min-w-[16rem] md:max-w-sm mt-1 max-h-64 md:max-h-72 z-[9999] rounded-xl shadow-2xl border overflow-hidden">
           <!-- Search input fixed at top of dropdown -->
-          <div class="p-3" style="border-bottom: 1px solid rgba(255,255,255,0.2);">
+          <div class="timezone-dropdown-header p-3">
             <div class="relative">
               <input
                 id="timezone-search"
@@ -436,8 +416,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                 name="search"
                 value={@timezone_search}
                 placeholder={gettext("Search cities, countries, or timezones...")}
-                class="w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-none focus:ring-2 focus:ring-white/30"
-                style="background: rgba(255,255,255,0.9); color: #2d3436;"
+                class="timezone-search-input w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-none focus:ring-2 focus:ring-white/30"
                 autocomplete="off"
                 phx-hook="AutoFocus"
               />
@@ -461,29 +440,22 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
           </div>
 
     <!-- Scrollable timezone options -->
-          <div class="max-h-48 md:max-h-56 overflow-y-auto">
+          <div class="scroll-y max-h-48 md:max-h-56">
             <div class="p-1">
               <%= for {label, value, offset} <- TimezoneUtils.get_filtered_timezone_options(@timezone_search) do %>
                 <div
                   phx-click="change_timezone"
                   phx-value-timezone={value}
                   phx-target={@target}
-                  class="w-full text-left px-3 py-2.5 text-sm rounded-lg flex justify-between items-center cursor-pointer transition-all duration-150 group"
-                  style="color: rgba(255,255,255,0.95);
-                         hover:background: rgba(255,255,255,0.2);"
-                  onmouseover="this.style.background='rgba(255,255,255,0.15)'"
-                  onmouseout="this.style.background='transparent'"
+                  class="timezone-dropdown-item w-full text-left px-3 py-2.5 text-sm rounded-lg flex justify-between items-center cursor-pointer transition-all duration-150 group"
                 >
                   <div class="flex-1 min-w-0">
                     <div class="font-medium truncate">{label}</div>
-                    <div class="text-xs mt-0.5" style="color: rgba(255,255,255,0.7);">
+                    <div class="timezone-time-display text-xs mt-0.5">
                       {get_timezone_local_time(value)}
                     </div>
                   </div>
-                  <div
-                    class="text-sm font-medium px-2.5 py-1 rounded-full transition-colors duration-150"
-                    style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9);"
-                  >
+                  <div class="timezone-offset-badge-dropdown text-sm font-medium px-2.5 py-1 rounded-full transition-colors duration-150">
                     {offset}
                   </div>
                 </div>
@@ -521,10 +493,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                 <%= for {period, slots} <- LocalizationHelpers.group_slots_by_period(normalized_slots) do %>
                   <%= if length(slots) > 0 do %>
                     <div>
-                      <div
-                        class="text-xs font-semibold mb-2 px-1"
-                        style="color: rgba(255,255,255,0.8);"
-                      >
+                      <div class="time-period-label text-xs font-semibold mb-2 px-1">
                         {period}
                       </div>
                       <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5">
@@ -564,7 +533,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
           <% end %>
         <% else %>
           <div class="h-full flex items-center justify-center">
-            <p class="text-sm" style="color: rgba(255,255,255,0.7);">
+            <p class="text-quill-secondary text-sm">
               {gettext("Please select a date to see available times")}
             </p>
           </div>

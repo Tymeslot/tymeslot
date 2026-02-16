@@ -13,7 +13,7 @@ defmodule TymeslotWeb.StepNavigation do
   @spec step_indicator(map()) :: Phoenix.LiveView.Rendered.t()
   def step_indicator(assigns) do
     ~H"""
-    <div class={"flex items-center space-x-3 sm:space-x-4 md:space-x-6 #{@class}"}>
+    <div class={"step-indicator-container flex items-center space-x-3 sm:space-x-4 md:space-x-6 #{@class}"}>
       <.step_item
         step={1}
         current_step={@current_step}
@@ -22,7 +22,7 @@ defmodule TymeslotWeb.StepNavigation do
         clickable={@current_step > 1}
       />
 
-      <div class={connector_class(1, @current_step)}></div>
+      <div class={"step-connector " <> connector_class(1, @current_step)}></div>
 
       <.step_item
         step={2}
@@ -36,7 +36,7 @@ defmodule TymeslotWeb.StepNavigation do
         clickable={@current_step > 2 && @slug != nil}
       />
 
-      <div class={connector_class(2, @current_step)}></div>
+      <div class={"step-connector " <> connector_class(2, @current_step)}></div>
 
       <.step_item
         step={3}
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.StepNavigation do
         clickable={@current_step > 3 && @slug != nil}
       />
 
-      <div class={connector_class(3, @current_step)}></div>
+      <div class={"step-connector " <> connector_class(3, @current_step)}></div>
 
       <.step_item
         step={4}
@@ -72,25 +72,25 @@ defmodule TymeslotWeb.StepNavigation do
   @spec step_item(map()) :: Phoenix.LiveView.Rendered.t()
   def step_item(assigns) do
     ~H"""
-    <div class="flex flex-col items-center">
+    <div class="step-item-wrapper flex flex-col items-center">
       <%= if @clickable && @path do %>
         <button
           phx-click="navigate_to_step"
           phx-value-step={@step}
           class="flex flex-col items-center group"
         >
-          <div class={step_class(@step, @current_step) <> " cursor-pointer hover:scale-125 transform transition-all"}>
+          <div class={"step-circle " <> step_class(@step, @current_step) <> " cursor-pointer hover:scale-125 transform transition-all"}>
             <span class="text-sm font-bold">{@step}</span>
           </div>
-          <span class={step_label_class(@step, @current_step) <> " mt-1 sm:mt-2 text-xs group-hover:text-purple-200 transition-colors"}>
+          <span class={"step-label " <> step_label_class(@step, @current_step) <> " mt-1 sm:mt-2 text-xs group-hover:text-purple-200 transition-colors"}>
             {@label}
           </span>
         </button>
       <% else %>
-        <div class={step_class(@step, @current_step)}>
+        <div class={"step-circle " <> step_class(@step, @current_step)}>
           <span class="text-sm font-bold">{@step}</span>
         </div>
-        <span class={step_label_class(@step, @current_step) <> " mt-1 sm:mt-2 text-xs"}>
+        <span class={"step-label " <> step_label_class(@step, @current_step) <> " mt-1 sm:mt-2 text-xs"}>
           {@label}
         </span>
       <% end %>

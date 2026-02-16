@@ -1,0 +1,38 @@
+/* Confirmation - Meeting Details and Confirmation-Specific Styling */
+
+/* Booking Detail Styling */
+.booking-detail-label {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--theme-text-secondary, #94a3b8);
+  margin: 0;
+  margin-bottom: var(--space-3xs);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.booking-detail-value {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--theme-font-size-base);
+  color: var(--theme-text, #e2e8f0);
+  margin: 0;
+}
+
+/* Ensure email addresses are visible with good contrast */
+.booking-detail-value a {
+  color: var(--theme-primary);
+  text-decoration: none;
+  font-weight: var(--font-weight-semibold);
+}
+
+.booking-detail-value a:hover {
+  color: var(--theme-primary-hover);
+  text-decoration: underline;
+}
+
+/* Duration card styling helper */
+@supports (selector(:has(*))) {
+  .duration-card:has(button[phx-click="select_duration"]) {
+    /* Modern browsers with :has() support */
+  }
+}

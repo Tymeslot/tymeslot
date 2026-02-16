@@ -1,0 +1,13 @@
+/* Calendar Header and Month Navigation */
+
+/* Calendar Navigation Buttons */
+.calendar-nav-button {
+  background: var(--surface-light);
+  color: white;
+  border: var(--border-width-thin) solid var(--border-intense);
+  transition: var(--transition-normal);
+}
+
+.calendar-nav-button:hover:not(:disabled) {
+  background: var(--border-medium);
+}

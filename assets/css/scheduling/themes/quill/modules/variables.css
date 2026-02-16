@@ -1,0 +1,266 @@
+/* Quill Theme Variables - Comprehensive Design Token System */
+
+/* Import Inter font - Modern, clean, and free for commercial use */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Typography - Font Family */
+  --theme-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Typography - Font Size Scale (fluid responsive using clamp()) */
+  --theme-font-size-3xs: clamp(0.625rem, 1.0vw, 0.688rem);    /* ~10-11px - tiny labels */
+  --theme-font-size-2xs: clamp(0.688rem, 1.1vw, 0.75rem);     /* ~11-12px - smallest interactive */
+  --theme-font-size-xs: clamp(0.75rem, 1.2vw, 0.813rem);      /* ~12-13px - small labels */
+  --theme-font-size-sm: clamp(0.813rem, 1.4vw, 0.938rem);     /* ~13-15px - small text */
+  --theme-font-size-base: clamp(0.938rem, 1.6vw, 1.063rem);   /* ~15-17px - body text */
+  --theme-font-size-md: clamp(1rem, 1.7vw, 1.125rem);         /* ~16-18px - emphasized body */
+  --theme-font-size-lg: clamp(1.063rem, 2.0vw, 1.188rem);     /* ~17-19px - subheadings */
+  --theme-font-size-xl: clamp(1.25rem, 2.4vw, 1.375rem);      /* ~20-22px - headings */
+  --theme-font-size-2xl: clamp(1.438rem, 2.8vw, 1.625rem);    /* ~23-26px - large headings */
+  --theme-font-size-3xl: clamp(1.75rem, 3.5vw, 2.5rem);       /* ~28-40px - hero text */
+
+  /* Typography - Line Heights */
+  --theme-line-height-tight: 1.1;
+  --theme-line-height-snug: 1.2;
+  --theme-line-height-normal: 1.4;
+  --theme-line-height-relaxed: 1.5;
+  --theme-line-height-loose: 1.6;
+
+  /* Typography - Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Typography - Letter Spacing */
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+
+  /* Theme Colors - Primary Palette */
+  --theme-primary: #06b6d4;
+  --theme-primary-hover: #0891b2;
+  --theme-primary-focus: rgba(6, 182, 212, 0.2);
+  --theme-secondary: #14b8a6;
+  --theme-accent: #10b981;
+  --theme-accent-dark: #059669;
+
+  /* Theme Colors - Status Colors */
+  --theme-success: #10b981;
+  --theme-success-dark: #059669;
+  --theme-warning: #fbbf24;
+  --theme-info: #6366f1;
+  --theme-danger: #ef4444;
+  --theme-danger-dark: #dc2626;
+  --theme-error: rgba(239, 68, 68, 0.95);
+  --theme-error-bg: rgba(254, 226, 226, 0.08);
+  --theme-error-border: rgba(239, 68, 68, 0.6);
+  --theme-error-border-focus: rgba(239, 68, 68, 0.8);
+  --theme-error-light: #fca5a5;
+
+  /* Theme Colors - Base Colors */
+  --theme-background-color: #0f172a;
+  --theme-surface: rgba(30, 41, 59, 0.5);
+  --theme-text: #e2e8f0;
+  --theme-text-secondary: #94a3b8;
+  --theme-text-muted: #64748b;
+
+  /* Theme Colors - Text Opacity Variants */
+  --text-opacity-high: rgba(255, 255, 255, 0.95);
+  --text-opacity-medium-high: rgba(255, 255, 255, 0.9);
+  --text-opacity-medium: rgba(255, 255, 255, 0.85);
+  --text-opacity-medium-low: rgba(255, 255, 255, 0.8);
+  --text-opacity-low: rgba(255, 255, 255, 0.7);
+  --text-opacity-subtle: rgba(255, 255, 255, 0.6);
+  --text-opacity-very-subtle: rgba(255, 255, 255, 0.5);
+
+  /* Glassmorphism Surface Opacity Levels */
+  --surface-transparent: rgba(255, 255, 255, 0.02);
+  --surface-subtle: rgba(255, 255, 255, 0.05);
+  --surface-very-light: rgba(255, 255, 255, 0.08);
+  --surface-light: rgba(255, 255, 255, 0.1);
+  --surface-medium-light: rgba(255, 255, 255, 0.12);
+  --surface-medium: rgba(255, 255, 255, 0.15);
+  --surface-strong: rgba(255, 255, 255, 0.18);
+  --surface-intense: rgba(255, 255, 255, 0.2);
+
+  /* Dark Surface Overlays (for backgrounds) */
+  --surface-dark-subtle: rgba(0, 0, 0, 0.2);
+  --surface-dark-light: rgba(0, 0, 0, 0.3);
+  --surface-dark-medium: rgba(0, 0, 0, 0.4);
+  --surface-dark-strong: rgba(0, 0, 0, 0.5);
+  --surface-dark-intense: rgba(0, 0, 0, 0.85);
+  --surface-dark-very-intense: rgba(0, 0, 0, 0.9);
+
+  /* Border Opacity Levels */
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-light: rgba(255, 255, 255, 0.15);
+  --border-medium: rgba(255, 255, 255, 0.2);
+  --border-strong: rgba(255, 255, 255, 0.25);
+  --border-intense: rgba(255, 255, 255, 0.3);
+
+  /* Border Radius Scale */
+  --radius-sm: 0.375rem;   /* 6px */
+  --radius-md: 0.5rem;     /* 8px */
+  --radius-lg: 0.75rem;    /* 12px */
+  --radius-xl: 1rem;       /* 16px */
+  --radius-2xl: 1.5rem;    /* 24px */
+  --radius-3xl: 2rem;      /* 32px */
+
+  /* Border Width Scale */
+  --border-width-thin: 1px;
+  --border-width-medium: 2px;
+  --border-width-thick: 3px;
+
+  /* Spacing Scale - Fluid Responsive */
+  --space-3xs: 0.25rem;                          /* 4px */
+  --space-2xs: 0.375rem;                         /* 6px */
+  --space-xs: clamp(0.5rem, 1.0vw, 0.625rem);    /* 8-10px */
+  --space-sm: clamp(0.625rem, 1.4vw, 0.75rem);   /* 10-12px */
+  --space-md: clamp(0.75rem, 1.6vw, 1rem);       /* 12-16px */
+  --space-lg: clamp(1rem, 2.0vw, 1.25rem);       /* 16-20px */
+  --space-xl: clamp(1.25rem, 2.4vw, 1.5rem);     /* 20-24px */
+  --space-2xl: clamp(1.5rem, 3.0vw, 2rem);       /* 24-32px */
+  --space-3xl: clamp(2rem, 3.5vw, 2.5rem);       /* 32-40px */
+
+  /* Transition Speeds */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-smooth: 0.3s ease;
+  --transition-slow: 0.4s ease-in-out;
+  --transition-very-slow: 0.6s ease;
+
+  /* Animation Transforms */
+  --animation-slide-distance: 10px;
+
+  /* Elevation Shadows - Base Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.15);
+  --shadow-2xl: 0 20px 40px rgba(0, 0, 0, 0.1);
+
+  /* Elevation Shadows - Colored Shadows */
+  --shadow-primary-sm: 0 4px 12px rgba(6, 182, 212, 0.3);
+  --shadow-primary-md: 0 6px 20px rgba(6, 182, 212, 0.4);
+  --shadow-primary-lg: 0 12px 32px rgba(6, 182, 212, 0.3);
+  --shadow-success-sm: 0 4px 12px rgba(16, 185, 129, 0.4);
+  --shadow-success-md: 0 6px 20px rgba(16, 185, 129, 0.4);
+  --shadow-danger-sm: 0 4px 12px rgba(239, 68, 68, 0.4);
+  --shadow-danger-md: 0 6px 20px rgba(239, 68, 68, 0.4);
+
+  /* Inset Shadows (highlights) */
+  --inset-highlight-subtle: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --inset-highlight-medium: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  --inset-highlight-strong: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+  /* Component-Specific Tokens - Avatars */
+  --avatar-size-sm: 32px;
+  --avatar-size-md: 48px;
+  --avatar-size-lg: 128px;
+  --avatar-size-xl: 192px;
+
+  /* Component-Specific Tokens - Icons */
+  --icon-xs: 12px;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-xl: 32px;
+  --icon-2xl: 48px;
+
+  /* Component-Specific Tokens - Touch Targets */
+  --min-touch-target: 44px;
+  --min-touch-target-ios: 48px;
+
+  /* Component-Specific Tokens - Calendar */
+  --calendar-gap: 0.25rem;
+  --calendar-gap-sm: 0.375rem;
+  --calendar-gap-md: 0.5rem;
+  --calendar-day-height: 2.5rem;
+  --calendar-day-height-sm: 2.75rem;
+  --calendar-day-height-md: 3rem;
+  --calendar-day-height-lg: 3.25rem;
+  --calendar-day-height-mobile: 2.25rem;
+
+  /* Component-Specific Tokens - Time Slots */
+  --time-slot-min-height: 2.75rem;
+  --time-slot-min-height-sm: 2.5rem;
+  --time-slot-padding: 0.75rem 0.5rem;
+  --time-slot-padding-sm: 0.625rem 0.375rem;
+  --time-slot-padding-lg: 0.625rem 0.5rem;
+
+  /* Component-Specific Tokens - Container Widths */
+  --container-xs: 280px;
+  --container-sm: 360px;
+  --container-md: 600px;
+  --container-lg: 800px;
+  --container-xl: 1024px;
+  --container-2xl: 1280px;
+
+  /* Component-Specific Tokens - Card Heights */
+  --card-height-sm: 450px;
+  --card-height-md: 500px;
+  --card-height-lg: 600px;
+  --card-height-xl: 650px;
+  --card-height-2xl: 700px;
+
+  /* Component-Specific Tokens - Buttons */
+  --button-padding: 0.75rem 1.5rem;
+  --button-padding-sm: 0.625rem 1rem;
+  --button-radius: 0.75rem;
+  --button-radius-sm: 0.5rem;
+  --button-hover-transform: translateY(-2px);
+
+  /* Component-Specific Tokens - Forms */
+  --input-border-radius: 0.75rem;
+  --input-padding: 0.75rem 1rem;
+  --input-min-height: 44px;
+  --textarea-min-height: 120px;
+  --textarea-max-height: 400px;
+
+  /* Component-Specific Tokens - Step Indicators */
+  --step-circle-size: 2rem;
+  --step-connector-height: 2px;
+  --step-connector-width: 2rem;
+
+  /* Component-Specific Tokens - Dropdowns */
+  --dropdown-width: 300px;
+  --dropdown-width-sm: 160px;
+  --dropdown-width-md: 180px;
+  --dropdown-max-height: 300px;
+
+  /* Component-Specific Tokens - Scrollbar */
+  --scrollbar-width: 6px;
+  --scrollbar-track: rgba(255, 255, 255, 0.05);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+
+  /* Background Gradients */
+  --theme-background: linear-gradient(135deg, #1a1b3a 0%, #2d1b69 100%);
+  --theme-background-image: none;
+
+  /* Glassmorphism Effects */
+  --glass-blur: 20px;
+  --glass-blur-sm: 8px;
+  --glass-blur-md: 10px;
+  --glass-blur-lg: 15px;
+  --glass-opacity: 0.1;
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+
+  /* Card Border Radius (legacy - use radius tokens) */
+  --card-border-radius: 1.5rem;
+
+  /* Input Glassmorphism Colors (component-specific) */
+  --input-border-glass: rgba(255, 255, 255, 0.3);
+  --input-border-glass-disabled: rgba(255, 255, 255, 0.2);
+  --input-bg-glass: rgba(0, 0, 0, 0.5);
+  --input-bg-glass-focus: rgba(0, 0, 0, 0.6);
+  --input-bg-glass-disabled: rgba(0, 0, 0, 0.2);
+  --input-placeholder-glass: rgba(255, 255, 255, 0.5);
+  --input-shadow-base: rgba(0, 0, 0, 0.15);
+  --input-shadow-focus: rgba(0, 0, 0, 0.2);
+  --input-inset-highlight: rgba(255, 255, 255, 0.1);
+  --input-inset-highlight-focus: rgba(255, 255, 255, 0.15);
+}

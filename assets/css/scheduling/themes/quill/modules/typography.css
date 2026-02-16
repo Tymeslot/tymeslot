@@ -3,31 +3,31 @@
 /* Responsive font sizes using clamp() for smooth scaling */
 .section-header {
   font-size: clamp(1.25rem, 2.5vw, 1.75rem);
-  line-height: 1.2;
+  line-height: var(--theme-line-height-snug);
 }
 
 .glass-morphism-card h3,
 .meeting-details-card h3 {
-  font-size: clamp(1rem, 2vw, 1.125rem);
-  line-height: 1.3;
+  font-size: var(--theme-font-size-md);
+  line-height: var(--theme-line-height-normal);
 }
 
 .form-field__label,
 .booking-detail-label {
   font-size: clamp(0.75rem, 1.5vw, 0.875rem);
-  line-height: 1.4;
+  line-height: var(--theme-line-height-normal);
 }
 
 .booking-detail-value,
 .action-button {
   font-size: clamp(0.875rem, 1.5vw, 1rem);
-  line-height: 1.5;
+  line-height: var(--theme-line-height-relaxed);
 }
 
 .empty-state__message,
 .step-indicator__circle {
   font-size: clamp(0.75rem, 1.3vw, 0.875rem);
-  line-height: 1.4;
+  line-height: var(--theme-line-height-normal);
 }
 
 .empty-state__secondary,
@@ -51,59 +51,30 @@
 /* Responsive heading sizes */
 h1, .text-3xl {
   font-size: clamp(1.5rem, 3vw, 2rem);
-  line-height: 1.1;
+  line-height: var(--theme-line-height-tight);
 }
 
 h2, .text-2xl {
   font-size: clamp(1.25rem, 2.5vw, 1.5rem);
-  line-height: 1.2;
+  line-height: var(--theme-line-height-snug);
 }
 
 h3, .text-xl {
   font-size: clamp(1rem, 2vw, 1.25rem);
-  line-height: 1.3;
+  line-height: var(--theme-line-height-normal);
 }
 
-/* Ensure minimum tap target sizes on mobile */
-@media (max-width: 767px) {
-  .action-button,
-  .btn-primary,
-  .btn-secondary,
-  .time-slot-button,
-  .calendar-day {
-    min-height: 44px; /* iOS minimum tap target */
-  }
-  
-  .form-field__input,
-  .form-field textarea {
-    min-height: 44px;
-    padding: 10px 12px;
-  }
-}
-
-/* Better readability on large screens */
-@media (min-width: 1440px) {
-  .glass-morphism-card {
-    max-width: 800px;
-    margin: 0 auto;
-  }
-  
-  .booking-container {
-    max-width: 600px;
-    margin: 0 auto;
-    width: 100%;
-  }
-}
+/* Responsive tap targets and readability moved to responsive.css */
 
 /* Font weight utilities */
 .font-medium {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .font-semibold {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .font-bold {
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }

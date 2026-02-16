@@ -1,0 +1,6 @@
+/* Schedule Module - Barrel Import */
+
+@import "./schedule-header.css";
+@import "./calendar.css";
+@import "./time-slots.css";
+@import "./timezone-selector.css";

@@ -6,10 +6,15 @@
 @import "../../shared/utilities.css";
 
 /* Import theme modules in dependency order */
-@import "./modules/foundation.css";
+@import "./modules/variables.css";
+@import "./modules/base.css";
+@import "./modules/video.css";
 @import "./modules/typography.css";
+@import "./modules/layouts.css";
+@import "./modules/components.css";
 @import "./modules/glass-components.css";
-@import "./modules/scheduling-ui.css";
-@import "./modules/booking-flow.css";
+@import "./modules/schedule/schedule.css";
+@import "./modules/booking.css";
+@import "./modules/confirmation.css";
 @import "./modules/language-switcher.css";
 @import "./modules/responsive.css";
