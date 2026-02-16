@@ -25,23 +25,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract version and tags
+      - name: Extract Docker metadata
         id: meta
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            # Version tag push: use tag version
-            VERSION=${GITHUB_REF#refs/tags/v}
-            TAGS="luka1thb/tymeslot:${VERSION},luka1thb/tymeslot:latest"
-          elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
-            # Push to main: use git SHA
-            SHORT_SHA=$(git rev-parse --short HEAD)
-            TAGS="luka1thb/tymeslot:latest,luka1thb/tymeslot:main-${SHORT_SHA}"
-          else
-            # Manual trigger: read version from mix.exs
-            VERSION=$(grep 'version:' mix.exs | head -n1 | sed 's/.*"\(.*\)".*/\1/')
-            TAGS="luka1thb/tymeslot:${VERSION},luka1thb/tymeslot:latest"
-          fi
-          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+        uses: docker/metadata-action@v5
+        with:
+          images: luka1thb/tymeslot
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=main-,enable={{is_default_branch}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -50,6 +45,7 @@ jobs:
           file: ./Dockerfile.docker
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=luka1thb/tymeslot:buildcache
           cache-to: type=registry,ref=luka1thb/tymeslot:buildcache,mode=max
