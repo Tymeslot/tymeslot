@@ -40,15 +40,18 @@ defmodule TymeslotWeb.Router do
   scope "/", TymeslotWeb do
     pipe_through :browser
 
-    # LiveView authentication routes
-    live "/auth/login", AuthLive, :login
-    live "/auth/signup", AuthLive, :signup
-    live "/auth/verify-email", AuthLive, :verify_email
-    live "/auth/reset-password", AuthLive, :reset_password
-    live "/auth/reset-password-sent", AuthLive, :reset_password_sent
-    live "/auth/reset-password/:token", AuthLive, :reset_password_form
-    live "/auth/complete-registration", AuthLive, :complete_registration
-    live "/auth/password-reset-success", AuthLive, :password_reset_success
+    # LiveView authentication routes with route bundle loading
+    live_session :auth,
+      on_mount: [TymeslotWeb.Hooks.RouteBundleHook] do
+      live "/auth/login", AuthLive, :login
+      live "/auth/signup", AuthLive, :signup
+      live "/auth/verify-email", AuthLive, :verify_email
+      live "/auth/reset-password", AuthLive, :reset_password
+      live "/auth/reset-password-sent", AuthLive, :reset_password_sent
+      live "/auth/reset-password/:token", AuthLive, :reset_password_form
+      live "/auth/complete-registration", AuthLive, :complete_registration
+      live "/auth/password-reset-success", AuthLive, :password_reset_success
+    end
 
     # Email change verification route
     get "/email-change/:token", EmailChangeController, :verify
@@ -84,7 +87,8 @@ defmodule TymeslotWeb.Router do
       {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
       TymeslotWeb.Hooks.ClientInfoHook,
       TymeslotWeb.Hooks.DashboardInitHook,
-      {TymeslotWeb.Hooks.FeatureAssignsHook, :set_feature_assigns}
+      {TymeslotWeb.Hooks.FeatureAssignsHook, :set_feature_assigns},
+      TymeslotWeb.Hooks.RouteBundleHook
     ]
 
     @spec on_mount(

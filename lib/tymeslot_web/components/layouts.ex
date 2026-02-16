@@ -73,6 +73,39 @@ defmodule TymeslotWeb.Layouts do
   end
 
   @doc """
+  Renders a fallback error message for browsers that don't support ES modules.
+  This replaces the page content with a browser upgrade message.
+
+  WARNING: The `context` attribute must only contain trusted, static strings.
+  Never pass user-controlled input as it is embedded directly in JavaScript.
+  """
+  attr :context, :atom,
+    default: :application,
+    values: [:application, :scheduling_page],
+    doc: "Static context identifier (atom) for the error message"
+
+  @spec nomodule_fallback(map()) :: Phoenix.LiveView.Rendered.t()
+  def nomodule_fallback(assigns) do
+    # Convert atom to human-readable string safely
+    assigns = assign(assigns, :context_str, context_to_string(assigns.context))
+
+    ~H"""
+    <script nomodule>
+      document.body.innerHTML = '<div style="padding: 2rem; text-align: center; font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 4rem auto;">' +
+        '<svg style="width: 64px; height: 64px; margin: 0 auto 1.5rem; color: #dc2626;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>' +
+        '<h1 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 0.75rem;">Browser Not Supported</h1>' +
+        '<p style="color: #6b7280; line-height: 1.6; margin-bottom: 1.5rem;">This <%= @context_str %> requires a modern browser with ES module support. Please upgrade to the latest version of Chrome, Firefox, Safari, or Edge.</p>' +
+        '<a href="https://browsehappy.com/" style="display: inline-block; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 0.5rem; font-weight: 500;">Learn About Modern Browsers</a>' +
+        '</div>';
+    </script>
+    """
+  end
+
+  # Convert context atom to safe display string
+  defp context_to_string(:application), do: "application"
+  defp context_to_string(:scheduling_page), do: "scheduling page"
+
+  @doc """
   Returns the theme-specific class name based on theme ID.
   Maps numeric IDs to semantic theme class names.
   """
@@ -154,7 +187,7 @@ defmodule TymeslotWeb.Layouts do
     """
   end
 
-  defp render_provider_script(_invalid, assigns), do: ~H""
+  defp render_provider_script(_, assigns), do: ~H""
 
   defp filter_valid_providers(nil), do: []
   defp filter_valid_providers([]), do: []

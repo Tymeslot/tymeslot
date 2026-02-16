@@ -73,3 +73,4 @@ export const AutoUpload = {
     }
   }
 };
+export default AutoUpload;

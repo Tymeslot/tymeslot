@@ -224,3 +224,5 @@ export const EmbedPreview = {
     return (yiq >= 128) ? 'black' : 'white';
   }
 };
+
+export default EmbedPreview;

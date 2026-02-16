@@ -21,8 +21,12 @@
       <link phx-track-static rel="stylesheet" href={css_path} />
     <% end %>
 
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
+    <%!-- Core bundle + Public booking bundle for scheduling pages --%>
+    <script phx-track-static type="module" src={~p"/assets/app.js"}>
     </script>
+    <script phx-track-static type="module" src={~p"/assets/bundles/public.js"}>
+    </script>
+    <.nomodule_fallback context={:scheduling_page} />
     <.analytics_scripts />
   </head>
   <body class={"theme-#{assigns[:theme_id] || "1"} #{theme_class(assigns[:theme_id] || "1")}"}>

@@ -134,3 +134,5 @@ export const MeetingTypeSortable = {
     this.el.removeEventListener('drop', this.handleDropBound);
   }
 };
+
+export default MeetingTypeSortable;

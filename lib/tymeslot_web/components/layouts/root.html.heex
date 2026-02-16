@@ -11,8 +11,34 @@
     <link rel="alternate icon" href={~p"/images/brand/favicon.ico"} />
     <!-- Default app styles -->
     <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
+    <%!-- Core bundle: always loaded (LiveSocket + utilities) --%>
+    <script phx-track-static type="module" src={~p"/assets/app.js"}>
     </script>
+    <%!-- Route-specific bundle: loaded conditionally based on assigns[:route_bundle] --%>
+    <%= if assigns[:route_bundle] do %>
+      <script phx-track-static type="module" src={TymeslotWeb.Endpoint.static_path("/assets/bundles/#{@route_bundle}.js")}>
+      </script>
+    <% else %>
+      <%!-- Fallback: connect LiveSocket with core-only hooks for pages without route bundles --%>
+      <script type="module">
+        // Wait for core bundle to load, then connect LiveSocket
+        (async function() {
+          let retries = 0;
+          const maxRetries = 100;
+          const interval = 100;
+
+          while (!window.liveSocket && retries < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, interval));
+            retries++;
+          }
+
+          if (window.liveSocket && !window.liveSocket.isConnected()) {
+            window.liveSocket.connect();
+          }
+        })();
+      </script>
+    <% end %>
+    <.nomodule_fallback />
     <.analytics_scripts />
   </head>
   <body>
