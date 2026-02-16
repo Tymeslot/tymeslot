@@ -136,9 +136,7 @@ defmodule Tymeslot.MixProject do
         "esbuild tymeslot"
       ],
       "assets.deploy": [
-        "tailwind tymeslot --minify",
-        "tailwind quill --minify",
-        "tailwind rhythm --minify",
+        "cmd bash -c 'mix tailwind tymeslot --minify & mix tailwind quill --minify & mix tailwind rhythm --minify & wait'",
         "esbuild tymeslot --minify",
         "phx.digest"
       ]
