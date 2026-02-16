@@ -151,16 +151,24 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
         ""
 
       "hero-" <> _ ->
-        raw(
-          "<span class='#{icon} hero-icon hero-icon--md'></span>"
-        )
+        # Sanitize icon to prevent XSS: only allow alphanumeric, hyphens, underscores
+        safe_icon = sanitize_css_class(icon)
+        raw("<span class='#{safe_icon} hero-icon hero-icon--md'></span>")
 
       _ ->
-        raw(
-          "<span class='hero-clock hero-icon hero-icon--md'></span>"
-        )
+        raw("<span class='hero-clock hero-icon hero-icon--md'></span>")
     end
   end
+
+  # Sanitizes a CSS class name to prevent XSS attacks
+  # Only allows alphanumeric characters, hyphens, and underscores
+  defp sanitize_css_class(class_name) when is_binary(class_name) do
+    class_name
+    |> String.replace(~r/[^a-zA-Z0-9\-_]/, "")
+    |> String.slice(0, 100)
+  end
+
+  defp sanitize_css_class(_), do: ""
 
   defp get_next_button_class(selected_duration) do
     if is_nil(selected_duration), do: "next-button disabled", else: "next-button"
