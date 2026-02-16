@@ -96,13 +96,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
                   title="No URL Configured"
                   message="Enter a custom video link to configure meeting rooms"
                 />
-
-              <% _ -> %>
-                <TemplatePreviewBox.render
-                  status={:empty}
-                  title="No URL Configured"
-                  message="Enter a custom video link to configure meeting rooms"
-                />
             <% end %>
           </div>
         </div>

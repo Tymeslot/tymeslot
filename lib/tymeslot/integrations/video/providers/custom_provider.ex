@@ -180,8 +180,6 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     "#{uri.scheme}://#{uri.host}/..."
   end
 
-  defp mask_url(_), do: "..."
-
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_join_url(room_data, _participant_name, _participant_email, _role, _meeting_time) do
     {:ok, room_data.meeting_url}

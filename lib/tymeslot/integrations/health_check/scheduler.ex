@@ -246,8 +246,6 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
     end
   end
 
-  defp safe_to_existing_atom(nil), do: nil
-
   defp safe_to_existing_atom("" = value) do
     Logger.warning("Empty provider name encountered", value: value)
     nil

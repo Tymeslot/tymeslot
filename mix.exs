@@ -11,6 +11,10 @@ defmodule Tymeslot.MixProject do
       aliases: aliases(),
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
+      dialyzer: [
+        ignore_warnings: ".dialyzer_ignore.exs",
+        plt_add_apps: [:mix, :credo, :xmerl]
+      ],
       releases: [
         tymeslot: [
           applications: [tymeslot: :permanent]
