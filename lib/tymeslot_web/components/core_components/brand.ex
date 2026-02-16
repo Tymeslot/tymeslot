@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Brand do
           alt="Tymeslot"
           width="620"
           height="200"
-          class={@img_class}
+          class={[@img_class, "w-auto"]}
         />
       <% else %>
         <img
@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Brand do
           alt="Tymeslot logo"
           width="200"
           height="200"
-          class={@img_class}
+          class={[@img_class, "w-auto"]}
         />
       <% end %>
     </div>
