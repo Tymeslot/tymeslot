@@ -101,6 +101,8 @@
           {CredoChecks.EmptyFiles, [priority: :low]},
           {CredoChecks.LargeModules, [priority: :low]},
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
+          {CredoChecks.UseCoreInputs, []},
+          {CredoChecks.RequireDashboardSectionHeader, [priority: :low]},
 
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)

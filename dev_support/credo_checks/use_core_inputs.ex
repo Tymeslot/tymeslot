@@ -44,7 +44,7 @@ defmodule CredoChecks.UseCoreInputs do
 
       # Regex to find standard Phoenix form helpers in .ex files
       helper_regex =
-        ~r/\.(text_input|textarea|select|password_input|email_input|number_input|checkbox)\(/
+        ~r/\.(text_input|textarea|select|password_input|email_input|number_input|checkbox|radio_button|date_input|time_input|datetime_local_input|color_input|file_input|range_input|search_input|telephone_input|url_input|label)\(/
 
       Enum.reduce(lines, [], fn {line_no, line}, issues ->
         cond do
@@ -76,7 +76,7 @@ defmodule CredoChecks.UseCoreInputs do
         :helper ->
           helper =
             case Regex.run(
-                   ~r/\.(text_input|textarea|select|password_input|email_input|number_input|checkbox)\(/,
+                   ~r/\.(text_input|textarea|select|password_input|email_input|number_input|checkbox|radio_button|date_input|time_input|datetime_local_input|color_input|file_input|range_input|search_input|telephone_input|url_input|label)\(/,
                    line
                  ) do
               [_, helper] -> helper
@@ -90,7 +90,9 @@ defmodule CredoChecks.UseCoreInputs do
       if type == :tag do
         "Avoid using raw `<#{tag}>` tags. Use `TymeslotWeb.Components.CoreComponents.input/1` instead."
       else
-        "Avoid using `Phoenix.HTML.Form.#{tag}/3` helpers. Use `TymeslotWeb.Components.CoreComponents.input/1` instead."
+        component = if tag == "label", do: "label/1", else: "input/1"
+
+        "Avoid using `Phoenix.HTML.Form.#{tag}/3` helpers. Use `TymeslotWeb.Components.CoreComponents.#{component}` instead."
       end
 
     format_issue(issue_meta,
