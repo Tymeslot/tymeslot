@@ -1,0 +1,14 @@
+{
+  "skip_files": [
+    "test/support",
+    "dev_support",
+    "lib/mix/tasks",
+    "_build",
+    "deps",
+    "priv",
+    "node_modules",
+    "behaviour.ex$",
+    "_behaviour.ex$"
+  ],
+  "file_col_width": 120
+}
