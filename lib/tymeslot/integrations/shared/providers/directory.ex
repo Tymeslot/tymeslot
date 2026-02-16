@@ -79,7 +79,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   @spec validate(domain(), atom(), map()) :: :ok | {:error, any()}
   def validate(domain, type, config) do
     case get(domain, type) do
-      %Descriptor{provider_module: mod} when is_atom(mod) and not is_nil(mod) ->
+      %Descriptor{provider_module: mod} when is_atom(mod) and mod != nil ->
         if function_exported?(mod, :validate_config, 1) do
           # credo:disable-for-next-line Credo.Check.Refactor.Apply
           apply(mod, :validate_config, [config])

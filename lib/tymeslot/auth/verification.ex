@@ -174,7 +174,7 @@ defmodule Tymeslot.Auth.Verification do
   @spec check_token_expiration(term()) :: :ok | {:error, :token_expired}
   defp check_token_expiration(user) do
     with nil <- user.verification_token_used_at,
-         sent_at when not is_nil(sent_at) <- user.verification_sent_at,
+         %DateTime{} = sent_at <- user.verification_sent_at,
          expiry <- DateTime.add(sent_at, 2 * 3600, :second),
          :gt <- DateTime.compare(expiry, DateTime.utc_now()) do
       :ok

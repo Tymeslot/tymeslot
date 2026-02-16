@@ -267,7 +267,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         socket
       ) do
     with {:ok, int_id} <- parse_int(id),
-         integration when not is_nil(integration) <-
+         %{} = integration <-
            Enum.find(socket.assigns.integrations, &(&1.id == int_id)),
          {:ok, _} <- Calendar.toggle_calendar_selection(integration, cal_id) do
       {:noreply, load_integrations(socket)}

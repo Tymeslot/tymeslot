@@ -130,8 +130,8 @@ defmodule Tymeslot.Availability.Breaks do
   defp validate_break_within_work_hours(changeset, weekly_availability_id) do
     with {work_start, work_end} <-
            AvailabilityBreakQueries.get_work_hours(weekly_availability_id),
-         start_time when not is_nil(start_time) <- Changeset.get_field(changeset, :start_time),
-         end_time when not is_nil(end_time) <- Changeset.get_field(changeset, :end_time) do
+         %Time{} = start_time <- Changeset.get_field(changeset, :start_time),
+         %Time{} = end_time <- Changeset.get_field(changeset, :end_time) do
       cond do
         Time.compare(start_time, work_start) == :lt ->
           Changeset.add_error(changeset, :start_time, "cannot be before work hours")

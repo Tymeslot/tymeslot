@@ -149,7 +149,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
 
   defp ensure_default_booking_calendar(%CalendarIntegrationSchema{} = integration) do
     if is_nil(integration.default_booking_calendar_id) do
-      with calendar_id when not is_nil(calendar_id) <-
+      with calendar_id when is_binary(calendar_id) <-
              Defaults.resolve_default_calendar_id(integration),
            {:ok, updated} <-
              CalendarManagement.update_calendar_integration(integration, %{

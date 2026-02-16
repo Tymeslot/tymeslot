@@ -167,7 +167,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
     }
   end
 
-  defp handle_user_verification_status(user, false, email) when not is_nil(email) do
+  defp handle_user_verification_status(user, false, email) when is_binary(email) do
     {:ok, Map.put(user, :needs_email_verification, true)}
   end
 

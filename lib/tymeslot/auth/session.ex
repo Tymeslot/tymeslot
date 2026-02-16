@@ -106,7 +106,7 @@ defmodule Tymeslot.Auth.Session do
   """
   @spec get_current_user_id(Conn.t()) :: integer() | nil
   def get_current_user_id(conn) do
-    with token when not is_nil(token) <- Conn.get_session(conn, @user_token_key),
+    with token when is_binary(token) <- Conn.get_session(conn, @user_token_key),
          %{id: id} <- UserSessionQueries.get_user_by_session_token(token) do
       id
     else
@@ -121,9 +121,9 @@ defmodule Tymeslot.Auth.Session do
   @spec get_unverified_user_from_session(map()) :: map() | nil
   def get_unverified_user_from_session(session) do
     # Check if session has unverified user data and it's not expired (30 min)
-    with user_id when not is_nil(user_id) <- session["unverified_user_id"],
-         email when not is_nil(email) <- session["unverified_user_email"],
-         timestamp when not is_nil(timestamp) <- session["unverified_session_timestamp"],
+    with user_id when is_integer(user_id) <- session["unverified_user_id"],
+         email when is_binary(email) <- session["unverified_user_email"],
+         timestamp when is_integer(timestamp) <- session["unverified_session_timestamp"],
          true <- session_valid?(timestamp) do
       %{
         id: user_id,

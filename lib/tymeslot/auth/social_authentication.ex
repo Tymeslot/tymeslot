@@ -127,7 +127,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
            verified_email: true
          } = temp_user
        )
-       when not is_nil(email) do
+       when is_binary(email) do
     # Convert string keys to ensure consistency
     auth_params
     |> ensure_string_keys()

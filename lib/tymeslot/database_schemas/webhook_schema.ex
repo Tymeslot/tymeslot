@@ -123,7 +123,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookSchema do
   """
   @spec should_be_active?(t()) :: boolean()
   def should_be_active?(%__MODULE__{is_active: false}), do: false
-  def should_be_active?(%__MODULE__{disabled_at: disabled}) when not is_nil(disabled), do: false
+  def should_be_active?(%__MODULE__{disabled_at: %DateTime{}}), do: false
   def should_be_active?(%__MODULE__{failure_count: count}) when count >= 10, do: false
   def should_be_active?(_), do: true
 

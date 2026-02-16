@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
       case String.split(tag, ";q=") do
         [locale] ->
           case normalize_locale(locale) do
-            normalized when not is_nil(normalized) -> {normalized, 1.0}
+            normalized when is_binary(normalized) -> {normalized, 1.0}
             _ -> nil
           end
 
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
             # Validate quality score is within HTTP spec (0.0 to 1.0)
             {q, _} when q >= 0.0 and q <= 1.0 ->
               case normalize_locale(locale) do
-                normalized when not is_nil(normalized) -> {normalized, q}
+                normalized when is_binary(normalized) -> {normalized, q}
                 _ -> nil
               end
 

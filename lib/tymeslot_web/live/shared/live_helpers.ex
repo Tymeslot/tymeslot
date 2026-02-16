@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   @spec assign_current_user(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_current_user(socket, session) do
     case session do
-      %{"user_token" => user_token} when not is_nil(user_token) ->
+      %{"user_token" => user_token} when is_binary(user_token) ->
         user = Authentication.get_user_by_session_token(user_token)
         assign(socket, :current_user, user)
 

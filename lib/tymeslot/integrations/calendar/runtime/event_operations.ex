@@ -35,7 +35,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
       Logger.info("Creating new calendar event")
 
       with :ok <- validate_event(event_data),
-           client when not is_nil(client) <- ClientManager.booking_client(context),
+           %{} = client <- ClientManager.booking_client(context),
            {:ok, _event} = result <- ProviderAdapter.create_event(client, event_data) do
         Logger.info("Successfully created calendar event")
         result
@@ -67,7 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
     Metrics.time_operation(:update_event, %{uid: uid}, fn ->
       Logger.info("Updating calendar event", uid: uid)
 
-      with client when not is_nil(client) <- ClientManager.resolve_client(context),
+      with %{} = client <- ClientManager.resolve_client(context),
            :ok <- ProviderAdapter.update_event(client, uid, event_data) do
         Logger.info("Successfully updated calendar event", uid: uid)
         :ok
@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
     Metrics.time_operation(:delete_event, %{uid: uid}, fn ->
       Logger.info("Deleting calendar event", uid: uid)
 
-      with client when not is_nil(client) <- ClientManager.resolve_client(context),
+      with %{} = client <- ClientManager.resolve_client(context),
            :ok <- ProviderAdapter.delete_event(client, uid) do
         Logger.info("Successfully deleted calendar event", uid: uid)
         :ok

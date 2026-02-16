@@ -140,7 +140,7 @@ defmodule Tymeslot.Bookings.Policy do
   # Gets reminder configuration from meeting type or returns defaults
   defp get_meeting_reminders(meeting_type_record) do
     case meeting_type_record do
-      %{reminder_config: reminder_config} when not is_nil(reminder_config) ->
+      %{reminder_config: reminder_config} when is_list(reminder_config) ->
         ReminderUtils.normalize_reminders(reminder_config)
 
       _ ->
