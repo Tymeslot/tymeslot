@@ -9,6 +9,7 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
   Tests the `initial_state_for_action/1` function common to all themes.
   Expects the theme module as the first argument.
   """
+  @spec test_initial_state_for_action(module()) :: :ok
   def test_initial_state_for_action(theme_module) do
     assert theme_module.initial_state_for_action(:index) == :overview
 
@@ -25,6 +26,7 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
   Tests the `render_meeting_action/2` function common to all themes.
   Expects the theme module and a function to build meeting assigns.
   """
+  @spec test_render_meeting_action(module(), (-> map())) :: :ok
   def test_render_meeting_action(theme_module, build_assigns_fn) do
     assigns = build_assigns_fn.()
 
@@ -49,6 +51,7 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
   @doc """
   Builds default meeting assigns with theme-specific overrides.
   """
+  @spec build_meeting_assigns(String.t(), String.t(), String.t()) :: map()
   def build_meeting_assigns(theme_id, color_scheme, background_value) do
     %{
       meeting: %{

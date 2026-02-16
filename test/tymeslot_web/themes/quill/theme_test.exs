@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Themes.Quill.ThemeTest do
   use TymeslotWeb.ConnCase, async: true
 
-  alias TymeslotWeb.Themes.Quill.Theme
   alias TymeslotWeb.ThemeCommonTestCases
+  alias TymeslotWeb.Themes.Quill.Theme
 
   describe "states/0" do
     test "returns a 4-step flow state machine" do

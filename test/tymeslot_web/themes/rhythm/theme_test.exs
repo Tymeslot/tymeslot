@@ -1,8 +1,8 @@
 defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
   use TymeslotWeb.ConnCase, async: true
 
-  alias TymeslotWeb.Themes.Rhythm.Theme
   alias TymeslotWeb.ThemeCommonTestCases
+  alias TymeslotWeb.Themes.Rhythm.Theme
 
   describe "states/0" do
     test "returns a 4-step flow state machine" do
