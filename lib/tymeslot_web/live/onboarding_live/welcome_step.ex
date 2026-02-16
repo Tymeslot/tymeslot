@@ -13,6 +13,7 @@ defmodule TymeslotWeb.OnboardingLive.WelcomeStep do
   @doc """
   Renders the welcome step component.
   """
+  # No assigns used in this component - purely static HTML
   @spec welcome_step(map()) :: Phoenix.LiveView.Rendered.t()
   def welcome_step(assigns) do
     ~H"""

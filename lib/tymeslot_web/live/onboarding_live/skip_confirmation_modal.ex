@@ -13,6 +13,8 @@ defmodule TymeslotWeb.OnboardingLive.SkipConfirmationModal do
   @doc """
   Renders the skip confirmation modal component.
   """
+  attr :show, :boolean, required: true
+
   @spec skip_confirmation_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def skip_confirmation_modal(assigns) do
     ~H"""

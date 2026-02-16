@@ -271,6 +271,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     """
   end
 
+  attr :filter, :string, required: true
+
   @spec empty_state(map()) :: Phoenix.LiveView.Rendered.t()
   def empty_state(assigns) do
     ~H"""
@@ -298,6 +300,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     """
   end
 
+  # No assigns used in this component - purely static HTML
   @spec loading_spinner(map()) :: Phoenix.LiveView.Rendered.t()
   def loading_spinner(assigns) do
     ~H"""
@@ -309,6 +312,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     """
   end
 
+  # No assigns used in this component - purely static HTML
   @spec info_panel(map()) :: Phoenix.LiveView.Rendered.t()
   def info_panel(assigns) do
     ~H"""

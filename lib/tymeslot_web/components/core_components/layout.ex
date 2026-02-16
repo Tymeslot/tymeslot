@@ -43,6 +43,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
   @doc """
   Global footer component.
   """
+  attr :class, :string, default: nil
   @spec footer(map()) :: Phoenix.LiveView.Rendered.t()
   def footer(assigns) do
     ~H"""

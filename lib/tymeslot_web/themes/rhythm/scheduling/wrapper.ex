@@ -8,6 +8,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
   import TymeslotWeb.Components.LanguageSwitcher
   alias TymeslotWeb.Themes.Shared.Customization.Video, as: VideoHelpers
 
+  attr :theme_customization, :map, default: nil
+  attr :custom_css, :string, default: nil
+  attr :locale, :string, default: nil
+  attr :current_state, :atom, default: nil
+  attr :language_dropdown_open, :boolean, default: nil
+  attr :organizer_user_id, :integer, default: nil
+  attr :should_show_branding, :boolean, default: false
+  slot :inner_block, required: true
+
   @doc """
   Renders the Rhythm theme wrapper with custom styles and background.
   """

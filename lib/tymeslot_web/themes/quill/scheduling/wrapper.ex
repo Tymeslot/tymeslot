@@ -9,6 +9,15 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
   import TymeslotWeb.Themes.Shared.Customization.Helpers
   import TymeslotWeb.Components.LanguageSwitcher
 
+  attr :theme_customization, :map, default: nil
+  attr :custom_css, :string, default: nil
+  attr :locale, :string, default: nil
+  attr :current_state, :atom, default: nil
+  attr :language_dropdown_open, :boolean, default: nil
+  attr :organizer_user_id, :integer, default: nil
+  attr :should_show_branding, :boolean, default: false
+  slot :inner_block, required: true
+
   @doc """
   Renders the Quill theme wrapper with custom styles and background.
   """

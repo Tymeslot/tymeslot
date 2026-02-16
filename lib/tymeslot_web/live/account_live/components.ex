@@ -11,6 +11,7 @@ defmodule TymeslotWeb.AccountLive.Components do
   @doc """
   Renders the security header with icon and title.
   """
+  # No assigns used in this component - purely static HTML
   @spec security_header(map) :: Phoenix.LiveView.Rendered.t()
   def security_header(assigns) do
     ~H"""
@@ -33,6 +34,12 @@ defmodule TymeslotWeb.AccountLive.Components do
   @doc """
   Renders the email settings card with form.
   """
+  attr :current_user, :map, required: true
+  attr :is_social_user, :boolean, required: true
+  attr :show_email_form, :boolean, required: true
+  attr :email_form_errors, :map, required: true
+  attr :saving_email, :boolean, required: true
+
   @spec email_card(map) :: Phoenix.LiveView.Rendered.t()
   def email_card(assigns) do
     ~H"""
@@ -65,6 +72,12 @@ defmodule TymeslotWeb.AccountLive.Components do
   @doc """
   Renders the password settings card with form.
   """
+  attr :current_user, :map, required: true
+  attr :is_social_user, :boolean, required: true
+  attr :show_password_form, :boolean, required: true
+  attr :password_form_errors, :map, required: true
+  attr :saving_password, :boolean, required: true
+
   @spec password_card(map) :: Phoenix.LiveView.Rendered.t()
   def password_card(assigns) do
     ~H"""
@@ -102,13 +115,19 @@ defmodule TymeslotWeb.AccountLive.Components do
   @doc """
   Renders a card header with title, current value, and action button.
   """
+  attr :title, :string, required: true
+  attr :is_social, :boolean, required: true
+  attr :provider, :string, default: nil
+  attr :toggle_event, :string, required: true
+  attr :button_text, :string, required: true
+  attr :current_value, :string, default: nil
+  attr :pending_email, :string, default: nil
+  attr :subtitle, :string, default: nil
+  attr :description, :string, default: nil
+  attr :show_form, :boolean, required: true
+
   @spec card_header(map) :: Phoenix.LiveView.Rendered.t()
   def card_header(assigns) do
-    assigns = assign_new(assigns, :current_value, fn -> nil end)
-    assigns = assign_new(assigns, :pending_email, fn -> nil end)
-    assigns = assign_new(assigns, :subtitle, fn -> nil end)
-    assigns = assign_new(assigns, :description, fn -> nil end)
-
     ~H"""
     <div class="flex items-center justify-between mb-4">
       <div>
@@ -143,6 +162,11 @@ defmodule TymeslotWeb.AccountLive.Components do
   @doc """
   Renders an action button with optional disabled state and tooltip.
   """
+  attr :toggle_event, :string, required: true
+  attr :button_text, :string, required: true
+  attr :is_social, :boolean, required: true
+  attr :provider, :string, default: nil
+
   @spec action_button(map) :: Phoenix.LiveView.Rendered.t()
   def action_button(assigns) do
     ~H"""
@@ -160,6 +184,8 @@ defmodule TymeslotWeb.AccountLive.Components do
   @doc """
   Renders a tooltip for social login restrictions.
   """
+  attr :provider, :string, required: true
+
   @spec social_tooltip(map) :: Phoenix.LiveView.Rendered.t()
   def social_tooltip(assigns) do
     ~H"""
@@ -176,6 +202,9 @@ defmodule TymeslotWeb.AccountLive.Components do
   @doc """
   Renders a notice for pending email change.
   """
+  attr :pending_email, :string, required: true
+  attr :email_change_sent_at, :any, default: nil
+
   @spec pending_email_notice(map) :: Phoenix.LiveView.Rendered.t()
   def pending_email_notice(assigns) do
     ~H"""

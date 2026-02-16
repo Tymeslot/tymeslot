@@ -8,6 +8,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
+  attr :theme_customization, :map, required: true
+  attr :custom_css, :string, required: true
+  attr :locale, :string, required: true
+  attr :language_dropdown_open, :boolean, required: true
+
   @doc """
   Renders the cancel confirmed page in Rhythm theme style.
   """

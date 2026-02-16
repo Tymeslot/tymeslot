@@ -11,6 +11,7 @@ defmodule TymeslotWeb.OnboardingLive.CompleteStep do
   @doc """
   Renders the completion step component.
   """
+  # No assigns used in this component - purely static HTML
   @spec complete_step(map()) :: Phoenix.LiveView.Rendered.t()
   def complete_step(assigns) do
     ~H"""

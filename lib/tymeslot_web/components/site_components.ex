@@ -193,6 +193,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
   @doc """
   Site footer component with legal links.
   """
+  # No explicit attrs needed - uses config values via Application.get_env
   @spec site_footer(map()) :: Phoenix.LiveView.Rendered.t()
   def site_footer(assigns) do
     ~H"""

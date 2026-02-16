@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   @doc """
   Renders a loading spinner.
   """
+  attr :class, :string, default: nil
   @spec spinner(map()) :: Phoenix.LiveView.Rendered.t()
   def spinner(assigns) do
     ~H"""

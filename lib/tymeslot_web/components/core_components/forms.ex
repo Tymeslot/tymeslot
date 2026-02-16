@@ -282,6 +282,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   @doc """
   Renders a list of password requirements.
   """
+  attr :class, :string, default: nil
   @spec password_requirements(map()) :: Phoenix.LiveView.Rendered.t()
   def password_requirements(assigns) do
     ~H"""

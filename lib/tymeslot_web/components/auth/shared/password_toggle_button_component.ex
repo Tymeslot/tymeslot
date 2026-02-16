@@ -11,9 +11,11 @@ defmodule TymeslotWeb.Shared.PasswordToggleButtonComponent do
   @doc """
   Renders a password visibility toggle button for password fields.
   """
+  attr :id, :string, required: true
+  attr :class, :string, default: ""
+
   @spec password_toggle_button(map()) :: Phoenix.LiveView.Rendered.t()
   def password_toggle_button(assigns) do
-    assigns = assign_new(assigns, :class, fn -> "" end)
 
     ~H"""
     <button

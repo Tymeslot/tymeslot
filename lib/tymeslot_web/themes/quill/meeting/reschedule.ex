@@ -9,6 +9,13 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
 
   import TymeslotWeb.Components.CoreComponents
 
+  attr :theme_customization, :map, required: true
+  attr :custom_css, :string, required: true
+  attr :locale, :string, required: true
+  attr :language_dropdown_open, :boolean, required: true
+  attr :meeting, :map, required: true
+  attr :organizer_profile, :map, default: nil
+
   @doc """
   Renders the reschedule page in Quill theme style.
   """

@@ -51,6 +51,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @doc """
   Global footer component.
   """
+  attr :class, :string, default: nil
   @spec footer(map()) :: Phoenix.LiveView.Rendered.t()
   def footer(assigns), do: Layout.footer(assigns)
 
@@ -100,6 +101,8 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @doc """
   Renders a glass-morphism card container.
   """
+  attr :class, :string, default: ""
+  slot :inner_block, required: true
   @spec glass_morphism_card(map()) :: Phoenix.LiveView.Rendered.t()
   def glass_morphism_card(assigns), do: Containers.glass_morphism_card(assigns)
 
@@ -193,6 +196,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @doc """
   Renders a list of password requirements.
   """
+  attr :class, :string, default: nil
   @spec password_requirements(map()) :: Phoenix.LiveView.Rendered.t()
   def password_requirements(assigns), do: Forms.password_requirements(assigns)
 
@@ -208,6 +212,7 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @doc """
   Renders a loading spinner.
   """
+  attr :class, :string, default: nil
   @spec spinner(map()) :: Phoenix.LiveView.Rendered.t()
   def spinner(assigns), do: Feedback.spinner(assigns)
 

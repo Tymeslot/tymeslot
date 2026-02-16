@@ -9,6 +9,9 @@ defmodule TymeslotWeb.AccountLive.Forms do
   @doc """
   Renders the email change form.
   """
+  attr :errors, :map, required: true
+  attr :saving, :boolean, required: true
+
   @spec email_form(map()) :: Phoenix.LiveView.Rendered.t()
   def email_form(assigns) do
     ~H"""
@@ -42,6 +45,9 @@ defmodule TymeslotWeb.AccountLive.Forms do
   @doc """
   Renders the password change form.
   """
+  attr :errors, :map, required: true
+  attr :saving, :boolean, required: true
+
   @spec password_form(map()) :: Phoenix.LiveView.Rendered.t()
   def password_form(assigns) do
     ~H"""
@@ -87,6 +93,8 @@ defmodule TymeslotWeb.AccountLive.Forms do
   @doc """
   Renders form-level error messages.
   """
+  attr :errors, :any, default: nil
+
   @spec form_errors(map()) :: Phoenix.LiveView.Rendered.t()
   def form_errors(assigns) do
     ~H"""
@@ -99,6 +107,9 @@ defmodule TymeslotWeb.AccountLive.Forms do
   @doc """
   Renders a submit button with loading state.
   """
+  attr :text, :string, required: true
+  attr :saving, :boolean, required: true
+
   @spec submit_button(map()) :: Phoenix.LiveView.Rendered.t()
   def submit_button(assigns) do
     ~H"""

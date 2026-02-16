@@ -24,6 +24,9 @@ defmodule TymeslotWeb.Components.UIComponents do
   @doc """
   Renders a meeting details card with consistent styling.
   """
+  attr :title, :string, default: nil
+  slot :inner_block, required: true
+
   @spec meeting_details_card(map()) :: Phoenix.LiveView.Rendered.t()
   def meeting_details_card(assigns) do
     ~H"""
@@ -108,6 +111,7 @@ defmodule TymeslotWeb.Components.UIComponents do
   @doc """
   Renders a loading spinner.
   """
+  # No assigns used in this component - purely static HTML
   @spec spinner(map()) :: Phoenix.LiveView.Rendered.t()
   def spinner(assigns) do
     ~H"""

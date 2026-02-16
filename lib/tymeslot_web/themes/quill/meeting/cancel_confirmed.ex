@@ -9,6 +9,11 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
 
   import TymeslotWeb.Components.CoreComponents
 
+  attr :theme_customization, :map, required: true
+  attr :custom_css, :string, required: true
+  attr :locale, :string, required: true
+  attr :language_dropdown_open, :boolean, required: true
+
   @doc """
   Renders the cancel confirmed page in Quill theme style.
   """

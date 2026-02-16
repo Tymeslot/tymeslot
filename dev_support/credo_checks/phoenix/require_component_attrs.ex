@@ -106,18 +106,41 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
     |> Enum.with_index()
     |> Enum.reduce([], fn {node, index}, acc ->
       case node do
-        {:def, meta, [{func_name, _, [{:assigns, _, nil}]}, _body]} ->
-          # Found a function component - check if it has attr declarations before it
-          if has_attr_before?(body, index) do
+        {:def, meta, [{func_name, _, [{:assigns, _, nil}]}, func_body]} ->
+          # Found a function component - check if it uses any assigns
+          uses_assigns = component_uses_assigns?(func_body)
+
+          # Skip if component doesn't use assigns (static HTML only)
+          if not uses_assigns do
+            acc
+          # Check if it has attr declarations before it
+          else if has_attr_before?(body, index) do
             acc
           else
             [create_issue(issue_meta, meta, func_name) | acc]
+          end
           end
 
         _ ->
           acc
       end
     end)
+  end
+
+  # Check if a component function body uses any assigns (@variable syntax)
+  defp component_uses_assigns?(func_body) do
+    {_, uses_assigns} =
+      Macro.prewalk(func_body, false, fn
+        # Look for @variable references (module attributes used as assigns)
+        {:@, _, [{var_name, _, _}]} = node, _acc
+        when is_atom(var_name) and var_name not in [:moduledoc, :doc, :spec, :impl, :behaviour, :type, :typep, :opaque, :callback, :macrocallback] ->
+          {node, true}
+
+        node, acc ->
+          {node, acc}
+      end)
+
+    uses_assigns
   end
 
   # Check if there are any attr/3 calls before the given index

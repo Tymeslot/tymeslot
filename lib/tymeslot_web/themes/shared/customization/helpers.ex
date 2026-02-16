@@ -40,6 +40,8 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   @doc """
   Renders a style tag with custom CSS.
   """
+  attr :custom_css, :string, required: true
+
   @spec render_custom_theme_styles(map()) :: Phoenix.LiveView.Rendered.t()
   def render_custom_theme_styles(assigns) do
     ~H"""

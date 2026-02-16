@@ -10,6 +10,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
+  attr :theme_customization, :map, required: true
+  attr :custom_css, :string, required: true
+  attr :locale, :string, required: true
+  attr :language_dropdown_open, :boolean, required: true
+  attr :meeting, :map, required: true
+  attr :organizer_profile, :map, default: nil
+
   @doc """
   Renders the reschedule page in Rhythm theme style.
   """

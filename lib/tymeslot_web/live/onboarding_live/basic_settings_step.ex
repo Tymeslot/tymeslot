@@ -25,6 +25,13 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsStep do
   * `timezone_search` - Current search query
   * `form_errors` - Map of form validation errors
   """
+  attr :profile, :map, required: true
+  attr :form_data, :map, required: true
+  attr :timezone_options, :list, required: true
+  attr :timezone_dropdown_open, :boolean, required: true
+  attr :timezone_search, :string, required: true
+  attr :form_errors, :map, required: true
+
   @spec basic_settings_step(map()) :: Phoenix.LiveView.Rendered.t()
   def basic_settings_step(assigns) do
     ~H"""
