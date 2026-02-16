@@ -1,5 +1,5 @@
 defmodule Tymeslot.Mailer.HealthCheck do
-  @compile {:no_warn_undefined, :castore}
+  @compile {:no_warn_undefined, CAStore}
 
   @moduledoc """
   Health checks for mailer configuration at application startup.
@@ -363,15 +363,29 @@ defmodule Tymeslot.Mailer.HealthCheck do
 
   # Port 465: Direct SSL connection
   defp test_ssl_connection(host, port, timeout, config) do
-    ssl_opts = [
-      :binary,
-      active: false,
-      verify: :verify_peer,
-      cacerts: config[:tls_options][:cacerts] || load_fallback_cacerts(),
-      server_name_indication: host,
-      versions: config[:tls_options][:versions] || [:"tlsv1.2", :"tlsv1.3"],
-      depth: config[:tls_options][:depth] || 5
-    ]
+    # Use cacerts if provided, otherwise use cacertfile from CAStore
+    ssl_opts =
+      if config[:tls_options][:cacerts] do
+        [
+          :binary,
+          active: false,
+          verify: :verify_peer,
+          cacerts: config[:tls_options][:cacerts],
+          server_name_indication: host,
+          versions: config[:tls_options][:versions] || [:"tlsv1.2", :"tlsv1.3"],
+          depth: config[:tls_options][:depth] || 5
+        ]
+      else
+        [
+          :binary,
+          active: false,
+          verify: :verify_peer,
+          cacertfile: load_fallback_cacertfile(),
+          server_name_indication: host,
+          versions: config[:tls_options][:versions] || [:"tlsv1.2", :"tlsv1.3"],
+          depth: config[:tls_options][:depth] || 5
+        ]
+      end
 
     case :ssl.connect(host, port, ssl_opts, timeout) do
       {:ok, socket} ->
@@ -406,13 +420,13 @@ defmodule Tymeslot.Mailer.HealthCheck do
     e -> {:error, Exception.message(e)}
   end
 
-  # Load fallback cacerts if not provided in config
-  defp load_fallback_cacerts do
-    if Code.ensure_loaded?(:castore) do
-      :castore.cacerts()
+  # Load fallback cacertfile path if not provided in config
+  defp load_fallback_cacertfile do
+    if Code.ensure_loaded?(CAStore) do
+      CAStore.file_path()
     else
       # This should not happen if dependencies are correct, but provide clear error
-      raise "Cannot load CA certificates: castore module not available"
+      raise "Cannot load CA certificates: CAStore module not available"
     end
   end
 
