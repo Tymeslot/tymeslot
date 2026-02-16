@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
   use TymeslotWeb.ConnCase, async: true
 
   alias TymeslotWeb.Themes.Rhythm.Theme
+  alias TymeslotWeb.ThemeCommonTestCases
 
   describe "states/0" do
     test "returns a 4-step flow state machine" do
@@ -93,20 +94,8 @@ defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
   end
 
   describe "initial_state_for_action/1" do
-    test "maps :index action to overview state" do
-      assert Theme.initial_state_for_action(:index) == :overview
-    end
-
-    test "maps each named action to its corresponding state" do
-      assert Theme.initial_state_for_action(:overview) == :overview
-      assert Theme.initial_state_for_action(:schedule) == :schedule
-      assert Theme.initial_state_for_action(:booking) == :booking
-      assert Theme.initial_state_for_action(:confirmation) == :confirmation
-    end
-
-    test "defaults unknown actions to overview" do
-      assert Theme.initial_state_for_action(:unknown) == :overview
-      assert Theme.initial_state_for_action(:random_action) == :overview
+    test "behaves according to common theme contract" do
+      ThemeCommonTestCases.test_initial_state_for_action(Theme)
     end
   end
 
@@ -130,55 +119,12 @@ defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
   end
 
   describe "render_meeting_action/2" do
-    test "renders reschedule action with proper assigns" do
-      assigns = build_meeting_assigns()
-      result = Theme.render_meeting_action(assigns, :reschedule)
-
-      assert result.__struct__ == Phoenix.LiveView.Rendered
-    end
-
-    test "renders cancel action with proper assigns" do
-      assigns = build_meeting_assigns()
-      result = Theme.render_meeting_action(assigns, :cancel)
-
-      assert result.__struct__ == Phoenix.LiveView.Rendered
-    end
-
-    test "renders cancel_confirmed action with proper assigns" do
-      assigns = build_meeting_assigns()
-      result = Theme.render_meeting_action(assigns, :cancel_confirmed)
-
-      assert result.__struct__ == Phoenix.LiveView.Rendered
-    end
-
-    test "raises error for unsupported actions" do
-      assigns = build_meeting_assigns()
-
-      assert_raise RuntimeError, "Unsupported meeting action: invalid", fn ->
-        Theme.render_meeting_action(assigns, :invalid)
-      end
+    test "behaves according to common theme contract" do
+      ThemeCommonTestCases.test_render_meeting_action(Theme, &build_meeting_assigns/0)
     end
   end
 
   defp build_meeting_assigns do
-    %{
-      meeting: %{
-        uid: "test-123",
-        start_time: ~U[2026-02-20 10:00:00Z],
-        duration: 30,
-        organizer_name: "Test User",
-        attendee_timezone: "UTC"
-      },
-      organizer_profile: %{username: "testuser"},
-      theme_customization: %{
-        theme_id: "2",
-        color_scheme: "purple",
-        background_type: "gradient",
-        background_value: "gradient_1"
-      },
-      custom_css: nil,
-      locale: "en",
-      language_dropdown_open: false
-    }
+    ThemeCommonTestCases.build_meeting_assigns("2", "purple", "gradient_1")
   end
 end
