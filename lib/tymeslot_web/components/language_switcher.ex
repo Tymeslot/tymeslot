@@ -90,6 +90,12 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
 
   defp dropdown_class(_), do: dropdown_class("quill")
 
+  defp dropdown_item_class("rhythm", active) do
+    base = "flex items-center w-full px-4 py-3 text-left text-sm transition-colors"
+    active_class = if active, do: "active", else: ""
+    "#{base} language-dropdown-item-rhythm #{active_class}"
+  end
+
   defp dropdown_item_class(theme, active) do
     base = "flex items-center w-full px-4 py-3 text-left text-gray-700 text-sm transition-colors"
     theme_class = "language-dropdown-item-#{theme}"
