@@ -137,7 +137,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
         )
       )
 
-    now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+    now = NaiveDateTime.utc_now(:second)
 
     default_types =
       Enum.reject(
@@ -295,7 +295,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
   """
   @spec reorder_meeting_types(integer(), [integer()]) :: {:ok, any()} | {:error, any()}
   def reorder_meeting_types(user_id, meeting_type_ids) when is_list(meeting_type_ids) do
-    now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+    now = NaiveDateTime.utc_now(:second)
 
     Repo.transaction(fn ->
       Enum.with_index(meeting_type_ids, fn meeting_type_id, index ->

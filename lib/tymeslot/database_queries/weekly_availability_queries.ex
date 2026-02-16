@@ -195,7 +195,7 @@ defmodule Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries do
   @spec create_default_weekly_schedule(integer()) ::
           {:ok, non_neg_integer()} | {:error, :failed_to_create_schedule}
   def create_default_weekly_schedule(profile_id) do
-    now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+    now = NaiveDateTime.utc_now(:second)
 
     # Build all entries at once
     # Monday to Friday (1-5)

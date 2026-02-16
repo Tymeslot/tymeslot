@@ -1,5 +1,5 @@
 defmodule Tymeslot.ThemeCustomizationsTest do
-  use Tymeslot.DataCase
+  use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
