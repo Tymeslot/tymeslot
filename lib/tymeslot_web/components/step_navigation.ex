@@ -119,11 +119,11 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp step_label_class(step, current) when step < current do
-    "text-gray-200 drop-shadow-md"
+    "text-gray-100 drop-shadow-md"
   end
 
   defp step_label_class(_, _) do
-    "text-gray-300 drop-shadow-md"
+    "text-white/80 drop-shadow-md"
   end
 
   defp get_step_path(username_context, step, slug \\ nil)
