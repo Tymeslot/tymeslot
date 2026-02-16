@@ -1,0 +1,18 @@
+
+XSS.SendResp: XSS in `send_resp`,lib/tymeslot_web/controllers/stripe_webhook_controller.ex:64,10542D2
+Traversal.FileModule: Directory Traversal in `File.chmod`,lib/tymeslot_web/helpers/file_operations.ex:140,262E305
+Traversal.FileModule: Directory Traversal in `File.read`,lib/tymeslot/emails/shared/shared_helpers.ex:209,265E07F
+Config.HTTPS: HTTPS Not Enabled,config/prod.exs:0,2B5C077
+Traversal.FileModule: Directory Traversal in `File.mkdir_p`,lib/tymeslot/theme_customizations/storage.ex:42,2D4BCA4
+Traversal.FileModule: Directory Traversal in `File.mkdir_p`,lib/tymeslot/profiles/avatars.ex:110,323D8D1
+Traversal.FileModule: Directory Traversal in `File.rm`,lib/tymeslot_web/helpers/file_operations.ex:219,39C1022
+Traversal.FileModule: Directory Traversal in `File.open`,lib/tymeslot/utils/media_validator.ex:60,3EA3307
+Traversal.FileModule: Directory Traversal in `File.cp`,lib/tymeslot/profiles/avatars.ex:113,579A76
+Traversal.FileModule: Directory Traversal in `File.open`,lib/tymeslot/utils/media_validator.ex:74,5EBAACD
+XSS.Raw: XSS,lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:156,60173A6
+Traversal.FileModule: Directory Traversal in `File.rm`,lib/tymeslot_web/helpers/file_operations.ex:200,63780FE
+Traversal.FileModule: Directory Traversal in `File.cp`,lib/tymeslot_web/helpers/file_operations.ex:198,6754389
+Traversal.SendFile: Directory Traversal in `send_file`,lib/tymeslot_web/endpoint.ex:48,6EAF1BE
+Traversal.FileModule: Directory Traversal in `File.mkdir_p`,lib/tymeslot_web/helpers/file_operations.ex:137,6EB5C87
+Traversal.FileModule: Directory Traversal in `File.read`,lib/tymeslot/profiles/avatars.ex:111,72DE541
+Traversal.FileModule: Directory Traversal in `File.read!`,lib/tymeslot/mailer/smtp_config.ex:200,C2DD8A
