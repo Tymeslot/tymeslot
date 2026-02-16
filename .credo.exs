@@ -135,15 +135,24 @@
           {Credo.Check.Warning.UnusedStringOperation, []},
           {Credo.Check.Warning.UnusedTupleOperation, []},
           {Credo.Check.Warning.WrongTestFileExtension, []},
-          {Credo.Check.Warning.UnsafeToAtom, []}
-        ],
-        disabled: [
+          {Credo.Check.Warning.UnsafeToAtom, []},
+
+          #
+          # Newly enabled checks for code quality
+          #
           {Credo.Check.Refactor.UtcNowTruncate, []},
-          {Credo.Check.Consistency.MultiAliasImportRequireUse, []},
           {Credo.Check.Consistency.UnusedVariableNames, []},
           {Credo.Check.Design.SkipTestWithoutComment, []},
-          {Credo.Check.Readability.AliasAs, []},
           {Credo.Check.Readability.ImplTrue, []},
+          {Credo.Check.Refactor.DoubleBooleanNegation, []},
+          {Credo.Check.Refactor.NegatedIsNil, []},
+          {Credo.Check.Refactor.PassAsyncInTestCases, []},
+          {Credo.Check.Warning.MapGetUnsafePass, []},
+          {Credo.Check.Warning.MixEnv, []}
+        ],
+        disabled: [
+          {Credo.Check.Consistency.MultiAliasImportRequireUse, []},
+          {Credo.Check.Readability.AliasAs, []},
           {Credo.Check.Readability.MultiAlias, []},
           {Credo.Check.Readability.NestedFunctionCalls, []},
           {Credo.Check.Readability.OneArityFunctionInPipe, []},
@@ -152,16 +161,11 @@
           {Credo.Check.Readability.StrictModuleLayout, []},
           {Credo.Check.Readability.WithCustomTaggedTuple, []},
           {Credo.Check.Refactor.AppendSingleItem, []},
-          {Credo.Check.Refactor.DoubleBooleanNegation, []},
           {Credo.Check.Refactor.FilterReject, []},
           {Credo.Check.Refactor.IoPuts, []},
           {Credo.Check.Refactor.MapMap, []},
-          {Credo.Check.Refactor.NegatedIsNil, []},
-          {Credo.Check.Refactor.PassAsyncInTestCases, []},
           {Credo.Check.Refactor.PipeChainStart, []},
-          {Credo.Check.Refactor.RejectFilter, []},
-          {Credo.Check.Warning.MapGetUnsafePass, []},
-          {Credo.Check.Warning.MixEnv, []}
+          {Credo.Check.Refactor.RejectFilter, []}
         ]
       }
     }
