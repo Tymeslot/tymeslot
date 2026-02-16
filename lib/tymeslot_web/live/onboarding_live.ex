@@ -246,17 +246,14 @@ defmodule TymeslotWeb.OnboardingLive do
   end
 
   def handle_event("update_scheduling_preferences", params, socket) do
-    case SchedulingHandlers.handle_update_scheduling_preferences(params, socket) do
-      {:noreply, updated_socket} ->
-        if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
-          socket_with_mode = update_custom_input_modes(updated_socket, params)
-          {:noreply, socket_with_mode}
-        else
-          {:noreply, updated_socket}
-        end
+    {:noreply, updated_socket} =
+      SchedulingHandlers.handle_update_scheduling_preferences(params, socket)
 
-      result ->
-        result
+    if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
+      socket_with_mode = update_custom_input_modes(updated_socket, params)
+      {:noreply, socket_with_mode}
+    else
+      {:noreply, updated_socket}
     end
   end
 
@@ -288,23 +285,19 @@ defmodule TymeslotWeb.OnboardingLive do
       # Update profile first via handler, then enable custom mode only on success
       params = %{setting => to_string(custom_value)}
 
-      case SchedulingHandlers.handle_update_scheduling_preferences(params, socket) do
-        {:noreply, updated_socket} ->
-          # Check if update was successful
-          if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
-            # Success - enable custom mode for this field
-            socket_with_mode =
-              CustomInputModeHelper.enable_custom_mode(updated_socket, config.field)
+      {:noreply, updated_socket} =
+        SchedulingHandlers.handle_update_scheduling_preferences(params, socket)
 
-            {:noreply, socket_with_mode}
-          else
-            # Validation or update failed - don't enable custom mode
-            {:noreply, updated_socket}
-          end
+      # Check if update was successful
+      if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
+        # Success - enable custom mode for this field
+        socket_with_mode =
+          CustomInputModeHelper.enable_custom_mode(updated_socket, config.field)
 
-        result ->
-          # Pass through any other result unchanged
-          result
+        {:noreply, socket_with_mode}
+      else
+        # Validation or update failed - don't enable custom mode
+        {:noreply, updated_socket}
       end
     else
       # Invalid setting name or missing profile - return unchanged socket
