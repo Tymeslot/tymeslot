@@ -22,12 +22,16 @@ defmodule TymeslotWeb.Components.CoreComponents.Brand do
         <img
           src="/images/brand/logo-with-text.svg"
           alt="Tymeslot"
+          width="620"
+          height="200"
           class={@img_class}
         />
       <% else %>
         <img
           src="/images/brand/logo.svg"
           alt="Tymeslot logo"
+          width="200"
+          height="200"
           class={@img_class}
         />
       <% end %>
