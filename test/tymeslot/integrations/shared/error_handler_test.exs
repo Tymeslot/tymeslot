@@ -147,7 +147,7 @@ defmodule Tymeslot.Integrations.Common.ErrorHandlerTest do
     test "handles Finch/HTTPoison errors" do
       error = %Finch.Error{reason: :timeout}
       assert {:error, message} = ErrorHandler.handle_http_error({:error, error})
-      assert message =~ "HTTP request failed: :timeout"
+      assert message =~ "HTTP request failed: timeout"
     end
 
     test "parses google-specific error body" do
