@@ -131,6 +131,10 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
 
         {:ok, processed}
 
+      "" ->
+        Logger.error("Template URL requires non-empty meeting_id", url: mask_url(url))
+        {:error, "meeting_id is required for template URLs but was empty"}
+
       meeting_id when is_integer(meeting_id) or is_atom(meeting_id) ->
         # Convert non-string meeting_id to string and check if non-empty
         string_id = to_string(meeting_id)
