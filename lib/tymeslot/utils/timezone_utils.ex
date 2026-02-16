@@ -35,7 +35,7 @@ defmodule Tymeslot.Utils.TimezoneUtils do
     _ -> false
   end
 
-  def valid_timezone?(_), do: false
+  def valid_timezone?(_value), do: false
 
   @doc """
   Formats a timezone string for display with current UTC offset.
@@ -59,7 +59,7 @@ defmodule Tymeslot.Utils.TimezoneUtils do
     end
   end
 
-  def format_timezone(_), do: "Unknown timezone"
+  def format_timezone(_value), do: "Unknown timezone"
 
   @doc """
   Gets the country code for a timezone to display flags.
@@ -217,7 +217,7 @@ defmodule Tymeslot.Utils.TimezoneUtils do
     Map.get(timezone_to_country_map, normalize_timezone(timezone))
   end
 
-  def get_country_code_for_timezone(_), do: nil
+  def get_country_code_for_timezone(_timezone), do: nil
 
   @doc """
   Gets the current UTC offset for a timezone.
@@ -419,7 +419,7 @@ defmodule Tymeslot.Utils.TimezoneUtils do
     end
   end
 
-  def format_duration(_), do: "Unknown duration"
+  def format_duration(_value), do: "Unknown duration"
 
   # Helper function to format minutes into human-readable string
   @spec format_minutes(non_neg_integer()) :: String.t()
@@ -457,7 +457,7 @@ defmodule Tymeslot.Utils.TimezoneUtils do
     end
   end
 
-  def format_date(_), do: "Invalid date"
+  def format_date(_value), do: "Invalid date"
 
   @doc """
   Checks if a flag function exists for the given country code.

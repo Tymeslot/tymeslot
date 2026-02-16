@@ -17,7 +17,7 @@ defmodule Tymeslot.Security.AccountLockout do
   end
 
   @spec init(any()) :: {:ok, map()}
-  def init(_) do
+  def init(_state) do
     Logger.info("Starting AccountLockout with ETS table", table: @lockout_table)
     :ets.new(@lockout_table, [:named_table, :public, :set])
     {:ok, %{}}

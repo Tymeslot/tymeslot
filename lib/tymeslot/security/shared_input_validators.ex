@@ -19,7 +19,7 @@ defmodule Tymeslot.Security.SharedInputValidators do
     end
   end
 
-  def validate_integration_name(_), do: {:error, %{name: "Name must be text"}}
+  def validate_integration_name(_value), do: {:error, %{name: "Name must be text"}}
 
   @doc """
   Strict, centralized validator for integration names with universal sanitization.

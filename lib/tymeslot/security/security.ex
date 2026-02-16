@@ -252,7 +252,7 @@ defmodule Tymeslot.Security.Security do
   Logs security events for monitoring.
   """
   @spec log_security_event(String.t(), map(), term()) :: :ok
-  def log_security_event(event_type, details, _socket) do
+  def log_security_event(event_type, details, _socket_or_conn) do
     Logger.warning("Security Event: #{event_type}",
       details: details,
       timestamp: DateTime.utc_now()
@@ -290,5 +290,5 @@ defmodule Tymeslot.Security.Security do
     end
   end
 
-  def validate_domain(_), do: {:error, "Invalid domain"}
+  def validate_domain(_value), do: {:error, "Invalid domain"}
 end

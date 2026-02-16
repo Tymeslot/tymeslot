@@ -164,7 +164,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   def categorize_error(429), do: :rate_limit
   def categorize_error(status) when is_integer(status) and status >= 500, do: :network
 
-  def categorize_error(_), do: :unknown
+  def categorize_error(_error), do: :unknown
 
   @doc """
   Gets a user-friendly error message for a category and provider.
@@ -234,7 +234,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     "Double-check your credentials and ensure they haven't expired"
   end
 
-  defp get_auth_suggestion(_, _), do: nil
+  defp get_auth_suggestion(_category, _provider), do: nil
 
   defp get_network_suggestion(:network, :nextcloud) do
     "Verify the URL format: https://your-domain.com (Nextcloud path will be added automatically)"
@@ -248,7 +248,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     "Verify the full CalDAV URL including the path (e.g., https://server.com/caldav/)"
   end
 
-  defp get_network_suggestion(_, _), do: nil
+  defp get_network_suggestion(_category, _provider), do: nil
 
   defp get_config_suggestion(:config, :radicale) do
     "Check that Radicale is running and accessible at the specified URL and port"
@@ -258,7 +258,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     "Check that the server URL is correct and the CalDAV service is enabled"
   end
 
-  defp get_config_suggestion(_, _), do: nil
+  defp get_config_suggestion(_category, _provider), do: nil
 
   defp get_other_suggestion(:timeout) do
     "If the problem persists, contact your calendar server administrator"
@@ -268,7 +268,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     "Wait 60 seconds before trying again"
   end
 
-  defp get_other_suggestion(_), do: nil
+  defp get_other_suggestion(_category), do: nil
 
   @doc """
   Creates a validation error in the format expected by the UI.

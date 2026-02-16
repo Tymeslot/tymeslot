@@ -37,12 +37,12 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
 
   defp provider_default(%{provider: "google"}), do: "primary"
   defp provider_default(%{provider: "outlook"}), do: "default"
-  defp provider_default(_), do: nil
+  defp provider_default(_integration), do: nil
 
   defp first_path(%{calendar_paths: paths}) when is_list(paths) and paths != [],
     do: List.first(paths)
 
-  defp first_path(_), do: nil
+  defp first_path(_integration), do: nil
 
   @doc """
   Find provider-primary calendar ID from a calendar list.
@@ -55,7 +55,7 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
     end
   end
 
-  def primary_id(_), do: nil
+  def primary_id(_calendars), do: nil
 
   @doc """
   Find first selected calendar ID from a calendar list.
@@ -68,7 +68,7 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
     end
   end
 
-  def selected_id(_), do: nil
+  def selected_id(_calendars), do: nil
 
   @doc """
   Get the first calendar ID from a calendar list.
@@ -81,5 +81,5 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
     end
   end
 
-  def first_id_from_list(_), do: nil
+  def first_id_from_list(_calendars), do: nil
 end

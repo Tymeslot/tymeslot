@@ -18,7 +18,7 @@ defmodule Tymeslot.Security.RateLimiter do
 
   @impl GenServer
   @spec init(term()) :: {:ok, map()}
-  def init(_) do
+  def init(_state) do
     Logger.info("Starting RateLimiter with ETS table", table: @table_name)
     :ets.new(@table_name, [:named_table, :public, :set])
     {:ok, %{}}
@@ -194,7 +194,7 @@ defmodule Tymeslot.Security.RateLimiter do
     check_with_logging("login_ip:#{ip}", 50, 1_800_000, "authentication (ip)", ip)
   end
 
-  defp check_auth_ip_bucket(_), do: :ok
+  defp check_auth_ip_bucket(_ip), do: :ok
 
   @doc """
   Record authentication attempt result for lockout tracking.

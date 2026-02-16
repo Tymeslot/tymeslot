@@ -94,7 +94,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
     provider in all_providers_with_dev()
   end
 
-  def valid_provider?(_), do: false
+  def valid_provider?(_provider), do: false
 
   @doc """
   Gets full metadata for a provider.
@@ -177,7 +177,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def display_name(:google_meet), do: "Google Meet"
   def display_name(:teams), do: "Microsoft Teams"
   def display_name(:custom), do: "Custom Video Link"
-  def display_name(_), do: "Unknown Provider"
+  def display_name(_provider), do: "Unknown Provider"
 
   @doc """
   Returns the provider modules list (enabled only).
@@ -202,7 +202,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
 
   def get_provider_module(:teams), do: Tymeslot.Integrations.Video.Providers.TeamsProvider
   def get_provider_module(:custom), do: Tymeslot.Integrations.Video.Providers.CustomProvider
-  def get_provider_module(_), do: nil
+  def get_provider_module(_provider), do: nil
 
   @doc """
   Returns a providers map suitable for the registry (type => module) for enabled providers.

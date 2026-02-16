@@ -55,5 +55,5 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
     end)
   end
 
-  def get_selected_calendars(_), do: []
+  def get_selected_calendars(_integration), do: []
 end

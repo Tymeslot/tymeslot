@@ -76,7 +76,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     room_data[:room_id] || room_data["room_id"]
   end
 
-  def extract_room_id(_), do: nil
+  def extract_room_id(_other), do: nil
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def valid_meeting_url?(meeting_url) do
@@ -147,7 +147,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     :ok
   end
 
-  def handle_meeting_event(_event, _room_data, _additional_data) do
+  def handle_meeting_event(_other_event, _room_data, _additional_data) do
     :ok
   end
 

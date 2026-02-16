@@ -35,7 +35,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
     """
   end
 
-  def format_video_section(_), do: ""
+  def format_video_section(_meeting_url), do: ""
 
   @doc """
   Formats action links for text body.
@@ -112,10 +112,10 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   defp format_location_line(location) when is_binary(location) and location != "",
     do: "Location: #{location}"
 
-  defp format_location_line(_), do: nil
+  defp format_location_line(_location), do: nil
 
   defp format_meeting_type_line(meeting_type) when is_binary(meeting_type) and meeting_type != "",
     do: "Type: #{meeting_type}"
 
-  defp format_meeting_type_line(_), do: nil
+  defp format_meeting_type_line(_meeting_type), do: nil
 end

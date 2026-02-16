@@ -352,11 +352,11 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   @spec create_join_url(String.t(), term(), term()) ::
           {:error, :missing_room_id | :missing_participant_name}
-  def create_join_url("", _, _), do: {:error, :missing_room_id}
+  def create_join_url("", _participant_name, _participant_email), do: {:error, :missing_room_id}
 
   @spec create_join_url(term(), String.t(), term()) ::
           {:error, :missing_room_id | :missing_participant_name}
-  def create_join_url(_, "", _), do: {:error, :missing_participant_name}
+  def create_join_url(_room_id, "", _participant_email), do: {:error, :missing_participant_name}
 
   @spec create_direct_join_url(map(), String.t(), String.t()) :: String.t()
   def create_direct_join_url(config, room_id, participant_name) do
@@ -453,7 +453,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   end
 
   @spec sanitize_input(term()) :: String.t()
-  def sanitize_input(_), do: ""
+  def sanitize_input(_non_string), do: ""
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) and meeting_url != "" do
@@ -471,7 +471,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     end
   end
 
-  def extract_room_id(_), do: nil
+  def extract_room_id(_url), do: nil
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def valid_meeting_url?(meeting_url) do

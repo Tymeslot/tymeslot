@@ -80,7 +80,7 @@ defmodule Tymeslot.Security.FormValidation do
     end
   end
 
-  defp sanitize_name(_), do: ""
+  defp sanitize_name(_input), do: ""
 
   defp sanitize_email(input) when is_binary(input) do
     case UniversalSanitizer.sanitize_and_validate(input,
@@ -97,7 +97,7 @@ defmodule Tymeslot.Security.FormValidation do
     end
   end
 
-  defp sanitize_email(_), do: ""
+  defp sanitize_email(_input), do: ""
 
   defp sanitize_message(input) when is_binary(input) do
     case UniversalSanitizer.sanitize_and_validate(input, allow_html: true, on_too_long: :truncate) do
@@ -111,7 +111,7 @@ defmodule Tymeslot.Security.FormValidation do
     end
   end
 
-  defp sanitize_message(_), do: ""
+  defp sanitize_message(_input), do: ""
 
   defp normalize_whitespace(text) do
     text
@@ -159,7 +159,7 @@ defmodule Tymeslot.Security.FormValidation do
     end
   end
 
-  defp validate_name(_, errors) do
+  defp validate_name(_name, errors) do
     [{:name, "Name is required"} | errors]
   end
 
@@ -181,7 +181,7 @@ defmodule Tymeslot.Security.FormValidation do
     end
   end
 
-  defp validate_email(_, errors) do
+  defp validate_email(_email, errors) do
     [{:email, "Email is required"} | errors]
   end
 
@@ -203,7 +203,7 @@ defmodule Tymeslot.Security.FormValidation do
   defp validate_message(nil, errors), do: errors
   defp validate_message("", errors), do: errors
 
-  defp validate_message(_, errors) do
+  defp validate_message(_message, errors) do
     [{:message, "Invalid message format"} | errors]
   end
 
@@ -286,7 +286,7 @@ defmodule Tymeslot.Security.FormValidation do
     end
   end
 
-  def validate_duration(_), do: {:error, "Invalid duration"}
+  def validate_duration(_value), do: {:error, "Invalid duration"}
 
   @doc """
   Validates date parameter from URL.
@@ -317,7 +317,7 @@ defmodule Tymeslot.Security.FormValidation do
     end
   end
 
-  def validate_date(_), do: {:error, "Invalid date"}
+  def validate_date(_value), do: {:error, "Invalid date"}
 
   @doc """
   Validates time parameter from URL.
@@ -330,7 +330,7 @@ defmodule Tymeslot.Security.FormValidation do
     end
   end
 
-  def validate_time(_), do: {:error, "Invalid time"}
+  def validate_time(_value), do: {:error, "Invalid time"}
 
   @doc """
   Gets validation errors for display in forms.

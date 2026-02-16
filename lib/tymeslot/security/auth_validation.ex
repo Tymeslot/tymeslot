@@ -21,7 +21,7 @@ defmodule Tymeslot.Security.AuthValidation do
     end
   end
 
-  def validate_login_input(_), do: {:error, %{base: ["Invalid input format"]}}
+  def validate_login_input(_params), do: {:error, %{base: ["Invalid input format"]}}
 
   @doc """
   Validates signup input.
@@ -50,7 +50,7 @@ defmodule Tymeslot.Security.AuthValidation do
     end
   end
 
-  def validate_signup_input(_), do: {:error, %{base: ["Invalid input format"]}}
+  def validate_signup_input(_params), do: {:error, %{base: ["Invalid input format"]}}
 
   # Private validation helper
 
@@ -87,7 +87,7 @@ defmodule Tymeslot.Security.AuthValidation do
     end
   end
 
-  def validate_password_reset_input(_), do: {:error, %{base: ["Invalid input format"]}}
+  def validate_password_reset_input(_params), do: {:error, %{base: ["Invalid input format"]}}
 
   # Private validation functions
 
@@ -115,7 +115,7 @@ defmodule Tymeslot.Security.AuthValidation do
     end
   end
 
-  defp validate_and_sanitize_email(_), do: {:error, :email, "can't be blank"}
+  defp validate_and_sanitize_email(_value), do: {:error, :email, "can't be blank"}
 
   defp validate_and_sanitize_full_name(nil), do: {:ok, nil}
   defp validate_and_sanitize_full_name(""), do: {:ok, nil}
@@ -141,13 +141,13 @@ defmodule Tymeslot.Security.AuthValidation do
     end
   end
 
-  defp validate_and_sanitize_full_name(_), do: {:error, :full_name, "must be text"}
+  defp validate_and_sanitize_full_name(_value), do: {:error, :full_name, "must be text"}
 
   defp validate_password_presence(password) when is_binary(password) and password != "" do
     {:ok, password}
   end
 
-  defp validate_password_presence(_), do: {:error, :password, "can't be blank"}
+  defp validate_password_presence(_password), do: {:error, :password, "can't be blank"}
 
   defp validate_password_if_provided(nil), do: {:ok, nil}
   defp validate_password_if_provided(""), do: {:ok, nil}
@@ -160,19 +160,19 @@ defmodule Tymeslot.Security.AuthValidation do
     end
   end
 
-  defp validate_password(_), do: {:error, :password, "can't be blank"}
+  defp validate_password(_value), do: {:error, :password, "can't be blank"}
 
   defp validate_password_confirmation(password, confirmation) when password == confirmation do
     {:ok, confirmation}
   end
 
-  defp validate_password_confirmation(_, _),
+  defp validate_password_confirmation(_password, _confirmation),
     do: {:error, :password_confirmation, "does not match password"}
 
   defp validate_terms_accepted("true"), do: {:ok, true}
   defp validate_terms_accepted(true), do: {:ok, true}
   defp validate_terms_accepted("on"), do: {:ok, true}
-  defp validate_terms_accepted(_), do: {:error, :terms_accepted, "must be accepted"}
+  defp validate_terms_accepted(_value), do: {:error, :terms_accepted, "must be accepted"}
 
   defp valid_email_format?(email) do
     String.match?(email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/)

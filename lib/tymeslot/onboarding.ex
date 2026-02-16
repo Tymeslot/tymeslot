@@ -22,7 +22,7 @@ defmodule Tymeslot.Onboarding do
   def next_step(:basic_settings), do: {:ok, :scheduling_preferences}
   def next_step(:scheduling_preferences), do: {:ok, :complete}
   def next_step(:complete), do: {:complete, :complete}
-  def next_step(_), do: {:error, :invalid_step}
+  def next_step(_invalid_step), do: {:error, :invalid_step}
 
   @doc """
   Determines the previous step in the onboarding flow.
@@ -32,7 +32,7 @@ defmodule Tymeslot.Onboarding do
   def previous_step(:scheduling_preferences), do: {:ok, :basic_settings}
   def previous_step(:complete), do: {:ok, :scheduling_preferences}
   def previous_step(:welcome), do: {:error, :first_step}
-  def previous_step(_), do: {:error, :invalid_step}
+  def previous_step(_invalid_step), do: {:error, :invalid_step}
 
   @doc """
   Creates a mock profile for development mode.
@@ -107,5 +107,5 @@ defmodule Tymeslot.Onboarding do
     ArgumentError -> false
   end
 
-  def valid_step?(_), do: false
+  def valid_step?(_invalid), do: false
 end

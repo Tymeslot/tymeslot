@@ -62,7 +62,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
         end_time: end_time
       })
     else
-      _ -> {:error, :invalid_time_format}
+      _error -> {:error, :invalid_time_format}
     end
   end
 
@@ -83,7 +83,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
         if(label == "", do: nil, else: label)
       )
     else
-      _ -> {:error, :invalid_time_format}
+      _error -> {:error, :invalid_time_format}
     end
   end
 
@@ -96,7 +96,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
       {:ok, start_time} ->
         Breaks.add_quick_break(day_availability_id, start_time, duration)
 
-      _ ->
+      _error ->
         {:error, :invalid_time_format}
     end
   end
@@ -151,11 +151,11 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   Formats a changeset error for display.
   """
   @spec format_changeset_error(Ecto.Changeset.t() | term()) :: String.t()
-  def format_changeset_error(%Ecto.Changeset{errors: [{field, {message, _}} | _]}) do
+  def format_changeset_error(%Ecto.Changeset{errors: [{field, {message, _opts}} | _rest]}) do
     "#{humanize_field(field)}: #{message}"
   end
 
-  def format_changeset_error(_), do: "An error occurred"
+  def format_changeset_error(_changeset), do: "An error occurred"
 
   @doc """
   Gets the display name for a day of the week.

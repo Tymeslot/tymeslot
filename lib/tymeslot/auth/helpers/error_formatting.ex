@@ -129,7 +129,7 @@ defmodule Tymeslot.Auth.Helpers.ErrorFormatting do
   def format_auth_error(:rate_limit_exceeded),
     do: "Too many login attempts. Please try again later."
 
-  def format_auth_error(_), do: "Authentication failed. Please try again."
+  def format_auth_error(_reason), do: "Authentication failed. Please try again."
 
   @doc """
   Formats verification-specific errors.
@@ -153,7 +153,7 @@ defmodule Tymeslot.Auth.Helpers.ErrorFormatting do
   def format_verification_error(:email_send_failed),
     do: "Failed to send verification email. Please try again later."
 
-  def format_verification_error(_), do: "Verification failed. Please try again."
+  def format_verification_error(_reason), do: "Verification failed. Please try again."
 
   @doc """
   Formats password reset-specific errors.
@@ -177,5 +177,5 @@ defmodule Tymeslot.Auth.Helpers.ErrorFormatting do
   def format_password_reset_error(:rate_limited),
     do: "Too many password reset attempts. Please try again later."
 
-  def format_password_reset_error(_), do: "Password reset failed. Please try again."
+  def format_password_reset_error(_reason), do: "Password reset failed. Please try again."
 end

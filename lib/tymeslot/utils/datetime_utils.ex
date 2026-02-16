@@ -41,7 +41,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
     _ -> {:error, :invalid_time_format}
   end
 
-  def parse_time_string(_), do: {:error, :invalid_time_format}
+  def parse_time_string(_value), do: {:error, :invalid_time_format}
 
   defp parse_12h_time(time_part, period) do
     with {:ok, hour, minute} <- parse_hour_minute(time_part),

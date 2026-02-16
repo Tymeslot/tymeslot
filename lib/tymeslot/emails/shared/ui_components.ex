@@ -317,7 +317,7 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
   Both label and value are sanitized for safe HTML output.
   """
   @spec quick_info_grid(list(map())) :: String.t()
-  def quick_info_grid([_ | _] = items) do
+  def quick_info_grid([_head | _tail] = items) do
     columns =
       Enum.map_join(items, "\n", fn item ->
         safe_label = SharedHelpers.sanitize_for_email(item.label)
@@ -362,7 +362,7 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
     """
   end
 
-  def quick_info_grid(_), do: ""
+  def quick_info_grid(_items), do: ""
 
   @doc """
   Generates a preparation checklist with items.
@@ -370,7 +370,7 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
   @spec preparation_checklist(list(String.t()), keyword()) :: String.t()
   def preparation_checklist(items, opts \\ [])
 
-  def preparation_checklist([_ | _] = items, opts) do
+  def preparation_checklist([_head | _tail] = items, opts) do
     title = Keyword.get(opts, :title, "Checklist")
     type = Keyword.get(opts, :type, :default)
 
@@ -382,7 +382,7 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
         :info ->
           {Styles.component_color(:reminder_note), Styles.status_text_color(:info_dark)}
 
-        _ ->
+        _default ->
           {Styles.background_color(:green_light), Styles.status_text_color(:success_green)}
       end
 
@@ -414,13 +414,13 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
     """
   end
 
-  def preparation_checklist(_, _), do: ""
+  def preparation_checklist(_items, _opts), do: ""
 
   @doc """
   Generates footer actions section with action links.
   """
   @spec footer_actions(list(map())) :: String.t()
-  def footer_actions([_ | _] = actions) do
+  def footer_actions([_head | _tail] = actions) do
     action_links =
       Enum.map_join(actions, " | ", fn action ->
         color = Map.get(action, :color, :primary)
@@ -444,7 +444,7 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
     """
   end
 
-  def footer_actions(_), do: ""
+  def footer_actions(_actions), do: ""
 
   defp button_markup(text, url, color, width, size, full_width) do
     safe_text = SharedHelpers.sanitize_for_email(text)

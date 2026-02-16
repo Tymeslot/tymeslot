@@ -128,7 +128,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
   defp detect_port_5232(url) do
     case URI.parse(url) do
       %URI{port: 5232} -> true
-      _ -> false
+      _other -> false
     end
   end
 
@@ -337,7 +337,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
     }
   end
 
-  def get_server_profile(_) do
+  def get_server_profile(_server_type) do
     # Generic CalDAV profile - works with full principal URLs
     # When users provide a full CalDAV URL (e.g., https://server.com/dav/user@domain.com),
     # this profile uses it as-is without adding additional path segments

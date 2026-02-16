@@ -117,5 +117,5 @@ defmodule Tymeslot.Auth.Validation do
     ErrorFormatter.format_changeset_errors(changeset)
   end
 
-  def format_validation_errors(_), do: "Invalid input provided."
+  def format_validation_errors(_input), do: "Invalid input provided."
 end

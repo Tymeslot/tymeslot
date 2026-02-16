@@ -154,5 +154,5 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundary do
   def format_error(%{function: :handle_params}), do: "Navigation error in theme"
   def format_error(%{function: :handle_event}), do: "Event handling error in theme"
   def format_error(%{function: :handle_info}), do: "Message handling error in theme"
-  def format_error(_), do: "An error occurred in the theme"
+  def format_error(_context), do: "An error occurred in the theme"
 end

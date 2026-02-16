@@ -55,10 +55,10 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
           id when is_binary(id) ->
             case Integer.parse(id) do
               {int, ""} -> int
-              _ -> :unknown
+              _other -> :unknown
             end
 
-          _ ->
+          _other ->
             :unknown
         end
 
@@ -71,7 +71,7 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
           integration =
             case CalendarIntegrationQueries.get(integration_id) do
               {:ok, fresh_integration} -> fresh_integration
-              _ -> integration
+              _error -> integration
             end
 
           if TokenUtils.token_expired?(integration) do
@@ -84,7 +84,7 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
     end
   end
 
-  def refresh_oauth_token(_), do: {:error, :unsupported_provider}
+  def refresh_oauth_token(_integration), do: {:error, :unsupported_provider}
 
   defp perform_refresh(%{provider: "google"} = integration) do
     case google_calendar_api().refresh_token(integration) do
@@ -137,7 +137,7 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
       {:ok, updated} ->
         {:ok, CalendarIntegrationSchema.decrypt_oauth_tokens(updated)}
 
-      {:error, _} ->
+      {:error, _changeset} ->
         {:ok,
          %{
            integration

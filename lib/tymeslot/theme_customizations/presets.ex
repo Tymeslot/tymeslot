@@ -66,7 +66,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
       :gradient -> Map.get(get_gradient_presets(), preset_id)
       :video -> Map.get(get_video_presets(), preset_id)
       :image -> Map.get(get_image_presets(), preset_id)
-      _ -> nil
+      _other -> nil
     end
   end
 
@@ -120,7 +120,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
       :gradient -> Map.keys(get_gradient_presets())
       :video -> Map.keys(get_video_presets())
       :image -> Map.keys(get_image_presets())
-      _ -> []
+      _other -> []
     end
   end
 
@@ -164,7 +164,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
     end
   end
 
-  def extract_preset_id(_), do: nil
+  def extract_preset_id(_value), do: nil
 
   @doc """
   Formats a preset ID as a preset value string.
@@ -178,7 +178,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
     end
   end
 
-  def format_as_preset_value(_), do: nil
+  def format_as_preset_value(_value), do: nil
 
   @doc """
   Gets recommended presets for a theme.
@@ -202,7 +202,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
           images: ["image_3", "image_4"]
         }
 
-      _ ->
+      _other ->
         %{gradients: [], videos: [], images: []}
     end
   end

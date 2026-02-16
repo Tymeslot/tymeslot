@@ -50,7 +50,7 @@ defmodule TymeslotWeb.AccountLive.ErrorFormatter do
     format_validation_errors(errors)
   end
 
-  def format(_), do: %{base: ["An unexpected error occurred"]}
+  def format(_other), do: %{base: ["An unexpected error occurred"]}
 
   @doc """
   Formats validation errors from input processor.

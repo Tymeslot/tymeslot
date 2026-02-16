@@ -341,7 +341,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
 
   defp resolve_booking_integration(user_id) when is_integer(user_id) do
     case CalendarPrimary.get_primary_calendar_integration(user_id) do
-      {:ok, %{default_booking_calendar_id: cal_id} = integration} when is_binary(cal_id) ->
+      {:ok, integration} when is_binary(integration.default_booking_calendar_id) ->
         integration
 
       {:ok, integration} ->

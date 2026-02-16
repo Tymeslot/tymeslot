@@ -45,7 +45,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
     end
   end
 
-  def normalize_reminder(_), do: {:error, :invalid_reminder}
+  def normalize_reminder(_value), do: {:error, :invalid_reminder}
 
   @doc """
   Normalizes reminder parameters that may use string keys.
@@ -68,7 +68,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
     end)
   end
 
-  def normalize_reminders(_), do: []
+  def normalize_reminders(_value), do: []
 
   @doc """
   Calculates the interval in seconds for a reminder.
@@ -103,7 +103,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
     end
   end
 
-  def parse_reminder_value(_), do: 30
+  def parse_reminder_value(_value), do: 30
 
   @doc """
   Validates a reminder value.
@@ -120,7 +120,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
     end
   end
 
-  def validate_reminder_value(_), do: {:error, :invalid_value}
+  def validate_reminder_value(_value), do: {:error, :invalid_value}
 
   @doc """
   Normalizes a reminder unit.
@@ -140,7 +140,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
     end
   end
 
-  def normalize_reminder_unit(_), do: "minutes"
+  def normalize_reminder_unit(_value), do: "minutes"
 
   @doc """
   Checks if a list of reminders contains duplicates.

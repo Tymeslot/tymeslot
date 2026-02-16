@@ -215,7 +215,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
     end
   end
 
-  def extract_nextcloud_username(_), do: :error
+  def extract_nextcloud_username(_url), do: :error
 
   @doc """
   Checks if a URL is a Nextcloud calendar URL.
@@ -231,7 +231,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
     String.contains?(url, "/remote.php/dav/calendars/")
   end
 
-  def nextcloud_calendar_url?(_), do: false
+  def nextcloud_calendar_url?(_url), do: false
 
   # Private helper functions
 
@@ -269,7 +269,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
   defp maybe_add_provider_path(url, :radicale), do: url
 
   # Generic CalDAV: No special path additions needed
-  defp maybe_add_provider_path(url, _provider), do: url
+  defp maybe_add_provider_path(url, _caldav_provider), do: url
 
   defp maybe_ensure_trailing_slash(url, false), do: url
 

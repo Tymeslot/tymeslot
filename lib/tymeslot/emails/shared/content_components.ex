@@ -85,7 +85,7 @@ defmodule Tymeslot.Emails.Shared.ContentComponents do
              on_too_long: :truncate
            ) do
         {:ok, sanitized} -> sanitized
-        {:error, _} -> SharedHelpers.sanitize_for_email(message)
+        {:error, _reason} -> SharedHelpers.sanitize_for_email(message)
       end
 
     escaped_message = String.replace(sanitized_message, "\n", "<br>")
@@ -129,7 +129,7 @@ defmodule Tymeslot.Emails.Shared.ContentComponents do
              on_too_long: :truncate
            ) do
         {:ok, sanitized} -> sanitized
-        {:error, _} -> SharedHelpers.sanitize_for_email(message)
+        {:error, _reason} -> SharedHelpers.sanitize_for_email(message)
       end
 
     """
@@ -160,5 +160,5 @@ defmodule Tymeslot.Emails.Shared.ContentComponents do
     """
   end
 
-  def attendee_message_box(_), do: ""
+  def attendee_message_box(_message), do: ""
 end

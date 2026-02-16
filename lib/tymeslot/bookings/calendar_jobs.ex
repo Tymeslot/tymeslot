@@ -43,7 +43,7 @@ defmodule Tymeslot.Bookings.CalendarJobs do
 
     case Oban.insert(job_changeset) do
       {:ok, _job} -> {:ok, :scheduled}
-      {:error, %Ecto.Changeset{errors: [unique: _]}} -> {:ok, :already_scheduled}
+      {:error, %Ecto.Changeset{errors: [unique: _error]}} -> {:ok, :already_scheduled}
       {:error, changeset} -> {:error, changeset}
     end
   end
@@ -57,5 +57,5 @@ defmodule Tymeslot.Bookings.CalendarJobs do
   @spec priority_for_action(String.t()) :: integer()
   def priority_for_action("create"), do: 0
   def priority_for_action("update"), do: 2
-  def priority_for_action(_), do: 1
+  def priority_for_action(_action), do: 1
 end

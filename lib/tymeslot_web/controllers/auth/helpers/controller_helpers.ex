@@ -130,5 +130,5 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   def convert_to_boolean("true"), do: true
   def convert_to_boolean("on"), do: true
   def convert_to_boolean(true), do: true
-  def convert_to_boolean(_), do: false
+  def convert_to_boolean(_other), do: false
 end

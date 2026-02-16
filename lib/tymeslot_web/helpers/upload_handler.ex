@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
   end
 
   @spec get_upload_opts(atom()) :: keyword()
-  def get_upload_opts(_) do
+  def get_upload_opts(_upload_type) do
     [
       accept: :any,
       max_entries: 1,
@@ -256,7 +256,7 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
   end
 
   # Default fallback
-  defp map_upload_type_to_file_type(_) do
+  defp map_upload_type_to_file_type(_other) do
     :avatar
   end
 
@@ -272,7 +272,7 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
     UploadConstraints.max_file_size(:video)
   end
 
-  defp get_max_file_size(_) do
+  defp get_max_file_size(_other) do
     UploadConstraints.max_file_size(:avatar)
   end
 

@@ -172,18 +172,18 @@ defmodule Tymeslot.Emails.Shared.Styles do
   def button_color("success"), do: @success_color
   def button_color("danger"), do: @danger_color
   def button_color("warning"), do: @warning_color
-  def button_color(_), do: @primary_color
+  def button_color(_type), do: @primary_color
 
   @doc "Get button hover color based on type"
   @spec button_hover_color(String.t()) :: String.t()
   def button_hover_color("primary"), do: @primary_hover
   def button_hover_color("success"), do: @success_hover
   def button_hover_color("danger"), do: @danger_hover
-  def button_hover_color(_), do: @primary_hover
+  def button_hover_color(_type), do: @primary_hover
 
   @doc "Get button text color based on type"
   @spec button_text_color(String.t()) :: String.t()
-  def button_text_color(_), do: @background_white
+  def button_text_color(_type), do: @background_white
 
   @doc "Get alert background color based on type"
   @spec alert_background_color(String.t()) :: String.t()
@@ -191,7 +191,7 @@ defmodule Tymeslot.Emails.Shared.Styles do
   def alert_background_color("error"), do: "#fef2f2"
   def alert_background_color("warning"), do: "#fffbeb"
   def alert_background_color("info"), do: "#eff6ff"
-  def alert_background_color(_), do: @background_light
+  def alert_background_color(_type), do: @background_light
 
   @doc "Get alert border color based on type"
   @spec alert_border_color(String.t()) :: String.t()
@@ -199,14 +199,14 @@ defmodule Tymeslot.Emails.Shared.Styles do
   def alert_border_color("error"), do: @danger_color
   def alert_border_color("warning"), do: @warning_color
   def alert_border_color("info"), do: @info_color
-  def alert_border_color(_), do: @border_color
+  def alert_border_color(_type), do: @border_color
 
   @doc "Button padding - More generous for modern feel"
   @spec button_padding(atom()) :: String.t()
   def button_padding(:large), do: "18px 36px"
   def button_padding(:medium), do: "14px 28px"
   def button_padding(:small), do: "10px 20px"
-  def button_padding(_), do: "16px 32px"
+  def button_padding(_size), do: "16px 32px"
 
   @doc "Button font size"
   @spec button_font_size() :: String.t()

@@ -215,7 +215,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
     State.validate(state, state_secret())
   end
 
-  def validate_state(_), do: {:error, "Invalid state parameter"}
+  def validate_state(_invalid), do: {:error, "Invalid state parameter"}
 
   @doc """
   Returns available scope definitions.

@@ -50,7 +50,8 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     end
   end
 
-  def format_booking_datetime(_date, _time, _timezone), do: gettext("Invalid date/time")
+  def format_booking_datetime(_date, _time, _timezone),
+    do: gettext("Invalid date/time")
 
   @doc """
   Formats meeting time with localization and timezone awareness.
@@ -121,7 +122,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   end
 
   @spec format_duration(any()) :: String.t()
-  def format_duration(_), do: gettext("Unknown duration")
+  def format_duration(_other), do: gettext("Unknown duration")
 
   @doc """
   Gets month name translated.

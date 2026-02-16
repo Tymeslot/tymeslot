@@ -17,12 +17,12 @@ defmodule Tymeslot.Integrations.Video.Urls do
     ProviderAdapter.extract_room_id(meeting_url)
   end
 
-  def extract_room_id(_), do: nil
+  def extract_room_id(_other), do: nil
 
   @spec valid_meeting_url?(String.t()) :: boolean()
   def valid_meeting_url?(meeting_url) when is_binary(meeting_url) do
     ProviderAdapter.valid_meeting_url?(meeting_url)
   end
 
-  def valid_meeting_url?(_), do: false
+  def valid_meeting_url?(_url), do: false
 end

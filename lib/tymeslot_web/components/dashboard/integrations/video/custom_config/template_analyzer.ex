@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
     end
   end
 
-  def analyze(_), do: {:ok, :empty, "", "Enter a URL to see a preview"}
+  def analyze(_url), do: {:ok, :empty, "", "Enter a URL to see a preview"}
 
   # Check for template in fragment position (critical issue)
   defp template_in_fragment?(url) do

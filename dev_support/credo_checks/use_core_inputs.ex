@@ -68,7 +68,7 @@ defmodule CredoChecks.UseCoreInputs do
           tag =
             case Regex.run(~r/<(input|textarea|select)/i, line) do
               [_, tag] -> tag
-              _ -> "input"
+              _other -> "input"
             end
 
           {tag, "<#{tag}"}
@@ -80,7 +80,7 @@ defmodule CredoChecks.UseCoreInputs do
                    line
                  ) do
               [_, helper] -> helper
-              _ -> "input_helper"
+              _other -> "input_helper"
             end
 
           {helper, ".#{helper}"}

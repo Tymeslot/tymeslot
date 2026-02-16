@@ -278,5 +278,5 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
     end
   end
 
-  def duration_text(_), do: "Unknown duration"
+  def duration_text(_meeting), do: "Unknown duration"
 end

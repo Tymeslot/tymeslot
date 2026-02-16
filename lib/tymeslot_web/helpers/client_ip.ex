@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     get_from_socket_assigns(socket)
   end
 
-  def get(_), do: "unknown"
+  def get(_other), do: "unknown"
 
   @doc """
   Reads client IP using LiveView connect_info/connect_params. This MUST be called
@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
     get_user_agent_from_socket(socket)
   end
 
-  def get_user_agent(_), do: "unknown"
+  def get_user_agent(_other), do: "unknown"
 
   @doc """
   Reads user-agent from LiveView connect params (headers). Call only during mount/3

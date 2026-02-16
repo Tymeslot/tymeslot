@@ -42,7 +42,7 @@ defmodule Tymeslot.Payments.CustomerLookup do
     end
   end
 
-  def parse_user_id(_), do: nil
+  def parse_user_id(_invalid), do: nil
 
   @doc """
   Gets the full subscription record by Stripe customer ID.

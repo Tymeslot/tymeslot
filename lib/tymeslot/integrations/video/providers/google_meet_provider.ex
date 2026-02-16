@@ -124,7 +124,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     _ -> nil
   end
 
-  def extract_room_id(_), do: nil
+  def extract_room_id(_url), do: nil
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def valid_meeting_url?(url) when is_binary(url) and url != "" do
@@ -138,7 +138,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     _ -> false
   end
 
-  def valid_meeting_url?(_), do: false
+  def valid_meeting_url?(_url), do: false
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def test_connection(config) do

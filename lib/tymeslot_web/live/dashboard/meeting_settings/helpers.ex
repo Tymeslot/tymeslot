@@ -140,5 +140,5 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
   @spec format_errors(list() | String.t() | any()) :: String.t()
   def format_errors(errors) when is_list(errors), do: Enum.join(errors, ", ")
   def format_errors(error) when is_binary(error), do: error
-  def format_errors(_), do: "An error occurred"
+  def format_errors(_other), do: "An error occurred"
 end

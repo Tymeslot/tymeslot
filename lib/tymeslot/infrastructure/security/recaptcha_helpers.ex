@@ -36,7 +36,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
       {:ok, value} when is_boolean(value) ->
         value
 
-      _ ->
+      _other ->
         System.get_env("RECAPTCHA_SIGNUP_ENABLED", "false") == "true"
     end
   end
@@ -75,7 +75,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   end
 
   @spec validate_token(any()) :: {:error, :invalid_token}
-  def validate_token(_), do: {:error, :invalid_token}
+  def validate_token(_token), do: {:error, :invalid_token}
 
   @doc """
   Verify signup token if signup protection is enabled and configured.
@@ -165,7 +165,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   end
 
   defp key_present?(value) when is_binary(value), do: String.trim(value) != ""
-  defp key_present?(_), do: false
+  defp key_present?(_value), do: false
 
   # Avoid log spam by emitting at most once per minute per node.
   defp log_signup_disabled_due_to_missing_keys(metadata) do

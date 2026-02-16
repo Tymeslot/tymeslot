@@ -95,7 +95,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
     end
   end
 
-  def validate_background_value(type, value, _presets) do
+  def validate_background_value(type, value, _available_presets) do
     {:error, "Invalid background value '#{value}' for type '#{type}'"}
   end
 
@@ -164,7 +164,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
     |> validate_required_fields()
   end
 
-  def sanitize_customization_input(_attrs), do: {:error, "Attributes must be a map"}
+  def sanitize_customization_input(_value), do: {:error, "Attributes must be a map"}
 
   @doc """
   Sanitizes a file path to prevent directory traversal and other injection attacks.
@@ -197,7 +197,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
     end
   end
 
-  def validate_hex_color(_), do: {:error, "Color must be a string"}
+  def validate_hex_color(_value), do: {:error, "Color must be a string"}
 
   @doc """
   Validates file upload parameters.
@@ -217,7 +217,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
     end
   end
 
-  def validate_file_upload(_), do: {:error, "Invalid file upload parameters"}
+  def validate_file_upload(_params), do: {:error, "Invalid file upload parameters"}
 
   @doc """
   Validates that a file extension is allowed for the given type.
@@ -245,7 +245,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
     end
   end
 
-  def validate_file_extension(_, type), do: {:error, "Unknown file type: #{type}"}
+  def validate_file_extension(_filename, type), do: {:error, "Unknown file type: #{type}"}
 
   @doc """
   Validates file size limits.

@@ -91,7 +91,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
     "This email is already registered. Please sign in instead."
   end
 
-  defp format_oauth_error(_) do
+  defp format_oauth_error(_reason) do
     "Authentication failed. Please try again."
   end
 
@@ -99,7 +99,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
     "The link has expired. Please request a new one."
   end
 
-  defp format_token_error(_) do
+  defp format_token_error(_reason) do
     "The link is invalid or has expired. Please request a new one."
   end
 
@@ -111,7 +111,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
     "Account created but email verification failed. Please contact support."
   end
 
-  defp format_registration_error(_) do
+  defp format_registration_error(_reason) do
     "Registration failed. Please try again."
   end
 
@@ -144,7 +144,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
     format_error_map(errors)
   end
 
-  def format_validation_errors(_), do: "Invalid input provided."
+  def format_validation_errors(_input), do: "Invalid input provided."
 
   @doc """
   Formats changeset errors into a user-friendly string.
@@ -208,7 +208,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
       :token_exchange_failed ->
         "Failed to authenticate with #{provider_name}. Please try again."
 
-      _ ->
+      _error ->
         "#{provider_name} authentication failed. Please try again."
     end
   end

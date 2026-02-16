@@ -37,7 +37,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   end
 
   @spec valid_step?(term()) :: boolean()
-  def valid_step?(_), do: false
+  def valid_step?(_other), do: false
 
   @doc """
   Returns configuration for buffer time options.
@@ -232,5 +232,5 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   """
   @spec next_button_text(step()) :: String.t()
   def next_button_text(:complete), do: "Get Started"
-  def next_button_text(_), do: "Continue"
+  def next_button_text(_step), do: "Continue"
 end

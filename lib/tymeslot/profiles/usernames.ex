@@ -48,7 +48,7 @@ defmodule Tymeslot.Profiles.Usernames do
     end
   end
 
-  def validate_username_format(_), do: {:error, "Username must be a string"}
+  def validate_username_format(_input), do: {:error, "Username must be a string"}
 
   # Private helpers
 

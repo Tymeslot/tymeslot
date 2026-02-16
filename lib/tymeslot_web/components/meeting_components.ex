@@ -193,7 +193,7 @@ defmodule TymeslotWeb.Components.MeetingComponents do
     normalize_slot_value(value)
   end
 
-  defp normalize_slot_value(_), do: :error
+  defp normalize_slot_value(_other), do: :error
 
   @spec normalize_slot_list(term()) :: [String.t()]
   def normalize_slot_list(slots) when is_list(slots) do
@@ -205,7 +205,7 @@ defmodule TymeslotWeb.Components.MeetingComponents do
     end)
   end
 
-  def normalize_slot_list(_), do: []
+  def normalize_slot_list(_other), do: []
 
   @doc """
   Renders a time slot button.

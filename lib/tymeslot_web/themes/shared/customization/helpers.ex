@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
       Regex.match?(~r/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/, value)
   end
 
-  defp valid_color?(_), do: false
+  defp valid_color?(_other), do: false
 
   defp get_color_background_style(customization) do
     if customization.background_value && valid_color?(customization.background_value) do
@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   @spec get_background_type(map() | struct() | nil) :: String.t() | nil
   def get_background_type(%{background_type: bg_type}), do: bg_type
   def get_background_type(%{"background_type" => bg_type}), do: bg_type
-  def get_background_type(_), do: nil
+  def get_background_type(_other), do: nil
 
   @doc """
   Safely gets the background video path from a customization map or struct.
@@ -177,7 +177,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   @spec get_background_video_path(map() | struct() | nil) :: String.t() | nil
   def get_background_video_path(%{background_video_path: path}), do: path
   def get_background_video_path(%{"background_video_path" => path}), do: path
-  def get_background_video_path(_), do: nil
+  def get_background_video_path(_other), do: nil
 
   @doc """
   Safely gets the background value from a customization map or struct.
@@ -185,7 +185,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   @spec get_background_value(map() | struct() | nil) :: String.t() | nil
   def get_background_value(%{background_value: value}), do: value
   def get_background_value(%{"background_value" => value}), do: value
-  def get_background_value(_), do: nil
+  def get_background_value(_other), do: nil
 
   @doc """
   Gets a poster image path for video background presets, if available.

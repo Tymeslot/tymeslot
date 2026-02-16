@@ -124,7 +124,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
     provider in all_providers_with_dev()
   end
 
-  def valid_provider?(_), do: false
+  def valid_provider?(_provider), do: false
 
   @doc """
   Checks if a provider is OAuth-based.
@@ -134,7 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
     provider in @oauth_providers
   end
 
-  def oauth_provider?(_), do: false
+  def oauth_provider?(_provider), do: false
 
   @doc """
   Checks if a provider is CalDAV-based.
@@ -144,7 +144,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
     provider in @caldav_based_providers
   end
 
-  def caldav_based?(_), do: false
+  def caldav_based?(_provider), do: false
 
   @doc """
   Gets full metadata for a provider.
@@ -229,7 +229,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def display_name(:outlook), do: "Outlook Calendar"
   def display_name(:debug), do: "Debug Provider"
   def display_name(:demo), do: "Demo Provider"
-  def display_name(_), do: "Unknown Provider"
+  def display_name(_provider), do: "Unknown Provider"
 
   @doc """
   Gets the provider module for a given provider type.
@@ -243,7 +243,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def get_provider_module(:outlook), do: Tymeslot.Integrations.Calendar.Outlook.Provider
   def get_provider_module(:debug), do: Tymeslot.Integrations.Calendar.DebugCalendarProvider
   def get_provider_module(:demo), do: Tymeslot.Integrations.Calendar.DemoCalendarProvider
-  def get_provider_module(_), do: nil
+  def get_provider_module(_provider), do: nil
 
   @doc """
   Returns provider string for database constraint.

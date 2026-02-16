@@ -63,7 +63,7 @@ defmodule Tymeslot.Security.Encryption do
     end
   end
 
-  def decrypt(_), do: nil
+  def decrypt(_value), do: nil
 
   @doc """
   Generates a new random API key.
