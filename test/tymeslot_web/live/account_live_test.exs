@@ -20,8 +20,8 @@ defmodule TymeslotWeb.AccountLiveTest do
     {:ok, user} =
       user
       |> Changeset.change(%{
-        verified_at: DateTime.truncate(DateTime.utc_now(), :second),
-        onboarding_completed_at: DateTime.truncate(DateTime.utc_now(), :second)
+        verified_at: DateTime.utc_now(:second),
+        onboarding_completed_at: DateTime.utc_now(:second)
       })
       |> Repo.update()
 

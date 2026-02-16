@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Components.DashboardModalsTest do
   end
 
   test "renders cancel_meeting_modal correctly" do
-    start_time = DateTime.truncate(DateTime.utc_now(), :second)
+    start_time = DateTime.utc_now(:second)
     end_time = DateTime.add(start_time, 1, :hour)
 
     assigns = %{
@@ -173,7 +173,7 @@ defmodule TymeslotWeb.Components.DashboardModalsTest do
   end
 
   test "cancel_meeting_modal hides when show is false" do
-    start_time = DateTime.truncate(DateTime.utc_now(), :second)
+    start_time = DateTime.utc_now(:second)
     end_time = DateTime.add(start_time, 1, :hour)
 
     assigns = %{

@@ -149,7 +149,7 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
     attrs = %{
       stripe_event_id: event_id,
       event_type: event_type,
-      processed_at: DateTime.truncate(DateTime.utc_now(), :second)
+      processed_at: DateTime.utc_now(:second)
     }
 
     changeset = WebhookEvent.changeset(%WebhookEvent{}, attrs)

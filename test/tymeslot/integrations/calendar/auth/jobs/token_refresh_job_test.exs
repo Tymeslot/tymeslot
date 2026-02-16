@@ -13,7 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
 
   describe "perform/1 - bulk refresh" do
     test "schedules individual refreshes for expiring tokens" do
-      now = DateTime.truncate(DateTime.utc_now(), :second)
+      now = DateTime.utc_now(:second)
       rt_encrypted = Encryption.encrypt("rt")
 
       # Google token expiring soon (1 hour from now)
