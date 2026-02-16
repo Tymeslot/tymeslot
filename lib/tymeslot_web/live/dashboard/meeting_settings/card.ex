@@ -223,6 +223,4 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
       name
     end
   end
-
-  defp truncate_calendar_name(_), do: "Calendar"
 end
