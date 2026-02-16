@@ -1,5 +1,5 @@
 defmodule Tymeslot.Mailer.SMTPConfig do
-  @compile {:no_warn_undefined, :castore}
+  @compile {:no_warn_undefined, CAStore}
 
   @moduledoc """
   Builds SMTP configuration with proper SSL/TLS/STARTTLS settings for OTP 26+.
@@ -183,11 +183,6 @@ defmodule Tymeslot.Mailer.SMTPConfig do
         [_ | _] = certs ->
           Logger.debug("Using OS certificate store (#{length(certs)} certificates)")
           certs
-
-        _ ->
-          # Unexpected return value, use castore as fallback
-          Logger.warning("Unexpected return from :public_key.cacerts_get(), using castore")
-          load_castore_certs()
       end
 
     # Validate we have certificates and they're in correct format
@@ -196,9 +191,9 @@ defmodule Tymeslot.Mailer.SMTPConfig do
 
   # Loads castore certificates with safety check
   defp load_castore_certs do
-    if Code.ensure_loaded?(:castore) do
+    if Code.ensure_loaded?(CAStore) do
       # Get path to castore's CA bundle (PEM format)
-      ca_bundle_path = :castore.file_path()
+      ca_bundle_path = CAStore.file_path()
 
       # Read and parse PEM file to extract DER-encoded certificates
       ca_bundle_path
@@ -209,7 +204,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
       raise """
       No CA certificates available:
       - OS certificate store is empty
-      - :castore module is not loaded (dependency missing?)
+      - CAStore module is not loaded (dependency missing?)
 
       Cannot verify SMTP SSL/TLS connections without CA certificates.
       """
