@@ -8,6 +8,11 @@
   z-index: 50;
 }
 
+/* Language switcher visibility (only on slide 1) */
+.language-switcher-container.hidden {
+  display: none;
+}
+
 .language-switcher-button-rhythm {
   background: rgba(0, 0, 0, 0.6);
   border: var(--border-width-thin) solid var(--border-light);

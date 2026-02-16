@@ -19,10 +19,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
       assigns[:theme_customization] &&
         get_background_type(assigns[:theme_customization]) == "video"
 
+    # Check if language switcher should be visible (only on slide 1/overview)
+    show_language_switcher = assigns[:current_state] == :overview
+
     assigns =
       assigns
       |> assign(:has_video_background, has_video_background)
       |> assign(:video_poster, get_background_video_poster(assigns[:theme_customization]))
+      |> assign(:show_language_switcher, show_language_switcher)
 
     ~H"""
     <div class="quill-theme-wrapper theme-1" data-locale={assigns[:locale]}>
@@ -85,7 +89,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
         <div class="content-area">
           <!-- Language Switcher -->
           <%= if assigns[:locale] && assigns[:language_dropdown_open] != nil do %>
-            <div class="absolute top-6 right-6 z-50">
+            <div class={[
+              "fixed top-6 right-6 z-50 language-switcher-wrapper",
+              @show_language_switcher && "visible",
+              !@show_language_switcher && "hidden"
+            ]}>
               <.language_switcher
                 locale={@locale}
                 locales={TymeslotWeb.Themes.Shared.LocaleHandler.get_locales_with_metadata()}

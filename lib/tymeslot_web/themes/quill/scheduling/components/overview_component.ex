@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
         slug={assigns[:selected_duration]}
         username_context={@username_context}
       >
-        <div class="container flex-1 flex items-center justify-center px-4 py-2 md:py-8">
+        <div class="container flex-1 flex items-start justify-center px-4 py-2 md:py-4">
           <div class="w-full max-w-5xl">
             <.glass_morphism_card>
               <div class="p-3 sm:p-6 md:p-8 lg:p-10">

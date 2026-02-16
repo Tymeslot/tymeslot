@@ -1,4 +1,10 @@
 /* Language Switcher - Quill Theme */
+
+/* Language switcher visibility (only on slide 1) */
+.language-switcher-wrapper.hidden {
+  display: none;
+}
+
 .language-switcher-button-quill {
   background: var(--surface-light);
   backdrop-filter: blur(var(--glass-blur-md));

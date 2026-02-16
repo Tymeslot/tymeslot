@@ -351,6 +351,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
       theme_customization={assigns[:theme_customization]}
       locale={assigns[:locale]}
       language_dropdown_open={assigns[:language_dropdown_open]}
+      current_state={assigns[:current_state]}
       organizer_user_id={@organizer_user_id}
       should_show_branding={assigns[:should_show_branding]}
     >
