@@ -169,7 +169,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
     |> unsafe_validate_unique(:pending_email, Tymeslot.Repo, message: "is already registered")
     |> unique_constraint(:pending_email)
     |> unique_constraint(:email_change_token_hash)
-    |> put_change(:email_change_sent_at, DateTime.truncate(DateTime.utc_now(), :second))
+    |> put_change(:email_change_sent_at, DateTime.utc_now(:second))
   end
 
   defp validate_pending_email_format(changeset) do
@@ -193,7 +193,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
       pending_email: nil,
       email_change_token_hash: nil,
       email_change_sent_at: nil,
-      email_change_confirmed_at: DateTime.truncate(DateTime.utc_now(), :second)
+      email_change_confirmed_at: DateTime.utc_now(:second)
     })
     |> unique_constraint(:email)
   end

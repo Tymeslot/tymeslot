@@ -79,7 +79,7 @@ defmodule Tymeslot.Bookings.Cancel do
   defp update_meeting_status(meeting) do
     attrs = %{
       status: "cancelled",
-      cancelled_at: DateTime.truncate(DateTime.utc_now(), :second)
+      cancelled_at: DateTime.utc_now(:second)
     }
 
     case MeetingQueries.update_meeting(meeting, attrs) do

@@ -181,8 +181,8 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
   def verify_user(%UserSchema{} = user) do
     user
     |> Changeset.change(
-      verified_at: DateTime.truncate(DateTime.utc_now(), :second),
-      verification_token_used_at: DateTime.truncate(DateTime.utc_now(), :second),
+      verified_at: DateTime.utc_now(:second),
+      verification_token_used_at: DateTime.utc_now(:second),
       verification_token: nil
       # NOTE: Do NOT clear signup_ip - keep for audit trail
     )
@@ -199,7 +199,7 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
 
     changes = %{
       verification_token: token,
-      verification_sent_at: DateTime.truncate(DateTime.utc_now(), :second)
+      verification_sent_at: DateTime.utc_now(:second)
     }
 
     changes =
@@ -257,7 +257,7 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
       user
       |> Changeset.change(
         reset_token_hash: token_hash,
-        reset_sent_at: DateTime.truncate(DateTime.utc_now(), :second),
+        reset_sent_at: DateTime.utc_now(:second),
         reset_token_used_at: nil
       )
       |> Repo.update()
@@ -313,7 +313,7 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
     |> Changeset.change(
       reset_token_hash: nil,
       reset_sent_at: nil,
-      reset_token_used_at: DateTime.truncate(DateTime.utc_now(), :second)
+      reset_token_used_at: DateTime.utc_now(:second)
     )
     |> Repo.update()
   end
@@ -447,7 +447,7 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
   def mark_onboarding_complete(%UserSchema{} = user) do
     user
     |> Changeset.change(%{
-      onboarding_completed_at: DateTime.truncate(DateTime.utc_now(), :second)
+      onboarding_completed_at: DateTime.utc_now(:second)
     })
     |> Repo.update()
   end

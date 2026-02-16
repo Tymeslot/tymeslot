@@ -196,7 +196,7 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   def mark_sync_success(%CalendarIntegrationSchema{} = integration) do
     integration
     |> Changeset.change(%{
-      last_sync_at: DateTime.truncate(DateTime.utc_now(), :second),
+      last_sync_at: DateTime.utc_now(:second),
       sync_error: nil
     })
     |> Repo.update()
