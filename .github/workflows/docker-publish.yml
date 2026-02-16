@@ -11,6 +11,8 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Only run on GitHub, not Gitea
+    if: github.server_url == 'https://github.com'
 
     steps:
       - name: Checkout code
