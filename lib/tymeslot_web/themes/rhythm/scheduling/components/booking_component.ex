@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.SecurityFields
 
   import TymeslotWeb.Components.CoreComponents
 
@@ -99,7 +100,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               data-testid="booking-form"
               class="booking-form"
               as={:booking}
+              {SecurityFields.recaptcha_form_attrs("booking_form", "booking")}
             >
+              <SecurityFields.honeypot_field id_prefix="booking" param_root="booking" />
+
               <.input
                 field={f[:name]}
                 label={gettext("name")}
@@ -129,6 +133,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 phx-value-field="message"
                 phx-target={@myself}
               />
+
+              <SecurityFields.recaptcha_fields id_prefix="booking" param_root="booking" />
 
     <!-- Navigation -->
               <div class="slide-actions horizontal">

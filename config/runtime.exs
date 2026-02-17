@@ -492,9 +492,10 @@ config :tymeslot, :social_auth,
   github_enabled: System.get_env("ENABLE_GITHUB_AUTH", "false") == "true"
 
 # reCAPTCHA configuration (runtime)
-# Signup protection is configurable and will automatically disable itself if keys are missing.
-# RECAPTCHA_SIGNUP_ENABLED is read directly by signup_enabled?() for runtime toggling support
-# (useful for emergency disables during Google API outages without redeployment).
+# Signup and booking protection are configurable and will automatically disable if keys are missing.
+# RECAPTCHA_SIGNUP_ENABLED and RECAPTCHA_BOOKING_ENABLED are read directly by the respective
+# enabled?() functions for runtime toggling support (useful for emergency disables during
+# Google API outages without redeployment).
 
 recaptcha_signup_min_score =
   case Float.parse(System.get_env("RECAPTCHA_SIGNUP_MIN_SCORE", "0.3")) do
@@ -502,7 +503,14 @@ recaptcha_signup_min_score =
     :error -> 0.3
   end
 
+recaptcha_booking_min_score =
+  case Float.parse(System.get_env("RECAPTCHA_BOOKING_MIN_SCORE", "0.3")) do
+    {score, _} -> score
+    :error -> 0.3
+  end
+
 recaptcha_signup_action = System.get_env("RECAPTCHA_SIGNUP_ACTION", "signup_form")
+recaptcha_booking_action = System.get_env("RECAPTCHA_BOOKING_ACTION", "booking_form")
 
 recaptcha_expected_hostnames =
   System.get_env("RECAPTCHA_EXPECTED_HOSTNAMES", "")
@@ -513,4 +521,6 @@ recaptcha_expected_hostnames =
 config :tymeslot, :recaptcha,
   signup_min_score: recaptcha_signup_min_score,
   signup_action: recaptcha_signup_action,
+  booking_min_score: recaptcha_booking_min_score,
+  booking_action: recaptcha_booking_action,
   expected_hostnames: recaptcha_expected_hostnames

@@ -38,12 +38,12 @@ defmodule TymeslotWeb.Registration.SignupComponent do
           rest={
             if RecaptchaHelpers.signup_active?() do
               %{
-                "data-site-key" => RecaptchaHelpers.site_key(),
-                "data-recaptcha-action" => "signup_form",
-                "data-recaptcha-event" => "submit_signup",
-                "data-recaptcha-param-root" => "user",
-                "data-recaptcha-require-token" => "true",
-                "phx-hook" => "RecaptchaV3"
+                :"data-site-key" => RecaptchaHelpers.site_key(),
+                :"data-recaptcha-action" => "signup_form",
+                :"data-recaptcha-event" => "submit_signup",
+                :"data-recaptcha-param-root" => "user",
+                :"data-recaptcha-require-token" => "true",
+                :"phx-hook" => "RecaptchaV3"
               }
             else
               %{}

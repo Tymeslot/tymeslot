@@ -481,19 +481,31 @@ Development setup & PR process
 - ✅ AES encryption for credentials
 - ✅ Rate limiting & IP protection
 - ✅ Security headers (CSP, HSTS, CSRF)
+- ✅ Spam protection (honeypot + reCAPTCHA v3)
 - ✅ Regular dependency updates
 
 </td>
 <td width="50%">
 
+**Spam Protection**
+
+Protect signup and booking forms from bots:
+- **Honeypot**: Invisible field catches automated bots
+- **reCAPTCHA v3**: Google's invisible bot detection (optional)
+
+Enable in your environment:
+```bash
+export RECAPTCHA_SITE_KEY="your_key"
+export RECAPTCHA_SECRET_KEY="your_secret"
+export RECAPTCHA_SIGNUP_ENABLED="true"
+export RECAPTCHA_BOOKING_ENABLED="true"
+```
+
+Get keys at [Google reCAPTCHA](https://www.google.com/recaptcha/admin)
+
 **Report Vulnerabilities**
 
 Use our [contact page](https://tymeslot.app/contact) for security issues.
-
-**Documentation**
-- [Docker Deployment](README-Docker.md)
-- [Cloudron Deployment](README-Cloudron.md)
-- [Contributing Guide](CONTRIBUTING.md)
 
 </td>
 </tr>

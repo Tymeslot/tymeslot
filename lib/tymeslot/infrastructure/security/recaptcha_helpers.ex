@@ -65,6 +65,66 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   end
 
   @doc """
+  Whether booking reCAPTCHA checks are enabled.
+
+  This setting allows runtime toggling without redeployment (useful for emergency
+  disables during outages).
+
+  ## Configuration precedence (highest to lowest)
+
+  1. Application config: `config :tymeslot, :recaptcha, booking_enabled: true`
+  2. Environment variable: `RECAPTCHA_BOOKING_ENABLED=true` (fallback only)
+
+  The application config takes precedence over the environment variable, allowing
+  compile-time defaults while still supporting runtime overrides via environment
+  variables when config is not explicitly set.
+
+  This is a *feature flag*; if enabled but keys are missing, booking verification is
+  automatically disabled (and logged) so legitimate bookings aren't blocked by misconfiguration.
+  """
+  @spec booking_enabled?() :: boolean()
+  def booking_enabled? do
+    recaptcha_cfg = Application.get_env(:tymeslot, :recaptcha, [])
+
+    case Keyword.fetch(recaptcha_cfg, :booking_enabled) do
+      {:ok, value} when is_boolean(value) ->
+        value
+
+      _other ->
+        System.get_env("RECAPTCHA_BOOKING_ENABLED", "false") == "true"
+    end
+  end
+
+  # Default minimum score for booking reCAPTCHA verification.
+  # Google recommends 0.5 for most cases, but we use 0.3 to reduce false positives
+  # for legitimate users on VPNs, mobile networks, or with privacy extensions.
+  # Combined with honeypot and rate limiting for defense in depth.
+  @default_booking_min_score 0.3
+
+  @doc """
+  Returns the minimum reCAPTCHA score required for booking submissions.
+
+  Defaults to #{@default_booking_min_score} if not configured. Lower scores are more
+  permissive (reduce false positives) but may allow more bot traffic.
+  """
+  @spec booking_min_score() :: float()
+  def booking_min_score do
+    recaptcha_cfg = Application.get_env(:tymeslot, :recaptcha, [])
+    Keyword.get(recaptcha_cfg, :booking_min_score, @default_booking_min_score)
+  end
+
+  @spec booking_action() :: String.t()
+  def booking_action do
+    recaptcha_cfg = Application.get_env(:tymeslot, :recaptcha, [])
+    Keyword.get(recaptcha_cfg, :booking_action, "booking_form")
+  end
+
+  @spec booking_active?() :: boolean()
+  def booking_active? do
+    booking_enabled?() and key_present?(site_key()) and key_present?(secret_key())
+  end
+
+  @doc """
   Validates a reCAPTCHA token using the verification service.
   """
   @spec validate_token(String.t()) ::
@@ -157,6 +217,98 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   end
 
   @doc """
+  Verify booking token if booking protection is enabled and configured.
+
+  Accepts nil or empty tokens and handles them appropriately based on whether
+  reCAPTCHA is enabled.
+
+  ## Parameters
+
+    * `token` - reCAPTCHA token from client (may be nil, empty, or a valid token)
+    * `metadata` - Map containing `:ip` and `:user_agent` for logging (optional)
+
+  ## Returns
+
+  - `:ok` when checks are disabled or when verification passes
+  - `{:error, :recaptcha_failed}` when enabled+configured but verification fails
+  - `{:error, :recaptcha_script_blocked}` when reCAPTCHA script failed to load (JS disabled, CSP blocked, extension blocked)
+  """
+  @spec maybe_verify_booking_token(String.t() | nil, map()) ::
+          :ok | {:error, :recaptcha_failed} | {:error, :recaptcha_script_blocked}
+  def maybe_verify_booking_token(token, metadata \\ %{})
+
+  def maybe_verify_booking_token(token, metadata) do
+    # Check if booking reCAPTCHA is enabled and active
+    enabled = booking_enabled?()
+    active = booking_active?()
+
+    cond do
+      not enabled ->
+        # Checks disabled; allow booking
+        :ok
+
+      enabled and not active ->
+        # Enabled but keys missing; log and allow booking
+        log_booking_disabled_due_to_missing_keys(metadata)
+        :ok
+
+      true ->
+        # Enabled and active; verify the token
+        verify_booking_token_impl(token, metadata)
+    end
+  end
+
+  # Special marker: reCAPTCHA script failed to load (CSP, extension, JS disabled)
+  defp verify_booking_token_impl("RECAPTCHA_SCRIPT_BLOCKED", metadata) do
+    Logger.warning("Booking attempted with reCAPTCHA script blocked",
+      event: "booking_recaptcha_script_blocked",
+      ip: metadata[:ip],
+      user_agent: metadata[:user_agent],
+      hint:
+        "Check: JavaScript disabled, browser extension, or Content-Security-Policy blocking reCAPTCHA"
+    )
+
+    {:error, :recaptcha_script_blocked}
+  end
+
+  defp verify_booking_token_impl(token, metadata) do
+    # Provide defaults for logging metadata
+    ip = metadata[:ip] || "unknown"
+    user_agent = metadata[:user_agent] || "unknown"
+
+    case Recaptcha.verify(token,
+           min_score: booking_min_score(),
+           expected_action: booking_action(),
+           expected_hostnames: expected_hostnames(),
+           remote_ip: ip
+         ) do
+      {:ok, %{score: score, action: action, hostname: hostname}} ->
+        Logger.info("Booking reCAPTCHA passed",
+          event: "booking_recaptcha_passed",
+          score: score,
+          threshold: booking_min_score(),
+          action: action,
+          hostname: hostname,
+          ip: ip,
+          user_agent: user_agent
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Booking reCAPTCHA failed",
+          event: "booking_recaptcha_failed",
+          reason: reason,
+          threshold: booking_min_score(),
+          ip: ip,
+          user_agent: user_agent
+        )
+
+        {:error, :recaptcha_failed}
+    end
+  end
+
+  @doc """
   Generates a hidden input field for the reCAPTCHA token.
   """
   @spec recaptcha_hidden_input() :: String.t()
@@ -182,6 +334,47 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
         ip: metadata[:ip],
         user_agent: metadata[:user_agent]
       )
+    end
+  end
+
+  # Avoid log spam by emitting at most once per minute per node.
+  # Uses atomics for thread-safe throttling without race conditions.
+  defp log_booking_disabled_due_to_missing_keys(metadata) do
+    now_sec = System.system_time(:second)
+    key = {__MODULE__, :booking_disabled_missing_keys_throttle}
+
+    # Create atomic counter on first use, or retrieve existing
+    counter =
+      case :persistent_term.get(key, nil) do
+        nil ->
+          ref = :atomics.new(1, [])
+          :atomics.put(ref, 1, 0)
+          :persistent_term.put(key, ref)
+          ref
+
+        existing ->
+          existing
+      end
+
+    last_sec = :atomics.get(counter, 1)
+
+    # Only log if 60 seconds have passed since last log
+    if now_sec - last_sec >= 60 do
+      # Atomically update timestamp only if it hasn't changed (prevents race)
+      case :atomics.compare_exchange(counter, 1, last_sec, now_sec) do
+        :ok ->
+          # We won the race; emit the log
+          Logger.warning(
+            "Booking reCAPTCHA is enabled but missing keys; booking protection is disabled",
+            event: "booking_recaptcha_disabled_missing_keys",
+            ip: metadata[:ip] || "unknown",
+            user_agent: metadata[:user_agent] || "unknown"
+          )
+
+        _ ->
+          # Another process won the race and already logged; skip
+          :ok
+      end
     end
   end
 end

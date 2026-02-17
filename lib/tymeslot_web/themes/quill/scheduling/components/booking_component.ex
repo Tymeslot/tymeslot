@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   alias Tymeslot.Utils.TimezoneUtils
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.SecurityFields
 
   import TymeslotWeb.Components.CoreComponents
 
@@ -92,7 +93,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     phx-target={@myself}
                     data-testid="booking-form"
                     class="space-y-2"
+                    {SecurityFields.recaptcha_form_attrs("booking_form", "booking")}
                   >
+                    <SecurityFields.honeypot_field id_prefix="booking" param_root="booking" />
+
                     <.input
                       field={f[:name]}
                       label={gettext("Your Name")}
@@ -127,6 +131,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       phx-value-field="message"
                       phx-target={@myself}
                     />
+
+                    <SecurityFields.recaptcha_fields id_prefix="booking" param_root="booking" />
 
                     <div class="cluster cluster-xs mt-3">
                       <.action_button

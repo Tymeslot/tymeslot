@@ -30,8 +30,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
   alias Phoenix.Component
   alias Tymeslot.Demo
+  alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Security.FormValidation
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
 
   require Logger
@@ -57,29 +59,35 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   def submit_booking(socket, booking_params) do
     Logger.info("Submit event triggered for booking form")
 
-    case FormValidation.validate_booking_form(booking_params) do
-      {:ok, sanitized_params} ->
-        Logger.info("Form validation passed, proceeding to booking")
+    # Check honeypot first (fastest gate)
+    if honeypot_tripped?(booking_params) do
+      handle_honeypot_booking(socket, booking_params)
+    else
+      case FormValidation.validate_booking_form(booking_params) do
+        {:ok, sanitized_params} ->
+          Logger.info("Form validation passed, proceeding to booking")
 
-        with {:ok, socket} <- check_duplicate_submission(socket),
-             {:ok, socket} <- check_rate_limit(socket) do
-          process_booking_submission(socket, sanitized_params)
-        else
-          {:error, socket} -> {:error, socket}
-        end
+          with {:ok, socket} <- check_duplicate_submission(socket),
+               {:ok, socket} <- check_rate_limit(socket),
+               :ok <- verify_recaptcha(socket, booking_params) do
+            process_booking_submission(socket, sanitized_params)
+          else
+            {:error, socket} -> {:error, socket}
+          end
 
-      {:error, errors} ->
-        Logger.warning("Form validation failed: #{inspect(errors)}")
-        {:ok, sanitized_params} = FormValidation.sanitize_booking_params(booking_params)
-        form = Component.to_form(sanitized_params)
+        {:error, errors} ->
+          Logger.warning("Form validation failed: #{inspect(errors)}")
+          {:ok, sanitized_params} = FormValidation.sanitize_booking_params(booking_params)
+          form = Component.to_form(sanitized_params)
 
-        socket =
-          socket
-          |> assign(:form, form)
-          |> assign(:validation_errors, errors)
-          |> put_flash(:error, "Please correct the errors below.")
+          socket =
+            socket
+            |> assign(:form, form)
+            |> assign(:validation_errors, errors)
+            |> put_flash(:error, "Please correct the errors below.")
 
-        {:error, socket}
+          {:error, socket}
+      end
     end
   end
 
@@ -230,6 +238,72 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   end
 
   # Private functions
+
+  defp honeypot_tripped?(params) do
+    case Map.get(params, "website") do
+      value when is_binary(value) -> value != ""
+      _other -> false
+    end
+  end
+
+  defp handle_honeypot_booking(socket, _booking_params) do
+    log_honeypot(socket)
+
+    # Return fake success to mislead the bot
+    Logger.info("Honeypot triggered in booking form - simulating success")
+
+    socket =
+      socket
+      |> assign(:submitting, false)
+      |> put_flash(
+        :info,
+        "Booking submitted successfully! You'll receive a confirmation email shortly."
+      )
+
+    {:ok, socket}
+  end
+
+  defp log_honeypot(socket) do
+    SecurityLogger.log_security_event("booking_honeypot_triggered", %{
+      ip_address: ClientIP.get(socket),
+      user_agent: ClientIP.get_user_agent(socket)
+    })
+  end
+
+  defp verify_recaptcha(socket, booking_params) do
+    recaptcha_token = Map.get(booking_params, "g-recaptcha-response", "")
+    client_ip = ClientIP.get(socket)
+    user_agent = ClientIP.get_user_agent(socket)
+
+    metadata = %{
+      ip: client_ip,
+      user_agent: user_agent
+    }
+
+    case RecaptchaHelpers.maybe_verify_booking_token(recaptcha_token, metadata) do
+      :ok ->
+        :ok
+
+      {:error, :recaptcha_failed} ->
+        socket =
+          socket
+          |> assign(:submitting, false)
+          |> put_flash(:error, "Security verification failed. Please try again.")
+
+        {:error, socket}
+
+      {:error, :recaptcha_script_blocked} ->
+        socket =
+          socket
+          |> assign(:submitting, false)
+          |> put_flash(
+            :error,
+            "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
+          )
+
+        {:error, socket}
+    end
+  end
 
   defp process_booking_submission(socket, sanitized_params) do
     form = Component.to_form(sanitized_params)

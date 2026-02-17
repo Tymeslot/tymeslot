@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings
-  alias Tymeslot.Security.MeetingsInputProcessor
+  alias Tymeslot.Security.{MeetingsInputProcessor, RateLimiter}
 
   alias Phoenix.LiveView
 
@@ -16,6 +16,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     MeetingListComponents,
     RescheduleRequestModal
   }
+
+  alias TymeslotWeb.Live.Shared.Flash
 
   require Logger
 
@@ -76,24 +78,34 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   @impl Phoenix.LiveComponent
   def handle_event("filter_meetings", %{"filter" => filter}, socket) do
     metadata = DashboardHelpers.get_security_metadata(socket)
+    user_id = socket.assigns.current_user.id
 
-    case MeetingsInputProcessor.validate_filter_input(%{"filter" => filter}, metadata: metadata) do
-      {:ok, %{"filter" => validated_filter}} ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :filter],
-          %{},
-          %{user_id: socket.assigns.current_user.id, filter: validated_filter}
-        )
+    case RateLimiter.check_meeting_filter_rate_limit(user_id) do
+      :ok ->
+        case MeetingsInputProcessor.validate_filter_input(%{"filter" => filter},
+               metadata: metadata
+             ) do
+          {:ok, %{"filter" => validated_filter}} ->
+            :telemetry.execute(
+              [:tymeslot, :dashboard, :meetings, :filter],
+              %{},
+              %{user_id: user_id, filter: validated_filter}
+            )
 
-        {:noreply,
-         socket
-         |> assign(:filter, validated_filter)
-         |> assign(:next_cursor, nil)
-         |> assign(:has_more, false)
-         |> assign(:loading, true)
-         |> load_meetings()}
+            {:noreply,
+             socket
+             |> assign(:filter, validated_filter)
+             |> assign(:next_cursor, nil)
+             |> assign(:has_more, false)
+             |> assign(:loading, true)
+             |> load_meetings()}
 
-      {:error, _errors} ->
+          {:error, _errors} ->
+            {:noreply, socket}
+        end
+
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
         {:noreply, socket}
     end
   end
