@@ -224,6 +224,7 @@ config :tymeslot, :calendar_providers, %{
   caldav: [enabled: true],
   radicale: [enabled: true],
   nextcloud: [enabled: true],
+  zimbra: [enabled: true],
   google: [enabled: true],
   outlook: [enabled: true]
 }

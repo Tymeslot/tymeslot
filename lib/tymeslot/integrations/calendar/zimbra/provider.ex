@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
 
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
+  alias Tymeslot.Security.UrlValidation
 
   @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def provider_type, do: :zimbra
@@ -72,11 +73,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def validate_config(config) do
     with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]),
-         :ok <-
-           ProviderCommon.validate_url(config[:base_url],
-             message:
-               "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
-           ),
+         :ok <- validate_zimbra_url(config[:base_url]),
          {:ok, client} <- build_test_client(config) do
       ProviderCommon.test_caldav_connection(client,
         error_formatter: &zimbra_error_formatter/1
@@ -147,6 +144,18 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
 
   # Private helper functions
 
+  defp validate_zimbra_url(url) do
+    case UrlValidation.validate_http_url(url,
+           enforce_https_for_public: true,
+           https_error_message: "Use HTTPS for non-local Zimbra servers",
+           invalid_message:
+             "Invalid Zimbra URL. Should be your Zimbra server URL (e.g., https://mail.example.com) or full CalDAV URL (e.g., https://mail.example.com/dav/user@example.com)"
+         ) do
+      :ok -> :ok
+      {:error, message} -> {:error, message}
+    end
+  end
+
   defp build_test_client(config) do
     full_client = new(config)
 
@@ -175,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
       paths when is_list(paths) and paths != [] ->
         paths
 
-      _ ->
+      _empty_or_nil ->
         build_zimbra_default_paths(config)
     end
   end
@@ -187,21 +196,93 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
     username = config[:username]
     calendar_names = config[:calendar_names] || []
 
-    if Enum.empty?(calendar_names) do
+    if Enum.empty?(calendar_names) or not is_binary(username) or username == "" do
       []
     else
-      Enum.map(calendar_names, &format_zimbra_path(&1, username))
+      calendar_names
+      |> Enum.map(&format_zimbra_path(&1, username))
+      |> Enum.reject(&is_nil(&1))
     end
   end
 
-  defp format_zimbra_path(calendar_name, username) do
-    if String.starts_with?(calendar_name, "/dav/#{username}/") do
-      calendar_name
+  defp format_zimbra_path(calendar_name, username)
+       when is_binary(calendar_name) and is_binary(username) and username != "" do
+    # Sanitize both calendar_name and username to prevent path traversal
+    sanitized_name = sanitize_calendar_name(calendar_name)
+    sanitized_username = sanitize_username(username)
+
+    if sanitized_name == "" or sanitized_username == "" do
+      nil
     else
-      "/dav/#{username}/#{calendar_name}/"
+      # Build path from sanitized inputs to prevent path traversal attacks
+      path = "/dav/#{sanitized_username}/#{sanitized_name}/"
+
+      # Validate path length (max 255 bytes for filesystem compatibility)
+      # Use byte_size instead of String.length to account for multi-byte UTF-8 characters
+      if byte_size(path) > 255 do
+        nil
+      else
+        path
+      end
     end
   end
 
-  defp format_error({:error, message}) when is_binary(message), do: message
-  defp format_error(error), do: "Zimbra error: #{inspect(error)}"
+  defp format_zimbra_path(_calendar_name, _username), do: nil
+
+  # Sanitizes calendar name input to prevent security vulnerabilities.
+  #
+  # Removes dangerous patterns that could be exploited for:
+  # - Path traversal attacks (../ sequences)
+  # - Directory traversal (leading/trailing slashes)
+  # - Null byte injection (\x00)
+  # - Control character injection (\x00-\x1F, \x7F)
+  #
+  # Also enforces reasonable length limits to prevent DoS attacks.
+  #
+  # Examples:
+  #   sanitize_calendar_name("../../../etc/passwd") => "etcpasswd"
+  #   sanitize_calendar_name("Calendar\x00Name") => "CalendarName"
+  #   sanitize_calendar_name("  /Valid Calendar/  ") => "Valid Calendar"
+  defp sanitize_calendar_name(name) do
+    name
+    # Hard limit on input size first to prevent DoS via extremely long strings
+    |> String.slice(0, 1000)
+    |> String.trim()
+    # Remove path traversal sequences (.., ..., etc.)
+    |> String.replace(~r/\.\.+/, "")
+    # Remove leading/trailing slashes from name component
+    |> String.trim("/")
+    # Remove null bytes and control characters
+    |> String.replace(~r/[\x00-\x1F\x7F]/, "")
+    # Ensure reasonable output length
+    |> String.slice(0, 200)
+  end
+
+  # Sanitizes username input to prevent path traversal and injection attacks.
+  #
+  # The username is used in CalDAV path construction (/dav/{username}/{calendar}/),
+  # so it must be sanitized to prevent attackers from escaping the user directory
+  # or injecting malicious path components.
+  #
+  # Applies the same security controls as calendar name sanitization.
+  #
+  # Examples:
+  #   sanitize_username("user@example.com/../../etc") => "user@example.cometc"
+  #   sanitize_username("user\x00@example.com") => "user@example.com"
+  defp sanitize_username(username) do
+    username
+    # Hard limit on input size first to prevent DoS
+    |> String.slice(0, 1000)
+    |> String.trim()
+    # Remove path traversal sequences
+    |> String.replace(~r/\.\.+/, "")
+    # Remove leading/trailing slashes
+    |> String.trim("/")
+    # Remove null bytes and control characters
+    |> String.replace(~r/[\x00-\x1F\x7F]/, "")
+    # Ensure reasonable output length
+    |> String.slice(0, 200)
+  end
+
+  defp format_error(error), do: ErrorHandler.sanitize_error_message(error, :zimbra)
 end

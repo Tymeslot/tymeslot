@@ -377,6 +377,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
       :caldav -> "CalDAV server"
       :nextcloud -> "Nextcloud"
       :radicale -> "Radicale"
+      :zimbra -> "Zimbra"
       :google -> "Google Calendar"
       :outlook -> "Outlook Calendar"
       _ -> "calendar provider"

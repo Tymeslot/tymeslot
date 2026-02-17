@@ -383,10 +383,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     )
   end
 
-  defp normalize_provider(p) when p in [:nextcloud, :radicale, :caldav], do: p
+  defp normalize_provider(p) when p in [:nextcloud, :radicale, :caldav, :zimbra], do: p
   defp normalize_provider("nextcloud"), do: :nextcloud
   defp normalize_provider("radicale"), do: :radicale
   defp normalize_provider("caldav"), do: :caldav
+  defp normalize_provider("zimbra"), do: :zimbra
   defp normalize_provider(_), do: :caldav
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}

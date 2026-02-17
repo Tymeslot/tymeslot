@@ -15,7 +15,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   alias Tymeslot.Infrastructure.{CircuitBreaker, CircuitBreakerHelpers}
   require Logger
 
-  @calendar_providers [:caldav, :radicale, :nextcloud, :google, :outlook]
+  @calendar_providers [:caldav, :radicale, :nextcloud, :zimbra, :google, :outlook]
   @calendar_breaker_names Enum.into(@calendar_providers, %{}, fn p ->
                             {p, :"calendar_breaker_#{p}"}
                           end)
@@ -27,6 +27,10 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
     half_open_requests: 2
   }
 
+  # Circuit breaker configurations per calendar provider
+  # - OAuth providers (Google, Outlook): More lenient due to rate limiting and API quotas
+  # - Self-hosted CalDAV (CalDAV, Radicale, Zimbra): Standard settings for typical self-hosted servers
+  # - Nextcloud: Slightly more lenient than basic CalDAV due to heavier server operations
   @provider_configs %{
     google: %{
       failure_threshold: 5,
@@ -47,6 +51,10 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
     nextcloud: %{
       failure_threshold: 4,
       recovery_timeout: :timer.minutes(3)
+    },
+    zimbra: %{
+      failure_threshold: 3,
+      recovery_timeout: :timer.minutes(2)
     }
   }
 

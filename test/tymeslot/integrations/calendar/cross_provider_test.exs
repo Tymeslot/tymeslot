@@ -92,7 +92,8 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           base_url: "http://localhost:1",
           username: "invalid",
           password: "invalid",
-          calendar_paths: []
+          calendar_paths: [],
+          provider: provider_type
         }
 
         result = provider_module.test_connection(invalid_config)
@@ -110,7 +111,8 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           base_url: "http://localhost:1",
           username: "test",
           password: "test",
-          calendar_paths: []
+          calendar_paths: [],
+          provider: provider_type
         }
 
         opts = [metadata: %{ip: "127.0.0.1"}]
@@ -155,7 +157,8 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           base_url: "http://localhost:1",
           username: "test",
           password: "test",
-          calendar_paths: []
+          calendar_paths: [],
+          provider: provider_type
         }
 
         # Should not crash on network error
@@ -173,7 +176,8 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
           base_url: "http://localhost:1",
           username: "invalid",
           password: "invalid",
-          calendar_paths: []
+          calendar_paths: [],
+          provider: provider_type
         }
 
         result = provider_module.test_connection(invalid_config)
