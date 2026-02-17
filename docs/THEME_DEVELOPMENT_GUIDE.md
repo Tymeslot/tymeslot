@@ -12,16 +12,120 @@ The theme system uses a centralized registry pattern that eliminates magic strin
 2. **Theme Behaviour** (`TymeslotWeb.Themes.Core.Behaviour`) - Interface that all themes must implement
 3. **Shared Context** (`TymeslotWeb.Themes.Shared.*`) - Shared helpers, handlers, and components
 4. **Capability System** (`Tymeslot.ThemeCustomizations.Capability`) - Capability-based customization logic
-5. **Dispatcher & Loader** - Systems for dynamically loading and dispatching theme actions
+5. **Dispatcher & Loader** (`TymeslotWeb.Themes.Core.Dispatcher`, `TymeslotWeb.Themes.Core.Loader`) - Systems for dynamically loading and dispatching theme actions
+6. **Event Bus** (`TymeslotWeb.Themes.Core.EventBus`) - Centralized event handling system for theme components
+7. **State Machine** (per-theme) - Validates state transitions and determines routing behavior
+8. **Wrapper Components** (per-theme) - Provides theme-specific layout, backgrounds, and UI chrome
+
+## Quick Reference
+
+### File Structure for a Theme
+
+```
+lib/tymeslot_web/themes/[theme_name]/
+├── theme.ex                    # Theme behaviour implementation
+├── scheduling/
+│   ├── live.ex                 # Main LiveView
+│   ├── state_machine.ex        # State transition logic
+│   ├── wrapper.ex              # Theme layout wrapper
+│   └── components/
+│       ├── overview_component.ex
+│       ├── schedule_component.ex
+│       ├── booking_component.ex
+│       └── confirmation_component.ex
+└── meeting/
+    ├── reschedule.ex
+    ├── cancel.ex
+    └── cancel_confirmed.ex
+
+assets/css/scheduling/themes/[theme_name]/
+├── theme.css                   # Main entry point
+└── modules/
+    ├── variables.css
+    ├── base.css
+    ├── typography.css
+    ├── layouts.css
+    ├── components.css
+    ├── schedule/               # Complex step needs subfolder
+    │   ├── calendar.css
+    │   ├── time-slots.css
+    │   └── timezone-selector.css
+    ├── booking.css
+    ├── confirmation.css
+    ├── language-switcher.css
+    ├── video.css               # If video backgrounds
+    └── responsive.css
+```
+
+### Required Behaviour Callbacks
+
+```elixir
+@callback states() :: map()
+@callback css_file() :: String.t()
+@callback components() :: map()
+@callback live_view_module() :: module()
+@callback theme_config() :: map()
+@callback validate_theme() :: :ok | {:error, String.t()}
+@callback initial_state_for_action(atom()) :: atom()
+@callback supports_feature?(atom()) :: boolean()
+@callback render_meeting_action(map(), atom()) :: Phoenix.LiveView.Rendered.t()
+```
+
+### Shared Modules You'll Use
+
+| Module | Purpose |
+|--------|---------|
+| `LiveHelpers` | Mount and param handling |
+| `EventHandlers` | Common UI events (locale, navigation) |
+| `InfoHandlers` | Async tasks (availability fetching) |
+| `SchedulingInit` | Base state initialization |
+| `BookingFlow` | Form validation and submission |
+| `LocalizationHelpers` | Date/time formatting |
+| `PathHandlers` | Navigation with locale preservation |
+| `Customization.Helpers` | Theme customization CSS generation |
+| `Customization.Video` | Video background rendering |
 
 ## Quick Start
 
-### 1. Generate Theme Files (Preview)
+### 1. Create Theme Directory Structure
 
-```elixir
-# This previews what files would be created (doesn't actually create them)
-Tymeslot.ThemeTestHelpers.generate_theme_skeleton("aurora", "Aurora Theme")
+Create the following directory structure for your new theme:
+
 ```
+apps/tymeslot/lib/tymeslot_web/themes/aurora/
+├── scheduling/
+│   ├── components/
+│   │   ├── booking_component.ex
+│   │   ├── confirmation_component.ex
+│   │   ├── overview_component.ex
+│   │   └── schedule_component.ex
+│   ├── live.ex
+│   ├── state_machine.ex
+│   └── wrapper.ex
+├── meeting/
+│   ├── cancel.ex
+│   ├── cancel_confirmed.ex
+│   └── reschedule.ex
+└── theme.ex
+
+apps/tymeslot/assets/css/scheduling/themes/aurora/
+├── modules/
+│   ├── base.css
+│   ├── booking.css
+│   ├── components.css
+│   ├── confirmation.css
+│   ├── language-switcher.css
+│   ├── layouts.css
+│   ├── overview.css (optional, theme-specific)
+│   ├── responsive.css
+│   ├── schedule.css
+│   ├── typography.css
+│   ├── variables.css
+│   └── video.css (if video backgrounds supported)
+└── theme.css
+```
+
+**Tip**: Copy an existing theme (Quill or Rhythm) as a starting point and modify it.
 
 ### 2. Register Your Theme
 
@@ -54,53 +158,109 @@ Your theme module must implement the `TymeslotWeb.Themes.Core.Behaviour`:
 
 ```elixir
 defmodule TymeslotWeb.Themes.Aurora.Theme do
+  @moduledoc """
+  Aurora theme implementation with northern lights design and 4-step flow.
+  """
+
   @behaviour TymeslotWeb.Themes.Core.Behaviour
-  
-  # Define your theme states (typically 4 steps)
-  @impl true
+
+  alias TymeslotWeb.Themes.Aurora.Scheduling.Components.{
+    BookingComponent,
+    ConfirmationComponent,
+    OverviewComponent,
+    ScheduleComponent
+  }
+
+  alias TymeslotWeb.Themes.Aurora.Meeting.{Cancel, CancelConfirmed, Reschedule}
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def states do
     %{
       overview: %{step: 1, next: :schedule, prev: nil},
       schedule: %{step: 2, next: :booking, prev: :overview},
       booking: %{step: 3, next: :confirmation, prev: :schedule},
-      confirmation: %{step: 4, prev: nil}
+      confirmation: %{step: 4, prev: :booking}
     }
   end
-  
-  @impl true
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def css_file, do: "/assets/scheduling-theme-aurora.css"
-  
-  @impl true
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def components do
     %{
-      overview: Aurora.OverviewComponent,
-      schedule: Aurora.ScheduleComponent,
-      booking: Aurora.BookingComponent,
-      confirmation: Aurora.ConfirmationComponent
+      overview: OverviewComponent,
+      schedule: ScheduleComponent,
+      booking: BookingComponent,
+      confirmation: ConfirmationComponent
     }
   end
-  
-  @impl true
-  def live_view_module, do: TymeslotWeb.Themes.Aurora.Scheduling.Live
-  
-  @impl true
-  def theme_config, do: %{name: "Aurora", description: "Beautiful theme"}
-  
-  @impl true
-  def validate_theme, do: :ok
-  
-  @impl true
-  def initial_state_for_action(_), do: :overview
-  
-  @impl true
-  def supports_feature?(_), do: true
 
-  @impl true
+  @impl TymeslotWeb.Themes.Core.Behaviour
+  def live_view_module do
+    TymeslotWeb.Themes.Aurora.Scheduling.Live
+  end
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
+  def theme_config do
+    %{
+      name: "Aurora",
+      description: "Beautiful northern lights theme with smooth animations.",
+      preview_image: "/images/ui/theme-previews/aurora-theme-preview.webp",
+      flow_steps: 4,
+      design_system: :northern_lights,
+      supports_duration_selection: true,
+      supports_inline_booking: false
+    }
+  end
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
+  def validate_theme do
+    required_components = [:overview, :schedule, :booking, :confirmation]
+
+    missing_components =
+      Enum.filter(required_components, fn component ->
+        not Code.ensure_loaded?(components()[component])
+      end)
+
+    if Enum.empty?(missing_components) do
+      :ok
+    else
+      {:error, "Missing components: #{inspect(missing_components)}"}
+    end
+  end
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
+  def initial_state_for_action(live_action) do
+    case live_action do
+      :index -> :overview
+      :overview -> :overview
+      :schedule -> :schedule
+      :booking -> :booking
+      :confirmation -> :confirmation
+      _other -> :overview
+    end
+  end
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
+  def supports_feature?(feature) do
+    case feature do
+      :duration_selection -> true
+      :inline_booking -> false
+      :step_navigation -> true
+      :video_background -> true
+      :aurora_effects -> true
+      _other -> false
+    end
+  end
+
+  @impl TymeslotWeb.Themes.Core.Behaviour
   def render_meeting_action(assigns, action) do
     case action do
-      :reschedule -> Aurora.Meeting.Reschedule.render(assigns)
-      :cancel -> Aurora.Meeting.Cancel.render(assigns)
-      :cancel_confirmed -> Aurora.Meeting.CancelConfirmed.render(assigns)
+      :reschedule -> Reschedule.render(assigns)
+      :cancel -> Cancel.render(assigns)
+      :cancel_confirmed -> CancelConfirmed.render(assigns)
+      _other -> raise "Unsupported meeting action: #{action}"
     end
   end
 end
@@ -123,33 +283,56 @@ This will verify:
 
 ## CSS Architecture
 
-### New Modular Structure
+### Modular Structure
 
-Starting with the current codebase, themes now use a **modular CSS architecture** located in `assets/css/scheduling/themes/`:
+Themes use a **modular CSS architecture** located in `apps/tymeslot/assets/css/scheduling/themes/`:
 
 ```
-assets/css/scheduling/themes/
-├── shared/                    # Shared utilities
-│   ├── reset.css             # CSS reset
-│   ├── variables.css         # CSS custom properties
-│   └── utilities.css         # Utility classes
-├── quill/                     # Quill theme (glassmorphism)
+apps/tymeslot/assets/css/scheduling/themes/
+├── shared/                        # Shared utilities (used by all themes)
+│   ├── reset.css                 # CSS reset
+│   ├── variables.css             # CSS custom properties
+│   └── utilities.css             # Utility classes
+├── quill/                         # Quill theme (glassmorphism)
 │   ├── modules/
-│   │   ├── foundation.css    # Base styles and typography
-│   │   ├── glass-components.css # Glass morphism components
-│   │   ├── scheduling-ui.css # Scheduling interface
-│   │   ├── booking-flow.css  # Booking flow specific styles
-│   │   └── responsive.css    # Responsive breakpoints
-│   └── theme.css             # Main theme entry point
-└── rhythm/                    # Rhythm theme (video backgrounds)
+│   │   ├── base.css              # Base layout and structure
+│   │   ├── booking.css           # Booking form styles
+│   │   ├── components.css        # Reusable UI components
+│   │   ├── confirmation.css      # Confirmation page
+│   │   ├── glass-components.css  # Glassmorphism effects
+│   │   ├── language-switcher.css # Language dropdown
+│   │   ├── layouts.css           # Layout utilities
+│   │   ├── responsive.css        # Mobile/tablet breakpoints
+│   │   ├── schedule/             # Schedule step (complex, needs subfolder)
+│   │   │   ├── calendar.css
+│   │   │   ├── schedule-header.css
+│   │   │   ├── schedule.css
+│   │   │   ├── time-slots.css
+│   │   │   └── timezone-selector.css
+│   │   ├── typography.css        # Text styles
+│   │   ├── variables.css         # Theme-specific CSS variables
+│   │   └── video.css             # Video background support
+│   └── theme.css                 # Main entry point (imports all modules)
+└── rhythm/                        # Rhythm theme (video backgrounds)
     ├── modules/
-    │   ├── variables.css      # Theme-specific variables
-    │   ├── base.css           # Base layout and typography
-    │   ├── video.css          # Video background handling
-    │   ├── slides.css         # Sliding interface
-    │   ├── components.css     # UI components
-    │   └── responsive.css     # Mobile responsive styles
-    └── theme.css              # Main theme entry point
+    │   ├── base.css
+    │   ├── booking.css
+    │   ├── components.css
+    │   ├── confirmation.css
+    │   ├── language-switcher.css
+    │   ├── layouts.css
+    │   ├── overview.css          # Rhythm-specific overview styles
+    │   ├── responsive.css
+    │   ├── schedule/
+    │   │   ├── calendar.css
+    │   │   ├── schedule-header.css
+    │   │   ├── time-slots.css
+    │   │   └── timezone-selector.css
+    │   ├── schedule.css          # Main schedule wrapper
+    │   ├── typography.css
+    │   ├── variables.css
+    │   └── video.css
+    └── theme.css
 ```
 
 ### Theme CSS Structure
@@ -157,31 +340,50 @@ assets/css/scheduling/themes/
 Each theme's main CSS file (`theme.css`) follows this pattern:
 
 ```css
+/* Quill Theme - Self-Contained Glassmorphism Theme for Scheduling */
+
 /* Import shared utilities */
 @import "../../shared/reset.css";
 @import "../../shared/variables.css";
 @import "../../shared/utilities.css";
 
 /* Import theme modules in dependency order */
-@import "./modules/foundation.css";
-@import "./modules/components.css";
-@import "./modules/responsive.css";
+@import "./modules/variables.css";      /* Theme-specific variables first */
+@import "./modules/base.css";           /* Base layout and structure */
+@import "./modules/video.css";          /* Video backgrounds (if supported) */
+@import "./modules/typography.css";     /* Text styles */
+@import "./modules/layouts.css";        /* Layout utilities */
+@import "./modules/components.css";     /* Reusable UI components */
+@import "./modules/glass-components.css"; /* Theme-specific (e.g., glassmorphism) */
+@import "./modules/schedule/schedule.css"; /* Schedule step styles */
+@import "./modules/booking.css";        /* Booking form */
+@import "./modules/confirmation.css";   /* Confirmation page */
+@import "./modules/language-switcher.css"; /* Language dropdown */
+@import "./modules/responsive.css";     /* Mobile/tablet breakpoints last */
 ```
+
+**Note**: Import order matters. Variables must come first, responsive styles last.
 
 ### Creating Theme CSS
 
-1. **Create theme directory**: `assets/css/scheduling/themes/your-theme/`
+1. **Create theme directory**: `apps/tymeslot/assets/css/scheduling/themes/your-theme/`
 2. **Create main theme.css** that imports shared utilities and your modules
 3. **Create modular CSS files** in a `modules/` subdirectory
+4. **Add schedule subdirectory** in `modules/schedule/` for complex calendar/scheduling styles
 
-**Note**: Theme CSS is completely separate from global app styles and uses only the modular architecture in `assets/css/scheduling/themes/`.
+**Note**: Theme CSS is completely separate from global app styles and uses only the modular architecture in `apps/tymeslot/assets/css/scheduling/themes/`.
 
 ## Theme Requirements
 
 ### Must Have
-- LiveView that renders without crashing
-- CSS file in `assets/css/scheduling/themes/your-theme/theme.css`
-- All 4 booking flow states: overview, calendar, booking_form, confirmation
+- Theme module implementing `TymeslotWeb.Themes.Core.Behaviour`
+- LiveView module that renders without crashing
+- StateMachine module for state transitions
+- Wrapper component for theme layout
+- CSS file in `apps/tymeslot/assets/css/scheduling/themes/your-theme/theme.css`
+- All 4 booking flow states: **overview**, **schedule**, **booking**, **confirmation**
+- All 4 step components as LiveComponents
+- Meeting action components (reschedule, cancel, cancel_confirmed)
 
 ### Nice to Have
 - Mobile responsive design
@@ -197,54 +399,227 @@ The theme system provides centralized handlers and helpers in `TymeslotWeb.Theme
 `TymeslotWeb.Themes.Shared.LiveHelpers` provides common mounting and parameter handling logic:
 
 ```elixir
-defmodule TymeslotWeb.Themes.MyTheme.Scheduling.Live do
+defmodule TymeslotWeb.Themes.Aurora.Scheduling.Live do
   use TymeslotWeb, :live_view
-  import TymeslotWeb.Themes.Shared.LiveHelpers
+  require Logger
 
-  @impl true
-  def mount(params, session, socket) do
-    socket = mount_scheduling_view(socket, params, :overview, &assign_initial_state/1, &setup_initial_state/3)
+  alias TymeslotWeb.Themes.Aurora.Scheduling.StateMachine
+  alias TymeslotWeb.Themes.Shared.{
+    EventHandlers,
+    InfoHandlers,
+    LiveHelpers,
+    PathHandlers,
+    SchedulingInit
+  }
+
+  @impl Phoenix.LiveView
+  def mount(params, _session, socket) do
+    # Determine initial state from route
+    initial_state = StateMachine.determine_initial_state(socket.assigns[:live_action])
+
+    socket =
+      LiveHelpers.mount_scheduling_view(
+        socket,
+        params,
+        initial_state,
+        &assign_initial_state/1,
+        &setup_initial_state/3
+      )
+
     {:ok, socket}
   end
 
-  @impl true
+  @impl Phoenix.LiveView
   def handle_params(params, _url, socket) do
-    handle_scheduling_params(socket, params, :overview, &handle_param_updates/2, &handle_state_entry/3)
+    # Handle URL changes (back/forward navigation)
+    new_state = StateMachine.determine_initial_state(socket.assigns[:live_action])
+
+    LiveHelpers.handle_scheduling_params(
+      socket,
+      params,
+      new_state,
+      &handle_param_updates/2,
+      &handle_state_entry/3
+    )
   end
+
+  # Private helpers required by LiveHelpers
+  defp assign_initial_state(socket) do
+    today = Date.utc_today()
+
+    socket
+    |> SchedulingInit.assign_base_state()
+    |> assign(:theme_id, "3")
+    |> assign(:duration, nil)
+    |> assign(:meeting_type, nil)
+    # ... additional initial state
+  end
+
+  defp handle_param_updates(socket, params) do
+    LiveHelpers.handle_param_updates(socket, params)
+  end
+
+  defp setup_initial_state(socket, initial_state, params) do
+    LiveHelpers.setup_initial_state(socket, initial_state, params, &handle_state_entry/3)
+  end
+
+  defp handle_state_entry(socket, :schedule, params) do
+    LiveHelpers.handle_schedule_entry(socket, params)
+  end
+
+  defp handle_state_entry(socket, :booking, params) do
+    LiveHelpers.handle_booking_entry(socket, params)
+  end
+
+  defp handle_state_entry(socket, _state, _params), do: socket
 end
 ```
 
 ### EventHandlers
 
-`TymeslotWeb.Themes.Shared.EventHandlers` handles common UI events:
+`TymeslotWeb.Themes.Shared.EventHandlers` handles common UI events using a callback pattern for flexibility:
 
 ```elixir
-@impl true
+# Language and dropdown events
+@impl Phoenix.LiveView
+def handle_event("toggle_language_dropdown", _params, socket) do
+  EventHandlers.handle_toggle_language_dropdown(socket)
+end
+
+@impl Phoenix.LiveView
 def handle_event("change_locale", %{"locale" => locale}, socket) do
   EventHandlers.handle_change_locale(socket, locale, PathHandlers)
 end
 
-@impl true
-def handle_event("step_event", %{"step" => "overview", "event" => event, "data" => data}, socket) do
-  EventHandlers.handle_overview_events(socket, String.to_existing_atom(event), data, callbacks(socket))
+# Step-specific events using callback pattern
+defp handle_overview_events(socket, event, data) do
+  callbacks = %{
+    maybe_assign_meeting_type: &maybe_assign_meeting_type/2,
+    validate_state_transition: &validate_state_transition/3,
+    transition_to: &transition_to/3
+  }
+
+  EventHandlers.handle_overview_events(socket, event, data, callbacks)
+end
+
+defp handle_state_transition(socket, current_state, next_state) do
+  callbacks = %{
+    validate_state_transition: &validate_state_transition/3,
+    transition_to: &transition_to/3
+  }
+
+  EventHandlers.handle_state_transition(socket, current_state, next_state, callbacks)
 end
 ```
+
+**Key EventHandler Functions**:
+- `handle_toggle_language_dropdown/1` - Toggle language selector
+- `handle_close_language_dropdown/1` - Close language dropdown
+- `handle_change_locale/3` - Change user locale
+- `handle_overview_events/4` - Overview step events (duration selection, navigation)
+- `handle_state_transition/4` - Navigate between steps
+- `handle_timezone_events/4` - Timezone selection and search
+- `handle_timezone_search/2` - Filter timezone list
 
 ### InfoHandlers
 
 `TymeslotWeb.Themes.Shared.InfoHandlers` handles async tasks like availability fetching:
 
 ```elixir
-@impl true
+@impl Phoenix.LiveView
 def handle_info({:fetch_available_slots, date, duration, timezone}, socket) do
   InfoHandlers.handle_fetch_available_slots(socket, date, duration, timezone)
 end
 
-@impl true
+@impl Phoenix.LiveView
+def handle_info({:load_slots, date}, socket) do
+  InfoHandlers.handle_load_slots(socket, date)
+end
+
+# Handle month availability fetch completion (success)
+@impl Phoenix.LiveView
 def handle_info({ref, {:ok, availability_map}}, socket) when is_reference(ref) do
   InfoHandlers.handle_availability_ok(socket, ref, availability_map)
 end
+
+# Handle month availability fetch completion (error)
+@impl Phoenix.LiveView
+def handle_info({ref, {:error, reason}}, socket) when is_reference(ref) do
+  InfoHandlers.handle_availability_error(socket, ref, reason)
+end
+
+# Handle task crash or timeout
+@impl Phoenix.LiveView
+def handle_info({:DOWN, ref, :process, _pid, reason}, socket) do
+  InfoHandlers.handle_availability_down(socket, ref, reason)
+end
+
+@impl Phoenix.LiveView
+def handle_info(:close_dropdown, socket) do
+  InfoHandlers.handle_close_dropdown(socket)
+end
 ```
+
+**Key InfoHandler Functions**:
+- `handle_fetch_available_slots/4` - Fetch available time slots for a date
+- `handle_load_slots/2` - Load slots for date selection
+- `handle_availability_ok/3` - Process successful availability fetch
+- `handle_availability_error/3` - Handle availability fetch errors
+- `handle_availability_down/3` - Handle task crashes/timeouts
+- `handle_close_dropdown/1` - Close dropdowns after delay
+
+### SchedulingInit
+
+`TymeslotWeb.Themes.Shared.SchedulingInit` provides base state initialization:
+
+```elixir
+defp assign_initial_state(socket) do
+  today = Date.utc_today()
+
+  socket
+  |> SchedulingInit.assign_base_state()  # Assigns locale, theme_key, etc.
+  |> assign(:theme_id, "3")
+  |> assign(:duration, nil)
+  |> assign(:meeting_type, nil)
+  |> assign(:current_year, today.year)
+  |> assign(:current_month, today.month)
+  # ... theme-specific state
+end
+```
+
+**Assigns from `assign_base_state/1`**:
+- `:locale` - User's selected locale
+- `:language_dropdown_open` - Language dropdown state
+- `:current_state` - Current step in the flow
+- `:scheduling_theme_id` - Active theme ID
+- `:theme_key` - Active theme key atom
+
+### BookingFlow
+
+`TymeslotWeb.Themes.Shared.BookingFlow` handles form validation and submission:
+
+```elixir
+defp handle_booking_events(socket, event, data) do
+  case event do
+    :validate ->
+      BookingFlow.handle_form_validation(socket, data)
+
+    :submit ->
+      BookingFlow.submit_booking(socket, data, &transition_to/3)
+
+    :field_blur ->
+      {:noreply, Helpers.mark_field_touched(socket, data)}
+
+    :back_step ->
+      handle_state_transition(socket, :booking, :schedule)
+  end
+end
+```
+
+**Key BookingFlow Functions**:
+- `handle_form_validation/2` - Validate form fields in real-time
+- `submit_booking/3` - Submit booking and transition to confirmation
+- Both functions handle spam prevention, rate limiting, and error handling automatically
 
 ### LocalizationHelpers
 
@@ -304,12 +679,256 @@ These components should reside in `lib/tymeslot_web/themes/[theme_name]/meeting/
 
 ## Common Patterns
 
-### Modular LiveView
-Keep the theme LiveView thin by using:
-1. **StateMachine**: To manage state transitions and validation.
-2. **Wrapper**: A functional component that provides the common layout (background, language switcher, etc.).
-3. **Step Components**: Separate LiveComponents for `overview`, `schedule`, `booking`, and `confirmation`.
+### Modular LiveView Architecture
 
+Modern themes follow a layered architecture that keeps the LiveView thin and maintainable:
+
+#### 1. **StateMachine Module**
+
+Each theme has its own `StateMachine` module (`themes/[theme_name]/scheduling/state_machine.ex`) that handles:
+
+```elixir
+defmodule TymeslotWeb.Themes.Aurora.Scheduling.StateMachine do
+  @moduledoc """
+  State machine for Aurora theme scheduling flow.
+  """
+
+  @doc "Determines initial state from Phoenix live_action"
+  def determine_initial_state(live_action) do
+    case live_action do
+      :index -> :overview
+      :overview -> :overview
+      :schedule -> :schedule
+      :booking -> :booking
+      :confirmation -> :confirmation
+      _other -> :overview
+    end
+  end
+
+  @doc "Validates state transitions"
+  def validate_state_transition(socket, current_state, next_state) do
+    case {current_state, next_state} do
+      {:overview, :schedule} -> validate_overview_complete(socket)
+      {:schedule, :booking} -> validate_schedule_complete(socket)
+      {:booking, :confirmation} -> {:ok, socket}
+      _ -> {:error, "Invalid state transition"}
+    end
+  end
+
+  @doc "Checks if navigation to a step is allowed"
+  def can_navigate_to_step?(socket, target_state) do
+    # Only allow navigation to previous or current steps
+    current_step = get_step_number(socket.assigns[:current_state])
+    target_step = get_step_number(target_state)
+    target_step <= current_step
+  end
+
+  defp validate_overview_complete(socket) do
+    if socket.assigns[:duration] && socket.assigns[:meeting_type] do
+      {:ok, socket}
+    else
+      {:error, "Please select a meeting duration"}
+    end
+  end
+
+  defp validate_schedule_complete(socket) do
+    cond do
+      not socket.assigns[:selected_date] ->
+        {:error, "Please select a date"}
+      not socket.assigns[:selected_time] ->
+        {:error, "Please select a time"}
+      true ->
+        {:ok, socket}
+    end
+  end
+
+  defp get_step_number(state) do
+    case state do
+      :overview -> 1
+      :schedule -> 2
+      :booking -> 3
+      :confirmation -> 4
+      _ -> 0
+    end
+  end
+end
+```
+
+#### 2. **Wrapper Component**
+
+The wrapper provides the theme's visual shell (background, language switcher, branding):
+
+```elixir
+defmodule TymeslotWeb.Themes.Aurora.Scheduling.Wrapper do
+  use Phoenix.Component
+
+  import TymeslotWeb.CoreComponents, only: [language_switcher: 1]
+
+  alias TymeslotWeb.Themes.Shared.Customization.{Helpers, Video}
+  alias TymeslotWeb.Themes.Shared.LocaleHandler
+
+  attr :custom_css, :string, default: nil
+  attr :theme_customization, :map, default: nil
+  attr :locale, :string, required: true
+  attr :language_dropdown_open, :boolean, required: true
+  attr :current_state, :atom, required: true
+  attr :organizer_user_id, :string, default: nil
+  attr :should_show_branding, :boolean, default: true
+
+  slot :inner_block, required: true
+
+  def aurora_wrapper(assigns) do
+    custom_css = Helpers.generate_custom_css(:aurora, assigns.theme_customization)
+    assigns = assign(assigns, :generated_css, custom_css)
+
+    ~H"""
+    <div class="aurora-theme-container" style={@generated_css}>
+      <!-- Video background (if supported) -->
+      <%= if @theme_customization do %>
+        <%= Video.render_video_container(:aurora, assigns) %>
+      <% end %>
+
+      <!-- Language switcher -->
+      <.language_switcher
+        locale={@locale}
+        locales={LocaleHandler.get_locales_with_metadata()}
+        dropdown_open={@language_dropdown_open}
+        theme={:aurora}
+      />
+
+      <!-- Main content -->
+      <div class="aurora-content">
+        <%= render_slot(@inner_block) %>
+      </div>
+
+      <!-- Branding footer -->
+      <%= if @should_show_branding do %>
+        <div class="branding-footer">
+          Powered by Tymeslot
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+end
+```
+
+#### 3. **Step Components**
+
+Each step is a separate LiveComponent:
+
+```elixir
+defmodule TymeslotWeb.Themes.Aurora.Scheduling.Components.OverviewComponent do
+  use TymeslotWeb, :live_component
+
+  @impl Phoenix.LiveComponent
+  def update(assigns, socket) do
+    {:ok, assign(socket, assigns)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def render(assigns) do
+    ~H"""
+    <div class="overview-step">
+      <h1>Select Meeting Duration</h1>
+      <div class="meeting-types">
+        <%= for mt <- @meeting_types do %>
+          <button
+            phx-click="step_event"
+            phx-value-step="overview"
+            phx-value-event="select_duration"
+            phx-value-data={mt.duration}
+            class={duration_button_class(mt.duration, @duration)}
+          >
+            <%= format_duration(mt.duration) %>
+          </button>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+end
+```
+
+#### 4. **Shared Modules**
+
+Leverage shared modules to avoid duplication:
+
+- **SchedulingInit**: Base state initialization
+- **BookingFlow**: Form validation and submission
+- **EventHandlers**: Common event handling with callbacks
+- **InfoHandlers**: Async task handling (availability fetching)
+- **LocalizationHelpers**: Date/time formatting
+- **PathHandlers**: Navigation with locale preservation
+
+#### 5. **Event Communication Pattern**
+
+Components send events to the LiveView using a standardized pattern:
+
+```elixir
+# In component template
+<button phx-click="step_event" phx-value-step="overview" phx-value-event="select_duration" phx-value-data={duration}>
+
+# In LiveView
+@impl Phoenix.LiveView
+def handle_info({:step_event, step, event, data}, socket) do
+  case step do
+    :overview -> handle_overview_events(socket, event, data)
+    :schedule -> handle_schedule_events(socket, event, data)
+    :booking -> handle_booking_events(socket, event, data)
+    :confirmation -> handle_confirmation_events(socket, event, data)
+  end
+end
+```
+
+### Theme Template Rendering
+
+The LiveView's `render/1` function delegates to the wrapper and components:
+
+```elixir
+@impl Phoenix.LiveView
+def render(assigns) do
+  organizer_user_id =
+    case assigns[:organizer_profile] do
+      %{user_id: user_id} -> user_id
+      _other -> nil
+    end
+
+  assigns = assign(assigns, :organizer_user_id, organizer_user_id)
+
+  ~H"""
+  <AuroraWrapper.aurora_wrapper
+    custom_css={assigns[:custom_css]}
+    theme_customization={assigns[:theme_customization]}
+    locale={assigns[:locale]}
+    language_dropdown_open={assigns[:language_dropdown_open]}
+    current_state={assigns[:current_state]}
+    organizer_user_id={@organizer_user_id}
+    should_show_branding={assigns[:should_show_branding]}
+  >
+    <%= if assigns[:scheduling_error_message] do %>
+      <.live_component
+        module={ErrorComponent}
+        id="scheduling-error"
+        message={@scheduling_error_message}
+        reason={assigns[:scheduling_error_reason]}
+      />
+    <% else %>
+      <%= case assigns[:current_state] || :overview do %>
+        <% :overview -> %>
+          <.live_component module={OverviewComponent} id="overview-step" {assigns} />
+        <% :schedule -> %>
+          <.live_component module={ScheduleComponent} id="schedule-step" {assigns} />
+        <% :booking -> %>
+          <.live_component module={BookingComponent} id="booking-step" {assigns} />
+        <% :confirmation -> %>
+          <.live_component module={ConfirmationComponent} id="confirmation-step" {assigns} />
+      <% end %>
+    <% end %>
+  </AuroraWrapper.aurora_wrapper>
+  """
+end
+```
 
 ## Theme Customization System
 
@@ -429,9 +1048,112 @@ LocalizationHelpers.format_date(@selected_date)
 ```
 
 
-## Don't Over-Engineer
+## Development Workflow
 
-- Start with the simplest theme that works
-- Copy from existing themes
-- Focus on user experience, not code perfection
-- The production checklist tells you if it's ready
+### Step-by-Step Implementation
+
+1. **Copy an existing theme** (Quill or Rhythm) as a starting point
+2. **Update the registry** with your theme metadata
+3. **Rename files and modules** to match your theme name
+4. **Customize the StateMachine** if you need different validation logic
+5. **Update the Wrapper** with your theme's visual design
+6. **Modify step components** (overview, schedule, booking, confirmation)
+7. **Create CSS modules** in `assets/css/scheduling/themes/your-theme/`
+8. **Implement meeting actions** (reschedule, cancel, cancel_confirmed)
+9. **Test with production checklist**
+
+### What to Copy vs. What to Customize
+
+**Copy as-is** (shared logic, rarely changes):
+- LiveView event handlers (`handle_info`, `handle_event`)
+- State initialization helpers
+- Shared module usage (LiveHelpers, EventHandlers, etc.)
+
+**Customize** (theme-specific):
+- StateMachine validation rules
+- Wrapper component layout and design
+- Step component templates and styles
+- CSS modules and variables
+- Meeting action component designs
+
+### Testing Your Theme
+
+Run the production checklist to validate your theme:
+
+```bash
+# Test all registered themes
+mix test apps/tymeslot/test/tymeslot_web/live/themes/theme_production_checklist_test.exs
+
+# Or test a specific theme
+mix test apps/tymeslot/test/tymeslot_web/live/themes/theme_production_checklist_test.exs -t theme_id:3
+```
+
+The checklist automatically verifies:
+- Theme renders without crashing
+- All meeting types display correctly
+- Edge cases work (no meetings, long names, etc.)
+- Basic mobile responsiveness
+- Acceptable load times
+- State transitions function properly
+
+### Debugging Tips
+
+**Common Issues**:
+
+1. **Component not found**: Check aliases in theme module match component names
+2. **CSS not loading**: Verify `theme.css` imports all modules in correct order
+3. **State transitions broken**: Check StateMachine validation logic
+4. **Availability not loading**: Ensure InfoHandlers are implemented
+5. **Form submission fails**: Check BookingFlow integration
+
+**Debug helpers**:
+
+```elixir
+# In LiveView mount or handle_info
+require Logger
+Logger.debug("Socket assigns: #{inspect(socket.assigns)}")
+
+# In StateMachine
+def validate_state_transition(socket, current, next) do
+  Logger.info("Transition: #{current} -> #{next}")
+  # validation logic
+end
+```
+
+## Best Practices
+
+### Do's
+
+✅ **Use shared modules** - LiveHelpers, EventHandlers, InfoHandlers, BookingFlow
+✅ **Follow the callback pattern** - EventHandlers use callbacks for flexibility
+✅ **Implement all required callbacks** - Theme behaviour defines the contract
+✅ **Keep LiveView thin** - Delegate to StateMachine, Wrapper, and components
+✅ **Use LocalizationHelpers** - For all date/time formatting
+✅ **Test with production checklist** - Automated validation catches issues early
+✅ **Copy existing themes** - Rhythm and Quill are proven implementations
+
+### Don'ts
+
+❌ **Don't hardcode dates/times** - Always use LocalizationHelpers
+❌ **Don't skip StateMachine validation** - It prevents invalid state transitions
+❌ **Don't duplicate shared logic** - Use the Shared.* modules
+❌ **Don't mix theme and app styles** - Keep theme CSS isolated
+❌ **Don't forget meeting actions** - Reschedule, cancel, cancel_confirmed required
+❌ **Don't over-engineer** - Start simple, add complexity only when needed
+
+## Summary Checklist
+
+Before considering your theme complete:
+
+- [ ] Theme registered in `Registry.ex`
+- [ ] Theme module implements all behaviour callbacks
+- [ ] StateMachine module handles state transitions
+- [ ] Wrapper component provides theme layout
+- [ ] All 4 step components implemented (overview, schedule, booking, confirmation)
+- [ ] All 3 meeting action components implemented
+- [ ] CSS theme.css imports all required modules
+- [ ] Production checklist tests pass
+- [ ] Mobile responsive design works
+- [ ] Localization works for all supported languages
+- [ ] Video/image backgrounds work (if supported)
+- [ ] Theme customization renders correctly
