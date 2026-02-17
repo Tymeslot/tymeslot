@@ -44,6 +44,8 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
   use Mix.Task
   require Logger
 
+  alias Tymeslot.Infrastructure.ProxyVerifier
+
   @shortdoc "Verifies HTTP proxy configuration"
 
   @switches [
@@ -114,7 +116,7 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
   defp run_quick_check do
     Mix.shell().info("=== Running Quick Proxy Check ===\n")
 
-    case Tymeslot.Infrastructure.ProxyVerifier.quick_check() do
+    case ProxyVerifier.quick_check() do
       :ok ->
         Mix.shell().info(IO.ANSI.format([:green, "✓ SUCCESS: Proxy is working correctly\n"]))
         :ok
@@ -133,7 +135,7 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
       |> maybe_add_opt(:test_url, opts[:url])
       |> maybe_add_opt(:timeout, opts[:timeout])
 
-    result = Tymeslot.Infrastructure.ProxyVerifier.verify(verify_opts)
+    result = ProxyVerifier.verify(verify_opts)
 
     print_result(result)
 

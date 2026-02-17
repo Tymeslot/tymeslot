@@ -1,7 +1,7 @@
 defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
   use ExUnit.Case, async: false
 
-  alias Tymeslot.Infrastructure.{HTTPClient, ProxyConfig}
+  alias Tymeslot.Infrastructure.{HTTPClient, ProxyConfig, ProxyVerifier}
 
   @moduletag :integration
   @moduletag timeout: 30_000
@@ -190,7 +190,7 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
       if proxy_configured? do
         IO.puts("\n=== Testing ProxyVerifier ===")
 
-        result = Tymeslot.Infrastructure.ProxyVerifier.verify(timeout: 10_000)
+        result = ProxyVerifier.verify(timeout: 10_000)
 
         assert result.proxy_configured == true,
                "Proxy should be configured"

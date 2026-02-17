@@ -21,7 +21,8 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
   """
   attr :profile, :map, required: true
   attr :form_errors, :map, required: true
-  attr :custom_input_mode, :map, default: %{buffer_minutes: false, advance_booking_days: false, min_advance_hours: false}
+  attr :custom_input_mode, :map,
+    default: %{buffer_minutes: false, advance_booking_days: false, min_advance_hours: false}
 
   @spec scheduling_preferences_step(map()) :: Phoenix.LiveView.Rendered.t()
   def scheduling_preferences_step(assigns) do
