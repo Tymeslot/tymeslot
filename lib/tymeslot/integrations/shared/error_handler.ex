@@ -253,7 +253,7 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
       p when p in [:outlook, "outlook", :teams, "teams", :microsoft, "microsoft"] ->
         parse_microsoft_error(response)
 
-      _ ->
+      _other ->
         extract_generic_error_message(response)
     end
   end
@@ -263,7 +263,7 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
       {:ok, %{"error" => %{"message" => message}}} -> message
       {:ok, %{"error_description" => desc}} -> desc
       {:ok, %{"error" => message}} when is_binary(message) -> message
-      _ -> extract_generic_error_message(%{body: body})
+      _other -> extract_generic_error_message(%{body: body})
     end
   end
 
@@ -271,7 +271,7 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
     case decode_json(body) do
       {:ok, %{"error" => %{"message" => message}}} -> message
       {:ok, %{"error_description" => desc}} -> desc
-      _ -> extract_generic_error_message(%{body: body})
+      _other -> extract_generic_error_message(%{body: body})
     end
   end
 
@@ -280,7 +280,7 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
       {:ok, %{"error" => %{"message" => message}}} -> message
       {:ok, %{"error" => message}} when is_binary(message) -> message
       {:ok, %{"message" => message}} -> message
-      _ -> body
+      _other -> body
     end
   end
 
@@ -290,7 +290,7 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
     case error_part do
       %{"message" => message} -> message
       message when is_binary(message) -> message
-      _ -> inspect(body)
+      _other -> inspect(body)
     end
   end
 
@@ -301,9 +301,9 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
   defp decode_json(body) when is_binary(body) do
     Jason.decode(body)
   rescue
-    _ -> {:error, :invalid_json}
+    _other -> {:error, :invalid_json}
   end
 
   defp decode_json(body) when is_map(body), do: {:ok, body}
-  defp decode_json(_), do: {:error, :not_json}
+  defp decode_json(_arg), do: {:error, :not_json}
 end

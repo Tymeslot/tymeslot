@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Themes.Core.Loader do
         end
       end)
 
-    errors = Enum.filter(results, &match?({:error, _}, &1))
+    errors = Enum.filter(results, &match?({:error, _reason}, &1))
 
     if Enum.empty?(errors) do
       modules = Enum.map(results, fn {:ok, {_id, module}} -> module end)
@@ -109,10 +109,10 @@ defmodule TymeslotWeb.Themes.Core.Loader do
         try do
           module.live_view_module()
         rescue
-          _ -> nil
+          _other -> nil
         end
 
-      {:error, _} ->
+      {:error, _reason} ->
         nil
     end
   end
@@ -146,11 +146,11 @@ defmodule TymeslotWeb.Themes.Core.Loader do
     case Registry.get_theme_by_id(theme_id) do
       {:ok, theme} ->
         case ensure_loaded(theme.module) do
-          {:ok, _} -> true
-          _ -> false
+          {:ok, _result} -> true
+          _other -> false
         end
 
-      _ ->
+      _other ->
         false
     end
   end

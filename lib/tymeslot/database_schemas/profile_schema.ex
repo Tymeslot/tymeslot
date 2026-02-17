@@ -161,7 +161,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
           # Use centralized security validation
           alias Tymeslot.Security.Security
           validation_results = Enum.map(domains, &Security.validate_domain/1)
-          errors = Enum.filter(validation_results, &match?({:error, _}, &1))
+          errors = Enum.filter(validation_results, &match?({:error, _reason}, &1))
 
           if errors != [] do
             invalid_domains_str =
@@ -176,7 +176,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
           end
         end
 
-      _ ->
+      _other ->
         add_error(changeset, :allowed_embed_domains, "must be a list of domains")
     end
   end

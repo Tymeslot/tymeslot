@@ -216,7 +216,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
     uri.scheme in ["http", "https"] and uri.host != nil
   end
 
-  defp valid_nextcloud_url?(_), do: false
+  defp valid_nextcloud_url?(_url), do: false
 
   defp maybe_extract_username_from_url(config) do
     url = config[:base_url] || ""

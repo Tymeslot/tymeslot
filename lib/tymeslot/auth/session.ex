@@ -88,7 +88,7 @@ defmodule Tymeslot.Auth.Session do
             user_agent: List.first(Conn.get_req_header(conn, "user-agent"))
           })
 
-        _ ->
+        _other ->
           nil
       end
 
@@ -110,7 +110,7 @@ defmodule Tymeslot.Auth.Session do
          %{id: id} <- UserSessionQueries.get_user_by_session_token(token) do
       id
     else
-      _ -> nil
+      _other -> nil
     end
   end
 
@@ -131,7 +131,7 @@ defmodule Tymeslot.Auth.Session do
         timestamp: timestamp
       }
     else
-      _ -> nil
+      _other -> nil
     end
   end
 
@@ -181,7 +181,7 @@ defmodule Tymeslot.Auth.Session do
         addr when is_tuple(addr) and tuple_size(addr) in [4, 8] ->
           to_string(:inet.ntoa(addr))
 
-        _ ->
+        _other ->
           "unknown"
       end
 

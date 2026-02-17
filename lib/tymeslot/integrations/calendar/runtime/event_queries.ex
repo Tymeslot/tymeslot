@@ -168,12 +168,12 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
       {:ok, res} -> res
       {:exit, reason} -> {:error, {:task_exit, reason}}
       {:error, reason} -> {:error, reason}
-      _ -> {:error, :unknown_task_result}
+      _other -> {:error, :unknown_task_result}
     end)
   end
 
   defp successful_result?({:ok, _events, _path}), do: true
-  defp successful_result?(_), do: false
+  defp successful_result?(_result), do: false
 
   defp extract_events({:ok, events, _path}), do: events
 end

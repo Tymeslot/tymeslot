@@ -13,7 +13,7 @@ defmodule Tymeslot.Security.InputProcessorTest do
 
     assert_raise ArgumentError, fn -> String.to_existing_atom(field_name) end
 
-    assert {:ok, _} =
+    assert {:ok, _result} =
              InputProcessor.validate_form(
                %{field_name => "value"},
                [{field_name, AlwaysOkValidator}],

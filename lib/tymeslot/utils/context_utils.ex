@@ -25,7 +25,7 @@ defmodule Tymeslot.Utils.ContextUtils do
       %{} = map ->
         Map.get(map, key)
 
-      _ ->
+      _other ->
         nil
     end
   end

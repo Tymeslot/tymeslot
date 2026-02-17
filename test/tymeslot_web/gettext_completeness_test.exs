@@ -104,7 +104,7 @@ defmodule TymeslotWeb.GettextCompletenessTest do
             # Skip the header entry (empty msgid)
             msgid != "" && msgstr == ""
           end)
-          |> Enum.map(fn {msgid, _} -> msgid end)
+          |> Enum.map(fn {msgid, _msgstr} -> msgid end)
 
         assert empty_translations == [],
                """
@@ -190,7 +190,7 @@ defmodule TymeslotWeb.GettextCompletenessTest do
           msgid = String.trim_trailing(rest, "\"")
           [msgid | acc]
 
-        _ ->
+        _non_msgid_line ->
           acc
       end
     end)
@@ -213,7 +213,7 @@ defmodule TymeslotWeb.GettextCompletenessTest do
             {:cont, {:msgid, msgid}}
 
           # msgstr following msgid
-          String.starts_with?(trimmed, "msgstr \"") && match?({:msgid, _}, acc) ->
+          String.starts_with?(trimmed, "msgstr \"") && match?({:msgid, _msgid}, acc) ->
             {:msgid, msgid} = acc
             msgstr = extract_quoted_value(trimmed, "msgstr")
             {:cont, {msgid, msgstr}, nil}
@@ -224,7 +224,7 @@ defmodule TymeslotWeb.GettextCompletenessTest do
       end,
       fn
         {:msgid, msgid} -> {:cont, {msgid, ""}, nil}
-        _ -> {:cont, nil}
+        _acc -> {:cont, nil}
       end
     )
     |> Enum.reject(&is_nil/1)

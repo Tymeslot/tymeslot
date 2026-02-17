@@ -37,7 +37,7 @@ defmodule Tymeslot.Availability.BusinessHours do
           user_timezone
         )
 
-      _ ->
+      _other ->
         # Day not available - return empty availability window
         {:ok, %{start_datetime: nil, end_datetime: nil, selected_date: date}}
     end
@@ -59,7 +59,7 @@ defmodule Tymeslot.Availability.BusinessHours do
           user_timezone
         )
 
-      _ ->
+      _other ->
         # Weekend - return empty availability window
         {:ok, %{start_datetime: nil, end_datetime: nil, selected_date: date}}
     end
@@ -74,7 +74,7 @@ defmodule Tymeslot.Availability.BusinessHours do
 
     case WeeklySchedule.get_day_availability(profile_id, day_of_week) do
       %{is_available: true} -> true
-      _ -> false
+      _other -> false
     end
   end
 
@@ -95,7 +95,7 @@ defmodule Tymeslot.Availability.BusinessHours do
       %{is_available: true, start_time: start_time, end_time: end_time} ->
         {start_time, end_time}
 
-      _ ->
+      _other ->
         {nil, nil}
     end
   end
@@ -116,7 +116,7 @@ defmodule Tymeslot.Availability.BusinessHours do
     current_date =
       case DateTime.now(timezone) do
         {:ok, dt} -> DateTime.to_date(dt)
-        _ -> Date.utc_today()
+        _other -> Date.utc_today()
       end
 
     target_date = Date.new!(year, month, 1)
@@ -154,7 +154,7 @@ defmodule Tymeslot.Availability.BusinessHours do
          {:ok, user_end} <- DateTime.shift_zone(owner_end, user_timezone) do
       {:ok, %{start_datetime: user_start, end_datetime: user_end, selected_date: date}}
     else
-      _ -> {:error, "Failed to convert business hours to user timezone"}
+      _other -> {:error, "Failed to convert business hours to user timezone"}
     end
   end
 end

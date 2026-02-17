@@ -329,7 +329,7 @@ defmodule Tymeslot.Profiles do
 
       # Validate domains using centralized security validation
       validation_results = Enum.map(domains, &Security.validate_domain/1)
-      errors = Enum.filter(validation_results, &match?({:error, _}, &1))
+      errors = Enum.filter(validation_results, &match?({:error, _reason}, &1))
 
       if errors != [] do
         invalid_domains_str =
@@ -390,7 +390,7 @@ defmodule Tymeslot.Profiles do
   end
 
   defp get_user_name_from_profile(%{user: %{name: name}}), do: name
-  defp get_user_name_from_profile(_), do: nil
+  defp get_user_name_from_profile(_arg), do: nil
 
   defp meeting_types_for_profile(%{meeting_types: meeting_types, user_id: user_id}) do
     if is_list(meeting_types) and meeting_types != [] do

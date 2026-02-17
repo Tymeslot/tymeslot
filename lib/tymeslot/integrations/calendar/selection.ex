@@ -106,7 +106,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     end
   end
 
-  defp maybe_put(acc, nil, _), do: acc
+  defp maybe_put(acc, nil, _val), do: acc
   defp maybe_put(acc, key, val), do: Map.put(acc, key, val)
 
   @doc """

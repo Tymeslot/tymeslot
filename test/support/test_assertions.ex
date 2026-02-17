@@ -96,7 +96,7 @@ defmodule Tymeslot.TestAssertions do
       %Date{} = d ->
         {d.year, d.month, d.day}
 
-      _ ->
+      _other ->
         nil
     end
   end
@@ -237,7 +237,7 @@ defmodule Tymeslot.TestAssertions do
         # It was redirected, which indicates success
         true
 
-      _ ->
+      _other ->
         html = render(view)
 
         assert html =~ "success" or html =~ "confirmed" or html =~ "thank",

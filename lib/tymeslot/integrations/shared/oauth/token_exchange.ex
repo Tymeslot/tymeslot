@@ -55,7 +55,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
           200 ->
             parse_token_response(resp_body, nil, scope)
 
-          _ ->
+          _other ->
             redacted_body = Redactor.redact_and_truncate(resp_body)
 
             Logger.error("OAuth token exchange failed: #{redacted_body}",
@@ -91,7 +91,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
           200 ->
             parse_token_response(resp_body, fallback_refresh_token, fallback_scope)
 
-          _ ->
+          _other ->
             redacted_body = Redactor.redact_and_truncate(resp_body)
 
             Logger.error("OAuth token refresh failed: #{redacted_body}",

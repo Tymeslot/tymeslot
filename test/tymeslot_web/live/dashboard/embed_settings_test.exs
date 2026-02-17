@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
     test "removes a domain successfully", %{conn: conn, profile: profile} do
       # Set initial domains
-      {:ok, _} = Profiles.update_allowed_embed_domains(profile, ["example.com", "test.org"])
+      {:ok, _result} = Profiles.update_allowed_embed_domains(profile, ["example.com", "test.org"])
 
       {:ok, view, _html} = live(conn, "/dashboard/embed")
       view |> element("button#tab-security") |> render_click()
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
 
     test "clears domains successfully", %{conn: conn, profile: profile} do
       # First set some domains
-      {:ok, _} =
+      {:ok, _result} =
         Profiles.update_allowed_embed_domains(profile, ["example.com", "test.org"])
 
       {:ok, view, _html} = live(conn, "/dashboard/embed")
@@ -206,7 +206,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
     end
 
     test "shows current domain count in UI", %{conn: conn, profile: profile} do
-      {:ok, _} =
+      {:ok, _result} =
         Profiles.update_allowed_embed_domains(profile, [
           "example.com",
           "test.org",

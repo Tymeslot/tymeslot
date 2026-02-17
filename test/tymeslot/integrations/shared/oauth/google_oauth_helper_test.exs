@@ -89,7 +89,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
     end
 
     test "handles error from Google" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok, %{status: 400, body: "error_msg"}}
       end)
 
@@ -106,7 +106,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
           "expires_in" => 3600
         })
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, body, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, body, _headers, _opts ->
         params = URI.decode_query(body)
         assert params["refresh_token"] == "old-rt"
         assert params["grant_type"] == "refresh_token"
@@ -126,19 +126,19 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
             "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email"
         })
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _, headers, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, headers, _opts ->
         assert url == "https://www.googleapis.com/oauth2/v1/tokeninfo"
         assert {"Authorization", "Bearer token"} in headers
         {:ok, %{status: 200, body: resp_body}}
       end)
 
-      assert {:ok, _} = GoogleOAuthHelper.validate_token_scope("token", [:calendar])
+      assert {:ok, _result} = GoogleOAuthHelper.validate_token_scope("token", [:calendar])
     end
 
     test "returns error for missing scopes" do
       resp_body = Jason.encode!(%{"scope" => "https://www.googleapis.com/auth/userinfo.email"})
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:ok, %{status: 200, body: resp_body}}
       end)
 
@@ -154,7 +154,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
     end
 
     test "fails for invalid state" do
-      assert {:error, _} = GoogleOAuthHelper.validate_state("invalid")
+      assert {:error, _error} = GoogleOAuthHelper.validate_state("invalid")
     end
   end
 end

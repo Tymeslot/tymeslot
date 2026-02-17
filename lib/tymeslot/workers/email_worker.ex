@@ -37,7 +37,7 @@ defmodule Tymeslot.Workers.EmailWorker do
   Implements exponential backoff for retries.
   """
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"action" => action} = args, attempt: _attempt} = job) do
+  def perform(%Oban.Job{args: %{"action" => action} = args, attempt: _current_attempt} = job) do
     execute_email_job_with_timeout(action, args, job)
   end
 
@@ -76,7 +76,7 @@ defmodule Tymeslot.Workers.EmailWorker do
         Logger.info("Confirmation email job scheduled", meeting_id: meeting_id)
         :ok
 
-      {:error, %Ecto.Changeset{errors: [unique: _]}} ->
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
         Logger.info("Confirmation email job already exists, skipping duplicate",
           meeting_id: meeting_id
         )
@@ -123,7 +123,7 @@ defmodule Tymeslot.Workers.EmailWorker do
         Logger.info("Email verification job scheduled", user_id: user_id)
         :ok
 
-      {:error, %Ecto.Changeset{errors: [unique: _]}} ->
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
         Logger.info("Email verification job already exists, skipping duplicate",
           user_id: user_id
         )
@@ -169,7 +169,7 @@ defmodule Tymeslot.Workers.EmailWorker do
         Logger.info("Password reset email job scheduled", user_id: user_id)
         :ok
 
-      {:error, %Ecto.Changeset{errors: [unique: _]}} ->
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
         Logger.info("Password reset email job already exists, skipping duplicate",
           user_id: user_id
         )
@@ -199,7 +199,7 @@ defmodule Tymeslot.Workers.EmailWorker do
         scheduled_at =
           scheduled_at || calculate_reminder_time(meeting_id, value, unit)
 
-        _ = delete_existing_reminder_jobs(meeting_id, value, unit)
+        _deleted = delete_existing_reminder_jobs(meeting_id, value, unit)
 
         result =
           %{
@@ -231,7 +231,7 @@ defmodule Tymeslot.Workers.EmailWorker do
 
             :ok
 
-          {:error, %Ecto.Changeset{errors: [unique: _]}} ->
+          {:error, %Ecto.Changeset{errors: [unique: _unique_error]}} ->
             Logger.info("Reminder email job already exists, skipping duplicate",
               meeting_id: meeting_id
             )
@@ -247,7 +247,7 @@ defmodule Tymeslot.Workers.EmailWorker do
             {:error, "Failed to schedule job"}
         end
 
-      _ ->
+      _error ->
         {:error, "invalid_reminder"}
     end
   end
@@ -265,15 +265,15 @@ defmodule Tymeslot.Workers.EmailWorker do
       {:discard, reason} ->
         {:discard, reason}
 
-      _ ->
+      _other ->
         handle_unexpected_email_result(result)
     end
   end
 
-  defp handle_email_error(:rate_limited, job) do
+  defp handle_email_error(:rate_limited, %{attempt: attempt}) do
     # Snooze for longer period when rate limited
     # Max 5 minutes
-    snooze_seconds = min(300, 60 * job.attempt)
+    snooze_seconds = min(300, 60 * attempt)
 
     Logger.warning("Email service rate limited, snoozing",
       snooze_seconds: snooze_seconds
@@ -302,7 +302,7 @@ defmodule Tymeslot.Workers.EmailWorker do
     {:error, reason}
   end
 
-  defp handle_email_error(_reason, _job) do
+  defp handle_email_error(_other_reason, _job) do
     # Unknown error format - retry
     {:error, "Unknown error"}
   end
@@ -407,7 +407,7 @@ defmodule Tymeslot.Workers.EmailWorker do
       "send_email_change_notification" -> ["user_id", "new_email"]
       "send_email_change_confirmations" -> ["user_id", "old_email", "new_email"]
       nil -> ["action"]
-      _ -> []
+      _other_action -> []
     end
   end
 end

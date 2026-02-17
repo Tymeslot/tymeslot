@@ -101,7 +101,7 @@ defmodule Tymeslot.Availability.Conflicts do
           not (Date.compare(event_end_date, start_date_limit) == :lt or
                  Date.compare(event_start_date, end_date_limit) == :gt)
 
-        _ ->
+        _other ->
           false
       end
     end)
@@ -129,7 +129,7 @@ defmodule Tymeslot.Availability.Conflicts do
             false
           end
 
-        _ ->
+        _other ->
           false
       end
     end
@@ -208,7 +208,7 @@ defmodule Tymeslot.Availability.Conflicts do
   end
 
   defp find_gap_between_events(relevant_events, latest_start, params) do
-    Enum.reduce_while(relevant_events, {nil, false}, fn event, {prev_end, _} ->
+    Enum.reduce_while(relevant_events, {nil, false}, fn event, {prev_end, _value} ->
       if is_nil(prev_end) do
         {:cont, {event.end_time, false}}
       else
@@ -235,7 +235,7 @@ defmodule Tymeslot.Availability.Conflicts do
   defp get_current_time(timezone) do
     case DateTime.now(timezone) do
       {:ok, dt} -> dt
-      _ -> DateTime.shift_zone!(DateTime.utc_now(), "Etc/UTC")
+      _other -> DateTime.shift_zone!(DateTime.utc_now(), "Etc/UTC")
     end
   end
 end

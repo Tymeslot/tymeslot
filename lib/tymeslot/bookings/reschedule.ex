@@ -51,7 +51,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
     case Repo.transaction(fn ->
            with {:ok, updated} <- update_meeting(meeting, attrs),
-                {:ok, _} <- schedule_calendar_job(updated) do
+                {:ok, _result} <- schedule_calendar_job(updated) do
              updated
            else
              {:error, reason} ->
@@ -60,7 +60,7 @@ defmodule Tymeslot.Bookings.Reschedule do
          end) do
       {:ok, updated} -> {:ok, updated}
       {:error, :failed_to_update_meeting} -> {:error, :failed_to_update_meeting}
-      {:error, _} -> {:error, :failed_to_update_meeting}
+      {:error, _reason} -> {:error, :failed_to_update_meeting}
     end
   end
 
@@ -94,7 +94,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   defp update_meeting(meeting, attrs) do
     case Scheduling.update_meeting_with_conflict_check(meeting, attrs) do
       {:ok, updated} -> {:ok, updated}
-      {:error, _} -> {:error, :failed_to_update_meeting}
+      {:error, _reason} -> {:error, :failed_to_update_meeting}
     end
   end
 

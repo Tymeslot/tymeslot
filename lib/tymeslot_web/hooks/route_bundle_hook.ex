@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Hooks.RouteBundleHook do
 
   @spec on_mount(:default, map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()}
-  def on_mount(:default, _, _, socket) do
+  def on_mount(:default, _params, _session, socket) do
     bundle = determine_bundle(socket.view)
     {:cont, assign(socket, :route_bundle, bundle)}
   end
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Hooks.RouteBundleHook do
 
         # Public booking uses scheduling_root layout (handles bundle itself)
         # SchedulingLive is in its own namespace
-        _ ->
+        _module ->
           nil
       end
 

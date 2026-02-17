@@ -71,7 +71,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookDeliverySchema do
       when is_integer(status) and status >= 200 and status < 300,
       do: true
 
-  def successful?(_), do: false
+  def successful?(_other), do: false
 
   @doc """
   Checks if the delivery is retryable
@@ -84,7 +84,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookDeliverySchema do
       do: true
 
   def retryable?(%__MODULE__{response_status: nil}), do: true
-  def retryable?(_), do: false
+  def retryable?(_other), do: false
 
   @doc """
   Gets a human-readable status message

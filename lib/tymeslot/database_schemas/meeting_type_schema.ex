@@ -136,7 +136,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchema do
           "is required when a target calendar is selected"
         )
 
-      _ ->
+      _other ->
         changeset
     end
   end
@@ -149,7 +149,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchema do
       reminders when is_list(reminders) ->
         validate_reminder_list(changeset, reminders)
 
-      _ ->
+      _other ->
         add_error(changeset, :reminder_config, "must be a list of reminder settings")
     end
   end
@@ -161,7 +161,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchema do
       {errors, normalized} =
         reminders
         |> Enum.map(&ReminderUtils.normalize_reminder/1)
-        |> Enum.split_with(&match?({:error, _}, &1))
+        |> Enum.split_with(&match?({:error, _reason}, &1))
 
       if errors != [] do
         add_error(changeset, :reminder_config, "contains invalid reminder settings")

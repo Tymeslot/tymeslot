@@ -66,7 +66,7 @@ defmodule Tymeslot.Security.AccountLockout do
             {:error, :account_throttled,
              "Too many failed attempts. Please wait before trying again"}
 
-          _ ->
+          _other ->
             :ok
         end
 

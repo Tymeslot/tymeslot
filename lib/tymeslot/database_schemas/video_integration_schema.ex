@@ -125,11 +125,11 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
   defp safe_decrypt(encrypted, field, id) do
     Encryption.decrypt(encrypted)
   rescue
-    e ->
+    _e ->
       require Logger
 
       Logger.error(
-        "Failed to decrypt #{field} for video integration #{id}: #{Exception.message(e)}"
+        "Failed to decrypt #{field} for video integration #{id}"
       )
 
       nil
@@ -157,7 +157,7 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
         |> validate_required([:custom_meeting_url])
         |> URLValidator.validate_url(:custom_meeting_url)
 
-      _ ->
+      _other_provider ->
         changeset
     end
   end

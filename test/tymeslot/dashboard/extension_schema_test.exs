@@ -203,7 +203,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
       assert {:error, errors} = ExtensionSchema.validate_all(extensions)
 
       # Check that errors are indexed
-      error_indices = Enum.uniq(Enum.map(errors, fn {index, _} -> index end))
+      error_indices = Enum.uniq(Enum.map(errors, fn {index, _message} -> index end))
       assert 0 in error_indices
       assert 1 in error_indices
       refute 2 in error_indices

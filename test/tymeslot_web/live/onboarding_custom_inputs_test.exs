@@ -208,7 +208,7 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
 
       # The "15 min" preset button should NOT have the active class
       # Extract the section between the preset buttons
-      [_before, preset_section | _] =
+      [_before, preset_section | _after] =
         String.split(html, "<!-- Custom input or \"Custom\" button -->", parts: 2)
 
       # In the preset section, "15 min" should not have the --active class nearby

@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   end
 
   @spec embed_code(any(), any()) :: String.t()
-  def embed_code(_, _), do: ""
+  def embed_code(_type, _assigns), do: ""
 
   defp build_js_options(options) do
     js_list =
@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
          :ok <- UsernameValidator.validate(sanitized) do
       sanitized
     else
-      {:error, _reason} -> "invalid-username"
+      {:error, _error} -> "invalid-username"
     end
   end
 

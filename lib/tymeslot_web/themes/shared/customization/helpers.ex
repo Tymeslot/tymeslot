@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
       "color" -> get_color_background_style(customization)
       "image" -> get_image_background_style(customization)
       "video" -> ""
-      _ -> ""
+      _other -> ""
     end
   end
 
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
       "color" -> get_color_background_style_from_map(customization)
       "image" -> get_image_background_style_from_map(customization)
       "video" -> ""
-      _ -> ""
+      _other -> ""
     end
   end
 

@@ -65,14 +65,14 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
     end
   end
 
-  defp validate_field(:name, v, m), do: validate_meeting_name(v, m)
-  defp validate_field(:duration, v, m), do: validate_meeting_duration(v, m)
-  defp validate_field(:description, v, m), do: validate_meeting_description(v, m)
-  defp validate_field(:icon, v, m), do: validate_icon(v, m)
-  defp validate_field(:meeting_mode, v, m), do: validate_meeting_mode(v, m)
-  defp validate_field(:calendar_integration_id, v, m), do: validate_calendar_integration_id(v, m)
-  defp validate_field(:target_calendar_id, v, m), do: validate_target_calendar_id(v, m)
-  defp validate_field(:reminder_config, v, m), do: validate_reminder_config(v, m)
+  defp validate_field(:name, value, metadata), do: validate_meeting_name(value, metadata)
+  defp validate_field(:duration, value, metadata), do: validate_meeting_duration(value, metadata)
+  defp validate_field(:description, value, metadata), do: validate_meeting_description(value, metadata)
+  defp validate_field(:icon, value, metadata), do: validate_icon(value, metadata)
+  defp validate_field(:meeting_mode, value, metadata), do: validate_meeting_mode(value, metadata)
+  defp validate_field(:calendar_integration_id, value, metadata), do: validate_calendar_integration_id(value, metadata)
+  defp validate_field(:target_calendar_id, value, metadata), do: validate_target_calendar_id(value, metadata)
+  defp validate_field(:reminder_config, value, metadata), do: validate_reminder_config(value, metadata)
 
   defp log_validation_result(status, metadata, errors \\ nil) do
     event_name = "meeting_type_form_validation_#{status}"
@@ -107,7 +107,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
 
     case validate_meeting_name(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
-      {:error, %{name: _} = err} -> {:error, err}
+      {:error, %{name: _name_error} = err} -> {:error, err}
     end
   end
 
@@ -116,7 +116,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
 
     case validate_meeting_duration(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
-      {:error, %{duration: _} = err} -> {:error, err}
+      {:error, %{duration: _duration_error} = err} -> {:error, err}
     end
   end
 
@@ -125,7 +125,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
 
     case validate_meeting_description(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
-      {:error, %{description: _} = err} -> {:error, err}
+      {:error, %{description: _description_error} = err} -> {:error, err}
     end
   end
 
@@ -134,7 +134,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
 
     case validate_icon(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
-      {:error, %{icon: _} = err} -> {:error, err}
+      {:error, %{icon: _icon_error} = err} -> {:error, err}
     end
   end
 
@@ -143,7 +143,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
 
     case validate_meeting_mode(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
-      {:error, %{meeting_mode: _} = err} -> {:error, err}
+      {:error, %{meeting_mode: _mode_error} = err} -> {:error, err}
     end
   end
 
@@ -156,7 +156,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
     end
   end
 
-  def validate_meeting_type_field(_other, _value, _opts), do: {:error, %{base: "Invalid field"}}
+  def validate_meeting_type_field(_other_field, _value, _opts), do: {:error, %{base: "Invalid field"}}
 
   @doc """
   Validates buffer minutes setting input.
@@ -310,7 +310,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
     end
   end
 
-  defp validate_meeting_name(_, _metadata) do
+  defp validate_meeting_name(_invalid, _metadata) do
     {:error, %{name: "Meeting name must be text"}}
   end
 
@@ -332,7 +332,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
     end
   end
 
-  defp validate_meeting_duration(_, _metadata) do
+  defp validate_meeting_duration(_invalid, _metadata) do
     {:error, %{duration: "Duration must be a number"}}
   end
 
@@ -341,7 +341,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
       {duration, ""} ->
         validate_duration_constraints(duration)
 
-      _ ->
+      _invalid ->
         {:error, %{duration: "Duration must be a valid number of minutes"}}
     end
   end
@@ -382,7 +382,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
     end
   end
 
-  defp validate_meeting_description(_, _metadata) do
+  defp validate_meeting_description(_invalid, _metadata) do
     {:error, %{description: "Description must be text"}}
   end
 
@@ -403,7 +403,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
     end
   end
 
-  defp validate_icon(_, _metadata) do
+  defp validate_icon(_invalid, _metadata) do
     {:error, %{icon: "Invalid icon format"}}
   end
 
@@ -424,7 +424,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
     end
   end
 
-  defp validate_meeting_mode(_, _metadata) do
+  defp validate_meeting_mode(_invalid, _metadata) do
     {:error, %{meeting_mode: "Invalid meeting mode format"}}
   end
 
@@ -439,10 +439,10 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
       id when is_binary(id) ->
         case Integer.parse(id) do
           {int, ""} -> {:ok, int}
-          _ -> {:error, %{calendar_integration: "Invalid calendar account selected"}}
+          _invalid -> {:error, %{calendar_integration: "Invalid calendar account selected"}}
         end
 
-      _ ->
+      _invalid ->
         {:error, %{calendar_integration: "Invalid calendar account format"}}
     end
   end
@@ -454,7 +454,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
     UniversalSanitizer.sanitize_and_validate(id, allow_html: false, metadata: metadata)
   end
 
-  defp validate_target_calendar_id(_, _metadata) do
+  defp validate_target_calendar_id(_invalid, _metadata) do
     {:error, %{target_calendar: "Invalid target calendar format"}}
   end
 
@@ -473,7 +473,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
   defp parse_and_normalize_reminders(reminders) when is_binary(reminders) do
     case Jason.decode(reminders) do
       {:ok, decoded} -> parse_and_normalize_reminders(decoded)
-      _ -> {:error, "Invalid reminder settings format"}
+      _invalid -> {:error, "Invalid reminder settings format"}
     end
   end
 
@@ -486,14 +486,14 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
   defp parse_and_normalize_reminders(reminders) when is_list(reminders) do
     results = Enum.map(reminders, &ReminderUtils.normalize_reminder_string_keys/1)
 
-    if Enum.any?(results, &match?({:error, _}, &1)) do
+    if Enum.any?(results, &match?({:error, _reason}, &1)) do
       {:error, "Reminder settings must include valid values and units"}
     else
       {:ok, Enum.map(results, fn {:ok, reminder} -> reminder end)}
     end
   end
 
-  defp parse_and_normalize_reminders(_), do: {:error, "Invalid reminder settings format"}
+  defp parse_and_normalize_reminders(_other), do: {:error, "Invalid reminder settings format"}
 
   defp validate_reminders_policy(reminders) do
     cond do
@@ -528,7 +528,7 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
       {value, ""} when value > max ->
         {:error, "#{field_name} cannot exceed #{max}"}
 
-      _ ->
+      _invalid ->
         {:error, "#{field_name} must be a valid number"}
     end
   end

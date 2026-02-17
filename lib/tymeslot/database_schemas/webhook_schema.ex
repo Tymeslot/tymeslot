@@ -125,7 +125,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookSchema do
   def should_be_active?(%__MODULE__{is_active: false}), do: false
   def should_be_active?(%__MODULE__{disabled_at: %DateTime{}}), do: false
   def should_be_active?(%__MODULE__{failure_count: count}) when count >= 10, do: false
-  def should_be_active?(_), do: true
+  def should_be_active?(_webhook), do: true
 
   @doc """
   Checks if webhook is subscribed to a specific event
@@ -202,23 +202,23 @@ defmodule Tymeslot.DatabaseSchemas.WebhookSchema do
     # Check IPv4
     ipv4_private =
       case :inet.getaddr(host_charlist, :inet) do
-        {:ok, {10, _, _, _}} -> true
-        {:ok, {172, x, _, _}} when x >= 16 and x <= 31 -> true
-        {:ok, {192, 168, _, _}} -> true
-        {:ok, {127, _, _, _}} -> true
-        {:ok, {169, 254, _, _}} -> true
+        {:ok, {10, _b, _c, _d}} -> true
+        {:ok, {172, x, _c, _d}} when x >= 16 and x <= 31 -> true
+        {:ok, {192, 168, _c, _d}} -> true
+        {:ok, {127, _b, _c, _d}} -> true
+        {:ok, {169, 254, _c, _d}} -> true
         {:ok, {0, 0, 0, 0}} -> true
-        _ -> false
+        _other -> false
       end
 
     # Check IPv6
     ipv6_private =
       case :inet.getaddr(host_charlist, :inet6) do
         {:ok, {0, 0, 0, 0, 0, 0, 0, 1}} -> true
-        {:ok, {0xFE80, _, _, _, _, _, _, _}} -> true
-        {:ok, {0xFC00, _, _, _, _, _, _, _}} -> true
-        {:ok, {0xFD00, _, _, _, _, _, _, _}} -> true
-        _ -> false
+        {:ok, {0xFE80, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} -> true
+        {:ok, {0xFC00, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} -> true
+        {:ok, {0xFD00, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} -> true
+        _other -> false
       end
 
     ipv4_private or ipv6_private

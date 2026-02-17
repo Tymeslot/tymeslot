@@ -41,7 +41,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
 
     Logger.info("Starting webhook delivery cleanup", retention_days: retention_days)
 
-    {count, _} = WebhookQueries.cleanup_old_deliveries(retention_days)
+    {count, _rows} = WebhookQueries.cleanup_old_deliveries(retention_days)
 
     Logger.info("Webhook delivery cleanup completed",
       deleted_count: count,
@@ -72,8 +72,8 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
       {0, nil} ->
         Logger.debug("No old Stripe webhook events to clean up")
 
-      error ->
-        Logger.error("Failed to clean up Stripe webhook events: #{inspect(error)}")
+      _error ->
+        Logger.error("Failed to clean up Stripe webhook events: #{inspect(_error)}")
     end
   end
 

@@ -14,7 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
         try do
           Agent.stop(__MODULE__.Counter)
         catch
-          :exit, _ -> :ok
+          :exit, _exit_signal -> :ok
         end
       end
     end)
@@ -44,7 +44,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
     end
 
     tasks =
-      for _ <- 1..5 do
+      for _task_num <- 1..5 do
         Task.async(fn ->
           send(parent, {:caller_ready, ref, self()})
 
@@ -58,7 +58,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
         end)
       end
 
-    for _ <- 1..5 do
+    for _i <- 1..5 do
       assert_receive {:caller_ready, ^ref, _pid}, @receive_timeout
     end
 
@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
     end
 
     tasks =
-      for _ <- 1..3 do
+      for _task_num <- 1..3 do
         Task.async(fn ->
           send(parent, {:caller_ready, ref, self()})
 
@@ -107,7 +107,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
         end)
       end
 
-    for _ <- 1..3 do
+    for _i <- 1..3 do
       assert_receive {:caller_ready, ^ref, _pid}, @receive_timeout
     end
 

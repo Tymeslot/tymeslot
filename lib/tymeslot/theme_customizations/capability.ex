@@ -32,7 +32,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
       {:ok, theme} ->
         build_options_from_capabilities(theme.features)
 
-      _ ->
+      _other ->
         %{}
     end
   end
@@ -46,7 +46,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
       {:ok, theme} ->
         validate_against_capabilities(theme.features, customization_attrs)
 
-      _ ->
+      _other ->
         {:error, ["Invalid theme ID"]}
     end
   end
@@ -60,7 +60,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
       {:ok, theme} ->
         build_defaults_from_capabilities(theme.features)
 
-      _ ->
+      _other ->
         %{}
     end
   end
@@ -74,7 +74,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
       {:ok, theme} ->
         check_capability_support(theme.features, customization_type)
 
-      _ ->
+      _other ->
         false
     end
   end
@@ -88,7 +88,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
       {:ok, theme} ->
         generate_capability_css(theme.features, customizations)
 
-      _ ->
+      _other ->
         ""
     end
   end
@@ -306,7 +306,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
       # Split by first colon only to handle values containing colons (like urls)
       case String.split(line, ":", parts: 2) do
         [key, value] -> Map.put(acc, String.trim(key), String.trim(value))
-        _ -> acc
+        _other -> acc
       end
     end)
     |> Enum.map_join("\n", fn {key, value} -> "#{key}: #{value}" end)
@@ -350,7 +350,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
     end
   end
 
-  defp generate_background_css(_), do: nil
+  defp generate_background_css(_customizations), do: nil
 
   defp valid_color?(value) when is_binary(value) do
     # Support hex colors
@@ -361,5 +361,5 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
       Regex.match?(~r/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/, value)
   end
 
-  defp valid_color?(_), do: false
+  defp valid_color?(_value), do: false
 end

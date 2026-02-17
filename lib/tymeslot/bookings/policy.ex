@@ -116,7 +116,7 @@ defmodule Tymeslot.Bookings.Policy do
     if meeting_type_id && organizer_user_id do
       case MeetingTypes.get_meeting_type(meeting_type_id, organizer_user_id) do
         %{is_active: true} = type -> type
-        _ -> nil
+        _other -> nil
       end
     else
       nil
@@ -143,7 +143,7 @@ defmodule Tymeslot.Bookings.Policy do
       %{reminder_config: reminder_config} when is_list(reminder_config) ->
         ReminderUtils.normalize_reminders(reminder_config)
 
-      _ ->
+      _other ->
         [%{value: 30, unit: "minutes"}]
     end
   end
@@ -169,7 +169,7 @@ defmodule Tymeslot.Bookings.Policy do
     case reason do
       :slot_unavailable -> true
       :calendar_fetch_failed -> false
-      _ -> false
+      _other -> false
     end
   end
 
@@ -305,7 +305,7 @@ defmodule Tymeslot.Bookings.Policy do
       {:ok, %{integration_id: integration_id, calendar_path: calendar_path}} ->
         {integration_id, calendar_path}
 
-      _ ->
+      _other ->
         {nil, nil}
     end
   end
@@ -319,10 +319,10 @@ defmodule Tymeslot.Bookings.Policy do
         id when is_binary(id) ->
           case Integer.parse(id) do
             {int, ""} -> int
-            _ -> nil
+            _other -> nil
           end
 
-        _ ->
+        _other ->
           nil
       end
 
@@ -331,7 +331,7 @@ defmodule Tymeslot.Bookings.Policy do
     else
       case VideoIntegrationQueries.get_for_user(video_integration_id, organizer_user_id) do
         {:ok, %{is_active: true}} -> video_integration_id
-        _ -> nil
+        _other -> nil
       end
     end
   end

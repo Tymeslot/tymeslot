@@ -218,7 +218,7 @@ defmodule Tymeslot.Security.AuthInputProcessor do
   defp validate_terms_accepted(params) do
     case Map.get(params, "terms_accepted") do
       value when value in ["true", "on", true] -> :ok
-      _ -> {:error, "Terms of service must be accepted"}
+      _other -> {:error, "Terms of service must be accepted"}
     end
   end
 end

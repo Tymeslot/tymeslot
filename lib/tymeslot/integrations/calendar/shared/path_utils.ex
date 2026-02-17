@@ -109,8 +109,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
   def extract_calendar_paths(urls) when is_list(urls) do
     base_url =
       case urls do
-        [first_url | _] -> extract_base_url(first_url)
-        _ -> ""
+        [first_url | _rest] -> extract_base_url(first_url)
+        _empty -> ""
       end
 
     calendar_paths =
@@ -182,7 +182,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
         "/#{username}/#{calendar_name}/"
 
       # Generic CalDAV: Uses /calendars/{username}/{calendar}/
-      _ ->
+      _other ->
         "/calendars/#{username}/#{calendar_name}/"
     end
   end
@@ -210,8 +210,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
     calendar_pattern = ~r{/remote\.php/dav/calendars/([^/]+)}
 
     case Regex.run(calendar_pattern, url) do
-      [_, username] -> {:ok, username}
-      _ -> :error
+      [_full_match, username] -> {:ok, username}
+      _no_match -> :error
     end
   end
 
@@ -269,7 +269,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
   defp maybe_add_provider_path(url, :radicale), do: url
 
   # Generic CalDAV: No special path additions needed
-  defp maybe_add_provider_path(url, _caldav_provider), do: url
+  defp maybe_add_provider_path(url, _other_provider), do: url
 
   defp maybe_ensure_trailing_slash(url, false), do: url
 

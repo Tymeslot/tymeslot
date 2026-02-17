@@ -100,14 +100,14 @@ defmodule TymeslotWeb.Helpers.ClientIP do
       ua when is_binary(ua) and ua != "" ->
         ua
 
-      _ ->
+      _other ->
         with %{} = params <- LiveView.get_connect_params(socket),
              headers when is_map(headers) <- Map.get(params, "headers", %{}),
              ua when is_binary(ua) <- Map.get(headers, "user-agent"),
              true <- ua != "" do
           ua
         else
-          _ -> "unknown"
+          _other -> "unknown"
         end
     end
   end
@@ -132,13 +132,13 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   defp get_real_ip_header(conn) do
     # Check X-Real-IP first (more specific)
     case Conn.get_req_header(conn, "x-real-ip") do
-      [real_ip | _] ->
+      [real_ip | _rest] ->
         {:ok, String.trim(real_ip)}
 
       [] ->
         # Then check X-Forwarded-For
         case Conn.get_req_header(conn, "x-forwarded-for") do
-          [forwarded | _] ->
+          [forwarded | _rest] ->
             # X-Forwarded-For can contain multiple IPs, take the first (original client)
             ip = forwarded |> String.split(",") |> List.first() |> String.trim()
             {:ok, ip}
@@ -151,13 +151,13 @@ defmodule TymeslotWeb.Helpers.ClientIP do
 
   defp get_remote_ip(conn) do
     case conn.remote_ip do
-      {_, _, _, _} = ip_tuple ->
+      {_a, _b, _c, _d} = ip_tuple ->
         inet_ntoa_to_string(ip_tuple)
 
-      {_, _, _, _, _, _, _, _} = ip_tuple ->
+      {_s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8} = ip_tuple ->
         inet_ntoa_to_string(ip_tuple)
 
-      _ ->
+      _other ->
         "unknown"
     end
   end
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
         last_octet = rem(:erlang.phash2(self()), 250) + 1
         "127.0.0.#{last_octet}"
 
-      _ ->
+      _other ->
         "unknown"
     end
   end
@@ -194,7 +194,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   defp get_from_socket_assigns(socket) do
     case socket.assigns[:client_ip] || socket.assigns[:remote_ip] do
       ip when is_binary(ip) -> ip
-      _ -> "unknown"
+      _other -> "unknown"
     end
   end
 
@@ -204,7 +204,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
       %{address: address} ->
         address |> :inet.ntoa() |> to_string()
 
-      _ ->
+      _other ->
         "unknown"
     end
   end
@@ -217,7 +217,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
       headers when is_list(headers) ->
         extract_forwarded_ip_from_tuples(headers)
 
-      _ ->
+      _other ->
         # Fallback to connect_params (client-side headers)
         get_forwarded_from_connect_params(socket)
     end
@@ -229,7 +229,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
          ip when is_binary(ip) <- extract_forwarded_ip_from_map(headers) do
       ip
     else
-      _ -> "unknown"
+      _other -> "unknown"
     end
   end
 
@@ -254,7 +254,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
   defp find_header(headers, name) do
     case List.keyfind(headers, name, 0) do
       {^name, value} -> value
-      _ -> nil
+      _other -> nil
     end
   end
 
@@ -276,7 +276,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
 
   defp get_user_agent_from_conn(conn) do
     case Conn.get_req_header(conn, "user-agent") do
-      [user_agent | _] -> user_agent
+      [user_agent | _rest] -> user_agent
       [] -> "unknown"
     end
   end
@@ -287,7 +287,7 @@ defmodule TymeslotWeb.Helpers.ClientIP do
       agent when is_binary(agent) ->
         agent
 
-      _ ->
+      _other ->
         "unknown"
     end
   end

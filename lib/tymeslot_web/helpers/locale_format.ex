@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       "en" -> Calendar.strftime(date, "%B %d, %Y")
       "de" -> Calendar.strftime(date, "%d. %B %Y")
       "uk" -> Calendar.strftime(date, "%d %B %Y")
-      _ -> Calendar.strftime(date, "%B %d, %Y")
+      _other_locale -> Calendar.strftime(date, "%B %d, %Y")
     end
   end
 
@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       "en" -> Calendar.strftime(time, "%I:%M %p")
       "de" -> Calendar.strftime(time, "%H:%M")
       "uk" -> Calendar.strftime(time, "%H:%M")
-      _ -> Calendar.strftime(time, "%I:%M %p")
+      _other_locale -> Calendar.strftime(time, "%I:%M %p")
     end
   end
 
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
           "Грудень"
         ]
 
-      _ ->
+      _other_locale ->
         [
           "January",
           "February",
@@ -117,13 +117,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       {"uk", :narrow} ->
         ["Н", "П", "В", "С", "Ч", "П", "С"]
 
-      {_, :full} ->
+      {_other_locale, :full} ->
         ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-      {_, :short} ->
+      {_other_locale, :short} ->
         ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-      {_, :narrow} ->
+      {_other_locale, :narrow} ->
         ["S", "M", "T", "W", "T", "F", "S"]
     end
   end
@@ -138,7 +138,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   end
 
   @spec format_month_name(integer(), String.t()) :: String.t()
-  def format_month_name(_, _locale), do: ""
+  def format_month_name(_invalid_month, _locale), do: ""
 
   @doc """
   Formats a weekday name based on weekday number (1=Monday, 7=Sunday) and locale.
@@ -155,7 +155,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   end
 
   @spec format_weekday_name(integer(), String.t(), :full | :short | :narrow) :: String.t()
-  def format_weekday_name(_, _locale, _format), do: ""
+  def format_weekday_name(_invalid_weekday, _locale, _format), do: ""
 
   @doc """
   Formats a number according to locale conventions.
@@ -183,9 +183,9 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   defp thousand_separator("de"), do: "."
   defp thousand_separator("uk"), do: " "
-  defp thousand_separator(_), do: ","
+  defp thousand_separator(_other_locale), do: ","
 
   defp decimal_separator("de"), do: ","
   defp decimal_separator("uk"), do: ","
-  defp decimal_separator(_), do: "."
+  defp decimal_separator(_other_locale), do: "."
 end

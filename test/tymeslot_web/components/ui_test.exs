@@ -165,7 +165,7 @@ defmodule TymeslotWeb.Components.UITest do
   describe "UIComponents" do
     test "action_button renders with variant and slots" do
       assigns = %{}
-      inner_block = [%{__slot__: :inner_block, inner_block: fn _, _ -> ~H"Click Me" end}]
+      inner_block = [%{__slot__: :inner_block, inner_block: fn _assigns, _index -> ~H"Click Me" end}]
 
       component_assigns = %{
         variant: :danger,
@@ -179,7 +179,7 @@ defmodule TymeslotWeb.Components.UITest do
 
     test "loading_button shows spinner when loading" do
       assigns = %{}
-      inner_block = [%{__slot__: :inner_block, inner_block: fn _, _ -> ~H"Submit" end}]
+      inner_block = [%{__slot__: :inner_block, inner_block: fn _assigns, _index -> ~H"Submit" end}]
 
       component_assigns = %{
         loading: true,

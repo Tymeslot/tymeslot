@@ -88,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
             server_type
 
           # Fall back to generic caldav for unknown servers
-          _ ->
+          _other ->
             :caldav
         end
       else

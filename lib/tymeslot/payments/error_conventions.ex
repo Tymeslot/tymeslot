@@ -202,5 +202,5 @@ defmodule Tymeslot.Payments.ErrorConventions do
     error_atom in error_atoms()
   end
 
-  def standard_error?(_), do: false
+  def standard_error?(_error), do: false
 end

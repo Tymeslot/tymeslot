@@ -61,7 +61,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
           refresh_token: "rt-123"
         )
 
-      expect(GoogleCalendarAPIMock, :refresh_token, fn _ ->
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _refresh_token ->
         {:ok,
          {"new-at", "new-rt",
           DateTime.truncate(DateTime.add(DateTime.utc_now(), 1, :hour), :second)}}
@@ -81,11 +81,11 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
         )
 
       # invalid_grant is a permanent error
-      expect(GoogleCalendarAPIMock, :refresh_token, fn _ ->
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _refresh_token ->
         {:error, :permanent, "invalid_grant"}
       end)
 
-      assert {:discard, _} =
+      assert {:discard, _job_result} =
                TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
 
       updated =
@@ -104,11 +104,11 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
           refresh_token: "rt-123"
         )
 
-      expect(GoogleCalendarAPIMock, :refresh_token, fn _ ->
+      expect(GoogleCalendarAPIMock, :refresh_token, fn _refresh_token ->
         {:error, :retryable, "timeout"}
       end)
 
-      assert {:error, _} =
+      assert {:error, _reason} =
                TokenRefreshJob.perform(%Oban.Job{args: %{"integration_id" => integration.id}})
     end
   end

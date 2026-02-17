@@ -37,7 +37,7 @@ defmodule Tymeslot.Integrations.Shared.MicrosoftConfig do
   def fetch_client_id do
     case client_id() do
       id when is_binary(id) and byte_size(id) > 0 -> {:ok, id}
-      _ -> {:error, "Microsoft Client ID not configured"}
+      _other -> {:error, "Microsoft Client ID not configured"}
     end
   end
 
@@ -48,7 +48,7 @@ defmodule Tymeslot.Integrations.Shared.MicrosoftConfig do
   def fetch_client_secret do
     case client_secret() do
       secret when is_binary(secret) and byte_size(secret) > 0 -> {:ok, secret}
-      _ -> {:error, "Microsoft Client Secret not configured"}
+      _other -> {:error, "Microsoft Client Secret not configured"}
     end
   end
 

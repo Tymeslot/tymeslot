@@ -341,7 +341,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
         :organizer -> %{organizer_email_sent: true}
         :attendee -> %{attendee_email_sent: true}
         :reminder -> %{reminder_email_sent: true}
-        _ -> nil
+        _other -> nil
       end
 
     if attrs do
@@ -362,7 +362,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
         new_reminder = %{"value" => val, "unit" => unit}
         new_reminder_list = [new_reminder]
 
-        {count, _} =
+        {count, _value} =
           Repo.update_all(
             from(m in Meeting,
               where: m.id == ^meeting.id,
@@ -387,7 +387,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
           {:error, :not_found}
         end
 
-      _ ->
+      _other ->
         {:error, :invalid_reminder}
     end
   end

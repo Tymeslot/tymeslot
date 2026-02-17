@@ -55,7 +55,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   def ensure_primary_on_first(user_id, new_integration_id, count_before) do
     case count_before do
       0 -> CalendarPrimary.set_primary_calendar_integration(user_id, new_integration_id)
-      _ -> :ok
+      _count -> :ok
     end
   end
 
@@ -137,13 +137,13 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
   defp ensure_calendar_list(attrs, calendar_paths_list) do
     case {Map.get(attrs, :calendar_list), calendar_paths_list} do
-      {[_ | _], _} ->
+      {[_head | _tail], _paths} ->
         attrs
 
-      {_, [_ | _] = paths} ->
+      {_empty, [_head | _tail] = paths} ->
         Map.put(attrs, :calendar_list, build_calendar_list_from_paths(paths))
 
-      _ ->
+      _no_paths ->
         attrs
     end
   end
@@ -236,7 +236,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       end
     else
       # If provider validation/lookup fails, skip pre-validation and allow creation to proceed
-      {:error, _} -> {:ok, attrs}
+      {:error, _error} -> {:ok, attrs}
     end
   end
 

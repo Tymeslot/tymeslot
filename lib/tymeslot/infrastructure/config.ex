@@ -154,7 +154,7 @@ defmodule Tymeslot.Infrastructure.Config do
     case Application.get_env(:tymeslot, :auth) do
       nil -> default
       config when is_list(config) -> Keyword.get(config, key, default)
-      _ -> default
+      _non_list -> default
     end
   end
 end

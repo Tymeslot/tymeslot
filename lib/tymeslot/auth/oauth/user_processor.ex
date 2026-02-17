@@ -36,7 +36,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
     {:ok, user}
   end
 
-  def process_user(_, _), do: {:error, :invalid_user_info}
+  def process_user(_provider, _user_info), do: {:error, :invalid_user_info}
 
   @doc """
   Enhances user data with additional information (e.g., fetching GitHub emails).
@@ -48,7 +48,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
       {:ok, emails} when is_list(emails) ->
         add_github_email_to_user(user, emails)
 
-      {:error, _reason} ->
+      {:error, _error_reason} ->
         Map.put(user, :email_from_provider, false)
     end
   end
@@ -65,7 +65,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
 
         Map.put(user, :email_from_provider, email_provided)
 
-      _ ->
+      _existing_flag ->
         user
     end
   end
@@ -126,7 +126,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
     end)
   end
 
-  defp extract_email_address(%{"email" => email}, _) when is_binary(email), do: {:ok, email}
-  defp extract_email_address(_, %{"email" => email}) when is_binary(email), do: {:ok, email}
-  defp extract_email_address(_, _), do: :error
+  defp extract_email_address(%{"email" => email}, _fallback) when is_binary(email), do: {:ok, email}
+  defp extract_email_address(_primary, %{"email" => email}) when is_binary(email), do: {:ok, email}
+  defp extract_email_address(_primary, _fallback), do: :error
 end

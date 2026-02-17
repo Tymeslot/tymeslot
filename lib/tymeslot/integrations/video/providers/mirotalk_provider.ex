@@ -85,7 +85,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       %URI{scheme: scheme, host: host} when scheme in ["http", "https"] and is_binary(host) ->
         :ok
 
-      _ ->
+      _other ->
         {:error,
          "Invalid URL format. Please provide a valid URL starting with http:// or https://"}
     end
@@ -181,7 +181,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
         {:error, "Connection timeout - Server took too long to respond"}
 
       # Generic fallback with message
-      _ ->
+      _other ->
         {:error, "Connection failed: #{Exception.message(exception)}"}
     end
   end
@@ -291,7 +291,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     mirotalk_role =
       case role do
         "organizer" -> "admin"
-        _ -> "guest"
+        _other -> "guest"
       end
 
     body =
@@ -388,7 +388,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     mirotalk_role =
       case role do
         "organizer" -> "admin"
-        _ -> "guest"
+        _other -> "guest"
       end
 
     # Generate secure token (Standard JWT)
@@ -466,7 +466,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
         |> Enum.reject(&(&1 == ""))
         |> List.last()
 
-      _ ->
+      _other ->
         meeting_url
     end
   end
@@ -480,7 +480,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       when scheme in ["http", "https"] and is_binary(host) and host != "" ->
         true
 
-      _ ->
+      _other ->
         false
     end
   end

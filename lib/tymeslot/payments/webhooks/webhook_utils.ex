@@ -26,7 +26,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookUtils do
           email = apply(template, template_fun, [user | args])
 
           case Mailer.deliver(email) do
-            {:ok, _} ->
+            {:ok, _metadata} ->
               Logger.info(Keyword.get(opts, :success_msg, "Email sent to user #{user_id}"))
               :ok
 

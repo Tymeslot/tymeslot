@@ -95,7 +95,7 @@ defmodule Tymeslot.Auth.OAuth.Client do
 
   defp decode_oauth_body(body) when is_binary(body), do: Jason.decode(body)
   defp decode_oauth_body(body) when is_map(body), do: {:ok, body}
-  defp decode_oauth_body(other), do: {:error, {:unexpected_body, other}}
+  defp decode_oauth_body(_other), do: {:error, {:unexpected_body, _other}}
 
   @doc """
   Parse access token from JSON or return as-is.
@@ -104,7 +104,7 @@ defmodule Tymeslot.Auth.OAuth.Client do
   def parse_access_token(json_string) do
     case Jason.decode(json_string) do
       {:ok, %{"access_token" => token}} -> token
-      _ -> json_string
+      _other -> json_string
     end
   end
 

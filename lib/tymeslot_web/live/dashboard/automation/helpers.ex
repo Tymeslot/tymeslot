@@ -63,8 +63,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
 
   def parse_id(id) when is_binary(id) do
     case Integer.parse(id) do
-      {int, _} -> int
-      _ -> 0
+      {int, _value} -> int
+      _other -> 0
     end
   end
 

@@ -223,6 +223,6 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
   defp unload_if_loaded(module) do
     :meck.unload(module)
   rescue
-    _ -> :ok
+    _error -> :ok
   end
 end

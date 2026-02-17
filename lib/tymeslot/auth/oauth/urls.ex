@@ -31,7 +31,7 @@ defmodule Tymeslot.Auth.OAuth.URLs do
         case {scheme, port} do
           {"https", 443} -> "https://#{host}"
           {"http", 80} -> "http://#{host}"
-          _ -> "#{scheme}://#{host}:#{port}"
+          _other -> "#{scheme}://#{host}:#{port}"
         end
 
       "#{base_url}#{relative_path}"

@@ -89,15 +89,15 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
 
   defp extract_tenant_id_from_id_token(id_token) do
     case String.split(id_token, ".") do
-      [_, payload_b64, _] ->
+      [_first, payload_b64, _last] ->
         with {:ok, payload_json} <- Base.url_decode64(payload_b64, padding: false),
              {:ok, %{"tid" => tenant_id}} <- Jason.decode(payload_json) do
           tenant_id
         else
-          _ -> nil
+          _other -> nil
         end
 
-      _ ->
+      _other ->
         nil
     end
   end
@@ -115,10 +115,10 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
             {:ok, %{"id" => id} = profile} when is_binary(id) and id != "" ->
               {:ok, profile}
 
-            {:ok, _} ->
+            {:ok, _result} ->
               {:error, "Microsoft profile missing unique ID"}
 
-            {:error, _} ->
+            {:error, _reason} ->
               {:error, "Invalid JSON response from Microsoft profile API"}
           end
 
@@ -217,7 +217,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
     State.validate(state, MicrosoftConfig.state_secret())
   end
 
-  defp verify_state(_), do: {:error, "Invalid state parameter"}
+  defp verify_state(_arg), do: {:error, "Invalid state parameter"}
 
   defp verify_required_scopes(tokens) do
     returned_scope = tokens[:scope] || tokens.scope || ""

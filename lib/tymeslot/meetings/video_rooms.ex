@@ -153,7 +153,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
              {:ok, updated_meeting} <- update_meeting_with_video_room(meeting, video_room_attrs) do
           # After attaching the video room, update the calendar event so Google/other calendars
           # include the meeting link in description/location.
-          _ = CalendarEventWorker.schedule_calendar_update(updated_meeting.id)
+          _job = CalendarEventWorker.schedule_calendar_update(updated_meeting.id)
           updated_meeting
         else
           {:error, reason} ->
@@ -349,7 +349,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
       {:ok, url} ->
         url
 
-      {:error, _} ->
+      {:error, _error} ->
         # Ensure participant name is URL-encoded
         query = URI.encode_query(%{name: participant_name})
         "#{room_id}?#{query}"

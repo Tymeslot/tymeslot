@@ -241,7 +241,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers do
     results =
       Enum.map(available_handlers(), fn handler ->
         case Code.ensure_loaded(handler.module) do
-          {:module, _} -> {handler.name, :ok}
+          {:module, _module} -> {handler.name, :ok}
           {:error, reason} -> {handler.name, {:error, reason}}
         end
       end)

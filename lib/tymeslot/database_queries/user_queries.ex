@@ -242,7 +242,7 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
     ip |> :inet.ntoa() |> to_string()
   end
 
-  defp normalize_ip_for_storage(_other), do: nil
+  defp normalize_ip_for_storage(_value), do: nil
 
   @doc """
   Sets password reset token for a user.
@@ -554,7 +554,7 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
 
     case result do
       {:ok, result} -> result
-      {:error, _} -> {:error, :taken}
+      {:error, _reason} -> {:error, :taken}
     end
   end
 

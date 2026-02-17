@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Themes.Core.Context do
         preview_mode: Keyword.get(options, :preview, false)
       }
     else
-      _ -> nil
+      _error -> nil
     end
   end
 
@@ -144,7 +144,7 @@ defmodule TymeslotWeb.Themes.Core.Context do
   defp ensure_module_loaded(module) do
     case Code.ensure_loaded(module) do
       {:module, ^module} -> {:ok, module}
-      error -> error
+      result -> result
     end
   end
 

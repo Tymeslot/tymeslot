@@ -169,7 +169,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
   # Determines SSL/TLS mode based on SMTP port
   defp determine_tls_mode(465), do: {true, :never}
   defp determine_tls_mode(587), do: {false, :always}
-  defp determine_tls_mode(_), do: {false, :if_available}
+  defp determine_tls_mode(_arg), do: {false, :if_available}
 
   # Loads CA certificates with fallback to castore
   defp load_cacerts do
@@ -180,7 +180,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
           Logger.debug("Using castore bundled CA certificates (OS cert store empty)")
           load_castore_certs()
 
-        [_ | _] = certs ->
+        [_first_cert | _rest] = certs ->
           Logger.debug("Using OS certificate store (#{length(certs)} certificates)")
           certs
       end
@@ -199,7 +199,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
       ca_bundle_path
       |> File.read!()
       |> :public_key.pem_decode()
-      |> Enum.map(fn {:Certificate, der, _} -> der end)
+      |> Enum.map(fn {:Certificate, der, _encoding} -> der end)
     else
       raise """
       No CA certificates available:
@@ -259,7 +259,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
         {true, :never} -> {"SSL (port 465)", "disabled"}
         {false, :always} -> {"no", "STARTTLS (required)"}
         {false, :if_available} -> {"no", "opportunistic"}
-        _ -> {"unknown", "unknown"}
+        _config_values -> {"unknown", "unknown"}
       end
 
     # Log at info level so operators can see SMTP configuration in production

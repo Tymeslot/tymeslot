@@ -44,13 +44,13 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
           {:ok, %{id: subscription_id}}
       end)
 
-      assert {:ok, _} = Subscriptions.cancel_subscription(subscription_id, user_id)
+      assert {:ok, _result} = Subscriptions.cancel_subscription(subscription_id, user_id)
     end
 
     test "propagates errors from subscription manager" do
       Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
 
-      expect(Tymeslot.Payments.SubscriptionManagerMock, :cancel_subscription, fn _, _, _ ->
+      expect(Tymeslot.Payments.SubscriptionManagerMock, :cancel_subscription, fn _sub_id, _user_id, _opts ->
         {:error, :subscription_not_found}
       end)
 
@@ -97,13 +97,13 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
           {:ok, %{id: subscription_id}}
       end)
 
-      assert {:ok, _} = Subscriptions.update_subscription(subscription_id, new_price_id, user_id)
+      assert {:ok, _result} = Subscriptions.update_subscription(subscription_id, new_price_id, user_id)
     end
 
     test "propagates errors from subscription manager" do
       Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
 
-      expect(Tymeslot.Payments.SubscriptionManagerMock, :update_subscription, fn _, _, _, _ ->
+      expect(Tymeslot.Payments.SubscriptionManagerMock, :update_subscription, fn _sub_id, _price_id, _user_id, _metadata ->
         {:error, :invalid_price_id}
       end)
 
@@ -157,11 +157,11 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
       # This is an integration test to verify the config module interaction
       Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
 
-      expect(Tymeslot.Payments.SubscriptionManagerMock, :cancel_subscription, fn _, _, _ ->
+      expect(Tymeslot.Payments.SubscriptionManagerMock, :cancel_subscription, fn _sub_id, _user_id, _opts ->
         {:ok, %{}}
       end)
 
-      assert {:ok, _} = Subscriptions.cancel_subscription("sub_123", 1)
+      assert {:ok, _result} = Subscriptions.cancel_subscription("sub_123", 1)
 
       # Clean up
       Application.delete_env(:tymeslot, :subscription_manager)

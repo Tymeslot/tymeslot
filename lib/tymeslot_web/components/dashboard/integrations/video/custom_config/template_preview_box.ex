@@ -127,5 +127,5 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
     do:
       "text-xs text-slate-700 bg-white px-2.5 py-1.5 rounded border border-amber-100 break-all font-mono block mt-2"
 
-  defp preview_code_class(_), do: ""
+  defp preview_code_class(_code), do: ""
 end

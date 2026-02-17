@@ -68,7 +68,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
       "invoice.upcoming" ->
         {:ok, :invoice_upcoming}
 
-      _ ->
+      _other ->
         {:ok, :ignored}
     end
   end
@@ -96,7 +96,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
       {:ok, :already_processed} ->
         {:ok, :already_processed}
 
-      {:ok, _} ->
+      {:ok, _result} ->
         {:ok, :invoice_processed}
 
       {:error, :subscription_not_found} ->
@@ -121,7 +121,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
 
   defp handle_payment_failed(subscription_id, invoice) do
     case DatabaseOperations.process_subscription_failure(subscription_id, invoice) do
-      {:ok, _} ->
+      {:ok, _result} ->
         {:ok, :invoice_processed}
 
       {:error, :subscription_not_found} ->

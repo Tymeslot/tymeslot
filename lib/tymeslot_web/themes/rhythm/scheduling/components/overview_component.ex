@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
     sorted_meeting_types =
       case Map.get(filtered_assigns, :meeting_types) do
         list when is_list(list) -> Enum.sort_by(list, fn mt -> natural_key(meeting_title(mt)) end)
-        _ -> Map.get(filtered_assigns, :meeting_types)
+        _non_list -> Map.get(filtered_assigns, :meeting_types)
       end
 
     {:ok,
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
       60 -> "hero-hand-raised"
       90 -> "hero-chart-bar"
       120 -> "hero-flag"
-      _ -> "hero-clock"
+      _duration -> "hero-clock"
     end
   end
 
@@ -150,12 +150,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
       "none" ->
         ""
 
-      "hero-" <> _ ->
+      "hero-" <> _rest ->
         # Sanitize icon to prevent XSS: only allow alphanumeric, hyphens, underscores
         safe_icon = sanitize_css_class(icon)
         raw("<span class='#{safe_icon} hero-icon hero-icon--md'></span>")
 
-      _ ->
+      _other_icon ->
         raw("<span class='hero-clock hero-icon hero-icon--md'></span>")
     end
   end
@@ -168,7 +168,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
     |> String.slice(0, 100)
   end
 
-  defp sanitize_css_class(_), do: ""
+  defp sanitize_css_class(_non_binary), do: ""
 
   defp get_next_button_class(selected_duration) do
     if is_nil(selected_duration), do: "next-button disabled", else: "next-button"
@@ -192,7 +192,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
     trimmed =
       case name do
         n when is_binary(n) -> String.trim(n)
-        _ -> ""
+        _non_binary -> ""
       end
 
     if trimmed != "" do

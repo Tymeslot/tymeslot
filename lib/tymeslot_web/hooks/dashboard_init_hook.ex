@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
         automations_allowed =
           case Features.check_access(user.id, :automations_allowed) do
             :ok -> true
-            {:error, _} -> false
+            {:error, _reason} -> false
           end
 
         socket =

@@ -39,12 +39,12 @@ defmodule TymeslotWeb.MeetingManagement.SharedHelpersTest do
 
     test "returns :ok for valid cancellation", %{meeting: meeting} do
       future_meeting = setup_future_meeting(meeting)
-      assert {:ok, _} = SharedHelpers.validate_meeting_access(future_meeting.uid, :cancel)
+      assert {:ok, _result} = SharedHelpers.validate_meeting_access(future_meeting.uid, :cancel)
     end
 
     test "returns :ok for valid rescheduling", %{meeting: meeting} do
       future_meeting = setup_future_meeting(meeting)
-      assert {:ok, _} = SharedHelpers.validate_meeting_access(future_meeting.uid, :reschedule)
+      assert {:ok, _result} = SharedHelpers.validate_meeting_access(future_meeting.uid, :reschedule)
     end
   end
 
@@ -90,7 +90,7 @@ defmodule TymeslotWeb.MeetingManagement.SharedHelpersTest do
       meeting_no_org =
         insert(:meeting, organizer_user_id: nil, organizer_email: "unknown@example.com")
 
-      assert {:ok, _, nil, theme_info} =
+      assert {:ok, _meeting, nil, theme_info} =
                SharedHelpers.validate_meeting_access_with_theme(meeting_no_org.uid, :view)
 
       assert theme_info.theme_id == "1"

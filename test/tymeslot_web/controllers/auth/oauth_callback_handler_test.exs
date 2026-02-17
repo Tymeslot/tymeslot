@@ -10,7 +10,7 @@ defmodule TymeslotWeb.OAuthCallbackHandlerTest do
     try do
       :meck.unload(RateLimiter)
     rescue
-      _ -> :ok
+      _other -> :ok
     end
 
     :meck.new(RateLimiter, [:passthrough])
@@ -26,7 +26,7 @@ defmodule TymeslotWeb.OAuthCallbackHandlerTest do
       try do
         :meck.unload(RateLimiter)
       rescue
-        _ -> :ok
+        _other -> :ok
       end
     end)
 

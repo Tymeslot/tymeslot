@@ -300,7 +300,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
     uri.scheme in ["http", "https"] and is_binary(uri.host) and uri.host != ""
   end
 
-  defp valid_url?(_), do: false
+  defp valid_url?(_url), do: false
 
   defp generate_room_id(url) do
     :crypto.hash(:md5, url) |> Base.encode16(case: :lower) |> String.slice(0, 16)
@@ -326,17 +326,17 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
       :ok
     else
       false -> {:error, "Invalid host in URL"}
-      {:error, _} -> {:error, "Could not resolve host: #{host}"}
+      {:error, _reason} -> {:error, "Could not resolve host: #{host}"}
       true -> {:error, "URL resolves to a private or loopback address"}
     end
   end
 
-  defp private_or_loopback_ip?({127, _, _, _}), do: true
-  defp private_or_loopback_ip?({10, _, _, _}), do: true
-  defp private_or_loopback_ip?({192, 168, _, _}), do: true
-  defp private_or_loopback_ip?({169, 254, _, _}), do: true
-  defp private_or_loopback_ip?({172, second, _, _}) when second >= 16 and second <= 31, do: true
-  defp private_or_loopback_ip?(_), do: false
+  defp private_or_loopback_ip?({127, _b, _c, _d}), do: true
+  defp private_or_loopback_ip?({10, _b, _c, _d}), do: true
+  defp private_or_loopback_ip?({192, 168, _c, _d}), do: true
+  defp private_or_loopback_ip?({169, 254, _c, _d}), do: true
+  defp private_or_loopback_ip?({172, second, _c, _d}) when second >= 16 and second <= 31, do: true
+  defp private_or_loopback_ip?(_public_ip), do: false
 
   defp check_reachable(url) do
     opts = [
@@ -356,7 +356,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
       {:ok, %{status: status}} ->
         {:error, "URL responded with HTTP #{status}"}
 
-      {:error, _} ->
+      {:error, _reason} ->
         do_get(url, opts)
     end
   end
@@ -377,7 +377,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
           %Req.TransportError{reason: :timeout} ->
             {:error, "Connection timeout while reaching the URL"}
 
-          _ ->
+          _network_exception ->
             {:error, "Failed to reach URL: #{Exception.message(exception)}"}
         end
 

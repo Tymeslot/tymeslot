@@ -16,10 +16,10 @@ defmodule Tymeslot.AuthTest do
         )
 
       # Wrong password
-      assert {:error, :invalid_password, _} = Auth.authenticate_user(user.email, "WrongPassword")
+      assert {:error, :invalid_password, _reason} = Auth.authenticate_user(user.email, "WrongPassword")
 
       # Non-existent user
-      assert {:error, :not_found, _} = Auth.authenticate_user("fake@example.com", "Password123!")
+      assert {:error, :not_found, _reason} = Auth.authenticate_user("fake@example.com", "Password123!")
     end
   end
 
@@ -62,7 +62,7 @@ defmodule Tymeslot.AuthTest do
         )
 
       # Verify new password works (sessions handled internally)
-      assert {:ok, _, _} = Auth.authenticate_user(user.email, "NewPassword123!")
+      assert {:ok, _user, _conn} = Auth.authenticate_user(user.email, "NewPassword123!")
     end
   end
 
@@ -78,14 +78,14 @@ defmodule Tymeslot.AuthTest do
         "terms_accepted" => "true"
       }
 
-      assert {:error, :auth, _} = Auth.register_user(params, %Plug.Conn{})
+      assert {:error, :auth, _reason} = Auth.register_user(params, %Plug.Conn{})
     end
   end
 
   describe "password_reset" do
     test "oauth users cannot reset passwords" do
       oauth_user = insert(:user, provider: "google", password_hash: nil)
-      assert {:error, :oauth_user, _} = Auth.initiate_password_reset(oauth_user.email)
+      assert {:error, :oauth_user, _reason} = Auth.initiate_password_reset(oauth_user.email)
     end
   end
 end

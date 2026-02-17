@@ -215,7 +215,7 @@ defmodule Tymeslot.Security.SettingsInputProcessor do
     end
   end
 
-  defp validate_timezone_format(_), do: {:error, "Timezone must be a string"}
+  defp validate_timezone_format(_arg), do: {:error, "Timezone must be a string"}
 
   defp validate_file_type(file_params) do
     case Map.get(file_params, "client_name") do
@@ -252,7 +252,7 @@ defmodule Tymeslot.Security.SettingsInputProcessor do
           {:error, "File too large. Maximum size is 10MB"}
         end
 
-      _ ->
+      _other ->
         {:error, "Invalid file size"}
     end
   end

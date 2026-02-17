@@ -49,7 +49,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeTest do
     end
 
     test "handles HTTP error" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok, %{status: 400, body: "{\"error\": \"invalid_grant\"}"}}
       end)
 
@@ -67,7 +67,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeTest do
     end
 
     test "handles network error" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:error, :timeout}
       end)
 
@@ -109,11 +109,11 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeTest do
     end
 
     test "handles http error in refresh" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok, %{status: 401, body: "unauthorized"}}
       end)
 
-      assert {:error, {:http_error, 401, _}} = TokenExchange.refresh_access_token(@token_url, %{})
+      assert {:error, {:http_error, 401, _error_body}} = TokenExchange.refresh_access_token(@token_url, %{})
     end
   end
 end

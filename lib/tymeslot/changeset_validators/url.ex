@@ -8,7 +8,7 @@ defmodule Tymeslot.ChangesetValidators.URL do
   @max_len 2000
 
   @spec validate_url(Ecto.Changeset.t(), atom(), keyword()) :: Ecto.Changeset.t()
-  def validate_url(changeset, field, _opts \\ []) do
+  def validate_url(changeset, field, _validation_opts \\ []) do
     validate_change(changeset, field, fn ^field, value ->
       case URI.parse(value) do
         %URI{scheme: scheme, host: host}
@@ -24,7 +24,7 @@ defmodule Tymeslot.ChangesetValidators.URL do
               []
           end
 
-        _ ->
+        _invalid ->
           [{field, "must be a valid HTTP or HTTPS URL"}]
       end
     end)

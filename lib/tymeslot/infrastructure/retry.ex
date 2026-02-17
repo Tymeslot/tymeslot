@@ -44,7 +44,7 @@ defmodule Tymeslot.Infrastructure.Retry do
 
   defp do_retry(fun, attempt, opts) do
     case fun.() do
-      {:ok, _} = success ->
+      {:ok, _result} = success ->
         success
 
       {:error, reason} ->
@@ -138,10 +138,10 @@ defmodule Tymeslot.Infrastructure.Retry do
       %Finch.Error{reason: reason} when is_atom(reason) ->
         reason in [:timeout, :closed, :econnrefused, :ehostunreach, :enetunreach]
 
-      _ ->
+      _other ->
         false
     end
   end
 
-  defp default_retriable?(_), do: false
+  defp default_retriable?(_error), do: false
 end

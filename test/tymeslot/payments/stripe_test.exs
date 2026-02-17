@@ -47,11 +47,11 @@ defmodule Tymeslot.Payments.StripeTest do
       email = "test@example.com"
 
       # First attempt fails with network error, second succeeds
-      expect(StripeCustomerMock, :create, 1, fn _, _ ->
+      expect(StripeCustomerMock, :create, 1, fn _params, _opts ->
         {:error, %{__struct__: Stripe.Error, source: :network, message: "Network timeout"}}
       end)
 
-      expect(StripeCustomerMock, :create, 1, fn _, _ ->
+      expect(StripeCustomerMock, :create, 1, fn _params, _opts ->
         {:ok, %{id: "cus_123"}}
       end)
 
@@ -61,7 +61,7 @@ defmodule Tymeslot.Payments.StripeTest do
     test "fails after max retries" do
       email = "test@example.com"
 
-      expect(StripeCustomerMock, :create, 3, fn _, _ ->
+      expect(StripeCustomerMock, :create, 3, fn _params, _opts ->
         {:error, %{__struct__: Stripe.Error, source: :network, message: "Network timeout"}}
       end)
 
@@ -97,7 +97,7 @@ defmodule Tymeslot.Payments.StripeTest do
       sub_id = "sub_123"
       new_price = "price_456"
 
-      expect(StripeSubscriptionMock, :retrieve, fn ^sub_id, _, _ ->
+      expect(StripeSubscriptionMock, :retrieve, fn ^sub_id, _params, _opts ->
         {:ok, %{id: sub_id, items: %{data: [%{id: "si_123"}]}}}
       end)
 
@@ -113,7 +113,7 @@ defmodule Tymeslot.Payments.StripeTest do
       sub_id = "sub_123"
       new_price = "price_456"
 
-      expect(StripeSubscriptionMock, :retrieve, fn ^sub_id, _, _ ->
+      expect(StripeSubscriptionMock, :retrieve, fn ^sub_id, _params, _opts ->
         {:ok, %{id: sub_id, items: %{data: []}}}
       end)
 

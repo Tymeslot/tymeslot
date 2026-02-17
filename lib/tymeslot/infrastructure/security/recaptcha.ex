@@ -34,7 +34,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
         key when is_binary(key) and byte_size(key) > 0 ->
           verify_with_secret(token, key, opts)
 
-        _ ->
+        _invalid ->
           Logger.error("reCAPTCHA verification failed: missing or invalid secret key")
           {:error, :recaptcha_configuration_error}
       end
@@ -42,7 +42,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
   end
 
   @spec verify(any(), any()) :: {:error, :invalid_token}
-  def verify(_, _), do: {:error, :invalid_token}
+  def verify(_invalid_token, _opts), do: {:error, :invalid_token}
 
   defp verify_with_secret(token, secret_key, opts) do
     min_score = Keyword.get(opts, :min_score, @default_minimum_score)
@@ -145,7 +145,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
   end
 
   @spec maybe_put_remote_ip(map(), any()) :: map()
-  def maybe_put_remote_ip(params, _), do: params
+  def maybe_put_remote_ip(params, _other), do: params
 
   # Validates that a string is a valid IPv4 or IPv6 address.
   # Rejects IPv6 addresses with scope IDs (e.g., "fe80::1%eth0") as they
@@ -158,8 +158,8 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
       false
     else
       case :inet.parse_address(String.to_charlist(trimmed)) do
-        {:ok, _} -> true
-        {:error, _} -> false
+        {:ok, _parsed_ip} -> true
+        {:error, _parse_error} -> false
       end
     end
   rescue
@@ -252,7 +252,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
 
   @spec validate_expected_hostname(nil, list()) :: {:error, atom()}
   # NEW: Log when hostname field is missing but was expected
-  def validate_expected_hostname(nil, [_ | _] = expected_hostnames) do
+  def validate_expected_hostname(nil, [_head | _tail] = expected_hostnames) do
     Logger.warning("reCAPTCHA response missing hostname field",
       expected_hostnames: expected_hostnames,
       hint: "Google may have omitted this field; verify your reCAPTCHA configuration"

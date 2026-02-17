@@ -13,7 +13,7 @@ defmodule Tymeslot.Security.FieldValidators.TextValidator do
     case key do
       :min_length -> Keyword.get(opts, :min_length, config[:text_min_length] || 1)
       :max_length -> Keyword.get(opts, :max_length, config[:text_max_length] || 500)
-      _ -> nil
+      _other -> nil
     end
   end
 

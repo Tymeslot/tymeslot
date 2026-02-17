@@ -27,7 +27,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
       integration = %{token_expires_at: expires_at, access_token: "current-token"}
 
       assert {:ok, "current-token"} =
-               Token.ensure_valid_access_token(integration, refresh_fun: fn _ -> :error end)
+               Token.ensure_valid_access_token(integration, refresh_fun: fn _client -> :error end)
     end
 
     test "refreshes and persists token if invalid" do
@@ -41,7 +41,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
         )
 
       new_expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
-      refresh_fun = fn _ -> {:ok, {"new-access", "new-refresh", new_expires_at}} end
+      refresh_fun = fn _client -> {:ok, {"new-access", "new-refresh", new_expires_at}} end
 
       assert {:ok, "new-access"} =
                Token.ensure_valid_access_token(integration, refresh_fun: refresh_fun)
@@ -58,7 +58,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
         id: 123
       }
 
-      refresh_fun = fn _ -> {:error, :failed_refresh} end
+      refresh_fun = fn _client -> {:error, :failed_refresh} end
 
       assert {:error, :failed_refresh} =
                Token.ensure_valid_access_token(integration, refresh_fun: refresh_fun)

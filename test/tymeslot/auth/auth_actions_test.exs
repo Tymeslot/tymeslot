@@ -166,7 +166,7 @@ defmodule Tymeslot.Auth.AuthActionsTest do
         "password_confirmation" => "NewValidPassword123!"
       }
 
-      assert {:ok, _} = AuthActions.validate_password_reset_input(params)
+      assert {:ok, _result} = AuthActions.validate_password_reset_input(params)
     end
 
     test "returns error for password mismatch" do

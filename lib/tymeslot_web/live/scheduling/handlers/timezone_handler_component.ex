@@ -82,7 +82,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent do
         socket
         |> assign(:loading_slots, true)
         |> assign(:calendar_error, nil)
-        |> tap(fn _ ->
+        |> tap(fn _client ->
           send(self(), {:fetch_available_slots, selected_date, duration, new_timezone})
         end)
     end
@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent do
         %{"search" => term} -> term
         %{"value" => term} -> term
         %{"_target" => ["search"], "search" => term} -> term
-        _ -> ""
+        _other -> ""
       end
 
     socket =

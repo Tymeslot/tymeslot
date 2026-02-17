@@ -75,7 +75,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   """
   @spec update_health(health_state(), {:ok, any()} | {:error, any(), :transient | :hard}) ::
           health_state()
-  def update_health(health_state, {:ok, _}) do
+  def update_health(health_state, {:ok, _check_result}) do
     %{
       failures: 0,
       successes: health_state.successes + 1,
@@ -86,7 +86,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     }
   end
 
-  def update_health(health_state, {:error, _reason, :transient}) do
+  def update_health(health_state, {:error, _error_reason, :transient}) do
     %{
       failures: health_state.failures,
       successes: health_state.successes,
@@ -97,7 +97,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     }
   end
 
-  def update_health(health_state, {:error, _reason, :hard}) do
+  def update_health(health_state, {:error, _error_reason, :hard}) do
     failures = health_state.failures + 1
 
     %{
@@ -114,10 +114,10 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   Determines the health status based on failure and success counts.
   """
   @spec determine_status(non_neg_integer(), non_neg_integer()) :: health_status()
-  def determine_status(failures, _) when failures >= @failure_threshold, do: :unhealthy
-  def determine_status(failures, _) when failures > 0, do: :degraded
-  def determine_status(_, successes) when successes >= @recovery_threshold, do: :healthy
-  def determine_status(_, _), do: :degraded
+  def determine_status(failures, _successes) when failures >= @failure_threshold, do: :unhealthy
+  def determine_status(failures, _successes) when failures > 0, do: :degraded
+  def determine_status(_failures, successes) when successes >= @recovery_threshold, do: :healthy
+  def determine_status(_failures, _successes), do: :degraded
 
   @doc """
   Detects transitions between health states.
@@ -127,27 +127,27 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   def detect_transition(old_state, new_state) do
     case {old_state.last_check, old_state.status, new_state.status} do
       # Initial check that fails
-      {nil, _, :unhealthy} ->
+      {nil, _old_status, :unhealthy} ->
         {:initial_failure, nil, :unhealthy}
 
       # Initial check that's healthy or degraded (no action needed)
-      {nil, _, status} when status != :unhealthy ->
+      {nil, _old_status, status} when status != :unhealthy ->
         {:no_change, nil, status}
 
       # Transition to unhealthy
-      {_, old, :unhealthy} when old != :unhealthy ->
+      {_last_check, old, :unhealthy} when old != :unhealthy ->
         {:became_unhealthy, old, :unhealthy}
 
       # Recovery to healthy
-      {_, :unhealthy, :healthy} ->
+      {_last_check, :unhealthy, :healthy} ->
         {:became_healthy, :unhealthy, :healthy}
 
       # Degradation from healthy
-      {_, :healthy, :degraded} ->
+      {_last_check, :healthy, :degraded} ->
         {:became_degraded, :healthy, :degraded}
 
       # No significant transition
-      _ ->
+      _other ->
         {:no_change, old_state.status, new_state.status}
     end
   end

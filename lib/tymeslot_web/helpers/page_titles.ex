@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Helpers.PageTitles do
 
     case Enum.find(extensions, &(&1.action == action)) do
       %{label: label} -> "#{label} - Dashboard"
-      _ -> "Dashboard"
+      _extension -> "Dashboard"
     end
   end
 end

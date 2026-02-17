@@ -68,7 +68,7 @@ defmodule Tymeslot.Availability.Calculate do
               []
             end
 
-          _ ->
+          _other ->
             []
         end
       end)
@@ -159,7 +159,7 @@ defmodule Tymeslot.Availability.Calculate do
     today =
       case DateTime.now(user_timezone) do
         {:ok, dt} -> DateTime.to_date(dt)
-        _ -> Date.utc_today()
+        _other -> Date.utc_today()
       end
 
     # Get max booking date
@@ -231,7 +231,7 @@ defmodule Tymeslot.Availability.Calculate do
     {today, now} =
       case DateTime.now(user_timezone) do
         {:ok, dt} -> {DateTime.to_date(dt), dt}
-        _ -> {Date.utc_today(), DateTime.utc_now()}
+        _other -> {Date.utc_today(), DateTime.utc_now()}
       end
 
     # Create date for the given year/month
@@ -322,7 +322,7 @@ defmodule Tymeslot.Availability.Calculate do
         {break.start_time, break.end_time}
       end)
     else
-      _ -> []
+      _other -> []
     end
   end
 
@@ -404,7 +404,7 @@ defmodule Tymeslot.Availability.Calculate do
         latest_start = DateTime.add(end_dt, -min_advance_hours * 60, :minute)
         DateTime.compare(now, latest_start) != :gt
 
-      _ ->
+      _other ->
         false
     end
   end

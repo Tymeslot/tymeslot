@@ -32,7 +32,7 @@ defmodule Tymeslot.Database.ProfileQueriesUsernameTest do
       user = insert(:user)
       {:ok, profile} = ProfileQueries.get_or_create_by_user_id(user.id)
       username = "taken_#{System.unique_integer([:positive])}"
-      {:ok, _} = ProfileQueries.update_username(profile, username)
+      {:ok, _result} = ProfileQueries.update_username(profile, username)
 
       refute ProfileQueries.username_available?(username)
     end
@@ -60,7 +60,7 @@ defmodule Tymeslot.Database.ProfileQueriesUsernameTest do
       {:ok, profile2} = ProfileQueries.get_or_create_by_user_id(user2.id)
 
       username = "dup_#{System.unique_integer([:positive])}"
-      {:ok, _} = ProfileQueries.update_username(profile1, username)
+      {:ok, _result} = ProfileQueries.update_username(profile1, username)
 
       # This should fail due to unique constraint
       assert {:error, changeset} = ProfileQueries.update_username(profile2, username)

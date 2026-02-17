@@ -87,7 +87,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
              calendar_path: meeting.calendar_path
            }}
 
-        _ ->
+        _not_found_or_inactive ->
           get_booking_integration_info(meeting.organizer_user_id)
       end
     else
@@ -105,7 +105,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
              calendar_path: mt.target_calendar_id
            }}
 
-        _ ->
+        _not_found_or_inactive ->
           get_booking_integration_info(mt.user_id)
       end
     else
@@ -151,7 +151,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
           provider when provider in [:caldav, :nextcloud, :radicale, :zimbra] ->
             create_caldav_client(provider_type, integration)
 
-          _ ->
+          _not_found_or_inactive ->
             Logger.error("Unknown calendar provider", provider: provider_type)
             nil
         end
@@ -180,7 +180,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
       user_id when is_integer(user_id) ->
         client(user_id)
 
-      _ ->
+      _not_found_or_inactive ->
         client()
     end
   end
@@ -208,7 +208,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
       :debug ->
         create_debug_client(integration)
 
-      _ ->
+      _unknown_provider ->
         Logger.warning("Unknown provider type: #{inspect(provider_type)}")
         []
     end
@@ -217,7 +217,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   defp create_oauth_client(provider_type, integration) do
     # Skip validation for operational client creation to avoid rate limiting
     case ProviderAdapter.new_client(provider_type, integration, skip_validation: true) do
-      %{client: _, provider_module: _, provider_type: _} = adapter_client ->
+      %{client: _client, provider_module: _module, provider_type: _type} = adapter_client ->
         [adapter_client]
 
       {:error, reason} ->
@@ -256,7 +256,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
 
       # Skip validation for operational client creation to avoid rate limiting
       case ProviderAdapter.new_client(provider_type, config, skip_validation: true) do
-        %{client: _, provider_module: _, provider_type: _} = adapter_client ->
+        %{client: _client, provider_module: _module, provider_type: _type} = adapter_client ->
           adapter_client
 
         {:error, reason} ->
@@ -277,7 +277,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
       case ProviderAdapter.new_client(:debug, %{user_id: integration.user_id},
              skip_validation: true
            ) do
-        %{client: _, provider_module: _, provider_type: _} = adapter_client ->
+        %{client: _client, provider_module: _module, provider_type: _type} = adapter_client ->
           [adapter_client]
 
         {:error, reason} ->
@@ -304,7 +304,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
             # Override default_booking_calendar_id with the one stored in the meeting
             %{integration | default_booking_calendar_id: meeting.calendar_path}
 
-          _ ->
+          _not_found_or_inactive ->
             resolve_booking_integration(meeting.organizer_user_id)
         end
 
@@ -327,7 +327,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
             # Override default_booking_calendar_id with the one stored in the meeting type
             %{integration | default_booking_calendar_id: meeting_type.target_calendar_id}
 
-          _ ->
+          _not_found_or_inactive ->
             resolve_booking_integration(meeting_type.user_id)
         end
 
@@ -349,19 +349,19 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         # if none found, return the primary integration itself as ultimate fallback
         find_integration_with_booking_calendar(user_id) || integration
 
-      {:error, _} ->
+      {:error, _reason} ->
         # No primary set, find any with booking calendar
         # if still none found, just pick the first integration
         find_integration_with_booking_calendar(user_id) || pick_first_integration(user_id)
     end
   end
 
-  defp resolve_booking_integration(_), do: nil
+  defp resolve_booking_integration(_not_found_or_inactive), do: nil
 
   defp pick_first_integration(user_id) do
     case get_integrations_from_database(user_id) do
       {:ok, integrations} -> List.first(integrations)
-      _ -> nil
+      _not_found_or_inactive -> nil
     end
   end
 
@@ -370,7 +370,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
       {:ok, integrations} ->
         Enum.find(integrations, & &1.default_booking_calendar_id)
 
-      _ ->
+      _not_found_or_inactive ->
         nil
     end
   end
@@ -396,7 +396,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
       provider when provider in [:caldav, :nextcloud, :radicale, :zimbra] ->
         create_caldav_client(provider_type, integration)
 
-      _ ->
+      _not_found_or_inactive ->
         nil
     end
   end
@@ -447,7 +447,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   defp create_adapter_client(provider_type, config) do
     # Skip validation for operational client creation to avoid rate limiting during normal operations
     case ProviderAdapter.new_client(provider_type, config, skip_validation: true) do
-      %{client: _, provider_module: _, provider_type: _} = adapter_client ->
+      %{client: _client, provider_module: _module, provider_type: _type} = adapter_client ->
         adapter_client
 
       {:error, reason} ->
@@ -466,7 +466,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         # Use the specific user's calendar integrations
         case CalendarManagement.list_active_calendar_integrations(user_id) do
           integrations when integrations != [] -> {:ok, integrations}
-          _ -> :not_found
+          _not_found_or_inactive -> :not_found
         end
     end
   end

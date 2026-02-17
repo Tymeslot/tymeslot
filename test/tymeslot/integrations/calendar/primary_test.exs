@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
         calendar_list: [%{"id" => "primary", "selected" => true, "path" => "/cal/primary"}]
       )
 
-    assert {:ok, _} = CalendarPrimary.set_primary_calendar_integration(user.id, second.id)
+    assert {:ok, _result} = CalendarPrimary.set_primary_calendar_integration(user.id, second.id)
 
     {:ok, cleared_first} = CalendarIntegrationQueries.get_for_user(first.id, user.id)
     assert cleared_first.default_booking_calendar_id == "old-default"
@@ -67,9 +67,9 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
         calendar_paths: ["/dav/fallback"]
       )
 
-    assert {:ok, _} = CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+    assert {:ok, _result} = CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
 
-    assert {:ok, _} = CalendarPrimary.delete_with_primary_handling(primary)
+    assert {:ok, _result} = CalendarPrimary.delete_with_primary_handling(primary)
 
     {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
     assert profile.primary_calendar_integration_id == fallback.id
@@ -92,7 +92,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
         calendar_paths: ["/dav/fallback"]
       )
 
-    assert {:ok, _} = CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
+    assert {:ok, _result} = CalendarPrimary.set_primary_calendar_integration(user.id, primary.id)
 
     assert {:ok, toggled_primary} =
              CalendarManagement.toggle_with_primary_rebalance(primary)
@@ -113,7 +113,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
         calendar_list: [%{"id" => "primary", "selected" => true}]
       )
 
-    assert {:ok, _} = CalendarPrimary.set_primary_calendar_integration(user.id, only.id)
+    assert {:ok, _result} = CalendarPrimary.set_primary_calendar_integration(user.id, only.id)
 
     assert {:ok, toggled} = CalendarManagement.toggle_with_primary_rebalance(only)
     refute toggled.is_active

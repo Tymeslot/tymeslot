@@ -9,13 +9,13 @@ defmodule Tymeslot.Utils.MediaValidator do
   @spec valid_image?(binary()) :: boolean()
   def valid_image?(binary) when is_binary(binary) do
     case ExImageInfo.info(binary) do
-      {mime, _width, _height, _type} when is_binary(mime) -> true
-      _ -> false
+      {mime, _width, _height, _variant} when is_binary(mime) -> true
+      _other -> false
     end
   end
 
   @spec valid_image?(any()) :: boolean()
-  def valid_image?(_), do: false
+  def valid_image?(_other), do: false
 
   @doc """
   Validates if a binary is a supported video format using magic bytes.
@@ -29,16 +29,16 @@ defmodule Tymeslot.Utils.MediaValidator do
   end
 
   @spec valid_video?(any()) :: boolean()
-  def valid_video?(_), do: false
+  def valid_video?(_other), do: false
 
   # MP4 / MOV: ftyp at offset 4
-  defp video_header?(<<_::binary-size(4), "ftyp", _rest::binary>>), do: true
+  defp video_header?(<<_a::binary-size(4), "ftyp", _rest::binary>>), do: true
 
   # WebM / MKV: 1A 45 DF A3
   defp video_header?(<<0x1A, 0x45, 0xDF, 0xA3, _rest::binary>>), do: true
 
   # AVI: RIFF .... AVI
-  defp video_header?(<<"RIFF", _::binary-size(4), "AVI ", _rest::binary>>), do: true
+  defp video_header?(<<"RIFF", _size::binary-size(4), "AVI ", _rest::binary>>), do: true
 
   # MPEG Transport Stream: 0x47
   defp video_header?(<<0x47, _rest::binary>>), do: true
@@ -50,7 +50,7 @@ defmodule Tymeslot.Utils.MediaValidator do
   # Flash Video: FLV
   defp video_header?(<<"FLV", _rest::binary>>), do: true
 
-  defp video_header?(_), do: false
+  defp video_header?(_other), do: false
 
   @doc """
   Validates if a file at the given path is a supported image format.
@@ -62,7 +62,7 @@ defmodule Tymeslot.Utils.MediaValidator do
          :ok <- File.close(file) do
       valid_image?(binary)
     else
-      _ -> false
+      _other -> false
     end
   end
 
@@ -76,7 +76,7 @@ defmodule Tymeslot.Utils.MediaValidator do
          :ok <- File.close(file) do
       valid_video?(binary)
     else
-      _ -> false
+      _other -> false
     end
   end
 

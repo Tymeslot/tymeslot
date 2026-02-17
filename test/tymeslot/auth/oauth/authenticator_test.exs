@@ -108,7 +108,7 @@ defmodule Tymeslot.Auth.OAuth.AuthenticatorTest do
     end
 
     test "returns error when code exchange fails due to OAuth error", %{conn: conn} do
-      expect(ClientMock, :build, fn _, _, _ -> %OAuth2.Client{} end)
+      expect(ClientMock, :build, fn _provider, _config, _redirect_uri -> %OAuth2.Client{} end)
 
       expect(ClientMock, :exchange_code_for_token, fn _client, _code ->
         {:error, %OAuth2.Error{reason: "invalid_code"}}
@@ -120,20 +120,20 @@ defmodule Tymeslot.Auth.OAuth.AuthenticatorTest do
                  "bad_code",
                  :github,
                  "url",
-                 fn _ -> {:ok, %{}} end,
-                 fn _ -> true end,
-                 fn _ -> %{} end
+                 fn _info -> {:ok, %{}} end,
+                 fn _info -> true end,
+                 fn _info -> %{} end
                )
     end
 
     test "returns error when other authentication errors occur", %{conn: conn} do
-      expect(ClientMock, :build, fn _, _, _ -> %OAuth2.Client{} end)
+      expect(ClientMock, :build, fn _provider, _config, _redirect_uri -> %OAuth2.Client{} end)
 
       expect(ClientMock, :exchange_code_for_token, fn _client, _code ->
         {:ok, %OAuth2.Client{}}
       end)
 
-      expect(ClientMock, :get_user_info, fn _client, _ -> {:error, :unreachable} end)
+      expect(ClientMock, :get_user_info, fn _client, _provider -> {:error, :unreachable} end)
 
       assert {:error, ^conn, :authentication_error,
               "An error occurred during Github authentication."} =
@@ -142,21 +142,21 @@ defmodule Tymeslot.Auth.OAuth.AuthenticatorTest do
                  "code",
                  :github,
                  "url",
-                 fn _ -> {:ok, %{}} end,
-                 fn _ -> true end,
-                 fn _ -> %{} end
+                 fn _info -> {:ok, %{}} end,
+                 fn _info -> true end,
+                 fn _info -> %{} end
                )
     end
 
     test "returns error when session creation fails", %{conn: conn} do
       user = %{id: 1}
-      expect(ClientMock, :build, fn _, _, _ -> %OAuth2.Client{} end)
+      expect(ClientMock, :build, fn _provider, _config, _redirect_uri -> %OAuth2.Client{} end)
 
       expect(ClientMock, :exchange_code_for_token, fn _client, _code ->
         {:ok, %OAuth2.Client{}}
       end)
 
-      expect(ClientMock, :get_user_info, fn _client, _ -> {:ok, %{}} end)
+      expect(ClientMock, :get_user_info, fn _client, _provider -> {:ok, %{}} end)
 
       expect(SessionMock, :create_session, fn _conn, ^user -> {:error, :failed, "message"} end)
 
@@ -167,9 +167,9 @@ defmodule Tymeslot.Auth.OAuth.AuthenticatorTest do
                  "code",
                  :github,
                  "url",
-                 fn _ -> {:ok, user} end,
-                 fn _ -> true end,
-                 fn _ -> %{} end
+                 fn _info -> {:ok, user} end,
+                 fn _info -> true end,
+                 fn _info -> %{} end
                )
     end
   end

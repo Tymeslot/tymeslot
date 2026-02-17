@@ -29,11 +29,11 @@ defmodule Tymeslot.Auth.OAuth.State do
 
     case stored_state do
       ^received_state when is_binary(stored_state) -> :ok
-      _ -> {:error, :invalid_state}
+      _other -> {:error, :invalid_state}
     end
   end
 
-  def validate_state(_conn, _), do: {:error, :invalid_state}
+  def validate_state(_conn, _invalid_state), do: {:error, :invalid_state}
 
   @doc """
   Clears the OAuth state from the session after validation.

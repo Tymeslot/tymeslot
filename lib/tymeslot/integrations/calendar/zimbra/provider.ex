@@ -118,7 +118,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
     }
 
     case CaldavCommon.test_connection(client, ip_address: ip_address) do
-      {:ok, _} ->
+      {:ok, _result} ->
         {:ok, "Zimbra connection successful"}
 
       {:error, :unauthorized} ->
@@ -192,7 +192,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
       paths when is_list(paths) and paths != [] ->
         paths
 
-      _ ->
+      _other ->
         build_zimbra_default_paths(config)
     end
   end

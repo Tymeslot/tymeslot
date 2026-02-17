@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Shared.SocialAuthButtons do
   end
 
   defp determine_grid_cols(true, true), do: "sm:grid-cols-2"
-  defp determine_grid_cols(_, _), do: ""
+  defp determine_grid_cols(_google_enabled, _github_enabled), do: ""
 
   @doc """
   Renders a social authentication button for a given provider.

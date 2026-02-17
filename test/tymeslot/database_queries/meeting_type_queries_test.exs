@@ -284,7 +284,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
       meeting_type = insert(:meeting_type, user: user)
 
       # Delete it first
-      assert {:ok, _} = MeetingTypeQueries.delete_meeting_type(meeting_type)
+      assert {:ok, _result} = MeetingTypeQueries.delete_meeting_type(meeting_type)
 
       # Try to delete again - this should raise an error or return a specific response
       assert_raise Ecto.StaleEntryError, fn ->
@@ -517,7 +517,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
       # Reorder: move Gamma to first, Alpha to second, Beta to third
       new_order = [mt3.id, mt1.id, mt2.id]
 
-      assert {:ok, _} = MeetingTypeQueries.reorder_meeting_types(user.id, new_order)
+      assert {:ok, _result} = MeetingTypeQueries.reorder_meeting_types(user.id, new_order)
 
       # Verify new sort order
       types = MeetingTypeQueries.list_all_meeting_types(user.id)
@@ -542,7 +542,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
 
       # Try to reorder user1's types using user2's id
       new_order = [mt2.id, mt1.id]
-      assert {:ok, _} = MeetingTypeQueries.reorder_meeting_types(user2.id, new_order)
+      assert {:ok, _result} = MeetingTypeQueries.reorder_meeting_types(user2.id, new_order)
 
       # Verify user1's types were NOT reordered (security check)
       types = MeetingTypeQueries.list_all_meeting_types(user1.id)
@@ -555,7 +555,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
     test "handles empty list" do
       user = insert(:user)
 
-      assert {:ok, _} = MeetingTypeQueries.reorder_meeting_types(user.id, [])
+      assert {:ok, _result} = MeetingTypeQueries.reorder_meeting_types(user.id, [])
     end
 
     test "normalizes sort order from zero" do
@@ -568,7 +568,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
 
       # Reorder them
       new_order = [mt1.id, mt2.id, mt3.id]
-      assert {:ok, _} = MeetingTypeQueries.reorder_meeting_types(user.id, new_order)
+      assert {:ok, _result} = MeetingTypeQueries.reorder_meeting_types(user.id, new_order)
 
       # Verify sort order is normalized to 0, 1, 2
       types = MeetingTypeQueries.list_all_meeting_types(user.id)
@@ -598,7 +598,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
       # Refresh mt3 to get the past_time
       mt3 = Repo.get!(Tymeslot.DatabaseSchemas.MeetingTypeSchema, mt3.id)
 
-      assert {:ok, _} = MeetingTypeQueries.reorder_meeting_types(user.id, new_order)
+      assert {:ok, _result} = MeetingTypeQueries.reorder_meeting_types(user.id, new_order)
 
       # Query again to verify persistence and updated_at
       types = MeetingTypeQueries.list_all_meeting_types(user.id)

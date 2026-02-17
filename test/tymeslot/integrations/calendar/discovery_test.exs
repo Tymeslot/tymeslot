@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
     test "discovers for google provider" do
       integration = insert(:calendar_integration, provider: "google")
 
-      expect(GoogleCalendarAPIMock, :list_calendars, fn _ ->
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
         {:ok, [%{"id" => "primary", "summary" => "Primary", "primary" => true}]}
       end)
 
@@ -23,7 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
     test "discovers for outlook provider" do
       integration = insert(:calendar_integration, provider: "outlook")
 
-      expect(OutlookCalendarAPIMock, :list_calendars, fn _ ->
+      expect(OutlookCalendarAPIMock, :list_calendars, fn _client ->
         {:ok, [%{"id" => "cal1", "name" => "Outlook", "isDefaultCalendar" => true}]}
       end)
 

@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   defp current_locale_name(locale, locales) do
     case Enum.find(locales, fn l -> l.code == locale end) do
       %{name: name} -> name
-      _ -> String.upcase(locale)
+      _other -> String.upcase(locale)
     end
   end
 
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
     "flex items-center px-4 py-2 rounded-lg text-white text-sm font-medium transition-all duration-200 language-switcher-button-rhythm"
   end
 
-  defp switcher_button_class(_), do: switcher_button_class("quill")
+  defp switcher_button_class(_arg), do: switcher_button_class("quill")
 
   defp dropdown_class("quill") do
     "absolute right-0 mt-2 w-48 rounded-lg shadow-xl z-50 language-dropdown-quill"
@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
     "absolute right-0 mt-2 w-48 rounded-lg shadow-xl z-50 language-dropdown-rhythm"
   end
 
-  defp dropdown_class(_), do: dropdown_class("quill")
+  defp dropdown_class(_arg), do: dropdown_class("quill")
 
   defp dropdown_item_class("rhythm", active) do
     base = "flex items-center w-full px-4 py-3 text-left text-sm transition-colors"

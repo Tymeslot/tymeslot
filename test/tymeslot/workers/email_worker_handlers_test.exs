@@ -18,11 +18,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
     test "handles send_confirmation_emails" do
       meeting = insert(:meeting)
 
-      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _, _ ->
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _meeting, _user ->
         {:ok, "sent"}
       end)
 
-      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _, _ ->
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _meeting, _user ->
         {:ok, "sent"}
       end)
 
@@ -35,7 +35,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
     test "handles send_reminder_emails" do
       meeting = insert(:meeting)
 
-      expect(EmailServiceMock, :send_appointment_reminders, fn _, _ ->
+      expect(EmailServiceMock, :send_appointment_reminders, fn _meeting, _user ->
         {{:ok, "sent"}, {:ok, "sent"}}
       end)
 
@@ -57,7 +57,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
 
     test "handles send_email_verification" do
       user = insert(:user)
-      expect(EmailServiceMock, :send_email_verification, fn _, _ -> {:ok, "sent"} end)
+      expect(EmailServiceMock, :send_email_verification, fn _user, _url -> {:ok, "sent"} end)
 
       assert :ok =
                EmailWorkerHandlers.execute_email_action("send_email_verification", %{
@@ -89,11 +89,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
     test "handles partial failure" do
       meeting = insert(:meeting)
 
-      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _, _ ->
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _meeting, _user ->
         {:ok, "sent"}
       end)
 
-      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _, _ ->
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _meeting, _user ->
         {:error, "failed"}
       end)
 
@@ -134,7 +134,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
     test "tracks reminder as sent after delivery" do
       meeting = insert(:meeting)
 
-      expect(EmailServiceMock, :send_appointment_reminders, fn _, _ ->
+      expect(EmailServiceMock, :send_appointment_reminders, fn _meeting, _user ->
         {{:ok, "sent"}, {:ok, "sent"}}
       end)
 

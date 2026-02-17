@@ -29,7 +29,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
           "name" => "Test"
         }
 
-        assert {:error, :input, _} = Registration.register_user(params, conn)
+        assert {:error, :input, _changeset} = Registration.register_user(params, conn)
       end)
     end
 
@@ -45,7 +45,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      assert {:error, :auth, _} = Registration.register_user(params, conn)
+      assert {:error, :auth, _reason} = Registration.register_user(params, conn)
     end
 
     test "new accounts require email verification" do
@@ -59,7 +59,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      {:ok, user, _} = Registration.register_user(params, conn)
+      {:ok, user, _conn} = Registration.register_user(params, conn)
       assert is_nil(user.verified_at)
     end
   end
@@ -76,7 +76,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      assert {:error, :auth, _} = Registration.register_user(params, %Plug.Conn{})
+      assert {:error, :auth, _changeset} = Registration.register_user(params, %Plug.Conn{})
     end
   end
 
@@ -90,7 +90,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      {:ok, user, _} = Registration.register_user(params, %Plug.Conn{})
+      {:ok, user, _session} = Registration.register_user(params, %Plug.Conn{})
 
       # Email trimmed
       assert user.email == "safe@example.com"
@@ -118,7 +118,7 @@ defmodule Tymeslot.Auth.RegistrationTest do
         "terms_accepted" => "true"
       }
 
-      {:ok, user, _} = Registration.register_user(params, %Plug.Conn{})
+      {:ok, user, _session} = Registration.register_user(params, %Plug.Conn{})
 
       # Never store plaintext
       refute user.password_hash == plain

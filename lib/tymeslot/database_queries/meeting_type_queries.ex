@@ -122,7 +122,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
         when is_binary(cal_id) ->
           {integration.id, cal_id}
 
-        _ ->
+        _other ->
           {nil, nil}
       end
 
@@ -264,7 +264,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
 
     case result do
       0 -> false
-      _ -> true
+      _other -> true
     end
   end
 
@@ -311,9 +311,9 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
   defp handle_individual_defaults_creation(types_to_create) when is_list(types_to_create) do
     results = Enum.map(types_to_create, &create_meeting_type/1)
 
-    case Enum.find(results, fn {status, _} -> status != :ok end) do
+    case Enum.find(results, fn {status, _value} -> status != :ok end) do
       nil -> {:ok, Enum.map(results, fn {:ok, mt} -> mt end)}
-      _ -> {:error, :bulk_creation_failed}
+      _other -> {:error, :bulk_creation_failed}
     end
   end
 end

@@ -22,7 +22,7 @@ defmodule Tymeslot.Security.SettingsInputProcessorTest do
 
     test "rejects invalid username" do
       # Assuming UsernameValidator rejects very short usernames
-      assert {:error, _} = SettingsInputProcessor.validate_username_update("a")
+      assert {:error, _reason} = SettingsInputProcessor.validate_username_update("a")
     end
   end
 

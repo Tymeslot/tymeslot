@@ -121,5 +121,5 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   defp modal_size_class(:large), do: "modal-content--large"
   defp modal_size_class(:xlarge), do: "modal-content--xlarge"
   defp modal_size_class(:full), do: "modal-content--full"
-  defp modal_size_class(_), do: "modal-content--medium"
+  defp modal_size_class(_other), do: "modal-content--medium"
 end

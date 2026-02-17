@@ -51,7 +51,7 @@ defmodule Tymeslot.Auth do
       verification_url = UrlBuilder.email_change_url(token_raw)
 
       # Queue emails via Oban; do not fail the request if scheduling fails
-      _ =
+      _result =
         with {:ok, _job1} <-
                Oban.insert(
                  EmailWorker.new(
@@ -128,7 +128,7 @@ defmodule Tymeslot.Auth do
          new_email <- user.pending_email,
          {:ok, result} <- verify_email_change_in_transaction(user, old_email, new_email) do
       # After successful commit, enqueue confirmation emails
-      _ =
+      _result =
         case Oban.insert(
                EmailWorker.new(
                  %{
@@ -171,7 +171,7 @@ defmodule Tymeslot.Auth do
       {:error, reason} when is_binary(reason) ->
         {:error, :unknown, reason}
 
-      _ ->
+      _unknown_error ->
         {:error, :unknown, "Failed to verify email change"}
     end
   end

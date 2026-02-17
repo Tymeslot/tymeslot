@@ -33,7 +33,7 @@ defmodule Tymeslot.Utils.AvatarUtils do
     """
   rescue
     # Fallback to a simple SVG if anything goes wrong
-    _ ->
+    _other ->
       """
       <svg width="#{size}" height="#{size}" viewBox="0 0 #{size} #{size}" xmlns="http://www.w3.org/2000/svg">
         <circle cx="#{size / 2}" cy="#{size / 2}" r="#{size / 2}" fill="#667eea" />
@@ -86,7 +86,7 @@ defmodule Tymeslot.Utils.AvatarUtils do
     end
   rescue
     # Handle any potential errors gracefully
-    _ -> "U"
+    _other -> "U"
   end
 
   @doc """

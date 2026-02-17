@@ -76,7 +76,7 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
 
       # Start 10 concurrent requests
       tasks =
-        for _ <- 1..10 do
+        for _i <- 1..10 do
           Task.async(fn ->
             Rooms.create_meeting_room(user.id, integration_id: integration.id)
           end)
@@ -86,8 +86,8 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
       results = Task.await_many(tasks, 5000)
 
       # All should have succeeded
-      for res <- results do
-        assert {:ok, room} = res
+      for result <- results do
+        assert {:ok, room} = result
         assert room.provider_type == :google_meet
       end
     end
@@ -147,7 +147,7 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
 
       # Start 10 concurrent requests
       tasks =
-        for _ <- 1..10 do
+        for _i <- 1..10 do
           Task.async(fn ->
             Rooms.create_meeting_room(user.id, integration_id: integration.id)
           end)
@@ -157,8 +157,8 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
       results = Task.await_many(tasks, 5000)
 
       # All should have succeeded
-      for res <- results do
-        assert {:ok, room} = res
+      for result <- results do
+        assert {:ok, room} = result
         assert room.provider_type == :teams
       end
     end

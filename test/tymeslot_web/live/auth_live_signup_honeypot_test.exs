@@ -42,7 +42,7 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
   end
 
   test "honeypot submission with whitespace-only value is dropped", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/auth/signup")
+    {:ok, view, _initial_html} = live(conn, ~p"/auth/signup")
 
     honeypot_signup_form(view, "   ")
 
@@ -52,7 +52,7 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
   end
 
   test "honeypot submission drops signup but keeps success flow", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/auth/signup")
+    {:ok, view, _initial_html} = live(conn, ~p"/auth/signup")
 
     honeypot_signup_form(view, "http://bot.example")
 
@@ -68,14 +68,14 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
   end
 
   test "honeypot resend verification is rate limited and logged", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/auth/signup")
+    {:ok, view, _initial_html} = live(conn, ~p"/auth/signup")
 
     honeypot_signup_form(view, "http://bot.example")
 
     assert_patch(view, ~p"/auth/verify-email")
     assert Repo.aggregate(UserSchema, :count, :id) == 0
 
-    Enum.each(1..5, fn _ ->
+    Enum.each(1..5, fn _iteration ->
       html =
         view
         |> element("button", "Resend Verification Email")
@@ -95,7 +95,7 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
   defp ensure_rate_limiter_started do
     case Process.whereis(Tymeslot.Security.RateLimiter) do
       nil -> start_supervised!(Tymeslot.Security.RateLimiter)
-      _pid -> :ok
+      _existing_pid -> :ok
     end
   end
 end

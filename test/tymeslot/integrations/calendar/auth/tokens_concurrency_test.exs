@@ -134,8 +134,8 @@ defmodule Tymeslot.Integrations.Calendar.TokensConcurrencyTest do
       end)
 
       # These should BOTH run because they don't lock on :unknown
-      assert {:ok, _} = Tokens.refresh_oauth_token(integration)
-      assert {:ok, _} = Tokens.refresh_oauth_token(integration)
+      assert {:ok, _result} = Tokens.refresh_oauth_token(integration)
+      assert {:ok, _result} = Tokens.refresh_oauth_token(integration)
     end
 
     test "slow refresh does not allow second process to 'steal' the lock prematurely" do
@@ -169,7 +169,7 @@ defmodule Tymeslot.Integrations.Calendar.TokensConcurrencyTest do
       assert {:error, :refresh_in_progress} = Tokens.refresh_oauth_token(integration)
 
       # Wait for first one to finish
-      assert {:ok, _} = Task.await(task1)
+      assert {:ok, _result} = Task.await(task1)
     end
   end
 end

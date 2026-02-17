@@ -125,7 +125,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       {:ok, reminder} ->
         build_reminder_details_from_interval(reminder)
 
-      _ ->
+      _error ->
         meeting
         |> Map.get(:reminders)
         |> ReminderUtils.normalize_reminders()

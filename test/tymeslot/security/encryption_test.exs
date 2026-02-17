@@ -72,7 +72,7 @@ defmodule Tymeslot.Security.EncryptionTest do
       encrypted = Encryption.encrypt(plaintext)
 
       # Corrupt the ciphertext by flipping a bit
-      <<first::binary-size(10), _rest::binary>> = encrypted
+      <<first::binary-size(10), _remainder::binary>> = encrypted
       corrupted = first <> "corrupted"
 
       assert Encryption.decrypt(corrupted) == nil
@@ -131,7 +131,7 @@ defmodule Tymeslot.Security.EncryptionTest do
     end
 
     test "generates keys of consistent format" do
-      keys = for _ <- 1..10, do: Encryption.generate_api_key()
+      keys = for _i <- 1..10, do: Encryption.generate_api_key()
 
       Enum.each(keys, fn key ->
         assert is_binary(key)
@@ -169,7 +169,7 @@ defmodule Tymeslot.Security.EncryptionTest do
       encrypted = Encryption.encrypt(plaintext)
 
       # Tamper with the tag portion (bytes 12-28)
-      <<nonce::binary-12, _tag::binary-16, ciphertext::binary>> = encrypted
+      <<nonce::binary-12, _auth_tag::binary-16, ciphertext::binary>> = encrypted
       tampered = nonce <> :crypto.strong_rand_bytes(16) <> ciphertext
 
       # Decryption should fail

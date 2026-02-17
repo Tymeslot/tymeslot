@@ -182,8 +182,8 @@ defmodule Tymeslot.Infrastructure.Metrics do
 
   defp sanitize_url(url), do: inspect(url)
 
-  defp calculate_events_per_second(0, _), do: 0.0
-  defp calculate_events_per_second(_, 0), do: 0.0
+  defp calculate_events_per_second(0, _duration_ms), do: 0.0
+  defp calculate_events_per_second(_event_count, 0), do: 0.0
 
   defp calculate_events_per_second(event_count, duration_ms) do
     Float.round(event_count * 1000 / duration_ms, 2)

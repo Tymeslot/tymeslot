@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
     profile = insert(:profile, user: user, username: "testuser")
 
     # Stub calendar operations to avoid Mox errors
-    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _, _, _ -> {:ok, []} end)
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _integration, _range_start, _range_end -> {:ok, []} end)
 
     insert(:calendar_integration,
       user: user,
@@ -251,7 +251,7 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
 
     query_params =
       URI.encode_query(
-        Enum.reject([locale: locale, duration: duration], fn {_, v} -> is_nil(v) end)
+        Enum.reject([locale: locale, duration: duration], fn {_key, v} -> is_nil(v) end)
       )
 
     url = if query_params == "", do: url, else: "#{url}?#{query_params}"

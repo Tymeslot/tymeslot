@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Live.OAuthHandler do
       {"teams", :video} ->
         {:oauth_redirect, "teams"}
 
-      _ ->
+      _other ->
         {:error, "Unknown OAuth provider: #{provider}"}
     end
   end
@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Live.OAuthHandler do
         send(self(), {:oauth_redirect, redirect_provider})
         :ok
 
-      {:error, _reason} = error ->
+      {:error, _error_msg} = error ->
         error
     end
   end

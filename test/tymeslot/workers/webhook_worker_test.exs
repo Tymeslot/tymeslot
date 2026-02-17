@@ -242,19 +242,19 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, headers, _opts ->
         # Verify token header is present and correct
-        token_header = Enum.find(headers, fn {key, _} -> key == "X-Tymeslot-Token" end)
+        token_header = Enum.find(headers, fn {key, _value} -> key == "X-Tymeslot-Token" end)
         assert token_header, "Expected X-Tymeslot-Token header"
         {_key, value} = token_header
         assert value == webhook.webhook_token
 
         # Verify timestamp header is present
-        timestamp_header = Enum.find(headers, fn {key, _} -> key == "X-Tymeslot-Timestamp" end)
+        timestamp_header = Enum.find(headers, fn {key, _value} -> key == "X-Tymeslot-Timestamp" end)
         assert timestamp_header, "Expected X-Tymeslot-Timestamp header"
 
-        {_, timestamp} = timestamp_header
+        {_timestamp_key, timestamp} = timestamp_header
 
         # Verify timestamp is ISO8601 format and recent
-        {:ok, ts, _} = DateTime.from_iso8601(timestamp)
+        {:ok, ts, _utc_offset} = DateTime.from_iso8601(timestamp)
         diff = DateTime.diff(DateTime.utc_now(), ts, :second)
         assert diff < 60, "Timestamp should be recent (within 60 seconds)"
 
@@ -278,7 +278,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       webhook = insert(:webhook, url: "https://169.254.169.254/latest/meta-data")
 
       # HTTP client should never be called
-      expect(Tymeslot.HTTPClientMock, :post, 0, fn _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts ->
         {:ok, %{status: 200, body: "Should not reach here"}}
       end)
 

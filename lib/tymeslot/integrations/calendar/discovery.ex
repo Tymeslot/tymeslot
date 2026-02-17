@@ -142,7 +142,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       {:ok, paths} when is_list(paths) and paths != [] ->
         {:ok, Map.put(attrs, "calendar_paths", paths)}
 
-      _ ->
+      _other ->
         {:ok, attrs}
     end
   end
@@ -150,7 +150,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   def maybe_discover_calendars(attrs), do: {:ok, attrs}
 
   defp calendar_paths_or_empty(%{calendar_paths: paths}) when is_list(paths), do: paths
-  defp calendar_paths_or_empty(_), do: []
+  defp calendar_paths_or_empty(_arg), do: []
 
   # Internal helper that returns just the list of paths for CalDAV/Radicale
   @spec discover_caldav_calendar_paths(map()) :: {:ok, list(String.t())} | {:error, String.t()}
@@ -158,7 +158,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
     provider_atom =
       case ProviderRegistry.validate_provider(provider) do
         {:ok, atom} -> atom
-        _ -> :unknown
+        _other -> :unknown
       end
 
     with true <- provider_atom != :unknown,
@@ -168,23 +168,23 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       {:ok, extract_calendar_paths(calendars)}
     else
       {:error, reason} -> {:error, format_discovery_error(reason)}
-      _ -> {:ok, []}
+      _other -> {:ok, []}
     end
   end
 
-  defp discover_caldav_calendar_paths(_), do: {:ok, []}
+  defp discover_caldav_calendar_paths(_arg), do: {:ok, []}
 
   defp resolve_provider_atom(p) do
     case ProviderRegistry.validate_provider(p) do
       {:ok, provider_atom} -> {:ok, provider_atom}
-      {:error, _} -> {:error, :unknown_provider}
+      {:error, _reason} -> {:error, :unknown_provider}
     end
   end
 
   defp provider_module_for(provider_atom) do
     case ProviderRegistry.get_provider(provider_atom) do
       {:ok, mod} -> {:ok, mod}
-      {:error, _} -> {:error, :unknown_provider}
+      {:error, _reason} -> {:error, :unknown_provider}
     end
   end
 
@@ -197,17 +197,17 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       %{"path" => path} -> path
       %{path: path} -> path
       path when is_binary(path) -> path
-      _ -> nil
+      _other -> nil
     end)
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
   end
 
-  defp extract_calendar_paths(_), do: []
+  defp extract_calendar_paths(_arg), do: []
 
   defp format_discovery_error(:unauthorized), do: "Authentication failed during discovery"
   defp format_discovery_error(:not_found), do: "Calendar server not found"
   defp format_discovery_error(:network_error), do: "Network error during discovery"
   defp format_discovery_error(reason) when is_binary(reason), do: reason
-  defp format_discovery_error(_), do: "Calendar discovery failed"
+  defp format_discovery_error(_arg), do: "Calendar discovery failed"
 end

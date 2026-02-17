@@ -54,5 +54,5 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandler do
   defp normalize_event_name("customer.subscription.created"), do: :subscription_created
   defp normalize_event_name("customer.subscription.updated"), do: :subscription_updated
   defp normalize_event_name("customer.subscription.deleted"), do: :subscription_deleted
-  defp normalize_event_name(_), do: :subscription_event
+  defp normalize_event_name(_other), do: :subscription_event
 end

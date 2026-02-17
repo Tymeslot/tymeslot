@@ -96,7 +96,7 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
   defp uses_phoenix_component?(body) when is_list(body) do
     Enum.any?(body, fn
       {:use, _, [{:__aliases__, _, [:Phoenix, :Component]} | _]} -> true
-      _ -> false
+      _other -> false
     end)
   end
 
@@ -121,7 +121,7 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
           end
           end
 
-        _ ->
+        _other ->
           acc
       end
     end)
@@ -172,7 +172,7 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
           {:halt, false}
 
         # Anything else - keep searching
-        _ ->
+        _other ->
           {:cont, false}
       end
     end)

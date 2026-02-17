@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
       %{errors: errors} when is_list(errors) ->
         Enum.map(errors, fn {msg, _opts} -> msg end)
 
-      _ ->
+      _other ->
         []
     end
   end
@@ -127,13 +127,13 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
         ip when is_binary(ip) ->
           ip
 
-        _ ->
+        _other ->
           # get_from_mount/1 should only be called during mount.
           # We wrap it in try-rescue to prevent crashes if called during events.
           try do
             ClientIP.get_from_mount(socket)
           rescue
-            _ -> "unknown"
+            _error -> "unknown"
           end
       end
 
@@ -146,12 +146,12 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   @spec form_valid?(Phoenix.HTML.Form.t()) :: boolean()
   def form_valid?(%{source: source}) when is_map(source) do
     case FormValidation.validate_booking_form(source) do
-      {:ok, _} -> true
-      {:error, _} -> false
+      {:ok, _result} -> true
+      {:error, _reason} -> false
     end
   end
 
-  def form_valid?(_), do: false
+  def form_valid?(_form), do: false
 
   @doc """
   Gets available slots for a specific date.
@@ -496,7 +496,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
 
   defp parse_duration_minutes(duration) when is_binary(duration) do
     case Regex.run(~r/^(\d+)min$/, duration) do
-      [_, minutes] ->
+      [_full_match, minutes] ->
         mins = String.to_integer(minutes)
         # Limit to 24 hours (1440 minutes)
         cond do
@@ -505,12 +505,12 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
           true -> mins
         end
 
-      _ ->
+      _no_match ->
         30
     end
   end
 
-  defp parse_duration_minutes(_), do: 30
+  defp parse_duration_minutes(_other), do: 30
 
   defp get_owner_timezone(organizer_profile) do
     {:ok, organizer_profile.timezone || "Europe/Kyiv"}
@@ -651,7 +651,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
         {:ok, dt} = DateTime.new(Date.utc_today(), time)
         dt
 
-      {:error, _} ->
+      {:error, _reason} ->
         DateTime.utc_now()
     end
   end
@@ -664,7 +664,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
     today =
       case DateTime.now(user_timezone) do
         {:ok, dt} -> DateTime.to_date(dt)
-        _ -> Date.utc_today()
+        _other -> Date.utc_today()
       end
 
     current_year < today.year || (current_year == today.year && current_month <= today.month)
@@ -678,7 +678,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
     today =
       case DateTime.now(user_timezone) do
         {:ok, dt} -> DateTime.to_date(dt)
-        _ -> Date.utc_today()
+        _other -> Date.utc_today()
       end
 
     max_advance_booking_days =

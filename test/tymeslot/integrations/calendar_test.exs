@@ -16,7 +16,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
       integration2 = insert(:calendar_integration, user: user)
 
       # Set integration1 as primary
-      assert {:ok, _} = Calendar.set_primary(user.id, integration1.id)
+      assert {:ok, _result} = Calendar.set_primary(user.id, integration1.id)
 
       integrations = Calendar.list_integrations(user.id)
 
@@ -71,7 +71,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
-      assert {:ok, _} = Calendar.delete_integration(integration.id, user.id)
+      assert {:ok, _result} = Calendar.delete_integration(integration.id, user.id)
       assert {:error, :not_found} = Calendar.get_integration(integration.id, user.id)
     end
   end
@@ -82,11 +82,11 @@ defmodule Tymeslot.Integrations.CalendarTest do
       insert(:profile, user: user)
       integration = insert(:calendar_integration, user: user)
 
-      assert {:ok, _} = Calendar.set_primary(user.id, integration.id)
+      assert {:ok, _result} = Calendar.set_primary(user.id, integration.id)
       integrations = Calendar.list_integrations(user.id)
       assert Enum.find(integrations, &(&1.id == integration.id)).is_primary
 
-      assert {:ok, _} = Calendar.clear_primary(user.id)
+      assert {:ok, _result} = Calendar.clear_primary(user.id)
       integrations = Calendar.list_integrations(user.id)
       refute Enum.find(integrations, &(&1.id == integration.id)).is_primary
     end
@@ -114,7 +114,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
       # We don't need to mock Operations because we just want to see if it's called
       # If it falls back to Operations, it will try to call Operations.get_event.
       # Since no integrations are set up in this test context, it should return an error.
-      assert {:error, _} = Calendar.get_event("some-uid")
+      assert {:error, _reason} = Calendar.get_event("some-uid")
     after
       Application.delete_env(:tymeslot, :calendar_module)
     end

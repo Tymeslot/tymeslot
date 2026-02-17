@@ -48,7 +48,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
       # 1 hour (final attempt)
       7 -> 3600
       # Cap at 1 hour
-      _ -> 3600
+      _other -> 3600
     end
   end
 
@@ -220,11 +220,11 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   defp extract_retry_after(reason) when is_binary(reason) do
     # Try to extract retry-after from error message
     case Regex.run(~r/retry[_\s]after[:\s]+(\d+)/i, reason) do
-      [_, seconds_str] -> String.to_integer(seconds_str)
+      [_first, seconds_str] -> String.to_integer(seconds_str)
       # Default to 5 minutes if no retry-after found
-      _ -> 300
+      _other -> 300
     end
   end
 
-  defp extract_retry_after(_), do: 300
+  defp extract_retry_after(_arg), do: 300
 end

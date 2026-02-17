@@ -40,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
       state = State.generate(user.id, "outlook-state")
 
       # Mock TokenExchange.exchange_code_for_tokens
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok,
          %{
            status: 200,
@@ -55,7 +55,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
       end)
 
       # Mock Outlook API for discovery
-      expect(OutlookCalendarAPIMock, :list_calendars, fn _ ->
+      expect(OutlookCalendarAPIMock, :list_calendars, fn _client ->
         {:ok, [%{"id" => "cal1", "name" => "Calendar", "isDefaultCalendar" => true}]}
       end)
 
@@ -72,7 +72,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
 
   describe "token operations" do
     test "exchange_code_for_tokens uses TokenExchange" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok,
          %{
            status: 200,
@@ -84,11 +84,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
          }}
       end)
 
-      assert {:ok, _} = OAuthHelper.exchange_code_for_tokens("code", "uri")
+      assert {:ok, _result} = OAuthHelper.exchange_code_for_tokens("code", "uri")
     end
 
     test "refresh_access_token uses TokenExchange" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok,
          %{
            status: 200,
@@ -100,7 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
          }}
       end)
 
-      assert {:ok, _} = OAuthHelper.refresh_access_token("rt")
+      assert {:ok, _result} = OAuthHelper.refresh_access_token("rt")
     end
   end
 end

@@ -14,7 +14,7 @@ defmodule Tymeslot.Security.Token do
   Returns {token, expiry}.
   """
   @spec generate_session_token(integer()) :: {String.t(), DateTime.t()}
-  def generate_session_token(_user_id) do
+  def generate_session_token(_unused_user_id) do
     token = generate_strong_token()
     expiry = DateTime.add(DateTime.utc_now(), @session_token_validity_hours * 3600, :second)
     {token, expiry}
@@ -42,7 +42,7 @@ defmodule Tymeslot.Security.Token do
   Returns {token, expiry, purpose}.
   """
   @spec generate_email_verification_token(integer()) :: {String.t(), DateTime.t(), String.t()}
-  def generate_email_verification_token(_user_id) do
+  def generate_email_verification_token(_unused_user_id) do
     token = generate_strong_token()
     # 2 hours expiry
     expiry = DateTime.add(DateTime.utc_now(), 2 * 3600, :second)
@@ -74,7 +74,7 @@ defmodule Tymeslot.Security.Token do
   def verify_token(token, expiry_datetime) do
     case DateTime.compare(DateTime.utc_now(), expiry_datetime) do
       :lt -> {:ok, token}
-      _ -> {:error, :token_expired}
+      _expired -> {:error, :token_expired}
     end
   end
 
@@ -108,5 +108,5 @@ defmodule Tymeslot.Security.Token do
     Crypto.secure_compare(token1, token2)
   end
 
-  def secure_compare_tokens(_, _), do: false
+  def secure_compare_tokens(_invalid_token1, _invalid_token2), do: false
 end

@@ -26,7 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
     test "returns error when mock helper raises configuration error" do
       user = insert(:user)
 
-      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _, _ ->
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id, _redirect_uri ->
         raise "Client ID not configured"
       end)
 
@@ -53,7 +53,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
     test "returns error when mock helper raises configuration error" do
       user = insert(:user)
 
-      expect(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _, _ ->
+      expect(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _user_id, _redirect_uri ->
         raise "Client ID not configured"
       end)
 
@@ -69,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
       integration = insert(:calendar_integration, user: user, provider: "google")
       expected_url = "https://accounts.google.com/upgrade"
 
-      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _, _ -> expected_url end)
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id, _integration_id -> expected_url end)
 
       assert {:ok, ^expected_url} = OAuth.initiate_google_scope_upgrade(user.id, integration.id)
     end

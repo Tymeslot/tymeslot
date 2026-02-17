@@ -11,19 +11,19 @@ defmodule Tymeslot.Auth.AuthenticationTest do
   describe "authentication security" do
     test "consistent error messages prevent user enumeration" do
       # Non-existent user
-      {:error, _, message1} = Authentication.authenticate_user("fake@example.com", "password")
+      {:error, _reason, message1} = Authentication.authenticate_user("fake@example.com", "password")
 
       # Existing user wrong password
       user = insert(:user, password_hash: Password.hash_password("RealPass123!"))
-      {:error, _, message2} = Authentication.authenticate_user(user.email, "WrongPass")
+      {:error, _reason, message2} = Authentication.authenticate_user(user.email, "WrongPass")
 
       # Messages must be identical
       assert message1 == message2
     end
 
     test "validates input to prevent injection attacks" do
-      assert {:error, :invalid_input, _} = Authentication.authenticate_user("", "pass")
-      assert {:error, :invalid_input, _} = Authentication.authenticate_user("email", "")
+      assert {:error, :invalid_input, _message} = Authentication.authenticate_user("", "pass")
+      assert {:error, :invalid_input, _message} = Authentication.authenticate_user("email", "")
     end
   end
 
@@ -46,7 +46,7 @@ defmodule Tymeslot.Auth.AuthenticationTest do
       oauth_user = insert(:user, provider: "google", password_hash: nil)
 
       # OAuth users should get an error tuple, not an exception
-      assert {:error, :oauth_user, _message} =
+      assert {:error, :oauth_user, _error_message} =
                Authentication.authenticate_user(oauth_user.email, "any-password")
     end
   end

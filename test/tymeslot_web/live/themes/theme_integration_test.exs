@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
       profile: profile,
       meeting_type: meeting_type
     } do
-      {:ok, _} = update_theme(profile, "1")
+      {:ok, _result} = update_theme(profile, "1")
 
       {:ok, view, html} = live(conn, ~p"/#{profile.username}")
 
@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
       profile: profile,
       meeting_type: meeting_type
     } do
-      {:ok, _} = update_theme(profile, "2")
+      {:ok, _result} = update_theme(profile, "2")
 
       {:ok, view, html} = live(conn, ~p"/#{profile.username}")
 

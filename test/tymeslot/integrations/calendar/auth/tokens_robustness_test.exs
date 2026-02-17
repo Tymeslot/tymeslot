@@ -35,7 +35,7 @@ defmodule Tymeslot.Integrations.Calendar.Auth.TokensRobustnessTest do
         {:ok, {"new", "ref", DateTime.utc_now()}}
       end)
 
-      assert {:ok, _} = Tokens.refresh_oauth_token(integration)
+      assert {:ok, _result} = Tokens.refresh_oauth_token(integration)
     end
 
     test "handles malformed integration maps" do
@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.Auth.TokensRobustnessTest do
         {:ok, {"new", "ref", DateTime.utc_now()}}
       end)
 
-      assert {:ok, _} = Tokens.refresh_oauth_token(integration)
+      assert {:ok, _result} = Tokens.refresh_oauth_token(integration)
     end
   end
 

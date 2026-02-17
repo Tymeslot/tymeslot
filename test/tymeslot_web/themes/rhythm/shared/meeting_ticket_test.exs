@@ -115,12 +115,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicketTest do
     end
 
     test "renders with footer slot content when provided" do
-      _assigns = %{}
+      _base_assigns = %{}
 
       footer_slot = [
         %{
           __slot__: :footer,
-          inner_block: fn assigns, _ ->
+          inner_block: fn assigns, _callback_context ->
             ~H"""
             <button id="footer-action">Reschedule</button>
             """

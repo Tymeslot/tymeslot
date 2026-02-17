@@ -21,18 +21,18 @@ defmodule Tymeslot.Auth.SecurityTest do
         )
 
       # Should block after 10 failed attempts (as configured in RateLimiter)
-      Enum.each(1..10, fn _ ->
+      Enum.each(1..10, fn _attempt ->
         Auth.authenticate_user(user.email, "WrongPassword")
       end)
 
       # Subsequent attempts should be rate limited
-      assert {:error, :rate_limit_exceeded, _} =
+      assert {:error, :rate_limit_exceeded, _message} =
                Auth.authenticate_user(user.email, "ValidPass123!")
     end
 
     test "protects against timing attacks with consistent error messages" do
       # Non-existent user
-      {:error, _, message1} = Auth.authenticate_user("fake@example.com", "password")
+      {:error, _reason1, message1} = Auth.authenticate_user("fake@example.com", "password")
 
       # Existing user with wrong password
       user =
@@ -40,7 +40,7 @@ defmodule Tymeslot.Auth.SecurityTest do
           password_hash: Password.hash_password("RealPass123!")
         )
 
-      {:error, _, message2} = Auth.authenticate_user(user.email, "WrongPass")
+      {:error, _reason2, message2} = Auth.authenticate_user(user.email, "WrongPass")
 
       # Messages should be identical to prevent user enumeration
       assert message1 == message2
@@ -51,7 +51,7 @@ defmodule Tymeslot.Auth.SecurityTest do
 
       # OAuth users should get an error tuple, not an exception
       # This prevents timing attacks by returning consistent error responses
-      assert {:error, :oauth_user, _message} =
+      assert {:error, :oauth_user, _error_message} =
                Auth.authenticate_user(oauth_user.email, "any-password")
     end
   end
@@ -60,7 +60,7 @@ defmodule Tymeslot.Auth.SecurityTest do
     test "sessions expire after 24 hours" do
       user = insert(:user)
 
-      {:ok, _conn, _token} =
+      {:ok, _created_conn, _session_token} =
         Session.create_session(init_test_session(build_conn(), %{}), user)
 
       # Create expired session directly in DB
@@ -83,7 +83,7 @@ defmodule Tymeslot.Auth.SecurityTest do
       sessions = insert_list(3, :user_session, user: user)
 
       # Change password
-      {:ok, _} = Auth.update_user_password(user, "OldPass123!", "NewPass123!", "NewPass123!")
+      {:ok, _updated_user} = Auth.update_user_password(user, "OldPass123!", "NewPass123!", "NewPass123!")
 
       # Verify all old sessions are invalid
       Enum.each(sessions, fn session ->
@@ -94,7 +94,7 @@ defmodule Tymeslot.Auth.SecurityTest do
 
   describe "registration security" do
     test "prevents duplicate accounts" do
-      _existing = insert(:user, email: "taken@example.com")
+      _existing_user = insert(:user, email: "taken@example.com")
 
       params = %{
         # Case variation
@@ -105,7 +105,7 @@ defmodule Tymeslot.Auth.SecurityTest do
         "terms_accepted" => "true"
       }
 
-      {:error, :auth, _} = Auth.register_user(params, %Plug.Conn{})
+      {:error, :auth, _changeset} = Auth.register_user(params, %Plug.Conn{})
     end
 
     test "enforces strong passwords" do
@@ -131,7 +131,7 @@ defmodule Tymeslot.Auth.SecurityTest do
           "terms_accepted" => "true"
         }
 
-        assert {:error, :input, _} = Auth.register_user(params, %Plug.Conn{})
+        assert {:error, :input, _changeset} = Auth.register_user(params, %Plug.Conn{})
       end)
     end
 
@@ -144,7 +144,7 @@ defmodule Tymeslot.Auth.SecurityTest do
         "terms_accepted" => "true"
       }
 
-      {:ok, user, _} = Auth.register_user(params, %Plug.Conn{})
+      {:ok, user, _session} = Auth.register_user(params, %Plug.Conn{})
 
       # Script tags should be removed, name should be sanitized
       if user.name do
@@ -167,7 +167,7 @@ defmodule Tymeslot.Auth.SecurityTest do
         "terms_accepted" => "true"
       }
 
-      {:ok, user, _} = Auth.register_user(params, conn)
+      {:ok, user, _session} = Auth.register_user(params, conn)
       assert is_nil(user.verified_at)
     end
   end
@@ -186,7 +186,7 @@ defmodule Tymeslot.Auth.SecurityTest do
         )
 
       # Unverified users should not be able to authenticate
-      assert {:error, :email_not_verified, _} = Auth.authenticate_user(unverified.email, password)
+      assert {:error, :email_not_verified, _message} = Auth.authenticate_user(unverified.email, password)
     end
   end
 
@@ -194,12 +194,12 @@ defmodule Tymeslot.Auth.SecurityTest do
     test "reset tokens are single-use" do
       user = insert(:user)
       result = Auth.initiate_password_reset(user.email)
-      assert match?({:ok, _}, result) or match?({:ok, _, _}, result)
+      assert match?({:ok, _result}, result) or match?({:ok, _, _}, result)
 
       # Get token directly using helper - initiate_password_reset sends it via email
       # For testing, we generate a fresh token and store it
-      {token, _} = Token.generate_password_reset_token()
-      {:ok, _} = UserQueries.set_reset_token(user, token)
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserQueries.set_reset_token(user, token)
 
       # First use succeeds
       result = Auth.reset_password(token, "NewPass123!", "NewPass123!")
@@ -207,7 +207,7 @@ defmodule Tymeslot.Auth.SecurityTest do
       assert match?({:ok, _, _}, result)
 
       # Second use always fails
-      assert {:error, :invalid_token, _} =
+      assert {:error, :invalid_token, _message} =
                Auth.reset_password(token, "AnotherPass123!", "AnotherPass123!")
     end
 

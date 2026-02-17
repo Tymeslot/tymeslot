@@ -264,7 +264,7 @@ defmodule Tymeslot.MeetingTypesTest do
       # Reorder: B, C, A
       new_order = [mt2.id, mt3.id, mt1.id]
 
-      assert {:ok, _} = MeetingTypes.reorder_meeting_types(user.id, new_order)
+      assert {:ok, _result} = MeetingTypes.reorder_meeting_types(user.id, new_order)
 
       # Verify new order
       types = MeetingTypes.get_all_meeting_types(user.id)
@@ -282,7 +282,7 @@ defmodule Tymeslot.MeetingTypesTest do
 
       # Try to reorder user1's types as user2
       new_order = [mt2.id, mt1.id]
-      assert {:ok, _} = MeetingTypes.reorder_meeting_types(user2.id, new_order)
+      assert {:ok, _result} = MeetingTypes.reorder_meeting_types(user2.id, new_order)
 
       # Verify user1's types remain unchanged
       types = MeetingTypes.get_all_meeting_types(user1.id)
@@ -293,7 +293,7 @@ defmodule Tymeslot.MeetingTypesTest do
     test "handles empty meeting type list" do
       user = insert(:user)
 
-      assert {:ok, _} = MeetingTypes.reorder_meeting_types(user.id, [])
+      assert {:ok, _result} = MeetingTypes.reorder_meeting_types(user.id, [])
     end
   end
 end

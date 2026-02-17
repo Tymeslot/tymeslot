@@ -98,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
         result = provider_module.test_connection(invalid_config)
 
         # Should return error tuple
-        assert match?({:error, _}, result)
+        assert match?({:error, _reason}, result)
       end)
     end
 
@@ -118,7 +118,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
         # Should not crash with options
         result = provider_module.test_connection(config, opts)
 
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
       end)
     end
   end
@@ -161,7 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
         # Should not crash on network error
         result = provider_module.test_connection(config)
 
-        assert match?({:error, _}, result) or match?({:ok, _}, result)
+        assert match?({:error, _reason}, result) or match?({:ok, _result}, result)
       end)
     end
 
@@ -183,7 +183,7 @@ defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
             # Message should be string or atom
             assert is_binary(message) or is_atom(message)
 
-          {:ok, _} ->
+          {:ok, _result} ->
             # Some providers may handle this differently
             :ok
         end

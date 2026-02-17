@@ -377,7 +377,7 @@ defmodule Tymeslot.MeetingsContextTest do
     test "organizer can delete meeting" do
       meeting = insert(:meeting, organizer_email: "organizer@example.com")
 
-      assert {:ok, _} = Meetings.delete_meeting_for_user(meeting, "organizer@example.com")
+      assert {:ok, _deleted_meeting} = Meetings.delete_meeting_for_user(meeting, "organizer@example.com")
       assert {:error, :not_found} = MeetingQueries.get_meeting(meeting.id)
     end
 
@@ -477,8 +477,8 @@ defmodule Tymeslot.MeetingsContextTest do
       # This should not raise
       result = Meetings.schedule_email_notifications(meeting)
 
-      # Result can be :ok or {:error, _} depending on Oban config
-      assert result in [:ok, {:error, :disabled}] or match?({:error, _}, result)
+      # Result can be :ok or {:error, _reason} depending on Oban config
+      assert result in [:ok, {:error, :disabled}] or match?({:error, _reason}, result)
     end
   end
 

@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     if meeting_uid, do: "/#{username}/meeting/#{meeting_uid}/reschedule", else: "/#{username}"
   end
 
-  defp do_get_base_path(_, username, _socket), do: "/#{username}"
+  defp do_get_base_path(_action, username, _socket), do: "/#{username}"
 
   defp build_query_params(socket, locale) do
     slug = get_slug(socket)
@@ -73,6 +73,6 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     MeetingTypes.normalize_duration_slug(duration)
   end
 
-  defp maybe_put_query_param(params, _key, nil), do: params
+  defp maybe_put_query_param(params, _param_key, nil), do: params
   defp maybe_put_query_param(params, key, value), do: Map.put(params, key, value)
 end

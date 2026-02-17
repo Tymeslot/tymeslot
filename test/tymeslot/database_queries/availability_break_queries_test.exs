@@ -170,7 +170,7 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityBreakQueriesTest do
       break2 = insert(:availability_break, weekly_availability: weekly_availability)
       other_break = insert(:availability_break)
 
-      {count, _} =
+      {count, _deleted_ids} =
         AvailabilityBreakQueries.delete_breaks_by_weekly_availability(weekly_availability.id)
 
       assert count == 2
@@ -182,7 +182,7 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityBreakQueriesTest do
     test "returns zero count when no breaks exist" do
       weekly_availability = insert(:weekly_availability)
 
-      {count, _} =
+      {count, _deleted_ids} =
         AvailabilityBreakQueries.delete_breaks_by_weekly_availability(weekly_availability.id)
 
       assert count == 0
@@ -366,8 +366,8 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityBreakQueriesTest do
 
       assert length(result) == 2
 
-      assert Enum.any?(result, fn {id, _, _} -> id == break1.id end)
-      assert Enum.any?(result, fn {id, _, _} -> id == break2.id end)
+      assert Enum.any?(result, fn {id, _start_time, _end_time} -> id == break1.id end)
+      assert Enum.any?(result, fn {id, _start_time, _end_time} -> id == break2.id end)
     end
 
     test "excludes specified break from results" do
@@ -382,7 +382,7 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityBreakQueriesTest do
         )
 
       assert length(result) == 1
-      assert [{id, _, _}] = result
+      assert [{id, _start_time, _end_time}] = result
       assert id == break2.id
     end
 
@@ -422,7 +422,7 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityBreakQueriesTest do
       # Reorder: break3, break1, break2
       new_order = [break3.id, break1.id, break2.id]
 
-      assert {:ok, _} =
+      assert {:ok, _result} =
                AvailabilityBreakQueries.reorder_breaks(weekly_availability.id, new_order)
 
       # Verify new order

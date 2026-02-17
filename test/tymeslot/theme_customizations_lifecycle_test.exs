@@ -45,14 +45,14 @@ defmodule Tymeslot.ThemeCustomizationsLifecycleTest do
     end
 
     test "get_all_by_profile_id/1 returns all customizations for a profile", %{profile: profile} do
-      {:ok, _} =
+      {:ok, _result} =
         ThemeCustomizations.create_theme_customization(profile.id, "1", %{
           "color_scheme" => "purple",
           "background_type" => "gradient",
           "background_value" => "gradient_1"
         })
 
-      {:ok, _} =
+      {:ok, _result} =
         ThemeCustomizations.create_theme_customization(profile.id, "2", %{
           "color_scheme" => "ocean",
           "background_type" => "video",
@@ -65,14 +65,14 @@ defmodule Tymeslot.ThemeCustomizationsLifecycleTest do
     end
 
     test "reset_to_defaults/2 removes customization", %{profile: profile} do
-      {:ok, _} =
+      {:ok, _result} =
         ThemeCustomizations.create_theme_customization(profile.id, "1", %{
           "color_scheme" => "sunset",
           "background_type" => "gradient",
           "background_value" => "gradient_3"
         })
 
-      assert {:ok, _} = ThemeCustomizations.reset_to_defaults(profile.id, "1")
+      assert {:ok, _result} = ThemeCustomizations.reset_to_defaults(profile.id, "1")
       assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1") == nil
     end
 
@@ -83,7 +83,7 @@ defmodule Tymeslot.ThemeCustomizationsLifecycleTest do
     end
 
     test "get_for_user/2 returns customization by user_id", %{user: user, profile: profile} do
-      {:ok, _} =
+      {:ok, _result} =
         ThemeCustomizations.create_theme_customization(profile.id, "1", %{
           "color_scheme" => "forest",
           "background_type" => "gradient",

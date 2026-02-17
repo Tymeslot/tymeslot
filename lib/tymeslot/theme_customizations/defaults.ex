@@ -28,7 +28,7 @@ defmodule Tymeslot.ThemeCustomizations.Defaults do
           background_value: "preset:rhythm-default"
         }
 
-      _ ->
+      _unknown_theme ->
         # Default fallback
         %{
           color_scheme: "default",
@@ -110,13 +110,13 @@ defmodule Tymeslot.ThemeCustomizations.Defaults do
     feature in [:video_backgrounds, :image_backgrounds, :gradient_backgrounds, :color_backgrounds]
   end
 
-  defp theme_one_supports?(_, _), do: false
+  defp theme_one_supports?(_other_theme, _feature), do: false
 
   defp theme_two_supports?("2", feature) do
     feature in [:video_backgrounds, :image_backgrounds, :gradient_backgrounds, :color_backgrounds]
   end
 
-  defp theme_two_supports?(_, _), do: false
+  defp theme_two_supports?(_other_theme, _feature), do: false
 
   @doc """
   Gets the recommended background type for a theme.

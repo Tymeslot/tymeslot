@@ -25,7 +25,7 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionExpiredHandler do
     Logger.info("Processing checkout.session.expired", session_id: session_id)
 
     case Payments.process_failed_payment(session_id) do
-      {:ok, _} ->
+      {:ok, _result} ->
         {:ok, :event_processed}
 
       {:error, reason} ->

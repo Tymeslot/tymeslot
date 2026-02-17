@@ -18,7 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionAndFetchTest do
     end
 
     defp get_pid(%{test_pid: pid}) when is_pid(pid), do: pid
-    defp get_pid(_), do: self()
+    defp get_pid(_other), do: self()
   end
 
   describe "prepare_selected_params/2" do

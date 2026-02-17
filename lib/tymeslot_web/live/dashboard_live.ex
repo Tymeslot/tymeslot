@@ -470,7 +470,7 @@ defmodule TymeslotWeb.DashboardLive do
           Profiles.prefill_timezone(assigns.profile, assigns[:detected_timezone])
         )
 
-      _ ->
+      _other_action ->
         base_props
     end
   end

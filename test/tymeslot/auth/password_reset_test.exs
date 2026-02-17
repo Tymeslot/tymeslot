@@ -44,8 +44,8 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   describe "token security" do
     test "reset tokens are single-use" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
-      {token, _} = Token.generate_password_reset_token()
-      {:ok, _} = UserQueries.set_reset_token(user, token)
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserQueries.set_reset_token(user, token)
 
       new_password = "NewSecurePassword123!"
 
@@ -54,17 +54,17 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       assert match?({:ok, _, _}, result) or match?({:error, :invalid_token, _}, result)
 
       # Second use always fails
-      assert {:error, :invalid_token, _} =
+      assert {:error, :invalid_token, _message} =
                PasswordReset.reset_password(token, "AnotherPass123!", "AnotherPass123!")
     end
 
     test "enforces strong password requirements" do
       user = insert(:user)
-      {token, _} = Token.generate_password_reset_token()
-      {:ok, _} = UserQueries.set_reset_token(user, token)
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserQueries.set_reset_token(user, token)
 
       # Weak password rejected
-      assert {:error, _, _} = PasswordReset.reset_password(token, "weak", "weak")
+      assert {:error, _reason, _changeset} = PasswordReset.reset_password(token, "weak", "weak")
     end
   end
 end

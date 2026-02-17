@@ -43,7 +43,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
         # Clear both image and video paths when selecting color
         %{customization | background_image_path: nil, background_video_path: nil}
 
-      _ ->
+      _other_type ->
         customization
     end
   end
@@ -85,7 +85,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
       "color" -> describe_color(customization)
       "image" -> describe_image(customization, presets)
       "video" -> describe_video(customization, presets)
-      _ -> "No Background Selected"
+      _unknown -> "No Background Selected"
     end
   end
 
@@ -150,7 +150,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
       "color" -> customization.background_value
       "image" -> get_image_css(customization, presets)
       "video" -> get_video_css(customization, presets)
-      _ -> nil
+      _unknown -> nil
     end
   end
 
@@ -203,7 +203,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
       "color" -> resolve_color(customization)
       "image" -> resolve_image(customization, presets)
       "video" -> resolve_video(customization, presets)
-      _ -> {:none, %{}}
+      _unknown -> {:none, %{}}
     end
   end
 
@@ -301,9 +301,9 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
     case {customization.background_type, customization.background_value} do
       {"image", "custom"} -> customization.background_image_path
       {"video", "custom"} -> customization.background_video_path
-      {"image", _} -> get_image_preset_file(customization, presets)
-      {"video", _} -> get_video_preset_file(customization, presets)
-      _ -> nil
+      {"image", _preset_value} -> get_image_preset_file(customization, presets)
+      {"video", _preset_value} -> get_video_preset_file(customization, presets)
+      _other_type -> nil
     end
   end
 

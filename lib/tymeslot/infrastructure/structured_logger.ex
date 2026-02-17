@@ -55,7 +55,7 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
       :account_locked ->
         Logger.error("Account locked due to too many failed attempts", merged_metadata)
 
-      _ ->
+      _other ->
         Logger.info("Authentication event: #{event}", merged_metadata)
     end
   end

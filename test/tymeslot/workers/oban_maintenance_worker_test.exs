@@ -58,11 +58,11 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
       stuck_time = DateTime.add(DateTime.utc_now(), -6, :hour)
 
       # Create 3 stuck jobs
-      for i <- 1..3 do
+      for worker_num <- 1..3 do
         Repo.insert!(%Oban.Job{
           state: "executing",
           attempted_at: stuck_time,
-          worker: "Worker#{i}",
+          worker: "Worker#{worker_num}",
           queue: "default",
           args: %{},
           errors: [],
@@ -87,7 +87,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
       })
 
       # Should not crash
-      assert {:ok, _result} = perform_job(ObanMaintenanceWorker, %{})
+      assert {:ok, _cleaned_result} = perform_job(ObanMaintenanceWorker, %{})
     end
   end
 
@@ -176,7 +176,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
 
       initial_count = Repo.one(from j in Oban.Job, select: count(j.id))
 
-      assert {:ok, _result} = perform_job(ObanMaintenanceWorker, %{})
+      assert {:ok, _cleanup_result} = perform_job(ObanMaintenanceWorker, %{})
 
       final_count = Repo.one(from j in Oban.Job, select: count(j.id))
 
@@ -194,7 +194,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
     end
 
     test "schedules next run after completion" do
-      assert {:ok, _} = perform_job(ObanMaintenanceWorker, %{})
+      assert {:ok, _result} = perform_job(ObanMaintenanceWorker, %{})
 
       assert_enqueued(
         worker: ObanMaintenanceWorker,
@@ -206,11 +206,11 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
   describe "perform/1 - input validation" do
     test "accepts unknown job arguments (forward compatibility)" do
       # Job with extra fields from future version
-      assert {:ok, _result} = perform_job(ObanMaintenanceWorker, %{"future_option" => true})
+      assert {:ok, _cleanup_result} = perform_job(ObanMaintenanceWorker, %{"future_option" => true})
     end
 
     test "handles empty args" do
-      assert {:ok, _result} = perform_job(ObanMaintenanceWorker, %{})
+      assert {:ok, _cleanup_result} = perform_job(ObanMaintenanceWorker, %{})
     end
   end
 

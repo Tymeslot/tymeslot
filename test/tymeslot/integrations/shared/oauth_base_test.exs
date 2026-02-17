@@ -13,9 +13,9 @@ defmodule Tymeslot.Integrations.Common.OAuthBaseTest do
         oauth_scope: "scope"
       }
 
-      assert :ok = OAuthBase.validate_config(config, fn _ -> :ok end)
+      assert :ok = OAuthBase.validate_config(config, fn _client -> :ok end)
 
-      assert {:error, message} = OAuthBase.validate_config(%{}, fn _ -> :ok end)
+      assert {:error, message} = OAuthBase.validate_config(%{}, fn _client -> :ok end)
       assert message =~ "Missing required fields"
     end
 
@@ -28,7 +28,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBaseTest do
       }
 
       assert {:error, "invalid scope"} =
-               OAuthBase.validate_config(config, fn _ -> {:error, "invalid scope"} end)
+               OAuthBase.validate_config(config, fn _client -> {:error, "invalid scope"} end)
     end
   end
 
@@ -41,11 +41,11 @@ defmodule Tymeslot.Integrations.Common.OAuthBaseTest do
         oauth_scope: "scope"
       }
 
-      assert {:ok, ^config} = OAuthBase.new(config, fn _ -> :ok end)
+      assert {:ok, ^config} = OAuthBase.new(config, fn _client -> :ok end)
     end
 
     test "returns error on failure" do
-      assert {:error, _} = OAuthBase.new(%{}, fn _ -> :ok end)
+      assert {:error, _reason} = OAuthBase.new(%{}, fn _client -> :ok end)
     end
   end
 

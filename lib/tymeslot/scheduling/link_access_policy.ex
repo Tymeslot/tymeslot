@@ -69,7 +69,7 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
       {:error, :no_calendar} ->
         "Connect a calendar in Calendar settings to enable this feature"
 
-      _ ->
+      _other_reason ->
         "Complete setup to enable this feature"
     end
   end
@@ -105,9 +105,9 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
         "This scheduling page isn’t available yet. The organizer hasn’t set a username."
 
       :no_calendar ->
-        "This scheduling page isn’t available right now. The organizer hasn’t connected a calendar yet."
+        "This scheduling page isn't available right now. The organizer hasn't connected a calendar yet."
 
-      _ ->
+      _other_reason ->
         "Complete setup to enable this feature"
     end
   end
@@ -119,12 +119,12 @@ defmodule Tymeslot.Scheduling.LinkAccessPolicy do
   defp has_username?(%{username: username}) when is_binary(username),
     do: String.trim(username) != ""
 
-  defp has_username?(_), do: false
+  defp has_username?(_user), do: false
 
   defp has_calendar?(integration_status) when is_map(integration_status),
     do: integration_status[:has_calendar] || false
 
-  defp has_calendar?(_), do: false
+  defp has_calendar?(_integration_status), do: false
 
   # Demo profiles used in the scheduling flow for previews/demos.
   defp demo_profile?(profile), do: Demo.demo_profile?(profile)

@@ -42,7 +42,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(client, opts \\ []) do
     case Base.test_connection(client, opts) do
-      {:ok, _} -> {:ok, success_message(client.provider)}
+      {:ok, _result} -> {:ok, success_message(client.provider)}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -90,7 +90,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
     events =
       results
-      |> Enum.filter(&match?({:ok, _}, &1))
+      |> Enum.filter(&match?({:ok, _result}, &1))
       |> Enum.flat_map(fn {:ok, evs} -> evs end)
       |> Enum.uniq_by(& &1.uid)
 
@@ -140,5 +140,5 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   defp success_message(:radicale), do: "Radicale connection successful"
-  defp success_message(_), do: "CalDAV connection successful"
+  defp success_message(_arg), do: "CalDAV connection successful"
 end

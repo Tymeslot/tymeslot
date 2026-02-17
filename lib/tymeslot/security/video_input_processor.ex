@@ -31,7 +31,7 @@ defmodule Tymeslot.Security.VideoInputProcessor do
       "custom" ->
         validate_custom_video_form(params, metadata)
 
-      _ ->
+      _unknown_provider ->
         SecurityLogger.log_security_event("video_integration_unknown_provider", %{
           ip_address: metadata[:ip],
           user_agent: metadata[:user_agent],
@@ -93,7 +93,7 @@ defmodule Tymeslot.Security.VideoInputProcessor do
     end
   end
 
-  def validate_single_field(_, _, _), do: {:ok, nil}
+  def validate_single_field(_other_field, _value, _opts), do: {:ok, nil}
 
   # Private validation functions for each provider type
 
@@ -180,7 +180,7 @@ defmodule Tymeslot.Security.VideoInputProcessor do
     end
   end
 
-  defp validate_api_key(_, _metadata) do
+  defp validate_api_key(_other, _metadata) do
     {:error, %{api_key: "API key must be text"}}
   end
 
@@ -197,7 +197,7 @@ defmodule Tymeslot.Security.VideoInputProcessor do
     end
   end
 
-  defp validate_base_url(_, _metadata) do
+  defp validate_base_url(_other, _metadata) do
     {:error, %{base_url: "Base URL must be text"}}
   end
 
@@ -227,7 +227,7 @@ defmodule Tymeslot.Security.VideoInputProcessor do
     end
   end
 
-  defp validate_meeting_url(_, _metadata) do
+  defp validate_meeting_url(_other, _metadata) do
     {:error, %{custom_meeting_url: "Meeting URL must be text"}}
   end
 

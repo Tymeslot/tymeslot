@@ -15,7 +15,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
     case Date.day_of_week(date) do
       6 -> Date.add(date, 2)
       7 -> Date.add(date, 1)
-      _ -> date
+      _weekday -> date
     end
   end
 
@@ -404,8 +404,8 @@ defmodule Tymeslot.Availability.ConflictsTest do
       slot_start =
         case DateTime.new(tuesday_date, slot_time, timezone) do
           {:ok, dt} -> dt
-          {:ambiguous, first, _} -> first
-          {:error, _} -> DateTime.new!(tuesday_date, slot_time, "Etc/UTC")
+          {:ambiguous, first, _second} -> first
+          {:error, _reason} -> DateTime.new!(tuesday_date, slot_time, "Etc/UTC")
         end
 
       slot_end = DateTime.add(slot_start, duration, :minute)
@@ -425,8 +425,8 @@ defmodule Tymeslot.Availability.ConflictsTest do
       monday_slot_start =
         case DateTime.new(monday_date, monday_slot_time, timezone) do
           {:ok, dt} -> dt
-          {:ambiguous, first, _} -> first
-          {:error, _} -> DateTime.new!(monday_date, monday_slot_time, "Etc/UTC")
+          {:ambiguous, first, _second} -> first
+          {:error, _reason} -> DateTime.new!(monday_date, monday_slot_time, "Etc/UTC")
         end
 
       monday_slot_end = DateTime.add(monday_slot_start, duration, :minute)

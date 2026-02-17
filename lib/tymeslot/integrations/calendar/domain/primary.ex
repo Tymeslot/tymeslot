@@ -45,7 +45,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
       {:ok, %{primary_calendar_integration_id: id}} ->
         CalendarManagement.get_calendar_integration(id, user_id)
 
-      {:error, _} ->
+      {:error, _reason} ->
         {:error, :not_found}
     end
   end
@@ -64,7 +64,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
     is_primary =
       case ProfileQueries.get_by_user_id(user_id) do
         {:ok, profile} -> profile.primary_calendar_integration_id == integration_id
-        _ -> false
+        _error -> false
       end
 
     # Delete the integration
@@ -130,7 +130,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
          :ok <- verify_integration_ownership(integration, user_id) do
       {:ok, integration}
     else
-      {:error, reason} -> {:error, reason}
+      {:error, error_reason} -> {:error, error_reason}
     end
   end
 
@@ -145,7 +145,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   defp verify_integration_ownership(%CalendarIntegrationSchema{user_id: user_id}, user_id),
     do: :ok
 
-  defp verify_integration_ownership(_, _), do: {:error, :unauthorized}
+  defp verify_integration_ownership(_integration, _different_user_id), do: {:error, :unauthorized}
 
   defp ensure_default_booking_calendar(%CalendarIntegrationSchema{} = integration) do
     if is_nil(integration.default_booking_calendar_id) do
@@ -157,7 +157,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
              }) do
         updated
       else
-        _ -> integration
+        _error -> integration
       end
     else
       integration

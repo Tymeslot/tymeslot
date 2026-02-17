@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Components.Dashboard.Availability.DeleteBreakModal do
     label =
       case info do
         %{} -> Map.get(info, :label) || Map.get(info, "label")
-        _ -> nil
+        _other -> nil
       end
 
     label =

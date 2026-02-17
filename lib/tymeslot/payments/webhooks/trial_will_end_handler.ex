@@ -20,7 +20,7 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?("customer.subscription.trial_will_end"), do: true
-  def can_handle?(_), do: false
+  def can_handle?(_event_type), do: false
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(event, subscription_object) do
@@ -66,7 +66,7 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
             {:ok, :trial_ending_notified}
         end
 
-      _ ->
+      _other ->
         Logger.error("TRIAL ENDING ERROR - Invalid trial_end timestamp: #{inspect(trial_end)}",
           subscription_id: subscription_id
         )

@@ -92,7 +92,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
       UserQueries.transaction(fn ->
         with {:ok, {user, created}} <-
                find_or_create_by_provider(Repo, provider, provider_uid, auth_params),
-             {:ok, _} <- ensure_profile(Repo, user, created, profile_params) do
+             {:ok, _result} <- ensure_profile(Repo, user, created, profile_params) do
           {user, created}
         else
           {:error, {operation, reason}} ->
@@ -150,7 +150,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
         name when is_binary(name) and name != "" ->
           Map.put(profile_attrs, :full_name, String.trim(name))
 
-        _ ->
+        _other ->
           profile_attrs
       end
 
@@ -179,7 +179,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     case provider do
       :github -> UserQueries.get_user_by_github_id(provider_uid, repo)
       :google -> UserQueries.get_user_by_google_id(provider_uid, repo)
-      _ -> {:error, :not_found}
+      _other -> {:error, :not_found}
     end
   end
 
@@ -217,11 +217,11 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     case provider do
       :github -> %{github_user_id: provider_uid}
       :google -> %{google_user_id: provider_uid}
-      _ -> %{}
+      _other -> %{}
     end
   end
 
   defp provider_uid_field(:github), do: "github_user_id"
   defp provider_uid_field(:google), do: "google_user_id"
-  defp provider_uid_field(_), do: nil
+  defp provider_uid_field(_arg), do: nil
 end

@@ -90,7 +90,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
 
     case provider do
       :unknown -> {:error, "Unsupported provider: #{integration.provider}"}
-      _ -> discover_calendars(provider, config, opts)
+      _other -> discover_calendars(provider, config, opts)
     end
   end
 
@@ -170,7 +170,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
           :radicale ->
             perform_radicale_discovery(config)
 
-          _ ->
+          _other ->
             {:error, "Unsupported provider: #{provider}"}
         end
       end,

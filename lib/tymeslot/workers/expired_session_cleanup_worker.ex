@@ -14,7 +14,7 @@ defmodule Tymeslot.Workers.ExpiredSessionCleanupWorker do
   @impl Oban.Worker
   def perform(_job) do
     case UserSessionQueries.cleanup_expired_sessions() do
-      {deleted_count, _} ->
+      {deleted_count, _sessions} ->
         Logger.info("Expired session cleanup completed", deleted_count: deleted_count)
         :ok
     end

@@ -57,7 +57,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
 
             {:noreply, socket}
 
-          {:error, _} ->
+          {:error, _changeset} ->
             {:noreply,
              LiveView.put_flash(socket, :error, "Please check your input and try again.")}
         end

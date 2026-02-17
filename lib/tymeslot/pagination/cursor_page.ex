@@ -37,10 +37,10 @@ defmodule Tymeslot.Pagination.CursorPage do
   def decode_cursor(cursor) when is_binary(cursor) do
     with {:ok, json} <- Base.url_decode64(cursor, padding: false),
          {:ok, %{"after_start" => after_start_str, "after_id" => after_id}} <- Jason.decode(json),
-         {:ok, after_start, _} <- DateTime.from_iso8601(after_start_str) do
+         {:ok, after_start, _offset} <- DateTime.from_iso8601(after_start_str) do
       {:ok, %{after_start: after_start, after_id: after_id}}
     else
-      _ -> {:error, :invalid_cursor}
+      _other -> {:error, :invalid_cursor}
     end
   end
 end

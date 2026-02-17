@@ -35,7 +35,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     true
   end
 
-  def can_handle?(_), do: false
+  def can_handle?(_event_type), do: false
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(%{"type" => "charge.refunded"} = event, charge) do
@@ -182,7 +182,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
       amount when is_integer(amount) and amount > 0 ->
         amount
 
-      _ ->
+      _amount_other ->
         # Fall back to summing individual refunds
         refunds = get_in(charge, ["refunds", "data"]) || get_in(charge, [:refunds, :data]) || []
 
@@ -243,7 +243,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     )
   end
 
-  defp send_refund_email(subscription, refund_amount_cents, _access_revoked) do
+  defp send_refund_email(subscription, refund_amount_cents, _revoked) do
     WebhookUtils.deliver_user_email(
       subscription.user_id,
       :refund_processed_template,
@@ -272,7 +272,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
 
   defp ensure_revoked_access(subscription, charge_id, customer_id, total_refunded, charge_amount) do
     case revoke_subscription_access(customer_id) do
-      {:ok, _} ->
+      {:ok, _result} ->
         Logger.info("REFUND PROCESSED - Revoked Pro access for user #{subscription.user_id}",
           user_id: subscription.user_id,
           charge_id: charge_id,

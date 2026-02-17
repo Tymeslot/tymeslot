@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Layouts do
       case theme_id do
         "1" -> ~p"/assets/scheduling-theme-quill.css"
         "2" -> ~p"/assets/scheduling-theme-rhythm.css"
-        _ -> ~p"/assets/scheduling-theme-quill.css"
+        _other -> ~p"/assets/scheduling-theme-quill.css"
       end
 
     assigns = %{theme_css_path: theme_css_path}
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Layouts do
     case theme_id do
       "1" -> "quill-theme"
       "2" -> "rhythm-theme"
-      _ -> "quill-theme"
+      _other -> "quill-theme"
     end
   end
 
@@ -156,7 +156,7 @@ defmodule TymeslotWeb.Layouts do
     end)
   end
 
-  defp filter_valid_extensions(_), do: []
+  defp filter_valid_extensions(_arg), do: []
 
   @doc """
   Renders analytics scripts based on application configuration.
@@ -187,7 +187,7 @@ defmodule TymeslotWeb.Layouts do
     """
   end
 
-  defp render_provider_script(_, assigns), do: ~H""
+  defp render_provider_script(_other, assigns), do: ~H""
 
   defp filter_valid_providers(nil), do: []
   defp filter_valid_providers([]), do: []
@@ -199,11 +199,11 @@ defmodule TymeslotWeb.Layouts do
         when is_binary(url) and is_binary(id) and url != "" and id != "" ->
           String.starts_with?(url, ["https://", "http://", "/"])
 
-        _ ->
+        _other ->
           false
       end
     end)
   end
 
-  defp filter_valid_providers(_), do: []
+  defp filter_valid_providers(_arg), do: []
 end

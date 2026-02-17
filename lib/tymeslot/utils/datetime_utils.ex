@@ -34,11 +34,11 @@ defmodule Tymeslot.Utils.DateTimeUtils do
       [time_part] ->
         parse_24h_time(time_part)
 
-      _ ->
+      _invalid ->
         {:error, :invalid_time_format}
     end
   rescue
-    _ -> {:error, :invalid_time_format}
+    _exception -> {:error, :invalid_time_format}
   end
 
   def parse_time_string(_value), do: {:error, :invalid_time_format}
@@ -50,7 +50,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
          {:ok, time} <- Time.new(adjusted_hour, minute, 0) do
       {:ok, time}
     else
-      _ -> {:error, :invalid_time_format}
+      _error -> {:error, :invalid_time_format}
     end
   end
 
@@ -59,12 +59,12 @@ defmodule Tymeslot.Utils.DateTimeUtils do
       case String.split(time_part, ":") do
         [hour, minute] -> "#{hour}:#{minute}:00"
         [hour, minute, second] -> "#{hour}:#{minute}:#{second}"
-        _ -> nil
+        _invalid -> nil
       end
 
     case normalized && Time.from_iso8601(normalized) do
       {:ok, time} -> {:ok, time}
-      _ -> {:error, :invalid_time_format}
+      _error -> {:error, :invalid_time_format}
     end
   end
 
@@ -75,10 +75,10 @@ defmodule Tymeslot.Utils.DateTimeUtils do
              {minute, ""} <- Integer.parse(minute_str) do
           {:ok, hour, minute}
         else
-          _ -> {:error, :invalid_time_format}
+          _error -> {:error, :invalid_time_format}
         end
 
-      _ ->
+      _invalid ->
         {:error, :invalid_time_format}
     end
   end
@@ -87,7 +87,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
     case String.upcase(String.trim(period)) do
       "AM" -> {:ok, :am}
       "PM" -> {:ok, :pm}
-      _ -> {:error, :invalid_period}
+      _invalid -> {:error, :invalid_period}
     end
   end
 
@@ -135,7 +135,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
       {:ok, time} ->
         determine_period_from_hour(time.hour)
 
-      {:error, _} ->
+      {:error, _parse_error} ->
         "Unknown"
     end
   end
@@ -165,7 +165,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
       "15min" -> "15min"
       "30min" -> "30min"
       # Default fallback
-      _ -> "30min"
+      _unknown -> "30min"
     end
   end
 
@@ -185,7 +185,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
       "15min" -> 15
       "30min" -> 30
       # Default fallback
-      _ -> 30
+      _unknown -> 30
     end
   end
 
@@ -197,7 +197,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
     case DateTime.shift_zone(datetime, timezone) do
       {:ok, shifted} -> shifted
       # Fallback to original if conversion fails
-      {:error, _} -> datetime
+      {:error, _shift_error} -> datetime
     end
   end
 
@@ -214,18 +214,18 @@ defmodule Tymeslot.Utils.DateTimeUtils do
         # In case of ambiguity (e.g. DST fall back), use the first occurrence
         first
 
-      {:gap, _, _} ->
+      {:gap, _just_before, _just_after} ->
         # Time is in a DST gap (spring forward). Shift forward by 1 hour.
         naive = NaiveDateTime.new!(date, time)
         shifted = NaiveDateTime.add(naive, 3600, :second)
 
         case DateTime.from_naive(shifted, timezone) do
           {:ok, dt} -> dt
-          {:ambiguous, first, _} -> first
-          _ -> DateTime.new!(date, time, "Etc/UTC")
+          {:ambiguous, first, _second} -> first
+          {:error, _naive_error} -> DateTime.new!(date, time, "Etc/UTC")
         end
 
-      {:error, _reason} ->
+      {:error, _new_error} ->
         # Fallback to UTC if timezone is invalid
         DateTime.new!(date, time, "Etc/UTC")
     end
@@ -289,14 +289,14 @@ defmodule Tymeslot.Utils.DateTimeUtils do
       # Date only: 20240726
       String.match?(datetime_str, ~r/^\d{8}$/) ->
         case Regex.run(~r/(\d{4})(\d{2})(\d{2})/, datetime_str) do
-          [_, year, month, day] ->
+          [_match, year, month, day] ->
             Date.new(
               String.to_integer(year),
               String.to_integer(month),
               String.to_integer(day)
             )
 
-          _ ->
+          nil ->
             {:error, "Invalid date format"}
         end
 
@@ -321,7 +321,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
       {:ok, %Date{} = date} ->
         {:ok, date}
 
-      {:error, _} = error ->
+      {:error, _parse_error} = error ->
         error
     end
   end
@@ -337,7 +337,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
     # No timezone specified, assume UTC
     case DateTime.from_naive(naive_dt, "Etc/UTC") do
       {:ok, dt} -> {:ok, dt}
-      _ -> {:error, "Failed to convert to UTC"}
+      {:error, _conversion_error} -> {:error, "Failed to convert to UTC"}
     end
   end
 
@@ -347,10 +347,10 @@ defmodule Tymeslot.Utils.DateTimeUtils do
         case DateTime.shift_zone(dt, "Etc/UTC") do
           {:ok, utc_dt} -> {:ok, utc_dt}
           # Fallback to UTC
-          _ -> convert_to_utc(naive_dt, nil)
+          {:error, _shift_error} -> convert_to_utc(naive_dt, nil)
         end
 
-      _ ->
+      {:error, _naive_error} ->
         # Fallback to UTC
         convert_to_utc(naive_dt, nil)
     end
@@ -407,7 +407,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
 
   defp parse_time_duration(duration_str) do
     case Regex.run(~r/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/, duration_str) do
-      [_ | captures] ->
+      [_match | captures] ->
         hours = parse_duration_component(Enum.at(captures, 0), 3600)
         minutes = parse_duration_component(Enum.at(captures, 1), 60)
         seconds = parse_duration_component(Enum.at(captures, 2), 1)
@@ -418,14 +418,14 @@ defmodule Tymeslot.Utils.DateTimeUtils do
           {:error, "Invalid time duration values"}
         end
 
-      _ ->
+      _no_match ->
         {:error, "Invalid time duration format"}
     end
   end
 
   defp parse_day_duration(duration_str) do
     case Regex.run(~r/^P(?:(\d+)W)?(?:(\d+)D)?$/, duration_str) do
-      [_ | captures] ->
+      [_match | captures] ->
         weeks = parse_duration_component(Enum.at(captures, 0), 86_400 * 7)
         days = parse_duration_component(Enum.at(captures, 1), 86_400)
         total = weeks + days
@@ -438,7 +438,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
           {:error, "Unsupported or invalid duration format"}
         end
 
-      _ ->
+      _no_match ->
         {:error, "Invalid day/week duration format or unsupported components"}
     end
   end
@@ -447,7 +447,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
 
   defp parse_basic_datetime(datetime_str) do
     case Regex.run(~r/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, datetime_str) do
-      [_, year, month, day, hour, minute, second] ->
+      [_match, year, month, day, hour, minute, second] ->
         NaiveDateTime.new(
           String.to_integer(year),
           String.to_integer(month),
@@ -457,7 +457,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
           String.to_integer(second)
         )
 
-      _ ->
+      nil ->
         {:error, "Invalid datetime format"}
     end
   end

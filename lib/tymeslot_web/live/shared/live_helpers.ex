@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
         user = Authentication.get_user_by_session_token(user_token)
         assign(socket, :current_user, user)
 
-      _ ->
+      _other ->
         assign(socket, :current_user, nil)
     end
   end
@@ -60,7 +60,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
         normalized_timezone = TimezoneUtils.normalize_timezone(validated)
         assign(socket, :user_timezone, normalized_timezone)
 
-      {:error, _} ->
+      {:error, _reason} ->
         socket
     end
   end
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   def assign_form_errors(socket, changeset) do
     errors =
       Changeset.traverse_errors(changeset, fn {msg, opts} ->
-        Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+        Regex.replace(~r"%{(\w+)}", msg, fn _arg1, key ->
           opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
         end)
       end)
@@ -205,7 +205,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   defp format_time_for_display(datetime, timezone) do
     case DateTime.shift_zone(datetime, timezone) do
       {:ok, shifted} -> Calendar.strftime(shifted, "%-I:%M %p")
-      _ -> Calendar.strftime(datetime, "%-I:%M %p")
+      _other -> Calendar.strftime(datetime, "%-I:%M %p")
     end
   end
 end

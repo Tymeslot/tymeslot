@@ -45,7 +45,7 @@ defmodule Tymeslot.Security.Security do
             true
           end
 
-        {_key, _val} ->
+        {_key, _non_string_val} ->
           true
       end)
 
@@ -109,13 +109,13 @@ defmodule Tymeslot.Security.Security do
       %{address: address} ->
         to_string(:inet.ntoa(address))
 
-      _ ->
+      _no_peer_data ->
         # Check headers for forwarded IP
         case LiveView.get_connect_info(socket, :x_headers) do
           headers when is_list(headers) ->
             get_forwarded_ip(headers) || "unknown"
 
-          _ ->
+          _no_headers ->
             "unknown"
         end
     end
@@ -126,7 +126,7 @@ defmodule Tymeslot.Security.Security do
          ua when is_binary(ua) <- find_header(headers, "user-agent") do
       ua
     else
-      _ -> "unknown"
+      _no_user_agent -> "unknown"
     end
   end
 
@@ -137,7 +137,7 @@ defmodule Tymeslot.Security.Security do
       {key, value} when is_binary(key) ->
         if String.downcase(key) == lname, do: value, else: nil
 
-      _ ->
+      _invalid_header ->
         nil
     end)
   end
@@ -178,15 +178,15 @@ defmodule Tymeslot.Security.Security do
                 {:error, "Time outside business hours"}
               end
 
-            _ ->
+            _error ->
               {:error, "Invalid timezone conversion"}
           end
 
-        _ ->
+        _error ->
           {:error, "Invalid time"}
       end
     rescue
-      _ -> {:error, "Time validation failed"}
+      _exception -> {:error, "Time validation failed"}
     end
   end
 
@@ -199,7 +199,7 @@ defmodule Tymeslot.Security.Security do
     bucket_key = "calendar_query:#{user_identifier}"
 
     case RateLimiter.check_rate(bucket_key, 60_000, 10) do
-      {:allow, _} ->
+      {:allow, _count} ->
         # Additional date validation
         today = Date.utc_today()
         max_future_date = Date.add(today, 365)
@@ -227,7 +227,7 @@ defmodule Tymeslot.Security.Security do
             {:ok, date}
         end
 
-      {:deny, _} ->
+      {:deny, _limit_count} ->
         Logger.error("Calendar access rate limit exceeded",
           user_identifier: user_identifier,
           bucket_key: bucket_key
@@ -252,7 +252,7 @@ defmodule Tymeslot.Security.Security do
   Logs security events for monitoring.
   """
   @spec log_security_event(String.t(), map(), term()) :: :ok
-  def log_security_event(event_type, details, _socket_or_conn) do
+  def log_security_event(event_type, details, _unused_socket_or_conn) do
     Logger.warning("Security Event: #{event_type}",
       details: details,
       timestamp: DateTime.utc_now()
@@ -290,5 +290,5 @@ defmodule Tymeslot.Security.Security do
     end
   end
 
-  def validate_domain(_value), do: {:error, "Invalid domain"}
+  def validate_domain(_invalid_value), do: {:error, "Invalid domain"}
 end

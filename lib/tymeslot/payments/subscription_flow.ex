@@ -142,7 +142,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
         end
 
       {:error, reason} ->
-        _ = mark_pending_subscription_transaction_failed(transaction, reason)
+        _mark_result = mark_pending_subscription_transaction_failed(transaction, reason)
         {:error, reason}
     end
   end
@@ -206,7 +206,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
     }
 
     case PaymentQueries.update_transaction(transaction, update_attrs) do
-      {:ok, _updated_transaction} ->
+      {:ok, _updated} ->
         :ok
 
       {:error, error} ->
@@ -242,7 +242,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
           {:error, :checkout_conflict}
         end
 
-      {:error, _} ->
+      {:error, _reason} ->
         {:error, :retry_later}
     end
   end
@@ -289,7 +289,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
       {:error, :checkout_conflict} ->
         {:error, :checkout_conflict}
 
-      {:error, _} ->
+      {:error, _reason} ->
         {:error, :retry_later}
     end
   end

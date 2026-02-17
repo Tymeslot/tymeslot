@@ -53,14 +53,14 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
   defp get_locale_from_params(conn) do
     case conn.params["locale"] do
       locale when is_binary(locale) -> sanitize_locale_input(locale)
-      _ -> nil
+      _other -> nil
     end
   end
 
   defp get_locale_from_session(conn) do
     case get_session(conn, :locale) do
       locale when is_binary(locale) -> sanitize_locale_input(locale)
-      _ -> nil
+      _other -> nil
     end
   end
 
@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
     end
   end
 
-  defp parse_accept_language(_), do: []
+  defp parse_accept_language(_arg), do: []
 
   defp parse_language_tag(tag) when is_binary(tag) do
     # Limit tag length to prevent DoS
@@ -104,29 +104,29 @@ defmodule TymeslotWeb.Plugs.LocalePlug do
         [locale] ->
           case normalize_locale(locale) do
             normalized when is_binary(normalized) -> {normalized, 1.0}
-            _ -> nil
+            _other -> nil
           end
 
         [locale, quality] ->
           case Float.parse(quality) do
             # Validate quality score is within HTTP spec (0.0 to 1.0)
-            {q, _} when q >= 0.0 and q <= 1.0 ->
+            {q, _value} when q >= 0.0 and q <= 1.0 ->
               case normalize_locale(locale) do
                 normalized when is_binary(normalized) -> {normalized, q}
-                _ -> nil
+                _other -> nil
               end
 
-            _ ->
+            _other ->
               nil
           end
 
-        _ ->
+        _other ->
           nil
       end
     end
   end
 
-  defp parse_language_tag(_), do: nil
+  defp parse_language_tag(_arg), do: nil
 
   # Sanitizes locale input to prevent security issues.
   #

@@ -67,8 +67,8 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) do
     case Regex.run(~r/meetup-join\/([^\/\?]+)/, meeting_url) do
-      [_, encoded_id] -> String.slice(encoded_id, 0, 20)
-      _ -> meeting_url
+      [_first, encoded_id] -> String.slice(encoded_id, 0, 20)
+      _other -> meeting_url
     end
   end
 
@@ -231,7 +231,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
           perform_refresh(config)
         end
 
-      _ ->
+      _other ->
         perform_refresh(config)
     end
   end
@@ -349,7 +349,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   defp parse_iso8601!(dt) do
-    {:ok, parsed, _} = DateTime.from_iso8601(dt)
+    {:ok, parsed, _offset} = DateTime.from_iso8601(dt)
     parsed
   end
 
@@ -426,7 +426,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
         {:error, error_message}
 
-      _ ->
+      _other ->
         {:error, "Failed to create meeting with status #{status}: #{body}"}
     end
   end

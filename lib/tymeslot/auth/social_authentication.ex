@@ -242,12 +242,12 @@ defmodule Tymeslot.Auth.SocialAuthentication do
     case params["verified_email"] do
       true -> :ok
       "true" -> :ok
-      _ -> {:error, :email_not_verified}
+      _other -> {:error, :email_not_verified}
     end
   end
 
   defp validate_provider_name(provider) when provider in ["google", "github"], do: :ok
-  defp validate_provider_name(_), do: {:error, :invalid_provider}
+  defp validate_provider_name(_arg), do: {:error, :invalid_provider}
 
   defp user_queries_module do
     Tymeslot.DatabaseQueries.UserQueries

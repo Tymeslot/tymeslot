@@ -58,14 +58,14 @@ defmodule CredoChecks.LargeModules do
       {:ok, {:defmodule, _, [{:__aliases__, _, module_parts}, _]}} ->
         Enum.map_join(module_parts, ".", &to_string/1)
 
-      _ ->
+      _other ->
         source_file.filename
         |> Path.basename()
         |> Path.rootname()
         |> Macro.camelize()
     end
   rescue
-    _ ->
+    _other ->
       source_file.filename
       |> Path.basename()
       |> Path.rootname()

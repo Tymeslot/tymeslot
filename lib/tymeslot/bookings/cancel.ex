@@ -104,7 +104,7 @@ defmodule Tymeslot.Bookings.Cancel do
     alias Tymeslot.Notifications.Events
 
     case Events.meeting_cancelled(meeting) do
-      {:ok, _} ->
+      {:ok, _result} ->
         Logger.info("Cancellation emails sent", meeting_id: meeting.id)
         :ok
 

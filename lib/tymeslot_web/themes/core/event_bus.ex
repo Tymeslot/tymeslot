@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Themes.Core.EventBus do
       :step_changed ->
         handle_step_changed(payload, socket)
 
-      _ ->
+      _other ->
         # Allow themes to handle custom events
         if function_exported?(socket.assigns[:theme_module], :handle_theme_event, 2) do
           socket.assigns[:theme_module].handle_theme_event(message, socket)
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Themes.Core.EventBus do
         %Context{} = context ->
           Context.assign_to_socket(socket, context)
 
-        _ ->
+        _other ->
           socket
       end
     else

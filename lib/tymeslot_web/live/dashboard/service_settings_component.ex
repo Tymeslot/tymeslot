@@ -135,7 +135,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
               id when is_binary(id) ->
                 case Integer.parse(id) do
-                  {int, _} -> int
+                  {int, _value} -> int
                   :error -> nil
                 end
             end
@@ -188,7 +188,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
           {:noreply, assign(socket, meeting_types: updated_meeting_types)}
 
-        {:error, _} ->
+        {:error, _reason} ->
           Flash.error("Failed to update meeting type")
           {:noreply, socket}
       end
@@ -218,12 +218,12 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     type = socket.assigns.delete_meeting_type_modal_data
 
     case MeetingTypes.delete_meeting_type(type) do
-      {:ok, _} ->
+      {:ok, _result} ->
         send(self(), {:meeting_type_changed})
         Flash.info("Meeting type deleted")
         {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
 
-      {:error, _} ->
+      {:error, _reason} ->
         Flash.error("Failed to delete meeting type")
         {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
     end
@@ -241,17 +241,17 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
         id when is_binary(id) ->
           case Integer.parse(id) do
-            {int, _} -> int
+            {int, _value} -> int
             :error -> nil
           end
 
-        _ ->
+        _other ->
           nil
       end)
       |> Enum.reject(&is_nil/1)
 
     case MeetingTypes.reorder_meeting_types(user_id, meeting_type_ids) do
-      {:ok, _} ->
+      {:ok, _result} ->
         send(self(), {:meeting_type_changed})
         Flash.info("Meeting types reordered")
         {:noreply, socket}

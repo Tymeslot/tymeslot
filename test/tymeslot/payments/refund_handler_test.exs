@@ -132,12 +132,12 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
 
     test "rejects refund object missing id" do
       refund = %{"amount" => 1000}
-      assert {:error, :missing_fields, _} = RefundHandler.validate(refund)
+      assert {:error, :missing_fields, _message} = RefundHandler.validate(refund)
     end
 
     test "rejects non-map input" do
-      assert {:error, :invalid_structure, _} = RefundHandler.validate("not a map")
-      assert {:error, :invalid_structure, _} = RefundHandler.validate(nil)
+      assert {:error, :invalid_structure, _message} = RefundHandler.validate("not a map")
+      assert {:error, :invalid_structure, _message} = RefundHandler.validate(nil)
     end
   end
 

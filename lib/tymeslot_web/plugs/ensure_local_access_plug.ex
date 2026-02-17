@@ -58,10 +58,10 @@ defmodule TymeslotWeb.Plugs.EnsureLocalAccessPlug do
       # IPv6 localhost
       {0, 0, 0, 0, 0, 0, 0, 1} -> true
       # Docker internal networks (if enabled)
-      {172, second, _, _} when allow_docker and second >= 16 and second <= 31 -> true
-      {10, _, _, _} when allow_docker -> true
-      {192, 168, _, _} when allow_docker -> true
-      _ -> false
+      {172, second, _c, _d} when allow_docker and second >= 16 and second <= 31 -> true
+      {10, _b, _c, _d} when allow_docker -> true
+      {192, 168, _c, _d} when allow_docker -> true
+      _ip -> false
     end
   end
 end

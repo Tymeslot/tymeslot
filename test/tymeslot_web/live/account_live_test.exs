@@ -100,7 +100,7 @@ defmodule TymeslotWeb.AccountLiveTest do
 
     test "can cancel a pending email change", %{conn: conn, user: user} do
       # Setup pending email change
-      {:ok, user, _} = Auth.request_email_change(user, "pending@example.com", "Password123!")
+      {:ok, user, _email_change_token} = Auth.request_email_change(user, "pending@example.com", "Password123!")
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 

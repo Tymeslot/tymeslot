@@ -118,7 +118,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
     end
   end
 
-  def validate_single_field(_, _, _), do: {:ok, nil}
+  def validate_single_field(_field, _value, _opts), do: {:ok, nil}
 
   @doc """
   Validates Nextcloud calendar discovery parameters.
@@ -156,7 +156,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
     normalize_url =
       case provider do
         :radicale -> &normalize_radicale_base_url_for_discovery/2
-        _ -> fn url, _username -> url end
+        _provider -> fn url, _username -> url end
       end
 
     validate_discovery(params, metadata,
@@ -166,7 +166,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
       extra_success_meta: fn sanitized ->
         %{url: sanitize_url_for_logging(sanitized["url"]), provider: provider}
       end,
-      extra_failure_meta: fn _ -> %{provider: provider} end
+      extra_failure_meta: fn _errors -> %{provider: provider} end
     )
   end
 
@@ -233,7 +233,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
     end
   end
 
-  defp validate_server_url(_, _metadata) do
+  defp validate_server_url(_value, _metadata) do
     {:error, %{url: "Server URL must be text"}}
   end
 
@@ -259,7 +259,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
     end
   end
 
-  defp validate_username(_, _metadata) do
+  defp validate_username(_value, _metadata) do
     {:error, %{username: "Username must be text"}}
   end
 
@@ -285,7 +285,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
     end
   end
 
-  defp validate_password(_, _metadata) do
+  defp validate_password(_value, _metadata) do
     {:error, %{password: "Password must be text"}}
   end
 
@@ -315,7 +315,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
     end
   end
 
-  defp validate_calendar_paths(_, _metadata) do
+  defp validate_calendar_paths(_value, _metadata) do
     {:error, %{calendar_paths: "Calendar paths must be text"}}
   end
 
@@ -352,7 +352,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
       String.starts_with?(path, ["http://", "https://"]) ->
         case validate_calendar_url(path) do
           :ok -> false
-          _ -> true
+          _error -> true
         end
 
       String.starts_with?(path, "/") ->
@@ -373,8 +373,8 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
     success_event = Keyword.fetch!(opts, :success_event)
     failure_event = Keyword.fetch!(opts, :failure_event)
     normalize_url = Keyword.get(opts, :normalize_url, fn url, _username -> url end)
-    extra_success_meta = Keyword.get(opts, :extra_success_meta, fn _ -> %{} end)
-    extra_failure_meta = Keyword.get(opts, :extra_failure_meta, fn _ -> %{} end)
+    extra_success_meta = Keyword.get(opts, :extra_success_meta, fn _sanitized -> %{} end)
+    extra_failure_meta = Keyword.get(opts, :extra_failure_meta, fn _errors -> %{} end)
 
     case validate_discovery_credentials(params, metadata) do
       {:ok, sanitized} ->

@@ -13,11 +13,11 @@ Mix.Task.run("ecto.create", ["--quiet"])
 Mix.Task.run("ecto.migrate", ["--quiet"])
 
 # Start PubSub for testing
-{:ok, _} =
+{:ok, _result} =
   Phoenix.PubSub.Supervisor.start_link(name: Tymeslot.TestPubSub, adapter: Phoenix.PubSub.PG2)
 
 # Start Ecto sandbox - ensure Repo is ready first
-{:ok, _} = Application.ensure_all_started(:tymeslot)
+{:ok, _result} = Application.ensure_all_started(:tymeslot)
 Ecto.Adapters.SQL.Sandbox.mode(Tymeslot.Repo, :manual)
 
 # Define mocks
@@ -104,7 +104,7 @@ max_cases =
 
     value ->
       case Integer.parse(value) do
-        {int, _} -> int
+        {int, _value} -> int
         :error -> nil
       end
   end

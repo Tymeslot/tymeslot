@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
           end
 
         case result do
-          {:ok, _} ->
+          {:ok, _result} ->
             # Notify the parent LiveView (usually DashboardLive) to refresh lists
             send(self(), {:integration_removed, type})
 
@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
             {:noreply, socket}
         end
 
-      _ ->
+      _other ->
         Flash.error("Invalid integration ID")
 
         {:noreply,
@@ -189,10 +189,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
     case Integer.parse(id) do
       {int, ""} when int > 0 -> {:ok, int}
       {int, _rest} when int > 0 -> {:error, :invalid_format}
-      {_int, _} -> {:error, :invalid_value}
+      {_int, _value} -> {:error, :invalid_value}
       :error -> {:error, :not_a_number}
     end
   end
 
-  defp parse_integration_id(_), do: {:error, :invalid_type}
+  defp parse_integration_id(_arg), do: {:error, :invalid_type}
 end

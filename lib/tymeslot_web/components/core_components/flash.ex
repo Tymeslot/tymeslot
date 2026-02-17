@@ -104,13 +104,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
     "bg-amber-50 border-amber-100 text-amber-900 shadow-amber-500/10"
   end
 
-  defp flash_variant(_), do: flash_variant(:info)
+  defp flash_variant(_arg), do: flash_variant(:info)
 
   # Helper function for icon backgrounds
   defp icon_bg_color(:info), do: "bg-turquoise-50 border-turquoise-100 text-turquoise-600"
   defp icon_bg_color(:error), do: "bg-white border-red-100 text-red-500"
   defp icon_bg_color(:warning), do: "bg-white border-amber-100 text-amber-600"
-  defp icon_bg_color(_), do: icon_bg_color(:info)
+  defp icon_bg_color(_arg), do: icon_bg_color(:info)
 
   # Helper function to hide flash with animation
   defp hide_flash(js, id) do

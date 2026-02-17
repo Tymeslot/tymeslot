@@ -247,7 +247,7 @@ defmodule Tymeslot.Integrations.Calendar.TokensTest do
         {:ok, {"new", "ref", DateTime.utc_now()}}
       end)
 
-      assert {:ok, _} = Tokens.refresh_oauth_token(integration)
+      assert {:ok, _updated} = Tokens.refresh_oauth_token(integration)
     end
 
     test "handles missing provider_atom safely" do

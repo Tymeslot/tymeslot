@@ -29,7 +29,7 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
     property "never crashes and returns either ok or error for random strings" do
       check all(s <- string(:ascii)) do
         result = DateTimeUtils.parse_duration(s)
-        assert match?({:ok, _}, result) or match?({:error, _}, result)
+        assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
       end
     end
 
@@ -58,8 +58,8 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
 
     test "handles unsupported P components gracefully (e.g. months)" do
       # Now returns error for unsupported components because of regex anchors
-      assert {:error, _} = DateTimeUtils.parse_duration("P1M")
-      assert {:error, _} = DateTimeUtils.parse_duration("P1Y")
+      assert {:error, _reason} = DateTimeUtils.parse_duration("P1M")
+      assert {:error, _reason} = DateTimeUtils.parse_duration("P1Y")
     end
   end
 

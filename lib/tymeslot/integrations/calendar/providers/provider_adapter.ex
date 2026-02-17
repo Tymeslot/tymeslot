@@ -26,7 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           provider_module: ProviderRegistry.get_provider!(provider_type)
         }
 
-      {:error, _} = error ->
+      {:error, _reason} = error ->
         error
     end
   end
@@ -100,7 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
         Logger.info("Creating event in #{adapter_client.provider_type} calendar")
 
         case adapter_client.provider_module.create_event(adapter_client.client, event_data) do
-          {:ok, _} = result ->
+          {:ok, _result} = result ->
             Logger.info("Successfully created event")
             result
 

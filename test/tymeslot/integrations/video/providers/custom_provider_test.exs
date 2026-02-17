@@ -353,7 +353,7 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
                ~r|^https://jitsi.example.org/[a-f0-9]{16}/room-[a-f0-9]{16}$|
 
       # Extract both hashed values
-      [_, hash1, hash2] =
+      [_path, hash1, hash2] =
         Regex.run(~r|/([a-f0-9]{16})/room-([a-f0-9]{16})|, room_data.meeting_url)
 
       assert hash1 == hash2

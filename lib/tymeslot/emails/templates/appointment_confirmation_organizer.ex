@@ -89,7 +89,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizer do
         false -> false
         true -> true
         # Any other value defaults to enabled
-        _ -> true
+        _other -> true
       end
 
     if reminders_enabled do

@@ -36,7 +36,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
     test "propagates circuit open error" do
       # Trigger circuit breaker to open by causing failures
       # The google_meet config has failure_threshold: 5
-      for _ <- 1..5 do
+      for _i <- 1..5 do
         VideoCircuitBreaker.call(:google_meet, fn ->
           {:error, :simulated_failure}
         end)
@@ -130,7 +130,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
       assert status.status == :closed
 
       # Cause failures to open circuit (teams has threshold of 5)
-      for _ <- 1..5 do
+      for _i <- 1..5 do
         VideoCircuitBreaker.call(:teams, fn ->
           {:error, :simulated_failure}
         end)
@@ -148,7 +148,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
   describe "reset/1" do
     test "resets circuit breaker to closed state" do
       # Open the circuit first
-      for _ <- 1..5 do
+      for _i <- 1..5 do
         VideoCircuitBreaker.call(:mirotalk, fn ->
           {:error, :failure}
         end)

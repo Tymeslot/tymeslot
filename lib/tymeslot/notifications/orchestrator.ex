@@ -22,7 +22,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
          result <- schedule_reminder_notifications(meeting) do
       case result do
         :ok -> {:ok, :notifications_scheduled}
-        {:ok, _} -> {:ok, :notifications_scheduled}
+        {:ok, _result} -> {:ok, :notifications_scheduled}
         error -> error
       end
     else
@@ -50,7 +50,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
          result <- schedule_email_job(:confirmation, meeting.id, content, timing) do
       case result do
         :ok -> :ok
-        {:ok, _} -> :ok
+        {:ok, _result} -> :ok
         error -> error
       end
     end
@@ -87,7 +87,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
       case {result, scheduled_any?} do
         {:ok, true} -> :ok
         {:ok, false} -> {:ok, :reminder_not_scheduled}
-        {error, _} -> error
+        {error, _scheduled} -> error
       end
     end
   end
@@ -199,7 +199,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
     case notification_type do
       :cancellation ->
         case email_service.send_cancellation_emails(content) do
-          {{:ok, _}, {:ok, _}} ->
+          {{:ok, _result}, {:ok, _result}} ->
             {:ok, :emails_sent}
 
           {organizer_result, attendee_result} ->
@@ -271,7 +271,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
           case schedule_email_job(:reminder, meeting.id, %{}, timing, schedule_at, value, unit) do
             :ok -> {:ok, true}
-            {:ok, _} -> {:ok, true}
+            {:ok, _result} -> {:ok, true}
             error -> {error, false}
           end
         else
@@ -285,7 +285,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
       end)
 
     # Check if any failed
-    error = Enum.find(results, &match?({{:error, _}, _}, &1))
+    error = Enum.find(results, &match?({{:error, _reason}, _sent}, &1))
 
     if error do
       {elem(error, 0), Enum.any?(results, &elem(&1, 1))}

@@ -10,7 +10,7 @@ defmodule Tymeslot.DatabaseQueries.WeeklyAvailabilityQueriesTest do
     test "creates sensible default schedule for new users" do
       profile = insert(:profile)
 
-      {:ok, _} = WeeklyAvailabilityQueries.create_default_weekly_schedule(profile.id)
+      {:ok, _schedules} = WeeklyAvailabilityQueries.create_default_weekly_schedule(profile.id)
       schedule = WeeklyAvailabilityQueries.get_weekly_availability_by_profile(profile.id)
 
       # Should create 7 days

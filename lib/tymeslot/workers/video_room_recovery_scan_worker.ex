@@ -21,7 +21,7 @@ defmodule Tymeslot.Workers.VideoRoomRecoveryScanWorker do
       Enum.reduce(meetings, 0, fn meeting, acc ->
         case VideoRoomWorker.schedule_video_room_creation(meeting.id) do
           :ok -> acc + 1
-          {:error, _} -> acc
+          {:error, _reason} -> acc
         end
       end)
 

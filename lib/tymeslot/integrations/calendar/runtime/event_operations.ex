@@ -146,7 +146,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
 
   defp validate_event(event_data) do
     case EventValidator.validate(event_data) do
-      {:ok, _} -> :ok
+      {:ok, _result} -> :ok
       {:error, _cs} -> {:error, :invalid_event_data}
     end
   end
@@ -164,5 +164,5 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   end
 
   defp log_context(user_id) when is_integer(user_id), do: %{user_id: user_id}
-  defp log_context(_), do: %{}
+  defp log_context(_arg), do: %{}
 end

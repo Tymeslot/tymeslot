@@ -64,14 +64,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
       case assigns.size do
         :small -> "h-12 w-12"
         :large -> "h-24 w-24"
-        _ -> "h-16 w-16"
+        _other -> "h-16 w-16"
       end
 
     icon_size =
       case assigns.size do
         :small -> "h-6 w-6"
         :large -> "h-12 w-12"
-        _ -> "h-8 w-8"
+        _other -> "h-8 w-8"
       end
 
     assigns = assigns |> assign(:size_classes, size_classes) |> assign(:icon_size, icon_size)
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
         1 -> "text-4xl"
         2 -> "text-3xl"
         3 -> "text-2xl"
-        _ -> "text-xl"
+        _other -> "text-xl"
       end
 
     computed_title_class =
@@ -172,7 +172,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
         :warning -> "bg-amber-50 border-amber-200 text-amber-800"
         :error -> "bg-red-50 border-red-200 text-red-800"
         :info -> "bg-sky-50 border-sky-200 text-sky-800"
-        _ -> "bg-slate-50 border-slate-200 text-slate-800"
+        _other -> "bg-slate-50 border-slate-200 text-slate-800"
       end
 
     assigns = assign(assigns, :classes, classes)

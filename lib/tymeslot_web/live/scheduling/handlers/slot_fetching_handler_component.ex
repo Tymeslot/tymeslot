@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
     duration_to_fetch =
       case socket.assigns[:meeting_type] do
         %{duration_minutes: mins} -> "#{mins}min"
-        _ -> duration
+        _other -> duration
       end
 
     case Helpers.get_available_slots(
@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
           socket
           |> assign(:loading_slots, true)
           |> assign(:calendar_error, nil)
-          |> tap(fn _ ->
+          |> tap(fn _client ->
             send(self(), {:fetch_available_slots, selected_date, duration, timezone})
           end)
 
@@ -145,7 +145,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
       case reason do
         "timeout" -> "Calendar is temporarily unavailable. Please try again later."
         "connection_error" -> "Unable to connect to calendar service."
-        _ -> "No timeslots available due to calendar parsing error"
+        _other -> "No timeslots available due to calendar parsing error"
       end
 
     socket =

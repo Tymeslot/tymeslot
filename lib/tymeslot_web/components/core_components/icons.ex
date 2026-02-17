@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Icons do
   attr :style, :string, default: nil
 
   @spec icon(map()) :: Phoenix.LiveView.Rendered.t()
-  def icon(%{name: "hero-" <> _} = assigns) do
+  def icon(%{name: "hero-" <> _rest} = assigns) do
     ~H"""
     <span class={[@name, @class]} style={@style} />
     """

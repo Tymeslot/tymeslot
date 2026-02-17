@@ -162,7 +162,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
         {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"items" => []})}}
       end)
 
-      assert {:ok, _} = GoogleMeetProvider.test_connection(config)
+      assert {:ok, _result} = GoogleMeetProvider.test_connection(config)
     end
   end
 
@@ -295,7 +295,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
          }}
       end)
 
-      assert {:ok, _} = GoogleMeetProvider.create_meeting_room(config)
+      assert {:ok, _result} = GoogleMeetProvider.create_meeting_room(config)
 
       # Verify DB update
       updated = Repo.get(VideoIntegrationSchema, integration.id)

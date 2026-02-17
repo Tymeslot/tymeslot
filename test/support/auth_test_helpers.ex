@@ -135,7 +135,7 @@ defmodule Tymeslot.AuthTestHelpers do
   @spec trigger_account_lockout(term()) :: term()
   def trigger_account_lockout(user) do
     # Make multiple failed login attempts
-    for _ <- 1..5 do
+    for _attempt <- 1..5 do
       Auth.authenticate_user(user.email, "wrong_password")
     end
   end

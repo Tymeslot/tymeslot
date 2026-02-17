@@ -156,7 +156,7 @@ defmodule Tymeslot.Security.OnboardingInputProcessor do
         else
           :error -> []
           :ok -> []
-          {:ok, _} -> []
+          {:ok, _result} -> []
         end
       end)
       |> Map.new()
@@ -167,7 +167,7 @@ defmodule Tymeslot.Security.OnboardingInputProcessor do
   defp validate_buffer_minutes(value) when is_binary(value) do
     case Integer.parse(value) do
       {minutes, ""} -> validate_buffer_minutes(minutes)
-      _ -> {:error, "Buffer minutes must be a valid number"}
+      _other -> {:error, "Buffer minutes must be a valid number"}
     end
   end
 
@@ -179,12 +179,12 @@ defmodule Tymeslot.Security.OnboardingInputProcessor do
     end
   end
 
-  defp validate_buffer_minutes(_), do: {:error, "Buffer minutes must be a number"}
+  defp validate_buffer_minutes(_arg), do: {:error, "Buffer minutes must be a number"}
 
   defp validate_advance_booking_days(value) when is_binary(value) do
     case Integer.parse(value) do
       {days, ""} -> validate_advance_booking_days(days)
-      _ -> {:error, "Advance booking days must be a valid number"}
+      _other -> {:error, "Advance booking days must be a valid number"}
     end
   end
 
@@ -196,12 +196,12 @@ defmodule Tymeslot.Security.OnboardingInputProcessor do
     end
   end
 
-  defp validate_advance_booking_days(_), do: {:error, "Advance booking days must be a number"}
+  defp validate_advance_booking_days(_arg), do: {:error, "Advance booking days must be a number"}
 
   defp validate_min_advance_hours(value) when is_binary(value) do
     case Integer.parse(value) do
       {hours, ""} -> validate_min_advance_hours(hours)
-      _ -> {:error, "Minimum advance hours must be a valid number"}
+      _other -> {:error, "Minimum advance hours must be a valid number"}
     end
   end
 
@@ -213,7 +213,7 @@ defmodule Tymeslot.Security.OnboardingInputProcessor do
     end
   end
 
-  defp validate_min_advance_hours(_), do: {:error, "Minimum advance hours must be a number"}
+  defp validate_min_advance_hours(_arg), do: {:error, "Minimum advance hours must be a number"}
 
   defp validate_timezone_format(timezone) when is_binary(timezone) do
     # Check for basic timezone format (e.g., "America/New_York", "UTC", "Europe/London")
@@ -224,5 +224,5 @@ defmodule Tymeslot.Security.OnboardingInputProcessor do
     end
   end
 
-  defp validate_timezone_format(_), do: {:error, "Timezone must be a string"}
+  defp validate_timezone_format(_arg), do: {:error, "Timezone must be a string"}
 end

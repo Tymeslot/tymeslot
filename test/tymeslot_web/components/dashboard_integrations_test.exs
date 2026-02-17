@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     }
 
     html = render_component(&IntegrationCard.integration_card/1, assigns)
-    _doc = Floki.parse_document!(html)
+    _parsed_doc = Floki.parse_document!(html)
 
     assert html =~ "My Calendar"
     assert html =~ "Work"
@@ -250,7 +250,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
   test "renders integration_form with provider info and base errors" do
     inner_block = [
-      %{__slot__: :inner_block, inner_block: fn assigns, _ -> ~H[<.input name="x" />] end}
+      %{__slot__: :inner_block, inner_block: fn assigns, _index -> ~H[<.input name="x" />] end}
     ]
 
     assigns = %{
@@ -280,7 +280,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
   test "renders integration_form submit button in saving state" do
     inner_block = [
-      %{__slot__: :inner_block, inner_block: fn assigns, _ -> ~H[<.input name="x" />] end}
+      %{__slot__: :inner_block, inner_block: fn assigns, _index -> ~H[<.input name="x" />] end}
     ]
 
     assigns = %{

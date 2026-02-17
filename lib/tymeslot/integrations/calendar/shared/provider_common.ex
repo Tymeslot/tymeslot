@@ -39,7 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     test_opts = Keyword.get(opts, :test_opts, [])
 
     case CaldavCommon.test_connection(client, test_opts) do
-      {:ok, _} -> :ok
+      {:ok, _result} -> :ok
       {:error, reason} -> {:error, error_formatter.(reason)}
     end
   end
@@ -61,7 +61,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     uri.scheme in ["http", "https"] and uri.host not in [nil, ""]
   end
 
-  defp valid_url?(_), do: false
+  defp valid_url?(_url), do: false
 
   defp default_caldav_error({:error, message}) when is_binary(message), do: message
   defp default_caldav_error(reason), do: "Connection failed: #{inspect(reason)}"

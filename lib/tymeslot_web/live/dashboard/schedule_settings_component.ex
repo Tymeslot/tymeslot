@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
       case option do
         "list" -> :list
         "grid" -> :grid
-        _ -> :list
+        _other -> :list
       end
 
     {:noreply, assign(socket, :input_mode, new_mode)}

@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
                role,
                meeting_time
              ) do
-          {:ok, _join_url} = result ->
+          {:ok, _url} = result ->
             Logger.info("Successfully created join URL",
               participant: participant_name,
               provider: meeting_context.provider_type
@@ -213,7 +213,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
             :none ->
               %{}
 
-            _ ->
+            _other_provider ->
               %{}
           end
 

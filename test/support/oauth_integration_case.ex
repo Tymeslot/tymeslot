@@ -69,7 +69,7 @@ defmodule TymeslotWeb.OAuthIntegrationCase do
         {:started, pid} when is_pid(pid) ->
           if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5000)
 
-        _ ->
+        _other ->
           :ok
       end
 
@@ -77,7 +77,7 @@ defmodule TymeslotWeb.OAuthIntegrationCase do
         {:started, pid} when is_pid(pid) ->
           if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5000)
 
-        _ ->
+        _other ->
           :ok
       end
     end)

@@ -80,7 +80,7 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
 
             {:noreply, socket}
 
-          {:error, _} ->
+          {:error, _reason} ->
             {:noreply,
              LiveView.put_flash(
                socket,

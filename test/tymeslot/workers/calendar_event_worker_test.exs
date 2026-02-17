@@ -350,7 +350,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
     end
 
     test "schedule_calendar_update/1 enqueues job" do
-      assert {:ok, _} = CalendarEventWorker.schedule_calendar_update(123)
+      assert {:ok, _result} = CalendarEventWorker.schedule_calendar_update(123)
 
       assert_enqueued(
         worker: CalendarEventWorker,
@@ -359,7 +359,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
     end
 
     test "schedule_calendar_deletion/1 enqueues job" do
-      assert {:ok, _} = CalendarEventWorker.schedule_calendar_deletion(123)
+      assert {:ok, _result} = CalendarEventWorker.schedule_calendar_deletion(123)
 
       assert_enqueued(
         worker: CalendarEventWorker,

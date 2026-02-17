@@ -215,7 +215,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     status_code =
       case result do
         {:ok, %{status: code}} -> code
-        _ -> 0
+        _error -> 0
       end
 
     Metrics.track_http_request(to_string(method), url, status_code, duration_ms)

@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
         time_str = format_time_by_locale(shifted)
         gettext("%{time} %{timezone}", time: time_str, timezone: shifted.zone_abbr)
 
-      _ ->
+      _other ->
         time_str = format_time_by_locale(datetime)
         gettext("%{time} UTC", time: time_str)
     end
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   def format_date(date_string) when is_binary(date_string) do
     case Date.from_iso8601(date_string) do
       {:ok, date} -> format_date(date)
-      _ -> date_string
+      _other -> date_string
     end
   end
 
@@ -101,13 +101,13 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     cond do
       # Handle "30min" format
       match = Regex.run(~r/^(\d+)min$/, duration_string) ->
-        [_, minutes_str] = match
+        [_first, minutes_str] = match
         minutes = String.to_integer(minutes_str)
         format_minutes(minutes)
 
       # Handle "30-minutes" slug format
       match = Regex.run(~r/^(\d+)-minutes?$/, duration_string) ->
-        [_, minutes_str] = match
+        [_first, minutes_str] = match
         minutes = String.to_integer(minutes_str)
         format_minutes(minutes)
 
@@ -184,7 +184,7 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   def format_time_by_locale(dt) do
     case gettext("time_format_type") do
       "12h" -> Calendar.strftime(dt, "%-I:%M %p")
-      _ -> Calendar.strftime(dt, "%H:%M")
+      _other -> Calendar.strftime(dt, "%H:%M")
     end
   end
 

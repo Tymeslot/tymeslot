@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
         {:ok, module} ->
           assert module == Tymeslot.Integrations.Video.Providers.TeamsProvider
 
-        {:error, _} ->
+        {:error, _reason} ->
           # Teams provider may not be available
           :ok
       end
@@ -122,20 +122,20 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       end)
 
       result = ProviderRegistry.test_provider_connection(:mirotalk, config)
-      assert {:ok, _} = result
+      assert {:ok, _result} = result
     end
 
     test "returns error for missing required config" do
       config = %{api_key: "test_key"}
 
       result = ProviderRegistry.test_provider_connection(:mirotalk, config)
-      assert {:error, _} = result
+      assert {:error, _reason} = result
     end
 
     test "returns error for unknown provider" do
       config = %{}
 
-      assert {:error, _} = ProviderRegistry.test_provider_connection(:unknown, config)
+      assert {:error, _reason} = ProviderRegistry.test_provider_connection(:unknown, config)
     end
   end
 

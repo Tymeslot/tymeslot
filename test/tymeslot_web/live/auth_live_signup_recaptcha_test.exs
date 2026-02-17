@@ -152,7 +152,7 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
     # inputs against DOM defaults (the hidden token is rendered with value=""), so we call the
     # event directly but still include a real `_csrf_token`.
     csrf_html = view |> element("input[name=_csrf_token]") |> render()
-    [_, csrf_token] = Regex.run(~r/value="([^"]+)"/, csrf_html)
+    [_csrf_pattern, csrf_token] = Regex.run(~r/value="([^"]+)"/, csrf_html)
 
     render_submit(view, "submit_signup", %{
       "_csrf_token" => csrf_token,

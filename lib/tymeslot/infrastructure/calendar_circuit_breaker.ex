@@ -246,7 +246,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
 
   defp breaker_exists?({:via, Registry, {registry, key}}) do
     case Registry.lookup(registry, key) do
-      [{_pid, _}] -> true
+      [{_pid, _value}] -> true
       [] -> false
     end
   end

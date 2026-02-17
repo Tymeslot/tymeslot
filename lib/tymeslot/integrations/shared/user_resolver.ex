@@ -45,8 +45,8 @@ defmodule Tymeslot.Integrations.Common.UserResolver do
       )
 
     case result do
-      {:ok, result} -> result
-      _ -> []
+      {:ok, integrations} -> integrations
+      _error -> []
     end
   end
 
@@ -145,12 +145,12 @@ defmodule Tymeslot.Integrations.Common.UserResolver do
 
       :video ->
         # Video integrations don't have provider-based queries, so we filter
-        vid_integration =
+        video_integration =
           user_id
           |> VideoIntegrationQueries.list_all_for_user()
           |> Enum.find(fn integration -> integration.provider == provider_name end)
 
-        case vid_integration do
+        case video_integration do
           nil -> {:error, "Integration not found"}
           integration -> {:ok, integration}
         end

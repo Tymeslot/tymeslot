@@ -39,8 +39,8 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandlerTest do
     end
 
     test "returns error for missing or empty id" do
-      assert {:error, :missing_field, _} = SubscriptionHandler.validate(%{})
-      assert {:error, :missing_field, _} = SubscriptionHandler.validate(%{"id" => ""})
+      assert {:error, :missing_field, _reason} = SubscriptionHandler.validate(%{})
+      assert {:error, :missing_field, _reason} = SubscriptionHandler.validate(%{"id" => ""})
     end
   end
 

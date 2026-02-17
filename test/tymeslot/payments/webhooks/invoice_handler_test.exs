@@ -26,8 +26,8 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
     end
 
     test "returns error for missing or empty id" do
-      assert {:error, :missing_field, _} = InvoiceHandler.validate(%{})
-      assert {:error, :missing_field, _} = InvoiceHandler.validate(%{"id" => ""})
+      assert {:error, :missing_field, _message} = InvoiceHandler.validate(%{})
+      assert {:error, :missing_field, _message} = InvoiceHandler.validate(%{"id" => ""})
     end
   end
 
@@ -37,7 +37,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
     end
 
     test "requires id for non-upcoming invoice events" do
-      assert {:error, :missing_field, _} = InvoiceHandler.validate("invoice.created", %{})
+      assert {:error, :missing_field, _message} = InvoiceHandler.validate("invoice.created", %{})
     end
   end
 
@@ -177,7 +177,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
       invoice = %{"id" => "in_123", "subscription" => "nonexistent"}
       event = %{"type" => "invoice.payment_succeeded"}
 
-      assert {:error, :retry_later, _} = InvoiceHandler.process(event, invoice)
+      assert {:error, :retry_later, _error_reason} = InvoiceHandler.process(event, invoice)
     end
 
     test "returns ok for missing subscription id" do

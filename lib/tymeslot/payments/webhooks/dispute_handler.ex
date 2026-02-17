@@ -30,7 +30,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     true
   end
 
-  def can_handle?(_), do: false
+  def can_handle?(_event_type), do: false
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def process(%{"type" => "charge.dispute.created"} = event, dispute) do
@@ -283,7 +283,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
           email_struct = apply(template, template_fun, [email, data])
 
           case Mailer.deliver(email_struct) do
-            {:ok, _} ->
+            {:ok, _result} ->
               Logger.info("Dispute email (#{template_fun}) sent to #{email}")
               :ok
 

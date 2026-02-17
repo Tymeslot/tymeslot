@@ -103,7 +103,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
     State.validate(state, state_secret())
   end
 
-  defp verify_state(_), do: {:error, "Invalid state parameter"}
+  defp verify_state(_invalid), do: {:error, "Invalid state parameter"}
 
   defp create_calendar_integration(user_id, tokens) do
     attrs = %{

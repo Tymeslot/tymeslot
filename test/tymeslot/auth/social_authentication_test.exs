@@ -59,7 +59,7 @@ defmodule Tymeslot.Auth.SocialAuthenticationTest do
         "verified_email" => true
       }
 
-      assert {:error, :missing_required_fields, _} =
+      assert {:error, :missing_required_fields, _fields} =
                SocialAuthentication.validate_provider_response(params)
     end
 
@@ -128,7 +128,7 @@ defmodule Tymeslot.Auth.SocialAuthenticationTest do
 
       # Note: email matching depends on database collation/citext usage
       # Test the actual behavior - exact match should return error
-      assert {:error, _} = SocialAuthentication.check_email_availability("test@example.com")
+      assert {:error, _msg} = SocialAuthentication.check_email_availability("test@example.com")
     end
 
     test "returns error for invalid email format (nil)" do
@@ -193,7 +193,7 @@ defmodule Tymeslot.Auth.SocialAuthenticationTest do
         google_user_id: "123456"
       }
 
-      assert {:error, :missing_required_fields, _} =
+      assert {:error, :missing_required_fields, _fields} =
                SocialAuthentication.finalize_social_login_registration(
                  auth_params,
                  profile_params,

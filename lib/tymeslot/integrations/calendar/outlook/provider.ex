@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
            "OAuth scope must include Calendars.ReadWrite permission for read/write access"}
         end
 
-      _ ->
+      _invalid ->
         {:error, "Invalid oauth_scope format"}
     end
   end
@@ -163,7 +163,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
       {:error, :rate_limited, _message} ->
         {:error, "Rate limited - please try again later"}
 
-      {:error, _type, reason} ->
+      {:error, _error_type, reason} ->
         message = ErrorHandler.sanitize_error_message(reason, :outlook)
 
         {:error, message}
@@ -180,7 +180,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     owner["name"] || owner["address"] || "Unknown"
   end
 
-  defp get_calendar_owner(_), do: "Unknown"
+  defp get_calendar_owner(_calendar), do: "Unknown"
 
   defp parse_datetime(time_map, is_all_day)
 
@@ -189,11 +189,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     # We strip the time part and return just the Date
     case Date.from_iso8601(String.slice(datetime_str, 0, 10)) do
       {:ok, date} -> date
-      {:error, _} -> nil
+      {:error, _reason} -> nil
     end
   end
 
-  defp parse_datetime(%{"dateTime" => datetime_str, "timeZone" => _timezone}, _is_all_day) do
+  defp parse_datetime(%{"dateTime" => datetime_str, "timeZone" => _tz}, _is_all_day) do
     parse_iso8601_lenient(datetime_str)
   end
 
@@ -201,7 +201,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     parse_iso8601_lenient(datetime_str)
   end
 
-  defp parse_datetime(_, _), do: nil
+  defp parse_datetime(_other, _is_all_day), do: nil
 
   defp parse_iso8601_lenient(datetime_str) do
     case DateTime.from_iso8601(datetime_str) do
@@ -212,10 +212,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
         # Try appending Z if it's missing (often the case with some providers)
         case DateTime.from_iso8601(datetime_str <> "Z") do
           {:ok, datetime, _offset} -> datetime
-          {:error, _} -> nil
+          {:error, _reason} -> nil
         end
 
-      {:error, _} ->
+      {:error, _reason} ->
         nil
     end
   end

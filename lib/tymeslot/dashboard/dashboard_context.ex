@@ -47,11 +47,11 @@ defmodule Tymeslot.Dashboard.DashboardContext do
            # Cache for 5 minutes since integrations don't change often
            :timer.minutes(5)
          ) do
-      {:error, reason} ->
+      {:error, error_reason} ->
         # If cache computation fails, return empty default to maintain contract
         Logger.warning("Failed to get integration status from cache",
           user_id: user_id,
-          reason: inspect(reason)
+          reason: inspect(error_reason)
         )
 
         %{
@@ -143,7 +143,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
         meetings = Meetings.list_upcoming_meetings_for_user(user_email, 3)
         %{upcoming_meetings: meetings}
 
-      _ ->
+      _other_tab ->
         %{upcoming_meetings: []}
     end
   end

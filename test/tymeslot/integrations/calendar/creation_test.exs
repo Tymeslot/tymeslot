@@ -147,7 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
 
       # Will fail validation due to network error
       result = Creation.prevalidate_config(attrs)
-      assert match?({:error, _}, result)
+      assert match?({:error, _reason}, result)
     end
 
     test "skips validation for OAuth providers" do
@@ -198,7 +198,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       result = Creation.ensure_primary_on_first(user.id, integration.id, 0)
 
       # May return :ok or {:error, :not_found} depending on implementation
-      assert match?(:ok, result) or match?({:error, _}, result)
+      assert match?(:ok, result) or match?({:error, _reason}, result)
     end
 
     test "does not set primary if not first integration", %{user: user} do
@@ -255,7 +255,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       result = Creation.create_with_validation(user.id, params)
 
       # Validation will fail because we can't connect
-      assert match?({:error, _}, result)
+      assert match?({:error, _reason}, result)
     end
 
     test "returns changeset errors for invalid params", %{user: user} do
@@ -267,7 +267,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       result = Creation.create_with_validation(user.id, params)
 
       # Should return error due to missing required fields
-      assert {:error, _} = result
+      assert {:error, _reason} = result
     end
 
     test "returns form errors for security validation failures", %{user: user} do
@@ -283,7 +283,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       result = Creation.create_with_validation(user.id, params)
 
       # Security validation should catch malicious URL
-      assert {:error, _} = result
+      assert {:error, _reason} = result
     end
 
     test "accepts metadata option for rate limiting", %{user: user} do
@@ -300,7 +300,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       result = Creation.create_with_validation(user.id, params, metadata: metadata)
 
       # Should still fail validation but metadata is accepted
-      assert match?({:error, _}, result)
+      assert match?({:error, _reason}, result)
     end
   end
 end

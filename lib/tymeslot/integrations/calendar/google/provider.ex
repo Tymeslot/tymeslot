@@ -26,7 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     !String.contains?(scope, "calendar")
   end
 
-  def needs_scope_upgrade?(_), do: false
+  def needs_scope_upgrade?(_scope), do: false
 
   # Required callbacks for OAuth base
 
@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
           {:error, "OAuth scope must include calendar permission for read/write access"}
         end
 
-      _ ->
+      _other ->
         {:error, "Invalid oauth_scope format"}
     end
   end
@@ -153,18 +153,18 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   defp parse_datetime(%{"dateTime" => datetime_str}) do
     case DateTime.from_iso8601(datetime_str) do
       {:ok, datetime, _offset} -> datetime
-      {:error, _} -> nil
+      {:error, _reason} -> nil
     end
   end
 
   defp parse_datetime(%{"date" => date_str}) do
     case Date.from_iso8601(date_str) do
       {:ok, date} -> date
-      {:error, _} -> nil
+      {:error, _reason} -> nil
     end
   end
 
-  defp parse_datetime(_), do: nil
+  defp parse_datetime(_other), do: nil
 
   defp format_calendar(cal) do
     %{

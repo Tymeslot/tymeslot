@@ -116,7 +116,7 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
       assert {:error, :not_found} = result
 
       # Integration should still exist
-      assert {:ok, _} =
+      assert {:ok, _updated_integration} =
                CalendarManagement.get_calendar_integration(integration.id, other_user.id)
     end
 

@@ -40,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     event_count =
       case result do
         {:ok, events} -> length(events)
-        _ -> 0
+        {:error, _reason} -> 0
       end
 
     Metrics.track_parsing_performance(:ical, size, duration_ms, event_count)
@@ -72,7 +72,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   defp parse_calendar_data(calendar_data) do
     case parse(calendar_data) do
       {:ok, events} -> events
-      {:error, _} -> []
+      {:error, _reason} -> []
     end
   end
 
@@ -117,8 +117,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     |> Enum.drop(1)
     |> Enum.map(fn block ->
       case String.split(block, "END:VEVENT", parts: 2) do
-        [event_content | _] -> "BEGIN:VEVENT\n" <> event_content <> "\nEND:VEVENT"
-        _ -> nil
+        [event_content | _rest] -> "BEGIN:VEVENT\n" <> event_content <> "\nEND:VEVENT"
+        [] -> nil
       end
     end)
     |> Enum.filter(&(&1 != nil))
@@ -221,8 +221,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp extract_timezone_param(line) do
     case Regex.run(~r/TZID=([^;:]+)/, line) do
-      [_, timezone] -> timezone
-      _ -> nil
+      [_match, timezone] -> timezone
+      nil -> nil
     end
   end
 
@@ -242,7 +242,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       {:ok, datetime} ->
         datetime
 
-      {:error, _} ->
+      {:error, _reason} ->
         # Fallback for all-day or basic date formats (YYYYMMDD)
         with %{value: value} <- dt_info,
              true <- is_binary(value),
@@ -254,12 +254,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
              {:ok, date} <- Date.new(year, month, day) do
           date
         else
-          _ -> nil
+          _error -> nil
         end
     end
   end
 
-  defp calculate_end_time(nil, _), do: nil
+  defp calculate_end_time(nil, _duration), do: nil
 
   # Default 1 hour for DateTime, 1 day for Date
   defp calculate_end_time(%DateTime{} = start_time, nil),
@@ -271,7 +271,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     # Parse ISO 8601 duration (simplified - only handles basic cases)
     case DateTimeUtils.parse_duration(duration_str) do
       {:ok, seconds} -> DateTime.add(start_time, seconds, :second)
-      _ -> DateTime.add(start_time, 3600, :second)
+      {:error, _reason} -> DateTime.add(start_time, 3600, :second)
     end
   end
 
@@ -284,7 +284,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         days = div(seconds, 86_400)
         Date.add(start_time, max(days, 1))
 
-      _ ->
+      {:error, _reason} ->
         # Fallback to 1 day
         Date.add(start_time, 1)
     end
@@ -294,7 +294,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     # Pattern to extract calendar data from CalDAV response
     calendar_data_pattern = ~r/<(?:C:)?calendar-data[^>]*>(.*?)<\/(?:C:)?calendar-data>/s
 
-    Enum.map(Regex.scan(calendar_data_pattern, xml_body), fn [_, calendar_data] ->
+    Enum.map(Regex.scan(calendar_data_pattern, xml_body), fn [_match, calendar_data] ->
       # Unescape XML entities
       calendar_data
       |> String.replace("&lt;", "<")

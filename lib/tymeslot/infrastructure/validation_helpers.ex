@@ -158,7 +158,7 @@ defmodule Tymeslot.Infrastructure.ValidationHelpers do
     Enum.reduce_while(validations, {:ok, params}, fn validation_fun, {:ok, current_params} ->
       case validation_fun.(current_params) do
         {:ok, updated_params} -> {:cont, {:ok, updated_params}}
-        {:error, _} = error -> {:halt, error}
+        {:error, _reason} = error -> {:halt, error}
       end
     end)
   end
