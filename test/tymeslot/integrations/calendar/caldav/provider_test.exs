@@ -42,50 +42,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
   end
 
   describe "validate_config/1" do
-    test "returns error when base_url is missing" do
-      config = %{username: "user", password: "pass"}
+    import Tymeslot.CalendarProviderValidationCases
 
-      assert {:error, message} = Provider.validate_config(config)
-      assert String.contains?(message, "base_url")
-    end
-
-    test "returns error when username is missing" do
-      config = %{base_url: "https://caldav.example.com", password: "pass"}
-
-      assert {:error, message} = Provider.validate_config(config)
-      assert String.contains?(message, "username")
-    end
-
-    test "returns error when password is missing" do
-      config = %{base_url: "https://caldav.example.com", username: "user"}
-
-      assert {:error, message} = Provider.validate_config(config)
-      assert String.contains?(message, "password")
-    end
-
-    test "returns error for invalid URL format" do
-      config = %{
-        base_url: "not-a-valid-url",
-        username: "user",
-        password: "pass"
-      }
-
-      assert {:error, message} = Provider.validate_config(config)
-      assert String.contains?(message, "URL") or String.contains?(message, "url")
+    test "validates basic required fields" do
+      test_basic_validation(Provider, "https://caldav.example.com")
     end
 
     test "attempts connection when all required fields present" do
-      config = %{
-        base_url: "https://caldav.example.com",
-        username: "user",
-        password: "pass"
-      }
-
-      # Will fail connection but validates structure
-      capture_log(fn ->
-        result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
-      end)
+      test_validation_attempts_connection(Provider, "https://caldav.example.com")
     end
   end
 
