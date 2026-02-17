@@ -397,13 +397,14 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   end
 
   @doc """
-  Performs a synchronous availability fetch. Used primarily in test environments.
+  Performs a truly synchronous availability fetch for test environments.
+
+  Unlike the async version, this directly updates the socket with availability data
+  instead of using message passing, making tests deterministic and faster.
   """
   @spec perform_sync_availability_fetch(Phoenix.LiveView.Socket.t(), map()) ::
           Phoenix.LiveView.Socket.t()
   def perform_sync_availability_fetch(socket, context) do
-    ref = make_ref()
-
     duration_minutes = get_duration_minutes(socket)
 
     case get_month_availability(
@@ -415,13 +416,22 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
            context,
            duration_minutes
          ) do
-      {:ok, availability} -> send(self(), {ref, {:ok, availability}})
-      {:error, reason} -> send(self(), {ref, {:error, reason}})
-    end
+      {:ok, availability_map} ->
+        socket
+        |> assign(:month_availability_map, availability_map)
+        |> assign(:availability_status, :loaded)
+        |> assign(:availability_task, nil)
+        |> assign(:availability_task_ref, nil)
 
-    socket
-    |> assign(:availability_task, nil)
-    |> assign(:availability_task_ref, ref)
+      {:error, reason} ->
+        Logger.warning("Month availability fetch failed in sync mode: #{inspect(reason)}")
+
+        socket
+        |> assign(:month_availability_map, nil)
+        |> assign(:availability_status, :error)
+        |> assign(:availability_task, nil)
+        |> assign(:availability_task_ref, nil)
+    end
   end
 
   @doc """
