@@ -112,7 +112,7 @@ defmodule Tymeslot.MixProject do
       {:ex_image_info, "~> 1.0"},
       {:sweet_xml, "~> 0.7"},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:credo, "1.7.13", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
       {:flagpack, "~> 0.6"},

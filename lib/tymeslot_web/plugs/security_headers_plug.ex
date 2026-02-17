@@ -104,6 +104,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       "admin",
       "healthcheck",
       "robots.txt",
+      "sitemap.xml",
       "favicon.ico",
       "embed.js"
     ]
