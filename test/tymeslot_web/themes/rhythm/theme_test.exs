@@ -6,44 +6,11 @@ defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
 
   describe "states/0" do
     test "returns a 4-step flow state machine" do
-      states = Theme.states()
-
-      assert map_size(states) == 4
-      assert Map.has_key?(states, :overview)
-      assert Map.has_key?(states, :schedule)
-      assert Map.has_key?(states, :booking)
-      assert Map.has_key?(states, :confirmation)
+      ThemeCommonTestCases.test_states_structure(Theme)
     end
 
-    test "overview is step 1 with no previous step" do
-      states = Theme.states()
-
-      assert states.overview.step == 1
-      assert states.overview.next == :schedule
-      assert states.overview.prev == nil
-    end
-
-    test "schedule is step 2 linking overview and booking" do
-      states = Theme.states()
-
-      assert states.schedule.step == 2
-      assert states.schedule.prev == :overview
-      assert states.schedule.next == :booking
-    end
-
-    test "booking is step 3 linking schedule and confirmation" do
-      states = Theme.states()
-
-      assert states.booking.step == 3
-      assert states.booking.prev == :schedule
-      assert states.booking.next == :confirmation
-    end
-
-    test "confirmation is step 4 with booking as previous" do
-      states = Theme.states()
-
-      assert states.confirmation.step == 4
-      assert states.confirmation.prev == :booking
+    test "state flow configuration" do
+      ThemeCommonTestCases.test_state_flow(Theme, :booking)
     end
   end
 
@@ -55,15 +22,13 @@ defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
 
   describe "components/0" do
     test "maps all scheduling states to their component modules" do
-      components = Theme.components()
-
-      assert map_size(components) == 4
-      assert components.overview == TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent
-      assert components.schedule == TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent
-      assert components.booking == TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent
-
-      assert components.confirmation ==
-               TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent
+      ThemeCommonTestCases.test_components_mapping(
+        Theme,
+        TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent,
+        TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent,
+        TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent,
+        TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent
+      )
     end
   end
 

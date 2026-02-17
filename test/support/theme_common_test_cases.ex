@@ -6,6 +6,68 @@ defmodule TymeslotWeb.ThemeCommonTestCases do
   import ExUnit.Assertions
 
   @doc """
+  Tests the standard 4-step state machine structure.
+  """
+  @spec test_states_structure(module()) :: :ok
+  def test_states_structure(theme_module) do
+    states = theme_module.states()
+
+    assert map_size(states) == 4
+    assert Map.has_key?(states, :overview)
+    assert Map.has_key?(states, :schedule)
+    assert Map.has_key?(states, :booking)
+    assert Map.has_key?(states, :confirmation)
+  end
+
+  @doc """
+  Tests the state flow configuration for a 4-step theme.
+  Allows customization of confirmation's previous state.
+  """
+  @spec test_state_flow(module(), atom() | nil) :: :ok
+  def test_state_flow(theme_module, confirmation_prev \\ nil) do
+    states = theme_module.states()
+
+    # Overview: step 1, no previous
+    assert states.overview.step == 1
+    assert states.overview.next == :schedule
+    assert states.overview.prev == nil
+
+    # Schedule: step 2, links overview and booking
+    assert states.schedule.step == 2
+    assert states.schedule.prev == :overview
+    assert states.schedule.next == :booking
+
+    # Booking: step 3, links schedule and confirmation
+    assert states.booking.step == 3
+    assert states.booking.prev == :schedule
+    assert states.booking.next == :confirmation
+
+    # Confirmation: step 4, configurable previous
+    assert states.confirmation.step == 4
+    assert states.confirmation.prev == confirmation_prev
+  end
+
+  @doc """
+  Tests that components map to expected modules.
+  """
+  @spec test_components_mapping(module(), module(), module(), module(), module()) :: :ok
+  def test_components_mapping(
+        theme_module,
+        overview_component,
+        schedule_component,
+        booking_component,
+        confirmation_component
+      ) do
+    components = theme_module.components()
+
+    assert map_size(components) == 4
+    assert components.overview == overview_component
+    assert components.schedule == schedule_component
+    assert components.booking == booking_component
+    assert components.confirmation == confirmation_component
+  end
+
+  @doc """
   Tests the `initial_state_for_action/1` function common to all themes.
   Expects the theme module as the first argument.
   """

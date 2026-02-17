@@ -33,101 +33,19 @@ defmodule TymeslotWeb.GettextCompletenessTest do
     end
 
     test "all locales have the same msgids in default.po" do
-      msgids_by_locale = get_msgids_by_locale("default.po")
-
-      # Get English as reference (should be complete)
-      reference_msgids = msgids_by_locale["en"]
-      assert reference_msgids != [], "English default.po has no msgids"
-
-      # Check all other locales have the same msgids
-      for {locale, msgids} <- msgids_by_locale do
-        missing_in_locale = reference_msgids -- msgids
-        extra_in_locale = msgids -- reference_msgids
-
-        assert missing_in_locale == [],
-               """
-               Locale '#{locale}' is missing msgids in default.po:
-               #{inspect(missing_in_locale, pretty: true)}
-               """
-
-        assert extra_in_locale == [],
-               """
-               Locale '#{locale}' has extra msgids not in English default.po:
-               #{inspect(extra_in_locale, pretty: true)}
-               """
-
-        assert length(msgids) == length(reference_msgids),
-               "Locale '#{locale}' has #{length(msgids)} msgids, expected #{length(reference_msgids)}"
-      end
+      assert_msgids_consistency("default.po")
     end
 
     test "all locales have the same msgids in errors.po" do
-      msgids_by_locale = get_msgids_by_locale("errors.po")
-
-      reference_msgids = msgids_by_locale["en"]
-      assert reference_msgids != [], "English errors.po has no msgids"
-
-      for {locale, msgids} <- msgids_by_locale do
-        missing_in_locale = reference_msgids -- msgids
-        extra_in_locale = msgids -- reference_msgids
-
-        assert missing_in_locale == [],
-               """
-               Locale '#{locale}' is missing msgids in errors.po:
-               #{inspect(missing_in_locale, pretty: true)}
-               """
-
-        assert extra_in_locale == [],
-               """
-               Locale '#{locale}' has extra msgids not in English errors.po:
-               #{inspect(extra_in_locale, pretty: true)}
-               """
-
-        assert length(msgids) == length(reference_msgids),
-               "Locale '#{locale}' has #{length(msgids)} msgids, expected #{length(reference_msgids)}"
-      end
+      assert_msgids_consistency("errors.po")
     end
 
     test "no empty translations (msgstr) in any locale" do
-      supported_locales = LocaleHandler.supported_locales()
-
-      for locale <- supported_locales, po_file <- @po_files do
-        po_path = Path.join([@gettext_path, locale, "LC_MESSAGES", po_file])
-        content = File.read!(po_path)
-
-        # Find all msgid/msgstr pairs
-        pairs = extract_msgid_msgstr_pairs(content)
-
-        empty_translations =
-          pairs
-          |> Enum.filter(fn {msgid, msgstr} ->
-            # Skip the header entry (empty msgid)
-            msgid != "" && msgstr == ""
-          end)
-          |> Enum.map(fn {msgid, _} -> msgid end)
-
-        assert empty_translations == [],
-               """
-               Locale '#{locale}' has empty translations in #{po_file}:
-               #{inspect(empty_translations, pretty: true)}
-               """
-      end
+      for_each_locale_and_file(&assert_no_empty_translations/2)
     end
 
     test "all .po files have proper headers" do
-      supported_locales = LocaleHandler.supported_locales()
-
-      for locale <- supported_locales, po_file <- @po_files do
-        po_path = Path.join([@gettext_path, locale, "LC_MESSAGES", po_file])
-        content = File.read!(po_path)
-
-        # Check for required header fields
-        assert content =~ ~r/Language: #{locale}/,
-               "#{locale}/#{po_file} missing Language header"
-
-        assert content =~ ~r/Plural-Forms:/,
-               "#{locale}/#{po_file} missing Plural-Forms header"
-      end
+      for_each_locale_and_file(&assert_proper_headers/2)
     end
 
     test "translation file sizes are reasonable" do
@@ -164,6 +82,77 @@ defmodule TymeslotWeb.GettextCompletenessTest do
   end
 
   # Helper functions
+
+  defp assert_msgids_consistency(po_file) do
+    msgids_by_locale = get_msgids_by_locale(po_file)
+
+    # Get English as reference (should be complete)
+    reference_msgids = msgids_by_locale["en"]
+    assert reference_msgids != [], "English #{po_file} has no msgids"
+
+    # Check all other locales have the same msgids
+    for {locale, msgids} <- msgids_by_locale do
+      missing_in_locale = reference_msgids -- msgids
+      extra_in_locale = msgids -- reference_msgids
+
+      assert missing_in_locale == [],
+             """
+             Locale '#{locale}' is missing msgids in #{po_file}:
+             #{inspect(missing_in_locale, pretty: true)}
+             """
+
+      assert extra_in_locale == [],
+             """
+             Locale '#{locale}' has extra msgids not in English #{po_file}:
+             #{inspect(extra_in_locale, pretty: true)}
+             """
+
+      assert length(msgids) == length(reference_msgids),
+             "Locale '#{locale}' has #{length(msgids)} msgids, expected #{length(reference_msgids)}"
+    end
+  end
+
+  defp for_each_locale_and_file(assertion_fn) do
+    supported_locales = LocaleHandler.supported_locales()
+
+    for locale <- supported_locales, po_file <- @po_files do
+      assertion_fn.(locale, po_file)
+    end
+  end
+
+  defp assert_no_empty_translations(locale, po_file) do
+    po_path = Path.join([@gettext_path, locale, "LC_MESSAGES", po_file])
+    content = File.read!(po_path)
+
+    # Find all msgid/msgstr pairs
+    pairs = extract_msgid_msgstr_pairs(content)
+
+    empty_translations =
+      pairs
+      |> Enum.filter(fn {msgid, msgstr} ->
+        # Skip the header entry (empty msgid)
+        msgid != "" && msgstr == ""
+      end)
+      |> Enum.map(fn {msgid, _} -> msgid end)
+
+    assert empty_translations == [],
+           """
+           Locale '#{locale}' has empty translations in #{po_file}:
+           #{inspect(empty_translations, pretty: true)}
+           """
+  end
+
+  defp assert_proper_headers(locale, po_file) do
+    po_path = Path.join([@gettext_path, locale, "LC_MESSAGES", po_file])
+    content = File.read!(po_path)
+
+    # Check for required header fields
+    assert content =~ ~r/Language: #{locale}/,
+           "#{locale}/#{po_file} missing Language header"
+
+    assert content =~ ~r/Plural-Forms:/,
+           "#{locale}/#{po_file} missing Plural-Forms header"
+  end
 
   defp get_msgids_by_locale(po_file) do
     supported_locales = LocaleHandler.supported_locales()

@@ -37,15 +37,7 @@ defmodule TymeslotWeb.Live.Themes.RhythmMeetingTest do
       meeting: meeting
     } do
       ThemeMeetingTestCases.test_reschedule_page_rendering(view)
-
-      # Check meeting details
-      formatted_date = Calendar.strftime(meeting.start_time, "%B %d, %Y")
-      formatted_time = Calendar.strftime(meeting.start_time, "%-I:%M %p")
-
-      assert render(view) =~ formatted_date
-      assert render(view) =~ formatted_time
-      assert render(view) =~ "John Doe"
-      assert render(view) =~ "30 min"
+      ThemeMeetingTestCases.assert_meeting_details_rendered(view, meeting, "John Doe", 30)
 
       # Check for the action button
       assert has_element?(view, "button", "Go to Calendar")

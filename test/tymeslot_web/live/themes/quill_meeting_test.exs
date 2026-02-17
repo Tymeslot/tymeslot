@@ -37,15 +37,7 @@ defmodule TymeslotWeb.Live.Themes.QuillMeetingTest do
       meeting: meeting
     } do
       ThemeMeetingTestCases.test_reschedule_page_rendering(view)
-
-      # Check meeting details
-      formatted_date = Calendar.strftime(meeting.start_time, "%B %d, %Y")
-      formatted_time = Calendar.strftime(meeting.start_time, "%-I:%M %p")
-
-      assert render(view) =~ formatted_date
-      assert render(view) =~ formatted_time
-      assert render(view) =~ "Jane Smith"
-      assert render(view) =~ "45 min"
+      ThemeMeetingTestCases.assert_meeting_details_rendered(view, meeting, "Jane Smith", 45)
     end
 
     test "Choose New Time button navigates back to profile", %{

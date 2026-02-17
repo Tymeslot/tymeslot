@@ -56,6 +56,51 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     end
   end
 
+  @doc """
+  Tests connection to a CalDAV server with provider-specific error messages.
+
+  This helper encapsulates the common pattern used by CalDAV-based providers
+  (Radicale, Zimbra, Nextcloud, etc.) for testing connections.
+
+  ## Options
+    * `:success_message` - Message to return on successful connection
+    * `:unauthorized_message` - Message to return on authentication failure
+    * `:not_found_message` - Message to return when server not found
+    * `:error_formatter` - Function to format other errors (receives reason, returns string)
+  """
+  @spec test_caldav_provider_connection(map(), keyword()) ::
+          {:ok, String.t()} | {:error, String.t()}
+  def test_caldav_provider_connection(integration, opts \\ []) do
+    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
+    success_msg = Keyword.fetch!(opts, :success_message)
+    unauthorized_msg = Keyword.fetch!(opts, :unauthorized_message)
+    not_found_msg = Keyword.fetch!(opts, :not_found_message)
+    error_formatter = Keyword.fetch!(opts, :error_formatter)
+
+    client = %{
+      base_url: integration.base_url,
+      username: integration.username,
+      password: integration.password,
+      calendar_paths: integration.calendar_paths || [],
+      verify_ssl: true,
+      provider: integration.provider
+    }
+
+    case CaldavCommon.test_connection(client, ip_address: ip_address) do
+      {:ok, _} ->
+        {:ok, success_msg}
+
+      {:error, :unauthorized} ->
+        {:error, unauthorized_msg}
+
+      {:error, :not_found} ->
+        {:error, not_found_msg}
+
+      {:error, reason} ->
+        {:error, error_formatter.(reason)}
+    end
+  end
+
   defp valid_url?(url) when is_binary(url) do
     uri = URI.parse(url)
     uri.scheme in ["http", "https"] and uri.host not in [nil, ""]

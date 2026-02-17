@@ -12,7 +12,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   - Provider-aware configuration
   """
 
-  alias Tymeslot.Infrastructure.CircuitBreaker
+  alias Tymeslot.Infrastructure.{CircuitBreaker, CircuitBreakerHelpers}
   require Logger
 
   @calendar_providers [:caldav, :radicale, :nextcloud, :google, :outlook]
@@ -69,39 +69,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   @spec call(atom(), (-> any())) :: {:ok, any()} | {:error, atom()}
   def call(provider, fun) when provider in @calendar_providers and is_function(fun, 0) do
     breaker_name = breaker_name(provider)
-
-    # Circuit breakers are now started by the supervisor at application startup
-    # Just check if it exists and log if it doesn't
-    if breaker_exists?(breaker_name) do
-      case CircuitBreaker.call(breaker_name, fun) do
-        {:ok, result} ->
-          {:ok, result}
-
-        {:error, :circuit_open} = error ->
-          Logger.warning("Calendar circuit breaker open", provider: provider)
-          error
-
-        {:error, reason} = error ->
-          Logger.error("Calendar operation failed", provider: provider, error: inspect(reason))
-          error
-      end
-    else
-      Logger.error("Circuit breaker not found - it should be started by supervisor",
-        provider: provider,
-        breaker_name: breaker_name
-      )
-
-      # Return error instead of bypassing circuit protection
-      {:error, :breaker_not_found}
-    end
-  rescue
-    error ->
-      Logger.error("Calendar circuit breaker error",
-        provider: provider,
-        error: inspect(error)
-      )
-
-      {:error, :circuit_breaker_error}
+    CircuitBreakerHelpers.call_with_breaker(breaker_name, provider, "Calendar", fun)
   end
 
   def call(provider, _fun) do
@@ -244,17 +212,5 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
     end
   end
 
-  defp breaker_exists?({:via, Registry, {registry, key}}) do
-    case Registry.lookup(registry, key) do
-      [{_pid, _}] -> true
-      [] -> false
-    end
-  end
-
-  defp breaker_exists?(name) when is_atom(name) do
-    case Process.whereis(name) do
-      nil -> false
-      _pid -> true
-    end
-  end
+  defp breaker_exists?(name), do: CircuitBreakerHelpers.breaker_exists?(name)
 end

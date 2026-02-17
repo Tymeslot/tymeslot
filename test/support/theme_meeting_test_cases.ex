@@ -110,4 +110,20 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
     assert redirect_type in [:redirect, :live_redirect]
     assert to == "/#{profile_username}"
   end
+
+  @doc """
+  Asserts that meeting details (date, time, organizer, duration) are rendered.
+  """
+  @spec assert_meeting_details_rendered(term(), term(), String.t(), integer()) :: term()
+  def assert_meeting_details_rendered(view, meeting, organizer_name, duration) do
+    html = render(view)
+
+    formatted_date = Calendar.strftime(meeting.start_time, "%B %d, %Y")
+    formatted_time = Calendar.strftime(meeting.start_time, "%-I:%M %p")
+
+    assert html =~ formatted_date
+    assert html =~ formatted_time
+    assert html =~ organizer_name
+    assert html =~ "#{duration} min"
+  end
 end

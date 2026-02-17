@@ -169,15 +169,7 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       navigate_to_scheduling_preferences(view)
 
-      # Click "Custom" button for buffer_minutes
-      view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
-      |> render_click()
-
-      # Type a value that matches a preset (15)
-      view
-      |> element("form[phx-change='update_scheduling_preferences']")
-      |> render_change(%{"buffer_minutes" => "15"})
+      setup_custom_input_and_change_value(view, "buffer_minutes", "15")
 
       # The custom input should still be visible (not switch back to "Custom" button)
       html = render(view)
@@ -190,15 +182,7 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       {:ok, view, _html, _user} = setup_onboarding(conn)
       navigate_to_scheduling_preferences(view)
 
-      # Click "Custom" button for buffer_minutes
-      view
-      |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
-      |> render_click()
-
-      # Type a value that matches a preset (15)
-      view
-      |> element("form[phx-change='update_scheduling_preferences']")
-      |> render_change(%{"buffer_minutes" => "15"})
+      setup_custom_input_and_change_value(view, "buffer_minutes", "15")
 
       html = render(view)
 
@@ -312,5 +296,19 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       # "30 min" button should be active
       assert html =~ "btn-tag-selector-primary--active"
     end
+  end
+
+  # Helper functions
+
+  defp setup_custom_input_and_change_value(view, setting, value) do
+    # Click "Custom" button for the setting
+    view
+    |> element("button[phx-click='focus_custom_input'][phx-value-setting='#{setting}']")
+    |> render_click()
+
+    # Type the value
+    view
+    |> element("form[phx-change='update_scheduling_preferences']")
+    |> render_change(%{setting => value})
   end
 end

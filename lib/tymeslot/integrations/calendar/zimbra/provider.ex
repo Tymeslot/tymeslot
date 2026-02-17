@@ -106,30 +106,13 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
   """
   @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
   def test_connection(integration, opts \\ []) do
-    ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
-
-    client = %{
-      base_url: integration.base_url,
-      username: integration.username,
-      password: integration.password,
-      calendar_paths: integration.calendar_paths || [],
-      verify_ssl: true,
-      provider: :zimbra
-    }
-
-    case CaldavCommon.test_connection(client, ip_address: ip_address) do
-      {:ok, _} ->
-        {:ok, "Zimbra connection successful"}
-
-      {:error, :unauthorized} ->
-        {:error, "Authentication failed. Check your Zimbra username and password."}
-
-      {:error, :not_found} ->
-        {:error, "Zimbra server not found. Check your server URL."}
-
-      {:error, reason} ->
-        {:error, format_error(reason)}
-    end
+    ProviderCommon.test_caldav_provider_connection(integration,
+      metadata: opts[:metadata],
+      success_message: "Zimbra connection successful",
+      unauthorized_message: "Authentication failed. Check your Zimbra username and password.",
+      not_found_message: "Zimbra server not found. Check your server URL.",
+      error_formatter: &format_error/1
+    )
   end
 
   @doc """
