@@ -11,7 +11,8 @@ defmodule Tymeslot.Auth.AuthenticationTest do
   describe "authentication security" do
     test "consistent error messages prevent user enumeration" do
       # Non-existent user
-      {:error, _reason, message1} = Authentication.authenticate_user("fake@example.com", "password")
+      {:error, _reason, message1} =
+        Authentication.authenticate_user("fake@example.com", "password")
 
       # Existing user wrong password
       user = insert(:user, password_hash: Password.hash_password("RealPass123!"))

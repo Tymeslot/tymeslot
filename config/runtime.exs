@@ -82,7 +82,9 @@ parse_proxy_url = fn proxy_url ->
       end
 
     %{
-      host: uri.host || raise("Proxy URL must include a valid host (check HTTP_PROXY/HTTPS_PROXY format)"),
+      host:
+        uri.host ||
+          raise("Proxy URL must include a valid host (check HTTP_PROXY/HTTPS_PROXY format)"),
       port: uri.port || 8080,
       auth: proxy_auth,
       scheme: uri.scheme || "http"

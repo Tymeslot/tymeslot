@@ -44,7 +44,9 @@ defmodule TymeslotWeb.MeetingManagement.SharedHelpersTest do
 
     test "returns :ok for valid rescheduling", %{meeting: meeting} do
       future_meeting = setup_future_meeting(meeting)
-      assert {:ok, _result} = SharedHelpers.validate_meeting_access(future_meeting.uid, :reschedule)
+
+      assert {:ok, _result} =
+               SharedHelpers.validate_meeting_access(future_meeting.uid, :reschedule)
     end
   end
 

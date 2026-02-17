@@ -347,8 +347,11 @@ defmodule TymeslotWeb.OnboardingLive do
 
   defp try_update_mode(socket, field, value_str, params) when is_binary(value_str) do
     case Integer.parse(value_str) do
-      {int_value, _value} -> CustomInputModeHelper.toggle_custom_mode(socket, field, params, int_value)
-      _other -> socket
+      {int_value, _value} ->
+        CustomInputModeHelper.toggle_custom_mode(socket, field, params, int_value)
+
+      _other ->
+        socket
     end
   end
 

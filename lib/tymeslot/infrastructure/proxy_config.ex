@@ -148,8 +148,10 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
 
   # Validate that prefix length is appropriate for IP version
   defp validate_prefix_length({_a, _b, _c, _d}, prefix) when prefix >= 0 and prefix <= 32, do: :ok
-  defp validate_prefix_length({_s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}, prefix) when prefix >= 0 and prefix <= 128,
-    do: :ok
+
+  defp validate_prefix_length({_s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}, prefix)
+       when prefix >= 0 and prefix <= 128,
+       do: :ok
 
   defp validate_prefix_length(_ip, _prefix), do: {:error, :invalid_prefix}
 

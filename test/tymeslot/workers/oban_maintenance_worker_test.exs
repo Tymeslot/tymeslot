@@ -206,7 +206,8 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
   describe "perform/1 - input validation" do
     test "accepts unknown job arguments (forward compatibility)" do
       # Job with extra fields from future version
-      assert {:ok, _cleanup_result} = perform_job(ObanMaintenanceWorker, %{"future_option" => true})
+      assert {:ok, _cleanup_result} =
+               perform_job(ObanMaintenanceWorker, %{"future_option" => true})
     end
 
     test "handles empty args" do

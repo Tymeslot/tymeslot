@@ -67,12 +67,21 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
 
   defp validate_field(:name, value, metadata), do: validate_meeting_name(value, metadata)
   defp validate_field(:duration, value, metadata), do: validate_meeting_duration(value, metadata)
-  defp validate_field(:description, value, metadata), do: validate_meeting_description(value, metadata)
+
+  defp validate_field(:description, value, metadata),
+    do: validate_meeting_description(value, metadata)
+
   defp validate_field(:icon, value, metadata), do: validate_icon(value, metadata)
   defp validate_field(:meeting_mode, value, metadata), do: validate_meeting_mode(value, metadata)
-  defp validate_field(:calendar_integration_id, value, metadata), do: validate_calendar_integration_id(value, metadata)
-  defp validate_field(:target_calendar_id, value, metadata), do: validate_target_calendar_id(value, metadata)
-  defp validate_field(:reminder_config, value, metadata), do: validate_reminder_config(value, metadata)
+
+  defp validate_field(:calendar_integration_id, value, metadata),
+    do: validate_calendar_integration_id(value, metadata)
+
+  defp validate_field(:target_calendar_id, value, metadata),
+    do: validate_target_calendar_id(value, metadata)
+
+  defp validate_field(:reminder_config, value, metadata),
+    do: validate_reminder_config(value, metadata)
 
   defp log_validation_result(status, metadata, errors \\ nil) do
     event_name = "meeting_type_form_validation_#{status}"
@@ -156,7 +165,8 @@ defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
     end
   end
 
-  def validate_meeting_type_field(_other_field, _value, _opts), do: {:error, %{base: "Invalid field"}}
+  def validate_meeting_type_field(_other_field, _value, _opts),
+    do: {:error, %{base: "Invalid field"}}
 
   @doc """
   Validates buffer minutes setting input.

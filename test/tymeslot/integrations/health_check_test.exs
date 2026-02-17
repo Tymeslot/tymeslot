@@ -39,7 +39,9 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
 
       # Mock failure for 3 checks (threshold is 3)
-      expect(GoogleCalendarAPIMock, :list_primary_events, 3, fn _integration, _start_date, _end_date ->
+      expect(GoogleCalendarAPIMock, :list_primary_events, 3, fn _integration,
+                                                                _start_date,
+                                                                _end_date ->
         {:error, :unauthorized, "Token expired"}
       end)
 
@@ -74,7 +76,9 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
 
       # Initial failure to make it degraded
-      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _integration, _start_date, _end_date ->
+      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _integration,
+                                                                _start_date,
+                                                                _end_date ->
         {:error, :unauthorized}
       end)
 
@@ -83,7 +87,9 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       assert HealthCheck.get_health_status(:calendar, integration.id).status == :degraded
 
       # Mock success for 2 checks (recovery threshold is 2)
-      expect(GoogleCalendarAPIMock, :list_primary_events, 2, fn _integration, _start_date, _end_date ->
+      expect(GoogleCalendarAPIMock, :list_primary_events, 2, fn _integration,
+                                                                _start_date,
+                                                                _end_date ->
         {:ok, []}
       end)
 
@@ -105,7 +111,9 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       # Mock a slow response
       # Note: Oban doesn't have a built-in "timeout" return value like Task.yield,
       # but the underlying integration call might timeout.
-      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _integration, _start_date, _end_date ->
+      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _integration,
+                                                                _start_date,
+                                                                _end_date ->
         {:error, :timeout}
       end)
 

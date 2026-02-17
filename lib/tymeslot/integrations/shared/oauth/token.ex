@@ -65,7 +65,9 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
 
     case result do
       {:ok, {access_token, refresh_token, expires_at}} ->
-        _persist_result = if persist?, do: persist_tokens(integration, access_token, refresh_token, expires_at)
+        _persist_result =
+          if persist?, do: persist_tokens(integration, access_token, refresh_token, expires_at)
+
         {:ok, access_token}
 
       {:error, type, reason} ->

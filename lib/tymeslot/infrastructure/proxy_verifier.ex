@@ -97,7 +97,6 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
   end
 
   defp run_verification(test_url, timeout) do
-
     Logger.info("Starting proxy verification test...")
 
     result = %{
@@ -207,11 +206,12 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
         result
         | proxy_reachable: true,
           traffic_flows_through_proxy: true,
-          details: Map.merge(result.details, %{
-            status: response.status,
-            test_url: test_url,
-            proxy_used: "#{proxy_config.host}:#{proxy_config.port}"
-          })
+          details:
+            Map.merge(result.details, %{
+              status: response.status,
+              test_url: test_url,
+              proxy_used: "#{proxy_config.host}:#{proxy_config.port}"
+            })
       }
 
       # Try to parse response body to confirm proxy usage (if using httpbin)
@@ -228,7 +228,11 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
         result
         | proxy_reachable: true,
           errors: [error | result.errors],
-          details: Map.merge(result.details, %{status: response.status, body_preview: preview_body(response.body)})
+          details:
+            Map.merge(result.details, %{
+              status: response.status,
+              body_preview: preview_body(response.body)
+            })
       }
     end
   end

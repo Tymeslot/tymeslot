@@ -69,7 +69,11 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
   end
 
   # Main traversal - look for defmodule nodes
-  defp traverse({:defmodule, _meta, [_alias, [do: {:__block__, _, body}]]} = ast, issues, issue_meta) do
+  defp traverse(
+         {:defmodule, _meta, [_alias, [do: {:__block__, _, body}]]} = ast,
+         issues,
+         issue_meta
+       ) do
     if uses_phoenix_component?(body) do
       new_issues = check_functions_in_module(body, issue_meta)
       {ast, issues ++ new_issues}
@@ -79,7 +83,8 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
   end
 
   # Handle single-expression modules
-  defp traverse({:defmodule, _meta, [_alias, [do: body]]} = ast, issues, issue_meta) when not is_list(body) do
+  defp traverse({:defmodule, _meta, [_alias, [do: body]]} = ast, issues, issue_meta)
+       when not is_list(body) do
     if uses_phoenix_component?([body]) do
       new_issues = check_functions_in_module([body], issue_meta)
       {ast, issues ++ new_issues}
@@ -113,12 +118,13 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
           # Skip if component doesn't use assigns (static HTML only)
           if not uses_assigns do
             acc
-          # Check if it has attr declarations before it
-          else if has_attr_before?(body, index) do
-            acc
+            # Check if it has attr declarations before it
           else
-            [create_issue(issue_meta, meta, func_name) | acc]
-          end
+            if has_attr_before?(body, index) do
+              acc
+            else
+              [create_issue(issue_meta, meta, func_name) | acc]
+            end
           end
 
         _other ->
@@ -133,7 +139,19 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
       Macro.prewalk(func_body, false, fn
         # Look for @variable references (module attributes used as assigns)
         {:@, _, [{var_name, _, _}]} = node, _acc
-        when is_atom(var_name) and var_name not in [:moduledoc, :doc, :spec, :impl, :behaviour, :type, :typep, :opaque, :callback, :macrocallback] ->
+        when is_atom(var_name) and
+               var_name not in [
+                 :moduledoc,
+                 :doc,
+                 :spec,
+                 :impl,
+                 :behaviour,
+                 :type,
+                 :typep,
+                 :opaque,
+                 :callback,
+                 :macrocallback
+               ] ->
           {node, true}
 
         node, acc ->
@@ -186,8 +204,7 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
 
     format_issue(
       issue_meta,
-      message:
-        "Function component `#{func_name}/1` should declare its attributes using `attr/3`",
+      message: "Function component `#{func_name}/1` should declare its attributes using `attr/3`",
       line_no: line_no,
       trigger: "def #{func_name}"
     )

@@ -36,7 +36,9 @@ defmodule Tymeslot.ThemeCustomizationsValidationTest do
       presets = %{gradients: %{"gradient_1" => %{}}}
 
       assert Validation.validate_background_value("gradient", "gradient_1", presets) == :ok
-      assert {:error, _reason} = Validation.validate_background_value("gradient", "unknown", presets)
+
+      assert {:error, _reason} =
+               Validation.validate_background_value("gradient", "unknown", presets)
     end
 
     test "validate_background_value/3 validates colors" do
@@ -64,7 +66,9 @@ defmodule Tymeslot.ThemeCustomizationsValidationTest do
       presets = Presets.get_all_presets()
 
       assert Validation.validate_background_selection("gradient", "gradient_1", presets) == :ok
-      assert {:error, _reason} = Validation.validate_background_selection("invalid", "value", presets)
+
+      assert {:error, _reason} =
+               Validation.validate_background_selection("invalid", "value", presets)
     end
 
     test "validate_hex_color/1 accepts valid hex colors" do

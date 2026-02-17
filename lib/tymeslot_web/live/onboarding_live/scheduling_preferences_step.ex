@@ -21,6 +21,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
   """
   attr :profile, :map, required: true
   attr :form_errors, :map, required: true
+
   attr :custom_input_mode, :map,
     default: %{buffer_minutes: false, advance_booking_days: false, min_advance_hours: false}
 

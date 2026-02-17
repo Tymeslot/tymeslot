@@ -113,7 +113,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeTest do
         {:ok, %{status: 401, body: "unauthorized"}}
       end)
 
-      assert {:error, {:http_error, 401, _error_body}} = TokenExchange.refresh_access_token(@token_url, %{})
+      assert {:error, {:http_error, 401, _error_body}} =
+               TokenExchange.refresh_access_token(@token_url, %{})
     end
   end
 end

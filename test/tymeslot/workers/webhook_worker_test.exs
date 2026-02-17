@@ -248,7 +248,9 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
         assert value == webhook.webhook_token
 
         # Verify timestamp header is present
-        timestamp_header = Enum.find(headers, fn {key, _value} -> key == "X-Tymeslot-Timestamp" end)
+        timestamp_header =
+          Enum.find(headers, fn {key, _value} -> key == "X-Tymeslot-Timestamp" end)
+
         assert timestamp_header, "Expected X-Tymeslot-Timestamp header"
 
         {_timestamp_key, timestamp} = timestamp_header

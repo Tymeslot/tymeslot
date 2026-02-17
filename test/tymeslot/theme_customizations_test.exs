@@ -51,7 +51,8 @@ defmodule Tymeslot.ThemeCustomizationsTest do
         "background_value" => "gradient_1"
       }
 
-      {:ok, _result} = ThemeCustomizations.create_theme_customization(profile.id, "1", initial_attrs)
+      {:ok, _result} =
+        ThemeCustomizations.create_theme_customization(profile.id, "1", initial_attrs)
 
       # Update it
       update_attrs = %{

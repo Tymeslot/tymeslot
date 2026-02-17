@@ -39,7 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
     event_data = %{summary: "Test"}
 
     # Should not call the mock for invalid context
-    expect(Tymeslot.CalendarMock, :create_event, 0, fn _arg1,_arg2-> {:ok, %{}} end)
+    expect(Tymeslot.CalendarMock, :create_event, 0, fn _arg1, _arg2 -> {:ok, %{}} end)
 
     assert {:error, :invalid_context} = Calendar.create_event(event_data, "invalid_string")
     assert {:error, :invalid_context} = Calendar.create_event(event_data, %{some: "map"})

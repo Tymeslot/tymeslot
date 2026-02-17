@@ -16,7 +16,6 @@ defmodule TymeslotWeb.Shared.PasswordToggleButtonComponent do
 
   @spec password_toggle_button(map()) :: Phoenix.LiveView.Rendered.t()
   def password_toggle_button(assigns) do
-
     ~H"""
     <button
       type="button"

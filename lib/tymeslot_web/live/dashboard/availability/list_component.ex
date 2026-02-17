@@ -265,7 +265,8 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     with {:ok, from_day} <- parse_day(from_day_str),
          {:ok, to_days} <-
            AvailabilityInputProcessor.validate_day_selections(to_days_str, metadata: metadata),
-         {:ok, _result} <- AvailabilityActions.copy_day_settings(profile_id(socket), from_day, to_days) do
+         {:ok, _result} <-
+           AvailabilityActions.copy_day_settings(profile_id(socket), from_day, to_days) do
       day_names = Enum.map_join(to_days, ", ", &AvailabilityActions.day_name/1)
       Flash.info("Settings copied to #{day_names}")
       send(self(), {:reload_schedule})

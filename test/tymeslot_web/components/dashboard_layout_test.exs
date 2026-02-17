@@ -16,7 +16,9 @@ defmodule TymeslotWeb.Components.DashboardLayoutTest do
       profile: profile,
       current_action: :overview,
       integration_status: %{has_calendar: true},
-      inner_block: [%{__slot__: :inner_block, inner_block: fn _assigns, _changed -> ~H"Main Content" end}]
+      inner_block: [
+        %{__slot__: :inner_block, inner_block: fn _assigns, _changed -> ~H"Main Content" end}
+      ]
     }
 
     html = render_component(&DashboardLayout.dashboard_layout/1, component_assigns)

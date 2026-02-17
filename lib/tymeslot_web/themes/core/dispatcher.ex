@@ -424,7 +424,8 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     |> assign(:duration, duration_str)
   end
 
-  defp assign_action_specific_data(socket, _other_action, _unused_meeting, _unused_params), do: socket
+  defp assign_action_specific_data(socket, _other_action, _unused_meeting, _unused_params),
+    do: socket
 
   defp assign_theme_customization_data(socket, profile, theme_id) do
     if profile do

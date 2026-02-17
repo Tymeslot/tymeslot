@@ -125,7 +125,9 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityOverrideQueriesTest do
       insert(:availability_override, profile: profile, date: Date.add(today, -2))
       insert(:availability_override, profile: profile, date: Date.add(today, 2))
 
-      {count, _value} = AvailabilityOverrideQueries.delete_overrides_before_date(profile.id, today)
+      {count, _value} =
+        AvailabilityOverrideQueries.delete_overrides_before_date(profile.id, today)
+
       assert count == 2
       assert length(AvailabilityOverrideQueries.get_overrides_by_profile(profile.id)) == 1
     end

@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Hooks.RouteBundleHookTest do
         }
 
         {:cont, updated_socket} = RouteBundleHook.on_mount(:default, %{}, %{}, socket)
-        assert updated_socket.assigns.route_bundle in ~w(auth dashboard public saas) ++ [nil]
+        assert updated_socket.assigns.route_bundle in (~w(auth dashboard public saas) ++ [nil])
       end
     end
   end

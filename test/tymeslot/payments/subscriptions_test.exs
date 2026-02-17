@@ -14,7 +14,11 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
       opts = [at_period_end: true]
 
       # Configure the subscription manager
-      Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
+      Application.put_env(
+        :tymeslot,
+        :subscription_manager,
+        Tymeslot.Payments.SubscriptionManagerMock
+      )
 
       expect(Tymeslot.Payments.SubscriptionManagerMock, :cancel_subscription, fn
         ^subscription_id, ^user_id, ^opts ->
@@ -37,7 +41,11 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
       subscription_id = "sub_123"
       user_id = 1
 
-      Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
+      Application.put_env(
+        :tymeslot,
+        :subscription_manager,
+        Tymeslot.Payments.SubscriptionManagerMock
+      )
 
       expect(Tymeslot.Payments.SubscriptionManagerMock, :cancel_subscription, fn
         ^subscription_id, ^user_id, [] ->
@@ -48,9 +56,15 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
     end
 
     test "propagates errors from subscription manager" do
-      Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
+      Application.put_env(
+        :tymeslot,
+        :subscription_manager,
+        Tymeslot.Payments.SubscriptionManagerMock
+      )
 
-      expect(Tymeslot.Payments.SubscriptionManagerMock, :cancel_subscription, fn _sub_id, _user_id, _opts ->
+      expect(Tymeslot.Payments.SubscriptionManagerMock, :cancel_subscription, fn _sub_id,
+                                                                                 _user_id,
+                                                                                 _opts ->
         {:error, :subscription_not_found}
       end)
 
@@ -66,7 +80,11 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
       user_id = 1
       metadata = %{upgrade_reason: "needs_more_features"}
 
-      Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
+      Application.put_env(
+        :tymeslot,
+        :subscription_manager,
+        Tymeslot.Payments.SubscriptionManagerMock
+      )
 
       expect(Tymeslot.Payments.SubscriptionManagerMock, :update_subscription, fn
         ^subscription_id, ^new_price_id, ^user_id, ^metadata ->
@@ -89,7 +107,11 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
       new_price_id = "price_456"
       user_id = 1
 
-      Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
+      Application.put_env(
+        :tymeslot,
+        :subscription_manager,
+        Tymeslot.Payments.SubscriptionManagerMock
+      )
 
       expect(Tymeslot.Payments.SubscriptionManagerMock, :update_subscription, fn
         ^subscription_id, ^new_price_id, ^user_id, metadata ->
@@ -97,13 +119,21 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
           {:ok, %{id: subscription_id}}
       end)
 
-      assert {:ok, _result} = Subscriptions.update_subscription(subscription_id, new_price_id, user_id)
+      assert {:ok, _result} =
+               Subscriptions.update_subscription(subscription_id, new_price_id, user_id)
     end
 
     test "propagates errors from subscription manager" do
-      Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
+      Application.put_env(
+        :tymeslot,
+        :subscription_manager,
+        Tymeslot.Payments.SubscriptionManagerMock
+      )
 
-      expect(Tymeslot.Payments.SubscriptionManagerMock, :update_subscription, fn _sub_id, _price_id, _user_id, _metadata ->
+      expect(Tymeslot.Payments.SubscriptionManagerMock, :update_subscription, fn _sub_id,
+                                                                                 _price_id,
+                                                                                 _user_id,
+                                                                                 _metadata ->
         {:error, :invalid_price_id}
       end)
 
@@ -123,7 +153,11 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
     test "returns error when subscription manager doesn't export downgrade function" do
       # SubscriptionManagerMock doesn't have downgrade_subscription/4 in its behavior
       # so it will return :downgrades_not_supported
-      Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
+      Application.put_env(
+        :tymeslot,
+        :subscription_manager,
+        Tymeslot.Payments.SubscriptionManagerMock
+      )
 
       assert {:error, :downgrades_not_supported} =
                Subscriptions.downgrade_subscription("sub_123", "price_basic", 1)
@@ -155,9 +189,15 @@ defmodule Tymeslot.Payments.SubscriptionsTest do
 
     test "subscription manager is properly retrieved from config" do
       # This is an integration test to verify the config module interaction
-      Application.put_env(:tymeslot, :subscription_manager, Tymeslot.Payments.SubscriptionManagerMock)
+      Application.put_env(
+        :tymeslot,
+        :subscription_manager,
+        Tymeslot.Payments.SubscriptionManagerMock
+      )
 
-      expect(Tymeslot.Payments.SubscriptionManagerMock, :cancel_subscription, fn _sub_id, _user_id, _opts ->
+      expect(Tymeslot.Payments.SubscriptionManagerMock, :cancel_subscription, fn _sub_id,
+                                                                                 _user_id,
+                                                                                 _opts ->
         {:ok, %{}}
       end)
 

@@ -193,7 +193,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     # Validate slug against meeting types if username context
     slug = normalize_duration_param(params)
 
-    with {:username_context, true} <- {:username_context, is_binary(socket.assigns[:username_context])},
+    with {:username_context, true} <-
+           {:username_context, is_binary(socket.assigns[:username_context])},
          {:slug, slug} when is_binary(slug) <- {:slug, slug},
          {:meeting_type, nil} <-
            {:meeting_type,

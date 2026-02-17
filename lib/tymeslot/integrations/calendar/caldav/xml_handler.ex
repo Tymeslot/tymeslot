@@ -206,7 +206,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
 
   defp build_prop_element(other), do: "<d:#{other}/>"
 
-  defp determine_calendar_name(%{displayname: displayname, href: _calendar_href}) when displayname != "" do
+  defp determine_calendar_name(%{displayname: displayname, href: _calendar_href})
+       when displayname != "" do
     displayname
   end
 

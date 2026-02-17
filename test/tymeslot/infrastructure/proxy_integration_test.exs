@@ -34,7 +34,10 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
       unless proxy_configured? do
         IO.puts("\n⚠️  Skipping integration test - no proxy configured")
         IO.puts("   Set HTTPS_PROXY environment variable to run this test")
-        IO.puts("   Example: HTTPS_PROXY=http://user:pass@proxy:port mix test --only integration\n")
+
+        IO.puts(
+          "   Example: HTTPS_PROXY=http://user:pass@proxy:port mix test --only integration\n"
+        )
       end
 
       # Skip test if no proxy configured
@@ -70,7 +73,9 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
       end
     end
 
-    test "proxy authentication works with real credentials", %{proxy_configured?: proxy_configured?} do
+    test "proxy authentication works with real credentials", %{
+      proxy_configured?: proxy_configured?
+    } do
       if proxy_configured? do
         # This test verifies that proxy authentication is actually working
         # by making a request that requires CONNECT tunneling (HTTPS through HTTP proxy)

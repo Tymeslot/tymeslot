@@ -211,6 +211,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
       # CRITICAL: Verify proxy_headers is at connect_options level
       # If this fails, authentication will fail with 407
       connect_opts = options[:connect_options]
+
       assert Keyword.has_key?(connect_opts, :proxy_headers),
              "proxy_headers MUST exist at connect_options level for CONNECT tunnel auth"
 

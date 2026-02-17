@@ -168,7 +168,9 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
     Mix.shell().info("")
 
     if result.traffic_flows_through_proxy do
-      Mix.shell().info(IO.ANSI.format([:green, :bright, "✓ SUCCESS: Proxy verification passed\n"]))
+      Mix.shell().info(
+        IO.ANSI.format([:green, :bright, "✓ SUCCESS: Proxy verification passed\n"])
+      )
     else
       Mix.shell().error(IO.ANSI.format([:red, :bright, "✗ FAILED: Proxy verification failed\n"]))
     end

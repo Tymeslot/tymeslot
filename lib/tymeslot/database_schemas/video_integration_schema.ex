@@ -128,9 +128,7 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
     _e ->
       require Logger
 
-      Logger.error(
-        "Failed to decrypt #{field} for video integration #{id}"
-      )
+      Logger.error("Failed to decrypt #{field} for video integration #{id}")
 
       nil
   end

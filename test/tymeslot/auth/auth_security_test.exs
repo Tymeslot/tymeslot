@@ -83,7 +83,8 @@ defmodule Tymeslot.Auth.SecurityTest do
       sessions = insert_list(3, :user_session, user: user)
 
       # Change password
-      {:ok, _updated_user} = Auth.update_user_password(user, "OldPass123!", "NewPass123!", "NewPass123!")
+      {:ok, _updated_user} =
+        Auth.update_user_password(user, "OldPass123!", "NewPass123!", "NewPass123!")
 
       # Verify all old sessions are invalid
       Enum.each(sessions, fn session ->
@@ -186,7 +187,8 @@ defmodule Tymeslot.Auth.SecurityTest do
         )
 
       # Unverified users should not be able to authenticate
-      assert {:error, :email_not_verified, _message} = Auth.authenticate_user(unverified.email, password)
+      assert {:error, :email_not_verified, _message} =
+               Auth.authenticate_user(unverified.email, password)
     end
   end
 

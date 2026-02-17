@@ -283,17 +283,26 @@ defmodule Tymeslot.MeetingTypes do
 
   defp validate_video_integration(_attrs, _user_id), do: :ok
 
-  defp validate_calendar_integration(%{calendar_integration_id: nil, target_calendar_id: nil}, _user_id),
-    do: :ok
+  defp validate_calendar_integration(
+         %{calendar_integration_id: nil, target_calendar_id: nil},
+         _user_id
+       ),
+       do: :ok
 
-  defp validate_calendar_integration(%{calendar_integration_id: "", target_calendar_id: nil}, _user_id),
-    do: :ok
+  defp validate_calendar_integration(
+         %{calendar_integration_id: "", target_calendar_id: nil},
+         _user_id
+       ),
+       do: :ok
 
   defp validate_calendar_integration(%{calendar_integration_id: nil}, _user_id),
     do: {:error, :calendar_integration_required}
 
-  defp validate_calendar_integration(%{calendar_integration_id: "", target_calendar_id: _target}, _user_id),
-    do: {:error, :calendar_integration_required}
+  defp validate_calendar_integration(
+         %{calendar_integration_id: "", target_calendar_id: _target},
+         _user_id
+       ),
+       do: {:error, :calendar_integration_required}
 
   defp validate_calendar_integration(
          %{calendar_integration_id: id, target_calendar_id: target_calendar_id},
@@ -316,8 +325,11 @@ defmodule Tymeslot.MeetingTypes do
 
   defp validate_calendar_integration(_other_attrs, _user_id), do: :ok
 
-  defp validate_target_calendar(nil, _calendar_integration), do: {:error, :target_calendar_required}
-  defp validate_target_calendar("", _calendar_integration), do: {:error, :target_calendar_required}
+  defp validate_target_calendar(nil, _calendar_integration),
+    do: {:error, :target_calendar_required}
+
+  defp validate_target_calendar("", _calendar_integration),
+    do: {:error, :target_calendar_required}
 
   defp validate_target_calendar(target_calendar_id, integration) do
     calendar_list = integration.calendar_list

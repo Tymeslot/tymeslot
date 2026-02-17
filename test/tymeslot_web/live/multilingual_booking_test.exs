@@ -11,7 +11,11 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
     profile = insert(:profile, user: user, username: "testuser")
 
     # Stub calendar operations to avoid Mox errors
-    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _integration, _range_start, _range_end -> {:ok, []} end)
+    stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _integration,
+                                                                _range_start,
+                                                                _range_end ->
+      {:ok, []}
+    end)
 
     insert(:calendar_integration,
       user: user,

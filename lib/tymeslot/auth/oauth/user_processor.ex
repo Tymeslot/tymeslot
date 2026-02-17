@@ -126,7 +126,11 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
     end)
   end
 
-  defp extract_email_address(%{"email" => email}, _fallback) when is_binary(email), do: {:ok, email}
-  defp extract_email_address(_primary, %{"email" => email}) when is_binary(email), do: {:ok, email}
+  defp extract_email_address(%{"email" => email}, _fallback) when is_binary(email),
+    do: {:ok, email}
+
+  defp extract_email_address(_primary, %{"email" => email}) when is_binary(email),
+    do: {:ok, email}
+
   defp extract_email_address(_primary, _fallback), do: :error
 end

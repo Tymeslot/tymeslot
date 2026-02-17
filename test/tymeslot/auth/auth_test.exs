@@ -16,10 +16,12 @@ defmodule Tymeslot.AuthTest do
         )
 
       # Wrong password
-      assert {:error, :invalid_password, _reason} = Auth.authenticate_user(user.email, "WrongPassword")
+      assert {:error, :invalid_password, _reason} =
+               Auth.authenticate_user(user.email, "WrongPassword")
 
       # Non-existent user
-      assert {:error, :not_found, _reason} = Auth.authenticate_user("fake@example.com", "Password123!")
+      assert {:error, :not_found, _reason} =
+               Auth.authenticate_user("fake@example.com", "Password123!")
     end
   end
 

@@ -253,7 +253,10 @@ defmodule TymeslotWeb.Components.DashboardComponentsTest do
 
   test "button renders correctly" do
     assigns = %{}
-    inner_block = [%{__slot__: :inner_block, inner_block: fn _assigns, _changes -> ~H"Save Changes" end}]
+
+    inner_block = [
+      %{__slot__: :inner_block, inner_block: fn _assigns, _changes -> ~H"Save Changes" end}
+    ]
 
     component_assigns = %{
       type: "submit",

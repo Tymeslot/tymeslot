@@ -158,7 +158,9 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
     ]
 
     result =
-      case Req.request([method: :get, url: url, headers: @probe_headers, decode_body: false] ++ opts) do
+      case Req.request(
+             [method: :get, url: url, headers: @probe_headers, decode_body: false] ++ opts
+           ) do
         {:ok, %Req.Response{status: status, body: body, headers: headers}} ->
           invalid_token? = Regex.match?(~r/invalid token/i, body || "")
 

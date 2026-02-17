@@ -377,7 +377,9 @@ defmodule Tymeslot.MeetingsContextTest do
     test "organizer can delete meeting" do
       meeting = insert(:meeting, organizer_email: "organizer@example.com")
 
-      assert {:ok, _deleted_meeting} = Meetings.delete_meeting_for_user(meeting, "organizer@example.com")
+      assert {:ok, _deleted_meeting} =
+               Meetings.delete_meeting_for_user(meeting, "organizer@example.com")
+
       assert {:error, :not_found} = MeetingQueries.get_meeting(meeting.id)
     end
 
