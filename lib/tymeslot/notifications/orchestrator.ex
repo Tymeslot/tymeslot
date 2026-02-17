@@ -199,7 +199,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
     case notification_type do
       :cancellation ->
         case email_service.send_cancellation_emails(content) do
-          {{:ok, _result}, {:ok, _result}} ->
+          {{:ok, result}, {:ok, result}} ->
             {:ok, :emails_sent}
 
           {organizer_result, attendee_result} ->

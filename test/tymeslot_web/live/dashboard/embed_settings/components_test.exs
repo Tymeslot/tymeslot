@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
 
       html = render_component(&LivePreview.live_preview/1, assigns)
       assert html =~ "Link Deactivated"
-      assert html =~ "The organizer hasn’t connected a calendar yet."
+      assert html =~ "The organizer hasn&#39;t connected a calendar yet."
     end
 
     test "renders preview container" do

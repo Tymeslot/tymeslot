@@ -310,13 +310,13 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
         api_key: "invalid-test-key"
       ]
 
-      # Should log error due to invalid API key (401) but return :ok
+      # Should log error due to invalid API key (401) or timeout, but return :ok
       log =
         capture_log([level: :error], fn ->
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "Invalid Postmark API key"
+      assert log =~ "Invalid Postmark API key" or log =~ "Postmark API validation timed out"
     end
   end
 

@@ -12,13 +12,9 @@ defmodule Tymeslot.Auth.VerificationTest do
   describe "email verification security" do
     test "verification tokens are single-use" do
       user = insert(:unverified_user)
-      {token, _hashed_token, _expires_at} = Token.generate_email_verification_token(user.id)
+      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
 
-      {:ok, _result} =
-        UserQueries.update_user(user, %{
-          verification_token: token,
-          verification_sent_at: DateTime.utc_now()
-        })
+      {:ok, _result} = UserQueries.set_verification_token(user, token)
 
       # Use the token
       {:ok, _verified_user} = Verification.verify_user(token)

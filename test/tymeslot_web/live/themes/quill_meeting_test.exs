@@ -1,8 +1,6 @@
 defmodule TymeslotWeb.Live.Themes.QuillMeetingTest do
   use TymeslotWeb.LiveCase, async: false
 
-  import Phoenix.LiveViewTest
-
   alias TymeslotWeb.ThemeMeetingTestCases
 
   setup do

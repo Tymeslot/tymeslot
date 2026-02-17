@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
 
       try do
         assert capture_log(fn ->
-                 assert {:error, [{"Theme Registration", error_reason}]} =
+                 assert {:error, [{"Theme Registration", _error_reason}]} =
                           Validator.run_full_validation()
                end) =~ "Theme Registration failed"
       after
