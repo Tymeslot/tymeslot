@@ -449,17 +449,128 @@ defmodule Tymeslot.Security.RateLimiter do
     check_rate_limit(bucket_key, max_attempts, window_ms)
   end
 
+  @doc """
+  Rate limit meeting cancellation attempts.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Prevents abuse by limiting how often meeting cancellation actions can be performed.
+  Generous limit of 10 cancellations per 10 minutes per IP to avoid impacting legitimate users.
+  """
+  @spec check_meeting_cancel_rate_limit(String.t()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_meeting_cancel_rate_limit(client_ip) do
+    check_with_logging(
+      "meeting_cancel:#{client_ip}",
+      10,
+      600_000,
+      "meeting cancellation",
+      client_ip
+    )
+  end
+
+  @doc """
+  Rate limit meeting keep/uncancel attempts.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Prevents abuse by limiting how often meeting keep actions can be performed.
+  Generous limit of 10 keep actions per 10 minutes per IP to avoid impacting legitimate users.
+  """
+  @spec check_meeting_keep_rate_limit(String.t()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_meeting_keep_rate_limit(client_ip) do
+    check_with_logging(
+      "meeting_keep:#{client_ip}",
+      10,
+      600_000,
+      "meeting keep",
+      client_ip
+    )
+  end
+
+  @doc """
+  Rate limit theme customization changes (color schemes, backgrounds).
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded,
+  or {:error, :invalid_user_id} if user_id is invalid.
+
+  Prevents abuse by limiting how often theme customization changes can be made.
+
+  ## Rate Limit Configuration
+
+  - Limit: 150 changes per 5 minutes per user
+  - Rationale: Allows legitimate customization workflow where users try multiple
+    colors/backgrounds rapidly to find their preferred design (~30-40 changes in
+    active session). Adjusted from initial 50 to reduce false positives based on
+    expected UX patterns.
+  - Scope: All theme changes (colors + backgrounds) share same bucket to prevent
+    overall abuse while allowing natural exploration workflow.
+
+  ## Error Responses
+
+  - `:ok` - Request allowed
+  - `{:error, :rate_limited, message}` - Rate limit exceeded
+  - `{:error, :invalid_user_id}` - Invalid user_id provided
+  """
+  @spec check_theme_customization_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_theme_customization_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
+    check_with_logging(
+      "theme_customization:#{user_id}",
+      150,
+      300_000,
+      "theme customization",
+      to_string(user_id)
+    )
+  end
+
+  def check_theme_customization_rate_limit(user_id) do
+    Logger.error("Invalid user_id for theme customization rate limit",
+      user_id: inspect(user_id)
+    )
+
+    {:error, :invalid_user_id}
+  end
+
+  @doc """
+  Rate limit meeting filter changes in dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Prevents abuse by limiting how often filter changes can be made.
+  Generous limit of 100 filter changes per 5 minutes per user to allow normal browsing.
+  """
+  @spec check_meeting_filter_rate_limit(integer()) ::
+          :ok | {:error, :rate_limited, String.t()}
+  def check_meeting_filter_rate_limit(user_id) do
+    check_with_logging(
+      "meeting_filter:#{user_id}",
+      100,
+      300_000,
+      "meeting filter",
+      to_string(user_id)
+    )
+  end
+
   # Private helper for consistent error handling and logging
   @spec check_with_logging(bucket_key(), pos_integer(), pos_integer(), String.t(), String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
-  defp check_with_logging(bucket_key, limit, window, operation, identifier) do
-    case check_rate_limit(bucket_key, limit, window) do
+  defp check_with_logging(bucket_key, limit, window_ms, operation, identifier) do
+    case check_rate_limit(bucket_key, limit, window_ms) do
       :ok ->
         :ok
 
       {:error, :rate_limited} ->
-        Logger.warning("Rate limit exceeded for #{operation}: #{identifier}")
-        {:error, :rate_limited, "Too many #{operation} attempts. Please try again later."}
+        window_minutes = div(window_ms, 60_000)
+
+        Logger.warning("Rate limit exceeded for #{operation}: #{identifier}",
+          bucket: bucket_key,
+          limit: limit,
+          window_minutes: window_minutes
+        )
+
+        message =
+          "You've reached the limit of #{limit} #{operation} actions per #{window_minutes} minutes. " <>
+            "Please wait a few minutes before trying again."
+
+        {:error, :rate_limited, message}
     end
   end
 

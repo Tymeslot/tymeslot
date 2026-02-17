@@ -17,6 +17,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   """
   use TymeslotWeb, :live_component
 
+  require Logger
+
   alias Phoenix.LiveView.Socket
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.ThemeCustomizations
@@ -151,19 +153,22 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
   @impl Phoenix.LiveComponent
   @spec handle_event(String.t(), map(), Socket.t()) :: {:noreply, Socket.t()}
   def handle_event("theme:select_color_scheme", %{"scheme" => scheme_id}, socket) do
-    case ThemeCustomizations.apply_color_scheme_change(
-           socket.assigns.profile.id,
-           socket.assigns.theme_id,
-           socket.assigns.customization,
-           scheme_id
-         ) do
-      {:ok, updated_customization} ->
-        {:noreply, assign(socket, :customization, updated_customization)}
+    with_rate_limit(socket, "color_scheme", fn ->
+      case ThemeCustomizations.apply_color_scheme_change(
+             socket.assigns.profile.id,
+             socket.assigns.theme_id,
+             socket.assigns.customization,
+             scheme_id
+           ) do
+        {:ok, updated_customization} ->
+          emit_telemetry(:color_scheme_changed, socket, %{scheme_id: scheme_id})
+          {:noreply, assign(socket, :customization, updated_customization)}
 
-      {:error, reason} ->
-        Flash.error(reason)
-        {:noreply, socket}
-    end
+        {:error, reason} ->
+          Flash.error(reason)
+          {:noreply, socket}
+      end
+    end)
   end
 
   def handle_event("theme:set_browsing_type", %{"type" => type}, socket) do
@@ -175,23 +180,27 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     type = params["type"]
     value = params["id"] || params["value"]
 
-    case ThemeCustomizations.apply_background_change(
-           socket.assigns.profile.id,
-           socket.assigns.theme_id,
-           socket.assigns.customization,
-           type,
-           value
-         ) do
-      {:ok, updated_customization} ->
-        {:noreply,
-         socket
-         |> assign(:customization, updated_customization)
-         |> assign(:browsing_type, type)}
+    with_rate_limit(socket, "background", fn ->
+      case ThemeCustomizations.apply_background_change(
+             socket.assigns.profile.id,
+             socket.assigns.theme_id,
+             socket.assigns.customization,
+             type,
+             value
+           ) do
+        {:ok, updated_customization} ->
+          emit_telemetry(:background_changed, socket, %{type: type, value: value})
 
-      {:error, reason} ->
-        Flash.error(reason)
-        {:noreply, socket}
-    end
+          {:noreply,
+           socket
+           |> assign(:customization, updated_customization)
+           |> assign(:browsing_type, type)}
+
+        {:error, reason} ->
+          Flash.error(reason)
+          {:noreply, socket}
+      end
+    end)
   end
 
   def handle_event("validate_image", _params, socket) do
@@ -342,5 +351,72 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
     Flash.info(message)
     assign(socket, :customization, customization)
+  end
+
+  # Rate limiting helper that validates user_id and checks rate limit before executing operation
+  @spec with_rate_limit(Socket.t(), String.t(), (-> {:noreply, Socket.t()})) ::
+          {:noreply, Socket.t()}
+  defp with_rate_limit(socket, action, operation) do
+    user_id = socket.assigns.profile.user_id
+    profile_id = socket.assigns.profile.id
+
+    # Validate user_id before proceeding
+    if is_nil(user_id) or not is_integer(user_id) or user_id <= 0 do
+      Logger.error("Invalid user_id in theme customization",
+        user_id: inspect(user_id),
+        profile_id: profile_id
+      )
+
+      Flash.error("An error occurred. Please refresh the page and try again.")
+      {:noreply, socket}
+    else
+      case RateLimiter.check_theme_customization_rate_limit(user_id) do
+        :ok ->
+          operation.()
+
+        {:error, :rate_limited, message} ->
+          emit_telemetry(:rate_limited, socket, %{action: action})
+          Flash.error(message)
+          {:noreply, socket}
+
+        {:error, :invalid_user_id} ->
+          Logger.error("Rate limiter rejected invalid user_id",
+            user_id: inspect(user_id),
+            profile_id: profile_id
+          )
+
+          Flash.error("An error occurred. Please refresh the page and try again.")
+          {:noreply, socket}
+
+        # Defensive: handle unexpected responses (should never happen based on typespec)
+        unexpected ->
+          Logger.error("Unexpected rate limiter response in theme customization",
+            response: inspect(unexpected),
+            user_id: user_id,
+            profile_id: profile_id
+          )
+
+          Flash.error("An error occurred. Please try again.")
+          {:noreply, socket}
+      end
+    end
+  end
+
+  # Emit telemetry events for monitoring and metrics
+  # SECURITY: Telemetry handlers must be properly secured as these events include user_id and profile_id
+  @spec emit_telemetry(atom(), Socket.t(), map()) :: :ok
+  defp emit_telemetry(event_name, socket, metadata) do
+    :telemetry.execute(
+      [:tymeslot, :theme_customization, event_name],
+      %{count: 1},
+      Map.merge(
+        %{
+          user_id: socket.assigns.profile.user_id,
+          profile_id: socket.assigns.profile.id,
+          theme_id: socket.assigns.theme_id
+        },
+        metadata
+      )
+    )
   end
 end

@@ -15,8 +15,10 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   alias Tymeslot.Meetings
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Themes.{Registry, Theme}
   alias Tymeslot.Utils.{DateTimeUtils, TimezoneUtils}
+  alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Core.{Context, ErrorBoundary, EventBus}
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
@@ -501,16 +503,23 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   defp handle_meeting_event("cancel_meeting", _unused_params, socket) do
     if socket.assigns[:live_action] == :cancel do
       meeting = socket.assigns[:meeting]
+      client_ip = ClientIP.get(socket)
 
-      case Meetings.cancel_meeting(meeting) do
-        {:ok, _result} ->
-          cancel_confirmed_url = build_cancel_confirmed_url(socket, meeting)
+      case RateLimiter.check_meeting_cancel_rate_limit(client_ip) do
+        :ok ->
+          case Meetings.cancel_meeting(meeting) do
+            {:ok, _result} ->
+              cancel_confirmed_url = build_cancel_confirmed_url(socket, meeting)
 
-          # Use redirect instead of push_navigate to force full page reload
-          {:noreply, redirect(socket, to: cancel_confirmed_url)}
+              # Use redirect instead of push_navigate to force full page reload
+              {:noreply, redirect(socket, to: cancel_confirmed_url)}
 
-        {:error, reason} ->
-          {:noreply, put_flash(socket, :error, "Failed to cancel meeting: #{reason}")}
+            {:error, reason} ->
+              {:noreply, put_flash(socket, :error, "Failed to cancel meeting: #{reason}")}
+          end
+
+        {:error, :rate_limited, message} ->
+          {:noreply, put_flash(socket, :error, message)}
       end
     else
       {:noreply, socket}
@@ -519,8 +528,16 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   defp handle_meeting_event("keep_meeting", _unused_params, socket) do
     if socket.assigns[:live_action] == :cancel do
-      # Set a flag to show the "kept" state instead of the cancel form
-      {:noreply, assign(socket, :meeting_kept, true)}
+      client_ip = ClientIP.get(socket)
+
+      case RateLimiter.check_meeting_keep_rate_limit(client_ip) do
+        :ok ->
+          # Set a flag to show the "kept" state instead of the cancel form
+          {:noreply, assign(socket, :meeting_kept, true)}
+
+        {:error, :rate_limited, message} ->
+          {:noreply, put_flash(socket, :error, message)}
+      end
     else
       {:noreply, socket}
     end
