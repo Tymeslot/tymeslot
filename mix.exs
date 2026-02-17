@@ -10,7 +10,6 @@ defmodule Tymeslot.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      listeners: [Phoenix.CodeReloader],
       dialyzer: [
         ignore_warnings: ".dialyzer_ignore.exs",
         plt_add_apps: [:mix, :credo, :xmerl]
@@ -142,7 +141,9 @@ defmodule Tymeslot.MixProject do
         "esbuild tymeslot"
       ],
       "assets.deploy": [
-        "cmd bash -c 'mix tailwind tymeslot --minify & mix tailwind quill --minify & mix tailwind rhythm --minify & wait'",
+        "tailwind tymeslot --minify",
+        "tailwind quill --minify",
+        "tailwind rhythm --minify",
         "esbuild tymeslot --minify",
         "phx.digest"
       ]
