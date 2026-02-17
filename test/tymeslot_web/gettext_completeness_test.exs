@@ -133,7 +133,7 @@ defmodule TymeslotWeb.GettextCompletenessTest do
         # Skip the header entry (empty msgid)
         msgid != "" && msgstr == ""
       end)
-      |> Enum.map(fn {msgid, _} -> msgid end)
+      |> Enum.map(fn {msgid, _msgstr} -> msgid end)
 
     assert empty_translations == [],
            """

@@ -64,7 +64,7 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
 
   @impl Mix.Task
   def run(args) do
-    {opts, _} = OptionParser.parse!(args, strict: @switches, aliases: @aliases)
+    {opts, _remaining_args} = OptionParser.parse!(args, strict: @switches, aliases: @aliases)
 
     # Start necessary applications
     Mix.Task.run("app.start")

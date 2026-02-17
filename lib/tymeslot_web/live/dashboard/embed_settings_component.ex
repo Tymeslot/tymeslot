@@ -146,10 +146,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     else
       # Validate each domain using centralized security validation
       validation_results = Enum.map(input_domains, &Security.validate_domain/1)
-      errors = Enum.filter(validation_results, &match?({:error, _}, &1))
+      errors = Enum.filter(validation_results, &match?({:error, _reason}, &1))
 
       if errors != [] do
-        {_, reason} = List.first(errors)
+        {:error, reason} = List.first(errors)
         Flash.error(reason)
         {:noreply, socket}
       else

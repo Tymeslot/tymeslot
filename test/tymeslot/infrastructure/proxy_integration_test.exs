@@ -63,7 +63,7 @@ defmodule Tymeslot.Infrastructure.ProxyIntegrationTest do
                 assert String.match?(origin_ip, ~r/^\d+\.\d+\.\d+\.\d+$/),
                        "Expected valid IP address format"
 
-              {:error, _} ->
+              {:error, _error} ->
                 flunk("Failed to parse JSON response from httpbin")
             end
 

@@ -243,11 +243,11 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
         Logger.info("✓ Request origin IP: #{origin}")
         %{result | details: Map.put(result.details, :origin_ip, origin)}
 
-      _ ->
+      _result ->
         result
     end
   rescue
-    _ -> result
+    _exception -> result
   end
 
   defp test_request(url, opts) do
@@ -314,7 +314,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
     String.slice(body, 0, 200)
   end
 
-  defp preview_body(_), do: nil
+  defp preview_body(_body), do: nil
 
   defp format_error_message(%{__struct__: struct_name, reason: reason}) do
     "#{inspect(struct_name)}: #{inspect(reason)}"
@@ -348,12 +348,12 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
       %URI{host: nil} ->
         {:error, "Test URL must include a hostname. Got: #{url}"}
 
-      _ ->
+      _uri ->
         {:error, "Invalid test URL format. Must be https://hostname/path. Got: #{url}"}
     end
   end
 
-  defp validate_test_url(_), do: {:error, "Test URL must be a string"}
+  defp validate_test_url(_url), do: {:error, "Test URL must be a string"}
 
   @doc false
   defp validate_timeout(timeout) when is_integer(timeout) do
@@ -369,5 +369,5 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
     end
   end
 
-  defp validate_timeout(_), do: {:error, "Timeout must be an integer (milliseconds)"}
+  defp validate_timeout(_timeout), do: {:error, "Timeout must be an integer (milliseconds)"}
 end

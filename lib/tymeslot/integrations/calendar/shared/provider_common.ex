@@ -87,7 +87,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     }
 
     case CaldavCommon.test_connection(client, ip_address: ip_address) do
-      {:ok, _} ->
+      {:ok, _response} ->
         {:ok, success_msg}
 
       {:error, :unauthorized} ->

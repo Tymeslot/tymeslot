@@ -230,7 +230,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
           auth_header = {"Proxy-Authorization", "Basic " <> Base.encode64("#{user}:#{password}")}
           [proxy: proxy_tuple, proxy_headers: [auth_header]]
 
-        _ ->
+        _other ->
           [proxy: proxy_tuple]
       end
 

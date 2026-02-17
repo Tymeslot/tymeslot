@@ -211,7 +211,6 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       assert client.calendar_paths == paths
     end
 
-
   end
 
   describe "test_connection/2" do
@@ -228,7 +227,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
       capture_log(fn ->
         case Provider.test_connection(integration) do
           {:ok, message} -> assert String.contains?(message, "Zimbra")
-          {:error, _} -> :ok
+          {:error, _reason} -> :ok
         end
       end)
     end
