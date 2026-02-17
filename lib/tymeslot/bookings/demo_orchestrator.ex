@@ -41,7 +41,7 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
       Logger.info("Demo mode: Successfully created mock booking")
       {:ok, mock_meeting}
     else
-      {:error, _} = err -> err
+      {:error, _reason} = err -> err
     end
   end
 
@@ -86,15 +86,15 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
          true <- suffix_valid?(String.trim_leading(rest)) do
       int
     else
-      _ ->
+      _other ->
         case Regex.run(~r/^(\d+)\s*m(in)?$/i, trimmed) do
-          [_, digits | _] -> String.to_integer(digits)
-          _ -> nil
+          [_match, digits | _rest] -> String.to_integer(digits)
+          _other -> nil
         end
     end
   end
 
-  defp normalize_duration(_), do: nil
+  defp normalize_duration(_other), do: nil
 
   defp suffix_valid?(""), do: true
   defp suffix_valid?(suffix), do: String.match?(suffix, ~r/^m(in)?$/i)
@@ -106,11 +106,11 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
          {:ok, dt} <- DateTime.from_naive(ndt, tz) do
       {:ok, dt}
     else
-      _ -> {:error, :invalid_datetime}
+      _other -> {:error, :invalid_datetime}
     end
   end
 
-  defp parse_start_time(_), do: {:error, :invalid_datetime}
+  defp parse_start_time(_other), do: {:error, :invalid_datetime}
 
   defp create_mock_meeting(params, validated_data, start_time, rng, _opts) do
     %{

@@ -109,10 +109,10 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     ]
 
     case String.split(path, "/", parts: 3) do
-      ["", username | _] ->
+      ["", username | _rest] ->
         if username in reserved_paths, do: nil, else: username
 
-      _ ->
+      _invalid_path ->
         nil
     end
   end
@@ -157,7 +157,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       # Chrome, Safari, and modern Firefox ignore it.
       x_frame_options =
         case allowed_domains do
-          [first_domain | _] ->
+          [first_domain | _rest] ->
             # X-Frame-Options ALLOW-FROM does not support wildcards or multiple domains.
             # Modern browsers use CSP frame-ancestors anyway.
             if String.starts_with?(first_domain, "*") do

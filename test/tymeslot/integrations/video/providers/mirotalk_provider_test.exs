@@ -63,7 +63,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
     test "attempts connection when all required fields present" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
         {:ok, %Req.Response{status: 200}}
       end)
 
@@ -73,7 +73,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
     test "returns error when connection fails" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
-      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _opts ->
+      expect(Tymeslot.HTTPClientMock, :post, 2, fn _url, _body, _headers, _http_opts ->
         {:error, %Mint.TransportError{reason: :econnrefused}}
       end)
 
@@ -85,7 +85,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       import ExUnit.CaptureLog
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
         {:ok,
          %Req.Response{
            status: 500,
@@ -209,7 +209,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert length(parts) == 3
 
       # Decode header and verify algorithm
-      [header_b64, payload_b64, _signature] = parts
+      [header_b64, payload_b64, _jwt_signature] = parts
       {:ok, header_json} = Base.url_decode64(header_b64, padding: false)
       header = Jason.decode!(header_json)
 
@@ -240,7 +240,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
           meeting_time
         )
 
-      [_header, payload_b64, _signature] = String.split(token, ".")
+      [_header, payload_b64, _jwt_signature] = String.split(token, ".")
       {:ok, payload_json} = Base.url_decode64(payload_b64, padding: false)
       payload = Jason.decode!(payload_json)
 
@@ -326,7 +326,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
     test "successfully creates a meeting room" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
         {:ok,
          %Req.Response{
            status: 200,
@@ -342,11 +342,11 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
     test "handles API errors gracefully" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
         {:ok, %Req.Response{status: 401, body: "Unauthorized"}}
       end)
 
-      assert {:error, {:http_error, 401, _}} = MiroTalkProvider.create_meeting_room(config)
+      assert {:error, {:http_error, 401, _body}} = MiroTalkProvider.create_meeting_room(config)
     end
   end
 
@@ -357,7 +357,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
         provider_config: %{base_url: "https://mirotalk.example.com", api_key: "test_key"}
       }
 
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
         {:ok,
          %Req.Response{
            status: 200,
@@ -384,7 +384,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       }
 
       # Mock API failure
-      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
         {:ok, %Req.Response{status: 500, body: "Error"}}
       end)
 

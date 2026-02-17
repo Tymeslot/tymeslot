@@ -157,7 +157,7 @@ defmodule Tymeslot.Availability.WeeklySchedule do
     }
   end
 
-  defp get_preset_config(_), do: nil
+  defp get_preset_config(_preset), do: nil
 
   @doc """
   Clears all settings for a specific day (sets to unavailable and removes all breaks).

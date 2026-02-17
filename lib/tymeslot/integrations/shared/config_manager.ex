@@ -183,7 +183,7 @@ defmodule Tymeslot.Integrations.Common.ConfigManager do
       validator_fn when is_function(validator_fn, 1) ->
         validator_fn.(value)
 
-      _ ->
+      _other ->
         encrypted?(value)
     end
   end
@@ -303,7 +303,7 @@ defmodule Tymeslot.Integrations.Common.ConfigManager do
   defp coerce_type(value, :integer) when is_binary(value) do
     case Integer.parse(value) do
       {int, ""} -> int
-      _ -> value
+      _other -> value
     end
   end
 

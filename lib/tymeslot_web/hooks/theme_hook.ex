@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Hooks.ThemeHook do
       params["username"] ->
         case Profiles.get_profile_by_username(params["username"]) do
           %{booking_theme: theme} when is_binary(theme) -> theme
-          _ -> "1"
+          _other -> "1"
         end
 
       # Check if it's in socket.private (from router)

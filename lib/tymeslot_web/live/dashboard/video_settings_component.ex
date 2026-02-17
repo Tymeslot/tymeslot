@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       "teams" ->
         initiate_oauth(socket, :teams)
 
-      _ ->
+      _other ->
         {:noreply,
          socket
          |> assign(:view_mode, :config)
@@ -174,12 +174,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     case Video.toggle_integration(user_id, normalize_id(id)) do
-      {:ok, _} ->
+      {:ok, _result} ->
         notify_parent({:flash, {:info, "Integration status updated"}})
         notify_parent({:integration_updated, :video})
         {:noreply, load_integrations(socket)}
 
-      {:error, _} ->
+      {:error, _reason} ->
         notify_parent({:flash, {:error, "Failed to update integration status"}})
         {:noreply, socket}
     end
@@ -408,7 +408,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       "base_url" -> :base_url
       "api_key" -> :api_key
       "custom_meeting_url" -> :custom_meeting_url
-      _ -> :unknown
+      _other -> :unknown
     end
   end
 
@@ -433,7 +433,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       :custom ->
         {"Any video platform with static meeting URLs", "Add Custom Link"}
 
-      _ ->
+      _other ->
         {"", "Connect"}
     end
   end

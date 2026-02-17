@@ -144,7 +144,7 @@ defmodule TymeslotWeb.CustomInputModeHelper do
         :buffer_minutes -> StepConfig.buffer_time_values()
         :advance_booking_days -> StepConfig.advance_booking_values()
         :min_advance_hours -> StepConfig.min_advance_values()
-        _ -> []
+        _other -> []
       end
 
     value in preset_values

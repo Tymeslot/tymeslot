@@ -70,7 +70,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
       result = custom.test_connection(config)
 
       # Should return a tuple
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
+      assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
     end
 
     test "mirotalk test_connection requires HTTP mock" do
@@ -81,7 +81,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
         {:ok, %Req.Response{status: 200}}
       end)
 
-      assert {:ok, _} = mirotalk.test_connection(config)
+      assert {:ok, _result} = mirotalk.test_connection(config)
     end
   end
 
@@ -109,7 +109,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
           # Message should be string or atom
           assert is_binary(message) or is_atom(message)
 
-        {:ok, _} ->
+        {:ok, _result} ->
           # Some providers may handle this differently
           :ok
       end
@@ -157,7 +157,7 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
         # Empty config should fail validation
         result = provider_module.validate_config(%{})
 
-        assert match?({:error, _}, result)
+        assert match?({:error, _reason}, result)
       end)
     end
 
@@ -169,8 +169,8 @@ defmodule Tymeslot.Integrations.Video.CrossProviderTest do
       }
 
       result = custom.validate_config(custom_config)
-      # Custom provider validation may return :ok, {:ok, _}, or {:error, _}
-      assert result == :ok or match?({:ok, _}, result) or match?({:error, _}, result)
+      # Custom provider validation may return :ok, {:ok, _result}, or {:error, _reason}
+      assert result == :ok or match?({:ok, _result}, result) or match?({:error, _reason}, result)
     end
 
     test "mirotalk provider requires HTTP mock for validation" do

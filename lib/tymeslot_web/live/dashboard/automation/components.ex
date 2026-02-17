@@ -308,7 +308,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Components do
             <h4 class="text-token-lg font-black text-slate-900">Quick Setup with n8n</h4>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 ml-5">
-            <%= for {step, index} <- Enum.with_index([
+            <%= for {step, step_index} <- Enum.with_index([
               {"Create a workflow", "Start a new workflow in your n8n instance"},
               {"Add webhook trigger", "Insert a Webhook node and copy its URL"},
               {"Configure in Tymeslot", "Create a webhook above and paste the URL"},
@@ -318,7 +318,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Components do
             ], 1) do %>
               <div class="flex items-start gap-3 p-3 bg-white rounded-token-xl border-2 border-slate-100 hover:border-turquoise-200 transition-all">
                 <div class="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-turquoise-500 to-cyan-500 text-white flex items-center justify-center text-xs font-black">
-                  <%= index %>
+                  <%= step_index %>
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="font-black text-slate-900 text-token-sm"><%= elem(step, 0) %></div>
@@ -423,5 +423,5 @@ defmodule TymeslotWeb.Dashboard.Automation.Components do
 
   defp status_color("success"), do: "text-green-600 font-bold"
   defp status_color("failed"), do: "text-red-600 font-bold"
-  defp status_color(_), do: "text-tymeslot-600 font-medium"
+  defp status_color(_status), do: "text-tymeslot-600 font-medium"
 end

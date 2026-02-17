@@ -184,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.Provider do
       paths when is_list(paths) and paths != [] ->
         paths
 
-      _empty_or_nil ->
+      _other ->
         build_zimbra_default_paths(config)
     end
   end

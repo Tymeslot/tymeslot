@@ -473,7 +473,7 @@ defmodule TymeslotWeb.AuthLive do
   defp honeypot_tripped?(params) do
     case Map.get(params, "website") do
       value when is_binary(value) -> value != ""
-      _ -> false
+      _other -> false
     end
   end
 
@@ -578,7 +578,7 @@ defmodule TymeslotWeb.AuthLive do
               </div>
             </:form>
           </TymeslotWeb.Shared.Auth.LayoutComponents.auth_card_layout>
-        <% _ -> %>
+        <% _other -> %>
           {LoginComponent.auth_login(assigns)}
       <% end %>
     </div>

@@ -37,7 +37,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   def config_schema(domain, type) do
     case get(domain, type) do
       %Descriptor{config_schema: schema} -> schema
-      _ -> {:error, :unknown_provider}
+      _other -> {:error, :unknown_provider}
     end
   end
 
@@ -48,7 +48,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   def capabilities(domain, type) do
     case get(domain, type) do
       %Descriptor{capabilities: caps} -> caps
-      _ -> {:error, :unknown_provider}
+      _other -> {:error, :unknown_provider}
     end
   end
 
@@ -59,7 +59,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   def oauth?(domain, type) do
     case get(domain, type) do
       %Descriptor{oauth: oauth} -> oauth
-      _ -> {:error, :unknown_provider}
+      _other -> {:error, :unknown_provider}
     end
   end
 
@@ -90,7 +90,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
       %Descriptor{provider_module: nil} ->
         :ok
 
-      _ ->
+      _other ->
         {:error, :unknown_provider}
     end
   end
@@ -112,7 +112,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
           {:error, :not_supported}
         end
 
-      {:error, _} = err ->
+      {:error, _reason} = err ->
         err
     end
   end
@@ -125,7 +125,7 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   def setup_component(domain, type) do
     case get(domain, type) do
       %Descriptor{setup_component: comp} -> comp
-      _ -> {:error, :unknown_provider}
+      _other -> {:error, :unknown_provider}
     end
   end
 

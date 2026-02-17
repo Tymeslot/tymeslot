@@ -160,11 +160,11 @@ defmodule TymeslotWeb.SessionControllerTest do
       try do
         :meck.unload(Tymeslot.Auth.Verification)
       rescue
-        _ -> :ok
+        _other -> :ok
       end
 
       :meck.new(Tymeslot.Auth.Verification, [:passthrough])
-      _user = insert_unverified_user(token, "127.0.0.1")
+      _unverified_user = insert_unverified_user(token, "127.0.0.1")
 
       :meck.expect(Tymeslot.Auth.Verification, :verify_user_token, fn ^token ->
         {:error, :expired}

@@ -21,7 +21,7 @@ defmodule Tymeslot.Availability.Events do
         {{:ok, s}, {:ok, e}} ->
           %{event | start_time: s, end_time: e}
 
-        _ ->
+        _other ->
           nil
       end
     end)
@@ -36,7 +36,7 @@ defmodule Tymeslot.Availability.Events do
   end
 
   defp ensure_datetime(nil, _timezone), do: nil
-  defp ensure_datetime(_, _timezone), do: nil
+  defp ensure_datetime(_other, _timezone), do: nil
 
   defp shift_safe(nil, _timezone), do: {:error, nil}
 
@@ -47,6 +47,6 @@ defmodule Tymeslot.Availability.Events do
       DateTime.shift_zone(dt, timezone)
     end
   rescue
-    _ -> {:error, :invalid_timezone}
+    _other -> {:error, :invalid_timezone}
   end
 end

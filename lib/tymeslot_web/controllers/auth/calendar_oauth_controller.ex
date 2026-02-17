@@ -36,7 +36,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
     error_message =
       case error do
         "access_denied" -> "Authorization was denied. Please try again."
-        _ -> "Authentication failed. Please try again."
+        _other -> "Authentication failed. Please try again."
       end
 
     conn
@@ -90,7 +90,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
     error_message =
       case error do
         "access_denied" -> "Authorization was denied. Please try again."
-        _ -> "Authentication failed. Please try again."
+        _other -> "Authentication failed. Please try again."
       end
 
     conn

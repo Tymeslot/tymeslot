@@ -34,7 +34,7 @@ defmodule Tymeslot.ThemeCustomizationsTest do
         "background_value" => "#082f49"
       }
 
-      {:ok, _} = ThemeCustomizations.create_theme_customization(profile.id, "2", attrs)
+      {:ok, _result} = ThemeCustomizations.create_theme_customization(profile.id, "2", attrs)
 
       customization = ThemeCustomizations.get_by_profile_and_theme(profile.id, "2")
       assert customization.theme_id == "2"
@@ -51,7 +51,7 @@ defmodule Tymeslot.ThemeCustomizationsTest do
         "background_value" => "gradient_1"
       }
 
-      {:ok, _} = ThemeCustomizations.create_theme_customization(profile.id, "1", initial_attrs)
+      {:ok, _result} = ThemeCustomizations.create_theme_customization(profile.id, "1", initial_attrs)
 
       # Update it
       update_attrs = %{
@@ -77,7 +77,7 @@ defmodule Tymeslot.ThemeCustomizationsTest do
       {:ok, customization} =
         ThemeCustomizations.create_theme_customization(profile.id, "2", attrs)
 
-      assert {:ok, _} = ThemeCustomizations.delete_theme_customization(customization)
+      assert {:ok, _result} = ThemeCustomizations.delete_theme_customization(customization)
 
       # Check customization is deleted
       assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "2") == nil

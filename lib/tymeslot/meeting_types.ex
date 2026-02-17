@@ -143,8 +143,8 @@ defmodule Tymeslot.MeetingTypes do
 
   def normalize_duration_slug(duration) when is_binary(duration) do
     case Regex.run(~r/^(\d+)min$/, duration) do
-      [_, minutes] -> "#{minutes}-minutes"
-      _ -> duration
+      [_match, minutes] -> "#{minutes}-minutes"
+      _no_match -> duration
     end
   end
 
@@ -276,23 +276,23 @@ defmodule Tymeslot.MeetingTypes do
        when is_integer(id) do
     case VideoIntegrationQueries.get_for_user(id, user_id) do
       {:ok, %{is_active: true}} -> :ok
-      {:ok, _inactive} -> {:error, :invalid_video_integration}
+      {:ok, _integration} -> {:error, :invalid_video_integration}
       {:error, :not_found} -> {:error, :invalid_video_integration}
     end
   end
 
   defp validate_video_integration(_attrs, _user_id), do: :ok
 
-  defp validate_calendar_integration(%{calendar_integration_id: nil, target_calendar_id: nil}, _),
+  defp validate_calendar_integration(%{calendar_integration_id: nil, target_calendar_id: nil}, _user_id),
     do: :ok
 
-  defp validate_calendar_integration(%{calendar_integration_id: "", target_calendar_id: nil}, _),
+  defp validate_calendar_integration(%{calendar_integration_id: "", target_calendar_id: nil}, _user_id),
     do: :ok
 
-  defp validate_calendar_integration(%{calendar_integration_id: nil}, _),
+  defp validate_calendar_integration(%{calendar_integration_id: nil}, _user_id),
     do: {:error, :calendar_integration_required}
 
-  defp validate_calendar_integration(%{calendar_integration_id: "", target_calendar_id: _}, _),
+  defp validate_calendar_integration(%{calendar_integration_id: "", target_calendar_id: _target}, _user_id),
     do: {:error, :calendar_integration_required}
 
   defp validate_calendar_integration(
@@ -305,19 +305,19 @@ defmodule Tymeslot.MeetingTypes do
       :ok
     else
       {:error, :not_found} -> {:error, :calendar_integration_invalid}
-      {:error, _} = error -> error
+      {:error, _reason} = error -> error
     end
   end
 
-  defp validate_calendar_integration(%{calendar_integration_id: id}, _)
+  defp validate_calendar_integration(%{calendar_integration_id: id}, _user_id)
        when is_binary(id) and id != "" do
     {:error, :calendar_integration_invalid}
   end
 
-  defp validate_calendar_integration(_attrs, _user_id), do: :ok
+  defp validate_calendar_integration(_other_attrs, _user_id), do: :ok
 
-  defp validate_target_calendar(nil, _integration), do: {:error, :target_calendar_required}
-  defp validate_target_calendar("", _integration), do: {:error, :target_calendar_required}
+  defp validate_target_calendar(nil, _calendar_integration), do: {:error, :target_calendar_required}
+  defp validate_target_calendar("", _calendar_integration), do: {:error, :target_calendar_required}
 
   defp validate_target_calendar(target_calendar_id, integration) do
     calendar_list = integration.calendar_list
@@ -344,7 +344,7 @@ defmodule Tymeslot.MeetingTypes do
   defp normalize_reminder_config_params(reminders) when is_list(reminders) do
     normalized = Enum.map(reminders, &ReminderUtils.normalize_reminder_string_keys/1)
 
-    if Enum.any?(normalized, &match?({:error, _}, &1)) do
+    if Enum.any?(normalized, &match?({:error, _error_reason}, &1)) do
       {:error, :invalid_reminder_config}
     else
       {:ok, Enum.map(normalized, fn {:ok, reminder} -> reminder end)}
@@ -360,9 +360,9 @@ defmodule Tymeslot.MeetingTypes do
   defp normalize_reminder_config_params(reminders) when is_binary(reminders) do
     case Jason.decode(reminders) do
       {:ok, decoded} -> normalize_reminder_config_params(decoded)
-      _ -> {:error, :invalid_reminder_config}
+      {:error, _decode_error} -> {:error, :invalid_reminder_config}
     end
   end
 
-  defp normalize_reminder_config_params(_), do: {:error, :invalid_reminder_config}
+  defp normalize_reminder_config_params(_other), do: {:error, :invalid_reminder_config}
 end

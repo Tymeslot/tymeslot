@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
     test "returns error when exception occurs during independence test" do
       :meck.new(Theme, [:passthrough])
       :meck.expect(Theme, :all_themes, 0, %{"error" => %{id: "error"}})
-      :meck.expect(Theme, :get_theme_module, 1, fn _ -> raise "Boom" end)
+      :meck.expect(Theme, :get_theme_module, 1, fn _theme_id -> raise "Boom" end)
 
       try do
         assert capture_log(fn ->
@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
 
       try do
         assert capture_log(fn ->
-                 assert {:error, [{"Theme Registration", _}]} = Validator.run_full_validation()
+                 assert {:error, [{"Theme Registration", error_reason}]} = Validator.run_full_validation()
                end) =~ "Theme Registration failed"
       after
         :meck.unload(Theme)

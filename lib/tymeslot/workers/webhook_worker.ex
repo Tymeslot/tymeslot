@@ -128,7 +128,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
         :ok
 
-      {:error, %Ecto.Changeset{errors: [unique: _]}} ->
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
         Logger.debug("Webhook delivery job already exists",
           webhook_id: webhook_id,
           event_type: event_type

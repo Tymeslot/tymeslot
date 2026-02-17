@@ -93,7 +93,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
       refute changeset_21.valid?
       assert Keyword.has_key?(changeset_21.errors, :allowed_embed_domains)
 
-      {error_msg, _} = changeset_21.errors[:allowed_embed_domains]
+      {error_msg, _value} = changeset_21.errors[:allowed_embed_domains]
       assert error_msg =~ "cannot have more than 20"
     end
 
@@ -129,7 +129,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
       refute changeset_256.valid?
       assert Keyword.has_key?(changeset_256.errors, :allowed_embed_domains)
 
-      {error_msg, _} = changeset_256.errors[:allowed_embed_domains]
+      {error_msg, _value} = changeset_256.errors[:allowed_embed_domains]
       assert error_msg =~ "exceed maximum length"
     end
 

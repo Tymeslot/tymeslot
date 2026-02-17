@@ -211,7 +211,7 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
               encoded = Base.encode64(content)
               "data:image/svg+xml;base64,#{encoded}"
 
-            _ ->
+            _other ->
               ""
           end
 
@@ -244,7 +244,7 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
         "usd" -> "$"
         "gbp" -> "£"
         "jpy" -> "¥"
-        _ -> "€"
+        _other -> "€"
       end
 
     amount = cents / 100

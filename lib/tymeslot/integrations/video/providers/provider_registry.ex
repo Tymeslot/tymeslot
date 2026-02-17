@@ -25,10 +25,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
       {:ok, module} ->
         case module.validate_config(config) do
           :ok -> module.test_connection(config)
-          {:error, _} = error -> error
+          {:error, _reason} = error -> error
         end
 
-      {:error, _} = error ->
+      {:error, _reason} = error ->
         error
     end
   end
@@ -83,7 +83,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistry do
     # - etc.
 
     # Suppress unused variable warning
-    _ = requirements
+    _requirements = requirements
     default_provider()
   end
 end

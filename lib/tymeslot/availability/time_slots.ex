@@ -78,7 +78,7 @@ defmodule Tymeslot.Availability.TimeSlots do
         end_of_day = DateTime.new!(selected_date, ~T[23:59:59], start_dt.time_zone)
         {midnight, end_of_day}
 
-      _ ->
+      _other ->
         # No slots for this date
         :no_slots
     end
@@ -115,7 +115,7 @@ defmodule Tymeslot.Availability.TimeSlots do
   def parse_time_slot(slot_string) do
     case DateTimeUtils.parse_time_string(slot_string) do
       {:ok, time} -> time
-      {:error, _} -> raise ArgumentError, "Invalid time slot: #{inspect(slot_string)}"
+      {:error, _reason} -> raise ArgumentError, "Invalid time slot: #{inspect(slot_string)}"
     end
   end
 
@@ -127,13 +127,13 @@ defmodule Tymeslot.Availability.TimeSlots do
 
   def parse_duration(duration) when is_binary(duration) do
     case Regex.run(~r/^\s*(\d+)\s*(?:min)?\s*$/i, duration) do
-      [_, minutes_str] ->
+      [_first, minutes_str] ->
         case Integer.parse(minutes_str) do
           {minutes, ""} when minutes > 0 -> minutes
-          _ -> 30
+          _other -> 30
         end
 
-      _ ->
+      _other ->
         30
     end
   end

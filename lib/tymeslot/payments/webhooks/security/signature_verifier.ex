@@ -75,7 +75,7 @@ defmodule Tymeslot.Payments.Webhooks.Security.SignatureVerifier do
   end
 
   @spec normalize_event(map()) :: map()
-  defp normalize_event(%{__struct__: _} = event) do
+  defp normalize_event(%{__struct__: _value} = event) do
     struct_to_map(event)
   end
 
@@ -86,7 +86,7 @@ defmodule Tymeslot.Payments.Webhooks.Security.SignatureVerifier do
   defp normalize_event(event), do: event
 
   @spec struct_to_map(any()) :: any()
-  defp struct_to_map(%{__struct__: _} = struct) do
+  defp struct_to_map(%{__struct__: _value} = struct) do
     struct
     |> Map.from_struct()
     |> Enum.map(fn {k, v} -> {to_string(k), struct_to_map(v)} end)

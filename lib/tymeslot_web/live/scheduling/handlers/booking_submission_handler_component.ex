@@ -210,7 +210,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         "Booking time must be in the future" ->
           reason
 
-        _ ->
+        _other ->
           if is_binary(reason) and String.length(reason) < 100 do
             reason
           else
@@ -279,7 +279,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   defp get_meeting_type_id(socket) do
     case socket.assigns[:meeting_type] do
       %{id: id} -> id
-      _ -> nil
+      _other -> nil
     end
   end
 end

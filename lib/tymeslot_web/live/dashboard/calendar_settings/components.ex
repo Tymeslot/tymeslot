@@ -414,5 +414,5 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp format_provider_title(:radicale), do: "Radicale"
   defp format_provider_title(:caldav), do: "CalDAV"
   defp format_provider_title(:zimbra), do: "Zimbra"
-  defp format_provider_title(_), do: "Calendar"
+  defp format_provider_title(_provider), do: "Calendar"
 end

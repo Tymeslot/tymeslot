@@ -102,7 +102,7 @@ defmodule TymeslotWeb.StepNavigation do
     "w-8 h-8 rounded-full bg-gradient-to-r from-purple-800 to-purple-900 text-white flex items-center justify-center shadow-lg border border-white/20 transition-all duration-300 scale-110"
   end
 
-  defp step_class(_, _) do
+  defp step_class(_step, _current) do
     "w-8 h-8 rounded-full bg-gray-700/90 text-white flex items-center justify-center border border-gray-500/40 backdrop-blur-sm transition-all duration-300"
   end
 
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.StepNavigation do
     "w-4 sm:w-8 md:w-12 h-0.5 sm:h-1 bg-gradient-to-r from-purple-800 to-purple-900 rounded shadow-sm transition-all duration-500"
   end
 
-  defp connector_class(_, _) do
+  defp connector_class(_step, _current) do
     "w-4 sm:w-8 md:w-12 h-0.5 sm:h-1 bg-gray-600/70 rounded transition-all duration-500"
   end
 
@@ -122,7 +122,7 @@ defmodule TymeslotWeb.StepNavigation do
     "text-gray-100 drop-shadow-md"
   end
 
-  defp step_label_class(_, _) do
+  defp step_label_class(_step, _current) do
     "text-white/80 drop-shadow-md"
   end
 

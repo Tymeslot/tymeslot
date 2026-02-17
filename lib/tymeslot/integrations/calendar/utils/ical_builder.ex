@@ -287,7 +287,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     end
   end
 
-  defp maybe_add_property(properties, _, _), do: properties
+  defp maybe_add_property(properties, _key, _value), do: properties
 
   defp build_attendees(%{attendees: attendees}) when is_list(attendees) do
     Enum.map_join(attendees, "\r\n", fn email ->
@@ -295,13 +295,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     end)
   end
 
-  defp build_attendees(_), do: ""
+  defp build_attendees(_no_attendees), do: ""
 
   defp build_reminders(%{reminders: reminders}) when is_list(reminders) do
     Enum.map_join(reminders, "\r\n", &build_reminder/1)
   end
 
-  defp build_reminders(_), do: ""
+  defp build_reminders(_no_reminders), do: ""
 
   defp build_reminder(%{minutes_before: minutes, type: type}) do
     type = String.upcase(to_string(type))

@@ -72,7 +72,7 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityBreakSchema do
         changeset
       end
     else
-      _ -> changeset
+      _not_found -> changeset
     end
   end
 

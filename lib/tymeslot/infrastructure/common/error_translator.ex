@@ -288,7 +288,7 @@ defmodule Tymeslot.Infrastructure.Common.ErrorTranslator do
     true
   end
 
-  def should_retry?(_), do: false
+  def should_retry?(_error), do: false
 
   @doc """
   Formats an error for display to the user.
@@ -321,7 +321,7 @@ defmodule Tymeslot.Infrastructure.Common.ErrorTranslator do
       :token_expired -> true
       :unauthorized -> true
       {:http_error, 401} -> true
-      _ -> false
+      _error -> false
     end
   end
 
@@ -332,7 +332,7 @@ defmodule Tymeslot.Infrastructure.Common.ErrorTranslator do
       :nxdomain -> true
       {:error, :closed} -> true
       {:error, :econnrefused} -> true
-      _ -> false
+      _error -> false
     end
   end
 
@@ -341,7 +341,7 @@ defmodule Tymeslot.Infrastructure.Common.ErrorTranslator do
       :insufficient_permissions -> true
       :access_denied -> true
       {:http_error, 403} -> true
-      _ -> false
+      _error -> false
     end
   end
 
@@ -351,7 +351,7 @@ defmodule Tymeslot.Infrastructure.Common.ErrorTranslator do
       :calendar_not_found -> true
       :invalid_configuration -> true
       {:http_error, 404} -> true
-      _ -> false
+      _error -> false
     end
   end
 
@@ -359,7 +359,7 @@ defmodule Tymeslot.Infrastructure.Common.ErrorTranslator do
     case error do
       :rate_limited -> true
       {:http_error, 429} -> true
-      _ -> false
+      _error -> false
     end
   end
 
@@ -367,7 +367,7 @@ defmodule Tymeslot.Infrastructure.Common.ErrorTranslator do
     case error do
       {:http_error, status} when status >= 500 -> true
       :server_error -> true
-      _ -> false
+      _error -> false
     end
   end
 

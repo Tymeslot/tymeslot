@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Live.Shared.FormValidationHelpers do
   def update_field_errors(current_errors, nil, _validation_result, _normalize_fn),
     do: current_errors
 
-  def update_field_errors(current_errors, atom_field, {:ok, _}, _normalize_fn) do
+  def update_field_errors(current_errors, atom_field, {:ok, _result}, _normalize_fn) do
     delete_field_error(current_errors, atom_field)
   end
 

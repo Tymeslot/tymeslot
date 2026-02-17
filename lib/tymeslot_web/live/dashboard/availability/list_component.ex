@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         Flash.error("Failed to update availability")
         {:noreply, socket}
 
-      _ ->
+      _other ->
         {:noreply, socket}
     end
   end
@@ -154,7 +154,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         socket = assign(socket, :form_errors, validation_errors)
         {:noreply, socket}
 
-      _ ->
+      _other ->
         {:noreply, socket}
     end
   catch
@@ -178,7 +178,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       {:ok, day} ->
         {:noreply, assign(socket, :show_add_break_form, day)}
 
-      _ ->
+      _other ->
         {:noreply, socket}
     end
   end
@@ -196,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         send(self(), {:reload_schedule})
         {:noreply, ModalHook.hide_modal(socket, :delete_break)}
 
-      {:error, _} ->
+      {:error, _reason} ->
         Flash.error("Failed to delete break")
         {:noreply, socket}
     end
@@ -248,7 +248,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         socket = assign(socket, :form_errors, validation_errors)
         {:noreply, socket}
 
-      _ ->
+      _other ->
         {:noreply, socket}
     end
   catch
@@ -265,7 +265,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     with {:ok, from_day} <- parse_day(from_day_str),
          {:ok, to_days} <-
            AvailabilityInputProcessor.validate_day_selections(to_days_str, metadata: metadata),
-         {:ok, _} <- AvailabilityActions.copy_day_settings(profile_id(socket), from_day, to_days) do
+         {:ok, _result} <- AvailabilityActions.copy_day_settings(profile_id(socket), from_day, to_days) do
       day_names = Enum.map_join(to_days, ", ", &AvailabilityActions.day_name/1)
       Flash.info("Settings copied to #{day_names}")
       send(self(), {:reload_schedule})
@@ -275,7 +275,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         Flash.error(validation_error)
         {:noreply, socket}
 
-      {:error, _} ->
+      {:error, _reason} ->
         Flash.error("Failed to copy settings")
         {:noreply, socket}
     end
@@ -298,12 +298,12 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     day_data = socket.assigns.clear_day_modal_data
 
     case AvailabilityActions.clear_day_settings(profile_id(socket), day_data.day) do
-      {:ok, _} ->
+      {:ok, _result} ->
         Flash.info("#{day_data.day_name} settings cleared")
         send(self(), {:reload_schedule})
         {:noreply, ModalHook.hide_modal(socket, :clear_day)}
 
-      {:error, _} ->
+      {:error, _reason} ->
         Flash.error("Failed to clear day settings")
         {:noreply, socket}
     end
@@ -391,7 +391,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
     case Integer.parse(str) do
       {day, ""} when day in 1..7 -> {:ok, day}
-      _ -> {:error, :invalid_day}
+      _other -> {:error, :invalid_day}
     end
   end
 
@@ -550,7 +550,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
                 case @day_availability.breaks do
                   %Ecto.Association.NotLoaded{} -> []
                   b when is_list(b) -> b
-                  _ -> []
+                  _other -> []
                 end %>
               <span class="bg-tymeslot-100 text-tymeslot-500 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
                 {length(breaks)} total

@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
           case CalendarInputProcessor.validate_single_field(field_atom, value,
                  metadata: socket.assigns.metadata
                ) do
-            {:ok, _} -> handle_valid_field(socket, field_atom)
+            {:ok, _result} -> handle_valid_field(socket, field_atom)
             {:error, error} -> handle_invalid_field(socket, field_atom, error)
           end
         end
@@ -211,8 +211,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
 
       defp has_discovered_calendars?(assigns) do
         case Map.get(assigns, :discovered_calendars) do
-          [_ | _] -> true
-          _ -> false
+          [_head | _rest] -> true
+          _other -> false
         end
       end
     end

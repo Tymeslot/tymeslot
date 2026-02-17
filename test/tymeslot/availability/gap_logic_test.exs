@@ -50,7 +50,7 @@ defmodule Tymeslot.Availability.GapLogicTest do
       last_event_end =
         case events do
           [] -> business_start
-          _ -> Enum.max_by(events, & &1.end_time, DateTime).end_time
+          _non_empty -> Enum.max_by(events, & &1.end_time, DateTime).end_time
         end
 
       final_gap_dur = DateTime.diff(business_end, last_event_end) / 60

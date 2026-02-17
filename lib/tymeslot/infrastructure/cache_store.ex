@@ -168,7 +168,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   @spec handle_computation_done(atom(), any(), any(), integer(), map()) :: {:noreply, map()}
   def handle_computation_done(table_name, key, value, ttl, state) do
     case Map.pop(state.pending, key) do
-      {nil, _} ->
+      {nil, _value} ->
         {:noreply, state}
 
       {%{waiters: waiters, ref: ref}, pending} ->
@@ -198,7 +198,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
 
         {:noreply, %{state | pending: Map.delete(state.pending, key)}}
 
-      _ ->
+      _other ->
         {:noreply, state}
     end
   end
@@ -212,7 +212,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
       [{^key, value, expiry}] when expiry > now ->
         {:ok, value}
 
-      _ ->
+      _other ->
         :miss
     end
   end

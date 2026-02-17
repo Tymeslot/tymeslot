@@ -299,7 +299,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
   end
 
   # Test DNS resolution separately
-  defp test_dns_resolution(host, _host_string, timeout) do
+  defp test_dns_resolution(host, _original_host_string, timeout) do
     case :inet.getaddr(host, :inet, timeout) do
       {:ok, _ip} ->
         :ok
@@ -320,7 +320,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
     case port do
       465 -> test_ssl_connection(host, port, timeout, config)
       587 -> test_starttls_connection(host, port, timeout)
-      _ -> test_plain_connection(host, port, timeout)
+      _other -> test_plain_connection(host, port, timeout)
     end
   end
 
@@ -345,7 +345,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
                   :ok
                 end
 
-              {:error, _} ->
+              {:error, _error_reason} ->
                 # Timeout or connection closed - acceptable, server might close immediately
                 :ok
             end
@@ -404,7 +404,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
                   :ok
                 end
 
-              {:error, _} ->
+              {:error, _error_reason} ->
                 # Timeout or connection closed - acceptable
                 :ok
             end
@@ -476,7 +476,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
   defp format_readable_reason(:timeout), do: "Connection timed out"
   defp format_readable_reason(:etimedout), do: "Connection timed out"
 
-  defp format_readable_reason({:tls_alert, {:handshake_failure, _}}),
+  defp format_readable_reason({:tls_alert, {:handshake_failure, _details}}),
     do: "SSL/TLS handshake failed"
 
   defp format_readable_reason({:tls_alert, alert}), do: "SSL/TLS alert: #{inspect(alert)}"
@@ -500,20 +500,20 @@ defmodule Tymeslot.Mailer.HealthCheck do
       "  - Try port 587 (STARTTLS) instead: SMTP_PORT=587"
   end
 
-  defp get_error_suggestion(reason, _) when reason in [:timeout, :etimedout] do
+  defp get_error_suggestion(reason, _port) when reason in [:timeout, :etimedout] do
     "\n\nConnection timed out. Common causes:\n" <>
       "  - Firewall blocking outbound SMTP\n" <>
       "  - Network connectivity issues\n" <>
       "  - SMTP server is slow to respond"
   end
 
-  defp get_error_suggestion({:dns_failed, :nxdomain}, _) do
+  defp get_error_suggestion({:dns_failed, :nxdomain}, _port) do
     "\n\nHostname not found (DNS resolution failed).\n" <>
       "  - Verify SMTP_HOST is correct (no spaces, correct domain)\n" <>
       "  - Check DNS configuration"
   end
 
-  defp get_error_suggestion({:tls_alert, {:handshake_failure, _}}, 465) do
+  defp get_error_suggestion({:tls_alert, {:handshake_failure, _details}}, 465) do
     "\n\nSSL/TLS handshake failed. Common causes:\n" <>
       "  - Certificate verification failed\n" <>
       "  - Server requires different TLS version\n" <>
@@ -521,5 +521,5 @@ defmodule Tymeslot.Mailer.HealthCheck do
       "  - Try port 587 (STARTTLS) instead: SMTP_PORT=587"
   end
 
-  defp get_error_suggestion(_, _), do: ""
+  defp get_error_suggestion(_other_reason, _port), do: ""
 end

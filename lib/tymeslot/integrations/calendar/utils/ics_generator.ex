@@ -81,7 +81,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       name when is_binary(name) and name != "" ->
         "CN=#{name}:mailto:#{organizer_email}"
 
-      _ ->
+      _other ->
         "mailto:#{organizer_email}"
     end
   end
@@ -97,11 +97,11 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
           name when is_binary(name) and name != "" ->
             "CN=#{name}:mailto:#{email}"
 
-          _ ->
+          _other ->
             "mailto:#{email}"
         end
 
-      _ ->
+      _other ->
         nil
     end
   end
@@ -123,7 +123,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       message when is_binary(message) and message != "" ->
         "Message from #{Map.get(meeting_details, :attendee_name, "attendee")}:\n#{String.trim(message)}"
 
-      _ ->
+      _other ->
         nil
     end
   end
@@ -133,7 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       url when is_binary(url) and url != "" ->
         "Video meeting: #{url}"
 
-      _ ->
+      _other ->
         nil
     end
   end

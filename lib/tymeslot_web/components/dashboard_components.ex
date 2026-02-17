@@ -269,5 +269,5 @@ defmodule TymeslotWeb.Components.DashboardComponents do
   defp button_classes(:secondary), do: "btn-secondary"
   defp button_classes(:danger), do: "btn-danger"
   defp button_classes(:ghost), do: "btn-ghost"
-  defp button_classes(_), do: "btn-primary"
+  defp button_classes(_variant), do: "btn-primary"
 end

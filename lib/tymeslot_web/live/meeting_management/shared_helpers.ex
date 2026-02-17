@@ -83,7 +83,7 @@ defmodule TymeslotWeb.MeetingManagement.SharedHelpers do
         meeting.organizer_email ->
           case UserQueries.get_user_by_email(meeting.organizer_email) do
             {:ok, user} -> Profiles.get_profile(user.id)
-            _ -> nil
+            _error -> nil
           end
 
         true ->

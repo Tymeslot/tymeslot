@@ -35,7 +35,7 @@ defmodule Tymeslot.Infrastructure.CorrelationId do
   def get_from_conn(conn) do
     # Check headers first (for incoming requests)
     case Conn.get_req_header(conn, @correlation_id_header) do
-      [correlation_id | _] -> correlation_id
+      [correlation_id | _rest] -> correlation_id
       [] -> conn.assigns[@correlation_id_key]
     end
   end
@@ -170,7 +170,7 @@ defmodule Tymeslot.Infrastructure.CorrelationId do
   def init(opts), do: opts
 
   @spec call(Conn.t(), any()) :: Conn.t()
-  def call(conn, _opts) do
+  def call(conn, _options) do
     {updated_conn, correlation_id} = ensure(conn)
 
     # Add to logger metadata for this request

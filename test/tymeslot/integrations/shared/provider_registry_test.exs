@@ -15,7 +15,7 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistryTest do
     def config_schema, do: %{key: :string}
 
     @spec validate_config(map()) :: :ok | {:error, String.t()}
-    def validate_config(_), do: :ok
+    def validate_config(_arg), do: :ok
 
     @spec capabilities() :: [atom()]
     def capabilities, do: [:events]
@@ -32,7 +32,7 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistryTest do
     def config_schema, do: %{key: :string}
 
     @spec validate_config(map()) :: :ok | {:error, String.t()}
-    def validate_config(_), do: :ok
+    def validate_config(_arg), do: :ok
   end
 
   defmodule TestRegistry do

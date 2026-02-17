@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
       :next_step ->
         handle_state_transition(socket, :overview, :schedule, callbacks)
 
-      _ ->
+      _other ->
         {:noreply, socket}
     end
   end
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
         %{"search" => term} -> term
         %{"value" => term} -> term
         %{"_target" => ["search"], "search" => term} -> term
-        _ -> ""
+        _other -> ""
       end
 
     socket =

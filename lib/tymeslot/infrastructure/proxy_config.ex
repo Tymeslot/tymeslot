@@ -117,7 +117,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
          {:ok, network, prefix_len} <- parse_cidr(cidr_pattern) do
       ip_in_network?(ip, network, prefix_len)
     else
-      _ -> false
+      _other -> false
     end
   end
 
@@ -125,7 +125,7 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   defp parse_ip_address(ip_string) do
     case :inet.parse_address(String.to_charlist(ip_string)) do
       {:ok, ip_tuple} -> {:ok, ip_tuple}
-      {:error, _} -> {:error, :invalid_ip}
+      {:error, _reason} -> {:error, :invalid_ip}
     end
   end
 
@@ -138,20 +138,20 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
              :ok <- validate_prefix_length(network, prefix_len) do
           {:ok, network, prefix_len}
         else
-          _ -> {:error, :invalid_cidr}
+          _other -> {:error, :invalid_cidr}
         end
 
-      _ ->
+      _other ->
         {:error, :invalid_cidr}
     end
   end
 
   # Validate that prefix length is appropriate for IP version
-  defp validate_prefix_length({_, _, _, _}, prefix) when prefix >= 0 and prefix <= 32, do: :ok
-  defp validate_prefix_length({_, _, _, _, _, _, _, _}, prefix) when prefix >= 0 and prefix <= 128,
+  defp validate_prefix_length({_a, _b, _c, _d}, prefix) when prefix >= 0 and prefix <= 32, do: :ok
+  defp validate_prefix_length({_s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}, prefix) when prefix >= 0 and prefix <= 128,
     do: :ok
 
-  defp validate_prefix_length(_, _), do: {:error, :invalid_prefix}
+  defp validate_prefix_length(_ip, _prefix), do: {:error, :invalid_prefix}
 
   # Check if IP is in network/prefix range
   defp ip_in_network?(ip, network, prefix_len) do
@@ -163,8 +163,8 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
       network_bits = ip_to_bits(network)
 
       # Compare the first prefix_len bits
-      <<ip_prefix::size(prefix_len), _::bitstring>> = ip_bits
-      <<network_prefix::size(prefix_len), _::bitstring>> = network_bits
+      <<ip_prefix::size(prefix_len), _rest_ip::bitstring>> = ip_bits
+      <<network_prefix::size(prefix_len), _rest_net::bitstring>> = network_bits
 
       ip_prefix == network_prefix
     end
@@ -236,5 +236,5 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   end
 
   defp parse_scheme("https"), do: :https
-  defp parse_scheme(_), do: :http
+  defp parse_scheme(_arg), do: :http
 end

@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenUtils do
           {:valid, "Expires #{relative_time(expires_at)}"}
         end
 
-      _ ->
+      _other ->
         {:unknown, "Unknown"}
     end
   end
@@ -47,10 +47,10 @@ defmodule Tymeslot.Integrations.Calendar.TokenUtils do
   @spec token_status(map()) :: :expired | :valid | :no_expiry | :unknown
   def token_status(integration) do
     case format_token_expiry(integration) do
-      {:expired, _} -> :expired
-      {:valid, _} -> :valid
-      {:no_expiry, _} -> :no_expiry
-      {:unknown, _} -> :unknown
+      {:expired, _message} -> :expired
+      {:valid, _message} -> :valid
+      {:no_expiry, _message} -> :no_expiry
+      {:unknown, _message} -> :unknown
     end
   end
 
@@ -103,7 +103,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenUtils do
   """
   @spec needs_refresh?(map(), non_neg_integer()) :: boolean()
   def needs_refresh?(integration, minutes \\ 5)
-  def needs_refresh?(%{token_expires_at: nil}, _minutes), do: false
+  def needs_refresh?(%{token_expires_at: nil}, _threshold_minutes), do: false
 
   def needs_refresh?(%{token_expires_at: expires_at}, minutes) do
     threshold = DateTime.add(DateTime.utc_now(), minutes * 60, :second)

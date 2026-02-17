@@ -121,7 +121,7 @@ defmodule Tymeslot.Payments.DatabaseOperations do
               "Subscription transaction updated: #{checkout_session_id} -> #{subscription_id}"
             )
 
-            _ = process_subscription_updates(updated_transaction)
+            _result = process_subscription_updates(updated_transaction)
             {:ok, updated_transaction}
 
           {:error, changeset} ->
@@ -244,7 +244,7 @@ defmodule Tymeslot.Payments.DatabaseOperations do
     error_message = "Payment processing failed: #{inspect(error)}"
     Logger.error(error_message)
 
-    _ =
+    _result =
       ErrorHandler.handle_payment_error(
         transaction.stripe_id,
         error,
@@ -282,7 +282,7 @@ defmodule Tymeslot.Payments.DatabaseOperations do
     error_message = "Subscription processing failed: #{inspect(error)}"
     Logger.error(error_message)
 
-    _ =
+    _result =
       ErrorHandler.handle_subscription_error(
         transaction.subscription_id || transaction.stripe_id,
         error,
@@ -294,8 +294,8 @@ defmodule Tymeslot.Payments.DatabaseOperations do
 
   defp duplicate_stripe_id_error?(%Ecto.Changeset{} = changeset) do
     Enum.any?(changeset.errors, fn
-      {:stripe_id, {_message, opts}} -> Keyword.get(opts, :constraint) == :unique
-      _ -> false
+      {:stripe_id, {_error_message, opts}} -> Keyword.get(opts, :constraint) == :unique
+      _other_error -> false
     end)
   end
 end

@@ -32,7 +32,7 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
           "message" => meeting.attendee_message || ""
         }
 
-      _ ->
+      _error ->
         default_booking_form_data()
     end
   end

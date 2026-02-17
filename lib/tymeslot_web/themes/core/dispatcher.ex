@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
         %{error: error} ->
           {:ok, assign(socket, :error, error)}
 
-        _ ->
+        _no_profile ->
           mount_without_profile(params, session, socket)
       end
     else
@@ -214,7 +214,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
           override = params["theme"]
           if override && override != current_theme_id, do: override, else: current_theme_id
 
-        _ ->
+        _no_theme ->
           params["theme"] || params["theme_id"] || Registry.default_theme_id()
       end
 
@@ -236,7 +236,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
       [msg, socket] ->
         [msg, assign(socket, :theme_id, theme_id)]
 
-      _ ->
+      _unknown_format ->
         args
     end
   end
@@ -257,7 +257,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     {:noreply, assign(socket, :error, "Theme message handling failed")}
   end
 
-  defp handle_theme_error(_, _), do: {:error, "Unknown theme error"}
+  defp handle_theme_error(_unknown_function, _unknown_args), do: {:error, "Unknown theme error"}
 
   defp render_error(assigns, message) do
     assigns = assign(assigns, :error_message, message)
@@ -326,7 +326,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
   # Mount helpers
 
-  defp log_mount_debug_info(_action, _profile, _socket) do
+  defp log_mount_debug_info(_unused_action, _unused_profile, _unused_socket) do
     # Debug logging removed for production
   end
 
@@ -424,7 +424,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     |> assign(:duration, duration_str)
   end
 
-  defp assign_action_specific_data(socket, _action, _meeting, _params), do: socket
+  defp assign_action_specific_data(socket, _other_action, _unused_meeting, _unused_params), do: socket
 
   defp assign_theme_customization_data(socket, profile, theme_id) do
     if profile do
@@ -474,7 +474,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     Policy.can_reschedule_meeting?(meeting)
   end
 
-  defp validate_meeting_action(_meeting, :cancel_confirmed) do
+  defp validate_meeting_action(_unused_meeting, :cancel_confirmed) do
     :ok
   end
 
@@ -497,12 +497,12 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   end
 
   # Handle events for meeting management
-  defp handle_meeting_event("cancel_meeting", _params, socket) do
+  defp handle_meeting_event("cancel_meeting", _unused_params, socket) do
     if socket.assigns[:live_action] == :cancel do
       meeting = socket.assigns[:meeting]
 
       case Meetings.cancel_meeting(meeting) do
-        {:ok, _} ->
+        {:ok, _result} ->
           cancel_confirmed_url = build_cancel_confirmed_url(socket, meeting)
 
           # Use redirect instead of push_navigate to force full page reload
@@ -516,7 +516,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     end
   end
 
-  defp handle_meeting_event("keep_meeting", _params, socket) do
+  defp handle_meeting_event("keep_meeting", _unused_params, socket) do
     if socket.assigns[:live_action] == :cancel do
       # Set a flag to show the "kept" state instead of the cancel form
       {:noreply, assign(socket, :meeting_kept, true)}
@@ -530,7 +530,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
       %{username: username} when is_binary(username) and byte_size(username) > 0 ->
         "/#{username}/meeting/#{meeting.uid}/cancel-confirmed"
 
-      _ ->
+      _no_username ->
         "/meeting/#{meeting.uid}/cancel-confirmed"
     end
   end

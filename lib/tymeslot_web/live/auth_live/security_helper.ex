@@ -73,7 +73,7 @@ defmodule TymeslotWeb.AuthLive.SecurityHelper do
   def get_current_user_id(socket) do
     case socket.assigns[:current_user] do
       %{id: id} -> id
-      _ -> nil
+      _other -> nil
     end
   end
 

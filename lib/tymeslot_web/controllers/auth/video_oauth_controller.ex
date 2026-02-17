@@ -61,7 +61,7 @@ defmodule TymeslotWeb.VideoOAuthController do
     error_message =
       case error do
         "access_denied" -> "Authorization was denied. Please try again."
-        _ -> "Authentication failed. Please try again."
+        _other -> "Authentication failed. Please try again."
       end
 
     conn
@@ -129,7 +129,7 @@ defmodule TymeslotWeb.VideoOAuthController do
     error_message =
       case error do
         "access_denied" -> "Authorization was denied. Please try again."
-        _ -> "Authentication failed. Please try again."
+        _other -> "Authentication failed. Please try again."
       end
 
     conn
@@ -161,12 +161,12 @@ defmodule TymeslotWeb.VideoOAuthController do
 
   defp validate_state_parameter(state) when is_binary(state) do
     case State.validate(state, state_secret()) do
-      {:ok, _} -> :ok
+      {:ok, _result} -> :ok
       {:error, reason} -> {:error, :invalid_state, reason}
     end
   end
 
-  defp validate_state_parameter(_), do: {:error, :invalid_state, "Missing state parameter"}
+  defp validate_state_parameter(_arg), do: {:error, :invalid_state, "Missing state parameter"}
 
   defp state_secret do
     Application.get_env(:tymeslot, :outlook_oauth)[:state_secret] ||

@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
   def format_token_expiry(expires_at) do
     case DateTime.compare(expires_at, DateTime.utc_now()) do
       :gt -> "in #{relative_time(expires_at)}"
-      _ -> "expired"
+      _other -> "expired"
     end
   end
 
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
       atom_type ->
         case ProviderDirectory.get(type, atom_type) do
           %{} = desc -> {:ok, desc}
-          _ -> :error
+          _other -> :error
         end
     end
   end
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Helpers.IntegrationProviders do
       "google_meet" -> "✓ Google Meet connection verified - #{message}"
       "teams" -> "✓ Microsoft Teams connection verified - #{message}"
       "custom" -> "✓ Custom provider configured - #{message}"
-      _ -> message
+      _other -> message
     end
   end
 

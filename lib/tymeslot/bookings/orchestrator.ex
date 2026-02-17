@@ -43,7 +43,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
       {:error, reason} when is_binary(reason) ->
         {:error, reason}
 
-      {:error, _} ->
+      {:error, _reason} ->
         {:error, "Failed to process booking. Please try again."}
     end
   end

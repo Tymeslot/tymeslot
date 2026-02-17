@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
          %{step: target_step} <- states[target_state] do
       target_step <= current_step
     else
-      _ -> false
+      _other -> false
     end
   end
 
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
       :schedule -> :schedule
       :booking -> :booking
       :confirmation -> :confirmation
-      _ -> :overview
+      _other -> :overview
     end
   end
 
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
       {:schedule, :booking} ->
         validate_step_requirements(socket, :booking)
 
-      _ ->
+      _other ->
         :ok
     end
   end

@@ -12,7 +12,7 @@ defmodule Tymeslot.Payments.ChangesetHelpers do
           String.contains?(msg, "has already been taken")
         end)
 
-      _ ->
+      _other ->
         false
     end
   end

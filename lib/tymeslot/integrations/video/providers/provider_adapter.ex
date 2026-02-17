@@ -44,7 +44,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
           Logger.error("Unknown video provider", provider_type: provider_type)
           {:error, :unknown_provider}
 
-        {:error, _} = error ->
+        {:error, _reason} = error ->
           Logger.error("Failed to create meeting room with #{provider_type}",
             reason: inspect(error)
           )
@@ -112,7 +112,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
           {:ok, provider_module} ->
             provider_module.extract_room_id(meeting_url)
 
-          {:error, _} ->
+          {:error, _reason} ->
             Logger.warning("Failed to get provider for room ID extraction",
               provider_type: provider_type
             )
@@ -120,7 +120,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
             nil
         end
 
-      {:error, _} ->
+      {:error, _reason} ->
         Logger.warning("Could not detect provider from URL", url: meeting_url)
         nil
     end
@@ -137,11 +137,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
           {:ok, provider_module} ->
             provider_module.valid_meeting_url?(meeting_url)
 
-          {:error, _} ->
+          {:error, _reason} ->
             false
         end
 
-      {:error, _} ->
+      {:error, _reason} ->
         false
     end
   end
@@ -242,7 +242,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
     end
   end
 
-  defp detect_provider_from_url(_), do: {:error, "Invalid URL"}
+  defp detect_provider_from_url(_arg), do: {:error, "Invalid URL"}
 
   defp find_matching_provider(meeting_url, provider_patterns) do
     Enum.find_value(provider_patterns, :not_found, fn {patterns, provider} ->
@@ -265,5 +265,5 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       "unknown"
   end
 
-  defp extract_room_identifier(_), do: "unknown"
+  defp extract_room_identifier(_arg), do: "unknown"
 end

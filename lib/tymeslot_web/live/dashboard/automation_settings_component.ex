@@ -182,7 +182,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
            "events" => webhook.events
          })}
 
-      {:error, _} ->
+      {:error, _reason} ->
         Flash.error("Webhook not found")
         {:noreply, socket}
     end
@@ -249,7 +249,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         case get_webhook_for_user(socket, id) do
           {:ok, webhook} ->
             case Webhooks.delete_webhook(webhook) do
-              {:ok, _} ->
+              {:ok, _result} ->
                 Flash.info("Webhook deleted successfully")
 
                 {:noreply,
@@ -258,12 +258,12 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
                  |> assign(:webhook_to_delete, nil)
                  |> load_webhooks()}
 
-              {:error, _} ->
+              {:error, _reason} ->
                 Flash.error("Failed to delete webhook")
                 {:noreply, socket}
             end
 
-          {:error, _} ->
+          {:error, _reason} ->
             Flash.error("Webhook not found")
             {:noreply, socket}
         end
@@ -274,19 +274,19 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     case get_webhook_for_user(socket, id) do
       {:ok, webhook} ->
         case Webhooks.toggle_webhook(webhook) do
-          {:ok, _} ->
+          {:ok, _result} ->
             Flash.info("Webhook status updated")
             {:noreply, load_webhooks(socket)}
 
           {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
             {:noreply, handle_feature_access_error(socket, reason)}
 
-          {:error, _} ->
+          {:error, _reason} ->
             Flash.error("Failed to update webhook status")
             {:noreply, socket}
         end
 
-      {:error, _} ->
+      {:error, _reason} ->
         Flash.error("Webhook not found")
         {:noreply, socket}
     end
@@ -308,7 +308,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
             {:noreply, assign(socket, :testing_connection, nil)}
         end
 
-      {:error, _} ->
+      {:error, _reason} ->
         Flash.error("Webhook not found")
         {:noreply, assign(socket, :testing_connection, nil)}
     end
@@ -327,7 +327,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
          |> assign(:deliveries, deliveries)
          |> assign(:delivery_stats, stats)}
 
-      {:error, _} ->
+      {:error, _reason} ->
         Flash.error("Webhook not found")
         {:noreply, socket}
     end
@@ -341,7 +341,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
          |> ModalHook.show_modal(:regenerate_token)
          |> assign(:selected_webhook, webhook)}
 
-      {:error, _} ->
+      {:error, _reason} ->
         Flash.error("Webhook not found")
         {:noreply, socket}
     end
@@ -382,7 +382,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
           {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
             {:noreply, handle_feature_access_error(socket, reason)}
 
-          {:error, _} ->
+          {:error, _reason} ->
             Flash.error("Failed to regenerate token")
             {:noreply, socket}
         end

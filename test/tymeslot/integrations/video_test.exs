@@ -119,7 +119,7 @@ defmodule Tymeslot.Integrations.VideoTest do
     end
 
     test "returns error for non-oauth provider" do
-      assert {:error, _} = Video.oauth_authorization_url(1, :mirotalk)
+      assert {:error, _reason} = Video.oauth_authorization_url(1, :mirotalk)
     end
   end
 end

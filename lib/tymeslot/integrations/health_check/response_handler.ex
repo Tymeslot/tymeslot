@@ -18,7 +18,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   Handles a health status transition by taking appropriate action.
   """
   @spec handle_transition(integration_type(), map(), Monitor.transition()) :: :ok
-  def handle_transition(_type, _integration, {:no_change, _, _}), do: :ok
+  def handle_transition(_type, _integration, {:no_change, _old_status, _new_status}), do: :ok
 
   def handle_transition(type, integration, {:initial_failure, nil, :unhealthy}) do
     Logger.error("Integration health check failed on first attempt",
@@ -113,7 +113,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
   defp deactivate_integration(:calendar, integration) do
     case CalendarIntegrationQueries.update(integration, %{is_active: false}) do
-      {:ok, _} ->
+      {:ok, _updated_integration} ->
         :ok
 
       {:error, reason} ->
@@ -126,7 +126,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
   defp deactivate_integration(:video, integration) do
     case VideoIntegrationQueries.update(integration, %{is_active: false}) do
-      {:ok, _} ->
+      {:ok, _updated_integration} ->
         :ok
 
       {:error, reason} ->

@@ -201,7 +201,7 @@ defmodule Tymeslot.Availability.CalculateTest do
       # Callback that only makes tomorrow available
       fallback_fn = fn
         ^tomorrow -> true
-        _ -> false
+        _other -> false
       end
 
       config = %{fallback_availability_fn: fallback_fn}
@@ -327,7 +327,7 @@ defmodule Tymeslot.Availability.CalculateTest do
           6 -> 2
           # Sunday to Monday
           7 -> 1
-          _ -> 1
+          _other -> 1
         end
 
       future_weekday = Date.add(Date.utc_today(), days_ahead)

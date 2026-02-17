@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Themes.Quill.Theme do
       :schedule -> :schedule
       :booking -> :booking
       :confirmation -> :confirmation
-      _ -> :overview
+      _other -> :overview
     end
   end
 
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Themes.Quill.Theme do
       :step_navigation -> true
       :glassmorphism -> true
       :calendar_grid -> true
-      _ -> false
+      _other -> false
     end
   end
 
@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Themes.Quill.Theme do
       :reschedule -> Reschedule.render(assigns)
       :cancel -> Cancel.render(assigns)
       :cancel_confirmed -> CancelConfirmed.render(assigns)
-      _ -> raise "Unsupported meeting action: #{action}"
+      _other -> raise "Unsupported meeting action: #{action}"
     end
   end
 end

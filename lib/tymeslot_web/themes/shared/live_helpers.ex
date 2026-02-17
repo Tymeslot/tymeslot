@@ -146,7 +146,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
         case params["name"] do
           nil -> "Guest"
           val when is_binary(val) -> URI.decode(val)
-          _ -> "Guest"
+          _other -> "Guest"
         end
 
       socket
@@ -207,7 +207,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
         |> assign(:meeting_type, meeting_type)
         |> do_handle_schedule_entry(params)
 
-      _ ->
+      _other ->
         do_handle_schedule_entry(socket, params)
     end
   end
@@ -219,7 +219,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     {current_year, current_month} =
       case DateTime.now(timezone) do
         {:ok, dt} -> {dt.year, dt.month}
-        _ -> {Date.utc_today().year, Date.utc_today().month}
+        _other -> {Date.utc_today().year, Date.utc_today().month}
       end
 
     normalized_duration =

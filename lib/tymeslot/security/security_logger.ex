@@ -79,7 +79,7 @@ defmodule Tymeslot.Security.SecurityLogger do
     end)
   end
 
-  defp sanitize_metadata(_), do: %{}
+  defp sanitize_metadata(_invalid), do: %{}
 
   defp sanitize_metadata_value(:ip, value) when is_binary(value) do
     # Basic IP validation - only log if it looks like a valid IP
@@ -101,7 +101,7 @@ defmodule Tymeslot.Security.SecurityLogger do
     |> String.replace(~r/[\r\n\t]/, " ")
   end
 
-  defp sanitize_metadata_value(_, _), do: nil
+  defp sanitize_metadata_value(_key, _value), do: nil
 
   # === EXISTING AUTHENTICATION LOGGING FUNCTIONS ===
 
@@ -178,7 +178,7 @@ defmodule Tymeslot.Security.SecurityLogger do
     end
   end
 
-  defp redact_session_id(_), do: nil
+  defp redact_session_id(_invalid), do: nil
 
   @doc """
   Logs rate limiting violations.

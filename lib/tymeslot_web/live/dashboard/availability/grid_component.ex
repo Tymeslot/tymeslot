@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
           <div class="grid grid-cols-8 gap-2 text-xs sm:text-sm">
             <!-- Header Row -->
             <div class="font-black text-tymeslot-400 uppercase tracking-widest text-center py-4"></div>
-            <%= for {day_name, _day_num} <- [{"Mon", 1}, {"Tue", 2}, {"Wed", 3}, {"Thu", 4}, {"Fri", 5}, {"Sat", 6}, {"Sun", 7}] do %>
+            <%= for {day_name, _day_number} <- [{"Mon", 1}, {"Tue", 2}, {"Wed", 3}, {"Thu", 4}, {"Fri", 5}, {"Sat", 6}, {"Sun", 7}] do %>
               <div class="font-black text-tymeslot-700 text-center py-4 bg-white rounded-token-xl border-2 border-white shadow-sm">
                 {day_name}
               </div>
@@ -171,7 +171,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
       [] ->
         {:available, "Available for booking"}
 
-      [break | _] ->
+      [break | _rest] ->
         get_break_status(break, slot_start, slot_end)
     end
   end

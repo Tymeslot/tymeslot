@@ -484,5 +484,5 @@ defmodule Tymeslot.Emails.EmailService do
   defp email_retriable?(:timeout), do: true
   defp email_retriable?(:closed), do: true
   defp email_retriable?(:econnrefused), do: true
-  defp email_retriable?(_), do: false
+  defp email_retriable?(_error), do: false
 end

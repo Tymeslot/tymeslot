@@ -188,7 +188,7 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
       end)
 
       try do
-        assert {:error, :retry_later, _} = DisputeHandler.process(event, dispute)
+        assert {:error, :retry_later, _reason} = DisputeHandler.process(event, dispute)
       after
         Application.put_env(:tymeslot, :stripe_provider, original_provider)
       end

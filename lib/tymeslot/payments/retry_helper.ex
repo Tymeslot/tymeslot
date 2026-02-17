@@ -90,12 +90,12 @@ defmodule Tymeslot.Payments.RetryHelper do
         operation
       )
   catch
-    {:error, _} = error ->
+    {:error, _reason} = error ->
       error
 
-    error ->
+    thrown_error ->
       handle_exception(
-        error,
+        thrown_error,
         attempt,
         max_attempts,
         base_delay_ms,
@@ -193,7 +193,7 @@ defmodule Tymeslot.Payments.RetryHelper do
   def default_retryable_error?(%{extra: %{http_status: status}}) when status >= 500, do: true
   def default_retryable_error?(%RuntimeError{}), do: true
   def default_retryable_error?(%ErlangError{}), do: true
-  def default_retryable_error?(_), do: false
+  def default_retryable_error?(_error), do: false
 
   # Configuration helpers
 

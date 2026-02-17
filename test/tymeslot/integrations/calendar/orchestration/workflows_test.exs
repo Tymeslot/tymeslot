@@ -14,7 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
       integration = insert(:calendar_integration, user: user, provider: "google")
       component_id = "comp_123"
 
-      expect(GoogleCalendarAPIMock, :list_calendars, fn _ ->
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
         {:ok, [%{"id" => "cal_1", "summary" => "New Calendar"}]}
       end)
 
@@ -42,7 +42,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
 
       component_id = "comp_err"
 
-      expect(GoogleCalendarAPIMock, :list_calendars, fn _ ->
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
         {:error, :api_error}
       end)
 
@@ -66,7 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
           calendar_list: [%{"id" => "cal_1", "selected" => true, "path" => "p1"}]
         )
 
-      expect(GoogleCalendarAPIMock, :list_calendars, fn _ ->
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
         {:ok,
          [%{"id" => "cal_1", "summary" => "Cal 1"}, %{"id" => "cal_2", "summary" => "Cal 2"}]}
       end)
@@ -88,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
       integration =
         insert(:calendar_integration, user: user, provider: "google", calendar_list: existing)
 
-      expect(GoogleCalendarAPIMock, :list_calendars, fn _ ->
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
         {:ok, []}
       end)
 

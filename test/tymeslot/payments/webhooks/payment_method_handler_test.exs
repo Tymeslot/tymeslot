@@ -19,8 +19,8 @@ defmodule Tymeslot.Payments.Webhooks.PaymentMethodHandlerTest do
     end
 
     test "returns error for missing or empty id" do
-      assert {:error, :missing_field, _} = PaymentMethodHandler.validate(%{})
-      assert {:error, :missing_field, _} = PaymentMethodHandler.validate(%{"id" => ""})
+      assert {:error, :missing_field, _message} = PaymentMethodHandler.validate(%{})
+      assert {:error, :missing_field, _message} = PaymentMethodHandler.validate(%{"id" => ""})
     end
   end
 

@@ -116,7 +116,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
     test "returns error when token validation fails" do
       config = %{access_token: "invalid_token"}
 
-      expect(TeamsOAuthHelperMock, :validate_token, fn _ -> {:error, "Invalid"} end)
+      expect(TeamsOAuthHelperMock, :validate_token, fn _client -> {:error, "Invalid"} end)
 
       assert {:error, message} = TeamsProvider.test_connection(config)
       assert String.contains?(message, "Failed to authenticate")
@@ -196,7 +196,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
          }}
       end)
 
-      expect(HTTPClientMock, :request, fn :post, _, _, headers, _ ->
+      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
         assert Enum.any?(headers, fn {k, v} ->
                  String.downcase(k) == "authorization" and v == "Bearer new_token"
                end)
@@ -208,7 +208,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
          }}
       end)
 
-      assert {:ok, _} = TeamsProvider.create_meeting_room(config)
+      assert {:ok, _result} = TeamsProvider.create_meeting_room(config)
 
       # Verify DB update
       updated = Repo.get(VideoIntegrationSchema, integration.id)
@@ -227,7 +227,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
       # Missing joinUrl
-      expect(HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok, %Req.Response{status: 201, body: Jason.encode!(%{"id" => "m1"})}}
       end)
 
@@ -237,7 +237,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       # Audio conferencing missing
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
-      expect(HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok,
          %Req.Response{
            status: 201,

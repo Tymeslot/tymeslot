@@ -28,7 +28,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   def validate_connection(%{provider: provider} = integration, user_id)
       when provider in ["google", "outlook"] do
     with {:ok, updated} <- Tokens.ensure_valid_token(integration, user_id),
-         {:ok, _} <- test_connection(updated) do
+         {:ok, _result} <- test_connection(updated) do
       {:ok, updated}
     else
       {:error, :token_refresh_failed} -> {:error, :token_expired}
@@ -47,15 +47,15 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
     provider_atom =
       case ProviderRegistry.validate_provider(provider) do
         {:ok, atom} -> atom
-        _ -> :unknown
+        _other -> :unknown
       end
 
     case DiscoveryService.discover_calendars(provider_atom, client_config) do
-      {:ok, _} -> {:ok, integration}
+      {:ok, _result} -> {:ok, integration}
       {:error, _msg} -> {:error, :network_error}
     end
   rescue
-    _ -> {:error, :network_error}
+    _other -> {:error, :network_error}
   end
 
   def validate_connection(_integration, _user_id), do: {:error, :unsupported_provider}
@@ -74,7 +74,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
 
     case provider_atom && ProviderRegistry.get_provider(provider_atom) do
       {:ok, provider_module} -> provider_module.test_connection(integration)
-      _ -> {:error, :unsupported_provider}
+      _other -> {:error, :unsupported_provider}
     end
   end
 end

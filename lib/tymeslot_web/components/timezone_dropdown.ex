@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         |> String.slice(0, 5)
         |> Kernel.<>(" local time")
 
-      _ ->
+      _other ->
         "Local time"
     end
   end
@@ -216,7 +216,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         |> Time.to_string()
         |> String.slice(0, 5)
 
-      _ ->
+      _other ->
         "--:--"
     end
   end

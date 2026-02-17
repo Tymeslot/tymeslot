@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
       :schedule -> handle_schedule_events(socket, event, data)
       :booking -> handle_booking_events(socket, event, data)
       :confirmation -> handle_confirmation_events(socket, event, data)
-      _ -> {:noreply, socket}
+      _other -> {:noreply, socket}
     end
   end
 
@@ -134,7 +134,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
         2 -> :schedule
         3 -> :booking
         4 -> :confirmation
-        _ -> socket.assigns[:current_state]
+        _other -> socket.assigns[:current_state]
       end
 
     # Only allow navigation to previous steps or current step
@@ -235,7 +235,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
       :back_step ->
         handle_state_transition(socket, :booking, :schedule)
 
-      _ ->
+      _other ->
         {:noreply, socket}
     end
   end
@@ -245,7 +245,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
       :schedule_another ->
         {:noreply, transition_to(socket, :overview, %{})}
 
-      _ ->
+      _other ->
         {:noreply, socket}
     end
   end
@@ -370,7 +370,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
     organizer_user_id =
       case assigns[:organizer_profile] do
         %{user_id: user_id} -> user_id
-        _ -> nil
+        _other -> nil
       end
 
     assigns = assign(assigns, :organizer_user_id, organizer_user_id)

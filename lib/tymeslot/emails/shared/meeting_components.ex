@@ -90,7 +90,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
           {Styles.background_color(:light), Styles.text_color(:secondary),
            Styles.button_color("primary"), Styles.button_text_color("primary"), ""}
 
-        _ ->
+        _other ->
           {Styles.background_color(:turquoise_subtle), Styles.text_color(:dark),
            Styles.button_color("primary"), Styles.button_text_color("primary"), ""}
       end
@@ -168,7 +168,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
     case length(actions) do
       1 -> single_button_layout(actions)
       2 -> two_button_layout(actions)
-      _ -> multi_button_layout(actions)
+      _other -> multi_button_layout(actions)
     end
   end
 
@@ -188,7 +188,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
       %{start_time: %DateTime{} = start_time} ->
         SharedHelpers.format_time(start_time)
 
-      _ ->
+      _other ->
         "TBD"
     end
   end
@@ -240,7 +240,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
     safe_url =
       case UrlValidation.validate_http_url(action.url) do
         :ok -> SharedHelpers.sanitize_for_email(action.url)
-        _ -> "#"
+        _other -> "#"
       end
 
     button_mjml = """
@@ -285,7 +285,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
       :danger ->
         {Styles.button_color("danger"), Styles.button_text_color("danger"), "button-danger"}
 
-      _ ->
+      _other ->
         {Styles.button_color("primary"), Styles.button_text_color("primary"), "button-primary"}
     end
   end
@@ -362,17 +362,17 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   defp location_icon("Video Call"), do: "📹"
   defp location_icon("Phone Call"), do: "📞"
   defp location_icon("In Person"), do: "📍"
-  defp location_icon(_), do: "📍"
+  defp location_icon(_arg), do: "📍"
 
   defp badge_background(:blue), do: Styles.background_color(:blue_light)
   defp badge_background(:green), do: Styles.background_color(:green_light)
   defp badge_background(:red), do: Styles.background_color(:red_light)
-  defp badge_background(_), do: Styles.background_color(:light)
+  defp badge_background(_arg), do: Styles.background_color(:light)
 
   defp badge_text_color(:blue), do: Styles.component_color(:status_badge_blue)
   defp badge_text_color(:green), do: "#065f46"
   defp badge_text_color(:red), do: "#991b1b"
-  defp badge_text_color(_), do: Styles.text_color(:secondary)
+  defp badge_text_color(_arg), do: Styles.text_color(:secondary)
 
   defp darken_color("#ffffff"), do: Styles.component_color(:reminder_note)
   defp darken_color(color), do: color

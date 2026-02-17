@@ -90,7 +90,7 @@ defmodule Tymeslot.Auth.AuthActions do
         {:error, normalize_auth_error(reason)}
 
       # Default fallback
-      _ ->
+      _other ->
         {:error, "An unexpected error occurred during registration."}
     end
   end
@@ -268,7 +268,7 @@ defmodule Tymeslot.Auth.AuthActions do
       "true" -> true
       "on" -> true
       true -> true
-      _ -> false
+      _other -> false
     end)
   end
 
@@ -305,7 +305,7 @@ defmodule Tymeslot.Auth.AuthActions do
   defp safe_client_ip(socket_or_conn) do
     ClientIP.get(socket_or_conn)
   rescue
-    _ -> nil
+    _other -> nil
   end
 
   defp get_token_error_message(:invalid_token), do: "Invalid or expired token"

@@ -411,7 +411,7 @@ defmodule Tymeslot.DatabaseQueries.ThemeCustomizationQueriesTest do
           background_value: "gradient_1"
         }
 
-        assert {:ok, _} = ThemeCustomizationQueries.create(attrs)
+        assert {:ok, _created_customization} = ThemeCustomizationQueries.create(attrs)
       end
     end
 

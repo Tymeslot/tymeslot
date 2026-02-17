@@ -24,7 +24,7 @@ defmodule Tymeslot.Integrations.Video.Connection do
       result =
         case provider_atom do
           :unknown -> {:error, :unsupported_provider}
-          _ -> ProviderAdapter.test_connection(provider_atom, config)
+          _provider -> ProviderAdapter.test_connection(provider_atom, config)
         end
 
       duration = System.monotonic_time(:millisecond) - start_time
@@ -73,5 +73,5 @@ defmodule Tymeslot.Integrations.Video.Connection do
 
   defp build_config(:custom, _integration, _decrypted), do: %{}
   defp build_config(:none, _integration, _decrypted), do: %{}
-  defp build_config(_unknown, _integration, _decrypted), do: %{}
+  defp build_config(_provider, _integration, _decrypted), do: %{}
 end

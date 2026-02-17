@@ -115,7 +115,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
 
           {:ok, truncated}
 
-        _ ->
+        _other ->
           maybe_log_truncation(log_events, metadata, %{
             reason: "max_input_bytes",
             original_bytes: byte_size(input),
@@ -127,7 +127,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     end
   end
 
-  defp enforce_max_input_bytes(input, _max_input_bytes, _on_too_long, _log_events, _metadata),
+  defp enforce_max_input_bytes(input, _max_bytes, _on_too_long, _log_events, _metadata),
     do: {:ok, input}
 
   defp truncate_to_bytes(input, max_bytes) when is_integer(max_bytes) and max_bytes >= 0 do
@@ -186,7 +186,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
       decoded -> decode_url_recursive(decoded, remaining - 1)
     end
   rescue
-    _ -> input
+    _exception -> input
   end
 
   defp sanitize_html(input, true) do
@@ -250,11 +250,11 @@ defmodule Tymeslot.Security.UniversalSanitizer do
   defp remove_dangerous_absolute_paths(input) do
     case input do
       # Preserve URLs completely
-      "http" <> _ ->
+      "http" <> _url_rest ->
         input
 
       # Check for dangerous system paths
-      "/" <> _rest ->
+      "/" <> _path_rest ->
         if dangerous_system_path?(input) do
           String.replace(input, ~r/^\/+/, "")
         else
@@ -262,7 +262,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
         end
 
       # Leave other inputs unchanged
-      _ ->
+      _path ->
         input
     end
   end
@@ -340,7 +340,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
 
           {:ok, String.slice(input, 0, max_length)}
 
-        _ ->
+        _mode ->
           {:error, "Input exceeds maximum length (#{max_length} characters)"}
       end
     end

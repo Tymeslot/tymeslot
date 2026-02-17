@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   def can_cancel?(meeting) do
     case Policy.can_cancel_meeting?(meeting) do
       :ok -> true
-      {:error, _} -> false
+      {:error, _reason} -> false
     end
   end
 
@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.Helpers do
   def can_reschedule?(meeting) do
     case Policy.can_reschedule_meeting?(meeting) do
       :ok -> true
-      {:error, _} -> false
+      {:error, _reason} -> false
     end
   end
 

@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
-  def handle_event("show_cancel_modal", %{"id" => _id} = params, socket) do
+  def handle_event("show_cancel_modal", %{"id" => _meeting_id} = params, socket) do
     case fetch_meeting_for_modal(socket, params, policy_fun: &Policy.can_cancel_meeting?/1) do
       {:ok, meeting} ->
         emit_cancel_open_telemetry(socket.assigns.current_user.id, meeting.id)
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         Flash.error(reason)
         {:noreply, socket}
 
-      {:error, :not_found, _} ->
+      {:error, :not_found, _reason} ->
         {:noreply, socket}
     end
   end
@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
         {:noreply, ModalHook.show_modal(socket, :reschedule_request, meeting)}
 
-      {:error, :validation_failed, _reason} ->
+      {:error, :validation_failed, _error} ->
         {:noreply, socket}
 
       {:error, :policy_blocked, reason} ->
@@ -183,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         Flash.error(reason)
         {:noreply, socket}
 
-      {:error, :not_found, _} ->
+      {:error, :not_found, _reason} ->
         {:noreply, socket}
     end
   end
@@ -269,7 +269,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
          |> assign(:has_more, page.has_more)
          |> assign(:loading_more, false)}
 
-      {:error, _reason} ->
+      {:error, _error} ->
         :telemetry.execute(
           [:tymeslot, :dashboard, :meetings, :load_more, :error],
           %{},
@@ -405,7 +405,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
         |> assign(:loading, false)
         |> assign(:is_empty, page.items == [])
 
-      {:error, _reason} ->
+      {:error, _error} ->
         :telemetry.execute(
           [:tymeslot, :dashboard, :meetings, :load, :error],
           %{},

@@ -38,17 +38,17 @@ defmodule Tymeslot.Auth.ValidationTest do
       # We just check if it returns something expected from AuthValidation
       # Since we don't want to mock internal modules, we just test the integration
       params = %{"email" => "invalid"}
-      assert {:error, _} = Validation.validate_signup_input(params)
+      assert {:error, _reason} = Validation.validate_signup_input(params)
     end
 
     test "validate_password_reset_input/1 delegates to AuthValidation" do
       params = %{"email" => "invalid"}
-      assert {:error, _} = Validation.validate_password_reset_input(params)
+      assert {:error, _reason} = Validation.validate_password_reset_input(params)
     end
 
     test "validate_new_password_input/1 delegates to AuthValidation" do
       params = %{"password" => "short"}
-      assert {:error, _} = Validation.validate_new_password_input(params)
+      assert {:error, _reason} = Validation.validate_new_password_input(params)
     end
   end
 

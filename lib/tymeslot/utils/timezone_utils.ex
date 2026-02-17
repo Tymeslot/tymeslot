@@ -28,11 +28,11 @@ defmodule Tymeslot.Utils.TimezoneUtils do
   @spec valid_timezone?(term()) :: boolean()
   def valid_timezone?(timezone) when is_binary(timezone) do
     case DateTime.now(timezone) do
-      {:ok, _} -> true
-      {:error, _} -> false
+      {:ok, _dt} -> true
+      {:error, _reason} -> false
     end
   rescue
-    _ -> false
+    _exception -> false
   end
 
   def valid_timezone?(_value), do: false
@@ -232,11 +232,11 @@ defmodule Tymeslot.Utils.TimezoneUtils do
         offset_seconds = shifted_dt.utc_offset + shifted_dt.std_offset
         format_utc_offset(offset_seconds)
 
-      _ ->
+      _result ->
         "UTC"
     end
   rescue
-    _ -> "UTC"
+    _exception -> "UTC"
   end
 
   @doc """
@@ -410,11 +410,11 @@ defmodule Tymeslot.Utils.TimezoneUtils do
 
   def format_duration(duration_string) when is_binary(duration_string) do
     case Regex.run(~r/^(\d+)min$/, duration_string) do
-      [_, minutes_str] ->
+      [_match, minutes_str] ->
         minutes = String.to_integer(minutes_str)
         format_minutes(minutes)
 
-      _ ->
+      _result ->
         "Unknown duration"
     end
   end
@@ -452,7 +452,7 @@ defmodule Tymeslot.Utils.TimezoneUtils do
       {:ok, date} ->
         Calendar.strftime(date, "%B %d, %Y")
 
-      _ ->
+      _result ->
         date_string
     end
   end
@@ -471,5 +471,5 @@ defmodule Tymeslot.Utils.TimezoneUtils do
     country_code in Keyword.keys(Flagpack.__info__(:functions))
   end
 
-  def flag_exists?(_), do: false
+  def flag_exists?(_country_code), do: false
 end

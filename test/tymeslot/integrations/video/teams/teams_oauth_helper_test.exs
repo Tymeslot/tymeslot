@@ -38,7 +38,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
         })
 
       # Mock token exchange
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok, %{status: 200, body: resp_body}}
       end)
 
@@ -79,7 +79,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
         })
 
       # Mock token exchange
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok, %{status: 200, body: resp_body}}
       end)
 
@@ -100,7 +100,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
       profile_body = Jason.encode!(%{"displayName" => "Microsoft User"})
 
       # Mock token exchange
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok, %{status: 200, body: resp_body}}
       end)
 
@@ -122,7 +122,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
         })
 
       # Mock token exchange
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok, %{status: 200, body: resp_body}}
       end)
 
@@ -150,7 +150,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
           "expires_in" => 3600
         })
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
         {:ok, %{status: 200, body: resp_body}}
       end)
 
@@ -171,7 +171,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
     end
 
     test "returns error when expiration info is missing" do
-      assert {:error, _} = TeamsOAuthHelper.validate_token(%{})
+      assert {:error, _reason} = TeamsOAuthHelper.validate_token(%{})
     end
   end
 

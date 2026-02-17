@@ -39,8 +39,8 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
         all_events =
           results
           |> Enum.filter(fn
-            {:ok, _, _} -> true
-            _ -> false
+            {:ok, _events, _path} -> true
+            _result -> false
           end)
           |> Enum.flat_map(fn {:ok, events, _path} -> events end)
           |> Enum.uniq_by(& &1.uid)
@@ -48,7 +48,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
         Logger.info("Total events found across all calendars: #{length(all_events)}")
         {:ok, all_events}
 
-      _ ->
+      _result ->
         {:error, :timezone_error}
     end
   end
@@ -131,7 +131,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
     {:ok, DateTime.new!(d, ~T[00:00:00], "Etc/UTC")}
   end
 
-  defp wrap_events_result(client, result, log_level \\ nil)
+  defp wrap_events_result(client, result, _log_level \\ nil)
 
   defp wrap_events_result(client, {:ok, events}, _log_level) do
     Logger.debug("Calendar #{get_calendar_path(client)} returned #{length(events)} events")
@@ -148,7 +148,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
     case client do
       %{client: %{calendar_path: path}} -> path
       %{calendar_path: path} -> path
-      _ -> "unknown"
+      _other -> "unknown"
     end
   end
 end

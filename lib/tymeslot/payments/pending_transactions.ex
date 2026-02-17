@@ -12,7 +12,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
           {:ok, transaction() | nil} | {:error, :transaction_lookup_failed}
   def get_pending_transaction_for_user(user_id) do
     case PaymentQueries.get_transactions_by_status("pending", user_id) do
-      {:ok, [transaction | _]} ->
+      {:ok, [transaction | _rest]} ->
         {:ok, transaction}
 
       {:ok, []} ->
@@ -49,7 +49,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
     }
 
     case PaymentQueries.update_transaction(transaction, update_attrs) do
-      {:ok, _updated_transaction} ->
+      {:ok, _result} ->
         :ok
 
       {:error, error} ->
@@ -70,7 +70,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
           count: length(pending_transactions)
         )
 
-        Enum.reduce_while(pending_transactions, :ok, fn pending_transaction, _acc ->
+        Enum.reduce_while(pending_transactions, :ok, fn pending_transaction, _result ->
           case supersede_pending_transaction(pending_transaction) do
             :ok -> {:cont, :ok}
             {:error, reason} -> {:halt, {:error, reason}}

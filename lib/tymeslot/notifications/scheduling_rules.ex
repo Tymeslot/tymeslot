@@ -148,7 +148,7 @@ defmodule Tymeslot.Notifications.SchedulingRules do
         "minutes" -> 60
         "hours" -> 3600
         "days" -> 86_400
-        _ -> 60
+        _other -> 60
       end
 
     value * multiplier

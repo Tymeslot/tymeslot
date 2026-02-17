@@ -116,5 +116,5 @@ defmodule TymeslotWeb.Components.FlagHelpers do
   defp locale_to_country_code("de"), do: :deu
   defp locale_to_country_code("uk"), do: :ukr
   defp locale_to_country_code("fr"), do: :fra
-  defp locale_to_country_code(_), do: nil
+  defp locale_to_country_code(_locale), do: nil
 end

@@ -115,7 +115,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
   @impl GenServer
   def handle_info({:coalescer_result, key, _pid, result}, state) do
     case Map.pop(state.requests, key) do
-      {nil, _} ->
+      {nil, _value} ->
         {:noreply, state}
 
       {%{waiters: waiters, task_ref: ref, start_time: start_time}, requests} ->
@@ -144,7 +144,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
   defp find_key_by_ref(requests, ref) do
     Enum.find_value(requests, fn
       {k, %{task_ref: ^ref}} -> k
-      _ -> nil
+      _other -> nil
     end)
   end
 
@@ -160,7 +160,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
             e ->
               {:error, {:task_failed, Exception.format(:error, e, __STACKTRACE__)}}
           catch
-            :exit, {:timeout, _} -> {:error, :timeout}
+            :exit, {:timeout, _details} -> {:error, :timeout}
             :exit, reason -> {:error, {:task_failed, reason}}
           end
 

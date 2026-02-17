@@ -66,7 +66,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
       :gradient -> Map.get(get_gradient_presets(), preset_id)
       :video -> Map.get(get_video_presets(), preset_id)
       :image -> Map.get(get_image_presets(), preset_id)
-      _other -> nil
+      _other_type -> nil
     end
   end
 
@@ -105,7 +105,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
           nil
         end
 
-      _ ->
+      _other_category ->
         nil
     end
   end
@@ -120,7 +120,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
       :gradient -> Map.keys(get_gradient_presets())
       :video -> Map.keys(get_video_presets())
       :image -> Map.keys(get_image_presets())
-      _other -> []
+      _other_type -> []
     end
   end
 
@@ -202,7 +202,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
           images: ["image_3", "image_4"]
         }
 
-      _other ->
+      _other_theme ->
         %{gradients: [], videos: [], images: []}
     end
   end

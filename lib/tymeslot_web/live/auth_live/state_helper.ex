@@ -75,7 +75,7 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
         |> assign(:email_required, params["oauth_email_from_provider"] != "true")
         |> assign(:has_oauth_error, has_oauth_error)
 
-      _ ->
+      _other_state ->
         socket
     end
   end

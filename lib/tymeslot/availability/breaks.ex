@@ -90,7 +90,7 @@ defmodule Tymeslot.Availability.Breaks do
     end_time = Time.add(start_time, duration_minutes * 60, :second)
     add_break(weekly_availability_id, start_time, end_time, label)
   rescue
-    _ ->
+    _other ->
       {:error, "Invalid time calculation"}
   end
 
@@ -146,7 +146,7 @@ defmodule Tymeslot.Availability.Breaks do
       nil ->
         Changeset.add_error(changeset, :base, "Work hours not found")
 
-      _ ->
+      _other ->
         changeset
     end
   end

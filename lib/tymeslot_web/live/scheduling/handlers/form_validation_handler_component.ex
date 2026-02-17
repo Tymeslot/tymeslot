@@ -162,7 +162,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
           add_field_error(socket, field_name, "Name is required")
         end
 
-      {_field, _value} ->
+      {_other_field, _other_value} ->
         # For other fields, assume valid
         clear_field_error(socket, field_name)
     end
@@ -170,7 +170,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
 
   defp clear_field_error(socket, field_name) do
     current_errors = socket.assigns[:validation_errors] || []
-    updated_errors = Enum.reject(current_errors, fn {field, _} -> field == field_name end)
+    updated_errors = Enum.reject(current_errors, fn {field, _msg} -> field == field_name end)
 
     socket = assign(socket, :validation_errors, updated_errors)
     {:ok, socket}

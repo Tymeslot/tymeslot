@@ -5,13 +5,13 @@ defmodule Tymeslot.ThemeCustomizationsUploadValidationTest do
 
   describe "Validation file upload tests" do
     test "validate_file_upload/1 requires path and filename" do
-      assert {:error, _} = Validation.validate_file_upload(%{})
-      assert {:error, _} = Validation.validate_file_upload(%{path: "test"})
-      assert {:error, _} = Validation.validate_file_upload(%{filename: "test"})
+      assert {:error, _reason} = Validation.validate_file_upload(%{})
+      assert {:error, _reason} = Validation.validate_file_upload(%{path: "test"})
+      assert {:error, _reason} = Validation.validate_file_upload(%{filename: "test"})
     end
 
     test "validate_file_upload/1 validates file exists" do
-      assert {:error, _} =
+      assert {:error, _reason} =
                Validation.validate_file_upload(%{
                  path: "/nonexistent/file.jpg",
                  filename: "test.jpg"
@@ -66,7 +66,7 @@ defmodule Tymeslot.ThemeCustomizationsUploadValidationTest do
     end
 
     test "validate_file_size/2 returns error for non-existent file" do
-      assert {:error, _} = Validation.validate_file_size("/nonexistent/file.jpg", :image)
+      assert {:error, _reason} = Validation.validate_file_size("/nonexistent/file.jpg", :image)
     end
   end
 end

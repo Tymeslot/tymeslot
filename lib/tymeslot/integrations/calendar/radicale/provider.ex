@@ -171,7 +171,7 @@ defmodule Tymeslot.Integrations.Calendar.Radicale.Provider do
       paths when is_list(paths) and paths != [] ->
         paths
 
-      _ ->
+      _other ->
         build_radicale_default_paths(config)
     end
   end

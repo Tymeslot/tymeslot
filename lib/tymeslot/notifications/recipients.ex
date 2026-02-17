@@ -43,7 +43,7 @@ defmodule Tymeslot.Notifications.Recipients do
       :video_room_failed ->
         {:organizer_only, base_recipients}
 
-      _ ->
+      _unknown_type ->
         {:both, base_recipients}
     end
   end
@@ -69,13 +69,13 @@ defmodule Tymeslot.Notifications.Recipients do
   Determines if a recipient should receive a specific notification.
   """
   @spec should_receive_notification?(atom(), atom(), term()) :: boolean()
-  def should_receive_notification?(recipient_type, notification_type, _meeting) do
+  def should_receive_notification?(recipient_type, notification_type, _unused_meeting) do
     case {recipient_type, notification_type} do
       {:organizer, :video_room_failed} -> true
-      {:organizer, _} -> true
+      {:organizer, _any_type} -> true
       {:attendee, :video_room_failed} -> false
-      {:attendee, _} -> true
-      _ -> false
+      {:attendee, _any_type} -> true
+      _invalid_combination -> false
     end
   end
 
@@ -165,7 +165,7 @@ defmodule Tymeslot.Notifications.Recipients do
       {:attendee_only, %{attendee: attendee}} ->
         validate_recipient(attendee, :attendee)
 
-      _ ->
+      _invalid_structure ->
         {:error, "Invalid recipient structure"}
     end
   end

@@ -52,11 +52,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
           token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
         )
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, _, _, _, _ ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:ok, %Req.Response{status: 401}}
       end)
 
-      assert {:error, :unauthorized, _} = CalendarAPI.list_calendars(integration)
+      assert {:error, :unauthorized, _message} = CalendarAPI.list_calendars(integration)
     end
   end
 

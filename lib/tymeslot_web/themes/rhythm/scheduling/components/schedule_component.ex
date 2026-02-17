@@ -341,7 +341,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
       "FRI" -> gettext("FRI")
       "SAT" -> gettext("SAT")
       "SUN" -> gettext("SUN")
-      _ -> day_name
+      _other -> day_name
     end
   end
 

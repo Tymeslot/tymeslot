@@ -127,7 +127,7 @@ defmodule TymeslotWeb.SessionController do
           default
         end
 
-      _ ->
+      _other ->
         default
     end
   end
@@ -139,7 +139,7 @@ defmodule TymeslotWeb.SessionController do
       # Backward compatibility with implementations that still return user or nil
       nil -> nil
       user when is_map(user) -> Map.get(user, :id)
-      _ -> nil
+      _other -> nil
     end
   end
 

@@ -17,11 +17,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
     profile = insert(:profile, user: user)
 
     # Stub email notifications for meeting actions
-    stub(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _ ->
+    stub(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _client ->
       {{:ok, nil}, {:ok, nil}}
     end)
 
-    stub(Tymeslot.EmailServiceMock, :send_reschedule_request, fn _ -> {:ok, nil} end)
+    stub(Tymeslot.EmailServiceMock, :send_reschedule_request, fn _client -> {:ok, nil} end)
 
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)

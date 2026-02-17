@@ -302,7 +302,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           case @notification_type do
             "warning" -> "dashboard-nav-notification--warning"
             "info" -> "dashboard-nav-notification--info"
-            _ -> ""
+            _other -> ""
           end
         ]}
         title="Setup recommended"

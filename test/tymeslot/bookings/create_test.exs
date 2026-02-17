@@ -105,7 +105,7 @@ defmodule Tymeslot.Bookings.CreateTest do
           try do
             Agent.stop(__MODULE__)
           catch
-            :exit, _ -> :ok
+            :exit, _reason -> :ok
           end
       end
     end
@@ -113,7 +113,7 @@ defmodule Tymeslot.Bookings.CreateTest do
 
   setup do
     # Start mock calendar agent
-    {:ok, _} = MockCalendar.start_link()
+    {:ok, _pid} = MockCalendar.start_link()
 
     # Set mock calendar module for tests
     original_module = Application.get_env(:tymeslot, :calendar_module)

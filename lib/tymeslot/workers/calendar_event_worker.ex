@@ -59,7 +59,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       2 -> 60
       3 -> 120
       4 -> 180
-      _ -> 30
+      _other_attempt -> 30
     end
   end
 
@@ -68,7 +68,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       "create" -> handle_calendar_creation(meeting_id, attempt)
       "update" -> handle_calendar_update(meeting_id, attempt)
       "delete" -> handle_calendar_deletion(meeting_id, attempt)
-      _ -> {:discard, "Unknown action: #{action}"}
+      _unknown -> {:discard, "Unknown action: #{action}"}
     end
   end
 
@@ -113,7 +113,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         Logger.info("Calendar event creation job scheduled", meeting_id: meeting_id)
         :ok
 
-      {:error, %Ecto.Changeset{errors: [unique: _]}} ->
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
         Logger.info("Calendar event creation job already exists, skipping duplicate",
           meeting_id: meeting_id
         )
@@ -186,7 +186,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       {:discard, reason} ->
         {:discard, reason}
 
-      _ ->
+      _unexpected ->
         handle_unexpected_result(result)
     end
   end
@@ -266,18 +266,18 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp parse_retry_after(%Oban.Job{errors: errors}) do
     # Try to extract retry_after:N from last error message (if present)
     case List.last(errors) do
-      %{"attempt" => _a, "error" => msg} when is_binary(msg) ->
+      %{"attempt" => _attempt_number, "error" => msg} when is_binary(msg) ->
         parse_retry_after_message(msg)
 
-      _ ->
+      _no_error ->
         nil
     end
   end
 
   defp parse_retry_after_message(msg) when is_binary(msg) do
     case Regex.run(~r/retry_after:(\d+)/i, msg) do
-      [_, n] -> String.to_integer(n)
-      _ -> nil
+      [_match, n] -> String.to_integer(n)
+      _nomatch -> nil
     end
   end
 
@@ -316,7 +316,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
   defp external_id?(uid) do
     case UUID.cast(uid) do
-      {:ok, _} -> false
+      {:ok, _uuid} -> false
       :error -> true
     end
   end
@@ -356,7 +356,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         Logger.info("Calendar event updated successfully", meeting_id: meeting_id)
         :ok
 
-      {:ok, _} ->
+      {:ok, _result} ->
         # Backward/forward compatibility if update returns tagged tuple
         Logger.info("Calendar event updated successfully", meeting_id: meeting_id)
         :ok
@@ -374,7 +374,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
     # Use the organizer_user_id to create in the correct calendar
     case calendar_module().create_event(event_data, meeting.organizer_user_id) do
-      {:ok, _} -> :ok
+      {:ok, _result} -> :ok
       error -> error
     end
   end
@@ -450,7 +450,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       :unauthorized ->
         {:error, :unauthorized}
 
-      {:connection_failed, _} ->
+      {:connection_failed, _details} ->
         {:error, :connection_failed}
 
       reason ->
@@ -499,9 +499,9 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         # so subsequent updates can use it.
         attrs = if returned_uid, do: Map.put(attrs, :uid, returned_uid), else: attrs
 
-        _ = MeetingQueries.update_meeting(meeting, attrs)
+        _update_result = MeetingQueries.update_meeting(meeting, attrs)
 
-      _ ->
+      _no_integration_info ->
         :ok
     end
   end

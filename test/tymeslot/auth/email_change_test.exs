@@ -39,7 +39,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
     end
 
     test "fails with invalid email format", %{user: user} do
-      assert {:error, _} =
+      assert {:error, _error_reason} =
                Auth.request_email_change(user, "not-an-email", "Password123!")
     end
 
@@ -124,7 +124,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
 
       # Spawn multiple processes trying to claim the same email
       tasks =
-        for _ <- 1..5 do
+        for _i <- 1..5 do
           Task.async(fn ->
             user = insert(:user)
             Auth.request_email_change(user, email, "Password123!")
@@ -136,8 +136,8 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       # Only one should succeed
       successful =
         Enum.filter(results, fn
-          {:ok, _, _} -> true
-          _ -> false
+          {:ok, _user, _message} -> true
+          _other -> false
         end)
 
       assert length(successful) == 1

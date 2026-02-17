@@ -86,7 +86,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessorTest do
         }
       }
 
-      assert {:error, :retry_later, _} = WebhookProcessor.process_event(event)
+      assert {:error, :retry_later, _error_reason} = WebhookProcessor.process_event(event)
     end
   end
 end

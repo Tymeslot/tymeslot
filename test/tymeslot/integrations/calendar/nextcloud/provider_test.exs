@@ -90,7 +90,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       # Will fail connection test but URL structure is valid
       capture_log(fn ->
         result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
+        assert match?({:error, _reason}, result)
       end)
     end
 
@@ -104,7 +104,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       # Will fail connection test but URL structure is valid
       capture_log(fn ->
         result = Provider.validate_config(config)
-        assert match?({:error, _}, result)
+        assert match?({:error, _reason}, result)
       end)
     end
   end
@@ -196,7 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       # Will fail but tests interface
       case Provider.test_connection(integration) do
         {:ok, message} -> assert String.contains?(message, "Nextcloud")
-        {:error, _} -> :ok
+        {:error, _reason} -> :ok
       end
     end
 
@@ -215,7 +215,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
           # Check for helpful message or network error
           assert is_atom(message) or is_binary(message) or is_tuple(message)
 
-        {:ok, _} ->
+        {:ok, _result} ->
           :ok
       end
     end
@@ -231,7 +231,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       opts = [metadata: %{ip: "192.168.1.1"}]
 
       result = Provider.test_connection(integration, opts)
-      assert match?({:ok, _}, result) or match?({:error, _}, result)
+      assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
     end
   end
 
@@ -282,7 +282,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       capture_log(fn ->
         result = Provider.get_events(client)
         # May return error or empty list depending on circuit breaker state
-        assert match?({:error, _}, result) or match?({:ok, []}, result)
+        assert match?({:error, _reason}, result) or match?({:ok, []}, result)
       end)
     end
   end
@@ -303,7 +303,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       capture_log(fn ->
         result = Provider.get_events(client, start_time, end_time)
         # May return error or empty list depending on circuit breaker state
-        assert match?({:error, _}, result) or match?({:ok, []}, result)
+        assert match?({:error, _reason}, result) or match?({:ok, []}, result)
       end)
     end
   end
@@ -326,7 +326,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
 
       capture_log(fn ->
         result = Provider.create_event(client, event_data)
-        assert match?({:error, _}, result)
+        assert match?({:error, _reason}, result)
       end)
     end
   end
@@ -351,7 +351,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
 
       capture_log(fn ->
         result = Provider.update_event(client, uid, event_data)
-        assert match?({:error, _}, result)
+        assert match?({:error, _reason}, result)
       end)
     end
   end
@@ -370,7 +370,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
 
       capture_log(fn ->
         result = Provider.delete_event(client, uid)
-        assert match?({:error, _}, result)
+        assert match?({:error, _reason}, result)
       end)
     end
   end

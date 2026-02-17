@@ -36,7 +36,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
           )
           |> Enum.flat_map(fn
             {:ok, {:ok, evs}} -> evs
-            _ -> []
+            _error -> []
           end)
           |> Enum.uniq_by(fn event -> event[:id] || event["id"] end)
 

@@ -148,7 +148,7 @@ defmodule Tymeslot.Meetings.Queries do
   def get_meeting(id) do
     case MeetingQueries.get_meeting(id) do
       {:ok, meeting} -> {:ok, meeting}
-      _ -> {:error, :not_found}
+      _other -> {:error, :not_found}
     end
   end
 
@@ -173,7 +173,7 @@ defmodule Tymeslot.Meetings.Queries do
          true <- meeting.organizer_email == user_email or meeting.attendee_email == user_email do
       {:ok, meeting}
     else
-      _ -> {:error, :not_found}
+      _other -> {:error, :not_found}
     end
   end
 
@@ -198,7 +198,7 @@ defmodule Tymeslot.Meetings.Queries do
          true <- meeting.organizer_email == user_email or meeting.attendee_email == user_email do
       {:ok, meeting}
     else
-      _ -> {:error, :not_found}
+      _other -> {:error, :not_found}
     end
   end
 
@@ -352,7 +352,7 @@ defmodule Tymeslot.Meetings.Queries do
         "upcoming" -> [time_filter: :upcoming, exclude_status: "cancelled"]
         "past" -> [time_filter: :past, exclude_status: "cancelled"]
         "cancelled" -> [status: "cancelled"]
-        _ -> []
+        _other -> []
       end
 
     query_opts = Keyword.merge(query_opts, per_page: per_page)
@@ -427,7 +427,7 @@ defmodule Tymeslot.Meetings.Queries do
         reminders_sent = meeting.reminders_sent || []
         length(reminders) > length(reminders_sent)
 
-      _ ->
+      _other ->
         true
     end
   end

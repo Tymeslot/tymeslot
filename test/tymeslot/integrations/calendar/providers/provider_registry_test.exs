@@ -40,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
         {:ok, module} ->
           assert module == Tymeslot.Integrations.Calendar.Outlook.Provider
 
-        {:error, _} ->
+        {:error, _reason} ->
           # Outlook provider may not be enabled
           :ok
       end
@@ -152,7 +152,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
 
       # Will fail connection but structure is validated
       result = ProviderRegistry.validate_provider_config(:caldav, config)
-      assert match?({:error, _}, result)
+      assert match?({:error, _reason}, result)
     end
 
     test "validates missing required fields" do
@@ -165,7 +165,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     test "returns error for unknown provider type" do
       config = %{}
 
-      assert {:error, _} = ProviderRegistry.validate_provider_config(:unknown, config)
+      assert {:error, _reason} = ProviderRegistry.validate_provider_config(:unknown, config)
     end
   end
 
@@ -235,7 +235,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
 
       # Will fail validation due to network error
       result = ProviderRegistry.create_client(:caldav, config)
-      assert match?({:error, _}, result)
+      assert match?({:error, _reason}, result)
     end
 
     test "creates client without validation when skip_validation is true" do
@@ -254,7 +254,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
     test "returns error for unknown provider" do
       config = %{}
 
-      assert {:error, _} = ProviderRegistry.create_client(:unknown, config)
+      assert {:error, _reason} = ProviderRegistry.create_client(:unknown, config)
     end
 
     test "validates config structure before client creation" do
@@ -262,7 +262,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
       config = %{base_url: "https://example.com"}
 
       result = ProviderRegistry.create_client(:caldav, config)
-      assert {:error, _} = result
+      assert {:error, _reason} = result
     end
   end
 end

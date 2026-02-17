@@ -43,7 +43,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
       # Create only weekdays with required times
       for day <- 1..5 do
-        {:ok, _} =
+        {:ok, _result} =
           WeeklySchedule.create_day_availability(profile.id, day, %{
             is_available: true,
             start_time: ~T[09:00:00],
@@ -80,7 +80,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
     test "makes unavailable day available with default hours", %{profile: profile} do
       # First make day unavailable
-      {:ok, _} = AvailabilityActions.toggle_day_availability(profile.id, 1, true)
+      {:ok, _result} = AvailabilityActions.toggle_day_availability(profile.id, 1, true)
 
       # Then toggle back to available
       assert {:ok, _result} = AvailabilityActions.toggle_day_availability(profile.id, 1, false)

@@ -25,7 +25,7 @@ defmodule Tymeslot.Bookings.Validation do
     minutes >= 0 and minutes <= 120
   end
 
-  def valid_buffer_minutes?(_), do: false
+  def valid_buffer_minutes?(_other), do: false
 
   @doc """
   Validates booking window days are within acceptable range.
@@ -43,7 +43,7 @@ defmodule Tymeslot.Bookings.Validation do
     days >= 1 and days <= 365
   end
 
-  def valid_booking_window?(_), do: false
+  def valid_booking_window?(_other), do: false
 
   @doc """
   Validates minimum notice hours are within acceptable range.
@@ -61,7 +61,7 @@ defmodule Tymeslot.Bookings.Validation do
     hours >= 0 and hours <= 168
   end
 
-  def valid_minimum_notice?(_), do: false
+  def valid_minimum_notice?(_other), do: false
 
   @doc """
   Validates meeting duration is reasonable.
@@ -80,7 +80,7 @@ defmodule Tymeslot.Bookings.Validation do
     minutes >= 15 and minutes <= 480
   end
 
-  def valid_meeting_duration?(_), do: false
+  def valid_meeting_duration?(_other), do: false
 
   @doc """
   Parses and validates meeting time strings into DateTime objects.
@@ -103,7 +103,7 @@ defmodule Tymeslot.Bookings.Validation do
          end_datetime <- DateTime.add(start_datetime, duration_minutes, :minute) do
       {:ok, {start_datetime, end_datetime}}
     else
-      _ -> {:error, "Invalid date or time format"}
+      _parse_error -> {:error, "Invalid date or time format"}
     end
   end
 
@@ -200,7 +200,7 @@ defmodule Tymeslot.Bookings.Validation do
     email =~ ~r/^[^\s]+@[^\s]+\.[^\s]+$/
   end
 
-  def valid_email_format?(_), do: false
+  def valid_email_format?(_other), do: false
 
   @doc """
   Validates booking time from string inputs.
@@ -252,17 +252,17 @@ defmodule Tymeslot.Bookings.Validation do
   defp parse_date(date_string) when is_binary(date_string) do
     case Date.from_iso8601(date_string) do
       {:ok, date} -> {:ok, date}
-      {:error, _} -> {:error, :invalid_date}
+      {:error, _reason} -> {:error, :invalid_date}
     end
   end
 
-  defp parse_date(_), do: {:error, :invalid_date}
+  defp parse_date(_invalid), do: {:error, :invalid_date}
 
   defp safe_parse_time_slot(time_string) do
     time = TimeSlots.parse_time_slot(time_string)
     {:ok, time}
   rescue
-    _ -> {:error, :invalid_time}
+    _parse_exception -> {:error, :invalid_time}
   end
 
   defp parse_duration(duration) when is_integer(duration), do: {:ok, duration}
@@ -273,7 +273,7 @@ defmodule Tymeslot.Bookings.Validation do
     {:ok, minutes}
   end
 
-  defp parse_duration(_), do: {:error, :invalid_duration}
+  defp parse_duration(_invalid), do: {:error, :invalid_duration}
 
   defp validate_meeting_for_reschedule(meeting) do
     cond do
@@ -337,5 +337,5 @@ defmodule Tymeslot.Bookings.Validation do
 
   defp format_window_message(message, _value, _default_fun) when is_binary(message), do: message
 
-  defp format_window_message(_message, value, default_fun), do: default_fun.(value)
+  defp format_window_message(_other, value, default_fun), do: default_fun.(value)
 end

@@ -186,7 +186,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       :video_room_failed ->
         "Video Room Issue: #{meeting.title}"
 
-      _ ->
+      _other ->
         "Meeting Update: #{meeting.title}"
     end
   end
@@ -227,7 +227,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   defp convert_to_timezone(datetime, timezone) do
     case DateTime.shift_zone(datetime, timezone) do
       {:ok, shifted} -> shifted
-      {:error, _} -> datetime
+      {:error, _reason} -> datetime
     end
   end
 

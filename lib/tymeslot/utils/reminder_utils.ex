@@ -21,7 +21,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
         {_value, "minutes"} -> "minutes"
         {_value, "hours"} -> "hours"
         {_value, "days"} -> "days"
-        _ -> "minutes"
+        _other -> "minutes"
       end
 
     "#{value} #{unit_label}"
@@ -41,7 +41,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
          true <- unit in @valid_reminder_units do
       {:ok, %{value: normalized_value, unit: unit}}
     else
-      _ -> {:error, :invalid_reminder}
+      _other -> {:error, :invalid_reminder}
     end
   end
 
@@ -64,7 +64,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
     |> Enum.map(&normalize_reminder/1)
     |> Enum.flat_map(fn
       {:ok, reminder} -> [reminder]
-      _ -> []
+      _other -> []
     end)
   end
 
@@ -83,7 +83,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
         "minutes" -> 60
         "hours" -> 3600
         "days" -> 86_400
-        _ -> 60
+        _other -> 60
       end
 
     value * multiplier
@@ -99,7 +99,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
   def parse_reminder_value(value) when is_binary(value) do
     case Integer.parse(value) do
       {int, _rest} when int > 0 -> int
-      _ -> 30
+      _other -> 30
     end
   end
 
@@ -116,7 +116,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
   def validate_reminder_value(value) when is_binary(value) do
     case Integer.parse(value) do
       {int, _rest} when int > 0 -> {:ok, int}
-      _ -> {:error, :invalid_value}
+      _other -> {:error, :invalid_value}
     end
   end
 
@@ -159,7 +159,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
           minutes = convert_to_minutes(v, u)
           [minutes]
 
-        _ ->
+        _other ->
           []
       end)
 
@@ -175,7 +175,7 @@ defmodule Tymeslot.Utils.ReminderUtils do
       "minutes" -> value
       "hours" -> value * 60
       "days" -> value * 24 * 60
-      _ -> value
+      _other -> value
     end
   end
 end

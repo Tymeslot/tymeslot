@@ -28,7 +28,7 @@ defmodule Tymeslot.Integrations.Calendar.EventTimeFormatter do
             "timeZone" => timezone
           }
 
-        {:error, _} ->
+        {:error, _reason} ->
           fallback_map(DateTime.to_iso8601(datetime), timezone, opts, :error)
       end
     else
@@ -41,12 +41,12 @@ defmodule Tymeslot.Integrations.Calendar.EventTimeFormatter do
       {:ok, datetime, _offset} ->
         format_with_timezone(datetime, timezone, opts)
 
-      {:error, _} ->
+      {:error, _reason} ->
         fallback_map(datetime_string, timezone, opts, :error)
     end
   end
 
-  def format_with_timezone(_, _timezone, _opts), do: nil
+  def format_with_timezone(_invalid, _timezone, _opts), do: nil
 
   defp fallback_map(iso_string, timezone, opts, context) do
     include_when_missing? = Keyword.get(opts, :include_when_missing?, false)

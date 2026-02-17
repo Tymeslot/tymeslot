@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
     username =
       case assigns[:organizer_profile] do
         %{username: username} when is_binary(username) -> username
-        _ -> "schedule"
+        _other -> "schedule"
       end
 
     "/#{username}"

@@ -11,7 +11,7 @@ defmodule TymeslotWeb.FallbackController do
         |> put_flash(:error, "Page not found. Redirected to profile.")
         |> redirect(to: "/#{username}")
 
-      _ ->
+      _error ->
         conn
         |> put_flash(:error, "Page not found.")
         |> redirect(to: "/")

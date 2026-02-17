@@ -57,7 +57,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.XmlParser do
 
     {:ok, calendars}
   rescue
-    _ -> {:error, "Failed to parse calendar discovery response"}
+    _parse_exception -> {:error, "Failed to parse calendar discovery response"}
   end
 
   @doc """
@@ -87,18 +87,18 @@ defmodule Tymeslot.Integrations.Calendar.Shared.XmlParser do
 
     case segments do
       # Nextcloud format: ["remote.php", "dav", "calendars", "username", "calendar_name"]
-      [_, "dav", "calendars", _username, calendar_name | _] ->
+      [_first, "dav", "calendars", _username, calendar_name | _rest] ->
         calendar_name
 
       # Standard CalDAV format: ["calendars", "username", "calendar_name"]
-      ["calendars", _username, calendar_name | _] ->
+      ["calendars", _username, calendar_name | _rest] ->
         calendar_name
 
       # Generic fallback - take the last non-empty segment
-      [_ | _] = segments ->
+      [_head | _tail] = segments ->
         List.last(segments)
 
-      _ ->
+      _empty ->
         "calendar"
     end
   end
@@ -136,8 +136,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.XmlParser do
   @spec parse_calendar_home_set(String.t()) :: String.t() | nil
   def parse_calendar_home_set(xml_body) do
     case Regex.run(~r/<cal:calendar-home-set><d:href>([^<]+)<\/d:href>/, xml_body) do
-      [_, home_set] -> home_set
-      _ -> nil
+      [_full_match, home_set] -> home_set
+      _other -> nil
     end
   end
 
@@ -192,19 +192,19 @@ defmodule Tymeslot.Integrations.Calendar.Shared.XmlParser do
         {href, name}
       end)
 
-    Enum.filter(mapped, fn {href, _name} -> href != nil end)
+    Enum.filter(mapped, fn {href, _display_name} -> href != nil end)
   end
 
   defp extract_href_from_response(response) do
     # Try both namespaced and non-namespaced patterns
     case Regex.run(~r/<d:href>([^<]+)<\/d:href>/, response) do
-      [_, href] ->
+      [_full_match, href] ->
         href
 
-      _ ->
+      _other ->
         case Regex.run(~r/<href>([^<]+)<\/href>/, response) do
-          [_, href] -> href
-          _ -> nil
+          [_full_match2, href] -> href
+          _other2 -> nil
         end
     end
   end
@@ -212,13 +212,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.XmlParser do
   defp extract_displayname_from_response(response) do
     # Try both namespaced and non-namespaced patterns
     case Regex.run(~r/<d:displayname>([^<]*)<\/d:displayname>/, response) do
-      [_, name] ->
+      [_full_match, name] ->
         name
 
-      _ ->
+      _other ->
         case Regex.run(~r/<displayname>([^<]*)<\/displayname>/, response) do
-          [_, name] -> name
-          _ -> ""
+          [_full_match2, name] -> name
+          _other2 -> ""
         end
     end
   end

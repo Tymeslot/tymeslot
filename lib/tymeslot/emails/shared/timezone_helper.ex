@@ -11,7 +11,7 @@ defmodule Tymeslot.Emails.Shared.TimezoneHelper do
   def convert_to_timezone(datetime, timezone) do
     case DateTime.shift_zone(datetime, timezone) do
       {:ok, shifted} -> shifted
-      {:error, _} -> datetime
+      {:error, _reason} -> datetime
     end
   end
 

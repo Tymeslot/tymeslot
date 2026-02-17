@@ -155,7 +155,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   defp format_timezone_display(timezone) do
     case String.split(timezone, "/") do
       [_continent, city | _rest] -> String.replace(city, "_", " ")
-      _ -> timezone
+      _other -> timezone
     end
   end
 end

@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Video.ConnectionTest do
 
       # GoogleMeetProvider calls GoogleCalendarAPI which may call list_primary_events or other checks
       # It also calls HTTPClient directly for some things
-      stub(GoogleCalendarAPIMock, :list_primary_events, fn _, _, _ ->
+      stub(GoogleCalendarAPIMock, :list_primary_events, fn _client, _start_time, _end_time ->
         {:ok, []}
       end)
 

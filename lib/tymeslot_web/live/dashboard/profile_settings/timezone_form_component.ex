@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
         Flash.info("Timezone updated to #{label}")
         {:noreply, assign(socket, profile: updated_profile)}
 
-      {:error, _reason} ->
+      {:error, _changeset} ->
         Flash.error("Failed to update timezone")
         {:noreply, socket}
     end
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
            value == timezone_value
          end) do
       {label, _value} -> label
-      _ -> timezone_value
+      _not_found -> timezone_value
     end
   end
 

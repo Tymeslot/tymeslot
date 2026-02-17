@@ -17,13 +17,13 @@ defmodule TymeslotWeb.HealthcheckControllerTest do
       assert is_binary(body["timestamp"])
 
       # Ensure timestamp is ISO8601 parseable
-      assert {:ok, _dt, _offset} = DateTime.from_iso8601(body["timestamp"])
+      assert {:ok, _datetime, _offset} = DateTime.from_iso8601(body["timestamp"])
     end
 
     test "is rate limited", %{conn: conn} do
       # Make 30 requests to reach the limit
       # The limit is 30 per 60s
-      for _ <- 1..30 do
+      for _i <- 1..30 do
         get(conn, ~p"/healthcheck")
       end
 

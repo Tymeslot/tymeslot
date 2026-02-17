@@ -199,7 +199,7 @@ defmodule Tymeslot.Integrations.Calendar do
     :telemetry.execute(
       [:tymeslot, :integration, :test_connection],
       %{duration: duration},
-      %{provider: integration.provider, type: "calendar", success: match?({:ok, _}, result)}
+      %{provider: integration.provider, type: "calendar", success: match?({:ok, _result}, result)}
     )
 
     result
@@ -346,7 +346,7 @@ defmodule Tymeslot.Integrations.Calendar do
     case user_id do
       id when is_integer(id) and id > 0 -> EventQueries.list_events(id)
       nil -> EventQueries.list_events(nil)
-      _ -> {:error, :invalid_user_id}
+      _other -> {:error, :invalid_user_id}
     end
   end
 
@@ -450,7 +450,7 @@ defmodule Tymeslot.Integrations.Calendar do
       nil ->
         behaviour_module().create_event(event_data, nil)
 
-      _ ->
+      _other ->
         {:error, :invalid_context}
     end
   end
@@ -573,7 +573,7 @@ defmodule Tymeslot.Integrations.Calendar do
       :token_expired -> "Your calendar access has expired. Please reconnect."
       :network_error -> "Unable to reach calendar service. Check your internet connection."
       :invalid_credentials -> "Invalid calendar credentials. Please update your connection."
-      _ -> "Failed to connect to calendar. Please try again or reconnect."
+      _other -> "Failed to connect to calendar. Please try again or reconnect."
     end
   end
 
@@ -622,7 +622,7 @@ defmodule Tymeslot.Integrations.Calendar do
     String.match?(str, ~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
   end
 
-  defp uuid_like?(_), do: false
+  defp uuid_like?(_non_string), do: false
 
   # Extract a friendly name from a path like "/user/calendar-name/" -> "Calendar Name"
   defp extract_name_from_path(path) when is_binary(path) do
@@ -644,7 +644,7 @@ defmodule Tymeslot.Integrations.Calendar do
     end
   end
 
-  defp extract_name_from_path(_), do: "Calendar"
+  defp extract_name_from_path(_arg), do: "Calendar"
 
   @doc """
   Discovers calendars for raw credentials and filters them for valid paths.

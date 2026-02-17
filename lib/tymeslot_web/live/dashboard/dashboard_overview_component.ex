@@ -189,7 +189,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           time_str = Calendar.strftime(start_time, "%-I:%M %p")
           "#{date_str} at #{time_str}"
         rescue
-          _ -> "Time TBD"
+          _error -> "Time TBD"
         end
     end
   end

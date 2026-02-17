@@ -226,8 +226,8 @@ defmodule Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries do
 
     # Bulk insert all 7 days at once
     case Repo.insert_all(WeeklyAvailabilitySchema, entries) do
-      {count, _} when count == 7 -> {:ok, count}
-      {_count, _} -> {:error, :failed_to_create_schedule}
+      {count, _value} when count == 7 -> {:ok, count}
+      {_count, _value} -> {:error, :failed_to_create_schedule}
     end
   end
 

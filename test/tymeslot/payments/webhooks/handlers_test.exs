@@ -50,7 +50,7 @@ defmodule Tymeslot.Payments.Webhooks.HandlersTest do
     test "validate/1 checks for id" do
       assert CustomerHandler.validate(%{"id" => "cus_123"}) == :ok
       assert CustomerHandler.validate(%{id: "cus_123"}) == :ok
-      assert {:error, :missing_field, _} = CustomerHandler.validate(%{})
+      assert {:error, :missing_field, _message} = CustomerHandler.validate(%{})
     end
 
     test "process/2 returns success for customer.created" do
@@ -153,7 +153,7 @@ defmodule Tymeslot.Payments.Webhooks.HandlersTest do
       session = %{"id" => "cs_123", "mode" => "subscription"}
       Application.delete_env(:tymeslot, :subscription_manager)
 
-      assert {:error, :subscriptions_not_supported, _} =
+      assert {:error, :subscriptions_not_supported, _error_message} =
                CheckoutSessionHandler.process(%{type: "checkout.session.completed"}, session)
     end
   end

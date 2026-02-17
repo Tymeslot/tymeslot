@@ -14,7 +14,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
 
     test "detects job accumulation when threshold exceeded" do
       # Create 101 available jobs (threshold is 100)
-      for _ <- 1..101 do
+      for _i <- 1..101 do
         insert_job(%{worker: "SomeWorker", queue: "test_queue", state: "available"})
       end
 
@@ -29,7 +29,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
 
     test "does not alert for job accumulation below threshold" do
       # Create 99 available jobs (below threshold of 100)
-      for _ <- 1..99 do
+      for _i <- 1..99 do
         insert_job(%{worker: "SomeWorker", queue: "test_queue", state: "available"})
       end
 
@@ -45,7 +45,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
       # Create jobs older than 2 hours in available state
       three_hours_ago = DateTime.add(DateTime.utc_now(), -3, :hour)
 
-      for _ <- 1..15 do
+      for _i <- 1..15 do
         insert_job(%{
           worker: "SomeWorker",
           queue: "stuck_queue",
@@ -67,7 +67,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
       # Create only 9 old jobs (threshold is 10)
       three_hours_ago = DateTime.add(DateTime.utc_now(), -3, :hour)
 
-      for _ <- 1..9 do
+      for _i <- 1..9 do
         insert_job(%{
           worker: "SomeWorker",
           queue: "test_queue",
@@ -91,7 +91,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
 
       # Create retryable jobs that were inserted 5 days ago (within 7-day window)
       # and scheduled to run 3 hours ago (past their retry time)
-      for _ <- 1..15 do
+      for _i <- 1..15 do
         insert_job(%{
           worker: "SomeWorker",
           queue: "retryable_queue",
@@ -116,7 +116,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
       one_hour_from_now = DateTime.add(now, 1, :hour)
 
       # Create retryable jobs scheduled for the future (legitimately waiting)
-      for _ <- 1..15 do
+      for _i <- 1..15 do
         insert_job(%{
           worker: "SomeWorker",
           queue: "test_queue",
@@ -137,7 +137,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
     test "batches alerts for multiple unhealthy queues" do
       # Create accumulation in 3 different queues
       for queue <- ["queue_1", "queue_2", "queue_3"] do
-        for _ <- 1..101 do
+        for _i <- 1..101 do
           insert_job(%{worker: "SomeWorker", queue: queue, state: "available"})
         end
       end
@@ -156,7 +156,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
       # Create very old jobs (8 days old)
       eight_days_ago = DateTime.add(DateTime.utc_now(), -8, :day)
 
-      for _ <- 1..200 do
+      for _i <- 1..200 do
         insert_job(%{
           worker: "SomeWorker",
           queue: "old_queue",

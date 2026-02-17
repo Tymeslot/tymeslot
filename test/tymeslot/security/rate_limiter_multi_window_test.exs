@@ -17,10 +17,10 @@ defmodule Tymeslot.Security.RateLimiterMultiWindowTest do
       assert :ok = RateLimiter.check_signup_rate_limit(email1, ip)
 
       # 6th attempt with same email/ip hits 10m limit
-      assert {:error, :rate_limited, _} = RateLimiter.check_signup_rate_limit(email1, ip)
+      assert {:error, :rate_limited, _msg} = RateLimiter.check_signup_rate_limit(email1, ip)
 
       # Different email but same IP should still be blocked by IP bucket
-      assert {:error, :rate_limited, _} = RateLimiter.check_signup_rate_limit(email2, ip)
+      assert {:error, :rate_limited, _msg} = RateLimiter.check_signup_rate_limit(email2, ip)
     end
   end
 
@@ -29,11 +29,11 @@ defmodule Tymeslot.Security.RateLimiterMultiWindowTest do
       user_id = "user-123"
       ip = "198.51.100.7"
 
-      Enum.each(1..5, fn _ ->
+      Enum.each(1..5, fn _i ->
         assert :ok = RateLimiter.check_verification_rate_limit(user_id, ip)
       end)
 
-      assert {:error, :rate_limited, _} =
+      assert {:error, :rate_limited, _msg} =
                RateLimiter.check_verification_rate_limit(user_id, ip)
     end
   end
@@ -43,22 +43,22 @@ defmodule Tymeslot.Security.RateLimiterMultiWindowTest do
       email = "reset@example.com"
       ip = "192.0.2.44"
 
-      Enum.each(1..5, fn _ ->
+      Enum.each(1..5, fn _i ->
         assert :ok = RateLimiter.check_password_reset_rate_limit(email, ip)
       end)
 
-      assert {:error, :rate_limited, _} =
+      assert {:error, :rate_limited, _msg} =
                RateLimiter.check_password_reset_rate_limit(email, ip)
     end
 
     test "normalizes nil IPs for password reset buckets" do
       email = "reset-nil@example.com"
 
-      Enum.each(1..5, fn _ ->
+      Enum.each(1..5, fn _i ->
         assert :ok = RateLimiter.check_password_reset_rate_limit(email, nil)
       end)
 
-      assert {:error, :rate_limited, _} =
+      assert {:error, :rate_limited, _msg} =
                RateLimiter.check_password_reset_rate_limit(email, nil)
     end
   end

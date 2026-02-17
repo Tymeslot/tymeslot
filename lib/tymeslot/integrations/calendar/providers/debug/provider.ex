@@ -133,7 +133,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
         ]
 
       # Weekend - No events
-      _ ->
+      _weekend ->
         []
     end
   end

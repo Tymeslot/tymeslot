@@ -62,7 +62,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   defp get_config_email_setting(key) do
     case Application.get_env(:tymeslot, :email) do
       config when is_list(config) -> config[key]
-      _ -> nil
+      _other -> nil
     end
   end
 
@@ -92,10 +92,10 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
         url when is_binary(url) ->
           case UrlValidation.validate_http_url(url) do
             :ok -> SharedHelpers.sanitize_for_email(url)
-            _ -> AvatarHelper.generate_default_avatar(organizer_name)
+            _other -> AvatarHelper.generate_default_avatar(organizer_name)
           end
 
-        _ ->
+        _other ->
           AvatarHelper.generate_default_avatar(organizer_name)
       end
 

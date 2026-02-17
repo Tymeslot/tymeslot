@@ -137,8 +137,8 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
     need_primary =
       case ProfileQueries.get_by_user_id(user_id) do
         {:ok, %{primary_calendar_integration_id: nil}} -> true
-        {:ok, _profile} -> existing_count == 1
-        {:error, _} -> existing_count == 1
+        {:ok, _existing_profile} -> existing_count == 1
+        {:error, _error_reason} -> existing_count == 1
       end
 
     if need_primary do
@@ -163,8 +163,8 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
            integration.id,
            clear_others_fn
          ) do
-      {:ok, _profile} -> integration
-      {:error, reason} -> Repo.rollback(reason)
+      {:ok, _updated_profile} -> integration
+      {:error, error_reason} -> Repo.rollback(error_reason)
     end
   end
 
@@ -322,7 +322,7 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   """
   @spec lock_user_profile_and_integrations(integer()) :: :ok
   def lock_user_profile_and_integrations(user_id) do
-    _ =
+    _locked_profile =
       Repo.one(
         from(p in ProfileSchema,
           where: p.user_id == ^user_id,
@@ -330,7 +330,7 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
         )
       )
 
-    _ =
+    _locked_integration_ids =
       Repo.all(
         from(ci in CalendarIntegrationSchema,
           where: ci.user_id == ^user_id,

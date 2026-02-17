@@ -61,10 +61,10 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
       [{:ok, updated_profile}] ->
         handle_successful_avatar_upload(updated_profile, socket)
 
-      [%{__struct__: _} = updated_profile] ->
+      [%{__struct__: _module} = updated_profile] ->
         handle_successful_avatar_upload(updated_profile, socket)
 
-      [{:error, _} = error | _] ->
+      [{:error, _reason} = error | _rest] ->
         handle_avatar_upload_error(error, socket)
 
       [] ->

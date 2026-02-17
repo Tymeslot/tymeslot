@@ -345,7 +345,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     {amount, unit} =
       case params do
         %{"amount" => a, "unit" => u} -> {a, u}
-        _ -> {nil, nil}
+        _other -> {nil, nil}
       end
 
     case validate_new_reminder(socket.assigns.reminders, amount, unit) do
@@ -402,7 +402,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       case params do
         %{"value" => %{"value" => v, "unit" => u}} -> {v, u}
         %{"value" => v, "unit" => u} -> {v, u}
-        _ -> {nil, nil}
+        _other -> {nil, nil}
       end
 
     reminders =
@@ -420,7 +420,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
          ) do
       {:ok, sanitized} -> {Map.put(acc_data, "name", sanitized), Map.delete(acc_errors, :name)}
       {:error, %{name: msg}} -> {acc_data, Map.put(acc_errors, :name, msg)}
-      {:error, _} -> {acc_data, acc_errors}
+      {:error, _reason} -> {acc_data, acc_errors}
     end
   end
 
@@ -434,7 +434,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       {:error, %{duration: msg}} ->
         {acc_data, Map.put(acc_errors, :duration, msg)}
 
-      {:error, _} ->
+      {:error, _reason} ->
         {acc_data, acc_errors}
     end
   end
@@ -449,7 +449,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       {:error, %{description: msg}} ->
         {acc_data, Map.put(acc_errors, :description, msg)}
 
-      {:error, _} ->
+      {:error, _reason} ->
         {acc_data, acc_errors}
     end
   end
@@ -486,10 +486,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   defp get_selected_icon(nil), do: "none"
   defp get_selected_icon(%{icon: icon}) when is_binary(icon) and icon != "", do: icon
-  defp get_selected_icon(_), do: "none"
+  defp get_selected_icon(_arg), do: "none"
 
   defp get_meeting_mode(%{allow_video: true}), do: "video"
-  defp get_meeting_mode(_), do: "personal"
+  defp get_meeting_mode(_arg), do: "personal"
 
   defp get_video_integration_id(nil), do: nil
   defp get_video_integration_id(%{video_integration_id: nil}), do: nil
@@ -497,12 +497,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   defp get_video_integration_id(%{video_integration_id: id}) when is_binary(id) do
     case Integer.parse(id) do
-      {int, _} -> int
+      {int, _value} -> int
       :error -> nil
     end
   end
 
-  defp get_video_integration_id(_), do: nil
+  defp get_video_integration_id(_arg), do: nil
 
   defp get_calendar_integration_id(nil), do: nil
   defp get_calendar_integration_id(%{calendar_integration_id: nil}), do: nil
@@ -541,12 +541,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     Enum.flat_map(reminders, fn r ->
       case ReminderUtils.normalize_reminder(r) do
         {:ok, reminder} -> [reminder]
-        _ -> []
+        _other -> []
       end
     end)
   end
 
-  defp get_reminders(_), do: [%{value: 30, unit: "minutes"}]
+  defp get_reminders(_arg), do: [%{value: 30, unit: "minutes"}]
 
   defp validate_new_reminder(reminders, value, unit) do
     cond do
@@ -556,7 +556,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       length(reminders) >= 3 ->
         {:error, "You can configure up to 3 reminders"}
 
-      match?({:error, _}, ReminderUtils.validate_reminder_value(value)) ->
+      match?({:error, _reason}, ReminderUtils.validate_reminder_value(value)) ->
         {:error, "Reminder value must be a positive number"}
 
       unit not in ["minutes", "hours", "days"] ->

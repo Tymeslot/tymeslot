@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Live.OAuthHandlerTest do
     end
 
     test "returns error for unknown providers" do
-      assert {:error, _} = OAuthHandler.handle_oauth_event("unknown", :calendar)
+      assert {:error, _reason} = OAuthHandler.handle_oauth_event("unknown", :calendar)
     end
   end
 
@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Live.OAuthHandlerTest do
     end
 
     test "returns error for invalid provider" do
-      assert {:error, _} = OAuthHandler.send_oauth_redirect("unknown", :calendar)
+      assert {:error, _reason} = OAuthHandler.send_oauth_redirect("unknown", :calendar)
     end
   end
 end

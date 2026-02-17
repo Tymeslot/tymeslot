@@ -216,7 +216,7 @@ defmodule Tymeslot.Security.AvailabilityInputProcessor do
         # Additional validation - parse to ensure it's a valid time
         case Time.from_iso8601(time_str <> ":00") do
           {:ok, _time} -> :ok
-          {:error, _} -> {:error, "Invalid time value"}
+          {:error, _reason} -> {:error, "Invalid time value"}
         end
 
       false ->
@@ -224,17 +224,17 @@ defmodule Tymeslot.Security.AvailabilityInputProcessor do
     end
   end
 
-  defp validate_time_format(_), do: {:error, "Time must be a string"}
+  defp validate_time_format(_arg), do: {:error, "Time must be a string"}
 
   defp validate_time_range(start_time, end_time) do
     with {:ok, start_parsed} <- Time.from_iso8601(start_time <> ":00"),
          {:ok, end_parsed} <- Time.from_iso8601(end_time <> ":00") do
       case Time.compare(start_parsed, end_parsed) do
         :lt -> :ok
-        _ -> {:error, "End time must be after start time"}
+        _other -> {:error, "End time must be after start time"}
       end
     else
-      _ -> {:error, "Invalid time format"}
+      _other -> {:error, "Invalid time format"}
     end
   end
 
@@ -260,7 +260,7 @@ defmodule Tymeslot.Security.AvailabilityInputProcessor do
     end
   end
 
-  defp validate_break_label(_, _metadata) do
+  defp validate_break_label(_invalid, _metadata) do
     {:error, %{label: "Break label must be text"}}
   end
 
@@ -281,7 +281,7 @@ defmodule Tymeslot.Security.AvailabilityInputProcessor do
           {duration, ""} when duration > 480 ->
             {:error, %{duration: "Duration cannot exceed 8 hours (480 minutes)"}}
 
-          _ ->
+          _invalid ->
             {:error, %{duration: "Duration must be a valid number of minutes"}}
         end
 

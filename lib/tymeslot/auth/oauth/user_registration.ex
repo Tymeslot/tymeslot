@@ -85,7 +85,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
       when is_binary(email) and is_binary(id),
       do: true
 
-  def registration_complete?(_, _), do: false
+  def registration_complete?(_provider, _user_data), do: false
 
   @doc """
   Determines what information is missing for OAuth registration completion.
@@ -117,7 +117,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
     case github_id do
       id when is_integer(id) -> id
       id when is_binary(id) -> String.to_integer(id)
-      _ -> nil
+      _invalid -> nil
     end
   end
 
@@ -171,7 +171,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
     {:ok, Map.put(user, :needs_email_verification, true)}
   end
 
-  defp handle_user_verification_status(user, _, _), do: {:ok, user}
+  defp handle_user_verification_status(user, _email_verified, _email), do: {:ok, user}
 
   defp check_oauth_account_linking(provider, user, oauth_user) do
     provider_id_field = String.to_existing_atom("#{provider}_user_id")

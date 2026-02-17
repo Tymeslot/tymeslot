@@ -96,7 +96,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
         case validate_state(state) do
           {:ok, user_id} -> {:ok, Map.put(tokens, :user_id, user_id)}
-          {:error, _} when is_nil(state) -> {:ok, tokens}
+          {:error, _reason} when is_nil(state) -> {:ok, tokens}
           {:error, reason} -> {:error, reason}
         end
 
@@ -187,7 +187,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
           {:error, "Token missing required scopes: #{Enum.join(missing_scopes, ", ")}"}
         end
 
-      {:ok, %{status: 400, body: _}} ->
+      {:ok, %{status: 400, body: _value}} ->
         {:error, "Invalid or expired access token"}
 
       {:ok, %{status: status, body: body}} ->

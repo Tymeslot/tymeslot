@@ -230,7 +230,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     "Check your Radicale credentials. If using htpasswd authentication, ensure the password is correct"
   end
 
-  defp get_auth_suggestion(:auth, _) do
+  defp get_auth_suggestion(:auth, _provider) do
     "Double-check your credentials and ensure they haven't expired"
   end
 
@@ -254,7 +254,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     "Check that Radicale is running and accessible at the specified URL and port"
   end
 
-  defp get_config_suggestion(:config, _) do
+  defp get_config_suggestion(:config, _provider) do
     "Check that the server URL is correct and the CalDAV service is enabled"
   end
 
@@ -356,7 +356,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
         # 3 seconds for network errors
         :network -> 3_000
         # 1 second default
-        _ -> 1_000
+        _other_category -> 1_000
       end
 
     # Exponential backoff with jitter
@@ -380,7 +380,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
       :zimbra -> "Zimbra"
       :google -> "Google Calendar"
       :outlook -> "Outlook Calendar"
-      _ -> "calendar provider"
+      _other_provider -> "calendar provider"
     end
   end
 

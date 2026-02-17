@@ -301,7 +301,7 @@ defmodule TymeslotWeb.OnboardingLive do
       end
     else
       # Invalid setting name or missing profile - return unchanged socket
-      _ -> {:noreply, socket}
+      _other -> {:noreply, socket}
     end
   end
 
@@ -343,12 +343,12 @@ defmodule TymeslotWeb.OnboardingLive do
   defp field_key_to_atom("buffer_minutes"), do: :buffer_minutes
   defp field_key_to_atom("advance_booking_days"), do: :advance_booking_days
   defp field_key_to_atom("min_advance_hours"), do: :min_advance_hours
-  defp field_key_to_atom(_), do: nil
+  defp field_key_to_atom(_arg), do: nil
 
   defp try_update_mode(socket, field, value_str, params) when is_binary(value_str) do
     case Integer.parse(value_str) do
-      {int_value, _} -> CustomInputModeHelper.toggle_custom_mode(socket, field, params, int_value)
-      _ -> socket
+      {int_value, _value} -> CustomInputModeHelper.toggle_custom_mode(socket, field, params, int_value)
+      _other -> socket
     end
   end
 

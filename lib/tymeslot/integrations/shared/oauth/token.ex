@@ -65,7 +65,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
 
     case result do
       {:ok, {access_token, refresh_token, expires_at}} ->
-        _ = if persist?, do: persist_tokens(integration, access_token, refresh_token, expires_at)
+        _persist_result = if persist?, do: persist_tokens(integration, access_token, refresh_token, expires_at)
         {:ok, access_token}
 
       {:error, type, reason} ->
@@ -85,8 +85,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
     }
 
     case CalendarIntegrationQueries.update_integration(integration, attrs) do
-      {:ok, _} -> :ok
-      {:error, _} -> :ok
+      {:ok, _updated_integration} -> :ok
+      {:error, _update_error} -> :ok
     end
   end
 
@@ -95,7 +95,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
       {:ok, %CalendarIntegrationSchema{} = integ} ->
         persist_tokens(integ, access, refresh, expires_at)
 
-      _ ->
+      {:error, _fetch_error} ->
         :ok
     end
   end

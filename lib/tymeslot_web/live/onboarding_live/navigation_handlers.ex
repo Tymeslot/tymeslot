@@ -83,7 +83,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
          end)
          |> LiveView.clear_flash()}
 
-      _ ->
+      _other ->
         {:noreply, socket}
     end
   end
@@ -145,11 +145,11 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
                   |> LiveView.redirect(to: ~p"/dashboard")
                 end
 
-              {:error, _} ->
+              {:error, _reason} ->
                 LiveView.put_flash(socket, :error, "Something went wrong. Please try again.")
             end
 
-          {:error, _} ->
+          {:error, _reason} ->
             LiveView.put_flash(socket, :error, "Could not set up your profile. Please try again.")
         end
 
@@ -193,7 +193,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
         {:noreply, socket}
 
-      {:error, _} ->
+      {:error, _reason} ->
         {:noreply,
          LiveView.put_flash(
            socket,

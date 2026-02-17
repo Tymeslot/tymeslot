@@ -64,7 +64,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
     test "is rate limited", %{conn: conn} do
       # 30 requests allowed per minute per IP
       conn =
-        Enum.reduce(1..30, conn, fn _, acc ->
+        Enum.reduce(1..30, conn, fn _attempt, acc ->
           get(acc, ~p"/email-change/some-token")
         end)
 

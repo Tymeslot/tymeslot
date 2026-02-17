@@ -18,11 +18,11 @@ defmodule Tymeslot.DatabaseQueries.ProfileQueries do
              %ProfileSchema{user_id: user_id}
              |> ProfileSchema.changeset(%{})
              |> Repo.insert(),
-           {:ok, _} <- WeeklySchedule.create_default_weekly_schedule(profile.id) do
+           {:ok, _result} <- WeeklySchedule.create_default_weekly_schedule(profile.id) do
         Repo.preload(profile, :user)
       else
         {:error, %Ecto.Changeset{} = changeset} -> Repo.rollback(changeset)
-        {:error, _} -> Repo.rollback("Failed to create default availability")
+        {:error, _reason} -> Repo.rollback("Failed to create default availability")
         other -> Repo.rollback(other)
       end
     end)
@@ -136,7 +136,7 @@ defmodule Tymeslot.DatabaseQueries.ProfileQueries do
   def username_available?(username) when is_binary(username) do
     case get_by_username(username) do
       {:error, :not_found} -> true
-      {:ok, _} -> false
+      {:ok, _result} -> false
     end
   end
 
@@ -276,10 +276,10 @@ defmodule Tymeslot.DatabaseQueries.ProfileQueries do
 
   defp run_clear_fun(fun) when is_function(fun, 0) do
     case fun.() do
-      {:ok, _} -> :ok
+      {:ok, _result} -> :ok
       :ok -> :ok
       {:error, reason} -> {:error, reason}
-      _ -> :ok
+      _other -> :ok
     end
   end
 

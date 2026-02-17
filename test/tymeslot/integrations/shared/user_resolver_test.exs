@@ -6,11 +6,11 @@ defmodule Tymeslot.Integrations.Common.UserResolverTest do
   describe "resolve_user_integrations/2" do
     test "returns integrations for a user" do
       user = insert(:user)
-      _ci = insert(:calendar_integration, user: user)
-      _vi = insert(:video_integration, user: user)
+      _calendar_integration = insert(:calendar_integration, user: user)
+      _video_integration = insert(:video_integration, user: user)
 
-      assert [_] = UserResolver.resolve_user_integrations(user.id, :calendar)
-      assert [_] = UserResolver.resolve_user_integrations(user.id, :video)
+      assert [_integration] = UserResolver.resolve_user_integrations(user.id, :calendar)
+      assert [_integration] = UserResolver.resolve_user_integrations(user.id, :video)
     end
 
     test "legacy support for user_id nil" do

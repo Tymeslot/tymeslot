@@ -54,5 +54,5 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
 
   defp parse_type("calendar"), do: :calendar
   defp parse_type("video"), do: :video
-  defp parse_type(_), do: nil
+  defp parse_type(_type), do: nil
 end

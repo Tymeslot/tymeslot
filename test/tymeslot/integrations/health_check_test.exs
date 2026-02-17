@@ -39,7 +39,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
 
       # Mock failure for 3 checks (threshold is 3)
-      expect(GoogleCalendarAPIMock, :list_primary_events, 3, fn _int, _start, _end ->
+      expect(GoogleCalendarAPIMock, :list_primary_events, 3, fn _integration, _start_date, _end_date ->
         {:error, :unauthorized, "Token expired"}
       end)
 
@@ -74,7 +74,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
 
       # Initial failure to make it degraded
-      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
+      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _integration, _start_date, _end_date ->
         {:error, :unauthorized}
       end)
 
@@ -83,7 +83,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       assert HealthCheck.get_health_status(:calendar, integration.id).status == :degraded
 
       # Mock success for 2 checks (recovery threshold is 2)
-      expect(GoogleCalendarAPIMock, :list_primary_events, 2, fn _int, _start, _end ->
+      expect(GoogleCalendarAPIMock, :list_primary_events, 2, fn _integration, _start_date, _end_date ->
         {:ok, []}
       end)
 
@@ -105,7 +105,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       # Mock a slow response
       # Note: Oban doesn't have a built-in "timeout" return value like Task.yield,
       # but the underlying integration call might timeout.
-      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
+      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _integration, _start_date, _end_date ->
         {:error, :timeout}
       end)
 
@@ -244,7 +244,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       CalendarCircuitBreaker.reset(:google)
 
       # Trip the circuit breaker by causing failures
-      for _ <- 1..5 do
+      for _i <- 1..5 do
         CalendarCircuitBreaker.call(:google, fn -> {:error, :api_failure} end)
       end
 
@@ -260,7 +260,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       alias Tymeslot.Infrastructure.CalendarCircuitBreaker
 
       # Trip the circuit
-      for _ <- 1..5 do
+      for _i <- 1..5 do
         CalendarCircuitBreaker.call(:google, fn -> {:error, :api_failure} end)
       end
 
@@ -328,7 +328,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
 
       # Trip the circuit breaker
-      for _ <- 1..5 do
+      for _i <- 1..5 do
         CalendarCircuitBreaker.call(:google, fn -> {:error, :api_failure} end)
       end
 
@@ -420,7 +420,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
 
       # The circuit breaker exists but we'll test the exception handling by checking logs
       # In practice, this would catch process crashes, registry issues, etc.
-      _log =
+      _captured_log =
         capture_log(fn ->
           HealthCheck.check_all_integrations()
           sync_with_server()
@@ -454,7 +454,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
 
   # Helper to ensure the GenServer has finished processing its message queue
   defp sync_with_server(timeout \\ 5000) do
-    _ = :sys.get_state(HealthCheck, timeout)
+    _state = :sys.get_state(HealthCheck, timeout)
   end
 
   defp run_health_checks do

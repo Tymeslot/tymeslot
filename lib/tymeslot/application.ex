@@ -197,8 +197,8 @@ defmodule Tymeslot.Application do
     # Find the Cron plugin configuration
     cron_plugin =
       Enum.find(plugins, fn
-        {Oban.Plugins.Cron, _} -> true
-        _ -> false
+        {Oban.Plugins.Cron, _opts} -> true
+        _other -> false
       end)
 
     case cron_plugin do
@@ -225,7 +225,7 @@ defmodule Tymeslot.Application do
             Enum.any?(crontab, fn
               {_schedule, ^worker} -> true
               {_schedule, ^worker, _opts} -> true
-              _ -> false
+              _other -> false
             end)
 
           unless worker_configured? do

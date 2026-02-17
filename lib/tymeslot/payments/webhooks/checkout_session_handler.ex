@@ -33,7 +33,7 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
       "subscription" ->
         handle_subscription_completion(session)
 
-      _ ->
+      _other ->
         handle_payment_completion(session)
     end
   end
@@ -104,5 +104,5 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
   end
 
   defp retryable_stripe_error?(%StripeError{source: :network}), do: true
-  defp retryable_stripe_error?(_), do: false
+  defp retryable_stripe_error?(_error), do: false
 end

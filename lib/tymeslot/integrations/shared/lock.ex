@@ -60,7 +60,7 @@ defmodule Tymeslot.Integrations.Shared.Lock do
       nil ->
         {:error, :lock_manager_not_started}
 
-      _pid ->
+      _manager_pid ->
         case GenServer.call(__MODULE__, {:acquire, key}) do
           :ok ->
             try do
@@ -108,7 +108,7 @@ defmodule Tymeslot.Integrations.Shared.Lock do
       case key do
         {provider, _id} when is_atom(provider) -> Keyword.get(config, provider)
         provider when is_atom(provider) -> Keyword.get(config, provider)
-        _ -> nil
+        _unknown_key -> nil
       end
 
     provider_timeout || Keyword.get(config, :default_timeout, @default_lock_timeout_ms)
@@ -154,7 +154,7 @@ defmodule Tymeslot.Integrations.Shared.Lock do
 
         {:reply, :ok, new_state}
 
-      _ ->
+      _no_existing_lock ->
         ref = Process.monitor(from_pid)
         :ets.insert(@table, {key, now, from_pid})
 
@@ -178,8 +178,8 @@ defmodule Tymeslot.Integrations.Shared.Lock do
 
     state =
       case :ets.lookup(@table, key) do
-        [{^key, _, old_pid}] -> cleanup_monitor(state, key, old_pid)
-        _ -> state
+        [{^key, _timestamp, old_pid}] -> cleanup_monitor(state, key, old_pid)
+        [] -> state
       end
 
     :ets.insert(@table, {key, timestamp, pid})
@@ -196,7 +196,7 @@ defmodule Tymeslot.Integrations.Shared.Lock do
         :telemetry.execute([:tymeslot, :lock, :release], %{}, %{key: key})
         {:noreply, cleanup_monitor(state, key, pid)}
 
-      _ ->
+      _different_holder ->
         {:noreply, state}
     end
   end
@@ -212,14 +212,14 @@ defmodule Tymeslot.Integrations.Shared.Lock do
             :ets.delete(@table, key)
             Logger.debug("Released lock for #{inspect(key)} because process #{inspect(pid)} died")
 
-          _ ->
+          _different_holder ->
             :ok
         end
 
         next_refs = Map.delete(state.refs, {key, pid})
         {:noreply, %{state | monitors: next_monitors, refs: next_refs}}
 
-      {nil, _} ->
+      {nil, _next_monitors} ->
         {:noreply, state}
     end
   end
@@ -232,7 +232,7 @@ defmodule Tymeslot.Integrations.Shared.Lock do
 
   defp cleanup_monitor(state, key, pid) do
     case Map.pop(state.refs, {key, pid}) do
-      {nil, _} ->
+      {nil, _next_refs} ->
         state
 
       {ref, next_refs} ->

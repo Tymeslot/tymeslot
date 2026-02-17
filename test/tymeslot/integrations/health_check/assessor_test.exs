@@ -18,7 +18,7 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
 
       {result, duration} = Assessor.assess(:calendar, integration)
 
-      assert match?({:ok, _}, result)
+      assert match?({:ok, _result}, result)
       assert is_integer(duration)
       assert duration >= 0
     end
@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
       {result, duration} = Assessor.assess(:calendar, integration)
 
       # Should be an error tuple (could be 2 or 3 element tuple)
-      assert {:error, _} = result
+      assert {:error, _reason} = result
       assert is_integer(duration)
       assert duration >= 0
     end
@@ -85,7 +85,7 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
       {result, duration} = Assessor.assess(:video, integration)
 
       # Provider adapter returns error message for unknown providers
-      assert match?({:error, _}, result)
+      assert match?({:error, _reason}, result)
       assert is_integer(duration)
     end
 
@@ -112,7 +112,7 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
       # Telemetry is recorded internally
       {result, _duration} = Assessor.assess(:calendar, integration)
 
-      assert {:ok, _} = result
+      assert {:ok, _result} = result
     end
   end
 end

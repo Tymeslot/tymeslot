@@ -79,7 +79,7 @@ defmodule Tymeslot.Payments.RetryHelperTest do
     test "uses custom retryable error function" do
       custom_retryable = fn
         :custom_retry -> true
-        _ -> false
+        _other -> false
       end
 
       {:ok, agent_pid} = start_counter_agent()

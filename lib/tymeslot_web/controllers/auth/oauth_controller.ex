@@ -50,7 +50,7 @@ defmodule TymeslotWeb.OAuthController do
           disabled_redirect(conn, provider_atom)
         end
 
-      _ ->
+      _other_intent ->
         do_provider_auth(conn, provider_atom, params)
     end
   end
@@ -330,10 +330,10 @@ defmodule TymeslotWeb.OAuthController do
 
         create_session_and_redirect(conn, user, oauth_data, message)
 
-      {:error, :rate_limited, _message} ->
+      {:error, :rate_limited, _rate_limit_message} ->
         handle_rate_limited_error(conn)
 
-      {:error, _reason} ->
+      {:error, _error_reason} ->
         message =
           "Welcome! Successfully signed up with #{String.capitalize(oauth_data.provider)}. Verification email could not be sent - please contact support if needed."
 
@@ -342,14 +342,14 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   @spec create_session_and_redirect(Plug.Conn.t(), map(), map(), String.t()) :: Plug.Conn.t()
-  defp create_session_and_redirect(conn, user, _oauth_data, success_message) do
+  defp create_session_and_redirect(conn, user, _unused_oauth_data, success_message) do
     case Session.create_session(conn, user) do
-      {:ok, updated_conn, _token} ->
+      {:ok, updated_conn, _session_token} ->
         updated_conn
         |> put_flash(:info, success_message)
         |> redirect(to: "/dashboard")
 
-      {:error, _reason, _details} ->
+      {:error, _error_reason, _error_details} ->
         conn
         |> put_flash(:error, "Failed to create session. Please try again.")
         |> redirect(to: "/auth/login")
@@ -365,7 +365,7 @@ defmodule TymeslotWeb.OAuthController do
       %Ecto.Changeset{} ->
         redirect_to_registration_with_error(conn, reason, params)
 
-      _ ->
+      _other_error ->
         oauth_error_response(conn, reason, "/auth/login")
     end
   end
@@ -434,13 +434,13 @@ defmodule TymeslotWeb.OAuthController do
   @spec format_error_for_flash(any()) :: String.t()
   defp format_error_for_flash(%Ecto.Changeset{} = changeset) do
     case changeset.errors do
-      [email: {"can't be blank", _}] ->
+      [email: {"can't be blank", _opts}] ->
         "Email address is required to complete registration."
 
-      [email: {message, _}] when is_binary(message) ->
+      [email: {message, _opts}] when is_binary(message) ->
         "Email #{message}. Please provide a valid email address."
 
-      _ ->
+      _other_errors ->
         "Registration failed due to validation errors. Please check your information and try again."
     end
   end
@@ -503,7 +503,7 @@ defmodule TymeslotWeb.OAuthController do
           default
         end
 
-      _ ->
+      _invalid_path ->
         default
     end
   end
@@ -519,7 +519,7 @@ defmodule TymeslotWeb.OAuthController do
     case provider do
       "github" -> {:ok, :github}
       "google" -> {:ok, :google}
-      _ -> {:error, :unsupported_oauth_provider}
+      _unsupported -> {:error, :unsupported_oauth_provider}
     end
   end
 
@@ -548,7 +548,7 @@ defmodule TymeslotWeb.OAuthController do
         :email_already_taken ->
           "This email address is already associated with another account. Please use a different email or sign in to your existing account."
 
-        _ ->
+        _unknown_error ->
           "Authentication failed. Please try again."
       end
 
@@ -559,13 +559,13 @@ defmodule TymeslotWeb.OAuthController do
 
   defp format_changeset_errors(%Ecto.Changeset{errors: errors}) do
     case errors do
-      [email: {"can't be blank", _}] ->
+      [email: {"can't be blank", _opts}] ->
         "Email address is required to complete registration."
 
-      [email: {message, _}] when is_binary(message) ->
+      [email: {message, _opts}] when is_binary(message) ->
         "Email #{message}. Please provide a valid email address."
 
-      _ ->
+      _other_errors ->
         "Registration failed due to validation errors. Please check your information and try again."
     end
   end
@@ -575,7 +575,7 @@ defmodule TymeslotWeb.OAuthController do
       true -> true
       "true" -> true
       "on" -> true
-      _ -> false
+      _not_accepted -> false
     end
   end
 end

@@ -100,23 +100,23 @@ defmodule Tymeslot.Security.SecurityTest do
     end
 
     test "rejects domains with protocols" do
-      assert {:error, _} = Security.validate_domain("https://example.com")
-      assert {:error, _} = Security.validate_domain("http://localhost")
+      assert {:error, _reason} = Security.validate_domain("https://example.com")
+      assert {:error, _reason} = Security.validate_domain("http://localhost")
     end
 
     test "rejects domains with paths" do
-      assert {:error, _} = Security.validate_domain("example.com/path")
+      assert {:error, _reason} = Security.validate_domain("example.com/path")
     end
 
     test "rejects domains with ports" do
-      assert {:error, _} = Security.validate_domain("example.com:8080")
-      assert {:error, _} = Security.validate_domain("localhost:4000")
+      assert {:error, _reason} = Security.validate_domain("example.com:8080")
+      assert {:error, _reason} = Security.validate_domain("localhost:4000")
     end
 
     test "rejects invalid formats" do
-      assert {:error, _} = Security.validate_domain("-example.com")
-      assert {:error, _} = Security.validate_domain("example-.com")
-      assert {:error, _} = Security.validate_domain("example..com")
+      assert {:error, _reason} = Security.validate_domain("-example.com")
+      assert {:error, _reason} = Security.validate_domain("example-.com")
+      assert {:error, _reason} = Security.validate_domain("example..com")
     end
 
     test "rejects overly long domains" do

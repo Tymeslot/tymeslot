@@ -69,7 +69,7 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
       # Should use 10_000ms default timeout
       result = Connection.validate(integration, user.id)
 
-      assert match?({:error, _}, result)
+      assert match?({:error, _reason}, result)
     end
   end
 
@@ -192,7 +192,7 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
       result = Connection.test_connection(integration)
 
       # Will fail without real server
-      assert {:error, _} = result
+      assert {:error, _reason} = result
     end
 
     test "tests Google Calendar provider connection" do
@@ -223,7 +223,7 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
 
       result = Connection.test_connection(integration)
 
-      assert match?({:error, _}, result)
+      assert match?({:error, _reason}, result)
     end
 
     test "returns error for provider with invalid atom" do

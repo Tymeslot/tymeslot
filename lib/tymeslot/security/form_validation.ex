@@ -75,7 +75,7 @@ defmodule Tymeslot.Security.FormValidation do
         |> String.trim()
         |> normalize_whitespace()
 
-      {:error, _} ->
+      {:error, _error} ->
         ""
     end
   end
@@ -92,7 +92,7 @@ defmodule Tymeslot.Security.FormValidation do
         |> String.trim()
         |> String.downcase()
 
-      {:error, _} ->
+      {:error, _error} ->
         ""
     end
   end
@@ -106,7 +106,7 @@ defmodule Tymeslot.Security.FormValidation do
         |> String.trim()
         |> normalize_whitespace()
 
-      {:error, _} ->
+      {:error, _error} ->
         ""
     end
   end
@@ -132,7 +132,7 @@ defmodule Tymeslot.Security.FormValidation do
 
     case errors do
       [] -> {:ok, params}
-      _ -> {:error, errors}
+      _other -> {:error, errors}
     end
   end
 
@@ -229,7 +229,7 @@ defmodule Tymeslot.Security.FormValidation do
       [local, domain] ->
         valid_local_part?(local) and valid_domain_part?(domain)
 
-      _ ->
+      _invalid_parts ->
         false
     end
   end
@@ -282,7 +282,7 @@ defmodule Tymeslot.Security.FormValidation do
       "15" -> {:ok, 15}
       "30" -> {:ok, 30}
       "60" -> {:ok, 60}
-      _ -> {:error, "Invalid duration"}
+      _other -> {:error, "Invalid duration"}
     end
   end
 
@@ -311,7 +311,7 @@ defmodule Tymeslot.Security.FormValidation do
             {:ok, date}
         end
 
-      {:error, _} ->
+      {:error, _invalid_date} ->
         Logger.error("Date validation failed: invalid format", date: date_string)
         {:error, "Invalid date format"}
     end
@@ -326,7 +326,7 @@ defmodule Tymeslot.Security.FormValidation do
   def validate_time(time_string) when is_binary(time_string) do
     case Time.from_iso8601(time_string <> ":00") do
       {:ok, time} -> {:ok, time}
-      {:error, _} -> {:error, "Invalid time format"}
+      {:error, _invalid_time} -> {:error, "Invalid time format"}
     end
   end
 
@@ -338,8 +338,8 @@ defmodule Tymeslot.Security.FormValidation do
   @spec get_field_errors(list({atom(), String.t()}), atom()) :: [String.t()]
   def get_field_errors(errors, field) do
     errors
-    |> Enum.filter(fn {error_field, _} -> error_field == field end)
-    |> Enum.map(fn {_, message} -> message end)
+    |> Enum.filter(fn {error_field, _value} -> error_field == field end)
+    |> Enum.map(fn {_field, message} -> message end)
   end
 
   @doc """
@@ -353,7 +353,7 @@ defmodule Tymeslot.Security.FormValidation do
   """
   @spec field_has_errors?(list({atom(), String.t()}), atom()) :: boolean()
   def field_has_errors?(errors, field) do
-    Enum.any?(errors, fn {error_field, _} -> error_field == field end)
+    Enum.any?(errors, fn {error_field, _value} -> error_field == field end)
   end
 
   @doc """

@@ -20,7 +20,7 @@ defmodule Tymeslot.Integrations.Shared.ProviderToggle do
       value when is_boolean(value) -> value
       value when is_list(value) -> Keyword.get(value, :enabled, default_enabled)
       %{} = value -> Map.get(value, :enabled, default_enabled)
-      _ -> default_enabled
+      _other -> default_enabled
     end
   end
 

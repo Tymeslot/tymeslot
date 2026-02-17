@@ -333,7 +333,7 @@ defmodule Tymeslot.DatabaseSchemas.ThemeCustomizationSchema do
       "color" -> validate_color(changeset)
       "image" -> validate_image(changeset)
       "video" -> validate_video(changeset)
-      _ -> changeset
+      _other -> changeset
     end
   end
 

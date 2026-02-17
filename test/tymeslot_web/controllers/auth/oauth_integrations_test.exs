@@ -25,7 +25,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       try do
         :meck.unload(mod)
       rescue
-        _ -> :ok
+        _error -> :ok
       end
 
       :meck.new(mod, [:passthrough])
@@ -54,7 +54,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         try do
           :meck.unload(mod)
         rescue
-          _ -> :ok
+          _error -> :ok
         end
       end
 
@@ -121,7 +121,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     end
 
     test "outlook_callback handles exchange failure", %{conn: conn} do
-      :meck.expect(OutlookCalendarOAuthHelper, :handle_callback, fn _, _, _ ->
+      :meck.expect(OutlookCalendarOAuthHelper, :handle_callback, fn _code, _state, _uri ->
         {:error, :invalid_code}
       end)
 
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     end
 
     test "google_callback handles invalid state", %{conn: conn} do
-      :meck.expect(State, :validate, fn _, _ -> {:error, :expired} end)
+      :meck.expect(State, :validate, fn _state, _secret -> {:error, :expired} end)
 
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "invalid"})
 
@@ -228,7 +228,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     test "teams_callback handles creation failure", %{conn: conn} do
       user_id = 789
 
-      :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn _, _, _ ->
+      :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, _state ->
         {:ok,
          %{
            user_id: user_id,
@@ -241,7 +241,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
          }}
       end)
 
-      :meck.expect(VideoIntegrationQueries, :create, fn _ -> {:error, :db_error} end)
+      :meck.expect(VideoIntegrationQueries, :create, fn _client -> {:error, :db_error} end)
 
       Factory.insert(:user, id: user_id)
 
@@ -254,7 +254,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     test "teams_callback handles missing tenant_id or teams_user_id", %{conn: conn} do
       user_id = 999
 
-      :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn _, _, _ ->
+      :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, _state ->
         {:ok,
          %{
            user_id: user_id,

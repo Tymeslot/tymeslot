@@ -164,7 +164,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
           "background_video_path" -> :background_video_path
           key when is_atom(key) -> key
           key when is_binary(key) -> String.to_existing_atom(key)
-          _ -> key
+          _other -> key
         end
 
       Map.put(acc, atom_key, value)
@@ -200,7 +200,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
           background_image_path: nil
         })
 
-      _ ->
+      _other ->
         customization
     end
   end
@@ -269,7 +269,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
       "video" when customization.background_value == "custom" ->
         customization.background_video_path
 
-      _ ->
+      _other ->
         nil
     end
   end

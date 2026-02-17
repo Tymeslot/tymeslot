@@ -17,7 +17,7 @@ defmodule Tymeslot.Payments.Webhooks.CustomerHandler do
       nil ->
         {:error, :missing_field, "Required field missing: id"}
 
-      _ ->
+      _id ->
         :ok
     end
   end

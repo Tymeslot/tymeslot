@@ -257,8 +257,8 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   defp execute_function(fun) do
     case fun.() do
-      {:ok, _} = success -> success
-      {:error, _} = error -> error
+      {:ok, _result} = success -> success
+      {:error, _reason} = error -> error
       # Handle non-standard returns
       result -> {:ok, result}
     end

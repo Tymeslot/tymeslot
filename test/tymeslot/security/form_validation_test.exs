@@ -63,7 +63,7 @@ defmodule Tymeslot.Security.FormValidationTest do
         "message" => "Hello"
       }
 
-      assert {:ok, _} = FormValidation.validate_booking_form(valid_international)
+      assert {:ok, _validated_form} = FormValidation.validate_booking_form(valid_international)
     end
 
     test "very long inputs report length errors (not required)" do

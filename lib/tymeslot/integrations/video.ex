@@ -88,10 +88,10 @@ defmodule Tymeslot.Integrations.Video do
   @spec delete_integration(pos_integer(), pos_integer()) :: {:ok, :deleted} | {:error, any()}
   def delete_integration(user_id, id) when is_integer(user_id) do
     with {:ok, integration} <- VideoIntegrationQueries.get_for_user(id, user_id),
-         {:ok, _} <- VideoIntegrationQueries.delete(integration) do
+         {:ok, _result} <- VideoIntegrationQueries.delete(integration) do
       {:ok, :deleted}
     else
-      {:error, _} = err -> err
+      {:error, _reason} = err -> err
     end
   end
 
@@ -102,7 +102,7 @@ defmodule Tymeslot.Integrations.Video do
   def toggle_integration(user_id, id) when is_integer(user_id) do
     case VideoIntegrationQueries.get_for_user(id, user_id) do
       {:ok, integration} -> VideoIntegrationQueries.toggle_active(integration)
-      {:error, _} = err -> err
+      {:error, _reason} = err -> err
     end
   end
 
@@ -168,7 +168,7 @@ defmodule Tymeslot.Integrations.Video do
       :teams ->
         teams_oauth_authorization_url(user_id)
 
-      _ ->
+      _other ->
         {:error, "Provider does not support OAuth"}
     end
   end

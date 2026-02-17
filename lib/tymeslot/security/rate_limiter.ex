@@ -127,8 +127,8 @@ defmodule Tymeslot.Security.RateLimiter do
           :ok | {:error, :rate_limited}
   def check_rate_limit(bucket_key, limit, window_ms) do
     case check_rate(bucket_key, window_ms, limit) do
-      {:allow, _} -> :ok
-      {:deny, _} -> {:error, :rate_limited}
+      {:allow, _count} -> :ok
+      {:deny, _retry_after} -> {:error, :rate_limited}
     end
   end
 
@@ -145,8 +145,8 @@ defmodule Tymeslot.Security.RateLimiter do
     limit = 6
 
     case check_rate(bucket_key, window_ms, limit) do
-      {:allow, _} -> :allow
-      {:deny, _} -> :deny
+      {:allow, _count} -> :allow
+      {:deny, _retry_after} -> :deny
     end
   end
 
@@ -194,7 +194,7 @@ defmodule Tymeslot.Security.RateLimiter do
     check_with_logging("login_ip:#{ip}", 50, 1_800_000, "authentication (ip)", ip)
   end
 
-  defp check_auth_ip_bucket(_ip), do: :ok
+  defp check_auth_ip_bucket(_invalid_ip), do: :ok
 
   @doc """
   Record authentication attempt result for lockout tracking.
@@ -473,7 +473,7 @@ defmodule Tymeslot.Security.RateLimiter do
   defp normalize_ip(other), do: to_string(other)
 
   defp check_multi_bucket_limits(buckets) do
-    Enum.reduce_while(buckets, :ok, fn {bucket_base, limits, operation}, _ ->
+    Enum.reduce_while(buckets, :ok, fn {bucket_base, limits, operation}, _acc ->
       case apply_limits(bucket_base, limits, operation) do
         :ok -> {:cont, :ok}
         error -> {:halt, error}
@@ -482,7 +482,7 @@ defmodule Tymeslot.Security.RateLimiter do
   end
 
   defp apply_limits(bucket_base, limits, operation) do
-    Enum.reduce_while(limits, :ok, fn {label, limit, window_ms}, _ ->
+    Enum.reduce_while(limits, :ok, fn {label, limit, window_ms}, _acc ->
       case check_rate_limit("#{bucket_base}:#{label}", limit, window_ms) do
         :ok ->
           {:cont, :ok}

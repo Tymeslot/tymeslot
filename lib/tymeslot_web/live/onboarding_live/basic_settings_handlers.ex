@@ -41,7 +41,7 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsHandlers do
         URI.decode_query(value)
 
       # Use params directly if not nested
-      _ ->
+      _other ->
         params
     end
   end

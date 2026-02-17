@@ -28,7 +28,7 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
     with {:ok, integration} <-
            CalendarManagement.get_calendar_integration(integration_id, user_id),
          promoted_result <- maybe_handle_primary(user_id, integration),
-         {:ok, _} <- CalendarManagement.delete_calendar_integration(integration) do
+         {:ok, _result} <- CalendarManagement.delete_calendar_integration(integration) do
       case promoted_result do
         {:promoted, next_id} -> {:ok, {:deleted_promoted, next_id}}
         :cleared -> {:ok, {:deleted_cleared_primary}}
@@ -45,7 +45,7 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
          true <- primary_id == integration.id do
       promote_next_or_clear(user_id, integration.id)
     else
-      _ -> :unchanged
+      _not_primary -> :unchanged
     end
   end
 
@@ -54,16 +54,16 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
       Enum.reject(CalendarManagement.list_calendar_integrations(user_id), &(&1.id == exclude_id))
 
     case others do
-      [next | _] ->
+      [next | _rest] ->
         case CalendarPrimary.set_primary_calendar_integration(user_id, next.id) do
-          {:ok, _} -> {:promoted, next.id}
-          _ -> :unchanged
+          {:ok, _profile} -> {:promoted, next.id}
+          _error -> :unchanged
         end
 
       [] ->
         case ProfileQueries.clear_primary_calendar_integration(user_id) do
-          {:ok, _} -> :cleared
-          _ -> :unchanged
+          {:ok, _profile} -> :cleared
+          _error -> :unchanged
         end
     end
   end

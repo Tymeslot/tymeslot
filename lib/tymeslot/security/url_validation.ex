@@ -26,7 +26,7 @@ defmodule Tymeslot.Security.UrlValidation do
 
         {:error, disallowed_protocol_error}
 
-      _invalid_uri ->
+      _invalid_url ->
         {:error, invalid_message}
     end
   end

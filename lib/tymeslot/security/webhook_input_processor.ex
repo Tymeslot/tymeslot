@@ -148,13 +148,13 @@ defmodule Tymeslot.Security.WebhookInputProcessor do
   defp check_rate_limit(bucket_key, _metadata) do
     case RateLimiter.check_rate_limit(bucket_key, 60, 60_000) do
       :ok -> :ok
-      {:error, _} -> {:error, :rate_limited}
+      {:error, _reason} -> {:error, :rate_limited}
     end
   end
 
   defp translate_errors(changeset) do
     Changeset.traverse_errors(changeset, fn {msg, opts} ->
-      Regex.replace(~r/%{(\w+)}/, msg, fn _, key ->
+      Regex.replace(~r/%{(\w+)}/, msg, fn _arg1, key ->
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)
     end)
@@ -165,11 +165,11 @@ defmodule Tymeslot.Security.WebhookInputProcessor do
   defp get_first_error(changeset, field) do
     case changeset.errors[field] do
       {msg, opts} ->
-        Regex.replace(~r/%{(\w+)}/, msg, fn _, key ->
+        Regex.replace(~r/%{(\w+)}/, msg, fn _arg1, key ->
           opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
         end)
 
-      _ ->
+      _other ->
         "Invalid input"
     end
   end

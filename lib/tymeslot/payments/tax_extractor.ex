@@ -86,11 +86,11 @@ defmodule Tymeslot.Payments.TaxExtractor do
 
       amount when is_binary(amount) ->
         case Integer.parse(amount) do
-          {parsed, _} -> parsed
+          {parsed, _value} -> parsed
           :error -> 0
         end
 
-      _ ->
+      _other ->
         0
     end
   end
@@ -126,7 +126,7 @@ defmodule Tymeslot.Payments.TaxExtractor do
       tax_ids when is_list(tax_ids) and tax_ids != [] ->
         tax_ids |> List.first() |> Map.get("value", nil)
 
-      _ ->
+      _other ->
         nil
     end
   end
@@ -172,7 +172,7 @@ defmodule Tymeslot.Payments.TaxExtractor do
     has_eu_vat =
       Enum.any?(tax_ids, fn
         %{"type" => "eu_vat"} -> true
-        _ -> false
+        _other -> false
       end)
 
     has_eu_vat and country != nil and country in eu_country_codes()

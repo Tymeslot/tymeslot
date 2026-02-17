@@ -61,7 +61,7 @@ defmodule CredoChecks.ThinWrapperFunctions do
           issues
         end
 
-      _ ->
+      _other ->
         issues
     end
   end

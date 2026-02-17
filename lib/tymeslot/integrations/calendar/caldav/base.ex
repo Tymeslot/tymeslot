@@ -286,7 +286,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
       :create ->
         headers ++ [{"If-None-Match", "*"}]
 
-      _ ->
+      _operation ->
         headers
     end
   end
@@ -476,11 +476,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     case head_event(url, client.username, client.password, head_opts) do
       {:ok, %{headers: headers}} ->
         case Enum.find(headers, fn {k, _v} -> String.downcase(k) == "etag" end) do
-          {_, etag} -> etag
-          _ -> nil
+          {_key, etag} -> etag
+          _not_found -> nil
         end
 
-      _ ->
+      _error ->
         # HEAD failed or timed out - proceed without ETag
         # This is safe as PUT will work without If-Match header
         nil
@@ -541,7 +541,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
       {:ok, %Finch.Response{status: status}} when status >= 500 ->
         {:error, :server_error}
 
-      {:error, _reason} ->
+      {:error, _error_reason} ->
         {:error, :network_error}
     end
   end
@@ -578,7 +578,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
         :zimbra ->
           "#{base_url}/dav/#{client.username}/"
 
-        _ ->
+        _other ->
           "#{base_url}/calendars/#{client.username}/"
       end
     end
@@ -660,7 +660,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     end
   end
 
-  defp validate_client_url(_), do: {:error, :invalid_url}
+  defp validate_client_url(_arg), do: {:error, :invalid_url}
 
   defp validate_scheme_and_host(url) do
     case URI.parse(url) do
@@ -668,7 +668,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
       when scheme in ["http", "https"] and is_binary(host) and host != "" ->
         {:ok, {scheme, host}}
 
-      _ ->
+      _other ->
         {:error, :invalid_url}
     end
   end
@@ -721,7 +721,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   defp extract_host_from_url(url) do
     case URI.parse(url) do
       %URI{host: host} when is_binary(host) -> host
-      _ -> nil
+      _other -> nil
     end
   end
 end

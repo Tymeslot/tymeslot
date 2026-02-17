@@ -75,8 +75,8 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
         result_after_error = handle_error(reason, meeting_id, send_emails, attempt, job)
         handle_result(result_after_error, job)
 
-      {:ok, result} ->
-        handle_result(result, job)
+      {:ok, other_result} ->
+        handle_result(other_result, job)
 
       nil ->
         Logger.error("Video room creation timed out",
@@ -113,7 +113,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
         Logger.info("Video room creation job scheduled", meeting_id: meeting_id)
         :ok
 
-      {:error, %Ecto.Changeset{errors: [unique: _]}} ->
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
         Logger.info("Video room creation job already exists, skipping duplicate",
           meeting_id: meeting_id
         )
@@ -160,7 +160,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
         :ok
 
-      {:error, %Ecto.Changeset{errors: [unique: _]}} ->
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
         Logger.info("Video room creation job already exists, skipping duplicate",
           meeting_id: meeting_id
         )
@@ -185,7 +185,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
       :ok ->
         :ok
 
-      {:snooze, _} = snooze ->
+      {:snooze, _seconds} = snooze ->
         snooze
 
       {:error, error_type} ->
@@ -194,15 +194,15 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
       {:discard, reason} ->
         {:discard, reason}
 
-      _ ->
+      _other ->
         handle_unexpected_video_result(result)
     end
   end
 
-  defp handle_video_error(:rate_limited, job) do
+  defp handle_video_error(:rate_limited, %{attempt: attempt}) do
     # MiroTalk API rate limited us
     # Max 5 minutes
-    snooze_seconds = min(300, 60 * job.attempt)
+    snooze_seconds = min(300, 60 * attempt)
 
     Logger.warning("Video API rate limited, snoozing",
       snooze_seconds: snooze_seconds
@@ -277,7 +277,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     :ok
   end
 
-  defp handle_error(reason, meeting_id, send_emails, attempt, _job) do
+  defp handle_error(reason, meeting_id, send_emails, attempt, _current_job) do
     Logger.error("Failed to create video room",
       meeting_id: meeting_id,
       reason: inspect(reason),
@@ -322,7 +322,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     end
   end
 
-  defp handle_timeout_with_fallback(meeting_id, send_emails, attempt, _job) do
+  defp handle_timeout_with_fallback(meeting_id, send_emails, attempt, _current_job) do
     # If this is the final attempt and emails should be sent, send them without video
     if send_emails and attempt >= @fallback_email_attempt do
       if attempt == @fallback_email_attempt do
@@ -410,7 +410,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
             {:ok, %{reminder_config: config}} when is_list(config) and config != [] ->
               config
 
-            _ ->
+            _result ->
               []
           end
 
@@ -434,7 +434,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
             try do
               ReminderUtils.reminder_interval_seconds(val, unit)
             rescue
-              _ -> 0
+              _exception -> 0
             end
           end)
           |> Enum.max()
@@ -452,7 +452,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
       {:ok, meeting} ->
         Meetings.schedule_email_notifications(meeting)
 
-      {:error, _} ->
+      {:error, _error} ->
         Logger.error("Could not fetch meeting for fallback email scheduling",
           meeting_id: meeting_id
         )
@@ -460,10 +460,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   end
 
   @spec categorize_error(term()) :: {:error, atom() | term()}
-  defp categorize_error({:unauthorized, _}), do: {:error, :unauthorized}
+  defp categorize_error({:unauthorized, _details}), do: {:error, :unauthorized}
   defp categorize_error(:unauthorized), do: {:error, :unauthorized}
 
-  defp categorize_error({:configuration_error, _}), do: {:error, :invalid_configuration}
+  defp categorize_error({:configuration_error, _details}), do: {:error, :invalid_configuration}
   defp categorize_error(:configuration_error), do: {:error, :invalid_configuration}
 
   defp categorize_error({:http_error, status}) when is_integer(status) and status in 500..599,

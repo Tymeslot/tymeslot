@@ -235,7 +235,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
           errors ++ ["Path must start with '/': #{path}"]
         end
 
-      _ ->
+      _invalid_path ->
         errors
     end
   end
@@ -287,7 +287,7 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
 
     invalid =
       components
-      |> Enum.reject(fn {_action, module} ->
+      |> Enum.reject(fn {_action_key, module} ->
         is_atom(module) && Code.ensure_loaded?(module)
       end)
       |> Enum.map(fn {action, module} ->

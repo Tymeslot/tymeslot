@@ -69,7 +69,7 @@ defmodule Tymeslot.Meetings do
     case duration do
       "15min" -> 15
       "30min" -> 30
-      _ -> 30
+      _other -> 30
     end
   end
 
@@ -138,7 +138,7 @@ defmodule Tymeslot.Meetings do
     alias Tymeslot.Notifications.Orchestrator
 
     case Orchestrator.schedule_meeting_notifications(meeting) do
-      {:ok, _} ->
+      {:ok, _result} ->
         Logger.info("Meeting notifications scheduled", meeting_id: meeting.id)
 
       {:error, reason} ->
@@ -397,7 +397,7 @@ defmodule Tymeslot.Meetings do
   def get_meeting_for_user(id, user_email) do
     case Queries.get_meeting_for_user(id, user_email) do
       {:ok, meeting} -> {:ok, meeting}
-      _ -> {:error, :not_found}
+      _other -> {:error, :not_found}
     end
   end
 

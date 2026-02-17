@@ -54,7 +54,7 @@ defmodule Tymeslot.Infrastructure.CacheStoreTest do
 
     # Start 5 concurrent requests
     tasks =
-      Enum.map(1..5, fn _ ->
+      Enum.map(1..5, fn _task_index ->
         Task.async(fn ->
           TestCache.get_or_compute(key, fn ->
             # Signal that we started computing

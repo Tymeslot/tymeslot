@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponentTes
     socket = %Socket{assigns: %{__changed__: %{}, validation_errors: []}}
 
     {:error, updated} = FormValidationHandlerComponent.validate_field(socket, "email", "invalid")
-    assert Enum.any?(updated.assigns.validation_errors, fn {f, _} -> f == "email" end)
+    assert Enum.any?(updated.assigns.validation_errors, fn {f, _msg} -> f == "email" end)
 
     {:ok, updated_valid} =
       FormValidationHandlerComponent.validate_field(updated, "email", "john@example.com")

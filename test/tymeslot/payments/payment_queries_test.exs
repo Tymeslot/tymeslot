@@ -67,7 +67,7 @@ defmodule Tymeslot.DatabaseQueries.PaymentQueriesTest do
         stripe_id: "ch_test_dup"
       }
 
-      assert {:ok, _} = PaymentQueries.create_transaction(attrs)
+      assert {:ok, _result} = PaymentQueries.create_transaction(attrs)
       assert {:error, changeset} = PaymentQueries.create_transaction(attrs)
       assert "has already been taken" in errors_on(changeset).stripe_id
     end
@@ -79,7 +79,7 @@ defmodule Tymeslot.DatabaseQueries.PaymentQueriesTest do
         status: "pending"
       }
 
-      assert {:ok, _} = PaymentQueries.create_transaction(attrs)
+      assert {:ok, _result} = PaymentQueries.create_transaction(attrs)
       assert {:error, changeset} = PaymentQueries.create_transaction(attrs)
       assert "has already been taken" in errors_on(changeset).user_id
     end

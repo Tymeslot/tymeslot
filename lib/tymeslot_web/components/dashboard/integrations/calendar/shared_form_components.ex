@@ -294,7 +294,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   end
 
   defp normalize_error_message(nil), do: nil
-  defp normalize_error_message([message | _]) when is_binary(message), do: message
+  defp normalize_error_message([message | _rest]) when is_binary(message), do: message
   defp normalize_error_message(message) when is_binary(message), do: message
-  defp normalize_error_message(_), do: "Something went wrong. Please try again."
+  defp normalize_error_message(_other), do: "Something went wrong. Please try again."
 end

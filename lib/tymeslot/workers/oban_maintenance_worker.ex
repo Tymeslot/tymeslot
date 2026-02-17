@@ -79,7 +79,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
     cleaned_count =
       Enum.reduce(stuck_jobs, 0, fn job, count ->
         case transition_stuck_job_to_discarded(job) do
-          {:ok, _} ->
+          {:ok, _result} ->
             count + 1
 
           {:error, reason} ->
@@ -129,7 +129,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
     cutoff_date = DateTime.add(DateTime.utc_now(), -@old_job_retention_days, :day)
 
     # Delete old completed, discarded, and cancelled jobs
-    {deleted_count, _} = ObanJobQueries.delete_old_terminal_jobs(cutoff_date)
+    {deleted_count, _value} = ObanJobQueries.delete_old_terminal_jobs(cutoff_date)
 
     if deleted_count > 0 do
       Logger.info("Deleted old jobs",

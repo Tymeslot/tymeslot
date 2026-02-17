@@ -141,7 +141,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     case provider do
       :nextcloud -> normalize_nextcloud_attrs(attrs)
       "nextcloud" -> normalize_nextcloud_attrs(attrs)
-      _ -> attrs
+      _other -> attrs
     end
   end
 
@@ -208,7 +208,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
         opts[:constraint] == :unique &&
           to_string(opts[:constraint_name]) == "unique_booking_calendar_per_user"
 
-      _ ->
+      _other ->
         false
     end)
   end
@@ -216,7 +216,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   defp get_current_primary_id(user_id) do
     case CalendarPrimary.get_primary_calendar_integration(user_id) do
       {:ok, primary} -> primary.id
-      _ -> nil
+      _other -> nil
     end
   end
 
@@ -254,7 +254,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
           CalendarPrimary.set_primary_calendar_integration(user_id, updated_id)
         end
 
-      {:error, _} ->
+      {:error, _reason} ->
         CalendarPrimary.set_primary_calendar_integration(user_id, updated_id)
     end
   end

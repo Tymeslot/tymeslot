@@ -135,9 +135,9 @@ defmodule TymeslotWeb.StripeWebhookController do
 
   defp stripe_headers(conn) do
     conn.req_headers
-    |> Enum.filter(fn {k, _} -> String.contains?(k, "stripe") end)
+    |> Enum.filter(fn {k, _value} -> String.contains?(k, "stripe") end)
     |> Enum.map(fn
-      {"stripe-signature", _} -> {"stripe-signature", "[redacted]"}
+      {"stripe-signature", _value} -> {"stripe-signature", "[redacted]"}
       header -> header
     end)
   end

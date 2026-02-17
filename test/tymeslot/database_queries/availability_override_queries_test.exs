@@ -104,7 +104,7 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityOverrideQueriesTest do
 
     test "delete_override/1 deletes the override" do
       override = insert(:availability_override)
-      {:ok, _} = AvailabilityOverrideQueries.delete_override(override)
+      {:ok, _result} = AvailabilityOverrideQueries.delete_override(override)
       assert Repo.get(Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema, override.id) == nil
     end
 
@@ -113,7 +113,7 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityOverrideQueriesTest do
       insert(:availability_override, profile: profile, date: Date.add(Date.utc_today(), 1))
       insert(:availability_override, profile: profile, date: Date.add(Date.utc_today(), 2))
 
-      {count, _} = AvailabilityOverrideQueries.delete_overrides_by_profile(profile.id)
+      {count, _value} = AvailabilityOverrideQueries.delete_overrides_by_profile(profile.id)
       assert count == 2
       assert AvailabilityOverrideQueries.get_overrides_by_profile(profile.id) == []
     end
@@ -125,7 +125,7 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityOverrideQueriesTest do
       insert(:availability_override, profile: profile, date: Date.add(today, -2))
       insert(:availability_override, profile: profile, date: Date.add(today, 2))
 
-      {count, _} = AvailabilityOverrideQueries.delete_overrides_before_date(profile.id, today)
+      {count, _value} = AvailabilityOverrideQueries.delete_overrides_before_date(profile.id, today)
       assert count == 2
       assert length(AvailabilityOverrideQueries.get_overrides_by_profile(profile.id)) == 1
     end
@@ -145,7 +145,7 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityOverrideQueriesTest do
       }
 
       result = AvailabilityOverrideQueries.create_override(conflicting_override)
-      assert match?({:error, _}, result)
+      assert match?({:error, _reason}, result)
     end
   end
 

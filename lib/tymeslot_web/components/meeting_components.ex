@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Components.MeetingComponents do
     grid_class =
       case assigns.variant do
         :expanded -> "grid grid-cols-2 md:grid-cols-4 gap-2 text-xs"
-        _ -> "grid grid-cols-2 gap-2 text-xs"
+        _other -> "grid grid-cols-2 gap-2 text-xs"
       end
 
     assigns =
@@ -551,7 +551,7 @@ defmodule TymeslotWeb.Components.MeetingComponents do
         {:ok, dt} = DateTime.new(Date.utc_today(), time)
         dt
 
-      {:error, _} ->
+      {:error, _reason} ->
         # Fallback to current time if parsing fails
         DateTime.utc_now()
     end
@@ -574,7 +574,7 @@ defmodule TymeslotWeb.Components.MeetingComponents do
       {:ok, shifted} ->
         Calendar.strftime(shifted, "%H:%M") <> " " <> shifted.zone_abbr
 
-      _ ->
+      _other ->
         Calendar.strftime(datetime, "%H:%M") <> " UTC"
     end
   end
@@ -605,7 +605,7 @@ defmodule TymeslotWeb.Components.MeetingComponents do
           d when d in ["30min", "30-minutes"] ->
             "background: linear-gradient(135deg, #6a1b9a 0%, #4a148c 100%); box-shadow: 0 10px 30px rgba(106,27,154,0.4);"
 
-          _ ->
+          _other ->
             "background: linear-gradient(135deg, #4a1d6d 0%, #2d1b69 100%); box-shadow: 0 10px 30px rgba(74,29,109,0.4);"
         end
       else

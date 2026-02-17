@@ -13,7 +13,7 @@ defmodule Tymeslot.Security.AuthValidation do
   @spec validate_login_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_login_input(%{"email" => email, "password" => password} = params) do
     with {:ok, sanitized_email} <- validate_and_sanitize_email(email),
-         {:ok, _} <- validate_password_presence(password) do
+         {:ok, _result} <- validate_password_presence(password) do
       {:ok, %{params | "email" => sanitized_email}}
     else
       {:error, field, message} ->
@@ -29,7 +29,7 @@ defmodule Tymeslot.Security.AuthValidation do
   @spec validate_signup_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_signup_input(params) when is_map(params) do
     with {:ok, sanitized_email} <- validate_and_sanitize_email(params["email"]),
-         {:ok, _} <- validate_password_if_provided(params["password"]),
+         {:ok, _result} <- validate_password_if_provided(params["password"]),
          {:ok, sanitized_full_name} <- validate_and_sanitize_full_name(params["full_name"]),
          :ok <-
            if(Application.get_env(:tymeslot, :enforce_legal_agreements, false),
@@ -56,7 +56,7 @@ defmodule Tymeslot.Security.AuthValidation do
 
   defp validate_terms_accepted_to_ok(value) do
     case validate_terms_accepted(value) do
-      {:ok, _} -> :ok
+      {:ok, _result} -> :ok
       error -> error
     end
   end
@@ -78,8 +78,8 @@ defmodule Tymeslot.Security.AuthValidation do
   def validate_password_reset_input(
         %{"password" => password, "password_confirmation" => confirmation} = params
       ) do
-    with {:ok, _} <- validate_password(password),
-         {:ok, _} <- validate_password_confirmation(password, confirmation) do
+    with {:ok, _result} <- validate_password(password),
+         {:ok, _result} <- validate_password_confirmation(password, confirmation) do
       {:ok, params}
     else
       {:error, field, message} ->

@@ -49,7 +49,7 @@ defmodule Tymeslot.Workers.IntegrationHealthWorkerTest do
     job = %Oban.Job{args: %{"type" => "calendar", "integration_id" => integration.id}, id: 1}
 
     assert :ok = IntegrationHealthWorker.perform(job)
-    _ = :sys.get_state(HealthCheck, 5000)
+    _state = :sys.get_state(HealthCheck, 5000)
 
     status = HealthCheck.get_health_status(:calendar, integration.id)
     assert status.status == :healthy

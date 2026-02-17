@@ -92,7 +92,7 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
       def validate_provider_config(provider_type, config) do
         case get_provider(provider_type) do
           {:ok, module} -> module.validate_config(config)
-          {:error, _} = error -> error
+          {:error, _reason} = error -> error
         end
       end
 
@@ -153,7 +153,7 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
           :capabilities ->
             if function_exported?(module, :capabilities, 0), do: module.capabilities(), else: []
 
-          _ ->
+          _other ->
             if function_exported?(module, field, 0) do
               apply(module, field, [])
             else
@@ -161,7 +161,7 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
             end
         end
       rescue
-        _ -> nil
+        _other -> nil
       end
 
       # Allow specific registries to override behavior if needed
@@ -196,7 +196,7 @@ defmodule Tymeslot.Integrations.Common.ProviderRegistry do
         provider_type = module.provider_type()
         Map.put(acc, provider_type, module)
       rescue
-        _ -> acc
+        _other -> acc
       end
     end)
   end

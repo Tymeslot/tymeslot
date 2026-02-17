@@ -133,16 +133,16 @@ defmodule Tymeslot.ProfilesContextTest do
       # but that Profiles.update_username calls it.
       # In a real scenario, we might mock RateLimiter, but for now we just verify it works.
       new_username = "user#{System.unique_integer([:positive])}"
-      assert {:ok, _} = Profiles.update_username(profile, new_username, user.id)
+      assert {:ok, _result} = Profiles.update_username(profile, new_username, user.id)
     end
 
     test "validate_username_format rejects invalid formats" do
       # too short
-      assert {:error, _} = Profiles.validate_username_format("ab")
+      assert {:error, _reason} = Profiles.validate_username_format("ab")
       # reserved
-      assert {:error, _} = Profiles.validate_username_format("admin")
+      assert {:error, _reason} = Profiles.validate_username_format("admin")
       # spaces/caps
-      assert {:error, _} = Profiles.validate_username_format("Invalid User")
+      assert {:error, _reason} = Profiles.validate_username_format("Invalid User")
       assert Profiles.validate_username_format("valid_user-123") == :ok
     end
   end

@@ -108,7 +108,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
 
     test "produces varying jitter values across multiple calls" do
       results =
-        for _ <- 1..10 do
+        for _iteration <- 1..10 do
           now = DateTime.utc_now()
           scheduled = Scheduler.scheduled_at_with_jitter()
           DateTime.diff(scheduled, now, :millisecond)

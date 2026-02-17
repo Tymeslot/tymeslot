@@ -114,14 +114,14 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     if uri.host == "meet.google.com" and uri.path do
       case String.split(uri.path, "/") do
-        [_, meeting_code] when meeting_code != "" -> meeting_code
-        _ -> nil
+        [_first, meeting_code] when meeting_code != "" -> meeting_code
+        _other -> nil
       end
     else
       nil
     end
   rescue
-    _ -> nil
+    _other -> nil
   end
 
   def extract_room_id(_url), do: nil
@@ -135,7 +135,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       String.length(uri.path) > 1 and
       String.match?(uri.path, ~r|^/[a-z]{3}-[a-z]{4}-[a-z]{3}$|)
   rescue
-    _ -> false
+    _other -> false
   end
 
   def valid_meeting_url?(_url), do: false
@@ -175,7 +175,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
       :cancelled ->
         :ok
 
-      _ ->
+      _other ->
         Logger.warning("Unknown Google Meet event", event: event)
         :ok
     end
@@ -221,7 +221,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     expires_at =
       case config do
         %{token_expires_at: v} -> v
-        _ -> nil
+        _other -> nil
       end
 
     if expiring_later_than_buffer?(expires_at) do
@@ -267,7 +267,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
                 do_actual_refresh(config)
               end
 
-            _ ->
+            _other ->
               do_actual_refresh(config)
           end
         end,
@@ -280,7 +280,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     refresh_token =
       case config do
         %{refresh_token: v} -> v
-        _ -> nil
+        _other -> nil
       end
 
     current_scope = Map.get(config, :oauth_scope)
@@ -321,7 +321,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
     with id when is_integer(id) <- integration_id,
          uid when is_integer(uid) <- user_id,
          {:ok, integration} <- VideoIntegrationQueries.get_for_user(id, uid),
-         {:ok, _} <- VideoIntegrationQueries.update(integration, attrs) do
+         {:ok, _result} <- VideoIntegrationQueries.update(integration, attrs) do
       :ok
     else
       nil ->
@@ -440,7 +440,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
           {:error, "No meeting URL returned from Google"}
         end
 
-      _ ->
+      _other ->
         {:error, "Google Calendar did not return conference data"}
     end
   end

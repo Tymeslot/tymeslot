@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
         "calendar"
 
       # default to calendar
-      _ ->
+      _other ->
         "calendar"
     end
   end

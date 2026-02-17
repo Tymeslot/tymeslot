@@ -45,10 +45,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     socket =
       case {assigns[:event], assigns[:params]} do
         {"add_integration", %{"integration" => params}} ->
-          {_, socket} = handle_event("add_integration", %{"integration" => params}, socket)
+          {_noreply, socket} = handle_event("add_integration", %{"integration" => params}, socket)
           socket
 
-        _ ->
+        _other_event ->
           socket
       end
 
@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         "url" -> :url
         "username" -> :username
         "password" -> :password
-        _ -> nil
+        _other -> nil
       end
 
     if field_atom do
@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         case CalendarInputProcessor.validate_single_field(field_atom, value,
                metadata: socket.assigns.security_metadata
              ) do
-          {:ok, _} ->
+          {:ok, _result} ->
             {:noreply,
              assign(
                socket,
@@ -164,7 +164,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
           Map.merge(params, selection)
 
-        _ ->
+        _other ->
           params
       end
 
@@ -192,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do
     with {:ok, int_id} <- parse_int(id),
-         {:ok, _} <- Calendar.toggle_integration(int_id, socket.assigns.current_user.id) do
+         {:ok, _result} <- Calendar.toggle_integration(int_id, socket.assigns.current_user.id) do
       Flash.info("Calendar status updated")
       send(self(), {:integration_updated, :calendar})
       {:noreply, load_integrations(socket)}
@@ -269,10 +269,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     with {:ok, int_id} <- parse_int(id),
          %{} = integration <-
            Enum.find(socket.assigns.integrations, &(&1.id == int_id)),
-         {:ok, _} <- Calendar.toggle_calendar_selection(integration, cal_id) do
+         {:ok, _result} <- Calendar.toggle_calendar_selection(integration, cal_id) do
       {:noreply, load_integrations(socket)}
     else
-      _ ->
+      _other ->
         Flash.error("Failed to update selection")
         {:noreply, socket}
     end
@@ -319,7 +319,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         Flash.error(msg)
         {:noreply, socket}
 
-      _ ->
+      _other ->
         Flash.error("Invalid request")
         {:noreply, socket}
     end
@@ -331,7 +331,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   def handle_async(:refresh_calendars, {:ok, results}, socket) do
     {successes, failures} =
       Enum.reduce(results, {0, 0}, fn
-        {:ok, {:ok, _}}, {s, f} -> {s + 1, f}
+        {:ok, {:ok, _result}}, {s, f} -> {s + 1, f}
         _other, {s, f} -> {s, f + 1}
       end)
 
@@ -349,7 +349,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     {:noreply, socket |> assign(:is_refreshing, false) |> load_integrations()}
   end
 
-  def handle_async(:refresh_calendars, {:error, _}, socket) do
+  def handle_async(:refresh_calendars, {:error, _reason}, socket) do
     Flash.error("Refresh process failed unexpectedly.")
     {:noreply, assign(socket, :is_refreshing, false)}
   end
@@ -388,18 +388,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   defp normalize_provider("radicale"), do: :radicale
   defp normalize_provider("caldav"), do: :caldav
   defp normalize_provider("zimbra"), do: :zimbra
-  defp normalize_provider(_), do: :caldav
+  defp normalize_provider(_other_provider), do: :caldav
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}
 
   defp parse_int(id) when is_binary(id) do
     case Integer.parse(id) do
       {i, ""} -> {:ok, i}
-      _ -> :error
+      _other -> :error
     end
   end
 
-  defp parse_int(_), do: :error
+  defp parse_int(_arg), do: :error
 
   @impl Phoenix.LiveComponent
   def render(assigns) do

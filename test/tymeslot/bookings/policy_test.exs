@@ -259,7 +259,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
         user_timezone: "UTC"
       }
 
-      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ ->
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _client ->
         {:ok, %{integration_id: 1, calendar_path: "primary"}}
       end)
 
@@ -289,7 +289,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
         user_timezone: "UTC"
       }
 
-      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _ ->
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _client ->
         {:ok, %{integration_id: 1, calendar_path: "primary"}}
       end)
 

@@ -120,7 +120,7 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
 
     case :ets.lookup(:webhook_idempotency_cache, event_id) do
       [{^event_id, value, expiry}] when expiry > now -> {:ok, value}
-      _ -> :miss
+      _miss -> :miss
     end
   end
 
@@ -141,7 +141,7 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
   defp check_database(event_id) do
     case Repo.get_by(WebhookEvent, stripe_event_id: event_id) do
       nil -> {:ok, :not_processed}
-      _event -> {:ok, :already_processed}
+      _existing -> {:ok, :already_processed}
     end
   end
 

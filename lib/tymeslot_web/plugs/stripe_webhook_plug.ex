@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlug do
           SignatureVerifier.verify(raw_body, signature)
         end
 
-      {:error, _} = error ->
+      {:error, _dev_error} = error ->
         error
     end
   end
@@ -147,7 +147,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlug do
       raw_body when is_binary(raw_body) ->
         {:ok, raw_body, conn}
 
-      _ ->
+      _invalid_body ->
         Logger.error("Invalid raw_body in assigns: #{inspect(conn.assigns[:raw_body])}")
         {:ok, "", conn}
     end
@@ -157,11 +157,11 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlug do
           {:ok, String.t()} | {:error, WebhookError.SignatureError.t()}
   defp get_stripe_signature(conn) do
     case Conn.get_req_header(conn, "stripe-signature") do
-      [signature | _] ->
+      [signature | _rest] ->
         Logger.debug("Stripe signature found")
         {:ok, signature}
 
-      _ ->
+      _no_signature ->
         Logger.error("Missing Stripe signature header")
 
         {:error,

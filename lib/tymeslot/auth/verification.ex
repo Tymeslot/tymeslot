@@ -179,7 +179,7 @@ defmodule Tymeslot.Auth.Verification do
          :gt <- DateTime.compare(expiry, DateTime.utc_now()) do
       :ok
     else
-      _ -> {:error, :token_expired}
+      _other -> {:error, :token_expired}
     end
   end
 
@@ -219,7 +219,7 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   defp do_verify_user_email(socket_or_conn, user) do
-    {token, expiry, _} = Token.generate_email_verification_token(user.id)
+    {token, expiry, _hash} = Token.generate_email_verification_token(user.id)
     verification_url = build_verification_url(socket_or_conn, token)
     ip_address = extract_ip_address(socket_or_conn)
 
@@ -229,7 +229,7 @@ defmodule Tymeslot.Auth.Verification do
           {:ok, _pid} ->
             {:ok, updated_user}
 
-          {:error, _} ->
+          {:error, _reason} ->
             Logger.error("Failed to send verification email to user_id=#{user.id}")
             {:error, :email_send_failed}
         end
@@ -238,7 +238,7 @@ defmodule Tymeslot.Auth.Verification do
         Logger.error("Failed to store verification token for user_id=#{user.id}")
         {:error, :token_storage_failed}
 
-      {:error, _} ->
+      {:error, _reason} ->
         Logger.error("Unknown error during email verification for user_id=#{user.id}")
         {:error, :unknown}
     end
@@ -277,7 +277,7 @@ defmodule Tymeslot.Auth.Verification do
     # ClientIP.get/1 always returns a binary (string)
     ClientIP.get(socket_or_conn)
   rescue
-    _ ->
+    _other ->
       # Be defensive: do not leak details, and keep return type consistent.
       "unknown"
   end

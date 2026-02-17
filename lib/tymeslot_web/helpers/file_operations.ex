@@ -123,7 +123,7 @@ defmodule TymeslotWeb.Helpers.FileOperations do
         ^full_path ->
           {:error, :path_traversal_attempt}
 
-        _ ->
+        _normalized ->
           {:ok, full_path}
       end
     end

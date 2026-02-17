@@ -127,7 +127,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
               etag: clean_etag(event.etag)
             })
 
-          {:error, _} ->
+          {:error, _reason} ->
             nil
         end
       end)
@@ -172,7 +172,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
 
   defp parse_with_security(xml_string) do
     # Security options to prevent XXE attacks
-    _options = [
+    _security_options = [
       # Disable DTD processing
       dtd: :none,
       # Disable entity expansion
@@ -206,7 +206,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
 
   defp build_prop_element(other), do: "<d:#{other}/>"
 
-  defp determine_calendar_name(%{displayname: displayname, href: _href}) when displayname != "" do
+  defp determine_calendar_name(%{displayname: displayname, href: _calendar_href}) when displayname != "" do
     displayname
   end
 
@@ -238,7 +238,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   defp parse_ical_data(ical_string) when is_binary(ical_string) do
     # Use the comprehensive ICalParser instead of basic parsing
     case ICalParser.parse(ical_string) do
-      {:ok, [_ | _] = events} ->
+      {:ok, [_first | _rest] = events} ->
         # Return the first event (single iCal string should contain one event)
         {:ok, List.first(events)}
 
@@ -250,5 +250,5 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     end
   end
 
-  defp parse_ical_data(_), do: {:error, "Invalid iCal data"}
+  defp parse_ical_data(_invalid_data), do: {:error, "Invalid iCal data"}
 end

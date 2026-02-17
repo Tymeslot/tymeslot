@@ -130,7 +130,7 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
       when scheme in ["http", "https"] and is_binary(host) and host != "" ->
         :ok
 
-      _ ->
+      _invalid ->
         Mix.raise("Invalid MIROTALK_BASE_URL: #{base_url}")
     end
   end
@@ -234,17 +234,17 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
   defp decode_query(query) when is_binary(query) do
     URI.decode_query(query)
   rescue
-    _ -> %{}
+    _error -> %{}
   end
 
   defp header_value(headers, name) when is_map(headers) and is_binary(name) do
     case Map.get(headers, String.downcase(name)) do
-      [value | _] -> value
-      _ -> nil
+      [value | _rest] -> value
+      _no_match -> nil
     end
   end
 
-  defp header_value(_, _), do: nil
+  defp header_value(_headers, _name), do: nil
 
   defp extract_match_context(body, regex, radius) do
     case Regex.run(regex, body, return: :index) do
@@ -253,7 +253,7 @@ defmodule Mix.Tasks.MirotalkProdSmoke do
         end_idx = min(idx + len + radius, String.length(body))
         String.replace(String.slice(body, start_idx, end_idx - start_idx), ~r/\s+/, " ")
 
-      _ ->
+      _no_match ->
         nil
     end
   end

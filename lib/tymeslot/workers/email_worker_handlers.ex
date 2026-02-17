@@ -46,7 +46,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       "send_email_change_notification" ->
         handle_email_change_notification(args)
 
-      _ ->
+      _other ->
         {:discard, "Unknown action: #{action}"}
     end
   end
@@ -212,8 +212,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   end
 
   defp process_email_results(meeting, organizer_result, attendee_result, email_type) do
-    organizer_success = match?({:ok, _}, organizer_result)
-    attendee_success = match?({:ok, _}, attendee_result)
+    organizer_success = match?({:ok, _result}, organizer_result)
+    attendee_success = match?({:ok, _result}, attendee_result)
 
     error_result = check_email_errors(organizer_result, attendee_result)
 
@@ -254,7 +254,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
           {{:error, reason}, {:error, reason}} when is_binary(reason) ->
             {:error, reason}
 
-          _ ->
+          _other ->
             nil
         end
     end
@@ -262,11 +262,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
 
   defp update_email_sent_flags(meeting, :confirmation, organizer_success, attendee_success) do
     if organizer_success and not meeting.organizer_email_sent do
-      {:ok, _} = MeetingQueries.mark_email_sent(meeting, :organizer)
+      {:ok, _result} = MeetingQueries.mark_email_sent(meeting, :organizer)
     end
 
     if attendee_success and not meeting.attendee_email_sent do
-      {:ok, _} = MeetingQueries.mark_email_sent(meeting, :attendee)
+      {:ok, _result} = MeetingQueries.mark_email_sent(meeting, :attendee)
     end
 
     :ok
@@ -324,7 +324,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       case reminder do
         %{"value" => value, "unit" => unit} -> value == reminder_value and unit == reminder_unit
         %{value: value, unit: unit} -> value == reminder_value and unit == reminder_unit
-        _ -> false
+        _other -> false
       end
     end)
   end
@@ -333,7 +333,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     case UserQueries.get_user(user_id) do
       {:ok, user} ->
         case email_service_module().send_email_verification(user, verification_url) do
-          {:ok, _} ->
+          {:ok, _result} ->
             Logger.info("Queued email verification sent", user_id: user_id)
             :ok
 
@@ -356,7 +356,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     case UserQueries.get_user(user_id) do
       {:ok, user} ->
         case email_service_module().send_password_reset(user, reset_url) do
-          {:ok, _} ->
+          {:ok, _result} ->
             Logger.info("Queued password reset email sent", user_id: user_id)
             :ok
 
@@ -387,7 +387,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
                new_email,
                verification_url
              ) do
-          {:ok, _} ->
+          {:ok, _result} ->
             Logger.info("Queued email change verification sent",
               user_id: user_id,
               new_email: new_email
@@ -415,7 +415,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     case UserQueries.get_user(user_id) do
       {:ok, user} ->
         case email_service_module().send_email_change_notification(user, new_email) do
-          {:ok, _} ->
+          {:ok, _result} ->
             Logger.info("Queued email change notification sent",
               user_id: user_id,
               new_email: new_email
@@ -447,8 +447,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     with {:ok, user} <- UserQueries.get_user(user_id),
          {old_result, new_result} <-
            email_service_module().send_email_change_confirmations(user, old_email, new_email) do
-      organizer_success = match?({:ok, _}, old_result)
-      new_success = match?({:ok, _}, new_result)
+      organizer_success = match?({:ok, _result}, old_result)
+      new_success = match?({:ok, _result}, new_result)
 
       Logger.info("Email change confirmations sent",
         user_id: user_id,

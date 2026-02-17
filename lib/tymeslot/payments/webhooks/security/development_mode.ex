@@ -31,7 +31,7 @@ defmodule Tymeslot.Payments.Webhooks.Security.DevelopmentMode do
         case System.get_env("MIX_ENV") do
           "test" -> :test
           "dev" -> :dev
-          _ -> :prod
+          _other -> :prod
         end
 
     # Only allow in test/dev environments AND when explicitly configured

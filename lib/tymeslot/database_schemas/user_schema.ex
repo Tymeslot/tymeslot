@@ -240,7 +240,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
       %Ecto.Changeset{valid?: true, changes: %{password: password}} ->
         put_change(changeset, :password_hash, Password.hash_password(password))
 
-      _ ->
+      _other ->
         changeset
     end
   end

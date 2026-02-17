@@ -201,7 +201,7 @@ defmodule Tymeslot.Integrations.Common.ConfigManagerTest do
 
       assert :ok = ConfigManager.validate_encryption(%{api_secret: "TEST_ENC:data"}, schema)
 
-      assert {:error, _} =
+      assert {:error, _error_message} =
                ConfigManager.validate_encryption(%{api_secret: "TYS.ENC:data"}, schema)
     end
 

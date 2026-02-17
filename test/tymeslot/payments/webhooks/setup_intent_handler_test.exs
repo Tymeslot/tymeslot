@@ -20,8 +20,8 @@ defmodule Tymeslot.Payments.Webhooks.SetupIntentHandlerTest do
     end
 
     test "returns error for missing or empty id" do
-      assert {:error, :missing_field, _} = SetupIntentHandler.validate(%{})
-      assert {:error, :missing_field, _} = SetupIntentHandler.validate(%{"id" => ""})
+      assert {:error, :missing_field, _reason} = SetupIntentHandler.validate(%{})
+      assert {:error, :missing_field, _reason} = SetupIntentHandler.validate(%{"id" => ""})
     end
   end
 

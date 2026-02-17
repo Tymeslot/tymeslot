@@ -71,7 +71,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuth do
   def format_oauth_error(error, provider) do
     case error do
       %RuntimeError{message: message} -> format_runtime_error_message(message, provider)
-      _ -> "Failed to setup #{provider} OAuth: #{Exception.message(error)}"
+      _other -> "Failed to setup #{provider} OAuth: #{Exception.message(error)}"
     end
   end
 

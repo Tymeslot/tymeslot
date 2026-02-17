@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
   defp format_advance_booking_days(365), do: gettext("1 year in advance")
   defp format_advance_booking_days(days) when is_integer(days), do: format_years_advance(days)
-  defp format_advance_booking_days(_), do: gettext("90 days in advance")
+  defp format_advance_booking_days(_arg), do: gettext("90 days in advance")
 
   # Helper functions for formatting
   defp format_weeks_advance(days), do: gettext("%{weeks} weeks in advance", weeks: div(days, 7))
@@ -317,7 +317,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
           time: String.slice(Time.to_string(DateTime.to_time(datetime)), 0, 5)
         )
 
-      _ ->
+      _other ->
         gettext("local time")
     end
   end
@@ -331,7 +331,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
       {:ok, datetime} ->
         String.slice(Time.to_string(DateTime.to_time(datetime)), 0, 5)
 
-      _ ->
+      _other ->
         "--:--"
     end
   end

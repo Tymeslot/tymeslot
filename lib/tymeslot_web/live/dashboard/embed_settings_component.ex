@@ -234,7 +234,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
             {:noreply, socket}
         end
 
-      {:deny, _limit} ->
+      {:deny, _retry_after} ->
         Logger.warning("Embed domain update rate limit exceeded", user_id: user_id)
 
         Flash.error("Too many updates. Please wait a moment before trying again.")

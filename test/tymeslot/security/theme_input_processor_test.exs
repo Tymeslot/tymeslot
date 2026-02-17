@@ -7,7 +7,7 @@ defmodule Tymeslot.Security.ThemeInputProcessorTest do
     test "accepts valid theme selection" do
       # Get a valid theme ID from the registry
       case Theme.theme_options() do
-        [{_name, id} | _] ->
+        [{_name, id} | _rest] ->
           assert {:ok, %{"theme" => ^id}} =
                    ThemeInputProcessor.validate_theme_selection(%{"theme" => id})
 

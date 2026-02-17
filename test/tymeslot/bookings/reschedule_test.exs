@@ -81,7 +81,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
       %{meeting: meeting, new_params: new_params} = setup_reschedule_test()
 
       # Update meeting to cancelled status
-      {:ok, _} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
+      {:ok, _meeting} = MeetingQueries.update_meeting(meeting, %{status: "cancelled"})
 
       assert {:error, "Cannot reschedule a cancelled meeting"} =
                Reschedule.execute(meeting.uid, new_params, %{})

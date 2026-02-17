@@ -15,13 +15,13 @@ defmodule TymeslotWeb.OAuthControllerTest do
     try do
       :meck.unload(OAuthHelper)
     rescue
-      _ -> :ok
+      _other -> :ok
     end
 
     try do
       :meck.unload(RateLimiter)
     rescue
-      _ -> :ok
+      _other -> :ok
     end
 
     :meck.new(OAuthHelper, [:passthrough])
@@ -37,13 +37,13 @@ defmodule TymeslotWeb.OAuthControllerTest do
       try do
         :meck.unload(OAuthHelper)
       rescue
-        _ -> :ok
+        _other -> :ok
       end
 
       try do
         :meck.unload(RateLimiter)
       rescue
-        _ -> :ok
+        _other -> :ok
       end
 
       if is_nil(original_social_auth) do

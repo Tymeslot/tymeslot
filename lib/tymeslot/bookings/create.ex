@@ -121,7 +121,7 @@ defmodule Tymeslot.Bookings.Create do
 
   defp normalize_date_input(%Date{} = date), do: {:ok, Date.to_iso8601(date)}
   defp normalize_date_input(date) when is_binary(date), do: {:ok, date}
-  defp normalize_date_input(_), do: {:error, :invalid_date_input}
+  defp normalize_date_input(_arg), do: {:error, :invalid_date_input}
 
   @spec validate_booking(booking_data(), keyword()) ::
           {:ok, :validated} | {:error, error_reason()}
@@ -164,7 +164,7 @@ defmodule Tymeslot.Bookings.Create do
     case MeetingTypes.get_meeting_type(type_id, user_id) do
       nil -> :ok
       %{is_active: true} -> :ok
-      _ -> {:error, :meeting_type_inactive}
+      _other -> {:error, :meeting_type_inactive}
     end
   end
 
@@ -257,7 +257,7 @@ defmodule Tymeslot.Bookings.Create do
   defp run_meeting_transaction(meeting_attrs, opts) do
     Repo.transaction(fn ->
       with {:ok, meeting} <- create_meeting(meeting_attrs),
-           {:ok, _} <- schedule_calendar_job(meeting) do
+           {:ok, _result} <- schedule_calendar_job(meeting) do
         # Post-creation side effects (emails/video) are now part of the transaction
         # This ensures that if meeting creation fails due to a race condition (unique index),
         # no side-effect jobs (Oban) are committed.
@@ -307,7 +307,7 @@ defmodule Tymeslot.Bookings.Create do
       reason when is_binary(reason) ->
         reason
 
-      _ ->
+      _other ->
         "Failed to save meeting to database"
     end
   end
@@ -331,7 +331,7 @@ defmodule Tymeslot.Bookings.Create do
         {:ok, provider} when provider in [:mirotalk, :google_meet, :teams, :custom] ->
           schedule_video_room_with_emails(meeting)
 
-        _ ->
+        _other ->
           # No supported auto-create provider (none/unknown/etc.)
           schedule_email_notifications(meeting)
       end
@@ -354,7 +354,7 @@ defmodule Tymeslot.Bookings.Create do
     alias Tymeslot.Notifications.Events
 
     case Events.meeting_created(meeting) do
-      {:ok, _} -> :ok
+      {:ok, _result} -> :ok
       {:error, _reason} -> :ok
     end
   end

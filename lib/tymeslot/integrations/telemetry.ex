@@ -156,7 +156,7 @@ defmodule Tymeslot.Integrations.Telemetry do
       [:tymeslot, :integration, :sync, :conflict] ->
         :warning
 
-      _ ->
+      _other_event ->
         :debug
     end
   end
@@ -278,7 +278,7 @@ defmodule Tymeslot.Integrations.Telemetry do
 
   defp format_metadata(metadata) do
     Enum.into(
-      Enum.filter(Map.drop(metadata, [:correlation_id, :operation, :provider]), fn {_k, v} ->
+      Enum.filter(Map.drop(metadata, [:correlation_id, :operation, :provider]), fn {_key, v} ->
         v != nil
       end),
       %{}

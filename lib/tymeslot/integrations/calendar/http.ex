@@ -63,7 +63,7 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
       "head" -> {:ok, :head}
       "options" -> {:ok, :options}
       "report" -> {:ok, :report}
-      _ -> {:error, %RuntimeError{message: "Invalid method: #{method}"}}
+      _other -> {:error, %RuntimeError{message: "Invalid method: #{method}"}}
     end
   end
 
@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.HTTP do
     auth_header = {"Authorization", "Bearer #{token}"}
 
     headers
-    |> Enum.reject(fn {k, _} -> String.downcase(k) == "authorization" end)
+    |> Enum.reject(fn {k, _value} -> String.downcase(k) == "authorization" end)
     |> List.insert_at(0, auth_header)
   end
 

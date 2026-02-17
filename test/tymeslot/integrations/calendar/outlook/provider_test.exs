@@ -437,7 +437,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
           access_token: "test_token"
         )
 
-      expect(OutlookCalendarAPIMock, :list_primary_events, fn _, _, _ -> {:ok, []} end)
+      expect(OutlookCalendarAPIMock, :list_primary_events, fn _integration, _start_date, _end_date -> {:ok, []} end)
 
       assert {:ok, "Outlook Calendar connection successful"} =
                Provider.test_connection(integration)
@@ -453,7 +453,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
           access_token: "test_token"
         )
 
-      expect(OutlookCalendarAPIMock, :list_primary_events, fn _, _, _ ->
+      expect(OutlookCalendarAPIMock, :list_primary_events, fn _integration, _start_date, _end_date ->
         {:error, :unauthorized, "token expired"}
       end)
 

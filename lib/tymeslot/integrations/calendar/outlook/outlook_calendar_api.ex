@@ -327,13 +327,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     headers = Map.get(resp, :headers, %{})
 
     case Map.get(headers, "retry-after") do
-      [value | _] ->
+      [value | _rest] ->
         case Integer.parse(value) do
-          {n, _} -> n
-          _ -> nil
+          {n, _remainder} -> n
+          _parse_error -> nil
         end
 
-      _ ->
+      _no_header ->
         nil
     end
   end
@@ -342,9 +342,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     {:error, :rate_limited, "retry_after:" <> Integer.to_string(retry_after)}
   end
 
-  defp handle_403_reason(:rate_limited, msg, _), do: {:error, :rate_limited, msg}
-  defp handle_403_reason(:unauthorized, msg, _), do: {:error, :unauthorized, msg}
-  defp handle_403_reason(_, msg, _), do: {:error, :network_error, msg}
+  defp handle_403_reason(:rate_limited, msg, _retry_after), do: {:error, :rate_limited, msg}
+  defp handle_403_reason(:unauthorized, msg, _retry_after), do: {:error, :unauthorized, msg}
+  defp handle_403_reason(_other_reason, msg, _retry_after), do: {:error, :network_error, msg}
 
   defp make_request_with_body(method, path, token, body) do
     HTTP.request_with_body(method, @base_url, path, token, body,

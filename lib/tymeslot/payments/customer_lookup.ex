@@ -38,7 +38,7 @@ defmodule Tymeslot.Payments.CustomerLookup do
   def parse_user_id(id) when is_binary(id) do
     case Integer.parse(id) do
       {int_id, ""} -> int_id
-      _ -> nil
+      _other -> nil
     end
   end
 

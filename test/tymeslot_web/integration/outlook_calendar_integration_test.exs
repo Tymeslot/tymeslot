@@ -49,9 +49,9 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
           # Success only if real tokens are configured
           assert System.get_env("TEST_OUTLOOK_REFRESH_TOKEN") != nil
 
-        {:error, reason, _message} ->
+        {:error, error_reason, _error_message} ->
           # Expected when tokens are invalid
-          assert reason in [:authentication_error, :invalid_grant, :unauthorized]
+          assert error_reason in [:authentication_error, :invalid_grant, :unauthorized]
       end
     end
   end
@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
             assert Map.has_key?(event, :end)
           end)
 
-        {:error, _reason, _message} ->
+        {:error, _error_reason, _error_message} ->
           # Expected without real tokens
           assert true
       end
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
       invalid_end = DateTime.add(DateTime.utc_now(), -7, :day)
 
       result = CalendarAPI.list_primary_events(integration, invalid_start, invalid_end)
-      assert {:error, _, _} = result
+      assert {:error, _error_reason, _error_message} = result
     end
   end
 
@@ -153,7 +153,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
 
       # Other user cannot toggle
       result = Calendar.toggle_integration(integration.id, other_user.id)
-      assert {:error, _} = result
+      assert {:error, _error_reason} = result
     end
   end
 
@@ -175,7 +175,7 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
           assert System.get_env("TEST_OUTLOOK_ACCESS_TOKEN") != nil
           assert is_list(events)
 
-        {:error, _reason, _message} ->
+        {:error, _error_reason, _error_message} ->
           # Expected failure without real tokens
           assert true
       end

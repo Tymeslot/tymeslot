@@ -46,7 +46,7 @@ defmodule Tymeslot.Auth.PasswordReset do
       {:oauth_user_error, message} ->
         {:error, :oauth_user, message}
 
-      _ ->
+      _other ->
         # Always return the same message for non-OAuth cases to prevent user enumeration
         {:ok, :reset_initiated,
          "If an account exists with this email address, password reset instructions have been sent."}
@@ -63,9 +63,9 @@ defmodule Tymeslot.Auth.PasswordReset do
 
       {:ok, user} ->
         case handle_user_found(user, user_queries) do
-          {:ok, _, _} -> :email_sent
+          {:ok, _user, _token} -> :email_sent
           {:error, :oauth_user, message} -> {:oauth_user_error, message}
-          _ -> :error
+          _other -> :error
         end
     end
   end
@@ -99,7 +99,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   defp safe_client_ip(socket_or_conn) do
     ClientIP.get(socket_or_conn)
   rescue
-    _ -> nil
+    _error -> nil
   end
 
   defp process_regular_user_reset(user, user_queries) do
@@ -113,7 +113,7 @@ defmodule Tymeslot.Auth.PasswordReset do
 
         {:ok, :email_sent, "Password reset instructions have been sent to your email."}
 
-      {:error, _reason} ->
+      {:error, _error_reason} ->
         AccountLogging.log_operation_failure(
           "password_reset",
           user.email,
@@ -127,7 +127,7 @@ defmodule Tymeslot.Auth.PasswordReset do
 
   defp send_reset_email_and_log(user, reset_url) do
     case send_password_reset_email(user, reset_url) do
-      {:ok, _} ->
+      {:ok, _email_result} ->
         Logger.info("Password reset email sent", %{
           user_id: user.id,
           email: user.email,
@@ -176,7 +176,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   @spec verify_token(String.t(), keyword()) ::
           {:ok, map(), String.t()}
           | {:error, atom(), String.t()}
-  def verify_token(token, _opts \\ []) do
+  def verify_token(token, _unused_opts \\ []) do
     case Config.user_queries_module().get_user_by_reset_token(token) do
       {:error, :not_found} ->
         Logger.warning("Invalid password reset token", %{
@@ -192,7 +192,7 @@ defmodule Tymeslot.Auth.PasswordReset do
         expiry = DateTime.add(user.reset_sent_at, 2 * 3600, :second)
 
         case Token.verify_token(token, expiry) do
-          {:ok, _} ->
+          {:ok, _verified_token} ->
             {:ok, Map.from_struct(user), "Token verified successfully."}
 
           {:error, :token_expired} ->
@@ -225,8 +225,8 @@ defmodule Tymeslot.Auth.PasswordReset do
           {:ok, map(), String.t()}
           | {:error, atom(), String.t()}
   def reset_password(token, new_password, password_confirmation, opts \\ []) do
-    with {:ok, user, _} <- verify_token(token, opts),
-         {:ok, _} <- validate_password_input(new_password, password_confirmation, user),
+    with {:ok, user, _token} <- verify_token(token, opts),
+         {:ok, _result} <- validate_password_input(new_password, password_confirmation, user),
          {:ok, updated_user} <- perform_password_update(user, new_password),
          {:ok, final_user} <- perform_token_clear(updated_user),
          :ok <- invalidate_all_sessions(final_user) do
@@ -241,7 +241,7 @@ defmodule Tymeslot.Auth.PasswordReset do
            %{"password" => new_password, "password_confirmation" => password_confirmation},
            metadata: %{}
          ) do
-      {:ok, _sanitized} ->
+      {:ok, _sanitized_data} ->
         {:ok, :validated}
 
       {:error, errors} when is_map(errors) ->
@@ -295,7 +295,7 @@ defmodule Tymeslot.Auth.PasswordReset do
 
   # Private functions
 
-  defp store_reset_token(user, token, _expiry, user_queries) do
+  defp store_reset_token(user, token, _unused_expiry, user_queries) do
     user_queries.set_reset_token(user, token)
   end
 
@@ -308,10 +308,10 @@ defmodule Tymeslot.Auth.PasswordReset do
         %{email: email} when is_binary(email) ->
           case Config.user_queries_module().get_user_by_email(email) do
             {:ok, user} -> user
-            _ -> nil
+            _error -> nil
           end
 
-        _ ->
+        _invalid ->
           nil
       end
 
@@ -323,7 +323,7 @@ defmodule Tymeslot.Auth.PasswordReset do
           password_confirmation: password_confirmation
         })
 
-      _ ->
+      _invalid ->
         {:error, :invalid_user}
     end
   end
@@ -357,7 +357,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   # Invalidate all user sessions after password reset for security
   defp invalidate_all_sessions(user) do
     case UserSessionQueries.delete_user_sessions(user.id) do
-      {_count, _} ->
+      {_deleted_count, _deleted_sessions} ->
         Logger.info("Invalidated all sessions after password reset", %{
           user_id: user.id,
           email: user.email,
