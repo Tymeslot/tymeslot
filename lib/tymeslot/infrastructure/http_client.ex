@@ -135,16 +135,29 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     proxy_options = get_proxy_options(url)
 
     # Build base request options
-    base_options = [
-      method: method,
-      url: url,
-      headers: headers,
-      finch: Tymeslot.Finch,
-      receive_timeout: timeout,
-      # Disable automatic JSON decoding to match HTTPoison behavior
-      # Callers handle JSON parsing explicitly with Jason.decode!
-      decode_body: false
-    ]
+    # NOTE: Cannot set both :finch and :connect_options (Req limitation)
+    # When proxy is configured, connect_options will be set, so don't set finch
+    base_options =
+      if proxy_options == [] do
+        [
+          method: method,
+          url: url,
+          headers: headers,
+          finch: Tymeslot.Finch,
+          receive_timeout: timeout,
+          # Disable automatic JSON decoding to match HTTPoison behavior
+          # Callers handle JSON parsing explicitly with Jason.decode!
+          decode_body: false
+        ]
+      else
+        [
+          method: method,
+          url: url,
+          headers: headers,
+          receive_timeout: timeout,
+          decode_body: false
+        ]
+      end
 
     # Add body if present (and not empty)
     options_with_body =
@@ -181,6 +194,11 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
   defp get_proxy_options(url) do
     # Get proxy config for this URL (considers NO_PROXY and URL scheme)
     proxy_config = ProxyConfig.get_proxy_for_url(url)
+
+    # Log proxy usage for debugging
+    if proxy_config do
+      Logger.debug("Using proxy #{proxy_config.host}:#{proxy_config.port} for #{url}")
+    end
 
     # Build Req-compatible proxy options
     ProxyConfig.build_req_proxy_options(proxy_config)

@@ -178,6 +178,37 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
 
   @doc """
   Builds Req-compatible proxy options from proxy config.
+
+  ## Critical Structure for Mint.TunnelProxy
+
+  For proxy authentication to work with HTTPS requests (CONNECT tunnel),
+  the `proxy_headers` option MUST be at the `connect_options` level,
+  NOT inside the proxy tuple.
+
+  ### Correct (works):
+  ```elixir
+  [
+    connect_options: [
+      proxy: {:http, host, port, []},
+      proxy_headers: [{"Proxy-Authorization", "Basic ..."}]
+    ]
+  ]
+  ```
+
+  ### Incorrect (407 authentication error):
+  ```elixir
+  [
+    connect_options: [
+      proxy: {:http, host, port, [proxy_headers: [...]]}
+    ]
+  ]
+  ```
+
+  This is because Mint.TunnelProxy reads `proxy_headers` from the
+  `connect_options` keyword list during the CONNECT handshake, not from
+  the proxy tuple options.
+
+  See: https://hexdocs.pm/mint/Mint.TunnelProxy.html
   """
   @spec build_req_proxy_options(proxy_config() | nil) :: keyword()
   def build_req_proxy_options(nil), do: []
@@ -185,17 +216,23 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
   def build_req_proxy_options(proxy_config) do
     scheme = parse_scheme(proxy_config.scheme)
 
-    proxy_tuple =
-      case proxy_config do
-        %{auth: {user, password}, host: host, port: port} when is_binary(user) and user != "" ->
-          auth_header = {"proxy-authorization", "Basic " <> Base.encode64("#{user}:#{password}")}
-          {scheme, host, port, [proxy_headers: [auth_header]]}
+    # Build proxy tuple WITHOUT headers (they go at connect_options level)
+    proxy_tuple = {scheme, proxy_config.host, proxy_config.port, []}
 
-        %{host: host, port: port} ->
-          {scheme, host, port, []}
+    # Build connect_options with proxy_headers at the correct level
+    connect_opts =
+      case proxy_config.auth do
+        {user, password} when is_binary(user) and user != "" ->
+          # Proxy-Authorization header must be at connect_options level, not in proxy tuple
+          # This is required for Mint.TunnelProxy to properly send auth during CONNECT handshake
+          auth_header = {"Proxy-Authorization", "Basic " <> Base.encode64("#{user}:#{password}")}
+          [proxy: proxy_tuple, proxy_headers: [auth_header]]
+
+        _ ->
+          [proxy: proxy_tuple]
       end
 
-    [connect_options: [proxy: proxy_tuple]]
+    [connect_options: connect_opts]
   end
 
   defp parse_scheme("https"), do: :https

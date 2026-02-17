@@ -183,7 +183,12 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
       assert options[:connect_options][:proxy] == {:http, "proxy.example.com", 3128, []}
     end
 
-    test "builds proxy options with auth" do
+    test "builds proxy options with auth - CRITICAL STRUCTURE for Mint.TunnelProxy" do
+      # This test verifies the fix for proxy authentication bug.
+      # proxy_headers MUST be at connect_options level, NOT in proxy tuple.
+      # Placing headers in tuple causes 407 errors because Mint.TunnelProxy
+      # doesn't send them during CONNECT handshake.
+
       proxy_config = %{
         host: "proxy.example.com",
         port: 3128,
@@ -193,15 +198,113 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
 
       options = ProxyConfig.build_req_proxy_options(proxy_config)
 
-      {scheme, host, port, opts} = options[:connect_options][:proxy]
-
+      # CRITICAL: Verify proxy tuple has NO OPTIONS (4th element must be [])
+      # If this fails, proxy auth won't work - headers must be at connect_options level
+      {scheme, host, port, proxy_tuple_opts} = options[:connect_options][:proxy]
       assert scheme == :http
       assert host == "proxy.example.com"
       assert port == 3128
-      assert Keyword.has_key?(opts, :proxy_headers)
 
-      [{"proxy-authorization", auth_header}] = opts[:proxy_headers]
+      assert proxy_tuple_opts == [],
+             "Proxy tuple options MUST be empty. Headers belong at connect_options level!"
+
+      # CRITICAL: Verify proxy_headers is at connect_options level
+      # If this fails, authentication will fail with 407
+      connect_opts = options[:connect_options]
+      assert Keyword.has_key?(connect_opts, :proxy_headers),
+             "proxy_headers MUST exist at connect_options level for CONNECT tunnel auth"
+
+      proxy_headers = connect_opts[:proxy_headers]
+      assert is_list(proxy_headers), "proxy_headers must be a list"
+      assert length(proxy_headers) == 1, "Should have exactly one auth header"
+
+      # Verify header format
+      [{"Proxy-Authorization", auth_header}] = proxy_headers
       assert String.starts_with?(auth_header, "Basic ")
+
+      # Verify correct base64 encoding
+      expected_auth = Base.encode64("user:pass")
+      assert auth_header == "Basic #{expected_auth}"
+    end
+
+    test "proxy_headers must NOT be in proxy tuple (regression test)" do
+      # This test explicitly catches the bug we fixed.
+      # If someone accidentally puts proxy_headers back in the tuple,
+      # this test will fail.
+
+      proxy_config = %{
+        host: "proxy.example.com",
+        port: 3128,
+        auth: {"user", "pass"},
+        scheme: "http"
+      }
+
+      options = ProxyConfig.build_req_proxy_options(proxy_config)
+      {_scheme, _host, _port, proxy_tuple_opts} = options[:connect_options][:proxy]
+
+      # MUST NOT have proxy_headers in tuple
+      refute Keyword.has_key?(proxy_tuple_opts, :proxy_headers),
+             "BUG: proxy_headers found in proxy tuple! This breaks authentication. " <>
+               "Move proxy_headers to connect_options level."
+    end
+
+    test "complete structure matches Req/Mint expectations" do
+      # This test verifies the EXACT structure that Req/Mint expects.
+      # If Req/Mint changes their API, this test will catch it.
+
+      proxy_config = %{
+        host: "proxy.example.com",
+        port: 3128,
+        auth: {"testuser", "testpass"},
+        scheme: "http"
+      }
+
+      options = ProxyConfig.build_req_proxy_options(proxy_config)
+
+      # Expected structure for Req with authenticated proxy:
+      expected = [
+        connect_options: [
+          proxy: {:http, "proxy.example.com", 3128, []},
+          proxy_headers: [
+            {"Proxy-Authorization", "Basic " <> Base.encode64("testuser:testpass")}
+          ]
+        ]
+      ]
+
+      assert options == expected,
+             "Structure mismatch! Expected structure that works with Req/Mint. " <>
+               "If this fails, proxy authentication will break."
+    end
+
+    test "HTTPS proxy scheme is preserved" do
+      proxy_config = %{
+        host: "secure-proxy.example.com",
+        port: 8443,
+        auth: {"user", "pass"},
+        scheme: "https"
+      }
+
+      options = ProxyConfig.build_req_proxy_options(proxy_config)
+      {scheme, _host, _port, _opts} = options[:connect_options][:proxy]
+
+      assert scheme == :https
+    end
+
+    test "special characters in credentials are properly encoded" do
+      # Test that special characters in username/password work correctly
+      proxy_config = %{
+        host: "proxy.example.com",
+        port: 3128,
+        auth: {"user@domain", "p@ss:word!"},
+        scheme: "http"
+      }
+
+      options = ProxyConfig.build_req_proxy_options(proxy_config)
+      [{"Proxy-Authorization", auth_header}] = options[:connect_options][:proxy_headers]
+
+      # Verify it's properly base64 encoded
+      expected = "Basic " <> Base.encode64("user@domain:p@ss:word!")
+      assert auth_header == expected
     end
   end
 end

@@ -147,6 +147,7 @@ defmodule Tymeslot.Application do
   defp log_proxy_config do
     case Application.get_env(:tymeslot, :http_proxy) do
       nil ->
+        Logger.info("HTTP/HTTPS Proxy: Not configured (using direct connections)")
         :ok
 
       config ->
