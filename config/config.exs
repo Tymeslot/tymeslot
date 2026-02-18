@@ -187,12 +187,8 @@ config :tailwind,
   ]
 
 # Configures Elixir's Logger with JSON output for structured logging
-config :logger,
-  backends: [:console],
-  default_handler: [
-    formatter: {LoggerJSON.Formatters.BasicLogger, []}
-  ],
-  metadata: [:request_id, :user_id, :correlation_id]
+config :logger, :default_handler,
+  formatter: {LoggerJSON.Formatters.Basic, metadata: [:request_id, :user_id, :correlation_id]}
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
