@@ -71,21 +71,30 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     column-gap: var(--space-md);
-    row-gap: var(--space-md);
+    row-gap: var(--space-sm);
     flex: 1;
   }
 
-  .booking-form .form-field-wrapper:nth-child(1),
-  .booking-form .form-field-wrapper:nth-child(2) {
+  /* Name and email side by side — nth-child(2) and (3) because the honeypot
+     field is always nth-child(1) in the DOM (even though it's out of flow) */
+  .booking-form .form-field-wrapper:nth-child(2),
+  .booking-form .form-field-wrapper:nth-child(3) {
     grid-column: span 1;
   }
 
-  .booking-form .form-field-wrapper:nth-child(3) {
-    grid-column: 1 / -1; /* message full width */
+  /* Message spans full width */
+  .booking-form .form-field-wrapper:nth-child(4) {
+    grid-column: 1 / -1;
   }
 
+  /* Recaptcha notice always full width, always below message field */
+  .booking-form .recaptcha-notice {
+    grid-column: 1 / -1;
+  }
+
+  /* Buttons always full width */
   .booking-form .slide-actions {
-    grid-column: 1 / -1; /* buttons full width */
+    grid-column: 1 / -1;
   }
 }
 

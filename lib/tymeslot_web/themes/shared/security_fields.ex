@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
   def honeypot_field(assigns) do
     ~H"""
     <!-- Honeypot field (hidden from real users, visible to bots) -->
-    <div class="absolute -left-[9999px]" aria-hidden="true">
+    <div class="honeypot-field" aria-hidden="true">
       <label for={"#{@id_prefix}-website"}>Website</label>
       <input
         id={"#{@id_prefix}-website"}
@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
         id={"#{@id_prefix}-g-recaptcha-response"}
         value=""
       />
-      <div class="text-xs text-gray-500 text-center mt-3">
+      <div class="recaptcha-notice text-xs text-gray-500 text-center">
         This site is protected by reCAPTCHA and the Google
         <a
           href="https://policies.google.com/privacy"

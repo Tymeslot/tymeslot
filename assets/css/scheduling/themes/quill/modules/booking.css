@@ -298,9 +298,14 @@
   flex-direction: column;
 }
 
-/* Comfortable spacing before buttons */
-.glass-morphism-card form[phx-change="validate"] .mt-3 {
+/* Comfortable spacing before the action buttons cluster */
+.glass-morphism-card form[phx-change="validate"] .cluster.mt-3 {
   margin-top: var(--space-2xl);
+}
+
+/* Recaptcha notice sits tight below the message field, never beside it */
+.glass-morphism-card form[phx-change="validate"] .recaptcha-notice {
+  margin-top: var(--space-xs);
 }
 
 /* Responsive textarea sizing moved to responsive.css */
