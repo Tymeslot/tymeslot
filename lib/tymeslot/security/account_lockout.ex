@@ -16,6 +16,7 @@ defmodule Tymeslot.Security.AccountLockout do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
+  @impl GenServer
   @spec init(any()) :: {:ok, map()}
   def init(_state) do
     Logger.info("Starting AccountLockout with ETS table", table: @lockout_table)
@@ -28,16 +29,14 @@ defmodule Tymeslot.Security.AccountLockout do
   Returns :ok if allowed, {:error, reason, message} if locked/throttled.
   """
   @spec check_and_record_attempt(String.t(), boolean()) :: :ok | {:error, atom(), String.t()}
-  def check_and_record_attempt(identifier, success) do
-    case success do
-      true ->
-        clear_failed_attempts(identifier)
-        :ok
+  def check_and_record_attempt(identifier, true) do
+    clear_failed_attempts(identifier)
+    :ok
+  end
 
-      false ->
-        record_failed_attempt(identifier)
-        check_lockout_status(identifier)
-    end
+  def check_and_record_attempt(identifier, false) do
+    GenServer.call(__MODULE__, {:record_failed_attempt, identifier})
+    check_lockout_status(identifier)
   end
 
   @doc """
@@ -105,9 +104,17 @@ defmodule Tymeslot.Security.AccountLockout do
     end
   end
 
+  @impl GenServer
+  @spec handle_call({:record_failed_attempt, String.t()}, GenServer.from(), map()) ::
+          {:reply, :ok, map()}
+  def handle_call({:record_failed_attempt, identifier}, _from, state) do
+    do_record_failed_attempt(identifier)
+    {:reply, :ok, state}
+  end
+
   # Private functions
 
-  defp record_failed_attempt(identifier) do
+  defp do_record_failed_attempt(identifier) do
     now = System.system_time(:second)
 
     case :ets.lookup(@lockout_table, identifier) do

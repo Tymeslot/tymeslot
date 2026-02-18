@@ -64,7 +64,7 @@ defmodule Tymeslot.DataCase do
     end)
 
     # Clear rate limiter
-    if Process.whereis(RateLimiter), do: RateLimiter.clear_all()
+    RateLimiter.clear_all()
 
     # Clear availability cache
     AvailabilityCache.clear_all()

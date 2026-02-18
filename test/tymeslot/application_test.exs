@@ -3,7 +3,7 @@ defmodule Tymeslot.ApplicationTest do
 
   alias Tymeslot.Infrastructure.{AvailabilityCache, DashboardCache}
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
-  alias Tymeslot.Security.{AccountLockout, RateLimiter}
+  alias Tymeslot.Security.{AccountLockout, RateLimit}
 
   describe "core application services" do
     test "Tymeslot.PubSub is started" do
@@ -29,7 +29,8 @@ defmodule Tymeslot.ApplicationTest do
     end
 
     test "Security services are started" do
-      assert is_pid(Process.whereis(RateLimiter))
+      # RateLimit (Hammer ETS) is not a named process; verify its ETS table is up
+      assert :ets.info(RateLimit) != :undefined
       assert is_pid(Process.whereis(AccountLockout))
     end
 

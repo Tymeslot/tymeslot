@@ -59,8 +59,8 @@ defmodule Tymeslot.Application do
           Tymeslot.Integrations.Calendar.RequestCoalescer,
           # Start Oban for background job processing
           {Oban, oban_config()},
-          # Start custom rate limiter
-          Tymeslot.Security.RateLimiter,
+          # Start Hammer-backed rate limiter (ETS sliding window)
+          {Tymeslot.Security.RateLimit, clean_period: :timer.minutes(5)},
           # Start account lockout tracker
           Tymeslot.Security.AccountLockout,
           # Start circuit breaker supervisor
@@ -75,8 +75,8 @@ defmodule Tymeslot.Application do
           Tymeslot.Infrastructure.AvailabilityCache,
           # Start webhook idempotency cache
           Tymeslot.Payments.Webhooks.IdempotencyCache,
-          # Start custom rate limiter
-          Tymeslot.Security.RateLimiter,
+          # Start Hammer-backed rate limiter (ETS sliding window)
+          {Tymeslot.Security.RateLimit, clean_period: :timer.minutes(5)},
           # Start account lockout tracker
           Tymeslot.Security.AccountLockout,
           # Start Oban for background job processing (in manual mode for tests)

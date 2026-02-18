@@ -10,18 +10,15 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
 
   @endpoint TymeslotWeb.Endpoint
 
-  alias ExUnit.Callbacks
   alias Tymeslot.Security.RateLimiter
 
   @doc """
-  Ensures the rate limiter is started for tests.
+  Ensures the rate limiter is ready for tests.
+  RateLimit (Hammer ETS) is always started in the supervision tree.
   """
   @spec ensure_rate_limiter_started() :: :ok
   def ensure_rate_limiter_started do
-    case Process.whereis(RateLimiter) do
-      nil -> Callbacks.start_supervised!(RateLimiter)
-      _pid -> :ok
-    end
+    RateLimiter.clear_all()
   end
 
   @doc """

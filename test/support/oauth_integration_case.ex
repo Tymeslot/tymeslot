@@ -31,48 +31,26 @@ defmodule TymeslotWeb.OAuthIntegrationCase do
   setup tags do
     DataCase.setup_sandbox(tags)
 
-    # Start RateLimiter for OAuth integration tests
-    rate_limiter_result =
-      case Process.whereis(RateLimiter) do
-        nil ->
-          case RateLimiter.start_link([]) do
-            {:ok, pid} ->
-              {:started, pid}
+    # RateLimit (Hammer ETS) and AccountLockout are always started in the
+    # supervision tree. Clear their state for test isolation.
+    RateLimiter.clear_all()
 
-            {:error, {:already_started, pid}} ->
-              {:already_running, pid}
-          end
-
-        pid ->
-          {:already_running, pid}
-      end
-
-    # Start AccountLockout for OAuth integration tests
+    # Start AccountLockout if not already running (it is in the supervision tree,
+    # but guard defensively for isolated test runs)
     lockout_result =
       case Process.whereis(AccountLockout) do
         nil ->
           case AccountLockout.start_link([]) do
-            {:ok, pid} ->
-              {:started, pid}
-
-            {:error, {:already_started, pid}} ->
-              {:already_running, pid}
+            {:ok, pid} -> {:started, pid}
+            {:error, {:already_started, pid}} -> {:already_running, pid}
           end
 
         pid ->
           {:already_running, pid}
       end
 
-    # Only stop processes we started
+    # Only stop the AccountLockout process if we started it ourselves
     on_exit(fn ->
-      case rate_limiter_result do
-        {:started, pid} when is_pid(pid) ->
-          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5000)
-
-        _other ->
-          :ok
-      end
-
       case lockout_result do
         {:started, pid} when is_pid(pid) ->
           if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5000)

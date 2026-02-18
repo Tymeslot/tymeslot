@@ -1,88 +1,14 @@
 defmodule Tymeslot.Security.RateLimiter do
   @moduledoc """
-  Simple rate limiter implementation using ETS.
+  Rate limiter backed by Hammer (ETS sliding window).
   """
 
-  use GenServer
   require Logger
   alias Tymeslot.Security.AccountLockout
+  alias Tymeslot.Security.RateLimit
 
-  @table_name :rate_limiter_table
   @type bucket_key :: String.t()
   @type rate_check_result :: {:allow, pos_integer()} | {:deny, pos_integer()}
-
-  @spec start_link(GenServer.options()) :: GenServer.on_start()
-  def start_link(_opts \\ []) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
-  end
-
-  @impl GenServer
-  @spec init(term()) :: {:ok, map()}
-  def init(_state) do
-    Logger.info("Starting RateLimiter with ETS table", table: @table_name)
-    :ets.new(@table_name, [:named_table, :public, :set])
-    {:ok, %{}}
-  end
-
-  @impl GenServer
-  @spec handle_call(
-          {:check_rate, bucket_key(), pos_integer(), pos_integer(), integer(), integer()},
-          GenServer.from(),
-          map()
-        ) :: {:reply, rate_check_result(), map()}
-  def handle_call({:check_rate, bucket_key, _window_ms, limit, now, window_start}, _from, state) do
-    result =
-      case :ets.lookup(@table_name, bucket_key) do
-        [] ->
-          # First request for this bucket
-          :ets.insert(@table_name, {bucket_key, [now]})
-          Logger.debug("First request for bucket", bucket_key: bucket_key)
-          {:allow, 1}
-
-        [{^bucket_key, timestamps}] ->
-          # Filter out old timestamps
-          recent_timestamps = Enum.filter(timestamps, fn ts -> ts > window_start end)
-
-          if length(recent_timestamps) >= limit do
-            Logger.warning("Rate limit exceeded",
-              bucket_key: bucket_key,
-              limit: limit,
-              current_count: length(recent_timestamps)
-            )
-
-            {:deny, limit}
-          else
-            # Add current timestamp and update
-            new_timestamps = [now | recent_timestamps]
-            :ets.insert(@table_name, {bucket_key, new_timestamps})
-
-            Logger.debug("Rate limit check passed",
-              bucket_key: bucket_key,
-              count: length(new_timestamps),
-              limit: limit
-            )
-
-            {:allow, length(new_timestamps)}
-          end
-      end
-
-    {:reply, result, state}
-  end
-
-  @impl GenServer
-  @spec handle_call({:clear_bucket, bucket_key()}, GenServer.from(), map()) ::
-          {:reply, :ok, map()}
-  def handle_call({:clear_bucket, bucket_key}, _from, state) do
-    :ets.delete(@table_name, bucket_key)
-    {:reply, :ok, state}
-  end
-
-  @impl GenServer
-  @spec handle_call(:clear_all, GenServer.from(), map()) :: {:reply, :ok, map()}
-  def handle_call(:clear_all, _from, state) do
-    :ets.delete_all_objects(@table_name)
-    {:reply, :ok, state}
-  end
 
   @doc """
   Check rate limit for a given bucket key.
@@ -90,17 +16,7 @@ defmodule Tymeslot.Security.RateLimiter do
   """
   @spec check_rate(bucket_key(), pos_integer(), pos_integer()) :: rate_check_result()
   def check_rate(bucket_key, window_ms, limit) do
-    now = System.system_time(:millisecond)
-    window_start = now - window_ms
-
-    Logger.debug("Checking rate limit",
-      bucket_key: bucket_key,
-      window_ms: window_ms,
-      limit: limit
-    )
-
-    # Use GenServer call for atomic operations
-    GenServer.call(__MODULE__, {:check_rate, bucket_key, window_ms, limit, now, window_start})
+    RateLimit.hit(bucket_key, window_ms, limit)
   end
 
   @doc """
@@ -108,7 +24,8 @@ defmodule Tymeslot.Security.RateLimiter do
   """
   @spec clear_bucket(bucket_key()) :: :ok
   def clear_bucket(bucket_key) do
-    GenServer.call(__MODULE__, {:clear_bucket, bucket_key})
+    :ets.match_delete(RateLimit, {{bucket_key, :_}, :_})
+    :ok
   end
 
   @doc """
@@ -116,7 +33,8 @@ defmodule Tymeslot.Security.RateLimiter do
   """
   @spec clear_all() :: :ok
   def clear_all do
-    GenServer.call(__MODULE__, :clear_all)
+    :ets.delete_all_objects(RateLimit)
+    :ok
   end
 
   @doc """
@@ -129,24 +47,6 @@ defmodule Tymeslot.Security.RateLimiter do
     case check_rate(bucket_key, window_ms, limit) do
       {:allow, _count} -> :ok
       {:deny, _retry_after} -> {:error, :rate_limited}
-    end
-  end
-
-  @doc """
-  Check rate limit for password reset requests.
-  Returns :allow if allowed, :deny if exceeded.
-  """
-  @spec check_password_reset(String.t() | :inet.ip_address()) :: :allow | :deny
-  def check_password_reset(ip_address) do
-    bucket_key = "password_reset:#{inspect(ip_address)}"
-    # 20 minutes
-    window_ms = 20 * 60 * 1000
-    # 6 attempts per 20 minutes
-    limit = 6
-
-    case check_rate(bucket_key, window_ms, limit) do
-      {:allow, _count} -> :allow
-      {:deny, _retry_after} -> :deny
     end
   end
 
