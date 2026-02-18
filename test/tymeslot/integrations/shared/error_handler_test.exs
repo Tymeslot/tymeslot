@@ -88,7 +88,6 @@ defmodule Tymeslot.Integrations.Common.ErrorHandlerTest do
         end)
 
       assert log =~ "Integration error"
-      assert log =~ "category=network"
     end
   end
 

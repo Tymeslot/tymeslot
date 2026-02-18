@@ -94,9 +94,6 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
   end
 
   defp ensure_rate_limiter_started do
-    case Process.whereis(Tymeslot.Security.RateLimiter) do
-      nil -> start_supervised!(Tymeslot.Security.RateLimiter)
-      _existing_pid -> :ok
-    end
+    RateLimiter.clear_all()
   end
 end

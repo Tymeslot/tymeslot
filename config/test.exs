@@ -133,7 +133,7 @@ config :tymeslot, :calendar_providers, %{
 }
 
 # Configure reCAPTCHA for tests
-config :tymeslot, :recaptcha, signup_enabled: false
+config :tymeslot, :recaptcha, signup_enabled: false, booking_enabled: false
 
 # Payment system configuration for tests
 config :tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock

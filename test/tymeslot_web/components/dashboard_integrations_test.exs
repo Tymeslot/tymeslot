@@ -494,7 +494,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
           assigns: %{
             __changed__: %{},
             integrations: [],
-            is_refreshing: false
+            is_refreshing: false,
+            current_user: %{id: 1}
           }
         }
 

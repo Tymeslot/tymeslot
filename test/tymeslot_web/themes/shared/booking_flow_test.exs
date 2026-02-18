@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlowTest do
 
     {:noreply, updated} = BookingFlow.handle_form_validation(socket, params)
 
-    assert updated.assigns.validation_errors == []
+    assert updated.assigns.validation_errors == %{}
     assert updated.assigns.form_touched == false
   end
 

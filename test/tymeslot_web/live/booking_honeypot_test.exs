@@ -23,7 +23,6 @@ defmodule TymeslotWeb.BookingHoneypotTest do
 
   setup tags do
     Mox.set_mox_from_context(tags)
-    ensure_rate_limiter_started()
     RateLimiter.clear_all()
 
     # Disable reCAPTCHA so these tests focus on honeypot detection only,
@@ -155,10 +154,4 @@ defmodule TymeslotWeb.BookingHoneypotTest do
     assert Repo.aggregate(MeetingSchema, :count, :id) == 0
   end
 
-  defp ensure_rate_limiter_started do
-    case Process.whereis(Tymeslot.Security.RateLimiter) do
-      nil -> start_supervised!(Tymeslot.Security.RateLimiter)
-      _pid -> :ok
-    end
-  end
 end

@@ -194,7 +194,9 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
           _other -> false
         end)
 
-      assert failures >= 30, "Expected at least 30 failures, got #{failures}"
+      # Hammer ETS allows slight overage under concurrency, so the failure floor
+      # is set conservatively below the theoretical 50 (200 - 150 limit).
+      assert failures >= 20, "Expected at least 20 failures, got #{failures}"
       assert successes + failures == 200
     end
 

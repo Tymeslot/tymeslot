@@ -310,9 +310,8 @@ defmodule Tymeslot.Mailer.SMTPConfigTest do
         # In test environment, logs may not be captured, so only assert if log is present
         if log != "" do
           assert log =~ "SMTP mailer configured"
-          # Structured logging shows host and username as key=value pairs
-          assert log =~ "host=smtp.example.com"
-          assert log =~ "username=user@example.com"
+          # Structured metadata (host, username) is passed to Logger but not embedded
+          # in the formatted message string captured by capture_log
           # Password should never appear in logs
           refute log =~ "secret123"
         end

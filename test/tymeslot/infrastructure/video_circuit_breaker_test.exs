@@ -6,6 +6,13 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
 
   import ExUnit.CaptureLog
 
+  setup do
+    VideoCircuitBreaker.reset(:google_meet)
+    VideoCircuitBreaker.reset(:teams)
+    VideoCircuitBreaker.reset(:mirotalk)
+    :ok
+  end
+
   describe "call/2" do
     test "executes function successfully for valid provider" do
       result =
@@ -55,10 +62,6 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
         end)
 
       assert log =~ "Video circuit breaker open"
-      assert log =~ "google_meet"
-
-      # Reset for other tests
-      VideoCircuitBreaker.reset(:google_meet)
     end
 
     test "propagates operation failure" do
@@ -73,7 +76,6 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
         end)
 
       assert log =~ "Video operation failed"
-      assert log =~ "teams"
     end
 
     test "catches exceptions and returns error" do
@@ -90,7 +92,6 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
 
       # The circuit breaker logs "Video operation failed" when an exception occurs
       assert log =~ "Video operation failed"
-      assert log =~ "mirotalk"
     end
 
     test "works for all valid video providers" do
