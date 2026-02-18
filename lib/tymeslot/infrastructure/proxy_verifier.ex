@@ -316,12 +316,11 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
 
   defp preview_body(_body), do: nil
 
-  defp format_error_message(%{__struct__: struct_name, reason: reason}) do
-    "#{inspect(struct_name)}: #{inspect(reason)}"
-  end
-
   defp format_error_message(%{__struct__: struct_name} = error) do
-    "#{inspect(struct_name)}: #{inspect(error)}"
+    case Map.fetch(error, :reason) do
+      {:ok, reason} -> "#{inspect(struct_name)}: #{inspect(reason)}"
+      :error -> "#{inspect(struct_name)}: #{inspect(error)}"
+    end
   end
 
   defp format_error_message(error) do
