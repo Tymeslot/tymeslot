@@ -9,8 +9,8 @@ defmodule Tymeslot.Auth.PasswordReset do
   alias Tymeslot.DatabaseQueries.UserSessionQueries
   alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.{InputProcessor, RateLimiter, Token}
   alias Tymeslot.Security.FieldValidators.PasswordValidator
+  alias Tymeslot.Security.{InputProcessor, RateLimiter, Token}
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Helpers.ClientIP

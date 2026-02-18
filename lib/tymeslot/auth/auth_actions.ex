@@ -9,8 +9,8 @@ defmodule Tymeslot.Auth.AuthActions do
 
   alias Tymeslot.Auth.{PasswordReset, Registration, Session, SocialAuthentication}
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.InputProcessor
   alias Tymeslot.Security.FieldValidators.PasswordValidator
+  alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
 
   require Logger

@@ -13,8 +13,8 @@ defmodule TymeslotWeb.AuthLive do
   alias Tymeslot.Auth.{AuthActions, Session, Verification}
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
-  alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias Tymeslot.Security.FieldValidators.PasswordValidator
+  alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.AuthLive.{SecurityHelper, StateHelper}
   alias TymeslotWeb.Helpers.ClientIP

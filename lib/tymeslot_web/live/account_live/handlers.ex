@@ -8,8 +8,8 @@ defmodule TymeslotWeb.AccountLive.Handlers do
 
   alias Phoenix.LiveView
   alias Tymeslot.Auth
-  alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias Tymeslot.Security.FieldValidators.PasswordValidator
+  alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.AccountLive.{ErrorFormatter, Helpers}
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Shared.Flash
