@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
+  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
@@ -113,6 +114,127 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   # Validation is now handled inside MeetingTypeForm LiveComponent
 
   def handle_event("save_meeting_type", %{"meeting_type" => params}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+      do_save_meeting_type(params, socket)
+    end)
+  end
+
+  def handle_event("toggle_type", %{"id" => id}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+      type_id = String.to_integer(id)
+      type = MeetingTypes.get_meeting_type(type_id, user_id)
+
+      if type do
+        case MeetingTypes.toggle_meeting_type_status(type, %{is_active: !type.is_active}) do
+          {:ok, updated_type} ->
+            send(self(), {:meeting_type_changed})
+            Flash.info("Meeting type status updated")
+
+            # Update local state immediately for responsive UI
+            updated_meeting_types =
+              Enum.map(socket.assigns.meeting_types, fn
+                t when t.id == updated_type.id -> updated_type
+                t -> t
+              end)
+
+            {:noreply, assign(socket, meeting_types: updated_meeting_types)}
+
+          {:error, _reason} ->
+            Flash.error("Failed to update meeting type")
+            {:noreply, socket}
+        end
+      else
+        Flash.error("Meeting type not found")
+        {:noreply, socket}
+      end
+    end)
+  end
+
+  def handle_event("show_delete_modal", %{"id" => id}, socket) do
+    type_id = String.to_integer(id)
+    type = MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id)
+
+    if type do
+      {:noreply, ModalHook.show_modal(socket, :delete_meeting_type, type)}
+    else
+      Flash.error("Meeting type not found")
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("hide_delete_modal", _params, socket) do
+    {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
+  end
+
+  def handle_event("confirm_delete_meeting_type", _params, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+      type = socket.assigns.delete_meeting_type_modal_data
+
+      case MeetingTypes.delete_meeting_type(type) do
+        {:ok, _result} ->
+          send(self(), {:meeting_type_changed})
+          Flash.info("Meeting type deleted")
+          {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
+
+        {:error, _reason} ->
+          Flash.error("Failed to delete meeting type")
+          {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
+      end
+    end)
+  end
+
+  def handle_event("reorder_meeting_types", %{"ids" => ids}, socket) when is_list(ids) do
+    user_id = socket.assigns.current_user.id
+
+    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+      # Convert to integers safely
+      meeting_type_ids =
+        ids
+        |> Enum.map(fn
+          id when is_integer(id) ->
+            id
+
+          id when is_binary(id) ->
+            case Integer.parse(id) do
+              {int, _value} -> int
+              :error -> nil
+            end
+
+          _other ->
+            nil
+        end)
+        |> Enum.reject(&is_nil/1)
+
+      case MeetingTypes.reorder_meeting_types(user_id, meeting_type_ids) do
+        {:ok, _result} ->
+          send(self(), {:meeting_type_changed})
+          Flash.info("Meeting types reordered")
+          {:noreply, socket}
+
+        {:error, reason} ->
+          Logger.error("Failed to reorder meeting types: #{inspect(reason)}")
+          Flash.error("Failed to reorder meeting types")
+          {:noreply, socket}
+      end
+    end)
+  end
+
+  # Private functions
+
+  defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
+    Flash.error(message)
+    {:noreply, socket}
+  end
+
+  defp with_rate_limit(:ok, _socket, action), do: action.()
+
+  defp do_save_meeting_type(params, socket) do
     socket = assign(socket, :saving, true)
     metadata = Helpers.get_security_metadata(socket)
 
@@ -166,100 +288,6 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
          socket
          |> assign(:form_errors, validation_errors)
          |> assign(:saving, false)}
-    end
-  end
-
-  def handle_event("toggle_type", %{"id" => id}, socket) do
-    type_id = String.to_integer(id)
-    type = MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id)
-
-    if type do
-      case MeetingTypes.toggle_meeting_type_status(type, %{is_active: !type.is_active}) do
-        {:ok, updated_type} ->
-          send(self(), {:meeting_type_changed})
-          Flash.info("Meeting type status updated")
-
-          # Update local state immediately for responsive UI
-          updated_meeting_types =
-            Enum.map(socket.assigns.meeting_types, fn
-              t when t.id == updated_type.id -> updated_type
-              t -> t
-            end)
-
-          {:noreply, assign(socket, meeting_types: updated_meeting_types)}
-
-        {:error, _reason} ->
-          Flash.error("Failed to update meeting type")
-          {:noreply, socket}
-      end
-    else
-      Flash.error("Meeting type not found")
-      {:noreply, socket}
-    end
-  end
-
-  def handle_event("show_delete_modal", %{"id" => id}, socket) do
-    type_id = String.to_integer(id)
-    type = MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id)
-
-    if type do
-      {:noreply, ModalHook.show_modal(socket, :delete_meeting_type, type)}
-    else
-      Flash.error("Meeting type not found")
-      {:noreply, socket}
-    end
-  end
-
-  def handle_event("hide_delete_modal", _params, socket) do
-    {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
-  end
-
-  def handle_event("confirm_delete_meeting_type", _params, socket) do
-    type = socket.assigns.delete_meeting_type_modal_data
-
-    case MeetingTypes.delete_meeting_type(type) do
-      {:ok, _result} ->
-        send(self(), {:meeting_type_changed})
-        Flash.info("Meeting type deleted")
-        {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
-
-      {:error, _reason} ->
-        Flash.error("Failed to delete meeting type")
-        {:noreply, ModalHook.hide_modal(socket, :delete_meeting_type)}
-    end
-  end
-
-  def handle_event("reorder_meeting_types", %{"ids" => ids}, socket) when is_list(ids) do
-    user_id = socket.assigns.current_user.id
-
-    # Convert to integers safely
-    meeting_type_ids =
-      ids
-      |> Enum.map(fn
-        id when is_integer(id) ->
-          id
-
-        id when is_binary(id) ->
-          case Integer.parse(id) do
-            {int, _value} -> int
-            :error -> nil
-          end
-
-        _other ->
-          nil
-      end)
-      |> Enum.reject(&is_nil/1)
-
-    case MeetingTypes.reorder_meeting_types(user_id, meeting_type_ids) do
-      {:ok, _result} ->
-        send(self(), {:meeting_type_changed})
-        Flash.info("Meeting types reordered")
-        {:noreply, socket}
-
-      {:error, reason} ->
-        Logger.error("Failed to reorder meeting types: #{inspect(reason)}")
-        Flash.error("Failed to reorder meeting types")
-        {:noreply, socket}
     end
   end
 

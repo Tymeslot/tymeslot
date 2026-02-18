@@ -90,7 +90,10 @@ defmodule Tymeslot.Auth.Validation do
   """
   @spec validate_new_password_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_new_password_input(params) do
-    InputProcessor.validate_form(params, [{"password", :password}, {"password_confirmation", :password}])
+    InputProcessor.validate_form(params, [
+      {"password", :password},
+      {"password_confirmation", :password}
+    ])
   end
 
   @doc """

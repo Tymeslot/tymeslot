@@ -78,37 +78,74 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
 
   describe "validate_meeting_type_form/2 - duration constraints" do
     test "rejects duration below 5 minutes" do
-      params = %{"name" => "Chat", "duration" => "4", "icon" => "none", "meeting_mode" => "personal"}
+      params = %{
+        "name" => "Chat",
+        "duration" => "4",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
       assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
       assert Map.has_key?(errors, :duration)
     end
 
     test "rejects duration above 480 minutes" do
-      params = %{"name" => "Chat", "duration" => "481", "icon" => "none", "meeting_mode" => "personal"}
+      params = %{
+        "name" => "Chat",
+        "duration" => "481",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
       assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
       assert Map.has_key?(errors, :duration)
     end
 
     test "rejects duration not divisible by 5" do
-      params = %{"name" => "Chat", "duration" => "17", "icon" => "none", "meeting_mode" => "personal"}
+      params = %{
+        "name" => "Chat",
+        "duration" => "17",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
       assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
       assert Map.has_key?(errors, :duration)
     end
 
     test "accepts minimum valid duration (5 minutes)" do
-      params = %{"name" => "Chat", "duration" => "5", "icon" => "none", "meeting_mode" => "personal"}
+      params = %{
+        "name" => "Chat",
+        "duration" => "5",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
       assert {:ok, _sanitized} = InputValidation.validate_meeting_type_form(params)
     end
 
     test "accepts maximum valid duration (480 minutes)" do
-      params = %{"name" => "Chat", "duration" => "480", "icon" => "none", "meeting_mode" => "personal"}
+      params = %{
+        "name" => "Chat",
+        "duration" => "480",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
       assert {:ok, _sanitized} = InputValidation.validate_meeting_type_form(params)
     end
   end
 
   describe "validate_meeting_type_form/2 - description" do
     test "accepts optional empty description" do
-      params = %{"name" => "Chat", "duration" => "30", "icon" => "none", "meeting_mode" => "personal", "description" => ""}
+      params = %{
+        "name" => "Chat",
+        "duration" => "30",
+        "icon" => "none",
+        "meeting_mode" => "personal",
+        "description" => ""
+      }
+
       assert {:ok, sanitized} = InputValidation.validate_meeting_type_form(params)
       assert sanitized["description"] == ""
     end

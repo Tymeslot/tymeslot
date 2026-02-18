@@ -422,13 +422,8 @@ defmodule Tymeslot.Security.RateLimiter do
     )
   end
 
-  def check_theme_customization_rate_limit(user_id) do
-    Logger.error("Invalid user_id for theme customization rate limit",
-      user_id: inspect(user_id)
-    )
-
-    {:error, :invalid_user_id}
-  end
+  def check_theme_customization_rate_limit(user_id),
+    do: invalid_user_id("theme customization", user_id)
 
   @doc """
   Rate limit meeting filter changes in dashboard.
@@ -449,7 +444,193 @@ defmodule Tymeslot.Security.RateLimiter do
     )
   end
 
-  # Private helper for consistent error handling and logging
+  @doc """
+  Rate limit webhook create/update operations from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 30 writes per 30 minutes per user.
+  """
+  @spec check_webhook_write_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_webhook_write_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
+    check_with_logging(
+      "webhook_write:#{user_id}",
+      30,
+      1_800_000,
+      "webhook write",
+      to_string(user_id)
+    )
+  end
+
+  def check_webhook_write_rate_limit(user_id), do: invalid_user_id("webhook write", user_id)
+
+  @doc """
+  Rate limit webhook test-connection operations from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 30 tests per 5 minutes per user.
+  """
+  @spec check_webhook_test_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_webhook_test_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
+    check_with_logging("webhook_test:#{user_id}", 30, 300_000, "webhook test", to_string(user_id))
+  end
+
+  def check_webhook_test_rate_limit(user_id), do: invalid_user_id("webhook test", user_id)
+
+  @doc """
+  Rate limit webhook security token regeneration from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 10 regenerations per hour per user.
+  """
+  @spec check_webhook_token_regen_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_webhook_token_regen_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
+    check_with_logging(
+      "webhook_token_regen:#{user_id}",
+      10,
+      3_600_000,
+      "webhook token regeneration",
+      to_string(user_id)
+    )
+  end
+
+  def check_webhook_token_regen_rate_limit(user_id),
+    do: invalid_user_id("webhook token regeneration", user_id)
+
+  @doc """
+  Rate limit the "refresh all calendars" operation from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 10 refreshes per 10 minutes per user.
+  """
+  @spec check_calendar_refresh_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_calendar_refresh_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
+    check_with_logging(
+      "calendar_refresh:#{user_id}",
+      10,
+      600_000,
+      "calendar refresh",
+      to_string(user_id)
+    )
+  end
+
+  def check_calendar_refresh_rate_limit(user_id), do: invalid_user_id("calendar refresh", user_id)
+
+  @doc """
+  Rate limit calendar and video integration write operations (add/toggle) from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 30 writes per 30 minutes per user.
+  """
+  @spec check_integration_write_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_integration_write_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
+    check_with_logging(
+      "integration_write:#{user_id}",
+      30,
+      1_800_000,
+      "integration write",
+      to_string(user_id)
+    )
+  end
+
+  def check_integration_write_rate_limit(user_id),
+    do: invalid_user_id("integration write", user_id)
+
+  @doc """
+  Rate limit meeting type write operations (create, update, toggle, delete, reorder) from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 60 writes per 30 minutes per user.
+  """
+  @spec check_meeting_type_write_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_meeting_type_write_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
+    check_with_logging(
+      "meeting_type_write:#{user_id}",
+      60,
+      1_800_000,
+      "meeting type write",
+      to_string(user_id)
+    )
+  end
+
+  def check_meeting_type_write_rate_limit(user_id),
+    do: invalid_user_id("meeting type write", user_id)
+
+  @doc """
+  Rate limit avatar upload and delete operations from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 20 uploads per hour per user.
+  """
+  @spec check_avatar_upload_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_avatar_upload_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
+    check_with_logging(
+      "avatar_upload:#{user_id}",
+      20,
+      3_600_000,
+      "avatar upload",
+      to_string(user_id)
+    )
+  end
+
+  def check_avatar_upload_rate_limit(user_id), do: invalid_user_id("avatar upload", user_id)
+
+  @doc """
+  Rate limit owner-side meeting cancellation from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 20 cancellations per 10 minutes per user.
+  """
+  @spec check_dashboard_cancel_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_dashboard_cancel_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
+    check_with_logging(
+      "dashboard_cancel:#{user_id}",
+      20,
+      600_000,
+      "meeting cancellation",
+      to_string(user_id)
+    )
+  end
+
+  def check_dashboard_cancel_rate_limit(user_id),
+    do: invalid_user_id("meeting cancellation", user_id)
+
+  @doc """
+  Rate limit owner-side reschedule request sending from the dashboard.
+  Returns :ok if allowed, {:error, :rate_limited, message} if exceeded.
+
+  Limit: 20 reschedule requests per 10 minutes per user.
+  """
+  @spec check_dashboard_reschedule_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_dashboard_reschedule_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
+    check_with_logging(
+      "dashboard_reschedule:#{user_id}",
+      20,
+      600_000,
+      "reschedule request",
+      to_string(user_id)
+    )
+  end
+
+  def check_dashboard_reschedule_rate_limit(user_id),
+    do: invalid_user_id("reschedule request", user_id)
+
+  # Private helpers
+
+  @spec invalid_user_id(String.t(), any()) :: {:error, :invalid_user_id}
+  defp invalid_user_id(operation, user_id) do
+    Logger.error("Invalid user_id for #{operation} rate limit", user_id: inspect(user_id))
+    {:error, :invalid_user_id}
+  end
+
   @spec check_with_logging(bucket_key(), pos_integer(), pos_integer(), String.t(), String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   defp check_with_logging(bucket_key, limit, window_ms, operation, identifier) do

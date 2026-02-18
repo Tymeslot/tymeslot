@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
@@ -154,49 +155,65 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("add_integration", %{"integration" => params} = full_params, socket) do
-    socket = assign(socket, is_saving: true, form_values: params)
+    user_id = socket.assigns.current_user.id
 
-    processed_params =
-      case Map.get(full_params, "selected_calendars") do
-        calendars when is_list(calendars) ->
-          selection =
-            Calendar.prepare_selection_params(calendars, socket.assigns.discovered_calendars)
+    case RateLimiter.check_integration_write_rate_limit(user_id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
 
-          Map.merge(params, selection)
+      :ok ->
+        socket = assign(socket, is_saving: true, form_values: params)
 
-        _other ->
-          params
-      end
+        processed_params =
+          case Map.get(full_params, "selected_calendars") do
+            calendars when is_list(calendars) ->
+              selection =
+                Calendar.prepare_selection_params(calendars, socket.assigns.discovered_calendars)
 
-    case Calendar.create_integration_with_validation(
-           socket.assigns.current_user.id,
-           processed_params,
-           metadata: socket.assigns.security_metadata
-         ) do
-      {:ok, _integration} ->
-        send(self(), {:integration_added, :calendar})
-        Flash.info("Calendar integration added successfully")
-        {:noreply, socket |> reset_integration_form_state() |> load_integrations()}
+              Map.merge(params, selection)
 
-      {:error, {:form_errors, errors}} ->
-        {:noreply, assign(socket, form_errors: errors, is_saving: false)}
+            _other ->
+              params
+          end
 
-      {:error, {:changeset, changeset}} ->
-        {:noreply,
-         assign(socket,
-           form_errors: %{generic: [ChangesetUtils.get_first_error(changeset)]},
-           is_saving: false
-         )}
+        case Calendar.create_integration_with_validation(
+               user_id,
+               processed_params,
+               metadata: socket.assigns.security_metadata
+             ) do
+          {:ok, _integration} ->
+            send(self(), {:integration_added, :calendar})
+            Flash.info("Calendar integration added successfully")
+            {:noreply, socket |> reset_integration_form_state() |> load_integrations()}
+
+          {:error, {:form_errors, errors}} ->
+            {:noreply, assign(socket, form_errors: errors, is_saving: false)}
+
+          {:error, {:changeset, changeset}} ->
+            {:noreply,
+             assign(socket,
+               form_errors: %{generic: [ChangesetUtils.get_first_error(changeset)]},
+               is_saving: false
+             )}
+        end
     end
   end
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do
-    with {:ok, int_id} <- parse_int(id),
-         {:ok, _result} <- Calendar.toggle_integration(int_id, socket.assigns.current_user.id) do
+    user_id = socket.assigns.current_user.id
+
+    with :ok <- RateLimiter.check_integration_write_rate_limit(user_id),
+         {:ok, int_id} <- parse_int(id),
+         {:ok, _result} <- Calendar.toggle_integration(int_id, user_id) do
       Flash.info("Calendar status updated")
       send(self(), {:integration_updated, :calendar})
       {:noreply, load_integrations(socket)}
     else
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
       {:error, reason} ->
         Flash.error("Failed to update status: #{inspect(reason)}")
         {:noreply, socket}
@@ -241,22 +258,31 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     if socket.assigns.is_refreshing do
       {:noreply, socket}
     else
-      active = Enum.filter(socket.assigns.integrations, & &1.is_active)
+      user_id = socket.assigns.current_user.id
 
-      if active == [] do
-        {:noreply, assign(socket, :is_refreshing, false)}
-      else
-        {:noreply,
-         socket
-         |> assign(:is_refreshing, true)
-         |> start_async(:refresh_calendars, fn ->
-           active
-           |> Task.async_stream(&Calendar.update_integration_with_discovery/1,
-             max_concurrency: 5,
-             timeout: 30_000
-           )
-           |> Enum.to_list()
-         end)}
+      case RateLimiter.check_calendar_refresh_rate_limit(user_id) do
+        {:error, :rate_limited, message} ->
+          Flash.error(message)
+          {:noreply, socket}
+
+        :ok ->
+          active = Enum.filter(socket.assigns.integrations, & &1.is_active)
+
+          if active == [] do
+            {:noreply, assign(socket, :is_refreshing, false)}
+          else
+            {:noreply,
+             socket
+             |> assign(:is_refreshing, true)
+             |> start_async(:refresh_calendars, fn ->
+               active
+               |> Task.async_stream(&Calendar.update_integration_with_discovery/1,
+                 max_concurrency: 5,
+                 timeout: 30_000
+               )
+               |> Enum.to_list()
+             end)}
+          end
       end
     end
   end
@@ -266,12 +292,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         %{"integration_id" => id, "calendar_id" => cal_id},
         socket
       ) do
-    with {:ok, int_id} <- parse_int(id),
+    user_id = socket.assigns.current_user.id
+
+    with :ok <- RateLimiter.check_integration_write_rate_limit(user_id),
+         {:ok, int_id} <- parse_int(id),
          %{} = integration <-
            Enum.find(socket.assigns.integrations, &(&1.id == int_id)),
          {:ok, _result} <- Calendar.toggle_calendar_selection(integration, cal_id) do
       {:noreply, load_integrations(socket)}
     else
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
       _other ->
         Flash.error("Failed to update selection")
         {:noreply, socket}

@@ -164,7 +164,9 @@ defmodule Tymeslot.Integrations.Video.InputValidationTest do
 
   describe "validate_single_field/3" do
     test "validates :name field" do
-      assert {:ok, "My Integration"} = InputValidation.validate_single_field(:name, "My Integration")
+      assert {:ok, "My Integration"} =
+               InputValidation.validate_single_field(:name, "My Integration")
+
       assert {:error, _msg} = InputValidation.validate_single_field(:name, "")
     end
 

@@ -13,8 +13,11 @@ defmodule Tymeslot.Profiles.AvatarValidationTest do
     test "accepts .jpg extension" do
       profile = insert(:profile)
       result = Profiles.consume_avatar_upload(profile, upload_stub(), entry("photo.jpg"), %{})
+
       # Returns {:ok, {:error, _}} only on validation failure; any other result means validation passed
-      assert result != {:ok, {:error, "Invalid file type. Only JPG, PNG, GIF, and WebP files are allowed"}}
+      assert result !=
+               {:ok,
+                {:error, "Invalid file type. Only JPG, PNG, GIF, and WebP files are allowed"}}
     end
 
     test "rejects .exe extension" do

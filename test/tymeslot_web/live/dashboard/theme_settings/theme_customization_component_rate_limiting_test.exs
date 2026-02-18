@@ -137,5 +137,4 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLim
       )
     end
   end
-
 end

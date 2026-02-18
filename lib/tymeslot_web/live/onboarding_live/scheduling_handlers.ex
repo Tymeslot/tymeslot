@@ -114,7 +114,8 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
       else: {:error, "Advance booking days must be between 1 and 365"}
   end
 
-  defp validate_advance_booking_days(_invalid), do: {:error, "Advance booking days must be a number"}
+  defp validate_advance_booking_days(_invalid),
+    do: {:error, "Advance booking days must be a number"}
 
   defp validate_min_advance_hours(value) when is_binary(value) do
     case Integer.parse(value) do
@@ -129,5 +130,6 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
       else: {:error, "Minimum advance hours must be between 0 and 168"}
   end
 
-  defp validate_min_advance_hours(_invalid), do: {:error, "Minimum advance hours must be a number"}
+  defp validate_min_advance_hours(_invalid),
+    do: {:error, "Minimum advance hours must be a number"}
 end

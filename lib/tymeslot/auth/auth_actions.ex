@@ -207,7 +207,9 @@ defmodule Tymeslot.Auth.AuthActions do
     InputProcessor.validate_form(params, [{"email", :email}])
   end
 
-  def validate_password_reset_input(%{"password" => _password, "password_confirmation" => _confirmation} = params) do
+  def validate_password_reset_input(
+        %{"password" => _password, "password_confirmation" => _confirmation} = params
+      ) do
     with {:ok, sanitized} <-
            InputProcessor.validate_form(params, [
              {"password", :password},

@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Profiles
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
 
   @impl Phoenix.LiveComponent
@@ -34,14 +35,32 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   end
 
   def handle_event("upload_avatar", _params, socket) do
-    metadata = DashboardHelpers.get_security_metadata(socket)
-    {:noreply, consume_avatar_upload(socket, metadata)}
+    user_id = socket.assigns.current_user.id
+
+    case RateLimiter.check_avatar_upload_rate_limit(user_id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
+      :ok ->
+        metadata = DashboardHelpers.get_security_metadata(socket)
+        {:noreply, consume_avatar_upload(socket, metadata)}
+    end
   end
 
   defp handle_avatar_progress(_config, entry, socket) do
     if entry.done? do
-      metadata = DashboardHelpers.get_security_metadata(socket)
-      {:noreply, consume_avatar_upload(socket, metadata)}
+      user_id = socket.assigns.current_user.id
+
+      case RateLimiter.check_avatar_upload_rate_limit(user_id) do
+        {:error, :rate_limited, message} ->
+          Flash.error(message)
+          {:noreply, socket}
+
+        :ok ->
+          metadata = DashboardHelpers.get_security_metadata(socket)
+          {:noreply, consume_avatar_upload(socket, metadata)}
+      end
     else
       {:noreply, socket}
     end

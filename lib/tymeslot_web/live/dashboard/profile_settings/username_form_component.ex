@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Profiles
   alias Tymeslot.Security.InputProcessor
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -24,9 +25,17 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("check_username_availability", %{"username" => username}, socket) do
-    metadata = DashboardHelpers.get_security_metadata(socket)
-    socket = update_username_availability(socket, username, metadata)
-    {:noreply, socket}
+    user_id = socket.assigns.current_user.id
+
+    case RateLimiter.check_username_check_rate_limit("user:#{user_id}") do
+      {:error, :rate_limited} ->
+        {:noreply, socket}
+
+      :ok ->
+        metadata = DashboardHelpers.get_security_metadata(socket)
+        socket = update_username_availability(socket, username, metadata)
+        {:noreply, socket}
+    end
   end
 
   def handle_event("update_username", %{"username" => username}, socket) do

@@ -133,39 +133,15 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   def handle_event("confirm_cancel_meeting", _params, socket) do
-    meeting = socket.assigns.cancel_meeting_modal_data
-    socket = assign(socket, :cancelling_meeting, meeting.id)
+    user_id = socket.assigns.current_user.id
 
-    case Meetings.cancel_meeting(meeting) do
-      {:ok, _cancelled_meeting} ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :cancel, :confirm],
-          %{},
-          %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id, result: :ok}
-        )
+    case RateLimiter.check_dashboard_cancel_rate_limit(user_id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
 
-        Flash.info("Meeting cancelled successfully")
-
-        {:noreply,
-         socket
-         |> assign(:cancelling_meeting, nil)
-         |> load_meetings()
-         |> ModalHook.hide_modal(:cancel_meeting)}
-
-      {:error, reason} ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :cancel, :confirm],
-          %{},
-          %{
-            user_id: socket.assigns.current_user.id,
-            meeting_id: meeting.id,
-            result: :error,
-            reason: inspect(reason)
-          }
-        )
-
-        Flash.error("Failed to cancel meeting: #{inspect(reason)}")
-        {:noreply, assign(socket, :cancelling_meeting, nil)}
+      :ok ->
+        do_cancel_meeting(socket)
     end
   end
 
@@ -203,39 +179,15 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   def handle_event("confirm_reschedule_request", _params, socket) do
-    meeting = socket.assigns.reschedule_request_modal_data
-    socket = assign(socket, :sending_reschedule, meeting.id)
+    user_id = socket.assigns.current_user.id
 
-    case Meetings.send_reschedule_request(meeting) do
+    case RateLimiter.check_dashboard_reschedule_rate_limit(user_id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
       :ok ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :reschedule, :confirm],
-          %{},
-          %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id, result: :ok}
-        )
-
-        Flash.info("Reschedule request sent to #{meeting.attendee_name}")
-
-        {:noreply,
-         socket
-         |> assign(:sending_reschedule, nil)
-         |> load_meetings()
-         |> ModalHook.hide_modal(:reschedule_request)}
-
-      {:error, reason} ->
-        :telemetry.execute(
-          [:tymeslot, :dashboard, :meetings, :reschedule, :confirm],
-          %{},
-          %{
-            user_id: socket.assigns.current_user.id,
-            meeting_id: meeting.id,
-            result: :error,
-            reason: inspect(reason)
-          }
-        )
-
-        Flash.error("Failed to send reschedule request: #{inspect(reason)}")
-        {:noreply, assign(socket, :sending_reschedule, nil)}
+        do_send_reschedule_request(socket)
     end
   end
 
@@ -370,6 +322,80 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   # Private functions
+
+  defp do_cancel_meeting(socket) do
+    meeting = socket.assigns.cancel_meeting_modal_data
+    socket = assign(socket, :cancelling_meeting, meeting.id)
+
+    case Meetings.cancel_meeting(meeting) do
+      {:ok, _cancelled_meeting} ->
+        :telemetry.execute(
+          [:tymeslot, :dashboard, :meetings, :cancel, :confirm],
+          %{},
+          %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id, result: :ok}
+        )
+
+        Flash.info("Meeting cancelled successfully")
+
+        {:noreply,
+         socket
+         |> assign(:cancelling_meeting, nil)
+         |> load_meetings()
+         |> ModalHook.hide_modal(:cancel_meeting)}
+
+      {:error, reason} ->
+        :telemetry.execute(
+          [:tymeslot, :dashboard, :meetings, :cancel, :confirm],
+          %{},
+          %{
+            user_id: socket.assigns.current_user.id,
+            meeting_id: meeting.id,
+            result: :error,
+            reason: inspect(reason)
+          }
+        )
+
+        Flash.error("Failed to cancel meeting: #{inspect(reason)}")
+        {:noreply, assign(socket, :cancelling_meeting, nil)}
+    end
+  end
+
+  defp do_send_reschedule_request(socket) do
+    meeting = socket.assigns.reschedule_request_modal_data
+    socket = assign(socket, :sending_reschedule, meeting.id)
+
+    case Meetings.send_reschedule_request(meeting) do
+      :ok ->
+        :telemetry.execute(
+          [:tymeslot, :dashboard, :meetings, :reschedule, :confirm],
+          %{},
+          %{user_id: socket.assigns.current_user.id, meeting_id: meeting.id, result: :ok}
+        )
+
+        Flash.info("Reschedule request sent to #{meeting.attendee_name}")
+
+        {:noreply,
+         socket
+         |> assign(:sending_reschedule, nil)
+         |> load_meetings()
+         |> ModalHook.hide_modal(:reschedule_request)}
+
+      {:error, reason} ->
+        :telemetry.execute(
+          [:tymeslot, :dashboard, :meetings, :reschedule, :confirm],
+          %{},
+          %{
+            user_id: socket.assigns.current_user.id,
+            meeting_id: meeting.id,
+            result: :error,
+            reason: inspect(reason)
+          }
+        )
+
+        Flash.error("Failed to send reschedule request: #{inspect(reason)}")
+        {:noreply, assign(socket, :sending_reschedule, nil)}
+    end
+  end
 
   defp emit_cancel_open_telemetry(user_id, meeting_id) do
     :telemetry.execute(
