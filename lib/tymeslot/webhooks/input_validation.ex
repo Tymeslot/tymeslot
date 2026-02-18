@@ -10,7 +10,7 @@ defmodule Tymeslot.Webhooks.InputValidation do
 
   alias Ecto.Changeset
   alias Tymeslot.DatabaseSchemas.WebhookSchema
-  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.{RateLimiter, UniversalSanitizer}
 
   @primary_key false
   embedded_schema do
@@ -36,9 +36,11 @@ defmodule Tymeslot.Webhooks.InputValidation do
 
     case check_rate_limit("webhook_form", metadata) do
       :ok ->
-        params
-        |> perform_webhook_validation()
-        |> handle_webhook_validation_result()
+        with {:ok, sanitized_params} <- sanitize_text_fields(params, metadata) do
+          sanitized_params
+          |> perform_webhook_validation()
+          |> handle_webhook_validation_result()
+        end
 
       {:error, :rate_limited} ->
         {:error, %{form: "Too many requests. Please slow down."}}
@@ -55,9 +57,15 @@ defmodule Tymeslot.Webhooks.InputValidation do
 
     case check_rate_limit("webhook_name", metadata) do
       :ok ->
-        %{"name" => name}
-        |> perform_name_update_validation()
-        |> handle_name_update_result()
+        case sanitize_text_value(name, metadata) do
+          {:ok, sanitized_name} ->
+            %{"name" => sanitized_name}
+            |> perform_name_update_validation()
+            |> handle_name_update_result()
+
+          {:error, reason} ->
+            {:error, reason}
+        end
 
       {:error, :rate_limited} ->
         {:error, "Too many requests. Please slow down."}
@@ -178,4 +186,30 @@ defmodule Tymeslot.Webhooks.InputValidation do
         "Invalid input"
     end
   end
+
+  defp sanitize_text_fields(params, metadata) do
+    with {:ok, sanitized_name} <- sanitize_field_for_form(params["name"], :name, metadata) do
+      {:ok, Map.put(params, "name", sanitized_name)}
+    end
+  end
+
+  defp sanitize_field_for_form(value, _field, _metadata) when value in [nil, ""], do: {:ok, value}
+
+  defp sanitize_field_for_form(value, field, metadata) when is_binary(value) do
+    case UniversalSanitizer.sanitize_and_validate(value, allow_html: false, metadata: metadata) do
+      {:ok, sanitized} -> {:ok, sanitized}
+      {:error, reason} -> {:error, %{field => reason}}
+    end
+  end
+
+  defp sanitize_field_for_form(_value, field, _metadata),
+    do: {:error, %{field => "must be a string"}}
+
+  defp sanitize_text_value(value, _metadata) when value in [nil, ""], do: {:ok, value}
+
+  defp sanitize_text_value(value, metadata) when is_binary(value) do
+    UniversalSanitizer.sanitize_and_validate(value, allow_html: false, metadata: metadata)
+  end
+
+  defp sanitize_text_value(_value, _metadata), do: {:error, "must be a string"}
 end
