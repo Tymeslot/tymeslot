@@ -1,6 +1,8 @@
 defmodule Tymeslot.MeetingTypes.InputValidationTest do
   use Tymeslot.DataCase, async: true
 
+  @moduletag :meeting_types
+
   alias Tymeslot.MeetingTypes.InputValidation
 
   describe "validate_meeting_type_form/2" do

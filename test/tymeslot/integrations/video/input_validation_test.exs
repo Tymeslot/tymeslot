@@ -1,6 +1,8 @@
 defmodule Tymeslot.Integrations.Video.InputValidationTest do
   use Tymeslot.DataCase, async: true
 
+  @moduletag :integrations
+
   alias Tymeslot.Integrations.Video.InputValidation
 
   describe "validate_video_integration_form/2 - mirotalk" do

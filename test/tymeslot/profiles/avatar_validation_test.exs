@@ -1,6 +1,8 @@
 defmodule Tymeslot.Profiles.AvatarValidationTest do
   use Tymeslot.DataCase, async: true
 
+  @moduletag :profiles
+
   alias Tymeslot.Profiles
 
   # consume_avatar_upload/4 wraps validation errors as {:ok, {:error, reason}}

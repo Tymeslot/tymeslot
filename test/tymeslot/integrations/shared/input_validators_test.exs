@@ -1,6 +1,8 @@
 defmodule Tymeslot.Integrations.Shared.InputValidatorsTest do
   use Tymeslot.DataCase, async: true
 
+  @moduletag :integrations
+
   alias Tymeslot.Integrations.Shared.InputValidators
 
   describe "validate_integration_name/1" do

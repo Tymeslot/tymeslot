@@ -1,6 +1,8 @@
 defmodule Tymeslot.Webhooks.InputValidationTest do
   use Tymeslot.DataCase, async: false
 
+  @moduletag :security
+
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Webhooks.InputValidation
 

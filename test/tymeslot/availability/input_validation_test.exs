@@ -1,6 +1,8 @@
 defmodule Tymeslot.Availability.InputValidationTest do
   use Tymeslot.DataCase, async: true
 
+  @moduletag :availability
+
   alias Tymeslot.Availability.InputValidation
 
   describe "validate_day_hours/2" do
