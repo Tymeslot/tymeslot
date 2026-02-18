@@ -160,9 +160,7 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
   end
 
   defp ensure_rate_limiter_started do
-    case Process.whereis(RateLimiter) do
-      nil -> start_supervised!(RateLimiter)
-      _pid -> :ok
-    end
+    # RateLimit (Hammer ETS) is always started in the supervision tree.
+    RateLimiter.clear_all()
   end
 end
