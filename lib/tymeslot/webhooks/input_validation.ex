@@ -82,15 +82,9 @@ defmodule Tymeslot.Webhooks.InputValidation do
 
     case check_rate_limit("webhook_url", metadata) do
       :ok ->
-        case sanitize_text_value(url, metadata) do
-          {:ok, sanitized_url} ->
-            %{"url" => sanitized_url}
-            |> perform_url_update_validation()
-            |> handle_url_update_result()
-
-          {:error, reason} ->
-            {:error, reason}
-        end
+        %{"url" => url}
+        |> perform_url_update_validation()
+        |> handle_url_update_result()
 
       {:error, :rate_limited} ->
         {:error, "Too many requests. Please slow down."}
@@ -194,9 +188,8 @@ defmodule Tymeslot.Webhooks.InputValidation do
   end
 
   defp sanitize_text_fields(params, metadata) do
-    with {:ok, sanitized_name} <- sanitize_field_for_form(params["name"], :name, metadata),
-         {:ok, sanitized_url} <- sanitize_field_for_form(params["url"], :url, metadata) do
-      {:ok, Map.merge(params, %{"name" => sanitized_name, "url" => sanitized_url})}
+    with {:ok, sanitized_name} <- sanitize_field_for_form(params["name"], :name, metadata) do
+      {:ok, Map.put(params, "name", sanitized_name)}
     end
   end
 
@@ -209,9 +202,14 @@ defmodule Tymeslot.Webhooks.InputValidation do
     end
   end
 
+  defp sanitize_field_for_form(_value, field, _metadata),
+    do: {:error, %{field => "must be a string"}}
+
   defp sanitize_text_value(value, _metadata) when value in [nil, ""], do: {:ok, value}
 
   defp sanitize_text_value(value, metadata) when is_binary(value) do
     UniversalSanitizer.sanitize_and_validate(value, allow_html: false, metadata: metadata)
   end
+
+  defp sanitize_text_value(_value, _metadata), do: {:error, "must be a string"}
 end

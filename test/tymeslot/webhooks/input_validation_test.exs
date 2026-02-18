@@ -88,6 +88,57 @@ defmodule Tymeslot.Webhooks.InputValidationTest do
       assert {:error, errors} = InputValidation.validate_webhook_form(params)
       assert Map.has_key?(errors, :events)
     end
+
+    test "strips XSS from name field" do
+      params = %{
+        "name" => "<script>alert(1)</script>My Webhook",
+        "url" => "https://example.com/hook",
+        "events" => []
+      }
+
+      assert {:ok, validated} = InputValidation.validate_webhook_form(params)
+      refute String.contains?(validated.name, "<script>")
+    end
+
+    test "strips SQL injection pattern from name field" do
+      params = %{
+        "name" => "Webhook'; DROP TABLE webhooks; --",
+        "url" => "https://example.com/hook",
+        "events" => []
+      }
+
+      assert {:ok, validated} = InputValidation.validate_webhook_form(params)
+      refute String.contains?(validated.name, "DROP TABLE")
+    end
+
+    test "preserves percent-encoded url unchanged" do
+      params = %{
+        "name" => "My Webhook",
+        "url" => "https://example.com/hook?q=hello%20world",
+        "events" => []
+      }
+
+      assert {:ok, validated} = InputValidation.validate_webhook_form(params)
+      assert validated.url == "https://example.com/hook?q=hello%20world"
+    end
+
+    test "returns error when name is non-string type" do
+      params = %{"name" => 42, "url" => "https://example.com/hook", "events" => []}
+      assert {:error, errors} = InputValidation.validate_webhook_form(params)
+      assert Map.has_key?(errors, :name)
+    end
+
+    test "returns error when url is non-string type" do
+      params = %{"name" => "My Webhook", "url" => ["https://example.com"], "events" => []}
+      assert {:error, errors} = InputValidation.validate_webhook_form(params)
+      assert Map.has_key?(errors, :url)
+    end
+
+    test "trims whitespace-only name and rejects it" do
+      params = %{"name" => "   ", "url" => "https://example.com/hook", "events" => []}
+      assert {:error, errors} = InputValidation.validate_webhook_form(params)
+      assert Map.has_key?(errors, :name)
+    end
   end
 
   describe "validate_name_update/2" do
@@ -103,6 +154,17 @@ defmodule Tymeslot.Webhooks.InputValidationTest do
       long_name = String.duplicate("a", 256)
       assert {:error, _msg} = InputValidation.validate_name_update(long_name)
     end
+
+    test "strips XSS from name" do
+      assert {:ok, sanitized} =
+               InputValidation.validate_name_update("<script>alert(1)</script>My Webhook")
+
+      refute String.contains?(sanitized, "<script>")
+    end
+
+    test "returns error for non-string name" do
+      assert {:error, _msg} = InputValidation.validate_name_update(42)
+    end
   end
 
   describe "validate_url_update/2" do
@@ -117,6 +179,15 @@ defmodule Tymeslot.Webhooks.InputValidationTest do
 
     test "rejects invalid url" do
       assert {:error, _msg} = InputValidation.validate_url_update("not-a-url")
+    end
+
+    test "accepts url with percent-encoded characters" do
+      assert {:ok, "https://example.com/hook?q=hello%20world"} =
+               InputValidation.validate_url_update("https://example.com/hook?q=hello%20world")
+    end
+
+    test "returns error for non-string url" do
+      assert {:error, _msg} = InputValidation.validate_url_update(:not_a_string)
     end
   end
 end
