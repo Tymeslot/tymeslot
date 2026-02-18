@@ -7,7 +7,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Repo
-  alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.TestMocks
 
   @moduledoc """
