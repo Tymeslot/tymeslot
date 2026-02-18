@@ -8,13 +8,11 @@ defmodule Tymeslot.MixProject do
       elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
+      build_path: build_path(),
       aliases: aliases(),
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
-      dialyzer: [
-        ignore_warnings: ".dialyzer_ignore.exs",
-        plt_add_apps: [:mix, :credo, :xmerl]
-      ],
+      dialyzer: [ignore_warnings: ".dialyzer_ignore.exs"],
       releases: [
         tymeslot: [
           applications: [tymeslot: :permanent]
@@ -54,6 +52,18 @@ defmodule Tymeslot.MixProject do
   end
 
   # Specifies which paths to compile per environment.
+  # Use the umbrella root's _build when running inside the umbrella,
+  # fall back to the local _build for standalone (self-hosted) deployments.
+  defp build_path do
+    umbrella_root = Path.join(__DIR__, "../..")
+
+    if File.exists?(Path.join(umbrella_root, "mix.exs")) do
+      Path.join(umbrella_root, "_build")
+    else
+      "_build"
+    end
+  end
+
   defp elixirc_paths(:dev), do: ["lib"]
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(:prod), do: ["lib"]
