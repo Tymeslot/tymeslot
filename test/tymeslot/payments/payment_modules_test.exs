@@ -1,5 +1,7 @@
 defmodule Tymeslot.Payments.PaymentModulesTest do
+  @moduletag :payments
   # PubSub tests need sequential execution
+  @moduletag :payments
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.Payments.{ErrorHandler, PubSub}

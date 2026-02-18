@@ -1,10 +1,12 @@
 defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
+  @moduletag :emails
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Emails.Templates.AppointmentConfirmationOrganizer
   import Tymeslot.EmailTestHelpers
 
   describe "confirmation_email/2" do
+  @moduletag :emails
     test "creates email with correct subject line" do
       details = build_appointment_details()
 

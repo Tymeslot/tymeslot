@@ -1,4 +1,5 @@
 defmodule Tymeslot.Payments.ComponentsTest do
+  @moduletag :payments
   use Tymeslot.DataCase, async: true
 
   alias Ecto.Changeset
@@ -8,6 +9,7 @@ defmodule Tymeslot.Payments.ComponentsTest do
   alias Tymeslot.Repo
 
   describe "Validation.validate_amount/1" do
+  @moduletag :payments
     test "accepts a valid amount" do
       assert :ok = Validation.validate_amount(100)
     end

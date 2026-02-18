@@ -1,8 +1,10 @@
 defmodule Tymeslot.Security.SettingsInputProcessorTest do
+  @moduletag :security
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Security.SettingsInputProcessor
 
   describe "validate_full_name_update/2" do
+  @moduletag :security
     test "accepts valid full name" do
       assert {:ok, "John Smith"} = SettingsInputProcessor.validate_full_name_update("John Smith")
     end

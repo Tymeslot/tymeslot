@@ -1,4 +1,5 @@
 defmodule Tymeslot.Security.InputProcessorTest do
+  @moduletag :security
   use ExUnit.Case, async: true
 
   alias Tymeslot.Security.InputProcessor

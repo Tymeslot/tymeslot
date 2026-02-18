@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
+  @moduletag :integrations
   use ExUnit.Case, async: true
 
   import ExUnit.CaptureLog
@@ -6,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
   alias Tymeslot.Integrations.Calendar.Nextcloud.Provider
 
   setup do
+  @moduletag :integrations
     CalendarCircuitBreaker.reset(:nextcloud)
     :ok
   end

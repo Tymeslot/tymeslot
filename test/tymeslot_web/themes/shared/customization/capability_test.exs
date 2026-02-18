@@ -1,8 +1,10 @@
 defmodule TymeslotWeb.Themes.Shared.Customization.CapabilityTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   alias TymeslotWeb.Themes.Shared.Customization.Capability
 
   test "delegates to Tymeslot.ThemeCustomizations.Capability" do
+  @moduletag :utils
     # We use a known theme ID "1" or "2"
     assert is_map(Capability.get_customization_options("1"))
     assert is_map(Capability.get_capability_defaults("1"))

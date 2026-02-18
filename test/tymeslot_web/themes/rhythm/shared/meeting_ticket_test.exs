@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicketTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
   import Phoenix.Component
@@ -6,6 +7,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Shared.MeetingTicketTest do
   alias TymeslotWeb.Themes.Rhythm.Shared.MeetingTicket
 
   describe "meeting_ticket/1" do
+  @moduletag :utils
     test "renders meeting details with all required information" do
       assigns = %{
         header_label: "Meeting Details",

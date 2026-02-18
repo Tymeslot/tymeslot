@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.RouterHookConfigTest do
+  @moduletag :utils
   use ExUnit.Case, async: false
 
   import ExUnit.CaptureLog
@@ -8,6 +9,7 @@ defmodule TymeslotWeb.RouterHookConfigTest do
   alias TymeslotWeb.Router
 
   setup do
+  @moduletag :utils
     original = Application.get_env(:tymeslot, :dashboard_additional_hooks)
 
     on_exit(fn ->

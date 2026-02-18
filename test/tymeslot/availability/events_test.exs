@@ -1,5 +1,7 @@
 defmodule Tymeslot.Availability.EventsTest do
+  @moduletag :availability
   @moduledoc """
+  @moduletag :availability
   Tests for the Events module - event processing and timezone conversion.
   """
 

@@ -1,4 +1,5 @@
 defmodule Tymeslot.Auth.EmailChangeTest do
+  @moduletag :auth
   use Tymeslot.DataCase, async: false
 
   alias Ecto.Changeset
@@ -9,6 +10,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
   import Tymeslot.Factory
 
   describe "request_email_change/3" do
+  @moduletag :auth
     setup do
       user = insert(:user)
       {:ok, user: user}

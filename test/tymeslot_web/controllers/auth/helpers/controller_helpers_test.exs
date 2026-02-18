@@ -1,10 +1,12 @@
 defmodule TymeslotWeb.AuthControllerHelpersTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   alias Phoenix.Flash
   alias Plug.Session
   alias TymeslotWeb.AuthControllerHelpers
 
   setup %{conn: conn} do
+  @moduletag :utils
     conn =
       conn
       |> Map.put(:secret_key_base, String.duplicate("a", 64))

@@ -1,8 +1,10 @@
 defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
+  @moduletag :utils
   use Tymeslot.DataCase, async: true
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
 
   describe "embed_code/2" do
+  @moduletag :utils
     test "generates inline embed code with sanitization" do
       assigns = %{username: "testuser", base_url: "https://tymeslot.com"}
       code = Helpers.embed_code("inline", assigns)

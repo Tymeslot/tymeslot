@@ -1,5 +1,7 @@
 defmodule TymeslotWeb.OnboardingCustomInputsTest do
+  @moduletag :utils
   @moduledoc """
+  @moduletag :utils
   Tests for custom value inputs in the onboarding scheduling preferences step.
 
   Tests the ability to:

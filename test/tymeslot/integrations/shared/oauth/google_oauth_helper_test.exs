@@ -1,10 +1,12 @@
 defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   import Mox
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   @client_id "test-client-id"
   @client_secret "test-client-secret"

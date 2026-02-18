@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.Shared.XmlParserTest do
+  @moduletag :integrations
   use ExUnit.Case, async: true
 
   alias Tymeslot.Integrations.Calendar.Shared.XmlParser
 
   describe "parse_calendar_discovery_response/2" do
+  @moduletag :integrations
     test "parses standard CalDAV discovery response" do
       xml = """
       <?xml version="1.0" encoding="UTF-8"?>

@@ -1,8 +1,10 @@
 defmodule Tymeslot.Security.MeetingSettingsInputProcessorTest do
+  @moduletag :security
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Security.MeetingSettingsInputProcessor
 
   describe "validate_meeting_type_form" do
+  @moduletag :security
     test "accepts valid input" do
       params = %{
         "name" => "Coffee Chat",

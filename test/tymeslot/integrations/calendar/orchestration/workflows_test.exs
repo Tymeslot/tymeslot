@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
@@ -7,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.WorkflowsTest do
   import Mox
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   describe "refresh_calendar_list_async/3" do
     test "successfully refreshes calendar list and notifies parent" do

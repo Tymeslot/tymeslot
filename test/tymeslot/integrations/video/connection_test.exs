@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Video.ConnectionTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Integrations.Video.Connection
@@ -6,6 +7,7 @@ defmodule Tymeslot.Integrations.Video.ConnectionTest do
   import Mox
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   describe "test_connection/2" do
     test "tests connection for mirotalk provider" do

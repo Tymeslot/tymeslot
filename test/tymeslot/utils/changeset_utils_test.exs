@@ -1,4 +1,5 @@
 defmodule Tymeslot.Utils.ChangesetUtilsTest do
+  @moduletag :utils
   use ExUnit.Case, async: true
   alias Tymeslot.Utils.ChangesetUtils
 

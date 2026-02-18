@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest do
+  @moduletag :integrations
   use ExUnit.Case, async: true
 
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter

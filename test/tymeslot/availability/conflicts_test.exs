@@ -1,5 +1,7 @@
 defmodule Tymeslot.Availability.ConflictsTest do
+  @moduletag :availability
   @moduledoc """
+  @moduletag :availability
   Tests for the Conflicts module - conflict detection and slot filtering.
   """
 

@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.VideoTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   import Mox
@@ -7,6 +8,7 @@ defmodule Tymeslot.Integrations.VideoTest do
   alias Tymeslot.Integrations.Video
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   describe "list_integrations/1" do
     test "lists all integrations for a user" do

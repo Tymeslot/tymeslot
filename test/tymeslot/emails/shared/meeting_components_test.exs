@@ -1,9 +1,11 @@
 defmodule Tymeslot.Emails.Shared.MeetingComponentsTest do
+  @moduletag :emails
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Emails.Shared.MeetingComponents
 
   describe "meeting_details_table/1" do
+  @moduletag :emails
     test "sanitizes user-provided location" do
       details = %{
         date: ~D[2026-01-15],

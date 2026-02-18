@@ -1,5 +1,7 @@
 defmodule Tymeslot.Availability.TimeSlotsTest do
+  @moduletag :availability
   @moduledoc """
+  @moduletag :availability
   Tests for the TimeSlots module - pure functions for time slot generation.
   """
 

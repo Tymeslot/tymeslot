@@ -1,9 +1,11 @@
 defmodule TymeslotWeb.Live.Themes.QuillMeetingTest do
+  @moduletag :utils
   use TymeslotWeb.LiveCase, async: false
 
   alias TymeslotWeb.ThemeMeetingTestCases
 
   setup do
+  @moduletag :utils
     ThemeMeetingTestCases.setup_theme_meeting(%{
       user_name: "Jane Smith",
       theme_id: "1",

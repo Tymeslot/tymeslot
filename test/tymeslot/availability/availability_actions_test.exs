@@ -1,5 +1,7 @@
 defmodule Tymeslot.Availability.AvailabilityActionsTest do
+  @moduletag :availability
   @moduledoc """
+  @moduletag :availability
   Comprehensive behavior tests for the Availability management functionality.
   Focuses on user-facing functionality and business rules.
   """

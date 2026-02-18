@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.BookingHoneypotTest do
+  @moduletag :utils
   use TymeslotWeb.LiveCase, async: false
 
   import Mox
@@ -11,6 +12,7 @@ defmodule TymeslotWeb.BookingHoneypotTest do
   alias Tymeslot.TestMocks
 
   @moduledoc """
+  @moduletag :utils
   Tests for honeypot-based bot detection in booking flow.
 
   Note: Honeypot detection happens *before* reCAPTCHA verification,

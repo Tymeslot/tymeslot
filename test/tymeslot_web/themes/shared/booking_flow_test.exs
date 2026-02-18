@@ -1,10 +1,12 @@
 defmodule TymeslotWeb.Themes.Shared.BookingFlowTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
 
   alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Themes.Shared.BookingFlow
 
   test "does not show validation errors before form is touched" do
+  @moduletag :utils
     socket = %Socket{assigns: %{__changed__: %{}}}
 
     params = %{

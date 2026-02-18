@@ -1,8 +1,10 @@
 defmodule TymeslotWeb.Live.Scheduling.HandlersTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   alias TymeslotWeb.Live.Scheduling.Handlers
 
   test "available_handlers/0 returns list of all handlers" do
+  @moduletag :utils
     handlers = Handlers.available_handlers()
     assert length(handlers) == 4
 

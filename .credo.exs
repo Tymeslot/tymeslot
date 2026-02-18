@@ -17,12 +17,15 @@
       },
       plugins: [],
       requires: [
+        # Tag taxonomy must be loaded first so the check can call TagTaxonomy.all()
+        "test/support/tag_taxonomy.ex",
         "dev_support/credo_checks/empty_files.ex",
         "dev_support/credo_checks/large_modules.ex",
         "dev_support/credo_checks/require_dashboard_section_header.ex",
         "dev_support/credo_checks/thin_wrapper_functions.ex",
         "dev_support/credo_checks/use_core_inputs.ex",
-        "dev_support/credo_checks/use_p_sigil.ex"
+        "dev_support/credo_checks/use_p_sigil.ex",
+        "dev_support/credo_checks/test_module_tag_required.ex"
       ],
       strict: false,
       parse_timeout: 5000,
@@ -103,6 +106,7 @@
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
           {CredoChecks.UseCoreInputs, []},
           {CredoChecks.RequireDashboardSectionHeader, [priority: :low]},
+          {CredoChecks.TestModuleTagRequired, [priority: :high]},
 
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)

@@ -1,9 +1,11 @@
 defmodule Tymeslot.ThemeCustomizationsValidationTest do
+  @moduletag :utils
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.ThemeCustomizations.{Presets, Validation}
 
   describe "Validation module" do
+  @moduletag :utils
     test "validate_color_scheme/1 validates known schemes" do
       assert Validation.validate_color_scheme("purple") == :ok
       assert Validation.validate_color_scheme("ocean") == :ok

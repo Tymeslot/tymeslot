@@ -1,9 +1,11 @@
 defmodule TymeslotWeb.HealthcheckControllerTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
 
   alias Tymeslot.Security.RateLimiter
 
   setup do
+  @moduletag :utils
     RateLimiter.clear_all()
     :ok
   end

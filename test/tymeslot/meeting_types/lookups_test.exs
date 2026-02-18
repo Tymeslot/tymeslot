@@ -1,5 +1,7 @@
 defmodule Tymeslot.MeetingTypes.LookupsTest do
+  @moduletag :meeting_types
   @moduledoc """
+  @moduletag :meeting_types
   Tests for meeting type lookups and validation utilities.
   Covers duration strings, slug-based lookups, and duration validation.
   """

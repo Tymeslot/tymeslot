@@ -1,10 +1,12 @@
 defmodule Tymeslot.DatabaseSchemas.WebhookSchemaTest do
+  @moduletag :utils
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.DatabaseSchemas.WebhookSchema
   alias Tymeslot.Security.Encryption
 
   describe "generate_token/1" do
+  @moduletag :utils
     test "generates a new token if one doesn't exist" do
       changeset =
         WebhookSchema.changeset(%WebhookSchema{}, %{

@@ -1,4 +1,5 @@
 defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
+  @moduletag :payments
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.DatabaseQueries.PaymentQueries
@@ -6,6 +7,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
   import Tymeslot.Factory
 
   describe "can_handle?/1" do
+  @moduletag :payments
     test "returns true for supported invoice events" do
       assert InvoiceHandler.can_handle?("invoice.created")
       assert InvoiceHandler.can_handle?("invoice.finalized")

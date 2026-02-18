@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLimitingTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
 
   import Tymeslot.Factory
@@ -7,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLim
   alias Tymeslot.Security.RateLimiter
 
   describe "theme customization rate limiting - unit level" do
+  @moduletag :utils
     setup do
       # Clear rate limiter before each test
       RateLimiter.clear_all()

@@ -1,10 +1,12 @@
 defmodule TymeslotWeb.Components.DashboardSidebarTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
   alias Floki
   alias TymeslotWeb.Components.DashboardSidebar
 
   test "renders sidebar with all navigation links" do
+  @moduletag :utils
     assigns = %{
       current_action: :overview,
       integration_status: %{has_calendar: true, has_video: true, has_meeting_types: true},

@@ -1,9 +1,11 @@
 defmodule Tymeslot.Security.MeetingsInputProcessorTest do
+  @moduletag :security
   use Tymeslot.DataCase, async: true
   alias Ecto.UUID
   alias Tymeslot.Security.MeetingsInputProcessor
 
   describe "validate_filter_input/2" do
+  @moduletag :security
     test "accepts valid filter options" do
       assert {:ok, %{"filter" => "upcoming"}} =
                MeetingsInputProcessor.validate_filter_input(%{"filter" => "upcoming"})

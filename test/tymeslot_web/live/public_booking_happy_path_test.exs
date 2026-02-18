@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.PublicBookingHappyPathTest do
+  @moduletag :utils
   use TymeslotWeb.LiveCase, async: false
 
   import Mox
@@ -10,6 +11,7 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
+  @moduletag :utils
 
   setup tags do
     Mox.set_mox_from_context(tags)

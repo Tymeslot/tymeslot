@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.AccountLiveTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
   import Phoenix.LiveViewTest
   import Tymeslot.TestFixtures
@@ -14,6 +15,7 @@ defmodule TymeslotWeb.AccountLiveTest do
   alias TymeslotWeb.AccountLive.ErrorFormatter
 
   setup %{conn: conn} do
+  @moduletag :utils
     RateLimiter.clear_all()
     user = create_user_fixture()
     # Ensure user is fully verified and onboarded

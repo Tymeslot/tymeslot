@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Video.RoomsTest do
+  @moduletag :integrations
   @moduledoc """
+  @moduletag :integrations
   Tests for video room creation and provider integration.
 
   ## Note on Process.sleep Usage

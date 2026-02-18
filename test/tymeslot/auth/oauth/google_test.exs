@@ -1,4 +1,5 @@
 defmodule Tymeslot.Auth.OAuth.GoogleTest do
+  @moduletag :auth
   use Tymeslot.DataCase, async: false
 
   alias Phoenix.Controller
@@ -11,6 +12,7 @@ defmodule Tymeslot.Auth.OAuth.GoogleTest do
   import Phoenix.ConnTest, only: [redirected_to: 1]
 
   setup :verify_on_exit!
+  @moduletag :auth
 
   setup do
     old_helper = Application.get_env(:tymeslot, :oauth_helper_module)

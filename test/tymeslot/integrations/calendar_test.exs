@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.CalendarTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: false
 
   import Tymeslot.Factory
@@ -7,6 +8,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
   alias Tymeslot.Integrations.Calendar
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   describe "list_integrations/1" do
     test "returns integrations with primary flag" do

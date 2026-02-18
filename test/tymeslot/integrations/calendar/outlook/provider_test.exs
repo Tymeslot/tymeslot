@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   import Tymeslot.Factory
@@ -7,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
   alias Tymeslot.Integrations.Calendar.Outlook.Provider
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   describe "validate_oauth_scope/1" do
     test "accepts valid Calendars.ReadWrite scope" do

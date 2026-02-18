@@ -1,9 +1,11 @@
 defmodule Tymeslot.Payments.RetryHelperTest do
+  @moduletag :payments
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Payments.RetryHelper
 
   describe "execute_with_retry/2" do
+  @moduletag :payments
     test "returns ok result on first attempt" do
       operation = fn -> {:ok, "success"} end
 

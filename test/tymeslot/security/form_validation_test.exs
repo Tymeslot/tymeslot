@@ -1,9 +1,11 @@
 defmodule Tymeslot.Security.FormValidationTest do
+  @moduletag :security
   use ExUnit.Case, async: true
 
   alias Tymeslot.Security.FormValidation
 
   describe "validate_booking_form/1" do
+  @moduletag :security
     test "accepts valid params and returns sanitized values" do
       params = %{
         "name" => "  Alice   Smith  ",

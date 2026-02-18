@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
+  @moduletag :utils
   use TymeslotWeb.LiveCase, async: true
 
   import Tymeslot.DashboardTestHelpers
@@ -10,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
   alias Tymeslot.Utils.TimezoneUtils
 
   setup :setup_dashboard_user
+  @moduletag :utils
 
   describe "Avatar upload" do
     test "successfully uploads an avatar", %{conn: conn, profile: profile} do

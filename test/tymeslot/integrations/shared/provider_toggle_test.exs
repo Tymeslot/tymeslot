@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.Shared.ProviderToggleTest do
+  @moduletag :integrations
   use ExUnit.Case, async: true
 
   alias Tymeslot.Integrations.Shared.ProviderToggle
 
   describe "enabled?/3" do
+  @moduletag :integrations
     test "returns boolean setting when available" do
       settings = %{google: true, outlook: false}
       assert ProviderToggle.enabled?(settings, :google) == true

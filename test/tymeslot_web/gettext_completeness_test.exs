@@ -1,5 +1,7 @@
 defmodule TymeslotWeb.GettextCompletenessTest do
+  @moduletag :utils
   @moduledoc """
+  @moduletag :utils
   Tests to ensure translation completeness across all supported languages.
   Verifies that:
   - All languages have the same msgids

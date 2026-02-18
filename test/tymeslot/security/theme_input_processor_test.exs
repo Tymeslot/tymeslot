@@ -1,9 +1,11 @@
 defmodule Tymeslot.Security.ThemeInputProcessorTest do
+  @moduletag :security
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Security.ThemeInputProcessor
   alias Tymeslot.Themes.Theme
 
   describe "validate_theme_selection/2" do
+  @moduletag :security
     test "accepts valid theme selection" do
       # Get a valid theme ID from the registry
       case Theme.theme_options() do

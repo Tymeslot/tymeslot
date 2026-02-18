@@ -1,4 +1,5 @@
 defmodule Tymeslot.Payments.Webhooks.WebhookProcessorTest do
+  @moduletag :payments
   use ExUnit.Case, async: false
 
   import Mox
@@ -6,6 +7,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessorTest do
   alias Tymeslot.Payments.Webhooks.WebhookProcessor
 
   setup :set_mox_from_context
+  @moduletag :payments
   setup :verify_on_exit!
 
   defmodule TestAdminAlerts do

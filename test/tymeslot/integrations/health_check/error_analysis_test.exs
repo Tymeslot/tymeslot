@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
+  @moduletag :integrations
   use ExUnit.Case, async: true
 
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
 
   describe "analyze/2 with success" do
+  @moduletag :integrations
     test "returns success result unchanged" do
       health_state = %{failures: 0, backoff_ms: :timer.minutes(5)}
 

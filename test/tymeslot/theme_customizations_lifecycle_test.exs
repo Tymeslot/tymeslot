@@ -1,4 +1,5 @@
 defmodule Tymeslot.ThemeCustomizationsLifecycleTest do
+  @moduletag :utils
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
@@ -6,6 +7,7 @@ defmodule Tymeslot.ThemeCustomizationsLifecycleTest do
   alias Tymeslot.ThemeCustomizations
 
   describe "ThemeCustomizations lifecycle" do
+  @moduletag :utils
     setup do
       user = insert(:user)
       {:ok, profile} = Profiles.get_or_create_profile(user.id)

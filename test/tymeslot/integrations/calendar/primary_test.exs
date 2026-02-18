@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
@@ -7,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
   alias Tymeslot.Integrations.CalendarPrimary
 
   setup do
+  @moduletag :integrations
     user = insert(:user)
     _profile = insert(:profile, user: user)
     %{user: user}

@@ -1,8 +1,10 @@
 defmodule Tymeslot.Demo.NoOpTest do
+  @moduletag :demo
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Demo.NoOp
 
   describe "NoOp provider" do
+  @moduletag :demo
     test "demo_mode?/1 always returns false" do
       refute NoOp.demo_mode?(%{})
     end

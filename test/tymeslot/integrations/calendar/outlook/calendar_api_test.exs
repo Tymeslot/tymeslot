@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   import Tymeslot.Factory
@@ -8,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
   alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   describe "list_calendars/1" do
     test "returns list of calendars when successful" do

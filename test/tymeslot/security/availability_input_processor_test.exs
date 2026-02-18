@@ -1,8 +1,10 @@
 defmodule Tymeslot.Security.AvailabilityInputProcessorTest do
+  @moduletag :security
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Security.AvailabilityInputProcessor
 
   describe "validate_day_hours/2" do
+  @moduletag :security
     test "accepts valid day hours" do
       params = %{"start" => "09:00", "end" => "17:00"}
       assert {:ok, sanitized} = AvailabilityInputProcessor.validate_day_hours(params)

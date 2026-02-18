@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Integrations.Calendar.IcsGenerator
 
   describe "generate_ics/1" do
+  @moduletag :integrations
     test "generates valid ICS content with required fields" do
       meeting_details = %{
         title: "Test Meeting",

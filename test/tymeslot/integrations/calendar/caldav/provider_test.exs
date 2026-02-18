@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
+  @moduletag :integrations
   use ExUnit.Case, async: true
 
   import Mox
@@ -7,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   setup do
     CalendarCircuitBreaker.reset(:caldav)

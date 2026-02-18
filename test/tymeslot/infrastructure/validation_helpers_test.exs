@@ -1,8 +1,10 @@
 defmodule Tymeslot.Infrastructure.ValidationHelpersTest do
+  @moduletag :infrastructure
   use ExUnit.Case, async: true
   alias Tymeslot.Infrastructure.ValidationHelpers
 
   describe "validate_required_fields/2" do
+  @moduletag :infrastructure
     test "returns :ok when all required fields are present" do
       params = %{"email" => "test@example.com", "password" => "secret"}
       required = ["email", "password"]

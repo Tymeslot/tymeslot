@@ -1,9 +1,11 @@
 defmodule TymeslotWeb.AuthLive.SecurityHelperTest do
+  @moduletag :utils
   use ExUnit.Case, async: true
 
   alias TymeslotWeb.AuthLive.SecurityHelper
 
   test "validate_csrf_token/2 returns invalid_csrf when token is missing" do
+  @moduletag :utils
     socket =
       %Phoenix.LiveView.Socket{
         assigns: %{

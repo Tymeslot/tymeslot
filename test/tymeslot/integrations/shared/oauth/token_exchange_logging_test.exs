@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
+  @moduletag :integrations
   # async: false because we are capturing global logs
+  @moduletag :integrations
   use ExUnit.Case, async: false
   import ExUnit.CaptureLog
 

@@ -1,5 +1,7 @@
 defmodule TymeslotWeb.OnboardingLive.StepConfigTest do
+  @moduletag :utils
   @moduledoc """
+  @moduletag :utils
   Tests for the StepConfig module, focusing on configuration options
   and helper functions for the onboarding flow.
   """

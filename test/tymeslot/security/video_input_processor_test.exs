@@ -1,8 +1,10 @@
 defmodule Tymeslot.Security.VideoInputProcessorTest do
+  @moduletag :security
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Security.VideoInputProcessor
 
   describe "validate_video_integration_form/2 for mirotalk" do
+  @moduletag :security
     test "accepts valid mirotalk input" do
       params = %{
         "provider" => "mirotalk",

@@ -1,9 +1,11 @@
 defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
 
   alias TymeslotWeb.Themes.Shared.LocaleHandler
 
   setup do
+  @moduletag :utils
     # Create a minimal LiveView socket structure for testing
     socket = %Phoenix.LiveView.Socket{
       assigns: %{locale: "en", __changed__: %{}},

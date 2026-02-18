@@ -1,9 +1,11 @@
 defmodule TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponentTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent
 
   test "handle_timezone_dropdown_toggle toggles state" do
+  @moduletag :utils
     socket = %Socket{assigns: %{__changed__: %{}, timezone_dropdown_open: false}}
     {:ok, updated} = TimezoneHandlerComponent.handle_timezone_dropdown_toggle(socket)
     assert updated.assigns.timezone_dropdown_open == true

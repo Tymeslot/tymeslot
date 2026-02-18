@@ -1,9 +1,11 @@
 defmodule Tymeslot.Payments.PricingTest do
+  @moduletag :payments
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Payments.Pricing
 
   describe "format_price/1" do
+  @moduletag :payments
     test "formats EUR correctly" do
       Application.put_env(:tymeslot, :currency, "eur")
       assert Pricing.format_price(1000) == "€10"

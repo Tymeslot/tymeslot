@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
+  @moduletag :integrations
   use ExUnit.Case, async: true
 
   alias Tymeslot.Integrations.Calendar.ICalParser
 
   describe "parse/1" do
+  @moduletag :integrations
     test "parses valid iCalendar content with single event" do
       ical_content = """
       BEGIN:VCALENDAR

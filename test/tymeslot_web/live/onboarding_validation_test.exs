@@ -1,5 +1,7 @@
 defmodule TymeslotWeb.OnboardingValidationTest do
+  @moduletag :utils
   @moduledoc """
+  @moduletag :utils
   Validation tests for the onboarding flow.
 
   Tests input validation for:

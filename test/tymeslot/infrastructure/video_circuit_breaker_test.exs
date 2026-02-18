@@ -1,4 +1,5 @@
 defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
+  @moduletag :infrastructure
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.Infrastructure.VideoCircuitBreaker
@@ -6,6 +7,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
   import ExUnit.CaptureLog
 
   describe "call/2" do
+  @moduletag :infrastructure
     test "executes function successfully for valid provider" do
       result =
         VideoCircuitBreaker.call(:google_meet, fn ->

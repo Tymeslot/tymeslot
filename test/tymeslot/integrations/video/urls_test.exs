@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.Video.UrlsTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Integrations.Video.Urls
 
   describe "extract_room_id/1" do
+  @moduletag :integrations
     test "extracts room_id from map" do
       assert Urls.extract_room_id(%{room_data: %{room_id: "room123"}}) == "room123"
       assert Urls.extract_room_id(%{room_data: %{"room_id" => "room456"}}) == "room456"

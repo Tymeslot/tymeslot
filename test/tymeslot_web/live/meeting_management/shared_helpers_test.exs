@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.MeetingManagement.SharedHelpersTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
 
   import Tymeslot.Factory
@@ -9,6 +10,7 @@ defmodule TymeslotWeb.MeetingManagement.SharedHelpersTest do
   alias TymeslotWeb.MeetingManagement.SharedHelpers
 
   setup do
+  @moduletag :utils
     user = insert(:user)
     profile = insert(:profile, user: user, booking_theme: "2")
     meeting = insert(:meeting, organizer_user: user, status: "confirmed")

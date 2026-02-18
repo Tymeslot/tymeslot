@@ -1,5 +1,7 @@
 defmodule TymeslotWeb.OnboardingNavigationTest do
+  @moduletag :utils
   @moduledoc """
+  @moduletag :utils
   Navigation tests for the onboarding flow.
 
   Tests step transitions, skip functionality, and navigation behavior including:

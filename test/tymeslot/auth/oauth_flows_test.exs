@@ -1,5 +1,7 @@
 defmodule Tymeslot.Auth.OAuthFlowsTest do
+  @moduletag :auth
   @moduledoc """
+  @moduletag :auth
   Comprehensive behavior tests for OAuth authentication flows.
   Focuses on user-facing functionality and business rules.
   """

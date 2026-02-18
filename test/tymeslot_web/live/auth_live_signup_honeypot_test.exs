@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
+  @moduletag :utils
   use TymeslotWeb.LiveCase, async: false
 
   alias Tymeslot.DatabaseSchemas.UserSchema
@@ -6,6 +7,7 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
   alias Tymeslot.Security.RateLimiter
 
   @moduledoc """
+  @moduletag :utils
   Tests for honeypot-based bot detection in signup flow.
 
   Note: Honeypot detection happens *before* reCAPTCHA verification,

@@ -1,10 +1,12 @@
 defmodule Tymeslot.ThemeCustomizationsDefaultsTest do
+  @moduletag :utils
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.ThemeCustomizations.Defaults
 
   describe "Defaults module" do
+  @moduletag :utils
     test "get_theme_defaults/1 returns Quill defaults" do
       defaults = Defaults.get_theme_defaults("1")
 

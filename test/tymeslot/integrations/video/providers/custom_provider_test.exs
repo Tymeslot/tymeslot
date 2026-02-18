@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.Video.Providers.CustomProviderTest do
+  @moduletag :integrations
   use ExUnit.Case, async: true
 
   alias Tymeslot.Integrations.Video.Providers.CustomProvider
 
   describe "provider_type/0" do
+  @moduletag :integrations
     test "returns :custom" do
       assert CustomProvider.provider_type() == :custom
     end

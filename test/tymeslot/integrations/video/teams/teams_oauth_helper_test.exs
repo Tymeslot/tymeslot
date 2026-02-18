@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.Integrations.Common.OAuth.State
@@ -6,6 +7,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
   import Mox
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   setup do
     # Teams helper reuses Outlook config in the code

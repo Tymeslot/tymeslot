@@ -1,8 +1,10 @@
 defmodule Tymeslot.Payments.TaxExtractorTest do
+  @moduletag :payments
   use ExUnit.Case, async: true
   alias Tymeslot.Payments.TaxExtractor
 
   describe "extract_tax_info/1" do
+  @moduletag :payments
     test "extracts all tax information from a complete session" do
       session = %{
         "total_details" => %{"amount_tax" => 500},

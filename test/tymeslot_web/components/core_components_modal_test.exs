@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Components.CoreComponentsModalTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   import Phoenix.Component
   import Phoenix.LiveViewTest
@@ -7,6 +8,7 @@ defmodule TymeslotWeb.Components.CoreComponentsModalTest do
   alias TymeslotWeb.Components.CoreComponents.Modal
 
   test "modal renders click-away when shown" do
+  @moduletag :utils
     assigns = %{
       id: "modal-test",
       show: true,

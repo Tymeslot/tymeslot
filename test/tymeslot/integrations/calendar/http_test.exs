@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.HTTPTest do
+  @moduletag :integrations
   use ExUnit.Case, async: true
   import Mox
   alias Tymeslot.Integrations.Calendar.HTTP
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   describe "request/5 method normalization" do
     test "accepts known string methods" do

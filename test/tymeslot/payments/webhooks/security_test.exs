@@ -1,4 +1,5 @@
 defmodule Tymeslot.Payments.Webhooks.SecurityTest do
+  @moduletag :payments
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.Payments.Webhooks.Security.{DevelopmentMode, SignatureVerifier}
@@ -6,6 +7,7 @@ defmodule Tymeslot.Payments.Webhooks.SecurityTest do
   import Mox
 
   setup :set_mox_from_context
+  @moduletag :payments
   setup :verify_on_exit!
 
   describe "DevelopmentMode" do

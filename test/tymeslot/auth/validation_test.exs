@@ -1,10 +1,12 @@
 defmodule Tymeslot.Auth.ValidationTest do
+  @moduletag :auth
   use Tymeslot.DataCase, async: true
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.Validation
 
   describe "validate_login_input/1" do
+  @moduletag :auth
     test "returns :ok when email and password are present" do
       params = %{"email" => "test@example.com", "password" => "password123"}
       assert {:ok, ^params} = Validation.validate_login_input(params)
