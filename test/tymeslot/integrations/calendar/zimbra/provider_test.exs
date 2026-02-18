@@ -212,7 +212,6 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
 
       assert client.calendar_paths == paths
     end
-
   end
 
   describe "test_connection/2" do

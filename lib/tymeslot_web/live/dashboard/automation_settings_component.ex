@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   require Logger
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Webhooks
   alias Tymeslot.Webhooks.InputValidation, as: WebhookInputValidation
   alias TymeslotWeb.Components.Icons.IconComponents
@@ -134,36 +135,11 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   end
 
   def handle_event("create_webhook", %{"webhook" => params}, socket) do
-    metadata = AutomationHelpers.get_security_metadata(socket)
+    user_id = socket.assigns.current_user.id
 
-    case WebhookInputValidation.validate_webhook_form(params, metadata: metadata) do
-      {:ok, sanitized} ->
-        user_id = socket.assigns.current_user.id
-
-        case Webhooks.create_webhook(user_id, sanitized) do
-          {:ok, _webhook} ->
-            Flash.info("Webhook created successfully")
-
-            {:noreply,
-             socket
-             |> assign(:show_webhook_form, false)
-             |> assign(:webhook_form_data, nil)
-             |> assign(:form_errors, %{})
-             |> assign(:form_values, %{})
-             |> load_webhooks()}
-
-          {:error, %Ecto.Changeset{} = changeset} ->
-            errors = AutomationHelpers.format_changeset_errors(changeset)
-            Flash.error("Failed to create webhook")
-            {:noreply, assign(socket, :form_errors, errors)}
-
-          {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
-            {:noreply, handle_feature_access_error(socket, reason)}
-        end
-
-      {:error, errors} ->
-        {:noreply, assign(socket, :form_errors, errors)}
-    end
+    with_rate_limit(RateLimiter.check_webhook_write_rate_limit(user_id), socket, fn ->
+      do_webhook_write(params, socket, &Webhooks.create_webhook(user_id, &1), "created")
+    end)
   end
 
   def handle_event("show_edit_webhook_form", %{"id" => id}, socket) do
@@ -194,35 +170,11 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         {:noreply, socket}
 
       webhook ->
-        metadata = AutomationHelpers.get_security_metadata(socket)
+        user_id = socket.assigns.current_user.id
 
-        case WebhookInputValidation.validate_webhook_form(params, metadata: metadata) do
-          {:ok, sanitized} ->
-            case Webhooks.update_webhook(webhook, sanitized) do
-              {:ok, _webhook} ->
-                Flash.info("Webhook updated successfully")
-
-                {:noreply,
-                 socket
-                 |> assign(:show_webhook_form, false)
-                 |> assign(:webhook_form_data, nil)
-                 |> assign(:form_errors, %{})
-                 |> assign(:form_values, %{})
-                 |> load_webhooks()}
-
-              {:error, %Ecto.Changeset{} = changeset} ->
-                errors = AutomationHelpers.format_changeset_errors(changeset)
-                Flash.error("Failed to update webhook")
-                {:noreply, assign(socket, :form_errors, errors)}
-
-              {:error, reason}
-              when reason in [:insufficient_plan, :feature_access_checker_failed] ->
-                {:noreply, handle_feature_access_error(socket, reason)}
-            end
-
-          {:error, errors} ->
-            {:noreply, assign(socket, :form_errors, errors)}
-        end
+        with_rate_limit(RateLimiter.check_webhook_write_rate_limit(user_id), socket, fn ->
+          do_webhook_write(params, socket, &Webhooks.update_webhook(webhook, &1), "updated")
+        end)
     end
   end
 
@@ -293,24 +245,33 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   end
 
   def handle_event("test_connection", %{"id" => id}, socket) do
-    webhook_id = AutomationHelpers.parse_id(id)
-    socket = assign(socket, :testing_connection, webhook_id)
+    user_id = socket.assigns.current_user.id
 
-    case get_webhook_for_user(socket, id) do
-      {:ok, webhook} ->
-        case Webhooks.test_webhook_connection(webhook.url, webhook.webhook_token) do
-          :ok ->
-            Flash.info("Webhook test successful! Check your endpoint.")
-            {:noreply, assign(socket, :testing_connection, nil)}
+    case RateLimiter.check_webhook_test_rate_limit(user_id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
 
-          {:error, reason} ->
-            Flash.error("Test failed: #{reason}")
+      :ok ->
+        webhook_id = AutomationHelpers.parse_id(id)
+        socket = assign(socket, :testing_connection, webhook_id)
+
+        case get_webhook_for_user(socket, id) do
+          {:ok, webhook} ->
+            case Webhooks.test_webhook_connection(webhook.url, webhook.webhook_token) do
+              :ok ->
+                Flash.info("Webhook test successful! Check your endpoint.")
+                {:noreply, assign(socket, :testing_connection, nil)}
+
+              {:error, reason} ->
+                Flash.error("Test failed: #{reason}")
+                {:noreply, assign(socket, :testing_connection, nil)}
+            end
+
+          {:error, _reason} ->
+            Flash.error("Webhook not found")
             {:noreply, assign(socket, :testing_connection, nil)}
         end
-
-      {:error, _reason} ->
-        Flash.error("Webhook not found")
-        {:noreply, assign(socket, :testing_connection, nil)}
     end
   end
 
@@ -355,37 +316,15 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   end
 
   def handle_event("regenerate_token", _params, socket) do
-    case socket.assigns.selected_webhook do
-      nil ->
+    user_id = socket.assigns.current_user.id
+
+    case RateLimiter.check_webhook_token_regen_rate_limit(user_id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
         {:noreply, socket}
 
-      webhook ->
-        case Webhooks.regenerate_token(webhook) do
-          {:ok, updated_webhook} ->
-            Flash.info("Security token regenerated")
-
-            # Update form data if we are editing this webhook
-            socket =
-              if socket.assigns.webhook_form_mode == :edit and
-                   socket.assigns.webhook_form_data.id == updated_webhook.id do
-                assign(socket, :webhook_form_data, updated_webhook)
-              else
-                socket
-              end
-
-            {:noreply,
-             socket
-             |> ModalHook.hide_modal(:regenerate_token)
-             |> assign(:selected_webhook, nil)
-             |> load_webhooks()}
-
-          {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
-            {:noreply, handle_feature_access_error(socket, reason)}
-
-          {:error, _reason} ->
-            Flash.error("Failed to regenerate token")
-            {:noreply, socket}
-        end
+      :ok ->
+        do_regenerate_token(socket)
     end
   end
 
@@ -512,6 +451,80 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   end
 
   # Private functions
+
+  defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
+    Flash.error(message)
+    {:noreply, socket}
+  end
+
+  defp with_rate_limit(:ok, _socket, action), do: action.()
+
+  defp do_webhook_write(params, socket, save_fn, verb) do
+    metadata = AutomationHelpers.get_security_metadata(socket)
+
+    case WebhookInputValidation.validate_webhook_form(params, metadata: metadata) do
+      {:ok, sanitized} ->
+        case save_fn.(sanitized) do
+          {:ok, _webhook} ->
+            Flash.info("Webhook #{verb} successfully")
+
+            {:noreply,
+             socket
+             |> assign(:show_webhook_form, false)
+             |> assign(:webhook_form_data, nil)
+             |> assign(:form_errors, %{})
+             |> assign(:form_values, %{})
+             |> load_webhooks()}
+
+          {:error, %Ecto.Changeset{} = changeset} ->
+            errors = AutomationHelpers.format_changeset_errors(changeset)
+            Flash.error("Failed to #{verb} webhook")
+            {:noreply, assign(socket, :form_errors, errors)}
+
+          {:error, reason}
+          when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+            {:noreply, handle_feature_access_error(socket, reason)}
+        end
+
+      {:error, errors} ->
+        {:noreply, assign(socket, :form_errors, errors)}
+    end
+  end
+
+  defp do_regenerate_token(socket) do
+    case socket.assigns.selected_webhook do
+      nil ->
+        {:noreply, socket}
+
+      webhook ->
+        case Webhooks.regenerate_token(webhook) do
+          {:ok, updated_webhook} ->
+            Flash.info("Security token regenerated")
+
+            # Update form data if we are editing this webhook
+            socket =
+              if socket.assigns.webhook_form_mode == :edit and
+                   socket.assigns.webhook_form_data.id == updated_webhook.id do
+                assign(socket, :webhook_form_data, updated_webhook)
+              else
+                socket
+              end
+
+            {:noreply,
+             socket
+             |> ModalHook.hide_modal(:regenerate_token)
+             |> assign(:selected_webhook, nil)
+             |> load_webhooks()}
+
+          {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+            {:noreply, handle_feature_access_error(socket, reason)}
+
+          {:error, _reason} ->
+            Flash.error("Failed to regenerate token")
+            {:noreply, socket}
+        end
+    end
+  end
 
   defp load_webhooks(socket) do
     user_id = socket.assigns.current_user.id

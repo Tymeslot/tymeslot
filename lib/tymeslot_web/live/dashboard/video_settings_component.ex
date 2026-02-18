@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.Dashboard.Integrations.ProviderCard
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
@@ -129,85 +130,93 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   def handle_event("add_integration", %{"integration" => params}, socket) do
-    socket = assign(socket, :saving, true)
-    metadata = DashboardHelpers.get_security_metadata(socket)
+    user_id = socket.assigns.current_user.id
 
-    case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
-      {:ok, sanitized_params} ->
-        validated_params = Map.merge(params, sanitized_params)
-        user_id = socket.assigns.current_user.id
-        provider = validated_params["provider"] || socket.assigns.config_provider
+    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+      socket = assign(socket, :saving, true)
+      metadata = DashboardHelpers.get_security_metadata(socket)
 
-        case Video.create_integration(user_id, provider, map_keys_to_atoms(validated_params)) do
-          {:ok, _integration} ->
-            notify_parent({:flash, {:info, "Video integration added successfully"}})
-            notify_parent({:integration_added, :video})
+      case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
+        {:ok, sanitized_params} ->
+          validated_params = Map.merge(params, sanitized_params)
+          provider = validated_params["provider"] || socket.assigns.config_provider
 
-            {:noreply,
-             socket
-             |> reset_form_state()
-             |> load_integrations()
-             |> assign(:form_values, %{})}
+          case Video.create_integration(user_id, provider, map_keys_to_atoms(validated_params)) do
+            {:ok, _integration} ->
+              notify_parent({:flash, {:info, "Video integration added successfully"}})
+              notify_parent({:integration_added, :video})
 
-          {:error, %Ecto.Changeset{} = changeset} ->
-            {:noreply,
-             socket
-             |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
-             |> assign(:saving, false)}
+              {:noreply,
+               socket
+               |> reset_form_state()
+               |> load_integrations()
+               |> assign(:form_values, %{})}
 
-          {:error, reason} ->
-            {:noreply,
-             socket
-             |> assign(:saving, false)
-             |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
-        end
+            {:error, %Ecto.Changeset{} = changeset} ->
+              {:noreply,
+               socket
+               |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
+               |> assign(:saving, false)}
 
-      {:error, validation_errors} ->
-        {:noreply,
-         socket
-         |> assign(:form_errors, validation_errors)
-         |> assign(:form_values, params)}
-    end
+            {:error, reason} ->
+              {:noreply,
+               socket
+               |> assign(:saving, false)
+               |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
+          end
+
+        {:error, validation_errors} ->
+          {:noreply,
+           socket
+           |> assign(:form_errors, validation_errors)
+           |> assign(:form_values, params)}
+      end
+    end)
   end
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
 
-    case Video.toggle_integration(user_id, normalize_id(id)) do
-      {:ok, _result} ->
-        notify_parent({:flash, {:info, "Integration status updated"}})
-        notify_parent({:integration_updated, :video})
-        {:noreply, load_integrations(socket)}
+    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+      case Video.toggle_integration(user_id, normalize_id(id)) do
+        {:ok, _result} ->
+          notify_parent({:flash, {:info, "Integration status updated"}})
+          notify_parent({:integration_updated, :video})
+          {:noreply, load_integrations(socket)}
 
-      {:error, _reason} ->
-        notify_parent({:flash, {:error, "Failed to update integration status"}})
-        {:noreply, socket}
-    end
+        {:error, _reason} ->
+          notify_parent({:flash, {:error, "Failed to update integration status"}})
+          {:noreply, socket}
+      end
+    end)
   end
 
   def handle_event("test_connection", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
-    id = normalize_id(id)
-    socket = assign(socket, :testing_connection, id)
 
-    case Video.test_connection(user_id, id) do
-      {:ok, message} ->
-        provider = get_provider_name(socket, id)
+    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+      int_id = normalize_id(id)
+      socket = assign(socket, :testing_connection, int_id)
 
-        notify_parent(
-          {:flash, {:info, IntegrationProviders.format_test_success_message(provider, message)}}
-        )
+      case Video.test_connection(user_id, int_id) do
+        {:ok, message} ->
+          provider = get_provider_name(socket, int_id)
 
-        {:noreply, assign(socket, :testing_connection, nil)}
+          notify_parent(
+            {:flash, {:info, IntegrationProviders.format_test_success_message(provider, message)}}
+          )
 
-      {:error, reason} when is_binary(reason) ->
-        notify_parent({:flash, {:error, reason}})
-        {:noreply, assign(socket, :testing_connection, nil)}
+          {:noreply, assign(socket, :testing_connection, nil)}
 
-      {:error, reason} ->
-        notify_parent({:flash, {:error, "Connection test failed: #{inspect(reason)}"}})
-        {:noreply, assign(socket, :testing_connection, nil)}
-    end
+        {:error, reason} when is_binary(reason) ->
+          notify_parent({:flash, {:error, reason}})
+          {:noreply, assign(socket, :testing_connection, nil)}
+
+        {:error, reason} ->
+          notify_parent({:flash, {:error, "Connection test failed: #{inspect(reason)}"}})
+          {:noreply, assign(socket, :testing_connection, nil)}
+      end
+    end)
   end
 
   @impl Phoenix.LiveComponent
@@ -350,6 +359,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   # Private functions
+
+  defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
+    notify_parent({:flash, {:error, message}})
+    {:noreply, socket}
+  end
+
+  defp with_rate_limit(:ok, _socket, action), do: action.()
 
   defp load_integrations(socket) do
     user_id = socket.assigns.current_user.id
