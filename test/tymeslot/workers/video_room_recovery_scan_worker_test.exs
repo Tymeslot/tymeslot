@@ -1,4 +1,5 @@
 defmodule Tymeslot.Workers.VideoRoomRecoveryScanWorkerTest do
+  @moduletag :workers
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
   import Tymeslot.Factory
@@ -7,6 +8,7 @@ defmodule Tymeslot.Workers.VideoRoomRecoveryScanWorkerTest do
   alias Tymeslot.Workers.VideoRoomWorker
 
   describe "perform/1" do
+  @moduletag :workers
     test "enqueues video room creation for meetings missing links" do
       user = insert(:user)
       integration = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)

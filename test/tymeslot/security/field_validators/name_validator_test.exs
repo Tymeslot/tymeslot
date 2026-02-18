@@ -1,8 +1,10 @@
 defmodule Tymeslot.Security.FieldValidators.NameValidatorTest do
+  @moduletag :security
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Security.FieldValidators.NameValidator
 
   describe "validate/2" do
+  @moduletag :security
     test "returns :ok for valid names" do
       assert :ok = NameValidator.validate("John Smith")
       assert :ok = NameValidator.validate("José María")

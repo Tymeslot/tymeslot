@@ -1,10 +1,12 @@
 defmodule Tymeslot.ConfigRobustnessTest do
+  @moduletag :utils
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.Bookings.Policy
   alias TymeslotWeb.Endpoint
 
   describe "Policy.app_url/0" do
+  @moduletag :utils
     test "delegates to Endpoint.url/0" do
       assert Policy.app_url() == Endpoint.url()
     end

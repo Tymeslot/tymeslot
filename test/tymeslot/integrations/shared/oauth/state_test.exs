@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Common.OAuth.StateTest do
+  @moduletag :integrations
   @moduledoc """
+  @moduletag :integrations
   Tests for OAuth state parameter generation and validation.
 
   ## Note on Process.sleep Usage

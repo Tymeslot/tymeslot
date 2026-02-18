@@ -1,5 +1,7 @@
 defmodule Tymeslot.Auth.AuthActionsTest do
+  @moduletag :auth
   @moduledoc """
+  @moduletag :auth
   Tests for AuthActions module - focusing on pure functions and validation logic.
   """
 

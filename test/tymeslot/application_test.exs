@@ -1,4 +1,5 @@
 defmodule Tymeslot.ApplicationTest do
+  @moduletag :infrastructure
   use ExUnit.Case, async: false
 
   alias Tymeslot.Infrastructure.{AvailabilityCache, DashboardCache}

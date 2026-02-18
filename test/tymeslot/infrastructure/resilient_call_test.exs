@@ -1,10 +1,12 @@
 defmodule Tymeslot.Infrastructure.ResilientCallTest do
+  @moduletag :infrastructure
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.Infrastructure.CircuitBreaker
   alias Tymeslot.Infrastructure.ResilientCall
 
   setup do
+  @moduletag :infrastructure
     breaker_name = :resilient_call_test_breaker
 
     {:ok, pid} =

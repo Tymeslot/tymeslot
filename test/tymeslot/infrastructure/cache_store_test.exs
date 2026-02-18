@@ -1,5 +1,7 @@
 defmodule Tymeslot.Infrastructure.CacheStoreTest do
+  @moduletag :infrastructure
   @moduledoc """
+  @moduletag :infrastructure
   Tests for CacheStore module with request coalescing and TTL.
 
   ## Note on Process.sleep Usage

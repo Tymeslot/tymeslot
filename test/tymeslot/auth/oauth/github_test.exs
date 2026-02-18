@@ -1,4 +1,5 @@
 defmodule Tymeslot.Auth.OAuth.GitHubTest do
+  @moduletag :auth
   use Tymeslot.DataCase, async: false
 
   alias Plug.Test, as: PlugTest
@@ -7,6 +8,7 @@ defmodule Tymeslot.Auth.OAuth.GitHubTest do
   import Mox
 
   setup :verify_on_exit!
+  @moduletag :auth
 
   setup do
     old_helper = Application.get_env(:tymeslot, :oauth_helper_module)

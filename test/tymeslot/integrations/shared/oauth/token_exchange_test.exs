@@ -1,10 +1,12 @@
 defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeTest do
+  @moduletag :integrations
   use ExUnit.Case, async: false
 
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
 
   import Mox
   setup :verify_on_exit!
+  @moduletag :integrations
 
   @token_url "https://oauth.com/token"
   @client_id "client-id"

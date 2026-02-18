@@ -1,8 +1,10 @@
 defmodule Tymeslot.Emails.Templates.AuthEmailsTest do
+  @moduletag :emails
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Emails.Templates.{
     EmailChangeConfirmed,
+  @moduletag :emails
     EmailChangeNotification,
     EmailChangeVerification,
     EmailVerification,

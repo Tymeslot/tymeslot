@@ -1,8 +1,10 @@
 defmodule Tymeslot.Security.FieldValidators.MessageValidatorTest do
+  @moduletag :security
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Security.FieldValidators.MessageValidator
 
   describe "validate/2" do
+  @moduletag :security
     test "returns :ok for valid messages" do
       assert :ok =
                MessageValidator.validate(

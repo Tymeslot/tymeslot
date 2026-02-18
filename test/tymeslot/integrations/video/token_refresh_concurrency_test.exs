@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
+  @moduletag :integrations
   @moduledoc """
+  @moduletag :integrations
   Concurrency tests for video provider OAuth token refresh operations.
 
   ## Note on Process.sleep Usage

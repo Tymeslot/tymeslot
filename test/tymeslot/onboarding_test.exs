@@ -1,8 +1,10 @@
 defmodule Tymeslot.OnboardingTest do
+  @moduletag :utils
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Onboarding
 
   describe "get_steps/0" do
+  @moduletag :utils
     test "returns the list of steps" do
       assert Onboarding.get_steps() == [
                :welcome,

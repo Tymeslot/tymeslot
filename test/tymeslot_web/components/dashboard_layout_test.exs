@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Components.DashboardLayoutTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
   import Phoenix.Component
@@ -7,6 +8,7 @@ defmodule TymeslotWeb.Components.DashboardLayoutTest do
   alias TymeslotWeb.Components.DashboardLayout
 
   test "renders dashboard layout with sidebar and top navigation" do
+  @moduletag :utils
     assigns = %{}
     user = build(:user)
     profile = build(:profile, user: user, username: "testuser", full_name: "Test User")

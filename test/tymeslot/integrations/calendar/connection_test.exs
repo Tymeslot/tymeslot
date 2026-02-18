@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   import Tymeslot.Factory
@@ -7,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.ConnectionTest do
   alias Tymeslot.Security.Encryption
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   describe "validate/3" do
     setup do

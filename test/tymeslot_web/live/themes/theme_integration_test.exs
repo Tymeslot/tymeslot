@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
@@ -10,6 +11,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
   alias Tymeslot.TestMocks
 
   @moduledoc """
+  @moduletag :utils
   Tests that themes actually work for booking meetings.
   These tests verify production readiness of themes.
   """

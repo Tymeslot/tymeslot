@@ -1,5 +1,7 @@
 defmodule TymeslotWeb.EmailChangeControllerTest do
+  @moduletag :utils
   # Uses global ETS rate limiter state; must not run concurrently.
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
 
   alias Ecto.Changeset

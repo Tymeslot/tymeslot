@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Shared.LockTest do
+  @moduletag :integrations
   @moduledoc """
+  @moduletag :integrations
   Tests for integration lock mechanism to prevent concurrent operations.
 
   ## Note on Process.sleep Usage

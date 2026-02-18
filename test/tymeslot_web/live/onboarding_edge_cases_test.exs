@@ -1,5 +1,7 @@
 defmodule TymeslotWeb.OnboardingEdgeCasesTest do
+  @moduletag :utils
   @moduledoc """
+  @moduletag :utils
   Edge case and error handling tests for onboarding custom input functionality.
 
   Tests scenarios like:

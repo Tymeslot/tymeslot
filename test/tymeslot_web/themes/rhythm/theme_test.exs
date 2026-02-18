@@ -1,10 +1,12 @@
 defmodule TymeslotWeb.Themes.Rhythm.ThemeTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
 
   alias TymeslotWeb.ThemeCommonTestCases
   alias TymeslotWeb.Themes.Rhythm.Theme
 
   describe "states/0" do
+  @moduletag :utils
     test "returns a 4-step flow state machine" do
       ThemeCommonTestCases.test_states_structure(Theme)
     end

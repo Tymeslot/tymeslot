@@ -1,10 +1,12 @@
 defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
+  @moduletag :utils
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.DatabaseSchemas.ProfileSchema
   import Tymeslot.Factory
 
   describe "embed domain validation" do
+  @moduletag :utils
     setup do
       user = insert(:user)
       {:ok, user: user}

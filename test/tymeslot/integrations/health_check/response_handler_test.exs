@@ -1,10 +1,12 @@
 defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.DatabaseQueries.{CalendarIntegrationQueries, VideoIntegrationQueries}
   alias Tymeslot.Integrations.HealthCheck.ResponseHandler
 
   describe "handle_transition/3 with no change" do
+  @moduletag :integrations
     test "does nothing for no_change transitions" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true)

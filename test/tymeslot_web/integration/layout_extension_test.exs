@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Integration.LayoutExtensionTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
   import Tymeslot.TestFixtures
   import Tymeslot.Factory
@@ -7,6 +8,7 @@ defmodule TymeslotWeb.Integration.LayoutExtensionTest do
   alias Tymeslot.DatabaseQueries.ProfileQueries
 
   setup do
+  @moduletag :utils
     verify_on_exit!()
     # Ensure theme_extensions is empty for Core tests
     old_extensions = Application.get_env(:tymeslot, :theme_extensions)

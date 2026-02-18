@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.DashboardExtensionsTest do
+  @moduletag :utils
   use TymeslotWeb.LiveCase, async: false
 
   import Phoenix.ConnTest
@@ -9,6 +10,7 @@ defmodule TymeslotWeb.DashboardExtensionsTest do
   alias Tymeslot.Infrastructure.DashboardCache
 
   setup_all do
+  @moduletag :utils
     case Process.whereis(DashboardCache) do
       nil -> start_supervised!(DashboardCache)
       _pid -> :ok

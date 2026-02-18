@@ -1,4 +1,5 @@
 defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
+  @moduletag :payments
   use ExUnit.Case, async: false
 
   alias Ecto.Adapters.SQL.Sandbox
@@ -11,6 +12,7 @@ defmodule Tymeslot.Payments.Webhooks.StandaloneHandlerTest do
   import Tymeslot.Factory
 
   setup :set_mox_from_context
+  @moduletag :payments
   setup :verify_on_exit!
 
   setup do

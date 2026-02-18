@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.OperationsBookingTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.Integrations.Calendar.Operations
@@ -6,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.OperationsBookingTest do
   import Tymeslot.Factory
 
   defp valid_event_attrs do
+  @moduletag :integrations
     start_time = DateTime.add(DateTime.utc_now(), 3600, :second)
 
     %{

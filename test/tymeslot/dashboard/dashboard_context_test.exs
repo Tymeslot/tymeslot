@@ -1,5 +1,7 @@
 defmodule Tymeslot.Dashboard.DashboardContextTest do
+  @moduletag :utils
   @moduledoc """
+  @moduletag :utils
   Tests for the DashboardContext module.
   """
 

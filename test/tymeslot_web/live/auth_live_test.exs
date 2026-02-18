@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.AuthLiveTest do
+  @moduletag :utils
   use TymeslotWeb.LiveCase, async: true
 
   alias Phoenix.Flash
@@ -7,6 +8,7 @@ defmodule TymeslotWeb.AuthLiveTest do
   import Tymeslot.Factory
 
   describe "Login" do
+  @moduletag :utils
     test "renders login page", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/auth/login")
       assert html =~ "Welcome Back!"

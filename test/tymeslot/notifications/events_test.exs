@@ -1,8 +1,10 @@
 defmodule Tymeslot.Notifications.EventsTest do
+  @moduletag :notifications
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Notifications.Events
 
   describe "should_trigger_notifications?/2" do
+  @moduletag :notifications
     test "returns true for confirmed meetings on creation" do
       assert Events.should_trigger_notifications?(:meeting_created, %{status: "confirmed"})
     end

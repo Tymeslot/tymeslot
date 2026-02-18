@@ -1,4 +1,5 @@
 defmodule Tymeslot.Security.UniversalSanitizerTest do
+  @moduletag :security
   use ExUnit.Case, async: true
 
   import ExUnit.CaptureLog
@@ -6,6 +7,7 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
   alias Tymeslot.Security.UniversalSanitizer
 
   describe "sanitize_and_validate/2" do
+  @moduletag :security
     test "rejects invalid UTF-8 input without raising" do
       invalid = <<0xC3, 0x28>>
 

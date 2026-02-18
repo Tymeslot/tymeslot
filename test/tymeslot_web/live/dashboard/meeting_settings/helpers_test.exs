@@ -1,8 +1,10 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.HelpersTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   defp mock_socket(assigns \\ %{}) do
+  @moduletag :utils
     %Phoenix.LiveView.Socket{
       assigns: Map.merge(%{__changed__: %{}, touched_fields: MapSet.new()}, assigns)
     }

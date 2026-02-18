@@ -1,9 +1,11 @@
 defmodule Tymeslot.Security.EncryptionTest do
+  @moduletag :security
   use ExUnit.Case, async: true
 
   alias Tymeslot.Security.Encryption
 
   describe "encrypt/1 and decrypt/1" do
+  @moduletag :security
     test "encrypts and decrypts a string successfully" do
       plaintext = "sensitive_password"
 

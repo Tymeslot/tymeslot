@@ -1,8 +1,10 @@
 defmodule Tymeslot.Payments.Webhooks.HandlersTest do
+  @moduletag :payments
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Payments.Webhooks.{
     ChargeHandler,
+  @moduletag :payments
     CheckoutSessionExpiredHandler,
     CheckoutSessionHandler,
     CustomerHandler,

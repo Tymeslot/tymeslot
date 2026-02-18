@@ -1,10 +1,12 @@
 defmodule Tymeslot.Infrastructure.HTTPMethodTest do
+  @moduletag :infrastructure
   use ExUnit.Case, async: true
 
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Calendar.HTTP, as: CalendarHTTP
 
   describe "HTTPClient.request method normalization" do
+  @moduletag :infrastructure
     test "accepts valid atom methods" do
       # We don't want to make actual requests, so we check if it reaches merge_options correctly.
       # Since we can't easily mock HTTPoison without Mox, and we are testing the logic

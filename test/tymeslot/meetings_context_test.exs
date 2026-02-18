@@ -1,5 +1,7 @@
 defmodule Tymeslot.MeetingsContextTest do
+  @moduletag :utils
   @moduledoc """
+  @moduletag :utils
   Comprehensive behavior tests for the Meetings context module.
   Focuses on user-facing functionality and business rules rather than implementation details.
   """

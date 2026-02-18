@@ -1,7 +1,9 @@
 defmodule TymeslotWeb.EmbedJsTest do
+  @moduletag :utils
   use ExUnit.Case, async: true
 
   @embed_js_path Path.expand("../../assets/js/embed.js", __DIR__)
+  @moduletag :utils
 
   test "username is URL encoded in booking iframe URL" do
     contents = File.read!(@embed_js_path)

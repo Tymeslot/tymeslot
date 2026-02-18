@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.OAuthCallbackHandlerTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
 
   alias Phoenix.Flash
@@ -7,6 +8,7 @@ defmodule TymeslotWeb.OAuthCallbackHandlerTest do
   alias TymeslotWeb.OAuthCallbackHandler
 
   setup %{conn: conn} do
+  @moduletag :utils
     try do
       :meck.unload(RateLimiter)
     rescue

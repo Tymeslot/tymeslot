@@ -1,4 +1,5 @@
 defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
+  @moduletag :emails
   use Tymeslot.DataCase, async: false
 
   import Tymeslot.Factory

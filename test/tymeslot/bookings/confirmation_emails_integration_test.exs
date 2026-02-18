@@ -1,5 +1,7 @@
 defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
+  @moduletag :bookings
   @moduledoc """
+  @moduletag :bookings
   Integration test that verifies the complete booking → email job flow.
 
   This test ensures that when a booking is created:

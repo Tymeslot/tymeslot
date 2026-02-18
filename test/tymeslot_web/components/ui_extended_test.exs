@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Components.UIExtendedTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
   import Phoenix.Component
@@ -9,6 +10,7 @@ defmodule TymeslotWeb.Components.UIExtendedTest do
   alias TymeslotWeb.Themes.Shared.Assets
 
   describe "TimeOptions" do
+  @moduletag :utils
     test "time_options/0 returns 24h interval pairs" do
       options = TimeOptions.time_options()
       assert length(options) == 24 * 4

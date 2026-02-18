@@ -1,4 +1,5 @@
 defmodule Tymeslot.Workers.VideoRoomWorkerTest do
+  @moduletag :workers
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
   import Mox
@@ -13,6 +14,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
   alias Tymeslot.Workers.VideoRoomWorker
 
   setup :verify_on_exit!
+  @moduletag :workers
 
   describe "perform/1 - input validation" do
     test "handles missing meeting_id" do

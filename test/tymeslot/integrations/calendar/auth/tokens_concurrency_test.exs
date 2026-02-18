@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.TokensConcurrencyTest do
+  @moduletag :integrations
   @moduledoc """
+  @moduletag :integrations
   Concurrency tests for OAuth token refresh operations.
 
   ## Note on Process.sleep Usage

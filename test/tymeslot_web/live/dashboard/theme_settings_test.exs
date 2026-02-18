@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
+  @moduletag :utils
   use TymeslotWeb.LiveCase, async: true
 
   import Tymeslot.TestHelpers.Eventually
@@ -7,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   alias Tymeslot.Repo
 
   setup :setup_dashboard_user_with_theme
+  @moduletag :utils
 
   describe "Theme selection" do
     test "renders theme options", %{conn: conn} do

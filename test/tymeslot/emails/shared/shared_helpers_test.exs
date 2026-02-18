@@ -1,10 +1,12 @@
 defmodule Tymeslot.Emails.Shared.SharedHelpersTest do
+  @moduletag :emails
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Emails.Shared.SharedHelpers
   alias TymeslotWeb.Endpoint
 
   describe "format_date/1" do
+  @moduletag :emails
     test "formats Date struct correctly" do
       date = ~D[2024-11-25]
       assert SharedHelpers.format_date(date) == "November 25, 2024"

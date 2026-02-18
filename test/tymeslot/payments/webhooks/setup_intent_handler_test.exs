@@ -1,9 +1,11 @@
 defmodule Tymeslot.Payments.Webhooks.SetupIntentHandlerTest do
+  @moduletag :payments
   use ExUnit.Case, async: true
 
   alias Tymeslot.Payments.Webhooks.SetupIntentHandler
 
   describe "can_handle?/1" do
+  @moduletag :payments
     test "returns true for supported setup intent events" do
       assert SetupIntentHandler.can_handle?("setup_intent.created")
       assert SetupIntentHandler.can_handle?("setup_intent.succeeded")

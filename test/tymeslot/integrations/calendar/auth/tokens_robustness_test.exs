@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.Auth.TokensRobustnessTest do
+  @moduletag :integrations
   @moduledoc """
+  @moduletag :integrations
   Robustness tests for token refresh error handling and lock recovery.
 
   ## Note on Process.sleep Usage

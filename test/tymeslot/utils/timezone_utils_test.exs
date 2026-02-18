@@ -1,8 +1,10 @@
 defmodule Tymeslot.Utils.TimezoneUtilsTest do
+  @moduletag :utils
   use ExUnit.Case, async: true
   alias Tymeslot.Utils.TimezoneUtils
 
   describe "format_duration/1" do
+  @moduletag :utils
     test "formats duration string" do
       assert TimezoneUtils.format_duration("15min") == "15 minutes"
       assert TimezoneUtils.format_duration("30min") == "30 minutes"

@@ -1,5 +1,7 @@
 defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderSanitizationTest do
+  @moduletag :integrations
   @moduledoc """
+  @moduletag :integrations
   Security-focused tests for Zimbra provider input sanitization.
   Tests path traversal, null bytes, control characters, and other injection attempts.
   """

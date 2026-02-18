@@ -1,4 +1,5 @@
 defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
+  @moduletag :workers
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
@@ -8,6 +9,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
   import ExUnit.CaptureLog
 
   describe "perform/1" do
+  @moduletag :workers
     test "completes successfully with no unhealthy queues" do
       assert :ok = perform_job(ObanQueueMonitorWorker, %{})
     end

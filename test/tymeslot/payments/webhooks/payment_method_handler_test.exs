@@ -1,9 +1,11 @@
 defmodule Tymeslot.Payments.Webhooks.PaymentMethodHandlerTest do
+  @moduletag :payments
   use ExUnit.Case, async: true
 
   alias Tymeslot.Payments.Webhooks.PaymentMethodHandler
 
   describe "can_handle?/1" do
+  @moduletag :payments
     test "returns true for supported payment method events" do
       assert PaymentMethodHandler.can_handle?("payment_method.attached")
     end

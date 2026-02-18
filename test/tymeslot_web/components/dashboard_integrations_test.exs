@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   import Phoenix.Component
   import Phoenix.LiveViewTest
@@ -21,6 +22,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
 
   test "renders calendar_item correctly" do
+  @moduletag :utils
     assigns = %{
       integration: %{
         id: 1,

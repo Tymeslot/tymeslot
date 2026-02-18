@@ -1,4 +1,5 @@
 defmodule Tymeslot.Notifications.OrchestratorTest do
+  @moduletag :notifications
   use Tymeslot.DataCase, async: true
   use Oban.Testing, repo: Tymeslot.Repo
 
@@ -8,6 +9,7 @@ defmodule Tymeslot.Notifications.OrchestratorTest do
   alias Tymeslot.Workers.EmailWorker
 
   describe "schedule_reminder_notifications/1" do
+  @moduletag :notifications
     test "schedules a job for each reminder interval" do
       meeting =
         insert(:meeting,

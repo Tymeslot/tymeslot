@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.EntryTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   import Mox
@@ -9,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
   alias Tymeslot.Integrations.Calendar
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   test "create_event forwards meeting context to calendar module" do
     meeting = insert(:meeting)

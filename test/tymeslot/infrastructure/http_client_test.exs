@@ -1,8 +1,10 @@
 defmodule Tymeslot.Infrastructure.HTTPClientTest do
+  @moduletag :infrastructure
   use ExUnit.Case, async: true
   alias Tymeslot.Infrastructure.HTTPClient
 
   # merge_options/3 tests removed - this function no longer exists with Req.
+  @moduletag :infrastructure
   # Timeout configuration is now handled via @operation_timeouts and get_timeout/2.
 
   describe "request/5 method normalization" do

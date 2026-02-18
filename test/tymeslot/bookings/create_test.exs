@@ -1,5 +1,7 @@
 defmodule Tymeslot.Bookings.CreateTest do
+  @moduletag :bookings
   @moduledoc false
+  @moduletag :bookings
 
   use Tymeslot.DataCase, async: false
 

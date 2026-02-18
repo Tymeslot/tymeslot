@@ -1,4 +1,5 @@
 defmodule Tymeslot.Utils.FormHelpersTest do
+  @moduletag :utils
   use ExUnit.Case, async: true
   alias Tymeslot.Utils.FormHelpers
 

@@ -1,9 +1,11 @@
 defmodule Tymeslot.ThemeCustomizationsStorageTest do
+  @moduletag :utils
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.ThemeCustomizations.Storage
 
   setup do
+  @moduletag :utils
     upload_root =
       Path.join(System.tmp_dir!(), "tymeslot_uploads_#{System.unique_integer([:positive])}")
 

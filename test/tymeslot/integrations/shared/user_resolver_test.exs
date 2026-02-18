@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.Common.UserResolverTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Integrations.Common.UserResolver
 
   describe "resolve_user_integrations/2" do
+  @moduletag :integrations
     test "returns integrations for a user" do
       user = insert(:user)
       _calendar_integration = insert(:calendar_integration, user: user)

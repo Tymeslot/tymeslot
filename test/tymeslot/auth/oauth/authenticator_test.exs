@@ -1,4 +1,5 @@
 defmodule Tymeslot.Auth.OAuth.AuthenticatorTest do
+  @moduletag :auth
   use Tymeslot.DataCase, async: false
 
   alias Plug.Test, as: PlugTest
@@ -8,6 +9,7 @@ defmodule Tymeslot.Auth.OAuth.AuthenticatorTest do
   import Mox
 
   setup :set_mox_from_context
+  @moduletag :auth
   setup :verify_on_exit!
 
   setup do

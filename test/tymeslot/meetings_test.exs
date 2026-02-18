@@ -1,5 +1,7 @@
 defmodule Tymeslot.MeetingsTest do
+  @moduletag :utils
   @moduledoc """
+  @moduletag :utils
   Tests for the Meetings context module.
   """
 

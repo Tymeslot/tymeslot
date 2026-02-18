@@ -1,9 +1,11 @@
 defmodule Tymeslot.Mailer.HealthCheckTest do
+  @moduletag :mailer
   use ExUnit.Case, async: true
 
   alias Tymeslot.Mailer.HealthCheck
 
   describe "validate_startup_config/1 for SMTP" do
+  @moduletag :mailer
     test "validates complete and valid SMTP configuration" do
       # Use empty list for cacerts in test (since :castore module may not be loaded)
       config = [

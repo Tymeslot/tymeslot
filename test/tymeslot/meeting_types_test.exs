@@ -1,5 +1,7 @@
 defmodule Tymeslot.MeetingTypesTest do
+  @moduletag :utils
   @moduledoc """
+  @moduletag :utils
   Core CRUD tests for the MeetingTypes context module.
   Focuses on basic create, read, update, delete, toggle, and reorder operations.
   """

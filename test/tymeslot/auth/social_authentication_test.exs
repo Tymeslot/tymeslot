@@ -1,5 +1,7 @@
 defmodule Tymeslot.Auth.SocialAuthenticationTest do
+  @moduletag :auth
   @moduledoc """
+  @moduletag :auth
   Tests for SocialAuthentication module.
   """
 

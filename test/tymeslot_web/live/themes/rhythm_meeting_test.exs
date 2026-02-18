@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Live.Themes.RhythmMeetingTest do
+  @moduletag :utils
   use TymeslotWeb.LiveCase, async: false
 
   import Phoenix.LiveViewTest
@@ -6,6 +7,7 @@ defmodule TymeslotWeb.Live.Themes.RhythmMeetingTest do
   alias TymeslotWeb.ThemeMeetingTestCases
 
   setup do
+  @moduletag :utils
     ThemeMeetingTestCases.setup_theme_meeting(%{
       user_name: "John Doe",
       theme_id: "2",

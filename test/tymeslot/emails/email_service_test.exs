@@ -1,4 +1,5 @@
 defmodule Tymeslot.Emails.EmailServiceTest do
+  @moduletag :emails
   use Tymeslot.DataCase, async: true
 
   import Tymeslot.EmailTestHelpers
@@ -7,6 +8,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
   alias Tymeslot.Emails.Templates.{
     AppointmentCancellation,
+  @moduletag :emails
     AppointmentConfirmationAttendee,
     AppointmentConfirmationOrganizer,
     AppointmentReminderAttendee,

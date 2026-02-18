@@ -1,9 +1,11 @@
 defmodule Tymeslot.Bookings.DemoOrchestratorTest do
+  @moduletag :bookings
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Bookings.DemoOrchestrator
   import Tymeslot.Factory
 
   describe "submit_booking/2" do
+  @moduletag :bookings
     test "returns ok and mock meeting for valid params" do
       user = insert(:user)
       insert(:profile, user: user, full_name: "Test Organizer")

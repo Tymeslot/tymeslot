@@ -1,9 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.TokensConnectionTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.Integrations.Calendar.{Connection, Tokens}
 
   describe "ensure_valid_token/2" do
+  @moduletag :integrations
     test "returns same integration when token not expired" do
       fresh =
         insert(:calendar_integration,

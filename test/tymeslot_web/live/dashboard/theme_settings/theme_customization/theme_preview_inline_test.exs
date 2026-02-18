@@ -1,9 +1,11 @@
 defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInlineTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInline
 
   test "renders theme preview with CSS variables" do
+  @moduletag :utils
     theme_id = "1"
 
     customization = %{

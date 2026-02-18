@@ -1,9 +1,11 @@
 defmodule Tymeslot.Infrastructure.ProxyVerifierTest do
+  @moduletag :infrastructure
   use ExUnit.Case, async: false
 
   alias Tymeslot.Infrastructure.ProxyVerifier
 
   setup do
+  @moduletag :infrastructure
     # Save original proxy config
     original_proxy = Application.get_env(:tymeslot, :http_proxy)
 

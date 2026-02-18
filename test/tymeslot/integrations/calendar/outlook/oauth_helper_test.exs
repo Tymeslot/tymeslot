@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: false
 
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
@@ -8,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
   import Mox
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   setup do
     Application.put_env(:tymeslot, :outlook_oauth,

@@ -1,8 +1,10 @@
 defmodule Tymeslot.Emails.Templates.SystemEmailsTest do
+  @moduletag :emails
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Emails.Templates.{
     CalendarSyncError,
+  @moduletag :emails
     RescheduleRequest
   }
 

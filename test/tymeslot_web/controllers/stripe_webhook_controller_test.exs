@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.StripeWebhookControllerTest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
 
   import Mox
@@ -10,6 +11,7 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
   alias Tymeslot.TestFixtures
 
   setup :verify_on_exit!
+  @moduletag :utils
 
   setup do
     # Clear idempotency cache before each test

@@ -1,4 +1,5 @@
 defmodule TymeslotWeb.Components.UITest do
+  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
   import Phoenix.Component
@@ -9,6 +10,7 @@ defmodule TymeslotWeb.Components.UITest do
   alias TymeslotWeb.Components.UIComponents
 
   describe "CloseButton" do
+  @moduletag :utils
     test "renders correctly with default attributes" do
       assigns = %{phx_click: "close"}
       html = render_component(&CloseButton.close_button/1, assigns)

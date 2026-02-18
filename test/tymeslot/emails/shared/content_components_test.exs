@@ -1,9 +1,11 @@
 defmodule Tymeslot.Emails.Shared.ContentComponentsTest do
+  @moduletag :emails
   use Tymeslot.DataCase, async: true
 
   alias Tymeslot.Emails.Shared.ContentComponents
 
   describe "contact_details_card/3" do
+  @moduletag :emails
     test "sanitizes row values by default" do
       rows = [
         %{label: "Name", value: "<script>alert('xss')</script>John"},

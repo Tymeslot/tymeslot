@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.OAuthTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: true
 
   import Tymeslot.Factory
@@ -7,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
   alias Tymeslot.Integrations.Calendar.OAuth
 
   # Make sure mocks are verified
+  @moduletag :integrations
   setup :verify_on_exit!
 
   describe "initiate_google_oauth/1" do

@@ -1,4 +1,5 @@
 defmodule Tymeslot.Integrations.HealthCheckTest do
+  @moduletag :integrations
   use Tymeslot.DataCase, async: false
 
   use Oban.Testing, repo: Tymeslot.Repo
@@ -13,6 +14,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
   alias Tymeslot.Repo
 
   setup :verify_on_exit!
+  @moduletag :integrations
 
   setup do
     # Start the GenServer with initial_delay: 0 to disable automatic checks

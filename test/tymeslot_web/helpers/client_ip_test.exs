@@ -1,9 +1,11 @@
 defmodule TymeslotWeb.Helpers.ClientIPTest do
+  @moduletag :utils
   use ExUnit.Case, async: true
 
   alias TymeslotWeb.Helpers.ClientIP
 
   defp mock_socket(opts) do
+  @moduletag :utils
     connected? = Keyword.get(opts, :connected?, true)
     connect_info = Keyword.get(opts, :connect_info, %{})
     connect_params = Keyword.get(opts, :connect_params, %{})

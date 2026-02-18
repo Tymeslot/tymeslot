@@ -1,8 +1,10 @@
 defmodule Tymeslot.Security.FieldValidators.EmailValidatorTest do
+  @moduletag :security
   use Tymeslot.DataCase, async: true
   alias Tymeslot.Security.FieldValidators.EmailValidator
 
   describe "validate/2" do
+  @moduletag :security
     test "returns :ok for valid email addresses" do
       assert :ok = EmailValidator.validate("user@example.com")
       assert :ok = EmailValidator.validate("first.last@domain.co.uk")
