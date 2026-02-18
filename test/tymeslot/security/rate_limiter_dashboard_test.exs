@@ -1,6 +1,8 @@
 defmodule Tymeslot.Security.RateLimiterDashboardTest do
   use ExUnit.Case, async: false
 
+  @moduletag :security
+
   import Tymeslot.RateLimiterTestHelpers
 
   alias Tymeslot.Security.RateLimiter
