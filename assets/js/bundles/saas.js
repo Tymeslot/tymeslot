@@ -2,12 +2,16 @@
  * SaaS Bundle
  *
  * Loaded on SaaS marketing pages that don't have route-specific bundles.
- * Simply connects the LiveSocket with CoreHooks (no additional hooks needed).
+ * Connects the LiveSocket with CoreHooks and SaaS-specific hooks (RecaptchaV3).
  */
 
 import { initializeBundle } from "./bundle_utils"
+import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
 
-// Initialize with CoreHooks only (no additional hooks for SaaS marketing pages)
-initializeBundle("saas", {}).catch(error => {
+const SaasHooks = {
+  RecaptchaV3: RecaptchaV3Hook
+};
+
+initializeBundle("saas", SaasHooks).catch(error => {
   console.error("SaaS bundle initialization failed:", error);
 });

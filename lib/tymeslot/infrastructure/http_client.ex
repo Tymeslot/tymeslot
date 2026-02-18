@@ -183,8 +183,10 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         proxy_connect_opts = Keyword.get(options_with_proxy, :connect_options, [])
         merged_connect_opts = Keyword.merge(proxy_connect_opts, user_connect_opts)
 
+        # Cannot use both :finch and :connect_options (Req limitation)
         options_with_proxy
         |> Keyword.delete(:connect_options)
+        |> Keyword.delete(:finch)
         |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
         |> Keyword.put(:connect_options, merged_connect_opts)
     end

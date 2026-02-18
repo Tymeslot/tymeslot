@@ -100,6 +100,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               data-testid="booking-form"
               class="booking-form"
               as={:booking}
+              id="booking-form"
               {SecurityFields.recaptcha_form_attrs("booking_form", "booking")}
             >
               <SecurityFields.honeypot_field id_prefix="booking" param_root="booking" />

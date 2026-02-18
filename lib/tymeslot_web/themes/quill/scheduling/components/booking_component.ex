@@ -93,6 +93,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     phx-target={@myself}
                     data-testid="booking-form"
                     class="space-y-2"
+                    id="booking-form"
                     {SecurityFields.recaptcha_form_attrs("booking_form", "booking")}
                   >
                     <SecurityFields.honeypot_field id_prefix="booking" param_root="booking" />
