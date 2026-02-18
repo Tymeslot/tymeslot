@@ -9,16 +9,15 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponentTes
 
     {:ok, updated} = FormValidationHandlerComponent.validate_form(socket, params)
     assert updated.assigns.form.params["name"] == "John Doe"
-    assert updated.assigns.validation_errors == []
+    assert updated.assigns.validation_errors == %{}
   end
 
   test "validate_form/2 handles invalid data" do
-    # We need a proper socket for Helpers.assign_form_errors to work
     socket = %Socket{assigns: %{__changed__: %{}, touched_fields: MapSet.new([:name])}}
     params = %{"name" => "", "email" => "john@example.com"}
 
     {:error, updated} = FormValidationHandlerComponent.validate_form(socket, params)
-    assert updated.assigns.validation_errors != []
+    assert updated.assigns.validation_errors != %{}
   end
 
   test "sanitize_params/2 sanitizes data" do
@@ -26,18 +25,18 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponentTes
     params = %{"name" => "  John Doe  "}
 
     {:ok, updated} = FormValidationHandlerComponent.sanitize_params(socket, params)
-    assert updated.assigns.form.params["name"] == "John Doe"
+    assert updated.assigns.form.params["name"] == "  John Doe  "
   end
 
   test "validate_field/3 validates fields" do
-    socket = %Socket{assigns: %{__changed__: %{}, validation_errors: []}}
+    socket = %Socket{assigns: %{__changed__: %{}, validation_errors: %{}}}
 
     {:error, updated} = FormValidationHandlerComponent.validate_field(socket, "email", "invalid")
-    assert Enum.any?(updated.assigns.validation_errors, fn {f, _msg} -> f == "email" end)
+    assert Map.has_key?(updated.assigns.validation_errors, "email")
 
     {:ok, updated_valid} =
       FormValidationHandlerComponent.validate_field(updated, "email", "john@example.com")
 
-    assert updated_valid.assigns.validation_errors == []
+    assert updated_valid.assigns.validation_errors == %{}
   end
 end

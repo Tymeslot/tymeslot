@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.Validation do
   """
 
   alias Tymeslot.Auth.ErrorFormatter
-  alias Tymeslot.Security.AuthValidation
+  alias Tymeslot.Security.InputProcessor
 
   @doc """
   Validates user login input.
@@ -56,9 +56,11 @@ defmodule Tymeslot.Auth.Validation do
   """
   @spec validate_signup_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_signup_input(params) do
-    # Delegate to existing AuthValidation module for now
-    # This will be refactored in a future iteration
-    AuthValidation.validate_signup_input(params)
+    InputProcessor.validate_form(params, [
+      {"email", :email},
+      {"password", :password},
+      {"full_name", :full_name}
+    ])
   end
 
   @doc """
@@ -73,9 +75,7 @@ defmodule Tymeslot.Auth.Validation do
   """
   @spec validate_password_reset_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_password_reset_input(params) do
-    # Delegate to existing AuthValidation module for now
-    # This will be refactored in a future iteration
-    AuthValidation.validate_password_reset_input(params)
+    InputProcessor.validate_form(params, [{"email", :email}])
   end
 
   @doc """
@@ -90,9 +90,7 @@ defmodule Tymeslot.Auth.Validation do
   """
   @spec validate_new_password_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_new_password_input(params) do
-    # Delegate to existing AuthValidation module for now
-    # This will be refactored in a future iteration
-    AuthValidation.validate_password_reset_input(params)
+    InputProcessor.validate_form(params, [{"password", :password}, {"password_confirmation", :password}])
   end
 
   @doc """

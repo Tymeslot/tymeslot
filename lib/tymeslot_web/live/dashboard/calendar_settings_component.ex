@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Security.CalendarInputProcessor
+  alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
            FormValidationHelpers.delete_field_error(socket.assigns.form_errors, field_atom)
          )}
       else
-        case CalendarInputProcessor.validate_single_field(field_atom, value,
+        case CalendarInputValidation.validate_single_field(field_atom, value,
                metadata: socket.assigns.security_metadata
              ) do
           {:ok, _result} ->
@@ -122,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       |> assign(:form_values, params)
       |> assign(:form_errors, %{})
 
-    case CalendarInputProcessor.validate_calendar_discovery(params,
+    case CalendarInputValidation.validate_calendar_discovery(params,
            metadata: socket.assigns.security_metadata,
            provider: provider
          ) do

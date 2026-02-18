@@ -1,6 +1,6 @@
-defmodule Tymeslot.Security.SharedInputValidators do
+defmodule Tymeslot.Integrations.Shared.InputValidators do
   @moduledoc """
-  Shared input validators used across multiple integration input processors.
+  Shared input validators used across multiple integration input validation modules.
 
   Provides consistent, tagged-tuple validation for common fields like integration name.
   """

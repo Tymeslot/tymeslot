@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
 
       alias Phoenix.Component
       alias Tymeslot.Integrations.Calendar.Discovery
-      alias Tymeslot.Security.CalendarInputProcessor
+      alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
     end
   end
 
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
         if String.trim(to_string(value)) == "" do
           handle_valid_field(socket, field_atom)
         else
-          case CalendarInputProcessor.validate_single_field(field_atom, value,
+          case CalendarInputValidation.validate_single_field(field_atom, value,
                  metadata: socket.assigns.metadata
                ) do
             {:ok, _result} -> handle_valid_field(socket, field_atom)
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
       def handle_event("discover_calendars", %{"integration" => params}, socket) do
         socket = Component.assign(socket, :saving, true)
 
-        case CalendarInputProcessor.validate_calendar_discovery(params,
+        case CalendarInputValidation.validate_calendar_discovery(params,
                metadata: socket.assigns.metadata,
                provider: @config_base_provider
              ) do

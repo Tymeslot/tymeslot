@@ -1,4 +1,4 @@
-defmodule Tymeslot.Security.AvailabilityInputProcessor do
+defmodule Tymeslot.Availability.InputValidation do
   @moduledoc """
   Availability input validation and sanitization.
 

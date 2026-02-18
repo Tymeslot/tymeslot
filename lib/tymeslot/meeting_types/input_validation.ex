@@ -1,4 +1,4 @@
-defmodule Tymeslot.Security.MeetingSettingsInputProcessor do
+defmodule Tymeslot.MeetingTypes.InputValidation do
   @moduledoc """
   Meeting settings input validation and sanitization.
 

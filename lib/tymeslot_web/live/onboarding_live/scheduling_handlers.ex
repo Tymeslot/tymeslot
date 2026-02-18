@@ -9,8 +9,6 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Profiles.Settings
-  alias Tymeslot.Security.OnboardingInputProcessor
-  alias TymeslotWeb.OnboardingLive.BasicSettingsShared
 
   @doc """
   Handles validation of scheduling preferences.
@@ -20,9 +18,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   @spec handle_validate_scheduling_preferences(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_validate_scheduling_preferences(params, socket) do
-    metadata = BasicSettingsShared.metadata(socket)
-
-    case OnboardingInputProcessor.validate_scheduling_preferences(params, metadata: metadata) do
+    case validate_scheduling_preferences(params) do
       {:ok, _sanitized_params} ->
         {:noreply, Component.assign(socket, :form_errors, %{})}
 
@@ -39,10 +35,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
   @spec handle_update_scheduling_preferences(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_scheduling_preferences(params, socket) do
-    metadata = BasicSettingsShared.metadata(socket)
-
-    # First validate the input
-    case OnboardingInputProcessor.validate_scheduling_preferences(params, metadata: metadata) do
+    case validate_scheduling_preferences(params) do
       {:ok, sanitized_params} ->
         # Then update the profile with sanitized data
         case Settings.update_scheduling_preferences(
@@ -68,4 +61,73 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
         {:noreply, socket}
     end
   end
+
+  # Private helpers
+
+  defp validate_scheduling_preferences(params) do
+    errors =
+      [
+        {"buffer_minutes", :buffer_minutes, &validate_buffer_minutes/1},
+        {"advance_booking_days", :advance_booking_days, &validate_advance_booking_days/1},
+        {"min_advance_hours", :min_advance_hours, &validate_min_advance_hours/1}
+      ]
+      |> Enum.flat_map(fn {key, error_key, validator} ->
+        with {:ok, value} <- Map.fetch(params, key),
+             {:error, error} <- validator.(value) do
+          [{error_key, error}]
+        else
+          :error -> []
+          :ok -> []
+          {:ok, _value} -> []
+        end
+      end)
+      |> Map.new()
+
+    if map_size(errors) == 0, do: {:ok, params}, else: {:error, errors}
+  end
+
+  defp validate_buffer_minutes(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {minutes, ""} -> validate_buffer_minutes(minutes)
+      _other -> {:error, "Buffer minutes must be a valid number"}
+    end
+  end
+
+  defp validate_buffer_minutes(minutes) when is_integer(minutes) do
+    if minutes >= 0 and minutes <= 120,
+      do: :ok,
+      else: {:error, "Buffer minutes must be between 0 and 120"}
+  end
+
+  defp validate_buffer_minutes(_invalid), do: {:error, "Buffer minutes must be a number"}
+
+  defp validate_advance_booking_days(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {days, ""} -> validate_advance_booking_days(days)
+      _other -> {:error, "Advance booking days must be a valid number"}
+    end
+  end
+
+  defp validate_advance_booking_days(days) when is_integer(days) do
+    if days >= 1 and days <= 365,
+      do: :ok,
+      else: {:error, "Advance booking days must be between 1 and 365"}
+  end
+
+  defp validate_advance_booking_days(_invalid), do: {:error, "Advance booking days must be a number"}
+
+  defp validate_min_advance_hours(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {hours, ""} -> validate_min_advance_hours(hours)
+      _other -> {:error, "Minimum advance hours must be a valid number"}
+    end
+  end
+
+  defp validate_min_advance_hours(hours) when is_integer(hours) do
+    if hours >= 0 and hours <= 168,
+      do: :ok,
+      else: {:error, "Minimum advance hours must be between 0 and 168"}
+  end
+
+  defp validate_min_advance_hours(_invalid), do: {:error, "Minimum advance hours must be a number"}
 end

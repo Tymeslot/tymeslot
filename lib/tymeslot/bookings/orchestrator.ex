@@ -8,7 +8,6 @@ defmodule Tymeslot.Bookings.Orchestrator do
 
   alias Tymeslot.Bookings.{Create, Validation}
   alias Tymeslot.Meetings
-  alias Tymeslot.Security.FormValidation
 
   @doc """
   Orchestrates the complete booking submission flow including:
@@ -27,16 +26,15 @@ defmodule Tymeslot.Bookings.Orchestrator do
       reschedule_uid: reschedule_uid
     } = normalize_params(params, opts)
 
-    with {:ok, sanitized_data} <- validate_form(form_data),
-         {:ok, meeting} <-
-           create_or_reschedule_meeting(
-             is_rescheduling,
-             reschedule_uid,
-             meeting_params,
-             sanitized_data
-           ) do
-      {:ok, meeting}
-    else
+    case create_or_reschedule_meeting(
+           is_rescheduling,
+           reschedule_uid,
+           meeting_params,
+           form_data
+         ) do
+      {:ok, meeting} ->
+        {:ok, meeting}
+
       {:error, errors} when is_list(errors) ->
         {:error, errors}
 
@@ -75,13 +73,6 @@ defmodule Tymeslot.Bookings.Orchestrator do
       is_rescheduling: Keyword.get(opts, :is_rescheduling, false),
       reschedule_uid: Keyword.get(opts, :reschedule_uid)
     }
-  end
-
-  defp validate_form(form_data) do
-    case FormValidation.validate_booking_form(form_data) do
-      {:ok, sanitized} -> {:ok, sanitized}
-      {:error, errors} -> {:error, errors}
-    end
   end
 
   defp create_or_reschedule_meeting(

@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Video
-  alias Tymeslot.Security.VideoInputProcessor
+  alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.Dashboard.Integrations.ProviderCard
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
@@ -104,7 +104,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
          FormValidationHelpers.delete_field_error(current_errors, field_atom)
        )}
     else
-      case VideoInputProcessor.validate_single_field(field_atom, value, metadata: metadata) do
+      case VideoInputValidation.validate_single_field(field_atom, value, metadata: metadata) do
         {:ok, _sanitized_value} ->
           current_errors = socket.assigns.form_errors || %{}
 
@@ -132,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     socket = assign(socket, :saving, true)
     metadata = DashboardHelpers.get_security_metadata(socket)
 
-    case VideoInputProcessor.validate_video_integration_form(params, metadata: metadata) do
+    case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
       {:ok, sanitized_params} ->
         validated_params = Map.merge(params, sanitized_params)
         user_id = socket.assigns.current_user.id

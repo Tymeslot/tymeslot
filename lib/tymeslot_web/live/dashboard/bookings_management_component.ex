@@ -4,9 +4,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   """
   use TymeslotWeb, :live_component
 
+  alias Ecto.UUID
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings
-  alias Tymeslot.Security.{MeetingsInputProcessor, RateLimiter}
+  alias Tymeslot.Security.RateLimiter
 
   alias Phoenix.LiveView
 
@@ -77,15 +78,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("filter_meetings", %{"filter" => filter}, socket) do
-    metadata = DashboardHelpers.get_security_metadata(socket)
     user_id = socket.assigns.current_user.id
 
     case RateLimiter.check_meeting_filter_rate_limit(user_id) do
       :ok ->
-        case MeetingsInputProcessor.validate_filter_input(%{"filter" => filter},
-               metadata: metadata
-             ) do
-          {:ok, %{"filter" => validated_filter}} ->
+        case validate_filter(filter) do
+          {:ok, validated_filter} ->
             :telemetry.execute(
               [:tymeslot, :dashboard, :meetings, :filter],
               %{},
@@ -436,12 +434,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   defp fetch_meeting_for_modal(socket, params, opts) do
-    metadata = DashboardHelpers.get_security_metadata(socket)
     policy_fun = Keyword.fetch!(opts, :policy_fun)
     user_email = socket.assigns.current_user.email
 
-    with {:ok, %{"id" => validated_id}} <-
-           MeetingsInputProcessor.validate_meeting_id_input(params, metadata: metadata),
+    with {:ok, validated_id} <- validate_meeting_id(params),
          {:ok, meeting} <- fetch_meeting_for_user(validated_id, user_email),
          :ok <- policy_fun.(meeting) do
       {:ok, meeting}
@@ -454,5 +450,23 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   defp fetch_meeting_for_user(id, user_email) do
     Meetings.get_meeting_for_user(id, user_email)
+  end
+
+  @valid_filters ["upcoming", "past", "cancelled"]
+
+  defp validate_filter(filter) when filter in @valid_filters, do: {:ok, filter}
+  defp validate_filter(_filter), do: {:error, "Invalid filter option"}
+
+  defp validate_meeting_id(params) do
+    case Map.get(params, "id") do
+      id when is_binary(id) ->
+        case UUID.cast(String.trim(id)) do
+          {:ok, uuid} -> {:ok, uuid}
+          :error -> {:error, %{id: "Invalid meeting ID format"}}
+        end
+
+      _id ->
+        {:error, %{id: "Meeting ID is required"}}
+    end
   end
 end

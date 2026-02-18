@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
     <!-- Navigation -->
             <div class="slide-actions">
               <button
-                class={get_next_button_class(@selected_duration)}
+                class={if is_nil(@selected_duration), do: "next-button disabled", else: "next-button"}
                 phx-click="next_slide"
                 phx-target={@myself}
                 data-testid="next-step"
@@ -154,9 +154,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
         # Sanitize icon to prevent XSS: only allow alphanumeric, hyphens, underscores
         safe_icon = sanitize_css_class(icon)
         raw("<span class='#{safe_icon} hero-icon hero-icon--md'></span>")
-
-      _other_icon ->
-        raw("<span class='hero-clock hero-icon hero-icon--md'></span>")
     end
   end
 
@@ -168,12 +165,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
     |> String.slice(0, 100)
   end
 
-  defp get_next_button_class(selected_duration) do
-    if is_nil(selected_duration), do: "next-button disabled", else: "next-button"
-  end
-
   # Natural sort key: split string into number and text segments and normalize
-  defp natural_key(string) when is_binary(string) do
+  defp natural_key(string) do
     normalized = String.downcase(String.trim(string))
 
     Enum.map(Regex.scan(~r/\d+|\D+/u, normalized), fn [seg] ->
@@ -187,11 +180,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
 
   # Derive a robust meeting title for sorting: prefer name, fallback to duration
   defp meeting_title(%{name: name, duration_minutes: duration}) do
-    trimmed =
-      case name do
-        n when is_binary(n) -> String.trim(n)
-        _non_binary -> ""
-      end
+    trimmed = String.trim(name)
 
     if trimmed != "" do
       trimmed

@@ -6,7 +6,7 @@ defmodule Tymeslot.Security.InputProcessor do
   followed by field-specific validation with error aggregation.
   """
 
-  alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
+  alias Tymeslot.Security.{FieldValidators, SecurityLogger, UniversalSanitizer}
 
   @doc """
   Validates a form with universal sanitization and field-specific validation.
@@ -23,9 +23,15 @@ defmodule Tymeslot.Security.InputProcessor do
   ## Examples
 
       InputProcessor.validate_form(params, [
+        {"email", :email},
+        {"name", :name},
+        {"message", :message, [required: false, min_length: 0]}
+      ])
+
+      # Also accepts explicit validator modules for backwards compatibility:
+      InputProcessor.validate_form(params, [
         {"email", EmailValidator},
-        {"name", NameValidator},
-        {"message", MessageValidator}
+        {"name", NameValidator}
       ])
 
       # Returns:
@@ -48,18 +54,22 @@ defmodule Tymeslot.Security.InputProcessor do
   @doc """
   Validates a single field with universal sanitization and specific validation.
 
+  Accepts a type atom (`:email`, `:name`, `:password`, etc.) or an explicit
+  validator module for backwards compatibility.
+
   ## Examples
 
-      InputProcessor.validate_field("user@example.com", EmailValidator)
+      InputProcessor.validate_field("user@example.com", :email)
       # Returns: {:ok, "user@example.com"}
 
-      InputProcessor.validate_field("<script>alert(1)</script>", EmailValidator)
+      InputProcessor.validate_field("<script>alert(1)</script>", :email)
       # Returns: {:error, "Email format is invalid (missing @ symbol)"}
   """
-  @spec validate_field(any(), module(), keyword()) :: {:ok, any()} | {:error, String.t()}
-  def validate_field(value, validator_module, opts \\ []) do
+  @spec validate_field(any(), atom(), keyword()) :: {:ok, any()} | {:error, String.t()}
+  def validate_field(value, type_or_module, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
     universal_opts = Keyword.get(opts, :universal_opts, [])
+    validator_module = resolve_validator(type_or_module)
 
     with {:ok, sanitized} <- UniversalSanitizer.sanitize_and_validate(value, universal_opts),
          :ok <- validator_module.validate(sanitized, opts) do
@@ -102,7 +112,14 @@ defmodule Tymeslot.Security.InputProcessor do
 
   defp validate_fields_with_aggregation(sanitized_params, field_specs, metadata) do
     errors =
-      Enum.reduce(field_specs, %{}, fn {field_name, validator_module}, acc ->
+      Enum.reduce(field_specs, %{}, fn spec, acc ->
+        {field_name, type_or_module, field_opts} =
+          case spec do
+            {f, t, o} -> {f, t, o}
+            {f, t} -> {f, t, []}
+          end
+
+        validator_module = resolve_validator(type_or_module)
         field_key = safe_field_key(field_name)
 
         field_value =
@@ -114,7 +131,7 @@ defmodule Tymeslot.Security.InputProcessor do
               Map.get(sanitized_params, name)
           end
 
-        case validator_module.validate(field_value) do
+        case validator_module.validate(field_value, field_opts) do
           :ok ->
             SecurityLogger.log_successful_validation(field_key, metadata)
             acc
@@ -131,4 +148,14 @@ defmodule Tymeslot.Security.InputProcessor do
       {:error, errors}
     end
   end
+
+  defp resolve_validator(:email), do: FieldValidators.EmailValidator
+  defp resolve_validator(:password), do: FieldValidators.PasswordValidator
+  defp resolve_validator(:name), do: FieldValidators.NameValidator
+  defp resolve_validator(:full_name), do: FieldValidators.FullNameValidator
+  defp resolve_validator(:username), do: FieldValidators.UsernameValidator
+  defp resolve_validator(:message), do: FieldValidators.MessageValidator
+  defp resolve_validator(:text), do: FieldValidators.TextValidator
+  defp resolve_validator(:integration_name), do: FieldValidators.IntegrationNameValidator
+  defp resolve_validator(module) when is_atom(module), do: module
 end

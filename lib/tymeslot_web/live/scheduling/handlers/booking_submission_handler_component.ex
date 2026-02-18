@@ -31,10 +31,17 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Phoenix.Component
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
-  alias Tymeslot.Security.FormValidation
+  alias Tymeslot.Security.InputProcessor
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Live.Scheduling.Helpers
+
+  @booking_field_spec [
+    {"name", :name},
+    {"email", :email},
+    {"message", :message, [required: false, min_length: 0]}
+  ]
 
   require Logger
 
@@ -63,7 +70,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     if honeypot_tripped?(booking_params) do
       handle_honeypot_booking(socket, booking_params)
     else
-      case FormValidation.validate_booking_form(booking_params) do
+      case InputProcessor.validate_form(booking_params, @booking_field_spec) do
         {:ok, sanitized_params} ->
           Logger.info("Form validation passed, proceeding to booking")
 
@@ -77,13 +84,12 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
         {:error, errors} ->
           Logger.warning("Form validation failed: #{inspect(errors)}")
-          {:ok, sanitized_params} = FormValidation.sanitize_booking_params(booking_params)
-          form = Component.to_form(sanitized_params)
+          form = Component.to_form(booking_params)
 
           socket =
             socket
             |> assign(:form, form)
-            |> assign(:validation_errors, errors)
+            |> Helpers.assign_form_errors(errors)
             |> put_flash(:error, "Please correct the errors below.")
 
           {:error, socket}
@@ -338,7 +344,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       {:error, errors} when is_list(errors) ->
         socket =
           socket
-          |> assign(:validation_errors, errors)
+          |> Helpers.assign_form_errors(Enum.into(errors, %{}))
           |> assign(:submitting, false)
           |> assign(:submission_processed, false)
           |> put_flash(:error, "Please correct the errors below before submitting.")

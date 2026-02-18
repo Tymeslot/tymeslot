@@ -28,8 +28,14 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.Component
-  alias Tymeslot.Security.FormValidation
+  alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Live.Scheduling.Helpers
+
+  @booking_field_spec [
+    {"name", :name},
+    {"email", :email},
+    {"message", :message, [required: false, min_length: 0]}
+  ]
 
   @doc """
   Validates booking form data and updates socket state.
@@ -49,20 +55,19 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
   @spec validate_form(Phoenix.LiveView.Socket.t(), map()) ::
           {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
   def validate_form(socket, booking_params) do
-    case FormValidation.validate_booking_form(booking_params) do
+    case InputProcessor.validate_form(booking_params, @booking_field_spec) do
       {:ok, sanitized_params} ->
         form = Component.to_form(sanitized_params)
 
         socket =
           socket
           |> assign(:form, form)
-          |> assign(:validation_errors, [])
+          |> assign(:validation_errors, %{})
 
         {:ok, socket}
 
       {:error, errors} ->
-        {:ok, sanitized_params} = FormValidation.sanitize_booking_params(booking_params)
-        form = Component.to_form(sanitized_params)
+        form = Component.to_form(booking_params)
 
         socket =
           socket
@@ -87,7 +92,12 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
   """
   @spec sanitize_params(Phoenix.LiveView.Socket.t(), map()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def sanitize_params(socket, params) do
-    {:ok, sanitized_params} = FormValidation.sanitize_booking_params(params)
+    sanitized_params =
+      case InputProcessor.validate_form(params, @booking_field_spec) do
+        {:ok, p} -> p
+        {:error, _errors} -> params
+      end
+
     form = Component.to_form(sanitized_params)
     socket = assign(socket, :form, form)
     {:ok, socket}
@@ -146,39 +156,34 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
   @spec validate_field(Phoenix.LiveView.Socket.t(), String.t(), any()) ::
           {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
   def validate_field(socket, field_name, field_value) do
-    # Simple field validation - can be extended based on field type
-    case {field_name, field_value} do
-      {"email", value} when is_binary(value) ->
-        if String.contains?(value, "@") do
-          clear_field_error(socket, field_name)
-        else
-          add_field_error(socket, field_name, "Invalid email format")
-        end
+    type =
+      case field_name do
+        "email" -> :email
+        "name" -> :name
+        _field_name -> nil
+      end
 
-      {"name", value} when is_binary(value) ->
-        if String.trim(value) != "" do
-          clear_field_error(socket, field_name)
-        else
-          add_field_error(socket, field_name, "Name is required")
-        end
-
-      {_other_field, _other_value} ->
-        # For other fields, assume valid
-        clear_field_error(socket, field_name)
+    if type do
+      case InputProcessor.validate_field(field_value, type) do
+        {:ok, _sanitized} -> clear_field_error(socket, field_name)
+        {:error, message} -> add_field_error(socket, field_name, message)
+      end
+    else
+      clear_field_error(socket, field_name)
     end
   end
 
   defp clear_field_error(socket, field_name) do
-    current_errors = socket.assigns[:validation_errors] || []
-    updated_errors = Enum.reject(current_errors, fn {field, _msg} -> field == field_name end)
+    current_errors = socket.assigns[:validation_errors] || %{}
+    updated_errors = Map.delete(current_errors, field_name)
 
     socket = assign(socket, :validation_errors, updated_errors)
     {:ok, socket}
   end
 
   defp add_field_error(socket, field_name, error_message) do
-    current_errors = socket.assigns[:validation_errors] || []
-    updated_errors = [{field_name, error_message} | current_errors]
+    current_errors = socket.assigns[:validation_errors] || %{}
+    updated_errors = Map.put(current_errors, field_name, error_message)
 
     socket = assign(socket, :validation_errors, updated_errors)
     {:error, socket}

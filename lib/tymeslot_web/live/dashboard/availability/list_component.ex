@@ -7,7 +7,8 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Availability.{AvailabilityActions, Breaks}
-  alias Tymeslot.Security.{AvailabilityInputProcessor, RateLimiter}
+  alias Tymeslot.Availability.InputValidation, as: AvailabilityInputValidation
+  alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Components.Dashboard.Availability.{ClearDayModal, DeleteBreakModal}
   alias TymeslotWeb.Components.Shared.TimeOptions
   alias TymeslotWeb.Dashboard.Availability.Helpers
@@ -74,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   def handle_event("validate_day_hours", params, socket) do
     metadata = DashboardHelpers.get_security_metadata(socket)
 
-    case AvailabilityInputProcessor.validate_day_hours(params, metadata: metadata) do
+    case AvailabilityInputValidation.validate_day_hours(params, metadata: metadata) do
       {:ok, _sanitized_params} ->
         {:noreply, assign(socket, :form_errors, %{})}
 
@@ -89,7 +90,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
     # Since we're using dropdowns with pre-validated time options,
     # we'll skip showing validation errors during phx-change events.
     # The validation still runs for security logging purposes.
-    case AvailabilityInputProcessor.validate_break_input(params, metadata: metadata) do
+    case AvailabilityInputValidation.validate_break_input(params, metadata: metadata) do
       {:ok, _sanitized_params} ->
         {:noreply, assign(socket, :form_errors, %{})}
 
@@ -121,7 +122,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
          %{} = day_availability <-
            AvailabilityActions.get_day_from_schedule(socket.assigns.weekly_schedule, day),
          {:ok, sanitized_params} <-
-           AvailabilityInputProcessor.validate_break_input(
+           AvailabilityInputValidation.validate_break_input(
              %{"start" => start_str, "end" => end_str, "label" => label},
              metadata: metadata
            ) do
@@ -214,7 +215,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
          %{} = day_availability <-
            AvailabilityActions.get_day_from_schedule(socket.assigns.weekly_schedule, day),
          {:ok, sanitized_params} <-
-           AvailabilityInputProcessor.validate_quick_break_input(
+           AvailabilityInputValidation.validate_quick_break_input(
              %{"start" => start_str, "duration" => duration_str},
              metadata: metadata
            ) do
@@ -264,7 +265,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
     with {:ok, from_day} <- parse_day(from_day_str),
          {:ok, to_days} <-
-           AvailabilityInputProcessor.validate_day_selections(to_days_str, metadata: metadata),
+           AvailabilityInputValidation.validate_day_selections(to_days_str, metadata: metadata),
          {:ok, _result} <-
            AvailabilityActions.copy_day_settings(profile_id(socket), from_day, to_days) do
       day_names = Enum.map_join(to_days, ", ", &AvailabilityActions.day_name/1)
@@ -319,7 +320,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
            AvailabilityActions.get_day_from_schedule(socket.assigns.weekly_schedule, day),
          strings <- resolve_day_strings(params, day_availability),
          {:ok, sanitized_params} <-
-           AvailabilityInputProcessor.validate_day_hours(strings, metadata: metadata),
+           AvailabilityInputValidation.validate_day_hours(strings, metadata: metadata),
          result <-
            AvailabilityActions.update_day_hours(
              profile_id(socket),

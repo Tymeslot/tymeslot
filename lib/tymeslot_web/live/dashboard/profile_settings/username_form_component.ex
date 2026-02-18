@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Profiles
-  alias Tymeslot.Security.SettingsInputProcessor
+  alias Tymeslot.Security.InputProcessor
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     perform_username_update(socket, username, metadata)
   end
 
-  defp update_username_availability(socket, username, metadata) do
+  defp update_username_availability(socket, username, _metadata) do
     cond do
       username == "" ->
         assign(socket, username_check: nil, username_available: nil)
@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
         assign(socket, username_check: username, username_available: :current)
 
       true ->
-        case SettingsInputProcessor.validate_username_update(username, metadata: metadata) do
+        case InputProcessor.validate_field(username, :username) do
           {:ok, sanitized_username} ->
             available = Profiles.username_available?(sanitized_username)
             assign(socket, username_check: sanitized_username, username_available: available)
@@ -54,14 +54,13 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     end
   end
 
-  defp perform_username_update(socket, username, metadata) do
+  defp perform_username_update(socket, username, _metadata) do
     profile = socket.assigns.profile
     user_id = socket.assigns.current_user.id
 
     socket = assign(socket, :saving, true)
 
-    with {:ok, sanitized_username} <-
-           SettingsInputProcessor.validate_username_update(username, metadata: metadata),
+    with {:ok, sanitized_username} <- InputProcessor.validate_field(username, :username),
          {:ok, updated_profile} <-
            Profiles.update_username(profile, sanitized_username, user_id) do
       handle_successful_username_update(socket, updated_profile, sanitized_username)

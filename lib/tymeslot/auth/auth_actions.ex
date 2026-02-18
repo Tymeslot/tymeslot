@@ -9,7 +9,8 @@ defmodule Tymeslot.Auth.AuthActions do
 
   alias Tymeslot.Auth.{PasswordReset, Registration, Session, SocialAuthentication}
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.AuthValidation
+  alias Tymeslot.Security.InputProcessor
+  alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias TymeslotWeb.Helpers.ClientIP
 
   require Logger
@@ -166,9 +167,11 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Validates signup form input.
   """
+  @signup_field_spec [{"email", :email}, {"password", :password}, {"full_name", :full_name}]
+
   @spec validate_signup_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_signup_input(params) do
-    AuthValidation.validate_signup_input(params)
+    InputProcessor.validate_form(params, @signup_field_spec)
   end
 
   @doc """
@@ -176,20 +179,59 @@ defmodule Tymeslot.Auth.AuthActions do
   """
   @spec validate_login_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_login_input(params) do
-    AuthValidation.validate_login_input(params)
+    {email_errors, sanitized_email} =
+      case InputProcessor.validate_field(params["email"], :email) do
+        {:ok, sanitized} -> {%{}, sanitized}
+        {:error, msg} -> {%{email: msg}, params["email"]}
+      end
+
+    errors =
+      if is_nil(params["password"]) or params["password"] == "" do
+        Map.put(email_errors, :password, "can't be blank")
+      else
+        email_errors
+      end
+
+    if map_size(errors) == 0 do
+      {:ok, Map.put(params, "email", sanitized_email)}
+    else
+      {:error, errors}
+    end
   end
 
   @doc """
   Validates password reset form input.
   """
   @spec validate_password_reset_input(map()) :: {:ok, map()} | {:error, map()}
-  def validate_password_reset_input(params) do
-    AuthValidation.validate_password_reset_input(params)
+  def validate_password_reset_input(%{"email" => _email} = params) do
+    InputProcessor.validate_form(params, [{"email", :email}])
   end
+
+  def validate_password_reset_input(%{"password" => _password, "password_confirmation" => _confirmation} = params) do
+    with {:ok, sanitized} <-
+           InputProcessor.validate_form(params, [
+             {"password", :password},
+             {"password_confirmation", :password}
+           ]),
+         :ok <-
+           PasswordValidator.validate_confirmation(
+             sanitized["password"],
+             sanitized["password_confirmation"]
+           ) do
+      {:ok, sanitized}
+    else
+      {:error, errors} when is_map(errors) -> {:error, errors}
+      {:error, msg} -> {:error, %{password_confirmation: msg}}
+    end
+  end
+
+  def validate_password_reset_input(_params), do: {:error, %{base: ["Invalid input format"]}}
 
   @doc """
   Validates complete registration form data.
   """
+  @oauth_registration_field_spec [{"email", :email}, {"full_name", :full_name}]
+
   @spec validate_complete_registration(map(), map()) :: {:ok, map()} | {:error, map()}
   def validate_complete_registration(auth_params, profile_params) do
     validation_map = %{
@@ -198,7 +240,7 @@ defmodule Tymeslot.Auth.AuthActions do
       "terms_accepted" => auth_params["terms_accepted"]
     }
 
-    AuthValidation.validate_signup_input(validation_map)
+    InputProcessor.validate_form(validation_map, @oauth_registration_field_spec)
   end
 
   # State Management

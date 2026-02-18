@@ -9,8 +9,6 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Profiles.Settings
-  alias Tymeslot.Security.OnboardingInputProcessor
-  alias TymeslotWeb.OnboardingLive.BasicSettingsShared
 
   @doc """
   Handles toggling the timezone dropdown visibility.
@@ -52,8 +50,6 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
   @spec handle_change_timezone(String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_change_timezone(timezone, socket) do
-    metadata = BasicSettingsShared.metadata(socket)
-
     # Close dropdown and clear search, but explicitly preserve form_data
     socket =
       socket
@@ -63,7 +59,7 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
       |> Component.assign(:form_data, socket.assigns.form_data)
 
     # First validate the timezone
-    case OnboardingInputProcessor.validate_timezone_selection(timezone, metadata: metadata) do
+    case validate_timezone(timezone) do
       {:ok, validated_timezone} ->
         # Update and persist the timezone
         case Settings.update_timezone(
@@ -99,4 +95,16 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
         {:noreply, socket}
     end
   end
+
+  # Private helpers
+
+  defp validate_timezone(timezone) when is_binary(timezone) do
+    if String.match?(timezone, ~r/^[A-Za-z_]+\/[A-Za-z_]+$/) or timezone in ["UTC", "GMT"] do
+      {:ok, timezone}
+    else
+      {:error, %{timezone: "Invalid timezone format"}}
+    end
+  end
+
+  defp validate_timezone(_invalid), do: {:error, %{timezone: "Timezone must be a string"}}
 end

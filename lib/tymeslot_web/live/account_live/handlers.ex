@@ -8,7 +8,8 @@ defmodule TymeslotWeb.AccountLive.Handlers do
 
   alias Phoenix.LiveView
   alias Tymeslot.Auth
-  alias Tymeslot.Security.{AccountInputProcessor, RateLimiter}
+  alias Tymeslot.Security.{InputProcessor, RateLimiter}
+  alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias TymeslotWeb.AccountLive.{ErrorFormatter, Helpers}
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Shared.Flash
@@ -89,7 +90,12 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     user = socket.assigns.current_user
 
     with {:ok, sanitized_params} <-
-           AccountInputProcessor.validate_email_change(params, metadata: metadata),
+           InputProcessor.validate_form(
+             params,
+             [{"new_email", :email}, {"current_password", :password}],
+             metadata: metadata,
+             universal_opts: [allow_html: false]
+           ),
          :ok <- RateLimiter.check_auth_rate_limit(user.email, metadata[:ip]),
          {:ok, updated_user, message} <-
            Auth.request_email_change(
@@ -118,7 +124,7 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     user = socket.assigns.current_user
 
     with {:ok, sanitized_params} <-
-           AccountInputProcessor.validate_password_change(params, metadata: metadata),
+           validate_password_change_input(params, metadata),
          :ok <- RateLimiter.check_auth_rate_limit(user.email, metadata[:ip]),
          {:ok, updated_user} <-
            Auth.update_user_password(
@@ -178,5 +184,47 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   defp social_user_message(socket, :password) do
     provider = String.capitalize(socket.assigns.current_user.provider || @social_provider_default)
     "Password authentication is not available for #{provider} login"
+  end
+
+  defp validate_password_change_input(params, metadata) do
+    with {:ok, sanitized_params} <-
+           InputProcessor.validate_form(
+             params,
+             [
+               {"current_password", :password},
+               {"new_password", :password},
+               {"new_password_confirmation", :password}
+             ],
+             metadata: metadata,
+             universal_opts: [allow_html: false]
+           ),
+         :ok <-
+           PasswordValidator.validate_confirmation(
+             sanitized_params["new_password"],
+             sanitized_params["new_password_confirmation"]
+           ),
+         :ok <- check_passwords_differ(sanitized_params) do
+      {:ok, sanitized_params}
+    else
+      {:error, errors} when is_map(errors) ->
+        {:error, errors}
+
+      {:error, confirmation_msg} when is_binary(confirmation_msg) ->
+        {:error, %{new_password_confirmation: confirmation_msg}}
+
+      {:error, :same_password} ->
+        {:error, %{new_password: "New password must be different from current password"}}
+    end
+  end
+
+  defp check_passwords_differ(params) do
+    current = Map.get(params, "current_password", "")
+    new_pw = Map.get(params, "new_password", "")
+
+    if current == new_pw and current != "" do
+      {:error, :same_password}
+    else
+      :ok
+    end
   end
 end

@@ -16,7 +16,6 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Profiles.Timezone
   alias Tymeslot.Profiles.Usernames
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Security.SettingsInputProcessor
   alias Tymeslot.Themes.Theme
 
   @type user_id :: pos_integer()
@@ -241,14 +240,14 @@ defmodule Tymeslot.Profiles do
   """
   @spec consume_avatar_upload(profile(), map(), map(), map()) ::
           {:ok, profile() | {:error, any()}}
-  def consume_avatar_upload(profile, %{path: path}, entry, metadata) do
+  def consume_avatar_upload(profile, %{path: path}, entry, _metadata) do
     uploaded_entry = %{
       "path" => path,
       "client_name" => entry.client_name,
       "size" => entry.client_size
     }
 
-    case SettingsInputProcessor.validate_avatar_upload(uploaded_entry, metadata: metadata) do
+    case validate_avatar_upload(uploaded_entry) do
       {:ok, validated_entry} ->
         atom_entry = %{path: validated_entry["path"], client_name: validated_entry["client_name"]}
 
@@ -259,6 +258,65 @@ defmodule Tymeslot.Profiles do
 
       {:error, validation_error} ->
         {:ok, {:error, validation_error}}
+    end
+  end
+
+  defp validate_avatar_upload(file_params) do
+    with :ok <- validate_avatar_file_type(file_params),
+         :ok <- validate_avatar_file_size(file_params),
+         :ok <- validate_avatar_file_name(file_params) do
+      {:ok, file_params}
+    end
+  end
+
+  defp validate_avatar_file_type(file_params) do
+    case Map.get(file_params, "client_name") do
+      nil ->
+        {:error, "No file name provided"}
+
+      filename ->
+        extension = filename |> Path.extname() |> String.downcase()
+
+        if extension in [".jpg", ".jpeg", ".png", ".gif", ".webp"] do
+          :ok
+        else
+          {:error, "Invalid file type. Only JPG, PNG, GIF, and WebP files are allowed"}
+        end
+    end
+  end
+
+  defp validate_avatar_file_size(file_params) do
+    case Map.get(file_params, "size") do
+      nil ->
+        :ok
+
+      size when is_integer(size) ->
+        if size <= 10_000_000, do: :ok, else: {:error, "File too large. Maximum size is 10MB"}
+
+      _other ->
+        {:error, "Invalid file size"}
+    end
+  end
+
+  defp validate_avatar_file_name(file_params) do
+    case Map.get(file_params, "client_name") do
+      nil ->
+        {:error, "No file name provided"}
+
+      filename ->
+        cond do
+          String.contains?(filename, ["../", "..\\", "\0"]) ->
+            {:error, "Invalid file name"}
+
+          String.match?(filename, ~r/[<>:"\\|?*]/) ->
+            {:error, "Invalid file name"}
+
+          String.length(filename) > 255 ->
+            {:error, "File name too long"}
+
+          true ->
+            :ok
+        end
     end
   end
 

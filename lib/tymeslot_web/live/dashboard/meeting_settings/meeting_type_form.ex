@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   use TymeslotWeb, :live_component
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
-  alias Tymeslot.Security.MeetingSettingsInputProcessor
+  alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -415,7 +415,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # --- Private helpers ---
   defp validate_and_update_field("name", value, metadata, acc_data, acc_errors) do
-    case MeetingSettingsInputProcessor.validate_meeting_type_field(:name, value,
+    case MeetingSettingsInputValidation.validate_meeting_type_field(:name, value,
            metadata: metadata
          ) do
       {:ok, sanitized} -> {Map.put(acc_data, "name", sanitized), Map.delete(acc_errors, :name)}
@@ -425,7 +425,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   defp validate_and_update_field("duration", value, metadata, acc_data, acc_errors) do
-    case MeetingSettingsInputProcessor.validate_meeting_type_field(:duration, value,
+    case MeetingSettingsInputValidation.validate_meeting_type_field(:duration, value,
            metadata: metadata
          ) do
       {:ok, sanitized} ->
@@ -440,7 +440,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   defp validate_and_update_field("description", value, metadata, acc_data, acc_errors) do
-    case MeetingSettingsInputProcessor.validate_meeting_type_field(:description, value,
+    case MeetingSettingsInputValidation.validate_meeting_type_field(:description, value,
            metadata: metadata
          ) do
       {:ok, sanitized} ->

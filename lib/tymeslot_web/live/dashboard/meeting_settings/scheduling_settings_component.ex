@@ -6,8 +6,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
   """
   use TymeslotWeb, :live_component
 
+  alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias Tymeslot.Profiles
-  alias Tymeslot.Security.MeetingSettingsInputProcessor
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.Dashboard.MeetingSettings.Components
@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
     buffer_str = params["buffer_minutes"] || params["value"] || "0"
     metadata = Helpers.get_security_metadata(socket)
 
-    case MeetingSettingsInputProcessor.validate_buffer_minutes(buffer_str, metadata: metadata) do
+    case MeetingSettingsInputValidation.validate_buffer_minutes(buffer_str, metadata: metadata) do
       {:ok, validated_buffer} ->
         # Update profile first, then update custom_input_mode only on success
         case Profiles.update_buffer_minutes(socket.assigns.profile, validated_buffer) do
@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
     days_str = params["advance_booking_days"] || params["value"] || "90"
     metadata = Helpers.get_security_metadata(socket)
 
-    case MeetingSettingsInputProcessor.validate_advance_booking_days(days_str,
+    case MeetingSettingsInputValidation.validate_advance_booking_days(days_str,
            metadata: metadata
          ) do
       {:ok, validated_days} ->
@@ -143,7 +143,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
     hours_str = params["min_advance_hours"] || params["value"] || "24"
     metadata = Helpers.get_security_metadata(socket)
 
-    case MeetingSettingsInputProcessor.validate_min_advance_hours(hours_str, metadata: metadata) do
+    case MeetingSettingsInputValidation.validate_min_advance_hours(hours_str, metadata: metadata) do
       {:ok, validated_hours} ->
         # Update profile first, then update custom_input_mode only on success
         case Profiles.update_min_advance_hours(socket.assigns.profile, validated_hours) do

@@ -1,9 +1,9 @@
-defmodule Tymeslot.Security.WebhookInputProcessor do
+defmodule Tymeslot.Webhooks.InputValidation do
   @moduledoc """
-  Validates and sanitizes webhook input from user forms.
+  Webhook input validation and sanitization.
 
-  Ensures webhook configuration is safe and valid before
-  saving to the database.
+  Validates webhook configuration forms including name, URL, and event selection.
+  Uses Ecto embedded schema for structured validation.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -22,7 +22,12 @@ defmodule Tymeslot.Security.WebhookInputProcessor do
   @doc """
   Validates webhook form input.
 
-  Returns {:ok, sanitized_params} or {:error, errors_map}
+  ## Parameters
+  - `params` - Map containing webhook form parameters
+  - `opts` - Options including metadata for logging
+
+  ## Returns
+  - `{:ok, sanitized_params}` | `{:error, validation_errors}`
   """
   @spec validate_webhook_form(map(), keyword()) ::
           {:ok, map()} | {:error, map()}
@@ -38,26 +43,6 @@ defmodule Tymeslot.Security.WebhookInputProcessor do
       {:error, :rate_limited} ->
         {:error, %{form: "Too many requests. Please slow down."}}
     end
-  end
-
-  defp handle_webhook_validation_result({:ok, validated}) do
-    {:ok, Map.from_struct(validated)}
-  end
-
-  defp handle_webhook_validation_result({:error, changeset}) do
-    {:error, translate_errors(changeset)}
-  end
-
-  defp perform_webhook_validation(params) do
-    %__MODULE__{}
-    |> cast(params, [:name, :url, :events])
-    |> validate_required([:name], message: "Name cannot be empty")
-    |> validate_required([:url])
-    |> validate_length(:name, min: 1, max: 255)
-    |> validate_length(:url, min: 1, max: 2048)
-    |> validate_url_format()
-    |> validate_events_list()
-    |> apply_action(:validate)
   end
 
   @doc """
@@ -79,19 +64,6 @@ defmodule Tymeslot.Security.WebhookInputProcessor do
     end
   end
 
-  defp handle_name_update_result({:ok, validated}), do: {:ok, validated.name}
-
-  defp handle_name_update_result({:error, changeset}),
-    do: {:error, get_first_error(changeset, :name)}
-
-  defp perform_name_update_validation(params) do
-    %__MODULE__{}
-    |> cast(params, [:name])
-    |> validate_required([:name])
-    |> validate_length(:name, min: 1, max: 255)
-    |> apply_action(:validate)
-  end
-
   @doc """
   Validates a webhook URL update.
   """
@@ -111,6 +83,41 @@ defmodule Tymeslot.Security.WebhookInputProcessor do
     end
   end
 
+  # Private functions
+
+  defp handle_webhook_validation_result({:ok, validated}) do
+    {:ok, Map.from_struct(validated)}
+  end
+
+  defp handle_webhook_validation_result({:error, changeset}) do
+    {:error, translate_errors(changeset)}
+  end
+
+  defp perform_webhook_validation(params) do
+    %__MODULE__{}
+    |> cast(params, [:name, :url, :events])
+    |> validate_required([:name], message: "Name cannot be empty")
+    |> validate_required([:url])
+    |> validate_length(:name, min: 1, max: 255)
+    |> validate_length(:url, min: 1, max: 2048)
+    |> validate_url_format()
+    |> validate_events_list()
+    |> apply_action(:validate)
+  end
+
+  defp handle_name_update_result({:ok, validated}), do: {:ok, validated.name}
+
+  defp handle_name_update_result({:error, changeset}),
+    do: {:error, get_first_error(changeset, :name)}
+
+  defp perform_name_update_validation(params) do
+    %__MODULE__{}
+    |> cast(params, [:name])
+    |> validate_required([:name])
+    |> validate_length(:name, min: 1, max: 255)
+    |> apply_action(:validate)
+  end
+
   defp handle_url_update_result({:ok, validated}), do: {:ok, validated.url}
 
   defp handle_url_update_result({:error, changeset}),
@@ -124,8 +131,6 @@ defmodule Tymeslot.Security.WebhookInputProcessor do
     |> validate_url_format()
     |> apply_action(:validate)
   end
-
-  # Private functions
 
   defp validate_url_format(changeset) do
     validate_change(changeset, :url, fn :url, url ->

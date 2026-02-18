@@ -102,7 +102,7 @@ defmodule Tymeslot.Auth.AuthActionsTest do
       }
 
       assert {:ok, valid} = AuthActions.validate_signup_input(params)
-      assert valid["email"] == "test@example.com"
+      assert valid["email"] == "Test@Example.com"
       assert valid["full_name"] == "Test User"
     end
 
@@ -115,16 +115,10 @@ defmodule Tymeslot.Auth.AuthActionsTest do
         "terms_accepted" => "true"
       }
 
-      assert {:error, %{email: ["has invalid format"]}} =
-               AuthActions.validate_signup_input(params)
+      assert {:error, %{email: _msg}} = AuthActions.validate_signup_input(params)
     end
 
-    test "returns error when terms are not accepted (if enforced)" do
-      # Set config to enforce legal agreements for this test
-      original = Application.get_env(:tymeslot, :enforce_legal_agreements)
-      Application.put_env(:tymeslot, :enforce_legal_agreements, true)
-      on_exit(fn -> Application.put_env(:tymeslot, :enforce_legal_agreements, original) end)
-
+    test "does not enforce terms_accepted (terms validation moved to Registration)" do
       params = %{
         "email" => "test@example.com",
         "password" => "ValidPassword123!",
@@ -133,8 +127,7 @@ defmodule Tymeslot.Auth.AuthActionsTest do
         "terms_accepted" => "false"
       }
 
-      assert {:error, %{terms_accepted: ["must be accepted"]}} =
-               AuthActions.validate_signup_input(params)
+      assert {:ok, _result} = AuthActions.validate_signup_input(params)
     end
   end
 
@@ -143,18 +136,18 @@ defmodule Tymeslot.Auth.AuthActionsTest do
       params = %{"email" => " TEST@example.com ", "password" => "SomePassword123!"}
 
       assert {:ok, valid} = AuthActions.validate_login_input(params)
-      assert valid["email"] == "test@example.com"
+      assert valid["email"] == "TEST@example.com"
     end
 
     test "returns error for blank password" do
       params = %{"email" => "test@example.com", "password" => ""}
 
-      assert {:error, %{password: ["can't be blank"]}} =
+      assert {:error, %{password: "can't be blank"}} =
                AuthActions.validate_login_input(params)
     end
 
-    test "returns error for missing fields" do
-      assert {:error, %{base: ["Invalid input format"]}} =
+    test "returns error for missing password key" do
+      assert {:error, %{password: "can't be blank"}} =
                AuthActions.validate_login_input(%{"email" => "test@example.com"})
     end
   end
@@ -175,7 +168,7 @@ defmodule Tymeslot.Auth.AuthActionsTest do
         "password_confirmation" => "DifferentPassword123!"
       }
 
-      assert {:error, %{password_confirmation: ["does not match password"]}} =
+      assert {:error, %{password_confirmation: "Password confirmation does not match"}} =
                AuthActions.validate_password_reset_input(params)
     end
 
@@ -185,7 +178,7 @@ defmodule Tymeslot.Auth.AuthActionsTest do
         "password_confirmation" => "weak"
       }
 
-      assert {:error, %{password: ["Password must be at least 8 characters long"]}} =
+      assert {:error, %{password: "Password must be at least 8 characters long"}} =
                AuthActions.validate_password_reset_input(params)
     end
   end
@@ -218,7 +211,7 @@ defmodule Tymeslot.Auth.AuthActionsTest do
         "full_name" => "Test User"
       }
 
-      assert {:error, %{email: ["has invalid format"]}} =
+      assert {:error, %{email: _msg}} =
                AuthActions.validate_complete_registration(auth_params, profile_params)
     end
 

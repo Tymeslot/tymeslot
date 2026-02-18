@@ -9,13 +9,19 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Security.FormValidation
+  alias Tymeslot.Security.InputProcessor
   alias Tymeslot.Utils.{ContextUtils, DateTimeUtils, TimezoneUtils}
   alias TymeslotWeb.Helpers.ClientIP
 
   require Logger
 
   import Component, only: [assign: 3]
+
+  @booking_field_spec [
+    {"name", :name},
+    {"email", :email},
+    {"message", :message, [required: false, min_length: 0]}
+  ]
 
   @doc """
   Handles username resolution and organizer setup.
@@ -65,13 +71,8 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
     |> assign(:saving, false)
   end
 
-  @spec assign_form_errors(Phoenix.LiveView.Socket.t(), list() | map()) ::
+  @spec assign_form_errors(Phoenix.LiveView.Socket.t(), map()) ::
           Phoenix.LiveView.Socket.t()
-  def assign_form_errors(socket, errors) when is_list(errors) do
-    error_map = Enum.group_by(errors, &elem(&1, 0), &elem(&1, 1))
-    assign(socket, :validation_errors, error_map)
-  end
-
   def assign_form_errors(socket, error_map) when is_map(error_map) do
     assign(socket, :validation_errors, error_map)
   end
@@ -145,7 +146,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   """
   @spec form_valid?(Phoenix.HTML.Form.t()) :: boolean()
   def form_valid?(%{source: source}) when is_map(source) do
-    case FormValidation.validate_booking_form(source) do
+    case InputProcessor.validate_form(source, @booking_field_spec) do
       {:ok, _result} -> true
       {:error, _reason} -> false
     end

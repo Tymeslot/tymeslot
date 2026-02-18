@@ -13,7 +13,8 @@ defmodule TymeslotWeb.AuthLive do
   alias Tymeslot.Auth.{AuthActions, Session, Verification}
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
-  alias Tymeslot.Security.{AuthInputProcessor, RateLimiter}
+  alias Tymeslot.Security.{InputProcessor, RateLimiter}
+  alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.AuthLive.{SecurityHelper, StateHelper}
   alias TymeslotWeb.Helpers.ClientIP
@@ -82,10 +83,9 @@ defmodule TymeslotWeb.AuthLive do
   # Login Events
   def handle_event("validate_login", %{"email" => email, "password" => password}, socket) do
     params = %{"email" => email, "password" => password}
-    metadata = SecurityHelper.extract_client_metadata(socket)
 
-    case AuthInputProcessor.validate_login_input(params, metadata: metadata) do
-      {:ok, _sanitized_params} ->
+    case validate_login_params(params) do
+      {:ok, _validated} ->
         updated_socket = assign(socket, :form_errors, %{})
         {:noreply, updated_socket}
 
@@ -106,7 +106,11 @@ defmodule TymeslotWeb.AuthLive do
     user_params = params["user"] || %{}
     metadata = SecurityHelper.extract_client_metadata(socket)
 
-    case AuthInputProcessor.validate_signup_input(user_params, metadata: metadata) do
+    case InputProcessor.validate_form(
+           user_params,
+           [{"email", :email}, {"password", :password}, {"full_name", :full_name}],
+           metadata: metadata
+         ) do
       {:ok, _sanitized_params} ->
         updated_socket = assign(socket, :form_errors, %{})
         {:noreply, updated_socket}
@@ -139,7 +143,7 @@ defmodule TymeslotWeb.AuthLive do
     params = %{"email" => email}
     metadata = SecurityHelper.extract_client_metadata(socket)
 
-    case AuthInputProcessor.validate_password_reset_request(params, metadata: metadata) do
+    case InputProcessor.validate_form(params, [{"email", :email}], metadata: metadata) do
       {:ok, sanitized_params} ->
         socket =
           socket
@@ -200,19 +204,36 @@ defmodule TymeslotWeb.AuthLive do
 
     metadata = SecurityHelper.extract_client_metadata(socket)
 
-    case AuthInputProcessor.validate_password_reset_form(validation_input, metadata: metadata) do
-      {:ok, sanitized_params} ->
-        socket =
-          socket
-          |> assign(:errors, %{})
-          |> assign(:form_data, sanitized_params)
+    with {:ok, sanitized_params} <-
+           InputProcessor.validate_form(
+             validation_input,
+             [{"password", :password}, {"password_confirmation", :password}],
+             metadata: metadata
+           ),
+         :ok <-
+           PasswordValidator.validate_confirmation(
+             sanitized_params["password"],
+             sanitized_params["password_confirmation"]
+           ) do
+      socket =
+        socket
+        |> assign(:errors, %{})
+        |> assign(:form_data, sanitized_params)
 
-        {:noreply, socket}
-
-      {:error, errors} ->
+      {:noreply, socket}
+    else
+      {:error, errors} when is_map(errors) ->
         socket =
           socket
           |> assign(:errors, errors)
+          |> assign(:form_data, validation_input)
+
+        {:noreply, socket}
+
+      {:error, confirmation_error} ->
+        socket =
+          socket
+          |> assign(:errors, %{password_confirmation: confirmation_error})
           |> assign(:form_data, validation_input)
 
         {:noreply, socket}
@@ -271,7 +292,11 @@ defmodule TymeslotWeb.AuthLive do
 
       metadata = SecurityHelper.extract_client_metadata(socket)
 
-      case AuthInputProcessor.validate_signup_input(validation_map, metadata: metadata) do
+      case InputProcessor.validate_form(
+             validation_map,
+             [{"email", :email}, {"password", :password}, {"full_name", :full_name}],
+             metadata: metadata
+           ) do
         {:ok, _sanitized_params} ->
           socket =
             socket
@@ -489,6 +514,23 @@ defmodule TymeslotWeb.AuthLive do
       ip_address: metadata.ip,
       user_agent: metadata.user_agent
     })
+  end
+
+  defp validate_login_params(params) do
+    errors =
+      case InputProcessor.validate_field(params["email"], :email) do
+        {:ok, _sanitized} -> %{}
+        {:error, msg} -> %{email: msg}
+      end
+
+    errors =
+      if is_nil(params["password"]) or params["password"] == "" do
+        Map.put(errors, :password, "Password is required")
+      else
+        errors
+      end
+
+    if map_size(errors) == 0, do: {:ok, params}, else: {:error, errors}
   end
 
   defp normalize_ip_for_security(ip) when ip in [nil, ""] do

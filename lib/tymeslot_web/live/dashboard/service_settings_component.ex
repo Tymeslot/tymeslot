@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.Security.MeetingSettingsInputProcessor
+  alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     metadata = Helpers.get_security_metadata(socket)
 
     # First validate the meeting type form input
-    case MeetingSettingsInputProcessor.validate_meeting_type_form(params, metadata: metadata) do
+    case MeetingSettingsInputValidation.validate_meeting_type_form(params, metadata: metadata) do
       {:ok, sanitized_params} ->
         ui_state = %{
           meeting_mode: Map.get(sanitized_params, "meeting_mode", "personal"),

@@ -1,4 +1,4 @@
-defmodule Tymeslot.Security.CalendarInputProcessor do
+defmodule Tymeslot.Integrations.Calendar.InputValidation do
   @moduledoc """
   Calendar integration input validation and sanitization.
 
@@ -6,8 +6,8 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
   Nextcloud and CalDAV configuration forms with URL, credential, and path validation.
   """
 
-  alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
-  alias Tymeslot.Security.{SharedInputValidators, UrlValidation}
+  alias Tymeslot.Integrations.Shared.InputValidators
+  alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer, UrlValidation}
 
   @doc """
   Validates calendar integration form input (name, url, username, password, calendar_paths).
@@ -24,7 +24,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
     metadata = Keyword.get(opts, :metadata, %{})
 
     with {:ok, sanitized_name} <-
-           SharedInputValidators.validate_integration_name(params["name"], metadata),
+           InputValidators.validate_integration_name(params["name"], metadata),
          {:ok, sanitized_url} <- validate_server_url(params["url"], metadata),
          {:ok, sanitized_username} <- validate_username(params["username"], metadata),
          {:ok, sanitized_password} <- validate_password(params["password"], metadata),
@@ -76,7 +76,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
   def validate_single_field(:name, value, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
 
-    case SharedInputValidators.validate_integration_name(value, metadata) do
+    case InputValidators.validate_integration_name(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
       {:error, %{name: error}} -> {:error, error}
     end
@@ -224,7 +224,7 @@ defmodule Tymeslot.Security.CalendarInputProcessor do
   defp validate_server_url("", _metadata), do: {:ok, ""}
 
   defp validate_server_url(url, metadata) when is_binary(url) do
-    case SharedInputValidators.validate_server_url(url, metadata,
+    case InputValidators.validate_server_url(url, metadata,
            error_message: "Please enter a valid server URL (e.g., https://cloud.example.com)",
            validate_url_fn: &validate_calendar_url/1
          ) do

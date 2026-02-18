@@ -9,7 +9,8 @@ defmodule Tymeslot.Auth.PasswordReset do
   alias Tymeslot.DatabaseQueries.UserSessionQueries
   alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.{AuthInputProcessor, RateLimiter, Token}
+  alias Tymeslot.Security.{InputProcessor, RateLimiter, Token}
+  alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Helpers.ClientIP
@@ -236,15 +237,33 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
-  defp validate_password_input(new_password, password_confirmation, user) do
-    case AuthInputProcessor.validate_password_reset_form(
-           %{"password" => new_password, "password_confirmation" => password_confirmation},
-           metadata: %{}
-         ) do
-      {:ok, _sanitized_data} ->
-        {:ok, :validated}
+  @password_reset_field_spec [
+    {"password", :password},
+    {"password_confirmation", :password}
+  ]
 
+  defp validate_password_input(new_password, password_confirmation, user) do
+    params = %{"password" => new_password, "password_confirmation" => password_confirmation}
+
+    with {:ok, sanitized} <- InputProcessor.validate_form(params, @password_reset_field_spec),
+         :ok <-
+           PasswordValidator.validate_confirmation(
+             sanitized["password"],
+             sanitized["password_confirmation"]
+           ) do
+      {:ok, :validated}
+    else
       {:error, errors} when is_map(errors) ->
+        AccountLogging.log_validation_failure("password_reset", user.email, errors, %{
+          user_id: user.id
+        })
+
+        error_message = ErrorFormatting.format_validation_errors(errors)
+        {:error, :invalid_input, "Please fix the following errors: #{error_message}"}
+
+      {:error, confirmation_error} ->
+        errors = %{password_confirmation: confirmation_error}
+
         AccountLogging.log_validation_failure("password_reset", user.email, errors, %{
           user_id: user.id
         })

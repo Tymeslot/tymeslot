@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.Authentication do
   alias Tymeslot.Auth.Helpers.AccountLogging
   alias Tymeslot.DatabaseQueries.{UserQueries, UserSessionQueries}
   alias Tymeslot.Infrastructure.StructuredLogger
-  alias Tymeslot.Security.{AuthInputProcessor, Password, RateLimiter, SecurityLogger}
+  alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger}
 
   require Logger
 
@@ -31,12 +31,8 @@ defmodule Tymeslot.Auth.Authentication do
           | {:error, atom(), String.t()}
           | {:error, :invalid_input, map()}
   def authenticate_user(email, password, opts \\ []) do
-    metadata = %{ip: opts[:ip_address], user_agent: opts[:user_agent]}
-
-    case AuthInputProcessor.validate_login_input(%{"email" => email, "password" => password},
-           metadata: metadata
-         ) do
-      {:ok, _sanitized_params} ->
+    case validate_login_params(email, password) do
+      :ok ->
         check_rate_limit_and_authenticate(email, password, opts)
 
       {:error, errors} ->
@@ -172,6 +168,23 @@ defmodule Tymeslot.Auth.Authentication do
   end
 
   # Private functions
+
+  defp validate_login_params(email, password) do
+    errors =
+      case InputProcessor.validate_field(email, :email) do
+        {:ok, _sanitized} -> %{}
+        {:error, msg} -> %{email: msg}
+      end
+
+    errors =
+      if is_nil(password) or password == "" do
+        Map.put(errors, :password, "Password is required")
+      else
+        errors
+      end
+
+    if map_size(errors) == 0, do: :ok, else: {:error, errors}
+  end
 
   defp verify_password(user, password) do
     Password.verify_password(password, user.password_hash)

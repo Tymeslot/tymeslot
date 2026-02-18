@@ -6,9 +6,15 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.Component
-  alias Tymeslot.Security.FormValidation
+  alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias TymeslotWeb.Live.Scheduling.Helpers
+
+  @booking_field_spec [
+    {"name", :name},
+    {"email", :email},
+    {"message", :message, [required: false, min_length: 0]}
+  ]
 
   require Logger
 
@@ -42,23 +48,20 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
       socket.assigns[:form_touched] ||
         Map.has_key?(booking_params, "_target")
 
-    case FormValidation.validate_booking_form(booking_params) do
+    case InputProcessor.validate_form(booking_params, @booking_field_spec) do
       {:ok, sanitized_params} ->
         form = Component.to_form(sanitized_params)
 
         socket =
           socket
           |> assign(:form, form)
-          |> assign(:validation_errors, [])
+          |> assign(:validation_errors, %{})
           |> assign(:form_touched, form_touched)
 
         {:noreply, socket}
 
       {:error, errors} ->
-        {:ok, sanitized_params} =
-          FormValidation.sanitize_booking_params(booking_params)
-
-        form = Component.to_form(sanitized_params)
+        form = Component.to_form(booking_params)
 
         # Only assign validation errors if the form has been touched.
         # This prevents showing errors immediately when the booking step loads.
@@ -70,7 +73,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
           else
             socket
             |> assign(:form, form)
-            |> assign(:validation_errors, [])
+            |> assign(:validation_errors, %{})
           end
 
         socket = assign(socket, :form_touched, form_touched)

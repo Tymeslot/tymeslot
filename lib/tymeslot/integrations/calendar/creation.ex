@@ -5,12 +5,12 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   """
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
-  alias Tymeslot.Security.CalendarInputProcessor
 
   @type user_id :: pos_integer()
 
@@ -32,7 +32,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     metadata = Keyword.get(opts, :metadata, %{})
 
     with {:ok, sanitized} <-
-           CalendarInputProcessor.validate_calendar_integration_form(params, metadata: metadata),
+           CalendarInputValidation.validate_calendar_integration_form(params, metadata: metadata),
          validated <- Map.merge(params, sanitized),
          count_before <- length(CalendarManagement.list_calendar_integrations(user_id)),
          {:ok, integration} <- Calendar.create_integration(validated, user_id) do

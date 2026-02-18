@@ -8,7 +8,7 @@ defmodule Tymeslot.Auth.Registration do
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.PubSub
-  alias Tymeslot.Security.{AuthInputProcessor, RateLimiter}
+  alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.Helpers.ClientIP
   # Use function instead of compile-time module attribute to allow test-time mocking
   defp verification_module,
@@ -41,15 +41,39 @@ defmodule Tymeslot.Auth.Registration do
     end
   end
 
+  @signup_field_spec [
+    {"email", :email},
+    {"password", :password},
+    {"full_name", :full_name}
+  ]
+
   defp validate_input(params) do
-    case AuthInputProcessor.validate_signup_input(params) do
+    case InputProcessor.validate_form(params, @signup_field_spec) do
       {:ok, validated_params} ->
-        {:ok, validated_params}
+        validate_terms(params, validated_params)
 
       {:error, errors} ->
         AccountLogging.log_validation_failure("signup", params["email"], errors)
         formatted_errors = ErrorFormatting.format_validation_errors(errors)
         {:error, :input, "Please correct the following errors: #{formatted_errors}"}
+    end
+  end
+
+  defp validate_terms(params, validated_params) do
+    if Application.get_env(:tymeslot, :enforce_legal_agreements, false) ||
+         Application.get_env(:tymeslot, :environment) == :test do
+      case Map.get(params, "terms_accepted") do
+        value when value in ["true", "on", true] ->
+          {:ok, validated_params}
+
+        _other ->
+          errors = %{terms_accepted: "Terms of service must be accepted"}
+          AccountLogging.log_validation_failure("signup", params["email"], errors)
+          formatted = ErrorFormatting.format_validation_errors(errors)
+          {:error, :input, "Please correct the following errors: #{formatted}"}
+      end
+    else
+      {:ok, validated_params}
     end
   end
 

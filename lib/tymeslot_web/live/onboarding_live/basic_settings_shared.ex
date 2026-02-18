@@ -5,7 +5,7 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
 
   alias Phoenix.Component
   alias Tymeslot.Profiles.Settings
-  alias Tymeslot.Security.OnboardingInputProcessor
+  alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
@@ -24,8 +24,15 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   """
   @spec validate_basic_settings(Phoenix.LiveView.Socket.t(), map()) ::
           {:ok, map()} | {:error, map()}
+  @basic_settings_field_spec [{"full_name", :full_name}, {"username", :username}]
+
   def validate_basic_settings(socket, params) do
-    OnboardingInputProcessor.validate_basic_settings(params, metadata: metadata(socket))
+    InputProcessor.validate_form(
+      params,
+      @basic_settings_field_spec,
+      metadata: metadata(socket),
+      universal_opts: [allow_html: false]
+    )
   end
 
   @doc """

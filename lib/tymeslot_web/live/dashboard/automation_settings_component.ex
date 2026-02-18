@@ -8,8 +8,8 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   require Logger
 
   alias Phoenix.LiveView.JS
-  alias Tymeslot.Security.WebhookInputProcessor
   alias Tymeslot.Webhooks
+  alias Tymeslot.Webhooks.InputValidation, as: WebhookInputValidation
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.Components
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
@@ -136,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   def handle_event("create_webhook", %{"webhook" => params}, socket) do
     metadata = AutomationHelpers.get_security_metadata(socket)
 
-    case WebhookInputProcessor.validate_webhook_form(params, metadata: metadata) do
+    case WebhookInputValidation.validate_webhook_form(params, metadata: metadata) do
       {:ok, sanitized} ->
         user_id = socket.assigns.current_user.id
 
@@ -196,7 +196,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       webhook ->
         metadata = AutomationHelpers.get_security_metadata(socket)
 
-        case WebhookInputProcessor.validate_webhook_form(params, metadata: metadata) do
+        case WebhookInputValidation.validate_webhook_form(params, metadata: metadata) do
           {:ok, sanitized} ->
             case Webhooks.update_webhook(webhook, sanitized) do
               {:ok, _webhook} ->

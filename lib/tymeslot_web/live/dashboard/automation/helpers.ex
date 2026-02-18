@@ -4,8 +4,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   Contains business logic, state management, and utility functions.
   """
 
-  alias Tymeslot.Security.WebhookInputProcessor
   alias Tymeslot.Utils.FormHelpers
+  alias Tymeslot.Webhooks.InputValidation, as: WebhookInputValidation
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
 
   @doc """
@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
     if field in allowed_fields do
       updated_values = Map.put(form_values, field, value)
 
-      case WebhookInputProcessor.validate_webhook_form(updated_values, metadata: metadata) do
+      case WebhookInputValidation.validate_webhook_form(updated_values, metadata: metadata) do
         {:ok, _sanitized} ->
           field_atom = String.to_existing_atom(field)
           Map.delete(current_errors, field_atom)

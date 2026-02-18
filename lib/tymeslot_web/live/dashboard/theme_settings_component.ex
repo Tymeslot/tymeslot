@@ -7,11 +7,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
 
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
-  alias Tymeslot.Security.ThemeInputProcessor
   alias Tymeslot.Themes.Theme
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemePreview
-  alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -235,31 +233,22 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   end
 
   def handle_event("select_theme", %{"theme" => theme_id}, socket) do
-    metadata = get_security_metadata(socket)
+    if Theme.valid_theme_id?(theme_id) do
+      case Profiles.update_booking_theme(socket.assigns.profile, theme_id) do
+        {:ok, updated_profile} ->
+          theme_name = Theme.get_theme_name(updated_profile.booking_theme)
+          send(self(), {:profile_updated, updated_profile})
 
-    case ThemeInputProcessor.validate_theme_selection(%{"theme" => theme_id}, metadata: metadata) do
-      {:ok, %{"theme" => validated_theme_id}} ->
-        case Profiles.update_booking_theme(socket.assigns.profile, validated_theme_id) do
-          {:ok, updated_profile} ->
-            theme_name = Theme.get_theme_name(updated_profile.booking_theme)
-            send(self(), {:profile_updated, updated_profile})
+          {:noreply,
+           socket
+           |> assign(profile: updated_profile)
+           |> put_flash(:info, "Theme updated to #{theme_name}")}
 
-            {:noreply,
-             socket
-             |> assign(profile: updated_profile)
-             |> put_flash(:info, "Theme updated to #{theme_name}")}
-
-          {:error, _changeset} ->
-            {:noreply, put_flash(socket, :error, "Failed to update theme")}
-        end
-
-      {:error, _validation_errors} ->
-        {:noreply, put_flash(socket, :error, "Invalid theme selection")}
+        {:error, _changeset} ->
+          {:noreply, put_flash(socket, :error, "Failed to update theme")}
+      end
+    else
+      {:noreply, put_flash(socket, :error, "Invalid theme selection")}
     end
-  end
-
-  # Helper function to get security metadata
-  defp get_security_metadata(socket) do
-    DashboardHelpers.get_security_metadata(socket)
   end
 end

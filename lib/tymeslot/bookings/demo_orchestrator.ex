@@ -13,7 +13,6 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
 
   alias Ecto.UUID
   alias Tymeslot.Demo
-  alias Tymeslot.Security.FormValidation
 
   require Logger
 
@@ -34,10 +33,15 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
     rng = Keyword.get(opts, :rng, &:rand.uniform/1)
 
     with {:ok, normalized_params} <- normalize_params(params),
-         {:ok, validated_data} <- validate_form_data(normalized_params),
          {:ok, start_time} <- parse_start_time(normalized_params[:meeting_params]),
          {:ok, mock_meeting} <-
-           create_mock_meeting(normalized_params, validated_data, start_time, rng, opts) do
+           create_mock_meeting(
+             normalized_params,
+             normalized_params[:form_data],
+             start_time,
+             rng,
+             opts
+           ) do
       Logger.info("Demo mode: Successfully created mock booking")
       {:ok, mock_meeting}
     else
@@ -65,13 +69,6 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
         }
 
         {:ok, normalized}
-    end
-  end
-
-  defp validate_form_data(%{form_data: form_data}) do
-    case FormValidation.validate_booking_form(form_data) do
-      {:ok, validated_data} -> {:ok, validated_data}
-      {:error, errors} -> {:error, errors}
     end
   end
 

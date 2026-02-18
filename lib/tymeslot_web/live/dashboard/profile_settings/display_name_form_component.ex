@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Profiles
-  alias Tymeslot.Security.SettingsInputProcessor
+  alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import TymeslotWeb.Components.CoreComponents
 
@@ -20,9 +20,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("validate_full_name", %{"full_name" => full_name}, socket) do
-    metadata = DashboardHelpers.get_security_metadata(socket)
-
-    case SettingsInputProcessor.validate_full_name_update(full_name, metadata: metadata) do
+    case InputProcessor.validate_field(full_name, :full_name) do
       {:ok, sanitized_name} ->
         socket =
           assign(
@@ -33,8 +31,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
 
         maybe_update_full_name(socket, sanitized_name)
 
-      {:error, error} ->
-        errors = Map.put(socket.assigns.form_errors, :full_name, error)
+      {:error, error_msg} ->
+        errors = Map.put(socket.assigns.form_errors, :full_name, error_msg)
         {:noreply, assign(socket, :form_errors, errors)}
     end
   end

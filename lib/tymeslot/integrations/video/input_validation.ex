@@ -1,4 +1,4 @@
-defmodule Tymeslot.Security.VideoInputProcessor do
+defmodule Tymeslot.Integrations.Video.InputValidation do
   @moduledoc """
   Video integration input validation and sanitization.
 
@@ -6,8 +6,8 @@ defmodule Tymeslot.Security.VideoInputProcessor do
   MiroTalk and Custom Video configuration forms.
   """
 
-  alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
-  alias Tymeslot.Security.{SharedInputValidators, UrlValidation}
+  alias Tymeslot.Integrations.Shared.InputValidators
+  alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer, UrlValidation}
 
   @doc """
   Validates video integration form input based on provider type.
@@ -60,7 +60,7 @@ defmodule Tymeslot.Security.VideoInputProcessor do
   def validate_single_field(:name, value, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
 
-    case SharedInputValidators.validate_integration_name(value, metadata) do
+    case InputValidators.validate_integration_name(value, metadata) do
       {:ok, sanitized} -> {:ok, sanitized}
       {:error, %{name: error}} -> {:error, error}
     end
@@ -99,7 +99,7 @@ defmodule Tymeslot.Security.VideoInputProcessor do
 
   defp validate_mirotalk_form(params, metadata) do
     with {:ok, sanitized_name} <-
-           SharedInputValidators.validate_integration_name(params["name"], metadata),
+           InputValidators.validate_integration_name(params["name"], metadata),
          {:ok, sanitized_api_key} <- validate_api_key(params["api_key"], metadata),
          {:ok, sanitized_base_url} <- validate_base_url(params["base_url"], metadata) do
       SecurityLogger.log_security_event("mirotalk_integration_validation_success", %{
@@ -129,7 +129,7 @@ defmodule Tymeslot.Security.VideoInputProcessor do
 
   defp validate_custom_video_form(params, metadata) do
     with {:ok, sanitized_name} <-
-           SharedInputValidators.validate_integration_name(params["name"], metadata),
+           InputValidators.validate_integration_name(params["name"], metadata),
          {:ok, sanitized_meeting_url} <-
            validate_meeting_url(params["custom_meeting_url"], metadata) do
       SecurityLogger.log_security_event("custom_video_integration_validation_success", %{
@@ -188,7 +188,7 @@ defmodule Tymeslot.Security.VideoInputProcessor do
   defp validate_base_url("", _metadata), do: {:error, %{base_url: "Base URL is required"}}
 
   defp validate_base_url(base_url, metadata) when is_binary(base_url) do
-    case SharedInputValidators.validate_server_url(base_url, metadata,
+    case InputValidators.validate_server_url(base_url, metadata,
            error_message: "Please enter a valid server URL (e.g., https://mirotalk.example.com)",
            validate_url_fn: &validate_video_url/1
          ) do
@@ -218,7 +218,7 @@ defmodule Tymeslot.Security.VideoInputProcessor do
         "Only HTTP and HTTPS URLs are allowed"
       end
 
-    case SharedInputValidators.validate_server_url(trimmed_url, metadata,
+    case InputValidators.validate_server_url(trimmed_url, metadata,
            error_message: invalid_meeting_url_error,
            validate_url_fn: &validate_video_url/1
          ) do
