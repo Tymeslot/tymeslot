@@ -4,7 +4,6 @@ defmodule Tymeslot.Emails.Templates.AuthEmailsTest do
 
   alias Tymeslot.Emails.Templates.{
     EmailChangeConfirmed,
-  @moduletag :emails
     EmailChangeNotification,
     EmailChangeVerification,
     EmailVerification,

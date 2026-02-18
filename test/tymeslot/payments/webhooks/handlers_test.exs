@@ -4,7 +4,6 @@ defmodule Tymeslot.Payments.Webhooks.HandlersTest do
 
   alias Tymeslot.Payments.Webhooks.{
     ChargeHandler,
-  @moduletag :payments
     CheckoutSessionExpiredHandler,
     CheckoutSessionHandler,
     CustomerHandler,

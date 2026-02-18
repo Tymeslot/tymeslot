@@ -4,7 +4,6 @@ defmodule Tymeslot.Emails.Templates.SystemEmailsTest do
 
   alias Tymeslot.Emails.Templates.{
     CalendarSyncError,
-  @moduletag :emails
     RescheduleRequest
   }
 

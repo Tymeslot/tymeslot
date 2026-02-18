@@ -8,7 +8,6 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
   alias Tymeslot.Emails.Templates.{
     AppointmentCancellation,
-  @moduletag :emails
     AppointmentConfirmationAttendee,
     AppointmentConfirmationOrganizer,
     AppointmentReminderAttendee,
