@@ -371,7 +371,7 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
             user_agent: metadata[:user_agent] || "unknown"
           )
 
-        _ ->
+        _race_condition ->
           # Another process won the race and already logged; skip
           :ok
       end

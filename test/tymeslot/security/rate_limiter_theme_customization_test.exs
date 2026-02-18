@@ -1,6 +1,8 @@
 defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
   use ExUnit.Case, async: false
 
+  import Tymeslot.RateLimiterTestHelpers
+
   alias Tymeslot.Security.RateLimiter
 
   setup do
@@ -11,7 +13,7 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
 
   describe "check_theme_customization_rate_limit/1" do
     test "allows requests within rate limit" do
-      user_id = 12345
+      user_id = 12_345
 
       # Should allow 150 requests within the window
       for i <- 1..150 do
@@ -21,7 +23,7 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
     end
 
     test "blocks requests exceeding rate limit" do
-      user_id = 12346
+      user_id = 12_346
 
       # Use up the limit
       for _i <- 1..150 do
@@ -47,7 +49,7 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
       end
 
       # User 1 should be rate limited
-      assert {:error, :rate_limited, _} =
+      assert {:error, :rate_limited, _message} =
                RateLimiter.check_theme_customization_rate_limit(user_id_1)
 
       # User 2 should still be allowed (different bucket)
@@ -55,14 +57,14 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
     end
 
     test "rate limit resets after clearing bucket" do
-      user_id = 12347
+      user_id = 12_347
 
       # Exhaust the limit
       for _i <- 1..150 do
         RateLimiter.check_theme_customization_rate_limit(user_id)
       end
 
-      assert {:error, :rate_limited, _} =
+      assert {:error, :rate_limited, _message} =
                RateLimiter.check_theme_customization_rate_limit(user_id)
 
       # Clear the bucket (simulating window expiry)
@@ -111,7 +113,7 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
     end
 
     test "rate limit error message is actionable" do
-      user_id = 12348
+      user_id = 12_348
 
       # Exhaust the limit
       for _i <- 1..150 do
@@ -143,7 +145,7 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
     test "logs warning when rate limit exceeded" do
       import ExUnit.CaptureLog
 
-      user_id = 12349
+      user_id = 12_349
 
       # Exhaust the limit
       for _i <- 1..150 do
@@ -164,7 +166,7 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
 
   describe "concurrent access" do
     test "handles concurrent requests atomically" do
-      user_id = 99999
+      user_id = 99_999
 
       # Spawn many concurrent tasks
       tasks =
@@ -186,8 +188,8 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
       # Should have blocked at least 50 requests
       failures =
         Enum.count(results, fn
-          {:error, :rate_limited, _} -> true
-          _ -> false
+          {:error, :rate_limited, _message} -> true
+          _other -> false
         end)
 
       assert failures >= 50, "Expected at least 50 failures, got #{failures}"
@@ -196,32 +198,17 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
     test "multiple users can operate concurrently without interference" do
       user_ids = [1000, 2000, 3000, 4000, 5000]
 
-      # Each user makes 100 concurrent requests
-      tasks =
-        for user_id <- user_ids,
-            _i <- 1..100 do
-          Task.async(fn ->
-            {user_id, RateLimiter.check_theme_customization_rate_limit(user_id)}
-          end)
-        end
-
-      results = Task.await_many(tasks, 10_000)
-
-      # Group results by user
-      results_by_user = Enum.group_by(results, fn {user_id, _} -> user_id end)
-
-      # Each user should have all their requests succeed (100 < 150 limit)
-      for user_id <- user_ids do
-        user_results = Map.get(results_by_user, user_id, [])
-        successes = Enum.count(user_results, fn {_, result} -> result == :ok end)
-        assert successes == 100, "User #{user_id} should have 100 successes, got #{successes}"
-      end
+      test_multiple_users_operate_independently(
+        user_ids,
+        100,
+        &RateLimiter.check_theme_customization_rate_limit/1
+      )
     end
   end
 
   describe "integration with check_with_logging helper" do
     test "produces consistent error messages across different operations" do
-      user_id = 88888
+      user_id = 88_888
 
       # Exhaust theme customization limit
       for _i <- 1..150 do
@@ -255,7 +242,7 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
 
   describe "boundary conditions" do
     test "exactly at limit boundary" do
-      user_id = 77777
+      user_id = 77_777
 
       # Use exactly 150 requests (the limit)
       for i <- 1..150 do
@@ -264,12 +251,12 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
       end
 
       # 151st request should fail
-      assert {:error, :rate_limited, _} =
+      assert {:error, :rate_limited, _message} =
                RateLimiter.check_theme_customization_rate_limit(user_id)
     end
 
     test "one request under limit" do
-      user_id = 77778
+      user_id = 77_778
 
       # Use 149 requests (one under limit)
       for _i <- 1..149 do
@@ -280,7 +267,7 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
       assert :ok = RateLimiter.check_theme_customization_rate_limit(user_id)
 
       # 151st should fail
-      assert {:error, :rate_limited, _} =
+      assert {:error, :rate_limited, _message} =
                RateLimiter.check_theme_customization_rate_limit(user_id)
     end
 

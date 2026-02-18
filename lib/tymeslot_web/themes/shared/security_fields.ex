@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
   attr :id_prefix, :string, required: true
   attr :param_root, :string, required: true
 
+  @spec honeypot_field(map()) :: Phoenix.LiveView.Rendered.t()
   def honeypot_field(assigns) do
     ~H"""
     <!-- Honeypot field (hidden from real users, visible to bots) -->
@@ -60,6 +61,7 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
   attr :id_prefix, :string, required: true
   attr :param_root, :string, required: true
 
+  @spec recaptcha_fields(map()) :: Phoenix.LiveView.Rendered.t()
   def recaptcha_fields(assigns) do
     ~H"""
     <%= if RecaptchaHelpers.booking_active?() do %>

@@ -3,6 +3,7 @@ defmodule TymeslotWeb.BookingHoneypotTest do
 
   import Mox
   import Tymeslot.Factory
+  import Tymeslot.BookingTestHelpers
 
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Repo
@@ -23,6 +24,12 @@ defmodule TymeslotWeb.BookingHoneypotTest do
     Mox.set_mox_from_context(tags)
     ensure_rate_limiter_started()
     RateLimiter.clear_all()
+
+    # Disable reCAPTCHA so these tests focus on honeypot detection only,
+    # regardless of RECAPTCHA_BOOKING_ENABLED environment variable.
+    old_cfg = Application.get_env(:tymeslot, :recaptcha, [])
+    Application.put_env(:tymeslot, :recaptcha, Keyword.put(old_cfg, :booking_enabled, false))
+    on_exit(fn -> Application.put_env(:tymeslot, :recaptcha, old_cfg) end)
 
     TestMocks.setup_all_mocks()
 
@@ -60,48 +67,6 @@ defmodule TymeslotWeb.BookingHoneypotTest do
     end)
 
     %{user: user, profile: profile, event_type: event_type}
-  end
-
-  # Helper to navigate to the booking form step
-  defp navigate_to_booking_form(conn, profile, _event_type) do
-    timezone = profile.timezone
-    {:ok, view, _html} = live(conn, "/#{profile.username}?timezone=#{timezone}")
-
-    # Select the first meeting type
-    view |> element("button[data-testid='duration-option']") |> render_click()
-
-    # Navigate to date/time selection
-    view |> element("button[data-testid='next-step']") |> render_click()
-
-    # Wait for availability to load and select an available date
-    today = timezone |> DateTime.now!() |> DateTime.to_date()
-    target_date = Date.add(today, 1)
-    date_str = Date.to_string(target_date)
-
-    wait_until(fn ->
-      has_element?(view, "button.calendar-day[phx-value-date='#{date_str}']:not([disabled])")
-    end)
-
-    view |> element("button.calendar-day[phx-value-date='#{date_str}']") |> render_click()
-
-    # Wait for time slots to load
-    wait_until(fn -> has_element?(view, "button.time-slot-button") end)
-
-    # Extract and click the first available time slot
-    slot =
-      view
-      |> render()
-      |> Floki.parse_document!()
-      |> Floki.attribute("button.time-slot-button", "phx-value-time")
-      |> List.first() ||
-        flunk("Expected at least one available time slot button after selecting a date")
-
-    view |> element("button.time-slot-button[phx-value-time='#{slot}']") |> render_click()
-
-    # Navigate to the booking form
-    view |> element("button[phx-click='next_step']") |> render_click()
-
-    view
   end
 
   defp honeypot_booking_form(view, website_value) do

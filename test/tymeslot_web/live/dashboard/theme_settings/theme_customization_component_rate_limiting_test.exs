@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLim
   use TymeslotWeb.ConnCase, async: false
 
   import Tymeslot.Factory
+  import Tymeslot.RateLimiterTestHelpers
 
   alias Tymeslot.Security.RateLimiter
 
@@ -44,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLim
       end
 
       # User 1 should be rate limited
-      assert {:error, :rate_limited, _} =
+      assert {:error, :rate_limited, _message} =
                RateLimiter.check_theme_customization_rate_limit(user_id_1)
 
       # User 2 should still be allowed (different bucket)
@@ -111,8 +112,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLim
 
       failures =
         Enum.count(results, fn
-          {:error, :rate_limited, _} -> true
-          _ -> false
+          {:error, :rate_limited, _message} -> true
+          _other -> false
         end)
 
       # Should have at most 150 successes (the rate limit)
@@ -129,26 +130,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLim
     test "multiple users operate independently", %{user_id: base_user_id} do
       user_ids = [base_user_id, base_user_id + 1, base_user_id + 2]
 
-      # Each user makes 100 concurrent requests
-      tasks =
-        for user_id <- user_ids,
-            _i <- 1..100 do
-          Task.async(fn ->
-            {user_id, RateLimiter.check_theme_customization_rate_limit(user_id)}
-          end)
-        end
-
-      results = Task.await_many(tasks, 10_000)
-
-      # Group results by user
-      results_by_user = Enum.group_by(results, fn {user_id, _} -> user_id end)
-
-      # Each user should have all their requests succeed (100 < 150 limit)
-      for user_id <- user_ids do
-        user_results = Map.get(results_by_user, user_id, [])
-        successes = Enum.count(user_results, fn {_, result} -> result == :ok end)
-        assert successes == 100, "User #{user_id} should have 100 successes, got #{successes}"
-      end
+      test_multiple_users_operate_independently(
+        user_ids,
+        100,
+        &RateLimiter.check_theme_customization_rate_limit/1
+      )
     end
   end
 
