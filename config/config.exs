@@ -186,10 +186,13 @@ config :tailwind,
     cd: Path.expand("../assets", __DIR__)
   ]
 
-# Configures Elixir's Logger
-config :logger, :console, format: "$time $metadata[$level] $message\n"
-
-import_config "logger_metadata.exs"
+# Configures Elixir's Logger with JSON output for structured logging
+config :logger,
+  backends: [:console],
+  default_handler: [
+    formatter: {LoggerJSON.Formatters.BasicLogger, []}
+  ],
+  metadata: [:request_id, :user_id, :correlation_id]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

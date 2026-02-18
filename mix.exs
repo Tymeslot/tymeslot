@@ -105,6 +105,7 @@ defmodule Tymeslot.MixProject do
       {:mjml, "~> 5.2"},
       {:nodejs, "~> 3.0"},
       {:oban, "~> 2.20"},
+      {:logger_json, "~> 7.0"},
       {:ecto_sql, "~> 3.13"},
       {:postgrex, "~> 0.22"},
       {:magical, "~> 1.0"},
