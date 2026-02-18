@@ -35,26 +35,28 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
               <div class="confirmation-container">
                 <!-- Success Header with Animation -->
                 <div class="confirmation-header-section">
-                  <div class="success-badge">
-                    <div class="success-badge-inner">
-                      <svg class="success-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="3"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
+                  <div class="confirmation-title-row">
+                    <div class="success-badge">
+                      <div class="success-badge-inner">
+                        <svg class="success-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="3"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
 
-                  <h1 class="confirmation-headline" data-testid="confirmation-heading">
-                    <%= if @is_rescheduling do %>
-                      {gettext("Successfully Rescheduled!")}
-                    <% else %>
-                      {gettext("You're All Set!")}
-                    <% end %>
-                  </h1>
+                    <h1 class="confirmation-headline" data-testid="confirmation-heading">
+                      <%= if @is_rescheduling do %>
+                        {gettext("Successfully Rescheduled!")}
+                      <% else %>
+                        {gettext("You're All Set!")}
+                      <% end %>
+                    </h1>
+                  </div>
 
                   <p class="confirmation-message">
                     {gettext("%{name}, your meeting %{organizer} is confirmed", name: @name, organizer: get_organizer_text(@organizer_profile))}
@@ -100,7 +102,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                           <span class="ticket-value">
                             {@organizer_profile.user.name || @organizer_profile.full_name}
                           </span>
-                          <span class="ticket-sublabel">{gettext("Meeting with")}</span>
+                          <span class="ticket-sublabel">{gettext("Appointment host")}</span>
                         </div>
                       </div>
                     <% end %>

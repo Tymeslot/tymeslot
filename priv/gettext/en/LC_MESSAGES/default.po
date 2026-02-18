@@ -485,8 +485,8 @@ msgstr "May"
 msgid "Meeting Details"
 msgstr "Meeting Details"
 
-msgid "Meeting with"
-msgstr "Meeting with"
+msgid "Appointment host"
+msgstr "Appointment host"
 
 msgid "%{minutes} minutes"
 msgstr "%{minutes} minutes"

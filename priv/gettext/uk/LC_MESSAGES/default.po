@@ -384,8 +384,8 @@ msgstr "Усе готово!"
 msgid "Meeting Details"
 msgstr "Деталі зустрічі"
 
-msgid "Meeting with"
-msgstr "Зустріч із"
+msgid "Appointment host"
+msgstr "Організатор зустрічі"
 
 msgid "Sent to"
 msgstr "Надіслано на"

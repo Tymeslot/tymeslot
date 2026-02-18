@@ -413,8 +413,8 @@ msgstr "Mai"
 msgid "Meeting Details"
 msgstr "Détails de la réunion"
 
-msgid "Meeting with"
-msgstr "Réunion avec"
+msgid "Appointment host"
+msgstr "Hôte du rendez-vous"
 
 msgid "%{minutes} minutes"
 msgstr "%{minutes} minutes"

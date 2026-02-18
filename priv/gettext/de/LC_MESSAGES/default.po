@@ -384,8 +384,8 @@ msgstr "Alles bereit!"
 msgid "Meeting Details"
 msgstr "Termindetails"
 
-msgid "Meeting with"
-msgstr "Termin mit"
+msgid "Appointment host"
+msgstr "Gastgeber"
 
 msgid "Sent to"
 msgstr "Gesendet an"
