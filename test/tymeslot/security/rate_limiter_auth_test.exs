@@ -1,12 +1,11 @@
 defmodule Tymeslot.Security.RateLimiterAuthTest do
-  @moduletag :security
   use Tymeslot.DataCase, async: false
+  @moduletag :security
 
   alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimiter
 
   describe "check_auth_rate_limit/2 — per-email bucket" do
-  @moduletag :security
     test "allows up to 10 attempts then blocks the 11th" do
       email = "brute@example.com"
 

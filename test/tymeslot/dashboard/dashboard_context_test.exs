@@ -1,11 +1,10 @@
 defmodule Tymeslot.Dashboard.DashboardContextTest do
-  @moduletag :utils
   @moduledoc """
-  @moduletag :utils
   Tests for the DashboardContext module.
   """
 
   use Tymeslot.DataCase, async: false
+  @moduletag :utils
 
   alias Tymeslot.Dashboard.DashboardContext
 

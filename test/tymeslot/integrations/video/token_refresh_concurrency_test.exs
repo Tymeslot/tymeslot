@@ -1,7 +1,5 @@
 defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
-  @moduletag :integrations
   @moduledoc """
-  @moduletag :integrations
   Concurrency tests for video provider OAuth token refresh operations.
 
   ## Note on Process.sleep Usage
@@ -16,6 +14,7 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
 
   # async: false because we use set_mox_global()
   use Tymeslot.DataCase, async: false
+  @moduletag :integrations
 
   import Mox
   import Tymeslot.Factory

@@ -1,13 +1,12 @@
 defmodule Tymeslot.Emails.AppointmentBuilderTest do
-  @moduletag :emails
   use Tymeslot.DataCase, async: true
+  @moduletag :emails
 
   alias Tymeslot.Emails.AppointmentBuilder
 
   import Tymeslot.MeetingTestHelpers
 
   describe "from_meeting/1" do
-  @moduletag :emails
     test "converts meeting to appointment details with all required fields" do
       %{user: user} = create_user_with_profile()
       meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})

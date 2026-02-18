@@ -1,12 +1,11 @@
 defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   import Mox
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   describe "list_providers/0" do
     test "returns list of all registered video providers" do

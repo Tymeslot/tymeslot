@@ -1,6 +1,8 @@
 defmodule Tymeslot.Workers.WebhookWorkerTest do
-  @moduletag :workers
   use Tymeslot.DataCase, async: false
+
+  @moduletag :workers
+
   use Oban.Testing, repo: Tymeslot.Repo
   import Mox
   import Tymeslot.ConfigTestHelpers
@@ -13,7 +15,6 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
   alias Tymeslot.Workers.WebhookWorker
 
   setup :verify_on_exit!
-  @moduletag :workers
 
   setup do
     setup_config(:tymeslot,

@@ -1,11 +1,10 @@
 defmodule Tymeslot.Integrations.Common.ConfigManagerTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Common.ConfigManager
 
   describe "validate_config/2" do
-  @moduletag :integrations
     test "validates required fields" do
       schema = %{
         api_key: %{type: :string, required: true},

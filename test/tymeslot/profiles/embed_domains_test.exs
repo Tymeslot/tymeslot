@@ -1,12 +1,11 @@
 defmodule Tymeslot.Profiles.EmbedDomainsTest do
-  @moduletag :profiles
   use Tymeslot.DataCase, async: true
+  @moduletag :profiles
 
   alias Tymeslot.Profiles
   import Tymeslot.Factory
 
   describe "update_allowed_embed_domains/2" do
-  @moduletag :profiles
     setup do
       user = insert(:user)
       profile = insert(:profile, user: user, allowed_embed_domains: [])

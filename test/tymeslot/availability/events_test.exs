@@ -1,11 +1,12 @@
 defmodule Tymeslot.Availability.EventsTest do
-  @moduletag :availability
   @moduledoc """
-  @moduletag :availability
   Tests for the Events module - event processing and timezone conversion.
   """
 
   use ExUnit.Case, async: true
+
+  @moduletag :availability
+
   alias Tymeslot.Availability.Events
 
   describe "convert_events_to_timezone/3" do

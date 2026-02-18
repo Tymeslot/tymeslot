@@ -1,11 +1,12 @@
 defmodule TymeslotWeb.Dashboard.Automation.ComponentsTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   import Phoenix.LiveViewTest
   alias TymeslotWeb.Dashboard.Automation.Components
 
   describe "webhook_card" do
-  @moduletag :utils
     test "renders active webhook correctly" do
       webhook = %{
         id: 1,

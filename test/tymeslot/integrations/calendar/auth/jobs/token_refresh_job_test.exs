@@ -1,6 +1,8 @@
 defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+
+  @moduletag :integrations
+
   use Oban.Testing, repo: Tymeslot.Repo
 
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
@@ -11,7 +13,6 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
   import Mox
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   describe "perform/1 - bulk refresh" do
     test "schedules individual refreshes for expiring tokens" do

@@ -1,6 +1,6 @@
 defmodule Tymeslot.Workers.IntegrationHealthWorkerTest do
-  @moduletag :workers
   use Tymeslot.DataCase, async: false
+  @moduletag :workers
 
   use Oban.Testing, repo: Tymeslot.Repo
   import Tymeslot.Factory
@@ -10,7 +10,6 @@ defmodule Tymeslot.Workers.IntegrationHealthWorkerTest do
   alias Tymeslot.Workers.IntegrationHealthWorker
 
   setup :verify_on_exit!
-  @moduletag :workers
 
   setup do
     {:ok, pid} = HealthCheck.start_link(check_interval: 1_000_000, initial_delay: 0)

@@ -1,11 +1,10 @@
 defmodule TymeslotWeb.Helpers.LocaleFormatTest do
-  @moduletag :utils
   use ExUnit.Case, async: true
+  @moduletag :utils
 
   alias TymeslotWeb.Helpers.LocaleFormat
 
   describe "format_date/2" do
-  @moduletag :utils
     test "formats date in English" do
       date = ~D[2026-03-15]
       assert LocaleFormat.format_date(date, "en") == "March 15, 2026"

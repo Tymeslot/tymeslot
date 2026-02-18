@@ -1,10 +1,11 @@
 defmodule Tymeslot.Security.FieldValidators.PasswordValidatorTest do
-  @moduletag :security
   use Tymeslot.DataCase, async: true
+
+  @moduletag :security
+
   alias Tymeslot.Security.FieldValidators.PasswordValidator
 
   describe "validate/2" do
-  @moduletag :security
     test "returns :ok for valid passwords" do
       assert :ok = PasswordValidator.validate("StrongPass123!")
       assert :ok = PasswordValidator.validate("Another@456")

@@ -1,11 +1,10 @@
 defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
-  @moduletag :payments
   use Tymeslot.DataCase, async: false
+  @moduletag :payments
 
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
 
   setup do
-  @moduletag :payments
     # Clear cache before each test
     IdempotencyCache.clear_all()
     :ok

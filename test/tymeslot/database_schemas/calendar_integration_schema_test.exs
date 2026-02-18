@@ -1,13 +1,12 @@
 defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchemaTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+  @moduletag :utils
 
   import Tymeslot.Factory
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Security.Encryption
 
   describe "changeset/2" do
-  @moduletag :utils
     test "creates valid changeset with required fields" do
       user = insert(:user)
 

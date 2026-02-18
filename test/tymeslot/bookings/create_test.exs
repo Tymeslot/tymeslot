@@ -1,9 +1,8 @@
 defmodule Tymeslot.Bookings.CreateTest do
-  @moduletag :bookings
   @moduledoc false
-  @moduletag :bookings
 
   use Tymeslot.DataCase, async: false
+  @moduletag :bookings
 
   alias __MODULE__.MockCalendar
   alias Tymeslot.Bookings.Create

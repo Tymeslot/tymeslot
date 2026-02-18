@@ -1,11 +1,10 @@
 defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.HealthCheck.Scheduler
 
   describe "due_for_check?/2" do
-  @moduletag :integrations
     test "returns true for integrations never checked" do
       health_state = %{last_check: nil, backoff_ms: :timer.minutes(5)}
       now = DateTime.utc_now()

@@ -1,11 +1,10 @@
 defmodule Tymeslot.ThemeCustomizationsPresetsTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+  @moduletag :utils
 
   alias Tymeslot.ThemeCustomizations.Presets
 
   describe "Presets module" do
-  @moduletag :utils
     test "get_color_schemes/0 returns all color schemes" do
       schemes = Presets.get_color_schemes()
 

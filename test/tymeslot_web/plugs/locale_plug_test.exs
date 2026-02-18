@@ -1,11 +1,10 @@
 defmodule TymeslotWeb.Plugs.LocalePlugTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+  @moduletag :utils
 
   alias TymeslotWeb.Plugs.LocalePlug
 
   describe "locale detection" do
-  @moduletag :utils
     test "uses query parameter when provided", %{conn: conn} do
       conn = conn |> Map.put(:params, %{}) |> fetch_session() |> LocalePlug.call([])
       assert conn.assigns.locale == "en"

@@ -1,11 +1,12 @@
 defmodule Tymeslot.Availability.ConflictsTest do
-  @moduletag :availability
   @moduledoc """
-  @moduletag :availability
   Tests for the Conflicts module - conflict detection and slot filtering.
   """
 
   use ExUnit.Case, async: true
+
+  @moduletag :availability
+
   use ExUnitProperties
 
   alias Tymeslot.Availability.{BusinessHours, Calculate, Conflicts, Events}

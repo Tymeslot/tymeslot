@@ -1,11 +1,12 @@
 defmodule Tymeslot.Auth.Helpers.ErrorFormattingTest do
-  @moduletag :auth
   use Tymeslot.DataCase, async: true
+
+  @moduletag :auth
+
   alias Ecto.Changeset
   alias Tymeslot.Auth.Helpers.ErrorFormatting
 
   describe "format_validation_errors/1" do
-  @moduletag :auth
     test "formats a map of errors into a string" do
       errors = %{email: "can't be blank", password: "too short"}
       result = ErrorFormatting.format_validation_errors(errors)

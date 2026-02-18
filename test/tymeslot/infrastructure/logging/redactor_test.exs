@@ -1,11 +1,10 @@
 defmodule Tymeslot.Infrastructure.Logging.RedactorTest do
-  @moduletag :infrastructure
   use ExUnit.Case, async: true
+  @moduletag :infrastructure
 
   alias Tymeslot.Infrastructure.Logging.Redactor
 
   describe "redact/1" do
-  @moduletag :infrastructure
     test "redacts Bearer tokens" do
       text = "Authorization: Bearer abcd-1234-efgh-5678"
       assert Redactor.redact(text) == "Authorization: Bearer [REDACTED]"

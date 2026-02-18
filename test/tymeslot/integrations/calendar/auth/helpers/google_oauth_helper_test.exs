@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: false
+  @moduletag :integrations
 
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.OAuthHelper
@@ -9,7 +9,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
   import Mox
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   setup do
     Application.put_env(:tymeslot, :google_oauth,

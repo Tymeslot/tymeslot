@@ -1,11 +1,10 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalDAV.ServerDetector
 
   describe "detect_by_hostname/1" do
-  @moduletag :integrations
     test "detects Radicale from hostname" do
       assert ServerDetector.detect_by_hostname("https://radicale.example.com") == :radicale
       assert ServerDetector.detect_by_hostname("https://my-radicale-server.com") == :radicale

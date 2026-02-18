@@ -1,6 +1,8 @@
 defmodule Tymeslot.Utils.FormHelpersTest do
-  @moduletag :utils
   use ExUnit.Case, async: true
+
+  @moduletag :utils
+
   alias Tymeslot.Utils.FormHelpers
 
   # Dummy schema for testing changesets

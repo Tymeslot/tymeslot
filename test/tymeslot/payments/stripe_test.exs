@@ -1,12 +1,11 @@
 defmodule Tymeslot.Payments.StripeTest do
-  @moduletag :payments
   use Tymeslot.DataCase, async: true
+  @moduletag :payments
 
   import Mox
 
   alias Tymeslot.Payments.Stripe
   # Avoid alias conflicts by using the full module name for the struct
-  @moduletag :payments
   # or just use the map form if the struct isn't available at compile time
 
   # We mock the underlying Stripe modules that the Stripe wrapper uses

@@ -1,12 +1,11 @@
 defmodule Tymeslot.ThemeCustomizationsTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+  @moduletag :utils
 
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
 
   describe "theme customizations" do
-  @moduletag :utils
     setup do
       user = insert(:user)
       {:ok, profile} = Profiles.get_or_create_profile(user.id)

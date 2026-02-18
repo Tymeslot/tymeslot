@@ -1,13 +1,14 @@
 defmodule TymeslotWeb.Live.Shared.LiveHelpersTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   alias Tymeslot.DatabaseQueries.UserSessionQueries
   alias Tymeslot.Security.Token
   alias Tymeslot.TestFixtures
   alias TymeslotWeb.Live.Shared.LiveHelpers
 
   # Mock socket for testing
-  @moduletag :utils
   defp mock_socket(assigns \\ %{}) do
     %Phoenix.LiveView.Socket{
       assigns: Map.merge(%{__changed__: %{}}, assigns)

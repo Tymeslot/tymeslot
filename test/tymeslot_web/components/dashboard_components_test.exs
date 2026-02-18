@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Components.DashboardComponentsTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   import Phoenix.LiveViewTest
   import Phoenix.Component
   alias Floki
@@ -9,7 +11,6 @@ defmodule TymeslotWeb.Components.DashboardComponentsTest do
   alias TymeslotWeb.Components.DashboardComponents
 
   test "form_input renders correctly" do
-  @moduletag :utils
     assigns = %{
       id: "test-input",
       name: "test_name",

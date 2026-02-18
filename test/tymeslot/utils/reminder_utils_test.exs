@@ -1,10 +1,11 @@
 defmodule Tymeslot.Utils.ReminderUtilsTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+
+  @moduletag :utils
+
   alias Tymeslot.Utils.ReminderUtils
 
   describe "normalize_reminder_string_keys/1" do
-  @moduletag :utils
     test "normalizes map with string keys" do
       input = %{"value" => "45", "unit" => "minutes"}
 

@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.TokensTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: false
+  @moduletag :integrations
 
   import Tymeslot.Factory
   import Mox
@@ -10,7 +10,6 @@ defmodule Tymeslot.Integrations.Calendar.TokensTest do
   alias Tymeslot.Repo
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   describe "ensure_valid_token/2" do
     test "returns integration unchanged when token is not expired" do

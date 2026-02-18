@@ -1,11 +1,10 @@
 defmodule Tymeslot.Integrations.Video.DiscoveryTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Video.Discovery
 
   describe "list_available_providers/0" do
-  @moduletag :integrations
     test "returns list of available video providers" do
       providers = Discovery.list_available_providers()
 

@@ -1,10 +1,11 @@
 defmodule Tymeslot.Security.FieldValidators.UsernameValidatorTest do
-  @moduletag :security
   use ExUnit.Case, async: true
+
+  @moduletag :security
+
   alias Tymeslot.Security.FieldValidators.UsernameValidator
 
   describe "validate/2" do
-  @moduletag :security
     test "accepts valid usernames" do
       assert :ok = UsernameValidator.validate("john_doe")
       assert :ok = UsernameValidator.validate("jane-doe")

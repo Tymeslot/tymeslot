@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Common.ProviderRegistryTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Common.ProviderRegistry
 

@@ -1,13 +1,12 @@
 defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
-  @moduletag :security
   use ExUnit.Case, async: false
+  @moduletag :security
 
   import Tymeslot.RateLimiterTestHelpers
 
   alias Tymeslot.Security.RateLimiter
 
   setup do
-  @moduletag :security
     # Clear all rate limit data before each test
     RateLimiter.clear_all()
     :ok

@@ -1,6 +1,8 @@
 defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
-  @moduletag :auth
   use Tymeslot.DataCase, async: true
+
+  @moduletag :auth
+
   use ExUnitProperties
 
   alias Tymeslot.Auth.OAuth.TransactionalUserCreation
@@ -9,7 +11,6 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
   import Tymeslot.Factory
 
   describe "create_oauth_user_transactionally/2" do
-  @moduletag :auth
     test "successfully creates a user and profile" do
       auth_params = %{
         "email" => "new_oauth_user@example.com",

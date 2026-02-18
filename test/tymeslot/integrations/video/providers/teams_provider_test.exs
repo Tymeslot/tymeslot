@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+  @moduletag :integrations
 
   import Mox
   import Tymeslot.Factory
@@ -13,7 +13,6 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
   alias Tymeslot.TeamsOAuthHelperMock
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   describe "provider_type/0" do
     test "returns :teams" do

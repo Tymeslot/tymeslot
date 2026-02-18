@@ -1,6 +1,8 @@
 defmodule Tymeslot.Utils.ChangesetUtilsTest do
-  @moduletag :utils
   use ExUnit.Case, async: true
+
+  @moduletag :utils
+
   alias Tymeslot.Utils.ChangesetUtils
 
   # Dummy schema for testing changesets

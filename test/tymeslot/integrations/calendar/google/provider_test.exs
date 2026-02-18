@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+  @moduletag :integrations
 
   import Tymeslot.Factory
   import Mox
@@ -8,7 +8,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
   alias Tymeslot.Integrations.Calendar.Google.Provider
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   describe "needs_scope_upgrade?/1" do
     test "returns true when integration lacks calendar scope" do

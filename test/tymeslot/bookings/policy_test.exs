@@ -1,12 +1,11 @@
 defmodule Tymeslot.Bookings.PolicyTest do
-  @moduletag :bookings
   use Tymeslot.DataCase, async: true
+  @moduletag :bookings
 
   import Tymeslot.Factory
   import Mox
 
   setup :verify_on_exit!
-  @moduletag :bookings
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.DatabaseSchemas.MeetingSchema

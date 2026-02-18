@@ -1,12 +1,11 @@
 defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
-  @moduletag :emails
   use Tymeslot.DataCase, async: true
+  @moduletag :emails
 
   alias Tymeslot.Emails.Templates.AppointmentCancellation
   import Tymeslot.EmailTestHelpers
 
   describe "cancellation_email_organizer/2" do
-  @moduletag :emails
     test "creates email with correct subject line" do
       details = build_appointment_details()
 

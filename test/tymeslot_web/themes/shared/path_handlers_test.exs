@@ -1,11 +1,10 @@
 defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+  @moduletag :utils
 
   alias TymeslotWeb.Themes.Shared.PathHandlers
 
   describe "build_path_with_locale/2" do
-  @moduletag :utils
     test "builds path for overview action" do
       socket = %Phoenix.LiveView.Socket{
         assigns: %{

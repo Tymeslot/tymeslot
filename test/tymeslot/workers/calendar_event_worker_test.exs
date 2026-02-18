@@ -1,6 +1,8 @@
 defmodule Tymeslot.Workers.CalendarEventWorkerTest do
-  @moduletag :workers
   use Tymeslot.DataCase, async: true
+
+  @moduletag :workers
+
   use Oban.Testing, repo: Tymeslot.Repo
   import Mox
   import Tymeslot.Factory
@@ -11,7 +13,6 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   alias Tymeslot.Workers.CalendarEventWorker
 
   setup :verify_on_exit!
-  @moduletag :workers
 
   describe "perform/1 - create action" do
     test "successfully creates a calendar event" do

@@ -1,10 +1,11 @@
 defmodule Tymeslot.Availability.TimezoneFuzzingTest do
-  @moduletag :availability
   @moduledoc """
-  @moduletag :availability
   Property-based tests to ensure availability logic is consistent across different timezones.
   """
   use ExUnit.Case, async: false
+
+  @moduletag :availability
+
   use ExUnitProperties
 
   import Tymeslot.Factory

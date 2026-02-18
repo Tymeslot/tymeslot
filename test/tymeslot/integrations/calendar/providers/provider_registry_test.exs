@@ -1,11 +1,10 @@
 defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
 
   describe "list_providers/0" do
-  @moduletag :integrations
     test "returns list of all registered providers" do
       providers = ProviderRegistry.list_providers()
 

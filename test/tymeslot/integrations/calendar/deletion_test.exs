@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.DeletionTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+  @moduletag :integrations
 
   import Tymeslot.Factory
   alias Tymeslot.DatabaseQueries.ProfileQueries
@@ -9,7 +9,6 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
   alias Tymeslot.Integrations.CalendarPrimary
 
   describe "delete_with_primary_reassignment/2" do
-  @moduletag :integrations
     setup do
       user = insert(:user)
       %{user: user}

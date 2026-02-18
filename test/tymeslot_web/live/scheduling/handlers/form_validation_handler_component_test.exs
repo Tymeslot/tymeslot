@@ -1,11 +1,12 @@
 defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponentTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent
 
   test "validate_form/2 handles valid data" do
-  @moduletag :utils
     socket = %Socket{assigns: %{__changed__: %{}, touched_fields: MapSet.new()}}
     params = %{"name" => "John Doe", "email" => "john@example.com"}
 

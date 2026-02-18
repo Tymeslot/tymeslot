@@ -1,12 +1,11 @@
 defmodule Tymeslot.Integrations.Video.SelectionTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Video.Discovery
   alias Tymeslot.Integrations.Video.Selection
 
   describe "providers_with_capability/1" do
-  @moduletag :integrations
     test "returns providers with screen sharing capability" do
       providers = Selection.providers_with_capability(:screen_sharing)
 

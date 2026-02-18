@@ -1,11 +1,10 @@
 defmodule Tymeslot.MeetingsTest do
-  @moduletag :utils
   @moduledoc """
-  @moduletag :utils
   Tests for the Meetings context module.
   """
 
   use Tymeslot.DataCase, async: true
+  @moduletag :utils
 
   import Mox
 

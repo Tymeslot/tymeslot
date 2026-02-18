@@ -1,13 +1,12 @@
 defmodule Tymeslot.ThemeCustomizationsColorSchemeTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+  @moduletag :utils
 
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
 
   describe "ThemeCustomizations color scheme operations" do
-  @moduletag :utils
     setup do
       user = insert(:user)
       {:ok, profile} = Profiles.get_or_create_profile(user.id)

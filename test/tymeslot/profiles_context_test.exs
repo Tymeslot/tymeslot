@@ -1,12 +1,11 @@
 defmodule Tymeslot.ProfilesContextTest do
-  @moduletag :utils
   @moduledoc """
-  @moduletag :utils
   Comprehensive behavior tests for the Profiles context module.
   Focuses on user-facing functionality and business rules.
   """
 
   use Tymeslot.DataCase, async: true
+  @moduletag :utils
 
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Profiles

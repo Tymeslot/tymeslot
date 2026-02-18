@@ -1,11 +1,12 @@
 defmodule Tymeslot.Availability.BusinessHoursTest do
-  @moduletag :availability
   @moduledoc """
-  @moduletag :availability
   Tests for the BusinessHours module.
   """
 
   use ExUnit.Case, async: true
+
+  @moduletag :availability
+
   alias Tymeslot.Availability.BusinessHours
 
   describe "business_day?" do

@@ -1,10 +1,11 @@
 defmodule Tymeslot.DatabaseSchemas.WebhookDeliverySchemaTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+
+  @moduletag :utils
+
   alias Tymeslot.DatabaseSchemas.WebhookDeliverySchema
 
   describe "changeset/2" do
-  @moduletag :utils
     test "valid with required fields" do
       attrs = %{
         webhook_id: 1,

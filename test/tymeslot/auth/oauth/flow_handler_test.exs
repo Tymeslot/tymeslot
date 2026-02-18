@@ -1,6 +1,6 @@
 defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
-  @moduletag :auth
   use Tymeslot.DataCase, async: false
+  @moduletag :auth
 
   alias Phoenix.Controller
   alias Phoenix.Flash
@@ -10,7 +10,6 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
   import Phoenix.ConnTest, only: [redirected_to: 1]
 
   setup do
-  @moduletag :auth
     modules = [Client, State, URLs, UserProcessor, UserRegistration, Session]
 
     Enum.each(modules, &unload_if_loaded/1)

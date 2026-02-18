@@ -1,11 +1,10 @@
 defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.ICalBuilder
 
   describe "build_event/1" do
-  @moduletag :integrations
     test "builds complete iCalendar event with required fields" do
       event_data = %{
         summary: "Team Meeting",

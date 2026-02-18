@@ -1,12 +1,11 @@
 defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   import Mox
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   describe "provider_type/0" do
     test "returns :mirotalk" do

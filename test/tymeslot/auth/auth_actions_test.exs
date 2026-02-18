@@ -1,11 +1,10 @@
 defmodule Tymeslot.Auth.AuthActionsTest do
-  @moduletag :auth
   @moduledoc """
-  @moduletag :auth
   Tests for AuthActions module - focusing on pure functions and validation logic.
   """
 
   use Tymeslot.DataCase, async: false
+  @moduletag :auth
 
   alias Tymeslot.Auth.AuthActions
 

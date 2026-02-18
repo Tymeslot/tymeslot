@@ -1,12 +1,11 @@
 defmodule TymeslotWeb.Plugs.EnsureLocalAccessPlugTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+  @moduletag :utils
 
   import Phoenix.Controller
   alias TymeslotWeb.Plugs.EnsureLocalAccessPlug
 
   @opts EnsureLocalAccessPlug.init([])
-  @moduletag :utils
 
   describe "init/1" do
     test "sets default options" do

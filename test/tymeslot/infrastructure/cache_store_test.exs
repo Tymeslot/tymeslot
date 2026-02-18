@@ -1,7 +1,5 @@
 defmodule Tymeslot.Infrastructure.CacheStoreTest do
-  @moduletag :infrastructure
   @moduledoc """
-  @moduletag :infrastructure
   Tests for CacheStore module with request coalescing and TTL.
 
   ## Note on Process.sleep Usage
@@ -17,6 +15,9 @@ defmodule Tymeslot.Infrastructure.CacheStoreTest do
   """
 
   use ExUnit.Case, async: false
+
+  @moduletag :infrastructure
+
   import Tymeslot.TestHelpers.Eventually
 
   defmodule TestCache do

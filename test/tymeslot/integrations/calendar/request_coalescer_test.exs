@@ -1,11 +1,10 @@
 defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
-  @moduletag :integrations
   use ExUnit.Case, async: false
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.RequestCoalescer
 
   @receive_timeout 2_000
-  @moduletag :integrations
   @await_timeout 5_000
 
   setup do

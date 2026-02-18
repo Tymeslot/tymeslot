@@ -1,8 +1,7 @@
 defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
-  @moduletag :integrations
   # async: false because of :global.trans
-  @moduletag :integrations
   use Tymeslot.DataCase, async: false
+  @moduletag :integrations
 
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Common.OAuth.Token

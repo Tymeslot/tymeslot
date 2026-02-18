@@ -1,6 +1,6 @@
 defmodule Tymeslot.PaymentsTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+  @moduletag :utils
 
   alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
   alias Tymeslot.Factory
@@ -9,7 +9,6 @@ defmodule Tymeslot.PaymentsTest do
   import Mox
 
   setup :set_mox_from_context
-  @moduletag :utils
   setup :verify_on_exit!
 
   setup do

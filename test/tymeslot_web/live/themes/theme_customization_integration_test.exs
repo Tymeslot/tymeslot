@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
+  @moduletag :utils
 
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
@@ -12,7 +12,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
   alias Tymeslot.ThemeCustomizations
 
   describe "theme customization application" do
-  @moduletag :utils
     setup tags do
       Mox.set_mox_from_context(tags)
       TestMocks.setup_calendar_mocks()

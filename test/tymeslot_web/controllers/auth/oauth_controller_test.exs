@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.OAuthControllerTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
+  @moduletag :utils
 
   alias Ecto.Changeset
   alias Phoenix.Controller
@@ -11,7 +11,6 @@ defmodule TymeslotWeb.OAuthControllerTest do
   alias Tymeslot.Security.RateLimiter
 
   setup do
-  @moduletag :utils
     original_social_auth = Application.get_env(:tymeslot, :social_auth)
 
     try do

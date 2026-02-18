@@ -1,7 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.Auth.TokensRobustnessTest do
-  @moduletag :integrations
   @moduledoc """
-  @moduletag :integrations
   Robustness tests for token refresh error handling and lock recovery.
 
   ## Note on Process.sleep Usage
@@ -20,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Auth.TokensRobustnessTest do
 
   # async: false to control ETS table state
   use Tymeslot.DataCase, async: false
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Shared.Lock

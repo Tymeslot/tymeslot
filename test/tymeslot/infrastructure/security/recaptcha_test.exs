@@ -1,12 +1,13 @@
 defmodule Tymeslot.Infrastructure.Security.RecaptchaTest do
-  @moduletag :infrastructure
   use Tymeslot.DataCase, async: false
+
+  @moduletag :infrastructure
+
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Infrastructure.Security.Recaptcha
   import Mox
 
   setup :set_mox_from_context
-  @moduletag :infrastructure
   setup :verify_on_exit!
 
   setup do

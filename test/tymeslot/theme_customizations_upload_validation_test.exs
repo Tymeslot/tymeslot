@@ -1,11 +1,10 @@
 defmodule Tymeslot.ThemeCustomizationsUploadValidationTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+  @moduletag :utils
 
   alias Tymeslot.ThemeCustomizations.Validation
 
   describe "Validation file upload tests" do
-  @moduletag :utils
     test "validate_file_upload/1 requires path and filename" do
       assert {:error, _reason} = Validation.validate_file_upload(%{})
       assert {:error, _reason} = Validation.validate_file_upload(%{path: "test"})

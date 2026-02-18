@@ -1,11 +1,10 @@
 defmodule Tymeslot.Infrastructure.ProxyConfigTest do
-  @moduletag :infrastructure
   use ExUnit.Case, async: false
+  @moduletag :infrastructure
 
   alias Tymeslot.Infrastructure.ProxyConfig
 
   describe "NO_PROXY pattern matching" do
-  @moduletag :infrastructure
     test "matches exact hostname" do
       assert ProxyConfig.matches_no_proxy_pattern?("internal.example.com", "internal.example.com")
       refute ProxyConfig.matches_no_proxy_pattern?("other.example.com", "internal.example.com")

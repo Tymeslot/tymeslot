@@ -1,12 +1,13 @@
 defmodule Tymeslot.Infrastructure.StructuredLoggerTest do
-  @moduletag :infrastructure
   use Tymeslot.DataCase, async: true
+
+  @moduletag :infrastructure
+
   import ExUnit.CaptureLog
   require Logger
   alias Tymeslot.Infrastructure.StructuredLogger
 
   setup do
-  @moduletag :infrastructure
     # Temporarily set log level to :debug to capture all logs
     original_level = Logger.level()
     Logger.configure(level: :debug)

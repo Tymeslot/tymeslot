@@ -1,11 +1,10 @@
 defmodule Tymeslot.Security.UrlValidationTest do
-  @moduletag :security
   use ExUnit.Case, async: true
+  @moduletag :security
 
   alias Tymeslot.Security.UrlValidation
 
   describe "validate_http_url/2" do
-  @moduletag :security
     test "accepts valid http and https URLs" do
       assert :ok = UrlValidation.validate_http_url("https://example.com")
       assert :ok = UrlValidation.validate_http_url("http://example.com/path?x=1")

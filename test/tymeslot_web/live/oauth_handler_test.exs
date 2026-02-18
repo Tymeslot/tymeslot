@@ -1,11 +1,12 @@
 defmodule TymeslotWeb.Live.OAuthHandlerTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Live.OAuthHandler
 
   describe "handle_oauth_redirect/3" do
-  @moduletag :utils
     test "sends message and closes modal for OAuth provider" do
       socket = %Socket{assigns: %{__changed__: %{}, show_provider_modal: true}}
       # IntegrationProviders.oauth_provider? is used here.

@@ -1,11 +1,12 @@
 defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   import Phoenix.LiveViewTest
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
 
   describe "connected_calendars_section" do
-  @moduletag :utils
     test "renders nothing when integrations list is empty" do
       assigns = %{
         integrations: [],

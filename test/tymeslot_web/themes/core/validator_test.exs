@@ -1,13 +1,12 @@
 defmodule TymeslotWeb.Themes.Core.ValidatorTest do
-  @moduletag :utils
   use ExUnit.Case, async: false
+  @moduletag :utils
 
   alias Tymeslot.Themes.Theme
   alias TymeslotWeb.Themes.Core.Validator
   import ExUnit.CaptureLog
 
   setup_all do
-  @moduletag :utils
     # Ensure info logs are captured
     original_level = Logger.level()
     Logger.configure(level: :info)

@@ -1,7 +1,5 @@
 defmodule TymeslotWeb.OnboardingEdgeCasesTest do
-  @moduletag :utils
   @moduledoc """
-  @moduletag :utils
   Edge case and error handling tests for onboarding custom input functionality.
 
   Tests scenarios like:
@@ -14,6 +12,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   """
 
   use TymeslotWeb.LiveCase, async: false
+  @moduletag :utils
 
   import Mox
   import TymeslotWeb.OnboardingTestHelpers

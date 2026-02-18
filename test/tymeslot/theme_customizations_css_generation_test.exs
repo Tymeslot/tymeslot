@@ -1,6 +1,6 @@
 defmodule Tymeslot.ThemeCustomizationsCssGenerationTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+  @moduletag :utils
 
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Profiles
@@ -8,7 +8,6 @@ defmodule Tymeslot.ThemeCustomizationsCssGenerationTest do
   alias Tymeslot.ThemeCustomizations.Capability
 
   describe "ThemeCustomizations CSS generation" do
-  @moduletag :utils
     setup do
       user = insert(:user)
       {:ok, profile} = Profiles.get_or_create_profile(user.id)

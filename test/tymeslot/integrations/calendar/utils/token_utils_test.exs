@@ -1,10 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.TokenUtilsTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+
+  @moduletag :integrations
+
   alias Tymeslot.Integrations.Calendar.TokenUtils
 
   describe "token_expired?/1" do
-  @moduletag :integrations
     test "returns true for nil" do
       assert TokenUtils.token_expired?(nil)
     end

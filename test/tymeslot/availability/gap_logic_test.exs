@@ -1,10 +1,11 @@
 defmodule Tymeslot.Availability.GapLogicTest do
-  @moduletag :availability
   @moduledoc """
-  @moduletag :availability
   Property-based tests specifically for the gap-finding logic in the Conflicts module.
   """
   use ExUnit.Case, async: true
+
+  @moduletag :availability
+
   use ExUnitProperties
 
   alias Tymeslot.Availability.Conflicts

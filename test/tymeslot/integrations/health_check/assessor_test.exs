@@ -1,13 +1,12 @@
 defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+  @moduletag :integrations
 
   import Mox
 
   alias Tymeslot.Integrations.HealthCheck.Assessor
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   describe "assess/2 for calendar integrations" do
     test "returns success result and duration" do

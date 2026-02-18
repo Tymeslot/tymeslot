@@ -1,11 +1,10 @@
 defmodule Tymeslot.Mailer.SMTPConfigTest do
-  @moduletag :mailer
   use ExUnit.Case, async: true
+  @moduletag :mailer
 
   alias Tymeslot.Mailer.SMTPConfig
 
   describe "build/1" do
-  @moduletag :mailer
     test "creates valid SMTP configuration for port 587 (STARTTLS)" do
       config =
         SMTPConfig.build(

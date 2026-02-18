@@ -1,12 +1,11 @@
 defmodule Tymeslot.Availability.AvailabilityActionsTest do
-  @moduletag :availability
   @moduledoc """
-  @moduletag :availability
   Comprehensive behavior tests for the Availability management functionality.
   Focuses on user-facing functionality and business rules.
   """
 
   use Tymeslot.DataCase, async: true
+  @moduletag :availability
 
   alias Tymeslot.Availability.AvailabilityActions
   alias Tymeslot.Availability.Breaks

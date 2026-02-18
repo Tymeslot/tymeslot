@@ -1,7 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.TokensConcurrencyTest do
-  @moduletag :integrations
   @moduledoc """
-  @moduletag :integrations
   Concurrency tests for OAuth token refresh operations.
 
   ## Note on Process.sleep Usage
@@ -20,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.TokensConcurrencyTest do
 
   # async: false to avoid ETS table issues if not careful
   use Tymeslot.DataCase, async: false
+  @moduletag :integrations
 
   import Mox
   alias Tymeslot.Integrations.Calendar.Tokens

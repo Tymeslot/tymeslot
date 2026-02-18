@@ -1,6 +1,8 @@
 defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
-  @moduletag :workers
   use Tymeslot.DataCase, async: true
+
+  @moduletag :workers
+
   use Oban.Testing, repo: Tymeslot.Repo
 
   alias Tymeslot.Repo
@@ -8,7 +10,6 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
   import Ecto.Query
 
   describe "perform/1 - stuck job cleanup" do
-  @moduletag :workers
     test "cleans up stuck executing jobs" do
       # Create a job that is stuck in "executing" state for 5 hours
       stuck_time = DateTime.add(DateTime.utc_now(), -5, :hour)

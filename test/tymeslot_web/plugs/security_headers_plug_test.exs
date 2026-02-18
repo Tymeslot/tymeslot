@@ -1,11 +1,12 @@
 defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
+
+  @moduletag :utils
+
   alias TymeslotWeb.Plugs.SecurityHeadersPlug
   import Tymeslot.Factory
 
   describe "security headers without embedding" do
-  @moduletag :utils
     test "sets default security headers", %{conn: conn} do
       conn = SecurityHeadersPlug.call(conn, [])
 

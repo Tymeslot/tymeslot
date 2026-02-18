@@ -1,11 +1,10 @@
 defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.HealthCheck.Monitor
 
   describe "initial_state/0" do
-  @moduletag :integrations
     test "returns a healthy initial state" do
       state = Monitor.initial_state()
 

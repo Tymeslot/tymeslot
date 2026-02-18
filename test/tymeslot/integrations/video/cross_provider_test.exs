@@ -1,13 +1,12 @@
 defmodule Tymeslot.Integrations.Video.CrossProviderTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   import Mox
   import Tymeslot.CrossProviderTestHelpers
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   @moduledoc """
   Cross-provider consistency tests for video integrations.

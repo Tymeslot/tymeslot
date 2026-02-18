@@ -1,6 +1,8 @@
 defmodule Tymeslot.Workers.ExpiredSessionCleanupWorkerTest do
-  @moduletag :workers
   use Tymeslot.DataCase, async: true
+
+  @moduletag :workers
+
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Tymeslot.Factory
@@ -9,7 +11,6 @@ defmodule Tymeslot.Workers.ExpiredSessionCleanupWorkerTest do
   alias Tymeslot.Workers.ExpiredSessionCleanupWorker
 
   describe "perform/1" do
-  @moduletag :workers
     test "cleans up expired sessions" do
       user = insert(:user)
 

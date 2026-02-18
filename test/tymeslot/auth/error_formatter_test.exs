@@ -1,12 +1,11 @@
 defmodule Tymeslot.Auth.ErrorFormatterTest do
-  @moduletag :auth
   use Tymeslot.DataCase, async: true
+  @moduletag :auth
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.ErrorFormatter
 
   describe "format_auth_error/1" do
-  @moduletag :auth
     test "returns string as is" do
       assert ErrorFormatter.format_auth_error("Custom error") == "Custom error"
     end

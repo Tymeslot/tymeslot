@@ -1,12 +1,13 @@
 defmodule Tymeslot.Utils.DateTimeUtilsTest do
-  @moduletag :utils
   use ExUnit.Case, async: true
+
+  @moduletag :utils
+
   use ExUnitProperties
 
   alias Tymeslot.Utils.DateTimeUtils
 
   describe "parse_duration/1" do
-  @moduletag :utils
     test "parses time durations (PT)" do
       assert {:ok, 3600} == DateTimeUtils.parse_duration("PT1H")
       assert {:ok, 90} == DateTimeUtils.parse_duration("PT1M30S")

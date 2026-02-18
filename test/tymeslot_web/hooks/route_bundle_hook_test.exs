@@ -1,11 +1,10 @@
 defmodule TymeslotWeb.Hooks.RouteBundleHookTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+  @moduletag :utils
 
   alias TymeslotWeb.Hooks.RouteBundleHook
 
   describe "on_mount/4" do
-  @moduletag :utils
     test "assigns 'auth' bundle for AuthLive" do
       socket = %Phoenix.LiveView.Socket{view: TymeslotWeb.AuthLive}
       {:cont, updated_socket} = RouteBundleHook.on_mount(:default, %{}, %{}, socket)

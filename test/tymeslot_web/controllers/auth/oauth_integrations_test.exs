@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
+  @moduletag :utils
 
   alias Phoenix.Flash
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
@@ -13,7 +13,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
 
   setup do
-  @moduletag :utils
     modules = [
       GoogleCalendarOAuthHelper,
       OutlookCalendarOAuthHelper,

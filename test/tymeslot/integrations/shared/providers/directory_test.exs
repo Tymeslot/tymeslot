@@ -1,12 +1,11 @@
 defmodule Tymeslot.Integrations.Providers.DirectoryTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Providers.Descriptor
   alias Tymeslot.Integrations.Providers.Directory
 
   describe "list/1" do
-  @moduletag :integrations
     test "lists calendar providers" do
       list = Directory.list(:calendar)
       assert is_list(list)

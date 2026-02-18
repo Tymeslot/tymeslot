@@ -1,13 +1,12 @@
 defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapterTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   import Mox
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   describe "detect_provider_from_url/1 (private but tested via valid_meeting_url? and extract_room_id)" do
     test "detects mirotalk" do

@@ -1,11 +1,10 @@
 defmodule Tymeslot.Emails.Shared.UiComponentsTest do
-  @moduletag :emails
   use Tymeslot.DataCase, async: true
+  @moduletag :emails
 
   alias Tymeslot.Emails.Shared.UiComponents
 
   describe "troubleshooting_link/1" do
-  @moduletag :emails
     test "sanitizes URL for safe display" do
       malicious_url = "https://example.com/<script>alert('xss')</script>"
       html = UiComponents.troubleshooting_link(malicious_url)

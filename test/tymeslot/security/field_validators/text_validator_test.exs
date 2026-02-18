@@ -1,10 +1,11 @@
 defmodule Tymeslot.Security.FieldValidators.TextValidatorTest do
-  @moduletag :security
   use Tymeslot.DataCase, async: true
+
+  @moduletag :security
+
   alias Tymeslot.Security.FieldValidators.TextValidator
 
   describe "validate/2" do
-  @moduletag :security
     test "returns :ok for valid text" do
       assert :ok = TextValidator.validate("Hello world")
       assert :ok = TextValidator.validate("Some short text")

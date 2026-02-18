@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
+  @moduletag :utils
 
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeProductionChecklistTest do
   alias Tymeslot.Themes.Registry
 
   @moduledoc """
-  @moduletag :utils
   Production readiness checklist for themes.
   Run this for any new theme before releasing to production.
 

@@ -1,13 +1,12 @@
 defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   import ExUnit.CaptureLog
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.Zimbra.Provider
 
   setup do
-  @moduletag :integrations
     CalendarCircuitBreaker.reset(:zimbra)
     :ok
   end

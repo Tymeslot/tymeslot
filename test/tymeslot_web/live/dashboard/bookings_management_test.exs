@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
-  @moduletag :utils
   use TymeslotWeb.LiveCase, async: true
+  @moduletag :utils
 
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
@@ -12,7 +12,6 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
   alias Plug.Test
 
   setup :verify_on_exit!
-  @moduletag :utils
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())

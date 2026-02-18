@@ -1,13 +1,12 @@
 defmodule Tymeslot.DatabaseQueries.PaymentQueriesTest do
-  @moduletag :payments
   use Tymeslot.DataCase, async: true
+  @moduletag :payments
 
   alias Tymeslot.DatabaseQueries.PaymentQueries
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.TestFixtures
 
   setup do
-  @moduletag :payments
     user = TestFixtures.create_user_fixture()
     %{user: user}
   end

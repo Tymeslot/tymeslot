@@ -1,10 +1,11 @@
 defmodule Tymeslot.Utils.MediaValidatorTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+
+  @moduletag :utils
+
   alias Tymeslot.Utils.MediaValidator
 
   describe "valid_image?/1" do
-  @moduletag :utils
     test "returns true for valid PNG" do
       png_header = <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A>>
       # ExImageInfo needs enough bytes to identify

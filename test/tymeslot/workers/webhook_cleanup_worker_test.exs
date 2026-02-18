@@ -1,6 +1,8 @@
 defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
-  @moduletag :workers
   use Tymeslot.DataCase, async: true
+
+  @moduletag :workers
+
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Tymeslot.Factory
@@ -8,7 +10,6 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
   alias Tymeslot.Workers.WebhookCleanupWorker
 
   describe "perform/1" do
-  @moduletag :workers
     test "cleans up old webhook deliveries based on retention days" do
       webhook = insert(:webhook)
 

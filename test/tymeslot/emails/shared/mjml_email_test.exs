@@ -1,11 +1,10 @@
 defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
-  @moduletag :emails
   use Tymeslot.DataCase, async: true
+  @moduletag :emails
 
   alias Tymeslot.Emails.Shared.MjmlEmail
 
   describe "compile_mjml/1" do
-  @moduletag :emails
     test "compiles valid MJML to HTML" do
       mjml = """
       <mjml>

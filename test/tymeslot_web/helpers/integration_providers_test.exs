@@ -1,10 +1,11 @@
 defmodule TymeslotWeb.Helpers.IntegrationProvidersTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   alias TymeslotWeb.Helpers.IntegrationProviders
 
   describe "reason_to_form_errors/1" do
-  @moduletag :utils
     test "maps 'Invalid API key' case-insensitively" do
       assert %{api_key: "Invalid API key"} =
                IntegrationProviders.reason_to_form_errors("Invalid API key")

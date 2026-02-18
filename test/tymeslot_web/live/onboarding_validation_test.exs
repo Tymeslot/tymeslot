@@ -1,7 +1,5 @@
 defmodule TymeslotWeb.OnboardingValidationTest do
-  @moduletag :utils
   @moduledoc """
-  @moduletag :utils
   Validation tests for the onboarding flow.
 
   Tests input validation for:
@@ -12,6 +10,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
   """
 
   use TymeslotWeb.LiveCase, async: false
+  @moduletag :utils
 
   import Mox
   import Tymeslot.Factory

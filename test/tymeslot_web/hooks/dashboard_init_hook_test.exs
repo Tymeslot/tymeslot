@@ -1,13 +1,14 @@
 defmodule TymeslotWeb.Hooks.DashboardInitHookTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   import Tymeslot.Factory
 
   alias Phoenix.LiveView.Socket
   alias TymeslotWeb.Hooks.DashboardInitHook
 
   defp build_socket(assigns \\ %{}) do
-  @moduletag :utils
     %Socket{
       assigns: Map.merge(%{__changed__: %{}}, assigns),
       endpoint: TymeslotWeb.Endpoint

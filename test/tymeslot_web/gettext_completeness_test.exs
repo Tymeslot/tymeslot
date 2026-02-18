@@ -1,7 +1,5 @@
 defmodule TymeslotWeb.GettextCompletenessTest do
-  @moduletag :utils
   @moduledoc """
-  @moduletag :utils
   Tests to ensure translation completeness across all supported languages.
   Verifies that:
   - All languages have the same msgids
@@ -9,6 +7,7 @@ defmodule TymeslotWeb.GettextCompletenessTest do
   - .po files are properly formatted
   """
   use ExUnit.Case, async: true
+  @moduletag :utils
 
   alias TymeslotWeb.Themes.Shared.LocaleHandler
 

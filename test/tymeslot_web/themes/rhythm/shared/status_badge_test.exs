@@ -1,12 +1,13 @@
 defmodule TymeslotWeb.Themes.Rhythm.Shared.StatusBadgeTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   import Phoenix.LiveViewTest
   alias Floki
   alias TymeslotWeb.Themes.Rhythm.Shared.StatusBadge
 
   describe "status_badge/1 with success variant" do
-  @moduletag :utils
     test "renders success badge with check icon by default" do
       assigns = %{variant: "success", icon: "check", transparent: false}
       html = render_component(&StatusBadge.status_badge/1, assigns)

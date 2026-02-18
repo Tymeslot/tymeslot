@@ -1,13 +1,14 @@
 defmodule Tymeslot.Integrations.Common.ErrorHandlerTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+
+  @moduletag :integrations
+
   import ExUnit.CaptureLog
 
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Common.ErrorHandler
 
   describe "normalize_error/1" do
-  @moduletag :integrations
     test "normalizes 3-tuple errors" do
       assert {:error, "timeout"} = ErrorHandler.normalize_error({:error, :type, "timeout"})
     end

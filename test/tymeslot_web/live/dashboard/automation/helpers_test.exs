@@ -1,10 +1,11 @@
 defmodule TymeslotWeb.Dashboard.Automation.HelpersTest do
-  @moduletag :utils
   use Tymeslot.DataCase, async: true
+
+  @moduletag :utils
+
   alias TymeslotWeb.Dashboard.Automation.Helpers
 
   describe "toggle_event/2" do
-  @moduletag :utils
     test "adds event if not present" do
       form_values = %{"events" => ["event1"]}
       updated = Helpers.toggle_event(form_values, "event2")

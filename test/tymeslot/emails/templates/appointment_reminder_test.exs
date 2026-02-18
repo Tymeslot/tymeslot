@@ -1,12 +1,11 @@
 defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
-  @moduletag :emails
   use Tymeslot.DataCase, async: true
+  @moduletag :emails
 
   alias Tymeslot.Emails.Templates.{AppointmentReminderAttendee, AppointmentReminderOrganizer}
   import Tymeslot.EmailTestHelpers
 
   describe "AppointmentReminderOrganizer.reminder_email/2" do
-  @moduletag :emails
     test "creates email with correct subject line" do
       details = build_appointment_details(%{time_until: "30 minutes"})
       email = AppointmentReminderOrganizer.reminder_email("organizer@example.com", details)

@@ -1,11 +1,10 @@
 defmodule Tymeslot.Availability.CalculateTest do
-  @moduletag :availability
   @moduledoc """
-  @moduletag :availability
   Tests for the availability calculation module.
   """
 
   use Tymeslot.DataCase, async: true
+  @moduletag :availability
 
   alias Tymeslot.Availability.Calculate
 

@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+  @moduletag :utils
 
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
@@ -11,7 +11,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
   alias Tymeslot.Repo
 
   describe "embed settings component" do
-  @moduletag :utils
     setup do
       user = insert(:user, onboarding_completed_at: DateTime.utc_now())
       profile = insert(:profile, user: user, username: "testuser", allowed_embed_domains: [])

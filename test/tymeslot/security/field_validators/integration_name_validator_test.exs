@@ -1,10 +1,11 @@
 defmodule Tymeslot.Security.FieldValidators.IntegrationNameValidatorTest do
-  @moduletag :security
   use Tymeslot.DataCase, async: true
+
+  @moduletag :security
+
   alias Tymeslot.Security.FieldValidators.IntegrationNameValidator
 
   describe "validate/2" do
-  @moduletag :security
     test "returns :ok for valid integration names" do
       assert :ok = IntegrationNameValidator.validate("Google Calendar")
       assert :ok = IntegrationNameValidator.validate("MiroTalk")

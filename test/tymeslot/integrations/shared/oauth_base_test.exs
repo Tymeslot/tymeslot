@@ -1,12 +1,11 @@
 defmodule Tymeslot.Integrations.Common.OAuthBaseTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+  @moduletag :integrations
 
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Common.OAuthBase
 
   describe "validate_config/2" do
-  @moduletag :integrations
     test "validates required fields" do
       config = %{
         access_token: "at",

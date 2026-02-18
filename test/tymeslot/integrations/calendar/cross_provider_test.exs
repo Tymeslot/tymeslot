@@ -1,12 +1,11 @@
 defmodule Tymeslot.Integrations.Calendar.CrossProviderTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   import Tymeslot.CrossProviderTestHelpers
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
 
   @moduledoc """
-  @moduletag :integrations
   Cross-provider consistency tests for calendar integrations.
 
   Ensures all calendar providers implement required behavior callbacks

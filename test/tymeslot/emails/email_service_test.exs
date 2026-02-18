@@ -1,6 +1,6 @@
 defmodule Tymeslot.Emails.EmailServiceTest do
-  @moduletag :emails
   use Tymeslot.DataCase, async: true
+  @moduletag :emails
 
   import Tymeslot.EmailTestHelpers
 

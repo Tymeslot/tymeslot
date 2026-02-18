@@ -1,10 +1,11 @@
 defmodule Tymeslot.Infrastructure.Common.ErrorTranslatorTest do
-  @moduletag :infrastructure
   use Tymeslot.DataCase, async: true
+
+  @moduletag :infrastructure
+
   alias Tymeslot.Infrastructure.Common.ErrorTranslator
 
   describe "translate_error/3" do
-  @moduletag :infrastructure
     test "translates :invalid_credentials" do
       result = ErrorTranslator.translate_error(:invalid_credentials, "Google")
       assert result.category == :authentication

@@ -1,13 +1,12 @@
 defmodule Tymeslot.Payments.SubscriptionsTest do
-  @moduletag :payments
   use Tymeslot.DataCase, async: true
+  @moduletag :payments
 
   import Mox
 
   alias Tymeslot.Payments.Subscriptions
 
   setup :verify_on_exit!
-  @moduletag :payments
 
   describe "cancel_subscription/3" do
     test "delegates to subscription manager when configured" do

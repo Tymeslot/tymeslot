@@ -1,11 +1,10 @@
 defmodule Tymeslot.Auth.SocialAuthenticationTest do
-  @moduletag :auth
   @moduledoc """
-  @moduletag :auth
   Tests for SocialAuthentication module.
   """
 
   use Tymeslot.DataCase, async: true
+  @moduletag :auth
 
   alias Plug.Conn
   alias Plug.Test, as: PlugTest

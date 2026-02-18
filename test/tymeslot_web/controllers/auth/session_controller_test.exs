@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.SessionControllerTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+  @moduletag :utils
 
   alias Phoenix.Flash
   alias Tymeslot.AuthTestHelpers
@@ -10,7 +10,6 @@ defmodule TymeslotWeb.SessionControllerTest do
   alias Tymeslot.Security.Password
 
   describe "POST /auth/session" do
-  @moduletag :utils
     setup do
       password = "Password1234!"
 

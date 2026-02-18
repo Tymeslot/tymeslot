@@ -1,6 +1,6 @@
 defmodule Tymeslot.Payments.DatabaseOperationsTest do
-  @moduletag :payments
   use Tymeslot.DataCase, async: true
+  @moduletag :payments
 
   alias Tymeslot.DatabaseQueries.PaymentQueries
   alias Tymeslot.Payments.DatabaseOperations
@@ -8,7 +8,6 @@ defmodule Tymeslot.Payments.DatabaseOperationsTest do
   import Tymeslot.Factory
 
   describe "process_subscription_renewal/2" do
-  @moduletag :payments
     test "treats duplicate renewal as already processed" do
       user = insert(:user)
       subscription_id = "sub_dup"

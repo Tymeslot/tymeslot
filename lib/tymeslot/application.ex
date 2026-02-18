@@ -136,8 +136,10 @@ defmodule Tymeslot.Application do
     # Log HTTP proxy configuration if enabled
     log_proxy_config()
 
-    # Validate Oban Cron plugin configuration for critical workers
-    validate_oban_cron_config!()
+    # Validate Oban Cron plugin configuration for critical workers (skip in test)
+    if Application.get_env(:tymeslot, :environment) != :test do
+      validate_oban_cron_config!()
+    end
 
     # Validate database connection pool configuration
     validate_db_pool_config!()

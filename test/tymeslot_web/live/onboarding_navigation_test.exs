@@ -1,7 +1,5 @@
 defmodule TymeslotWeb.OnboardingNavigationTest do
-  @moduletag :utils
   @moduledoc """
-  @moduletag :utils
   Navigation tests for the onboarding flow.
 
   Tests step transitions, skip functionality, and navigation behavior including:
@@ -12,6 +10,7 @@ defmodule TymeslotWeb.OnboardingNavigationTest do
   """
 
   use TymeslotWeb.LiveCase, async: false
+  @moduletag :utils
 
   import Mox
   import Tymeslot.Factory

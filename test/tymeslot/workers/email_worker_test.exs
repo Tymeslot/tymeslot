@@ -1,6 +1,8 @@
 defmodule Tymeslot.Workers.EmailWorkerTest do
-  @moduletag :workers
   use Tymeslot.DataCase, async: true
+
+  @moduletag :workers
+
   use Oban.Testing, repo: Tymeslot.Repo
 
   import Tymeslot.Factory
@@ -9,7 +11,6 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
   alias Tymeslot.Workers.EmailWorker
 
   describe "schedule_confirmation_emails/1" do
-  @moduletag :workers
     test "creates high priority job with uniqueness constraint" do
       user = insert(:user)
       meeting = insert(:meeting, organizer_user: user)

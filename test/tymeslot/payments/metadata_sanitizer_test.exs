@@ -1,10 +1,11 @@
 defmodule Tymeslot.Payments.MetadataSanitizerTest do
-  @moduletag :payments
   use ExUnit.Case, async: true
+
+  @moduletag :payments
+
   alias Tymeslot.Payments.MetadataSanitizer
 
   describe "sanitize/2" do
-  @moduletag :payments
     test "allows whitelisted keys" do
       metadata = %{"referral_code" => "ABC123", "utm_source" => "google"}
       assert {:ok, sanitized} = MetadataSanitizer.sanitize(metadata)

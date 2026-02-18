@@ -1,12 +1,11 @@
 defmodule TymeslotWeb.Themes.Quill.ThemeTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+  @moduletag :utils
 
   alias TymeslotWeb.ThemeCommonTestCases
   alias TymeslotWeb.Themes.Quill.Theme
 
   describe "states/0" do
-  @moduletag :utils
     test "returns a 4-step flow state machine" do
       ThemeCommonTestCases.test_states_structure(Theme)
     end

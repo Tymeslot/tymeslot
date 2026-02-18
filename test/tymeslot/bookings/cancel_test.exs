@@ -1,11 +1,10 @@
 defmodule Tymeslot.Bookings.CancelTest do
-  @moduletag :bookings
   @moduledoc """
-  @moduletag :bookings
   Tests for the booking cancellation module.
   """
 
   use Tymeslot.DataCase, async: true
+  @moduletag :bookings
 
   import Mox
 

@@ -1,13 +1,12 @@
 defmodule Tymeslot.MeetingTypes.FormProcessingTest do
-  @moduletag :meeting_types
   @moduledoc """
-  @moduletag :meeting_types
   Tests for form-based meeting type creation and updates.
   Focuses on validation of video integrations, calendar integrations,
   CalDAV paths, reminder configs, and other form-specific logic.
   """
 
   use Tymeslot.DataCase, async: true
+  @moduletag :meeting_types
 
   alias Tymeslot.MeetingTypes
 

@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Components.DashboardModalsTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   import Phoenix.LiveViewTest
   alias Floki
   alias Phoenix.LiveView.JS
@@ -11,7 +13,6 @@ defmodule TymeslotWeb.Components.DashboardModalsTest do
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal
 
   test "renders clear_day_modal correctly" do
-  @moduletag :utils
     assigns = %{
       id: "clear-day",
       show: true,

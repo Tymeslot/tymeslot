@@ -1,6 +1,6 @@
 defmodule Tymeslot.Emails.Templates.AuthEmailsTest do
-  @moduletag :emails
   use Tymeslot.DataCase, async: true
+  @moduletag :emails
 
   alias Tymeslot.Emails.Templates.{
     EmailChangeConfirmed,

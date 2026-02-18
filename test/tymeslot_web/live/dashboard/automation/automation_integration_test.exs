@@ -1,6 +1,8 @@
 defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
+
+  @moduletag :utils
+
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.TestFixtures
@@ -10,7 +12,6 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
   alias Tymeslot.Webhooks
 
   setup %{conn: conn} do
-  @moduletag :utils
     # Create a user and log them in
     user = create_user_fixture()
     {:ok, user} = UserQueries.mark_onboarding_complete(user)
@@ -244,7 +245,6 @@ end
 
 # Test helper modules for feature access checking
 defmodule TymeslotWeb.Dashboard.Automation.TestAccessChecker do
-  @moduletag :utils
   @moduledoc false
 
   @spec check_access(any(), atom()) :: :ok | {:error, :insufficient_plan}
@@ -253,7 +253,6 @@ defmodule TymeslotWeb.Dashboard.Automation.TestAccessChecker do
 end
 
 defmodule TymeslotWeb.Dashboard.Automation.TestAccessCheckerAllows do
-  @moduletag :utils
   @moduledoc false
 
   @spec check_access(any(), atom()) :: :ok
@@ -261,7 +260,6 @@ defmodule TymeslotWeb.Dashboard.Automation.TestAccessCheckerAllows do
 end
 
 defmodule TymeslotWeb.Dashboard.Automation.TestAccessCheckerFails do
-  @moduletag :utils
   @moduledoc false
 
   @spec check_access(any(), atom()) :: {:error, atom()}

@@ -1,11 +1,10 @@
 defmodule Tymeslot.Payments.CustomerLookupTest do
-  @moduletag :payments
   use Tymeslot.DataCase, async: false
+  @moduletag :payments
 
   alias Tymeslot.Payments.CustomerLookup
 
   setup do
-  @moduletag :payments
     # Configure subscription schema for tests
     Application.put_env(:tymeslot, :subscription_schema, TymeslotSaas.Schemas.Subscription)
     Application.put_env(:tymeslot, :repo, Tymeslot.SaasRepo)

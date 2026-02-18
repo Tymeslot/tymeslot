@@ -1,11 +1,10 @@
 defmodule Tymeslot.Emails.Shared.TemplateHelperTest do
-  @moduletag :emails
   use Tymeslot.DataCase, async: true
+  @moduletag :emails
 
   alias Tymeslot.Emails.Shared.TemplateHelper
 
   describe "compile_system_template/3" do
-  @moduletag :emails
     test "uses default preview when preview is nil" do
       content = "<mj-text>Test content</mj-text>"
       html = TemplateHelper.compile_system_template(content, "Test Title", nil)

@@ -1,12 +1,11 @@
 defmodule Tymeslot.Security.RateLimiterMultiWindowTest do
-  @moduletag :security
   use Tymeslot.DataCase, async: false
+  @moduletag :security
 
   alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimiter
 
   describe "signup multi-window limits (email + IP)" do
-  @moduletag :security
     test "blocks after 5 attempts in 10 minutes and IP bucket applies across emails" do
       ip = "203.0.113.10"
       email1 = "user1@example.com"

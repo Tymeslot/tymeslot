@@ -1,13 +1,12 @@
 defmodule TymeslotWeb.Live.MultilingualBookingTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
+  @moduletag :utils
 
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
   import Mox
 
   setup do
-  @moduletag :utils
     # Create a user with calendar integration for booking flow
     user = insert(:user)
     profile = insert(:profile, user: user, username: "testuser")

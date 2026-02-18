@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+  @moduletag :integrations
 
   import Mox
   import Tymeslot.Factory
@@ -12,7 +12,6 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
   alias Tymeslot.Repo
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   describe "provider_type/0" do
     test "returns :google_meet" do

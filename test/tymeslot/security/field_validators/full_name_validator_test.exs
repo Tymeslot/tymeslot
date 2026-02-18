@@ -1,10 +1,11 @@
 defmodule Tymeslot.Security.FieldValidators.FullNameValidatorTest do
-  @moduletag :security
   use Tymeslot.DataCase, async: true
+
+  @moduletag :security
+
   alias Tymeslot.Security.FieldValidators.FullNameValidator
 
   describe "validate/2" do
-  @moduletag :security
     test "returns :ok for valid full names" do
       assert :ok = FullNameValidator.validate("John Smith")
       assert :ok = FullNameValidator.validate("José María")

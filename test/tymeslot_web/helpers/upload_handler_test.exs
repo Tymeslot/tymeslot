@@ -1,10 +1,11 @@
 defmodule TymeslotWeb.Helpers.UploadHandlerTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   alias TymeslotWeb.Helpers.UploadHandler
 
   describe "get_upload_opts/1" do
-  @moduletag :utils
     test "returns correct options for :avatar" do
       opts = UploadHandler.get_upload_opts(:avatar)
       assert opts[:max_entries] == 1

@@ -1,6 +1,6 @@
 defmodule Tymeslot.Payments.Webhooks.SubscriptionHandlerTest do
-  @moduletag :payments
   use Tymeslot.DataCase, async: false
+  @moduletag :payments
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Phoenix.PubSub
@@ -9,7 +9,6 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandlerTest do
   alias TymeslotSaas.Payments.PaymentEventListener
 
   setup do
-  @moduletag :payments
     # Ensure Tymeslot.PubSub is started
     unless Process.whereis(Tymeslot.PubSub) do
       Supervisor.start_link(name: Tymeslot.PubSub, adapter: Phoenix.PubSub.PG2)

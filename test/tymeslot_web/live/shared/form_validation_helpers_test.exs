@@ -1,11 +1,10 @@
 defmodule TymeslotWeb.Live.Shared.FormValidationHelpersTest do
-  @moduletag :utils
   use ExUnit.Case, async: true
+  @moduletag :utils
 
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @fields ~w(name email subject message)
-  @moduletag :utils
 
   test "base_form_params builds empty map" do
     assert FormValidationHelpers.base_form_params(@fields) == %{

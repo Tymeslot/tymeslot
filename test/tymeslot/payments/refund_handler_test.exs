@@ -1,11 +1,10 @@
 defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
-  @moduletag :payments
   use Tymeslot.DataCase, async: true
+  @moduletag :payments
 
   alias Tymeslot.Payments.Webhooks.RefundHandler
 
   describe "calculate_total_refunded/1" do
-  @moduletag :payments
     test "uses amount_refunded when available" do
       charge = %{
         "amount_refunded" => 5000,

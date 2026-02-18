@@ -1,13 +1,14 @@
 defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   import Phoenix.LiveViewTest
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection
 
   describe "OptionsGrid component" do
-  @moduletag :utils
     test "renders all options" do
       assigns = %{
         selected_embed_type: "inline",

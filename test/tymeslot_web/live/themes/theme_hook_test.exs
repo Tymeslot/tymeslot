@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.Live.Themes.ThemeHookTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
+  @moduletag :utils
 
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
@@ -10,7 +10,6 @@ defmodule TymeslotWeb.Live.Themes.ThemeHookTest do
   alias Tymeslot.TestMocks
 
   @moduledoc """
-  @moduletag :utils
   Verifies that theme-specific JS hooks are correctly rendered in the DOM.
   """
 

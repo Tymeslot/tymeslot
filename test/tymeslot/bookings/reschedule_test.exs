@@ -1,11 +1,10 @@
 defmodule Tymeslot.Bookings.RescheduleTest do
-  @moduletag :bookings
   @moduledoc """
-  @moduletag :bookings
   Tests for the booking rescheduling module.
   """
 
   use Tymeslot.DataCase, async: true
+  @moduletag :bookings
 
   import Mox
 

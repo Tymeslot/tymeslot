@@ -1,11 +1,10 @@
 defmodule Tymeslot.Payments.ErrorConventionsTest do
-  @moduletag :payments
   use Tymeslot.DataCase, async: true
+  @moduletag :payments
 
   alias Tymeslot.Payments.ErrorConventions
 
   describe "error_atoms/0" do
-  @moduletag :payments
     test "returns a list of atoms" do
       atoms = ErrorConventions.error_atoms()
       assert is_list(atoms)

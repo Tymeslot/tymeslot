@@ -1,6 +1,8 @@
 defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
-  @moduletag :workers
   use Tymeslot.DataCase, async: true
+
+  @moduletag :workers
+
   import Mox
   import Tymeslot.Factory
   alias Ecto.UUID
@@ -9,7 +11,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
   alias Tymeslot.Workers.EmailWorkerHandlers
 
   setup :verify_on_exit!
-  @moduletag :workers
 
   describe "execute_email_action/2" do
     test "discards unknown actions" do

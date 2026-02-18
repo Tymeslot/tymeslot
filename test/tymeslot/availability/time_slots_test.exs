@@ -1,11 +1,10 @@
 defmodule Tymeslot.Availability.TimeSlotsTest do
-  @moduletag :availability
   @moduledoc """
-  @moduletag :availability
   Tests for the TimeSlots module - pure functions for time slot generation.
   """
 
   use ExUnit.Case, async: true
+  @moduletag :availability
 
   alias Tymeslot.Availability.TimeSlots
 

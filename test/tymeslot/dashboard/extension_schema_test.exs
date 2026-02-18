@@ -1,11 +1,10 @@
 defmodule Tymeslot.Dashboard.ExtensionSchemaTest do
-  @moduletag :utils
   use ExUnit.Case, async: true
+  @moduletag :utils
 
   alias Tymeslot.Dashboard.ExtensionSchema
 
   describe "validate/1" do
-  @moduletag :utils
     test "accepts a valid extension" do
       extension = %{
         id: :subscription,

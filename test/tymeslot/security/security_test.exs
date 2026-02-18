@@ -1,10 +1,11 @@
 defmodule Tymeslot.Security.SecurityTest do
-  @moduletag :security
   use Tymeslot.DataCase, async: false
+
+  @moduletag :security
+
   alias Tymeslot.Security.Security
 
   describe "validate_url_params/1" do
-  @moduletag :security
     test "returns true for safe parameters" do
       params = %{"id" => "123", "name" => "John Doe"}
       assert Security.validate_url_params(params) == true

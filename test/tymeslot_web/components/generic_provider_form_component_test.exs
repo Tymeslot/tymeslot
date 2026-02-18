@@ -1,12 +1,13 @@
 defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponentTest do
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :utils
+
   import Phoenix.LiveViewTest
 
   alias TymeslotWeb.Integrations.Providers.GenericProviderFormComponent
 
   test "renders form fields based on schema" do
-  @moduletag :utils
     schema = [
       {:api_key, %{type: :string, label: "API Key"}},
       {:is_active, %{type: :boolean}},

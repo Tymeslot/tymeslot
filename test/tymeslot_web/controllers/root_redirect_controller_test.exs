@@ -1,8 +1,7 @@
 defmodule TymeslotWeb.RootRedirectControllerTest do
-  @moduletag :utils
   # async false because we are changing env vars
-  @moduletag :utils
   use TymeslotWeb.ConnCase, async: false
+  @moduletag :utils
 
   alias Tymeslot.AuthTestHelpers
   alias Tymeslot.Factory

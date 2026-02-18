@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.CreationTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+  @moduletag :integrations
 
   import Tymeslot.Factory
   alias Tymeslot.DatabaseQueries.ProfileQueries
@@ -8,7 +8,6 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
   alias Tymeslot.Integrations.CalendarPrimary
 
   describe "prepare_attrs/2" do
-  @moduletag :integrations
     test "prepares attributes for CalDAV integration" do
       params = %{
         "name" => "Test CalDAV",

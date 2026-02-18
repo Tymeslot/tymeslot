@@ -1,7 +1,5 @@
 defmodule TymeslotWeb.OnboardingLiveTest do
-  @moduletag :utils
   @moduledoc """
-  @moduletag :utils
   Happy path tests for the onboarding flow.
 
   Tests core user journeys including:
@@ -10,6 +8,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
   """
 
   use TymeslotWeb.LiveCase, async: false
+  @moduletag :utils
 
   import Ecto.Query
   import Mox

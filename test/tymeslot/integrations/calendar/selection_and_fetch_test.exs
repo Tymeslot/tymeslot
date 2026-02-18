@@ -1,6 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.SelectionAndFetchTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch

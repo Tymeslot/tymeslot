@@ -1,7 +1,5 @@
 defmodule Tymeslot.Integrations.Shared.LockTest do
-  @moduletag :integrations
   @moduledoc """
-  @moduletag :integrations
   Tests for integration lock mechanism to prevent concurrent operations.
 
   ## Note on Process.sleep Usage
@@ -20,6 +18,7 @@ defmodule Tymeslot.Integrations.Shared.LockTest do
 
   # async: false because we are deleting a global ETS table
   use ExUnit.Case, async: false
+  @moduletag :integrations
 
   import Tymeslot.TestHelpers.Eventually
   alias Tymeslot.Integrations.Shared.Lock

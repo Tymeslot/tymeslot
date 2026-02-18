@@ -1,13 +1,12 @@
 defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
-  @moduletag :integrations
   use Tymeslot.DataCase, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Discovery
   import Tymeslot.Factory
   import Mox
 
   setup :verify_on_exit!
-  @moduletag :integrations
 
   describe "discover_calendars_for_integration/1" do
     test "discovers for google provider" do

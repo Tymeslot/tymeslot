@@ -1,11 +1,10 @@
 defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplateAnalyzerTest do
-  @moduletag :utils
   use ExUnit.Case, async: true
+  @moduletag :utils
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplateAnalyzer
 
   describe "analyze/1 with valid templates" do
-  @moduletag :utils
     test "recognizes valid template with {{meeting_id}}" do
       url = "https://jitsi.example.org/{{meeting_id}}"
 

@@ -1,11 +1,10 @@
 defmodule Tymeslot.Integrations.Shared.ProviderConfigHelperTest do
-  @moduletag :integrations
   use ExUnit.Case, async: true
+  @moduletag :integrations
 
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
 
   describe "effective_providers/4" do
-  @moduletag :integrations
     test "filters by enabled status" do
       providers = [:google, :outlook]
       dev_only = [:local]
