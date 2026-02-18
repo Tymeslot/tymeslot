@@ -323,10 +323,6 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
     end
   end
 
-  defp format_error_message(error) do
-    inspect(error)
-  end
-
   # Input validation
 
   @doc false

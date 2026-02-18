@@ -153,7 +153,7 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
     print_check("Traffic Flows Through Proxy", result.traffic_flows_through_proxy)
 
     if result.errors != [] do
-      Mix.shell().info("\n" <> IO.chardata_to_string(IO.ANSI.format([:red, :bright, "Errors:"])))
+      Mix.shell().info(["\n", IO.ANSI.format([:red, :bright, "Errors:"])])
 
       Enum.each(result.errors, fn error ->
         Mix.shell().error("  - #{error}")
@@ -161,7 +161,7 @@ defmodule Mix.Tasks.Tymeslot.VerifyProxy do
     end
 
     if map_size(result.details) > 0 do
-      Mix.shell().info("\n" <> IO.chardata_to_string(IO.ANSI.format([:bright, "Details:"])))
+      Mix.shell().info(["\n", IO.ANSI.format([:bright, "Details:"])])
       print_details(result.details)
     end
 
