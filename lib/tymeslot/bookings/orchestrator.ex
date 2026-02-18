@@ -35,9 +35,6 @@ defmodule Tymeslot.Bookings.Orchestrator do
       {:ok, meeting} ->
         {:ok, meeting}
 
-      {:error, errors} when is_list(errors) ->
-        {:error, errors}
-
       {:error, reason} when is_binary(reason) ->
         {:error, reason}
 
