@@ -430,11 +430,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
     do: socket
 
   defp assign_theme_customization_data(socket, profile, theme_id) do
-    if profile do
-      ThemeCustomizationHelpers.assign_theme_customization(socket, profile, theme_id)
-    else
-      socket
-    end
+    ThemeCustomizationHelpers.assign_theme_customization(socket, profile, theme_id)
   end
 
   defp prepare_theme_context(profile, params, socket) do
