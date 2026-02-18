@@ -116,7 +116,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
         {:email, "Invalid email format"}
       ])
   """
-  @spec assign_form_errors(Phoenix.LiveView.Socket.t(), list()) ::
+  @spec assign_form_errors(Phoenix.LiveView.Socket.t(), map()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def assign_form_errors(socket, errors) do
     socket = Helpers.assign_form_errors(socket, errors)
