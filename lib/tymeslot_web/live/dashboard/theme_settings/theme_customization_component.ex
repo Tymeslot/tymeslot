@@ -387,17 +387,6 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
           Flash.error("An error occurred. Please refresh the page and try again.")
           {:noreply, socket}
-
-        # Defensive: handle unexpected responses (should never happen based on typespec)
-        unexpected ->
-          Logger.error("Unexpected rate limiter response in theme customization",
-            response: inspect(unexpected),
-            user_id: user_id,
-            profile_id: profile_id
-          )
-
-          Flash.error("An error occurred. Please try again.")
-          {:noreply, socket}
       end
     end
   end
