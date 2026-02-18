@@ -8,7 +8,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.PubSub
 
-  @type provider :: :github | :google
+  @type provider :: :github | :google | :oauth
 
   @doc """
   Finds an existing user in the database by OAuth provider information.
@@ -33,6 +33,17 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
       user_queries,
       &user_queries.get_user_by_google_id/1,
       google_id,
+      email
+    )
+  end
+
+  def find_existing_user(:oauth, %{email: email, oauth_user_id: oauth_id}) do
+    user_queries = Config.user_queries_module()
+
+    find_user_by_id_or_email(
+      user_queries,
+      &user_queries.get_user_by_oauth_id/1,
+      oauth_id,
       email
     )
   end
@@ -82,6 +93,10 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
       do: true
 
   def registration_complete?(:google, %{email: email, google_user_id: id})
+      when is_binary(email) and is_binary(id),
+      do: true
+
+  def registration_complete?(:oauth, %{email: email, oauth_user_id: id})
       when is_binary(email) and is_binary(id),
       do: true
 

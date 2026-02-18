@@ -81,7 +81,8 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
           name: params["oauth_name"],
           verified_email: params["oauth_verified"] == "true",
           github_user_id: params["oauth_github_id"],
-          google_user_id: params["oauth_google_id"]
+          google_user_id: params["oauth_google_id"],
+          oauth_user_id: params["oauth_oauth_id"]
         })
         |> assign(:email_required, params["oauth_email_from_provider"] != "true")
         |> assign(:has_oauth_error, has_oauth_error)

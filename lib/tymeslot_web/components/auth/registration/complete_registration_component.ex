@@ -97,6 +97,9 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
       <%= if @temp_user.google_user_id do %>
         <input type="hidden" name="oauth_google_id" value={@temp_user.google_user_id} />
       <% end %>
+      <%= if @temp_user.oauth_user_id do %>
+        <input type="hidden" name="oauth_oauth_id" value={@temp_user.oauth_user_id} />
+      <% end %>
     </div>
     """
   end

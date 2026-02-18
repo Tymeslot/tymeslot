@@ -195,6 +195,9 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   defp add_provider_user_id(auth_params, %{provider: "google", google_user_id: id}),
     do: Map.put(auth_params, "google_user_id", id)
 
+  defp add_provider_user_id(auth_params, %{provider: "oauth", oauth_user_id: id}),
+    do: Map.put(auth_params, "oauth_user_id", id)
+
   defp add_provider_user_id(auth_params, _temp_user), do: auth_params
 
   @spec ensure_string_keys(map()) :: map()
@@ -255,7 +258,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
     end
   end
 
-  defp validate_provider_name(provider) when provider in ["google", "github"], do: :ok
+  defp validate_provider_name(provider) when provider in ["google", "github", "oauth"], do: :ok
   defp validate_provider_name(_arg), do: {:error, :invalid_provider}
 
   defp user_queries_module do

@@ -188,7 +188,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
   Formats OAuth-specific errors.
 
   ## Parameters
-  - provider: The OAuth provider atom (:github, :google, etc.)
+  - provider: The OAuth provider atom (:github, :google, :oauth etc.)
   - error: The error type
 
   ## Returns

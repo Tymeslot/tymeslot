@@ -12,7 +12,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   alias Tymeslot.Auth.Session
   alias Tymeslot.Infrastructure.Config
 
-  @type provider :: :github | :google
+  @type provider :: :github | :google | :oauth
   @type flow_result :: HelperBehaviour.flow_result()
 
   @doc """

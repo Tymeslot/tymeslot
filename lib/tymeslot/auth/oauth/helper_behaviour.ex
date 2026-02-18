@@ -36,7 +36,7 @@ end
 
 defmodule Tymeslot.Auth.OAuth.ProviderBehaviour do
   @moduledoc """
-  Behaviour for OAuth providers (GitHub, Google, etc.).
+  Behaviour for OAuth providers (GitHub, Google, OAuth etc.).
   """
   @callback authorize_url(Plug.Conn.t(), String.t()) :: {Plug.Conn.t(), String.t()}
   @callback handle_callback(Plug.Conn.t(), String.t(), String.t(), String.t()) ::

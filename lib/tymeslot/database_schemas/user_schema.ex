@@ -39,6 +39,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
           provider_meta: map() | nil,
           github_user_id: String.t() | nil,
           google_user_id: String.t() | nil,
+          oauth_user_id: String.t() | nil,
           onboarding_completed_at: DateTime.t() | nil,
           profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integrations: [CalendarIntegrationSchema.t()] | Ecto.Association.NotLoaded.t(),
@@ -72,6 +73,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
     field(:provider_meta, :map)
     field(:github_user_id, :string)
     field(:google_user_id, :string)
+    field(:oauth_user_id, :string)
     field(:onboarding_completed_at, :utc_datetime)
 
     has_one(:profile, Tymeslot.DatabaseSchemas.ProfileSchema, foreign_key: :user_id)
@@ -134,6 +136,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
       :provider_meta,
       :github_user_id,
       :google_user_id,
+      :oauth_user_id,
       :verified_at
     ])
     |> validate_required([:email])
@@ -142,6 +145,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
     |> unique_constraint([:provider, :provider_uid])
     |> unique_constraint(:github_user_id)
     |> unique_constraint(:google_user_id)
+    |> unique_constraint(:oauth_user_id)
   end
 
   @spec password_reset_changeset(t(), map()) :: Ecto.Changeset.t()

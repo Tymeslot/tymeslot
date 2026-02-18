@@ -486,7 +486,8 @@ config :tymeslot, registration_enabled: System.get_env("REGISTRATION_ENABLED", "
 # These environment variables control whether social login is enabled
 config :tymeslot, :social_auth,
   google_enabled: System.get_env("ENABLE_GOOGLE_AUTH", "false") == "true",
-  github_enabled: System.get_env("ENABLE_GITHUB_AUTH", "false") == "true"
+  github_enabled: System.get_env("ENABLE_GITHUB_AUTH", "false") == "true",
+  oauth_enabled: System.get_env("ENABLE_OAUTH_AUTH", "false") == "true"
 
 # reCAPTCHA configuration (runtime)
 # Signup and booking protection are configurable and will automatically disable if keys are missing.

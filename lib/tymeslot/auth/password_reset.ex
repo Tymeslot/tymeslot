@@ -76,7 +76,7 @@ defmodule Tymeslot.Auth.PasswordReset do
       provider when provider in [nil, "email"] ->
         process_regular_user_reset(user, user_queries)
 
-      provider when provider in ["google", "github"] ->
+      provider when provider in ["google", "github", "oauth"] ->
         handle_oauth_user_reset(user, provider)
 
       provider ->

@@ -74,7 +74,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   atomically. Prevents duplicate user creation in high-concurrency scenarios.
 
   ## Parameters
-  - provider: The OAuth provider (:github or :google)
+  - provider: The OAuth provider (:github, :google or :oauth)
   - auth_params: Map containing user authentication parameters
 
   ## Returns
@@ -179,6 +179,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     case provider do
       :github -> UserQueries.get_user_by_github_id(provider_uid, repo)
       :google -> UserQueries.get_user_by_google_id(provider_uid, repo)
+      :oauth -> UserQueries.get_user_by_oauth_id(provider_uid, repo)
       _other -> {:error, :not_found}
     end
   end
@@ -217,11 +218,13 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     case provider do
       :github -> %{github_user_id: provider_uid}
       :google -> %{google_user_id: provider_uid}
+      :oauth -> %{oauth_user_id: provider_uid}
       _other -> %{}
     end
   end
 
   defp provider_uid_field(:github), do: "github_user_id"
   defp provider_uid_field(:google), do: "google_user_id"
+  defp provider_uid_field(:oauth), do: "oauth_user_id"
   defp provider_uid_field(_arg), do: nil
 end

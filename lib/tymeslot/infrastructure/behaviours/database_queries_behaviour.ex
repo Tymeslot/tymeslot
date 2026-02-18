@@ -17,6 +17,7 @@ defmodule Tymeslot.Infrastructure.DatabaseQueriesBehaviour do
   @callback get_user_by_reset_token(String.t()) :: term() | nil
   @callback get_user_by_github_id(integer()) :: term() | nil
   @callback get_user_by_google_id(String.t()) :: term() | nil
+  @callback get_user_by_oauth_id(String.t()) :: term() | nil
 
   # Token management
   @callback update_session_token(integer(), String.t(), DateTime.t()) :: {integer(), nil}

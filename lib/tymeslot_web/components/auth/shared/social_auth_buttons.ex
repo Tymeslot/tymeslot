@@ -22,14 +22,16 @@ defmodule TymeslotWeb.Shared.SocialAuthButtons do
     social_auth_config = Application.get_env(:tymeslot, :social_auth, [])
     google_enabled = Keyword.get(social_auth_config, :google_enabled, false)
     github_enabled = Keyword.get(social_auth_config, :github_enabled, false)
-    any_enabled = google_enabled || github_enabled
+    oauth_enabled = Keyword.get(social_auth_config, :oauth_enabled, false)
+    any_enabled = google_enabled || github_enabled || oauth_enabled
 
     assigns =
       assigns
       |> assign(:google_enabled, google_enabled)
       |> assign(:github_enabled, github_enabled)
+      |> assign(:oauth_enabled, oauth_enabled)
       |> assign(:any_enabled, any_enabled)
-      |> assign(:grid_cols, determine_grid_cols(google_enabled, github_enabled))
+      |> assign(:grid_cols, determine_grid_cols(google_enabled, github_enabled, oauth_enabled))
 
     ~H"""
     <div :if={@any_enabled} class="space-y-4">
@@ -46,19 +48,29 @@ defmodule TymeslotWeb.Shared.SocialAuthButtons do
           label={if @signup, do: "Join with GitHub", else: "GitHub"}
           href={~p"/auth/github"}
         />
+        <.social_auth_button
+          :if={@oauth_enabled}
+          provider="oauth"
+          label={if @signup, do: "Join with OAuth", else: "OAuth"}
+          href="/auth/oauth"
+        />
       </div>
     </div>
     """
   end
 
-  defp determine_grid_cols(true, true), do: "sm:grid-cols-2"
-  defp determine_grid_cols(_google_enabled, _github_enabled), do: ""
+  defp determine_grid_cols(true, true, true), do: "sm:grid-cols-3"
+  defp determine_grid_cols(true, true, false), do: "sm:grid-cols-2"
+  defp determine_grid_cols(true, false, true), do: "sm:grid-cols-2"
+  defp determine_grid_cols(false, true, true), do: "sm:grid-cols-2"
+  defp determine_grid_cols(_google_enabled, _github_enabled, _oauth_enabled), do: ""
 
   @doc """
   Renders a social authentication button for a given provider.
   Usage:
     <.social_auth_button provider="google" label="Log in with Google" href="/auth/google" />
     <.social_auth_button provider="github" label="Log in with GitHub" href="/auth/github" />
+    <.social_auth_button provider="oauth" label="Log in with OAuth" href="/auth/oauth" />
   """
   attr :provider, :string, required: true
   attr :label, :string, required: true

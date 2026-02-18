@@ -1,6 +1,6 @@
 defmodule Tymeslot.Auth.OAuth.Authenticator do
   @moduledoc """
-  Shared OAuth authentication flow for GitHub and Google providers.
+  Shared OAuth authentication flow for GitHub, Google and Generic OAuth providers.
 
   Handles the common pattern of exchanging codes, fetching user info,
   processing users, and creating sessions or returning registration params.
@@ -10,13 +10,14 @@ defmodule Tymeslot.Auth.OAuth.Authenticator do
 
   alias Tymeslot.Auth.Session
 
-  @type provider :: :github | :google
+  @type provider :: :github | :google | :oauth
   @type registration_params :: %{
           provider: String.t(),
           email: String.t(),
           verified_email: boolean(),
           github_user_id: integer() | nil,
-          google_user_id: integer() | nil
+          google_user_id: integer() | nil,
+          oauth_user_id: String.t() | nil
         }
 
   @doc """
@@ -28,7 +29,7 @@ defmodule Tymeslot.Auth.OAuth.Authenticator do
   ## Parameters
     - conn: Plug.Conn.t()
     - code: String.t() - OAuth authorization code
-    - provider: atom() - OAuth provider (:github or :google)
+    - provider: atom() - OAuth provider (:github, :google or :oauth)
     - callback_url: String.t() - OAuth callback URL
     - process_user_fun: function - Function to process user info (provider-specific)
     - registration_complete_fun: function - Function to check if registration is complete

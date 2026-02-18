@@ -160,6 +160,7 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
           case String.downcase(service_name) do
             "github" -> :github
             "google" -> :google
+            "oauth" -> :oauth
             _other_service -> :unknown
           end
 

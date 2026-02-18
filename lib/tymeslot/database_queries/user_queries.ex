@@ -144,6 +144,18 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
   end
 
   @doc """
+  Gets a user by OAuth user ID.
+  Returns {:ok, user} if found, {:error, :not_found} otherwise.
+  """
+  @spec get_user_by_oauth_id(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
+  def get_user_by_oauth_id(oauth_user_id) when is_binary(oauth_user_id) do
+    case Repo.get_by(UserSchema, oauth_user_id: oauth_user_id) do
+      nil -> {:error, :not_found}
+      user -> {:ok, user}
+    end
+  end
+
+  @doc """
   Creates a user.
   """
   @spec create_user(map()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
@@ -414,6 +426,19 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
           {:ok, UserSchema.t()} | {:error, :not_found}
   def get_user_by_google_id(google_user_id, repo) when is_binary(google_user_id) do
     case repo.get_by(UserSchema, google_user_id: google_user_id) do
+      nil -> {:error, :not_found}
+      user -> {:ok, user}
+    end
+  end
+
+  @doc """
+  Gets a user by OAuth ID using a specific repo (for transactions).
+  Returns {:ok, user} if found, {:error, :not_found} otherwise.
+  """
+  @spec get_user_by_oauth_id(String.t(), Ecto.Repo.t()) ::
+          {:ok, UserSchema.t()} | {:error, :not_found}
+  def get_user_by_oauth_id(oauth_user_id, repo) when is_binary(oauth_user_id) do
+    case repo.get_by(UserSchema, oauth_user_id: oauth_user_id) do
       nil -> {:error, :not_found}
       user -> {:ok, user}
     end

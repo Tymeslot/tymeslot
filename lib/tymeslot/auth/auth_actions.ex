@@ -65,7 +65,8 @@ defmodule Tymeslot.Auth.AuthActions do
       email: auth_params["email"],
       verified_email: auth_params["verified_email"] == "true",
       github_user_id: auth_params["github_user_id"],
-      google_user_id: auth_params["google_user_id"]
+      google_user_id: auth_params["google_user_id"],
+      oauth_user_id: auth_params["oauth_user_id"]
     }
 
     metadata = %{
