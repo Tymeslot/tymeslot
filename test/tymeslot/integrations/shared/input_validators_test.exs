@@ -13,21 +13,21 @@ defmodule Tymeslot.Integrations.Shared.InputValidatorsTest do
     end
 
     test "rejects empty string" do
-      assert {:error, %{name: _}} = InputValidators.validate_integration_name("")
+      assert {:error, %{name: _error}} = InputValidators.validate_integration_name("")
     end
 
     test "rejects whitespace-only string" do
-      assert {:error, %{name: _}} = InputValidators.validate_integration_name("   ")
+      assert {:error, %{name: _error}} = InputValidators.validate_integration_name("   ")
     end
 
     test "rejects name exceeding 120 characters" do
       long_name = String.duplicate("a", 121)
-      assert {:error, %{name: _}} = InputValidators.validate_integration_name(long_name)
+      assert {:error, %{name: _error}} = InputValidators.validate_integration_name(long_name)
     end
 
     test "rejects non-string values" do
-      assert {:error, %{name: _}} = InputValidators.validate_integration_name(123)
-      assert {:error, %{name: _}} = InputValidators.validate_integration_name(nil)
+      assert {:error, %{name: _error}} = InputValidators.validate_integration_name(123)
+      assert {:error, %{name: _error}} = InputValidators.validate_integration_name(nil)
     end
   end
 
@@ -38,7 +38,7 @@ defmodule Tymeslot.Integrations.Shared.InputValidatorsTest do
     end
 
     test "rejects empty name with metadata" do
-      assert {:error, %{name: _}} = InputValidators.validate_integration_name("", %{})
+      assert {:error, %{name: _error}} = InputValidators.validate_integration_name("", %{})
     end
   end
 
