@@ -177,10 +177,15 @@ defmodule Tymeslot.Auth.Authentication do
       end
 
     errors =
-      if is_nil(password) or password == "" do
-        Map.put(errors, :password, "Password is required")
-      else
-        errors
+      cond do
+        is_nil(password) or password == "" ->
+          Map.put(errors, :password, "Password is required")
+
+        byte_size(password) > 1024 ->
+          Map.put(errors, :password, "Password is too long")
+
+        true ->
+          errors
       end
 
     if map_size(errors) == 0, do: :ok, else: {:error, errors}

@@ -121,7 +121,7 @@ defmodule TymeslotWeb.SessionController do
     case path do
       p when is_binary(p) ->
         if String.starts_with?(p, "/") and not String.contains?(p, "://") and
-             not String.starts_with?(p, "//") do
+             not String.starts_with?(p, "//") and not String.contains?(p, "\\") do
           p
         else
           default
