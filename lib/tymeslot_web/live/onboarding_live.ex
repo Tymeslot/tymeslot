@@ -58,7 +58,7 @@ defmodule TymeslotWeb.OnboardingLive do
         |> assign(:timezone_options, TimezoneUtils.get_all_timezone_options())
         |> assign(:timezone_dropdown_open, false)
         |> assign(:timezone_search, "")
-        |> assign(:page_title, "Welcome to Tymeslot")
+        |> assign(:page_title, "Welcome")
         |> assign(:form_errors, %{})
         |> assign(:custom_input_mode, CustomInputModeHelper.default_custom_mode())
 
