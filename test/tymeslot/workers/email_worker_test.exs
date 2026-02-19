@@ -229,6 +229,35 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
                  "reset_url" => "http://test.com"
                })
     end
+
+    test "discards send_email_change_verification job if user not found" do
+      assert {:discard, "User not found"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_email_change_verification",
+                 "user_id" => 999_999,
+                 "new_email" => "new@example.com",
+                 "verification_url" => "https://example.com/verify/token"
+               })
+    end
+
+    test "discards send_email_change_notification job if user not found" do
+      assert {:discard, "User not found"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_email_change_notification",
+                 "user_id" => 999_999,
+                 "new_email" => "new@example.com"
+               })
+    end
+
+    test "discards send_email_change_confirmations job if user not found" do
+      assert {:discard, "User not found"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_email_change_confirmations",
+                 "user_id" => 999_999,
+                 "old_email" => "old@example.com",
+                 "new_email" => "new@example.com"
+               })
+    end
   end
 
   describe "backoff/1" do
