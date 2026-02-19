@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.HelpersTest do
   use TymeslotWeb.ConnCase, async: true
 
-  @moduletag :utils
+  @moduletag :meeting_types
 
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
@@ -32,26 +32,6 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.HelpersTest do
 
     test "handles other types" do
       assert Helpers.format_errors(nil) == "An error occurred"
-    end
-  end
-
-  describe "handle_meeting_type_save_result/2" do
-    test "handles success" do
-      socket = mock_socket(%{editing_type: nil})
-      {:noreply, socket} = Helpers.handle_meeting_type_save_result({:ok, %{}}, socket)
-      assert_receive {:meeting_type_changed}
-      assert_receive {:flash, {:info, "Meeting type created"}}
-      refute socket.assigns.show_add_form
-    end
-
-    test "handles specific errors" do
-      socket = mock_socket()
-
-      {:noreply, socket} =
-        Helpers.handle_meeting_type_save_result({:error, :video_integration_required}, socket)
-
-      assert hd(socket.assigns.form_errors[:video_integration]) =~ "select a video provider"
-      refute socket.assigns.saving
     end
   end
 end

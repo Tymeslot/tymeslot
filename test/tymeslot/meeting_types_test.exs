@@ -5,7 +5,7 @@ defmodule Tymeslot.MeetingTypesTest do
   """
 
   use Tymeslot.DataCase, async: true
-  @moduletag :utils
+  @moduletag :meeting_types
 
   alias Tymeslot.MeetingTypes
 
