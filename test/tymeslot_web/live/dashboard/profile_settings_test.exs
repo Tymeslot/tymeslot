@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
   use TymeslotWeb.LiveCase, async: true
-  @moduletag :utils
+  @moduletag :profiles
+  @moduletag :live
 
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
@@ -135,6 +136,34 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
 
       assert render(view) =~ "too long"
     end
+
+    test "does not flash when display name is unchanged", %{conn: conn, profile: profile} do
+      # Set a known name first
+      profile = Repo.update!(Changeset.change(profile, full_name: "Existing Name"))
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      # Trigger change with the same value that's already in the DB
+      view
+      |> form("#display-name-form", %{full_name: profile.full_name})
+      |> render_change()
+
+      refute render(view) =~ "Display name updated"
+    end
+
+    test "clears display name when empty string is entered", %{conn: conn, profile: profile} do
+      profile = Repo.update!(Changeset.change(profile, full_name: "Some Name"))
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view
+      |> form("#display-name-form", %{full_name: ""})
+      |> render_change()
+
+      # Empty string is treated as a valid clear — no error, name is nil in DB
+      updated_profile = Repo.reload!(profile)
+      assert is_nil(updated_profile.full_name) or updated_profile.full_name == ""
+    end
   end
 
   describe "Username updates" do
@@ -178,9 +207,85 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
 
       assert render(view) =~ "Invalid"
     end
+
+    test "shows invalid badge when reserved username is typed", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view
+      |> form("#username-form-container form", %{username: "admin"})
+      |> render_change()
+
+      # Reserved names are rejected by InputProcessor as invalid, not as taken
+      assert render(view) =~ "Invalid"
+      refute render(view) =~ "Available"
+      refute render(view) =~ "Taken"
+    end
+
+    test "shows error when reserved username is submitted", %{conn: conn, profile: _profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view
+      |> form("#username-form-container form", %{username: "api"})
+      |> render_submit()
+
+      # InputProcessor.validate_field catches reserved names before Profiles.update_username
+      # is reached, and surfaces the message "This username is reserved and cannot be used".
+      html = render(view)
+      assert html =~ "reserved"
+    end
+
+    test "shows booking URL after successful username update", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      view
+      |> form("#username-form-container form", %{username: "mybookingpage"})
+      |> render_submit()
+
+      assert render(view) =~ "mybookingpage"
+    end
   end
 
   describe "Timezone updates" do
+    test "opens and closes the timezone dropdown", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      # Dropdown should be closed initially — search input not visible
+      refute render(view) =~ "Search cities"
+
+      # Open it
+      view
+      |> element("#timezone-form-container button[phx-click='toggle_timezone_dropdown']")
+      |> render_click()
+
+      assert render(view) =~ "Search cities"
+
+      # Close it via toggle
+      view
+      |> element("#timezone-form-container button[phx-click='toggle_timezone_dropdown']")
+      |> render_click()
+
+      refute render(view) =~ "Search cities"
+    end
+
+    test "filters timezone options by search term", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      # Open the dropdown
+      view
+      |> element("#timezone-form-container button[phx-click='toggle_timezone_dropdown']")
+      |> render_click()
+
+      # The search input uses phx-keyup; send the event with the "value" key that the
+      # component expects (name="value" on the input).
+      view
+      |> element("#timezone-search")
+      |> render_keyup(%{value: "London"})
+
+      html = render(view)
+      assert html =~ "London"
+      refute html =~ "New York"
+    end
+
     test "successfully updates timezone", %{conn: conn, profile: profile} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
 
