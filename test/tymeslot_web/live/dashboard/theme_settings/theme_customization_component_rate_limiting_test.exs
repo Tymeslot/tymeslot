@@ -37,8 +37,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLim
     end
 
     test "rate limit is per-user and isolated", %{profile: profile} do
+      user_2 = insert(:user)
       user_id_1 = profile.user_id
-      user_id_2 = profile.user_id + 1000
+      user_id_2 = user_2.id
 
       # User 1 exhausts their limit
       for _i <- 1..150 do
