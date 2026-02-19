@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
   use TymeslotWeb.ConnCase, async: false
 
-  @moduletag :utils
+  @moduletag :integration
 
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
@@ -141,6 +141,124 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
     end
   end
 
+  describe "Token regeneration flow" do
+    setup %{user: user} do
+      {:ok, webhook} =
+        Webhooks.create_webhook(user.id, %{
+          name: "Test Webhook",
+          url: "https://example.com/webhook",
+          events: ["meeting.created"]
+        })
+
+      {:ok, webhook: webhook}
+    end
+
+    test "user can regenerate the security token from the edit form", %{
+      conn: conn,
+      user: user,
+      webhook: webhook
+    } do
+      original_token = webhook.webhook_token
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+
+      # Open edit form — token is displayed there with the Regenerate button
+      view
+      |> element("button[title='Edit Webhook']")
+      |> render_click()
+
+      assert render(view) =~ "Edit Webhook"
+
+      # Click "Regenerate" button in the edit form to open the confirmation modal
+      view
+      |> element("button[phx-click='show_regenerate_token_modal']")
+      |> render_click()
+
+      assert render(view) =~ "Regenerate Token?"
+
+      # Confirm the regeneration via the danger button in the modal
+      view
+      |> element("#regenerate-token-modal .action-button--danger")
+      |> render_click()
+
+      assert render(view) =~ "Security token regenerated"
+
+      # A new, different token was persisted
+      [updated_webhook] = Webhooks.list_webhooks(user.id)
+      assert updated_webhook.webhook_token != original_token
+      assert String.starts_with?(updated_webhook.webhook_token, "ts_")
+    end
+  end
+
+  describe "Test connection flow" do
+    setup %{user: user} do
+      {:ok, webhook} =
+        Webhooks.create_webhook(user.id, %{
+          name: "Test Webhook",
+          url: "https://example.com/webhook",
+          events: ["meeting.created"]
+        })
+
+      {:ok, webhook: webhook}
+    end
+
+    test "shows success when the endpoint responds with 2xx", %{conn: conn} do
+      ConfigTestHelpers.setup_config(:tymeslot,
+        http_client_module: TymeslotWeb.Dashboard.Automation.TestHTTPClientSuccess
+      )
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+
+      view
+      |> element("button[title='Test Connection']")
+      |> render_click()
+
+      assert render(view) =~ "Webhook test successful"
+    end
+
+    test "shows an error when the endpoint returns a non-2xx status", %{conn: conn} do
+      ConfigTestHelpers.setup_config(:tymeslot,
+        http_client_module: TymeslotWeb.Dashboard.Automation.TestHTTPClientFailure
+      )
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+
+      view
+      |> element("button[title='Test Connection']")
+      |> render_click()
+
+      assert render(view) =~ "Test failed"
+    end
+  end
+
+  describe "Delivery logs modal" do
+    setup %{user: user} do
+      {:ok, webhook} =
+        Webhooks.create_webhook(user.id, %{
+          name: "Test Webhook",
+          url: "https://example.com/webhook",
+          events: ["meeting.created"]
+        })
+
+      {:ok, webhook: webhook}
+    end
+
+    test "opens and shows delivery statistics for a webhook", %{conn: conn, webhook: webhook} do
+      insert(:webhook_delivery, webhook: webhook, event_type: "meeting.created")
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation")
+
+      view
+      |> element("button[title='View Delivery Logs']")
+      |> render_click()
+
+      html = render(view)
+      assert html =~ "Total"
+      assert html =~ "Success"
+      assert html =~ "Failed"
+    end
+  end
+
   describe "Server-side feature gating" do
     setup %{user: user} do
       # Create a test meeting for webhook triggering
@@ -264,4 +382,20 @@ defmodule TymeslotWeb.Dashboard.Automation.TestAccessCheckerFails do
 
   @spec check_access(any(), atom()) :: {:error, atom()}
   def check_access(_user_id, _feature), do: {:error, :checker_unavailable}
+end
+
+# Minimal HTTP client stubs for test connection UI tests.
+# These avoid Mox cross-process coordination issues in LiveView tests.
+defmodule TymeslotWeb.Dashboard.Automation.TestHTTPClientSuccess do
+  @moduledoc false
+
+  @spec post(String.t(), any(), any(), any()) :: {:ok, map()}
+  def post(_url, _body, _headers, _opts), do: {:ok, %{status: 200, body: "OK"}}
+end
+
+defmodule TymeslotWeb.Dashboard.Automation.TestHTTPClientFailure do
+  @moduledoc false
+
+  @spec post(String.t(), any(), any(), any()) :: {:ok, map()}
+  def post(_url, _body, _headers, _opts), do: {:ok, %{status: 503, body: "Service Unavailable"}}
 end

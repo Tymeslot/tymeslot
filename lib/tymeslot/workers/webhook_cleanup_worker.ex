@@ -20,6 +20,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
   import Ecto.Query
   alias Tymeslot.DatabaseQueries.WebhookQueries
   alias Tymeslot.DatabaseSchemas.WebhookEventSchema, as: WebhookEvent
+  alias Tymeslot.Repo
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
@@ -56,14 +57,19 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
         get_in(Application.get_env(:tymeslot, :payments, []), [:retention, :stripe_event_days]) ||
         90
 
-    cutoff_date = DateTime.add(DateTime.utc_now(), -retention_days, :day)
+    # WebhookEventSchema.inserted_at is a NaiveDateTime (:naive_datetime), so the
+    # cutoff must be NaiveDateTime too — passing a DateTime silently fails to match.
+    cutoff_date =
+      DateTime.utc_now()
+      |> DateTime.add(-retention_days, :day)
+      |> DateTime.to_naive()
 
     query =
       from(w in WebhookEvent,
         where: w.inserted_at < ^cutoff_date
       )
 
-    case repo().delete_all(query) do
+    case Repo.delete_all(query) do
       {count, nil} when count > 0 ->
         Logger.info(
           "Cleaned up #{count} old Stripe webhook events older than #{retention_days} days"
@@ -77,7 +83,4 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
     end
   end
 
-  defp repo do
-    Application.get_env(:tymeslot, :repo, Tymeslot.Repo)
-  end
 end

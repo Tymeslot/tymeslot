@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Dashboard.Automation.ComponentsTest do
       refute html =~ "Last triggered"
     end
 
-    test "renders testing state" do
+    test "renders testing state with the button disabled and showing 'Testing' label" do
       webhook = %{
         id: 1,
         name: "Test Webhook",
@@ -89,7 +89,9 @@ defmodule TymeslotWeb.Dashboard.Automation.ComponentsTest do
       }
 
       html = render_component(&Components.webhook_card/1, assigns)
-      assert html =~ "animate-spin"
+      # The button text changes to "Testing" and it becomes disabled while a test is in progress
+      assert html =~ "Testing"
+      assert html =~ ~s(disabled)
     end
   end
 

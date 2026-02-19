@@ -7,52 +7,43 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
 
   import Tymeslot.Factory
 
+  alias Tymeslot.DatabaseSchemas.WebhookDeliverySchema
+  alias Tymeslot.DatabaseSchemas.WebhookEventSchema
   alias Tymeslot.Workers.WebhookCleanupWorker
 
-  describe "perform/1" do
-    test "cleans up old webhook deliveries based on retention days" do
+  describe "perform/1 - outgoing webhook delivery cleanup" do
+    test "removes delivery records older than the retention period" do
       webhook = insert(:webhook)
 
-      # Create some deliveries
-      # Old delivery (61 days ago)
       old_date = DateTime.add(DateTime.utc_now(), -61, :day)
       old_delivery = insert(:webhook_delivery, webhook: webhook, inserted_at: old_date)
 
-      # Recent delivery (10 days ago)
       recent_date = DateTime.add(DateTime.utc_now(), -10, :day)
       recent_delivery = insert(:webhook_delivery, webhook: webhook, inserted_at: recent_date)
 
-      # Run the worker with default 60 days retention
       assert :ok = perform_job(WebhookCleanupWorker, %{})
 
-      # Check results
-      refute Repo.get(Tymeslot.DatabaseSchemas.WebhookDeliverySchema, old_delivery.id)
-      assert Repo.get(Tymeslot.DatabaseSchemas.WebhookDeliverySchema, recent_delivery.id)
+      refute Repo.get(WebhookDeliverySchema, old_delivery.id)
+      assert Repo.get(WebhookDeliverySchema, recent_delivery.id)
     end
 
-    test "respects retention_days argument" do
+    test "respects the retention_days argument" do
       webhook = insert(:webhook)
 
-      # Delivery from 35 days ago
       date_35 = DateTime.add(DateTime.utc_now(), -35, :day)
       delivery_35 = insert(:webhook_delivery, webhook: webhook, inserted_at: date_35)
 
-      # Run with 30 days retention
       assert :ok = perform_job(WebhookCleanupWorker, %{"retention_days" => 30})
+      refute Repo.get(WebhookDeliverySchema, delivery_35.id)
 
-      refute Repo.get(Tymeslot.DatabaseSchemas.WebhookDeliverySchema, delivery_35.id)
-
-      # Run with 40 days retention on another delivery
       delivery_35_new = insert(:webhook_delivery, webhook: webhook, inserted_at: date_35)
       assert :ok = perform_job(WebhookCleanupWorker, %{"retention_days" => 40})
-
-      assert Repo.get(Tymeslot.DatabaseSchemas.WebhookDeliverySchema, delivery_35_new.id)
+      assert Repo.get(WebhookDeliverySchema, delivery_35_new.id)
     end
 
-    test "handles negative retention days safely (should not delete everything)" do
+    test "guards against negative retention days to prevent unintended bulk deletion" do
       webhook = insert(:webhook)
 
-      # Create deliveries at various ages
       recent_delivery = insert(:webhook_delivery, webhook: webhook)
 
       old_delivery =
@@ -61,16 +52,14 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
           inserted_at: DateTime.add(DateTime.utc_now(), -100, :day)
         )
 
-      # Negative retention should not cause data loss
-      # The query should handle this gracefully (likely by keeping all records)
       assert :ok = perform_job(WebhookCleanupWorker, %{"retention_days" => -1})
 
-      # Both deliveries should still exist (negative days = keep everything)
-      assert Repo.get(Tymeslot.DatabaseSchemas.WebhookDeliverySchema, recent_delivery.id)
-      assert Repo.get(Tymeslot.DatabaseSchemas.WebhookDeliverySchema, old_delivery.id)
+      # Negative retention is treated as a guard: no records are deleted
+      assert Repo.get(WebhookDeliverySchema, recent_delivery.id)
+      assert Repo.get(WebhookDeliverySchema, old_delivery.id)
     end
 
-    test "handles zero retention days (deletes all)" do
+    test "zero retention days removes everything older than today" do
       webhook = insert(:webhook)
 
       _recent_delivery = insert(:webhook_delivery, webhook: webhook)
@@ -81,14 +70,12 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
           inserted_at: DateTime.add(DateTime.utc_now(), -10, :day)
         )
 
-      # Zero retention = delete everything older than today
       assert :ok = perform_job(WebhookCleanupWorker, %{"retention_days" => 0})
 
-      # Old delivery should be deleted, recent might be kept depending on timestamp precision
-      refute Repo.get(Tymeslot.DatabaseSchemas.WebhookDeliverySchema, old_delivery.id)
+      refute Repo.get(WebhookDeliverySchema, old_delivery.id)
     end
 
-    test "handles extremely large retention days (capped to reasonable limit)" do
+    test "very large retention days keeps all records" do
       webhook = insert(:webhook)
 
       very_old_delivery =
@@ -97,13 +84,69 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
           inserted_at: DateTime.add(DateTime.utc_now(), -1000, :day)
         )
 
-      # Very large retention will cause DateTime.add to overflow
-      # This documents the edge case - in production, retention should be < 10000 days
-      # Testing with a large but reasonable value (10000 days = ~27 years)
       assert :ok = perform_job(WebhookCleanupWorker, %{"retention_days" => 10_000})
 
-      # With such high retention, the old delivery should still exist
-      assert Repo.get(Tymeslot.DatabaseSchemas.WebhookDeliverySchema, very_old_delivery.id)
+      assert Repo.get(WebhookDeliverySchema, very_old_delivery.id)
+    end
+  end
+
+  describe "perform/1 - incoming Stripe webhook event cleanup" do
+    # Use insert_all to bypass Ecto's autogenerate for inserted_at, which would
+    # override any value we set via Repo.insert!/1 with the current timestamp.
+    defp insert_webhook_event(stripe_event_id, dt) do
+      truncated = DateTime.truncate(dt, :second)
+      naive = NaiveDateTime.truncate(DateTime.to_naive(truncated), :second)
+
+      {1, [%{id: id}]} =
+        Repo.insert_all(
+          "webhook_events",
+          [
+            %{
+              stripe_event_id: stripe_event_id,
+              event_type: "customer.subscription.updated",
+              processed_at: truncated,
+              inserted_at: naive
+            }
+          ],
+          returning: [:id]
+        )
+
+      id
+    end
+
+    test "removes Stripe event records older than the retention period" do
+      old_date = DateTime.add(DateTime.utc_now(), -91, :day)
+      recent_date = DateTime.add(DateTime.utc_now(), -10, :day)
+
+      old_id = insert_webhook_event("evt_old_#{System.unique_integer()}", old_date)
+      recent_id = insert_webhook_event("evt_recent_#{System.unique_integer()}", recent_date)
+
+      assert :ok = perform_job(WebhookCleanupWorker, %{})
+
+      refute Repo.get(WebhookEventSchema, old_id)
+      assert Repo.get(WebhookEventSchema, recent_id)
+    end
+
+    test "respects the stripe_event_retention_days argument" do
+      date_45 = DateTime.add(DateTime.utc_now(), -45, :day)
+      event_id = insert_webhook_event("evt_45d_#{System.unique_integer()}", date_45)
+
+      # With 30-day retention the 45-day-old event should be removed
+      assert :ok = perform_job(WebhookCleanupWorker, %{"stripe_event_retention_days" => 30})
+      refute Repo.get(WebhookEventSchema, event_id)
+    end
+
+    test "outgoing delivery cleanup and Stripe event cleanup run together in a single job" do
+      webhook = insert(:webhook)
+      old_date = DateTime.add(DateTime.utc_now(), -91, :day)
+
+      old_delivery = insert(:webhook_delivery, webhook: webhook, inserted_at: old_date)
+      old_event_id = insert_webhook_event("evt_combined_#{System.unique_integer()}", old_date)
+
+      assert :ok = perform_job(WebhookCleanupWorker, %{})
+
+      refute Repo.get(WebhookDeliverySchema, old_delivery.id)
+      refute Repo.get(WebhookEventSchema, old_event_id)
     end
   end
 end
