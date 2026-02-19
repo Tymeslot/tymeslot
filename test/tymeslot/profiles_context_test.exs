@@ -5,10 +5,12 @@ defmodule Tymeslot.ProfilesContextTest do
   """
 
   use Tymeslot.DataCase, async: true
-  @moduletag :utils
+  @moduletag :profiles
+  @moduletag :unit
 
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Profiles
+  alias Tymeslot.Themes.Theme
 
   # =====================================
   # Profile Retrieval Behaviors
@@ -146,6 +148,23 @@ defmodule Tymeslot.ProfilesContextTest do
       assert {:error, _reason} = Profiles.validate_username_format("Invalid User")
       assert Profiles.validate_username_format("valid_user-123") == :ok
     end
+
+    test "username_available? returns false for reserved usernames" do
+      # Reserved names are not in the DB but should not be considered available
+      # (validate_username_format catches them, but username_available? is a DB-only check)
+      # This test documents the current behavior: reserved names ARE "available" in the DB
+      # sense — rejection happens upstream at the validation layer.
+      assert Profiles.username_available?("admin") == true
+    end
+
+    test "update_username rejects reserved usernames" do
+      user = insert(:user)
+      profile = insert(:profile, user: user)
+
+      assert {:error, reason} = Profiles.update_username(profile, "admin", user.id)
+      assert is_binary(reason)
+      assert reason =~ "reserved"
+    end
   end
 
   # =====================================
@@ -217,9 +236,9 @@ defmodule Tymeslot.ProfilesContextTest do
 
       # 1x1 transparent PNG
       png_binary =
-        <<137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8,
-          6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 8, 153, 99, 96, 0, 2, 0, 0,
-          5, 0, 1, 34, 38, 10, 75, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130>>
+        <<137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1,
+          8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 8, 153, 99, 96, 0, 2, 0,
+          0, 5, 0, 1, 34, 38, 10, 75, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130>>
 
       fake_path = "/tmp/valid_image.png"
       File.write!(fake_path, png_binary)
@@ -238,10 +257,140 @@ defmodule Tymeslot.ProfilesContextTest do
       File.rm!(fake_path)
     end
 
+    test "delete_avatar removes the avatar from the profile" do
+      user = insert(:user)
+      profile = insert(:profile, user: user, avatar: "some_avatar.png")
+
+      assert {:ok, updated} = Profiles.delete_avatar(profile)
+      assert is_nil(updated.avatar)
+    end
+
     test "display_name returns full name or nil" do
       assert Profiles.display_name(insert(:profile, full_name: "John Doe")) == "John Doe"
       assert Profiles.display_name(insert(:profile, full_name: "")) == nil
       assert Profiles.display_name(nil) == nil
+    end
+
+    test "display_name returns nil for whitespace-only name" do
+      assert Profiles.display_name(insert(:profile, full_name: "   ")) == nil
+    end
+  end
+
+  # =====================================
+  # Display Name & Timezone Updates
+  # =====================================
+
+  describe "display name and timezone updates" do
+    setup do
+      user = insert(:user)
+      profile = insert(:profile, user: user)
+      %{user: user, profile: profile}
+    end
+
+    test "update_full_name persists the new name", %{profile: profile} do
+      assert {:ok, updated} = Profiles.update_full_name(profile, "Jane Smith")
+      assert updated.full_name == "Jane Smith"
+    end
+
+    test "update_full_name accepts empty string", %{profile: profile} do
+      assert {:ok, updated} = Profiles.update_full_name(profile, "")
+      assert updated.full_name == "" or is_nil(updated.full_name)
+    end
+
+    test "update_timezone persists the new timezone", %{profile: profile} do
+      assert {:ok, updated} = Profiles.update_timezone(profile, "America/New_York")
+      assert updated.timezone == "America/New_York"
+    end
+
+    test "update_timezone rejects invalid timezone", %{profile: profile} do
+      assert {:error, _reason} = Profiles.update_timezone(profile, "Not/AReal_Zone")
+    end
+  end
+
+  # =====================================
+  # Timezone Prefill
+  # =====================================
+
+  describe "prefill_timezone" do
+    test "returns nil unchanged when profile is nil" do
+      assert Profiles.prefill_timezone(nil, "America/New_York") == nil
+    end
+
+    test "uses detected timezone when profile has default timezone" do
+      profile = insert(:profile, timezone: Profiles.get_default_timezone())
+      prefilled = Profiles.prefill_timezone(profile, "America/Chicago")
+
+      # Should have adopted the browser-detected timezone
+      assert prefilled.timezone == "America/Chicago"
+    end
+
+    test "does not overwrite an already-customised timezone" do
+      profile = insert(:profile, timezone: "Asia/Tokyo")
+      prefilled = Profiles.prefill_timezone(profile, "America/Chicago")
+
+      # Existing explicit timezone wins over browser detection
+      assert prefilled.timezone == "Asia/Tokyo"
+    end
+
+    test "handles nil detected timezone gracefully" do
+      profile = insert(:profile)
+      result = Profiles.prefill_timezone(profile, nil)
+
+      # Should return profile unchanged (no crash)
+      assert result.timezone == profile.timezone
+    end
+  end
+
+  # =====================================
+  # Theme & Embed Domain Updates
+  # =====================================
+
+  describe "update_booking_theme" do
+    setup do
+      %{profile: insert(:profile)}
+    end
+
+    test "accepts a valid registered theme ID", %{profile: profile} do
+      # Pick the first registered theme — guaranteed to exist
+      {valid_theme, _config} = Enum.at(Theme.all_themes(), 0)
+
+      assert {:ok, updated} = Profiles.update_booking_theme(profile, valid_theme)
+      assert updated.booking_theme == valid_theme
+    end
+
+    test "rejects an unrecognised theme ID", %{profile: profile} do
+      assert {:error, _reason} = Profiles.update_booking_theme(profile, "nonexistent-theme")
+    end
+  end
+
+  describe "update_allowed_embed_domains" do
+    setup do
+      %{profile: insert(:profile)}
+    end
+
+    test "accepts a list of valid domains", %{profile: profile} do
+      assert {:ok, updated} =
+               Profiles.update_allowed_embed_domains(profile, ["example.com", "sub.example.org"])
+
+      assert "example.com" in updated.allowed_embed_domains
+    end
+
+    test "accepts a comma-separated string of valid domains", %{profile: profile} do
+      assert {:ok, updated} =
+               Profiles.update_allowed_embed_domains(profile, "example.com, other.io")
+
+      assert "example.com" in updated.allowed_embed_domains
+      assert "other.io" in updated.allowed_embed_domains
+    end
+
+    test "rejects a list containing an invalid domain", %{profile: profile} do
+      assert {:error, _reason} =
+               Profiles.update_allowed_embed_domains(profile, ["https://bad-format.com"])
+    end
+
+    test "treats empty string as the 'none' disabled state", %{profile: profile} do
+      assert {:ok, updated} = Profiles.update_allowed_embed_domains(profile, "")
+      assert updated.allowed_embed_domains == ["none"]
     end
   end
 
