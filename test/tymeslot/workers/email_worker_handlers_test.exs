@@ -262,11 +262,26 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
                })
     end
 
-    test "returns error when delivery to one address fails" do
+    test "returns error when second delivery fails" do
       user = insert(:user)
 
       expect(EmailServiceMock, :send_email_change_confirmations, fn _user, _old, _new ->
         {{:ok, "sent"}, {:error, "delivery failed"}}
+      end)
+
+      assert {:error, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_email_change_confirmations", %{
+                 "user_id" => user.id,
+                 "old_email" => "old@example.com",
+                 "new_email" => "new@example.com"
+               })
+    end
+
+    test "returns error when first delivery fails" do
+      user = insert(:user)
+
+      expect(EmailServiceMock, :send_email_change_confirmations, fn _user, _old, _new ->
+        {{:error, "delivery failed"}, {:ok, "sent"}}
       end)
 
       assert {:error, _reason} =

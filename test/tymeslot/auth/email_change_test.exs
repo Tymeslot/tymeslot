@@ -40,6 +40,14 @@ defmodule Tymeslot.Auth.EmailChangeTest do
         }
       )
 
+      [verification_job] =
+        all_enqueued(
+          worker: EmailWorker,
+          args: %{"action" => "send_email_change_verification", "user_id" => updated_user.id}
+        )
+
+      assert is_binary(verification_job.args["verification_url"])
+
       assert_enqueued(
         worker: EmailWorker,
         args: %{
@@ -86,7 +94,6 @@ defmodule Tymeslot.Auth.EmailChangeTest do
         Auth.request_email_change(user_with_first, second_email, "Password123!")
 
       assert user_with_second.pending_email == second_email
-      refute user_with_second.pending_email == first_email
     end
   end
 

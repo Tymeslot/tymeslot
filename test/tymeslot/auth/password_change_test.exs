@@ -4,6 +4,7 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
+  alias Tymeslot.DatabaseSchemas.UserSessionSchema
   alias Tymeslot.Security.Password
 
   import Tymeslot.Factory
@@ -56,6 +57,15 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
                Auth.update_user_password(user, "CurrentPass123!", "short", "short")
 
       assert message =~ "8 characters"
+    end
+
+    test "invalidates all existing sessions on successful password change", %{user: user} do
+      session = insert(:user_session, user: user)
+
+      assert {:ok, _updated_user} =
+               Auth.update_user_password(user, "CurrentPass123!", "NewPass456!", "NewPass456!")
+
+      refute Repo.get(UserSessionSchema, session.id)
     end
   end
 end
