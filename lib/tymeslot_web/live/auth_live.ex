@@ -16,7 +16,7 @@ defmodule TymeslotWeb.AuthLive do
   alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias Tymeslot.Security.SecurityLogger
-  alias TymeslotWeb.AuthLive.{SecurityHelper, StateHelper}
+  alias TymeslotWeb.AuthLive.{PageMetaHelper, SecurityHelper, StateHelper}
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Registration.CompleteRegistrationComponent
   alias TymeslotWeb.Registration.SignupComponent
@@ -58,6 +58,7 @@ defmodule TymeslotWeb.AuthLive do
       |> StateHelper.handle_auth_params(params)
       |> Session.populate_unverified_user_data()
       |> StateHelper.clear_errors()
+      |> PageMetaHelper.assign_page_meta()
 
     Logger.info(
       "AuthLive: handle_params completed, current_state: #{socket.assigns.current_state}"

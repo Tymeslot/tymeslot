@@ -144,6 +144,49 @@ defmodule TymeslotWeb.AuthLiveTest do
     end
   end
 
+  describe "Page titles and meta descriptions" do
+    setup do
+      user = insert(:user)
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserQueries.set_reset_token(user, token)
+      %{user: user, token: token}
+    end
+
+    test "login page has a custom title and meta description", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/auth/login")
+      assert page_title(view) != "Schedule a Meeting · Tymeslot"
+      assert html =~ ~s(<meta name="description")
+    end
+
+    test "signup page has a custom title and meta description", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/auth/signup")
+      assert page_title(view) != "Schedule a Meeting · Tymeslot"
+      assert html =~ ~s(<meta name="description")
+    end
+
+    test "reset password page has a custom title and meta description", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/auth/reset-password")
+      assert page_title(view) != "Schedule a Meeting · Tymeslot"
+      assert html =~ ~s(<meta name="description")
+    end
+
+    test "reset password form page has a custom title and meta description", %{
+      conn: conn,
+      token: token
+    } do
+      {:ok, view, html} = live(conn, ~p"/auth/reset-password/#{token}")
+      assert page_title(view) != "Schedule a Meeting · Tymeslot"
+      assert html =~ ~s(<meta name="description")
+    end
+
+    test "oauth and transient pages do not set a custom title or meta description", %{conn: conn} do
+      params = %{"oauth_provider" => "github", "oauth_email" => "oauth@example.com", "oauth_verified" => "true", "oauth_email_from_provider" => "true"}
+      {:ok, view, html} = live(conn, ~p"/auth/complete-registration?#{params}")
+      assert page_title(view) == "Schedule a Meeting · Tymeslot"
+      refute html =~ ~s(<meta name="description")
+    end
+  end
+
   describe "Password Reset Form" do
     setup do
       user = insert(:user)
