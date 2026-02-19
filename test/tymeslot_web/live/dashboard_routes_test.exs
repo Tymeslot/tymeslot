@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.DashboardRoutesTest do
   use TymeslotWeb.LiveCase, async: false
   @moduletag :live
-  @moduletag :utils
+  @moduletag :meetings
 
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
@@ -136,7 +136,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     test "shows the user's full name in the welcome banner", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/dashboard")
 
-      assert html =~ "Test User"
+      assert html =~ "Welcome back, Test User"
     end
 
     test "shows empty state when no meetings are scheduled", %{conn: conn} do
@@ -158,11 +158,24 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       assert html =~ "Jane Smith"
     end
 
+    test "shows at most 3 upcoming meetings", %{conn: conn, user: user} do
+      for title <- ["Meeting One", "Meeting Two", "Meeting Three", "Meeting Four"] do
+        insert(:meeting, organizer_email: user.email, title: title)
+      end
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "Meeting One"
+      assert html =~ "Meeting Two"
+      assert html =~ "Meeting Three"
+      refute html =~ "Meeting Four"
+    end
+
     test "quick action navigates to settings", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard")
 
       view
-      |> element("a", "Profile Settings")
+      |> element("a.block", "Profile Settings")
       |> render_click()
 
       assert_patch(view, ~p"/dashboard/settings")
@@ -184,7 +197,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard")
 
       view
-      |> element("a", "Calendar Integration")
+      |> element("a.block", "Calendar Integration")
       |> render_click()
 
       assert_patch(view, ~p"/dashboard/calendar")
@@ -195,7 +208,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard")
 
       view
-      |> element("a", "Video Integration")
+      |> element("a.block", "Video Integration")
       |> render_click()
 
       assert_patch(view, ~p"/dashboard/video")
@@ -204,7 +217,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
 
     test "updates welcome banner name when profile is updated", %{conn: conn, profile: profile} do
       {:ok, view, html} = live(conn, ~p"/dashboard")
-      assert html =~ "Test User"
+      assert html =~ "Welcome back, Test User"
 
       send(view.pid, {:profile_updated, %{profile | full_name: "Updated Name"}})
 
@@ -223,6 +236,34 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       send(view.pid, {:meeting_type_changed})
 
       assert render(view) =~ "Newly Scheduled Meeting"
+    end
+  end
+
+  describe "overview - nil full name" do
+    setup %{conn: conn} do
+      DashboardCache.clear_all()
+
+      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+
+      insert(:profile,
+        user: user,
+        username: "noname",
+        full_name: nil,
+        booking_theme: "1"
+      )
+
+      conn =
+        conn
+        |> init_test_session(%{})
+        |> log_in_user(user)
+
+      {:ok, %{conn: conn}}
+    end
+
+    test "shows welcome banner without name when full_name is nil", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "Welcome back!"
     end
   end
 end
