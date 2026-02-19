@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       refute render(view) =~ "Display name updated"
     end
 
-    test "clears display name when empty string is submitted", %{conn: conn, profile: profile} do
+    test "clears display name when empty string is entered", %{conn: conn, profile: profile} do
       profile = Repo.update!(Changeset.change(profile, full_name: "Some Name"))
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
@@ -228,9 +228,10 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       |> form("#username-form-container form", %{username: "api"})
       |> render_submit()
 
-      # Reserved names also fail at the Profiles.update_username level
+      # InputProcessor.validate_field catches reserved names before Profiles.update_username
+      # is reached, and surfaces the message "This username is reserved and cannot be used".
       html = render(view)
-      assert html =~ "reserved" or html =~ "Invalid"
+      assert html =~ "reserved"
     end
 
     test "shows booking URL after successful username update", %{conn: conn} do

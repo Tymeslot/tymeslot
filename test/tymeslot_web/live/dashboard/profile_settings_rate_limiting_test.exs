@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsRateLimitingTest do
   @moduletag :security
 
   import Tymeslot.DashboardTestHelpers
-  import Tymeslot.Factory
 
   alias Tymeslot.Security.RateLimiter
 
@@ -59,6 +58,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsRateLimitingTest do
 
       html = render(view)
       refute html =~ "Avatar updated successfully"
+      # The apostrophe in the flash message is HTML-entity-encoded in the rendered output.
+      assert html =~ "reached the limit of 20 avatar upload"
     end
   end
 

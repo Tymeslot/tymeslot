@@ -149,11 +149,10 @@ defmodule Tymeslot.ProfilesContextTest do
       assert Profiles.validate_username_format("valid_user-123") == :ok
     end
 
-    test "username_available? returns false for reserved usernames" do
-      # Reserved names are not in the DB but should not be considered available
-      # (validate_username_format catches them, but username_available? is a DB-only check)
-      # This test documents the current behavior: reserved names ARE "available" in the DB
-      # sense — rejection happens upstream at the validation layer.
+    test "username_available? returns true for reserved usernames (DB-only check)" do
+      # username_available? only queries the DB — it has no knowledge of reserved names.
+      # Reserved names ARE "available" in the DB sense; rejection happens upstream in
+      # validate_username_format / InputProcessor before this function is ever reached.
       assert Profiles.username_available?("admin") == true
     end
 
@@ -294,7 +293,8 @@ defmodule Tymeslot.ProfilesContextTest do
 
     test "update_full_name accepts empty string", %{profile: profile} do
       assert {:ok, updated} = Profiles.update_full_name(profile, "")
-      assert updated.full_name == "" or is_nil(updated.full_name)
+      # Ecto's :string type coerces "" to nil on cast, so nil is the persisted value.
+      assert is_nil(updated.full_name)
     end
 
     test "update_timezone persists the new timezone", %{profile: profile} do
@@ -336,8 +336,19 @@ defmodule Tymeslot.ProfilesContextTest do
       profile = insert(:profile)
       result = Profiles.prefill_timezone(profile, nil)
 
-      # Should return profile unchanged (no crash)
+      # The profile is inserted with the default timezone, so should_use_detected? returns true.
+      # fallback_default(nil, default) returns the default, which equals profile.timezone.
+      # No crash and the timezone is unchanged from the profile's perspective.
       assert result.timezone == profile.timezone
+    end
+
+    test "keeps custom timezone when detected timezone is nil" do
+      profile = insert(:profile, timezone: "Asia/Tokyo")
+      result = Profiles.prefill_timezone(profile, nil)
+
+      # Custom timezone is not the default, so should_use_detected? returns false.
+      # The profile's existing timezone is returned unchanged.
+      assert result.timezone == "Asia/Tokyo"
     end
   end
 
@@ -351,8 +362,10 @@ defmodule Tymeslot.ProfilesContextTest do
     end
 
     test "accepts a valid registered theme ID", %{profile: profile} do
-      # Pick the first registered theme — guaranteed to exist
-      {valid_theme, _config} = Enum.at(Theme.all_themes(), 0)
+      # Theme.all_themes() returns a map; Enum.at/2 yields a {id, config} tuple.
+      themes = Theme.all_themes()
+      assert map_size(themes) > 0, "No themes are registered"
+      {valid_theme, _config} = Enum.at(themes, 0)
 
       assert {:ok, updated} = Profiles.update_booking_theme(profile, valid_theme)
       assert updated.booking_theme == valid_theme
