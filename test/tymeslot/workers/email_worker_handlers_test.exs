@@ -153,4 +153,128 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
       assert updated.reminder_email_sent == true
     end
   end
+
+  describe "handle_email_change_verification/1" do
+    test "successfully sends verification email to new address" do
+      user = insert(:user)
+      new_email = "new@example.com"
+
+      expect(EmailServiceMock, :send_email_change_verification, fn _user, ^new_email, _url ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_email_change_verification", %{
+                 "user_id" => user.id,
+                 "new_email" => new_email,
+                 "verification_url" => "https://example.com/verify/token123"
+               })
+    end
+
+    test "discards job when user is not found" do
+      assert {:discard, "User not found"} =
+               EmailWorkerHandlers.execute_email_action("send_email_change_verification", %{
+                 "user_id" => 999_999,
+                 "new_email" => "new@example.com",
+                 "verification_url" => "https://example.com/verify/token"
+               })
+    end
+
+    test "returns error when email service fails" do
+      user = insert(:user)
+
+      expect(EmailServiceMock, :send_email_change_verification, fn _user, _new_email, _url ->
+        {:error, "delivery failed"}
+      end)
+
+      assert {:error, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_email_change_verification", %{
+                 "user_id" => user.id,
+                 "new_email" => "new@example.com",
+                 "verification_url" => "https://example.com/verify/token"
+               })
+    end
+  end
+
+  describe "handle_email_change_notification/1" do
+    test "successfully sends security notification to old address" do
+      user = insert(:user)
+      new_email = "new@example.com"
+
+      expect(EmailServiceMock, :send_email_change_notification, fn _user, ^new_email ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_email_change_notification", %{
+                 "user_id" => user.id,
+                 "new_email" => new_email
+               })
+    end
+
+    test "discards job when user is not found" do
+      assert {:discard, "User not found"} =
+               EmailWorkerHandlers.execute_email_action("send_email_change_notification", %{
+                 "user_id" => 999_999,
+                 "new_email" => "new@example.com"
+               })
+    end
+
+    test "returns error when email service fails" do
+      user = insert(:user)
+
+      expect(EmailServiceMock, :send_email_change_notification, fn _user, _new_email ->
+        {:error, "delivery failed"}
+      end)
+
+      assert {:error, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_email_change_notification", %{
+                 "user_id" => user.id,
+                 "new_email" => "new@example.com"
+               })
+    end
+  end
+
+  describe "handle_email_change_confirmations/1" do
+    test "successfully sends confirmations to both old and new addresses" do
+      user = insert(:user)
+
+      expect(EmailServiceMock, :send_email_change_confirmations, fn _user,
+                                                                     "old@example.com",
+                                                                     "new@example.com" ->
+        {{:ok, "sent"}, {:ok, "sent"}}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_email_change_confirmations", %{
+                 "user_id" => user.id,
+                 "old_email" => "old@example.com",
+                 "new_email" => "new@example.com"
+               })
+    end
+
+    test "discards job when user is not found" do
+      assert {:discard, "User not found"} =
+               EmailWorkerHandlers.execute_email_action("send_email_change_confirmations", %{
+                 "user_id" => 999_999,
+                 "old_email" => "old@example.com",
+                 "new_email" => "new@example.com"
+               })
+    end
+
+    test "returns error when delivery to one address fails" do
+      user = insert(:user)
+
+      expect(EmailServiceMock, :send_email_change_confirmations, fn _user, _old, _new ->
+        {{:ok, "sent"}, {:error, "delivery failed"}}
+      end)
+
+      assert {:error, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_email_change_confirmations", %{
+                 "user_id" => user.id,
+                 "old_email" => "old@example.com",
+                 "new_email" => "new@example.com"
+               })
+    end
+  end
 end

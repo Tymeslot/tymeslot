@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.AccountLiveTest do
   use TymeslotWeb.ConnCase, async: false
 
-  @moduletag :utils
+  @moduletag :auth
 
   import Phoenix.LiveViewTest
   import Tymeslot.TestFixtures
@@ -175,6 +175,74 @@ defmodule TymeslotWeb.AccountLiveTest do
         |> render_submit()
 
       assert html =~ "at least 8 characters"
+    end
+
+    test "shows error when new password is the same as current", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      view |> element("button", "Change Password") |> render_click()
+
+      html =
+        view
+        |> form("form[phx-submit='update_password']", %{
+          "password_form" => %{
+            "current_password" => "Password123!",
+            "new_password" => "Password123!",
+            "new_password_confirmation" => "Password123!"
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "different from current"
+    end
+  end
+
+  describe "Rate Limiting" do
+    test "shows rate limit error when email change limit is exceeded", %{conn: conn, user: user} do
+      # Exhaust the auth rate limit bucket (10 per 30 minutes)
+      for _ <- 1..10 do
+        RateLimiter.check_rate("login:#{user.email}", 1_800_000, 10)
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      view |> element("button", "Change Email") |> render_click()
+
+      view
+      |> form("form[phx-submit='update_email']", %{
+        "email_form" => %{
+          "new_email" => "new@example.com",
+          "current_password" => "Password123!"
+        }
+      })
+      |> render_submit()
+
+      # Flash is delivered via handle_info after the submit handler returns
+      assert render(view) =~ "reached the limit"
+    end
+
+    test "shows rate limit error when password change limit is exceeded", %{conn: conn, user: user} do
+      # Exhaust the auth rate limit bucket (10 per 30 minutes)
+      for _ <- 1..10 do
+        RateLimiter.check_rate("login:#{user.email}", 1_800_000, 10)
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/account")
+
+      view |> element("button", "Change Password") |> render_click()
+
+      view
+      |> form("form[phx-submit='update_password']", %{
+        "password_form" => %{
+          "current_password" => "Password123!",
+          "new_password" => "NewPassword123!",
+          "new_password_confirmation" => "NewPassword123!"
+        }
+      })
+      |> render_submit()
+
+      # Flash is delivered via handle_info after the submit handler returns
+      assert render(view) =~ "reached the limit"
     end
   end
 

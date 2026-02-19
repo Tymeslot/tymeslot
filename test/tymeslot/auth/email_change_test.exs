@@ -1,11 +1,15 @@
 defmodule Tymeslot.Auth.EmailChangeTest do
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
+
   @moduletag :auth
 
   alias Ecto.Changeset
   alias Tymeslot.Auth
   alias Tymeslot.DatabaseQueries.UserQueries
+  alias Tymeslot.DatabaseSchemas.UserSessionSchema
   alias Tymeslot.Security.Token
+  alias Tymeslot.Workers.EmailWorker
 
   import Tymeslot.Factory
 
@@ -25,6 +29,25 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       assert updated_user.email_change_token_hash != nil
       assert updated_user.email_change_sent_at != nil
       assert message =~ "Verification email sent"
+
+      # Verify both email jobs were enqueued
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_email_change_verification",
+          "user_id" => updated_user.id,
+          "new_email" => new_email
+        }
+      )
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_email_change_notification",
+          "user_id" => updated_user.id,
+          "new_email" => new_email
+        }
+      )
     end
 
     test "fails with invalid password", %{user: user} do
@@ -50,6 +73,21 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       assert {:error, "Email address is already in use"} =
                Auth.request_email_change(user, other_user.email, "Password123!")
     end
+
+    test "overwrites pending change when a new one is requested", %{user: user} do
+      first_email = "first@example.com"
+      second_email = "second@example.com"
+
+      {:ok, user_with_first, _} = Auth.request_email_change(user, first_email, "Password123!")
+      assert user_with_first.pending_email == first_email
+
+      # Request again with a different email; the previous pending state should be overwritten
+      {:ok, user_with_second, _} =
+        Auth.request_email_change(user_with_first, second_email, "Password123!")
+
+      assert user_with_second.pending_email == second_email
+      refute user_with_second.pending_email == first_email
+    end
   end
 
   describe "verify_email_change/1" do
@@ -64,7 +102,13 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       {:ok, user: user_with_pending, token: token, new_email: new_email}
     end
 
-    test "successfully verifies and completes email change", %{token: token, new_email: new_email} do
+    test "successfully verifies and completes email change", %{
+      user: user,
+      token: token,
+      new_email: new_email
+    } do
+      old_email = user.email
+
       assert {:ok, updated_user, message} = Auth.verify_email_change(token)
 
       assert updated_user.email == new_email
@@ -72,6 +116,25 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       assert updated_user.email_change_token_hash == nil
       assert updated_user.email_change_confirmed_at != nil
       assert message =~ "successfully"
+
+      # Verify the confirmation email job was enqueued for both addresses
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_email_change_confirmations",
+          "user_id" => updated_user.id,
+          "old_email" => old_email,
+          "new_email" => new_email
+        }
+      )
+    end
+
+    test "invalidates all sessions on successful verification", %{user: user, token: token} do
+      session = insert(:user_session, user: user)
+
+      assert {:ok, _updated_user, _message} = Auth.verify_email_change(token)
+
+      refute Repo.get(UserSessionSchema, session.id)
     end
 
     test "fails with invalid token" do
