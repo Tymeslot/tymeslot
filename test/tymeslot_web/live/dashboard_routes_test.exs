@@ -1,5 +1,6 @@
 defmodule TymeslotWeb.DashboardRoutesTest do
   use TymeslotWeb.LiveCase, async: false
+  @moduletag :live
   @moduletag :utils
 
   import Phoenix.ConnTest
@@ -19,6 +20,27 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     :ok
   end
 
+  defp setup_authenticated_user(conn) do
+    DashboardCache.clear_all()
+
+    user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+
+    profile =
+      insert(:profile,
+        user: user,
+        username: "testuser",
+        full_name: "Test User",
+        booking_theme: "1"
+      )
+
+    conn =
+      conn
+      |> init_test_session(%{})
+      |> log_in_user(user)
+
+    %{conn: conn, user: user, profile: profile}
+  end
+
   describe "authentication" do
     test "dashboard requires login", %{conn: conn} do
       conn = get(conn, ~p"/dashboard")
@@ -30,24 +52,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
 
   describe "dashboard pages" do
     setup %{conn: conn} do
-      DashboardCache.clear_all()
-
-      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-
-      _profile =
-        insert(:profile,
-          user: user,
-          username: "testuser",
-          full_name: "Test User",
-          booking_theme: "1"
-        )
-
-      conn =
-        conn
-        |> init_test_session(%{})
-        |> log_in_user(user)
-
-      %{conn: conn, user: user}
+      {:ok, setup_authenticated_user(conn)}
     end
 
     @routes [
@@ -67,17 +72,6 @@ defmodule TymeslotWeb.DashboardRoutesTest do
         {:ok, _view, html} = live(conn, unquote(path))
         assert html =~ unquote(expected_text)
       end
-    end
-
-    test "overview quick action navigates to settings", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/dashboard")
-
-      view
-      |> element("a", "Profile Settings")
-      |> render_click()
-
-      assert_patch(view, ~p"/dashboard/settings")
-      assert render(view) =~ "Profile Settings"
     end
 
     test "availability can switch to grid view", %{conn: conn} do
@@ -131,6 +125,104 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       |> render_click()
 
       assert has_element?(view, "#theme-background-video-form")
+    end
+  end
+
+  describe "overview" do
+    setup %{conn: conn} do
+      {:ok, setup_authenticated_user(conn)}
+    end
+
+    test "shows the user's full name in the welcome banner", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "Test User"
+    end
+
+    test "shows empty state when no meetings are scheduled", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "No upcoming meetings scheduled yet."
+    end
+
+    test "shows upcoming meeting title and attendee name", %{conn: conn, user: user} do
+      insert(:meeting,
+        organizer_email: user.email,
+        title: "Strategy Session",
+        attendee_name: "Jane Smith"
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ "Strategy Session"
+      assert html =~ "Jane Smith"
+    end
+
+    test "quick action navigates to settings", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      view
+      |> element("a", "Profile Settings")
+      |> render_click()
+
+      assert_patch(view, ~p"/dashboard/settings")
+      assert render(view) =~ "Profile Settings"
+    end
+
+    test "quick action navigates to meeting settings", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      view
+      |> element("a.block", "Meeting Types")
+      |> render_click()
+
+      assert_patch(view, ~p"/dashboard/meeting-settings")
+      assert render(view) =~ "Meeting Settings"
+    end
+
+    test "quick action navigates to calendar integration", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      view
+      |> element("a", "Calendar Integration")
+      |> render_click()
+
+      assert_patch(view, ~p"/dashboard/calendar")
+      assert render(view) =~ "Calendar Integration"
+    end
+
+    test "quick action navigates to video integration", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      view
+      |> element("a", "Video Integration")
+      |> render_click()
+
+      assert_patch(view, ~p"/dashboard/video")
+      assert render(view) =~ "Video Integration"
+    end
+
+    test "updates welcome banner name when profile is updated", %{conn: conn, profile: profile} do
+      {:ok, view, html} = live(conn, ~p"/dashboard")
+      assert html =~ "Test User"
+
+      send(view.pid, {:profile_updated, %{profile | full_name: "Updated Name"}})
+
+      assert render(view) =~ "Updated Name"
+    end
+
+    test "refreshes meeting list after meeting type is changed", %{conn: conn, user: user} do
+      {:ok, view, html} = live(conn, ~p"/dashboard")
+      assert html =~ "No upcoming meetings scheduled yet."
+
+      insert(:meeting,
+        organizer_email: user.email,
+        title: "Newly Scheduled Meeting"
+      )
+
+      send(view.pid, {:meeting_type_changed})
+
+      assert render(view) =~ "Newly Scheduled Meeting"
     end
   end
 end
