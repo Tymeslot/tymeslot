@@ -145,12 +145,7 @@ defmodule TymeslotWeb.AuthLiveTest do
   end
 
   describe "Page titles and meta descriptions" do
-    setup do
-      user = insert(:user)
-      {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserQueries.set_reset_token(user, token)
-      %{user: user, token: token}
-    end
+    setup :setup_password_reset_token
 
     test "login page has a custom title and meta description", %{conn: conn} do
       {:ok, view, html} = live(conn, ~p"/auth/login")
@@ -188,12 +183,7 @@ defmodule TymeslotWeb.AuthLiveTest do
   end
 
   describe "Password Reset Form" do
-    setup do
-      user = insert(:user)
-      {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserQueries.set_reset_token(user, token)
-      %{user: user, token: token}
-    end
+    setup :setup_password_reset_token
 
     test "valid token renders new password form", %{conn: conn, token: token} do
       {:ok, _view, html} = live(conn, ~p"/auth/reset-password/#{token}")
@@ -323,6 +313,13 @@ defmodule TymeslotWeb.AuthLiveTest do
 
       assert render(view) =~ "limit" or render(view) =~ "Too many"
     end
+  end
+
+  defp setup_password_reset_token(_context) do
+    user = insert(:user)
+    {token, _value} = Token.generate_password_reset_token()
+    {:ok, _result} = UserQueries.set_reset_token(user, token)
+    %{user: user, token: token}
   end
 
   describe "OAuth Completion" do
