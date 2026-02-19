@@ -198,12 +198,16 @@ defmodule TymeslotWeb.AccountLiveTest do
   end
 
   describe "Rate Limiting" do
-    test "shows rate limit error when email change limit is exceeded", %{conn: conn, user: user} do
-      # Exhaust the auth rate limit bucket (10 per 30 minutes)
-      for _ <- 1..10 do
+    setup %{user: user} do
+      # Exhaust the auth rate limit bucket (10 per 30 minutes) before each test
+      Enum.each(1..10, fn _i ->
         RateLimiter.check_rate("login:#{user.email}", 1_800_000, 10)
-      end
+      end)
 
+      :ok
+    end
+
+    test "shows rate limit error when email change limit is exceeded", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
       view |> element("button", "Change Email") |> render_click()
@@ -221,12 +225,7 @@ defmodule TymeslotWeb.AccountLiveTest do
       assert render(view) =~ "reached the limit"
     end
 
-    test "shows rate limit error when password change limit is exceeded", %{conn: conn, user: user} do
-      # Exhaust the auth rate limit bucket (10 per 30 minutes)
-      for _ <- 1..10 do
-        RateLimiter.check_rate("login:#{user.email}", 1_800_000, 10)
-      end
-
+    test "shows rate limit error when password change limit is exceeded", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/account")
 
       view |> element("button", "Change Password") |> render_click()
