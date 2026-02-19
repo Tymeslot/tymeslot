@@ -9,14 +9,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection
 
   describe "OptionsGrid component" do
+    @base_grid_assigns %{
+      username: "testuser",
+      base_url: "https://tymeslot.com",
+      booking_url: "https://tymeslot.com/testuser",
+      myself: "myself"
+    }
+
     test "renders all options" do
-      assigns = %{
-        selected_embed_type: "inline",
-        username: "testuser",
-        base_url: "https://tymeslot.com",
-        booking_url: "https://tymeslot.com/testuser",
-        myself: "myself"
-      }
+      assigns = Map.put(@base_grid_assigns, :selected_embed_type, "inline")
 
       html = render_component(&OptionsGrid.options_grid/1, assigns)
       assert html =~ "Inline Embed"
@@ -24,6 +25,22 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
       assert html =~ "Direct Link"
       assert html =~ "Floating Button"
       assert html =~ "Recommended"
+    end
+
+    test "exactly one card carries the selection indicator at any time" do
+      # The checkmark SVG path is only rendered on the selected card (:if={@selected}).
+      # Regardless of which type is active, exactly one card should be marked.
+      for selected_type <- ["inline", "popup", "link", "floating"] do
+        assigns = Map.put(@base_grid_assigns, :selected_embed_type, selected_type)
+        html = render_component(&OptionsGrid.options_grid/1, assigns)
+
+        # "border-turquoise-500" is added to the card container only when selected
+        occurrence_count = html |> String.split("border-turquoise-500") |> length()
+
+        assert occurrence_count == 2,
+               "Expected exactly one selected card for type=#{selected_type}, " <>
+                 "but found #{occurrence_count - 1} occurrences of selection indicator"
+      end
     end
   end
 

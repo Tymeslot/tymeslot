@@ -90,6 +90,19 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
       refute code =~ "data-locale"
     end
 
+    test "generates link embed code with the booking URL" do
+      assigns = %{
+        username: "testuser",
+        base_url: "https://tymeslot.com",
+        booking_url: "https://tymeslot.com/testuser"
+      }
+
+      code = Helpers.embed_code("link", assigns)
+
+      assert code =~ ~s(<a href="https://tymeslot.com/testuser">)
+      assert code =~ "Schedule a meeting"
+    end
+
     test "returns empty string for unknown type" do
       assert Helpers.embed_code("unknown", %{}) == ""
     end

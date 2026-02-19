@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
-  use TymeslotWeb.ConnCase, async: false
+  use TymeslotWeb.ConnCase, async: true
 
   @moduletag :utils
 
@@ -149,6 +149,27 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
 
       # X-Frame-Options should be omitted because it doesn't support wildcards
       assert get_resp_header(conn, "x-frame-options") == []
+    end
+
+    test "preview=true still uses configured domains when they are set", %{
+      conn: conn,
+      profile: profile
+    } do
+      # When a profile has allowed domains, 'self' is always included in
+      # frame-ancestors, so the same-origin dashboard Live Preview works without
+      # any special handling. preview=true only changes behaviour for profiles
+      # that have no configured domains (disabled state).
+      conn =
+        conn
+        |> Map.put(:request_path, "/#{profile.username}")
+        |> Map.put(:query_params, %{"preview" => "true"})
+        |> SecurityHeadersPlug.call(allow_embedding: true)
+
+      assert [csp] = get_resp_header(conn, "content-security-policy")
+      # 'self' is always in frame-ancestors when domains are configured, so the
+      # dashboard (same-origin) can embed the preview iframe regardless.
+      assert csp =~ "frame-ancestors 'self'"
+      assert csp =~ "https://example.com"
     end
   end
 

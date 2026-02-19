@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
   alias Plug.Test
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimiter
 
   describe "embed settings component" do
     setup do
@@ -33,7 +34,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       # Security section tab panel should be hidden initially
-      assert render(view) =~ "id=\"panel-security\" aria-labelledby=\"tab-security\" hidden=\"\""
+      assert has_element?(view, "#panel-security[hidden]")
 
       # Click to show security section tab
       view
@@ -41,7 +42,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       |> render_click()
 
       # Now it should be visible (hidden attribute removed)
-      refute render(view) =~ "id=\"panel-security\" aria-labelledby=\"tab-security\" hidden=\"\""
+      refute has_element?(view, "#panel-security[hidden]")
       assert has_element?(view, "input[name='allowed_domains']")
     end
 
@@ -105,6 +106,26 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       refute has_element?(view, "span.inline-flex", "example.com")
     end
 
+    test "removing the last domain automatically disables embedding", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, _result} = Profiles.update_allowed_embed_domains(profile, ["only-domain.com"])
+
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+      view |> element("button#tab-security") |> render_click()
+
+      view
+      |> element("button[phx-click='remove_domain'][phx-value-domain='only-domain.com']")
+      |> render_click()
+
+      assert render(view) =~ "Domain removed successfully"
+
+      # With no domains left, embedding should be auto-disabled (sentinel ["none"])
+      updated_profile = Repo.reload(profile)
+      assert updated_profile.allowed_embed_domains == ["none"]
+    end
+
     test "shows error for invalid domains", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
@@ -148,6 +169,47 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       assert render(view) =~ "exceed maximum length"
     end
 
+    test "shows error when submitting a domain already in the whitelist", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, _result} = Profiles.update_allowed_embed_domains(profile, ["existing.com"])
+
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+      view |> element("button#tab-security") |> render_click()
+
+      # Try to add a domain that is already whitelisted
+      view
+      |> form("form", %{allowed_domains: "existing.com"})
+      |> render_submit()
+
+      assert render(view) =~ "Already whitelisted"
+
+      # Domain list should be unchanged
+      assert Repo.reload(profile).allowed_embed_domains == ["existing.com"]
+    end
+
+    test "adding a domain when embedding is currently disabled replaces the sentinel", %{
+      conn: conn,
+      profile: profile
+    } do
+      # Start from the ["none"] disabled state
+      {:ok, _result} = Profiles.update_allowed_embed_domains(profile, ["none"])
+
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+      view |> element("button#tab-security") |> render_click()
+
+      view
+      |> form("form", %{allowed_domains: "new-site.com"})
+      |> render_submit()
+
+      assert render(view) =~ "Security settings saved successfully"
+
+      # ["none"] sentinel should be gone; only the new domain should be stored
+      updated_profile = Repo.reload(profile)
+      assert updated_profile.allowed_embed_domains == ["new-site.com"]
+    end
+
     test "clears domains successfully", %{conn: conn, profile: profile} do
       # First set some domains
       {:ok, _result} =
@@ -170,6 +232,25 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       # Verify domains were cleared (set to ["none"])
       updated_profile = Repo.reload(profile)
       assert updated_profile.allowed_embed_domains == ["none"]
+    end
+
+    test "shows rate limit error after too many domain updates", %{conn: conn, user: user} do
+      # Exhaust the rate limit bucket for this user before opening the page
+      bucket_key = "embed_domain_update:#{user.id}"
+
+      Enum.each(1..10, fn _i ->
+        RateLimiter.check_rate(bucket_key, 60_000 * 60, 10)
+      end)
+
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+      view |> element("button#tab-security") |> render_click()
+
+      # The 11th update should be rate-limited
+      view
+      |> form("form", %{allowed_domains: "allowed.com"})
+      |> render_submit()
+
+      assert render(view) =~ "Too many updates"
     end
 
     test "copies embed code to clipboard", %{conn: conn} do
@@ -254,7 +335,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       {:ok, view, _html} = live(conn, "/dashboard/embed")
 
       # Preview should be hidden initially (it's in a tab)
-      assert render(view) =~ "id=\"panel-preview\" aria-labelledby=\"tab-preview\" hidden=\"\""
+      assert has_element?(view, "#panel-preview[hidden]")
 
       # Click to show preview tab
       view
@@ -262,7 +343,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       |> render_click()
 
       # Now preview should be visible
-      refute render(view) =~ "id=\"panel-preview\" aria-labelledby=\"tab-preview\" hidden=\"\""
+      refute has_element?(view, "#panel-preview[hidden]")
       assert has_element?(view, "#live-preview-container")
     end
   end
