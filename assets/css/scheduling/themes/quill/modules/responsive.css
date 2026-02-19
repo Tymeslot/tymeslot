@@ -5,6 +5,31 @@
    MOBILE (max-width: 640px)
    ============================================================================ */
 @media (max-width: 640px) {
+  /* Revert desktop scroll lock — mobile should scroll naturally */
+  html.quill-theme {
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body.quill-theme {
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body.quill-theme > .scheduling-main,
+  body.quill-theme > .scheduling-main > [data-phx-main] {
+    height: auto;
+  }
+
+  .quill-theme-wrapper {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+    overflow-x: hidden;
+  }
+
   /* Container */
   .container {
     padding-left: var(--space-lg);
@@ -388,10 +413,6 @@
   .main-gradient.theme-grid {
     max-height: 100vh;
     max-height: 100dvh;
-  }
-
-  .main-gradient.theme-grid .content-area {
-    overflow-y: auto;
   }
 }
 

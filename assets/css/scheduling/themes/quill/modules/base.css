@@ -1,7 +1,14 @@
 /* Base - Theme setup, containers, and core structure */
 
 /* Base Theme Styles */
+html.quill-theme {
+  height: 100%;
+  overflow: hidden;
+}
+
 body.quill-theme {
+  height: 100%;
+  overflow: hidden;
   font-family: var(--theme-font-family);
   font-size: var(--theme-font-size-base);
   -webkit-font-smoothing: antialiased;
@@ -9,8 +16,19 @@ body.quill-theme {
   background-color: var(--theme-background-color);
 }
 
+/* Propagate definite height through unstyled intermediate DOM elements.
+   Phoenix LiveView inserts a wrapper div[data-phx-main] between <main> and
+   the theme wrapper, so we need to explicitly chain height through all of them.
+   Without this chain, height: 100% on the wrapper resolves to auto (no definite
+   parent height), and the CSS Grid 1fr row cannot be computed. */
+body.quill-theme > .scheduling-main,
+body.quill-theme > .scheduling-main > [data-phx-main] {
+  height: 100%;
+}
+
 .quill-theme-wrapper {
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -34,8 +52,10 @@ body.quill-theme {
 .main-gradient.theme-grid {
   display: grid;
   grid-template-rows: 1fr auto;
+  height: 100%;
   min-height: 100vh;
   min-height: 100dvh;
+  overflow: hidden;
 }
 
 /* Height constraints moved to responsive.css */
@@ -45,6 +65,7 @@ body.quill-theme {
   flex-direction: column;
   min-height: 0;
   position: relative;
+  overflow-y: auto;
 }
 
 /* Override glass gradient colors with theme colors */

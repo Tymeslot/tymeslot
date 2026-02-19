@@ -6,8 +6,7 @@ html.rhythm-theme {
   height: 100%;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   position: relative;
 }
 
@@ -15,14 +14,28 @@ body.rhythm-theme {
   height: 100%;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   margin: 0;
   padding: 0;
   font-family: var(--theme-font-family);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   position: relative;
+}
+
+/* Propagate definite height through unstyled intermediate DOM elements.
+   Phoenix LiveView inserts a wrapper div[data-phx-main] between <main> and
+   the theme wrapper, so we need to explicitly chain height through all of them.
+   Without this chain, height: 100% on the wrapper resolves to auto (no definite
+   parent height), and the CSS Grid 1fr row cannot be computed. */
+body.rhythm-theme > .scheduling-main,
+body.rhythm-theme > .scheduling-main > [data-phx-main] {
+  height: 100%;
+}
+
+/* Theme wrapper: completes the height chain */
+.rhythm-theme-wrapper {
+  height: 100%;
 }
 
 /* Main theme container */
@@ -48,29 +61,29 @@ body.rhythm-theme {
   grid-template-rows: 1fr auto;
   align-items: stretch;
   justify-content: stretch;
+  height: 100%;
   min-height: 100vh;
   min-height: 100dvh;
+  overflow: hidden;
 }
 
-/* Only constrain height when NOT in an iframe (standalone page) */
+/* Safety net: cap grid height to viewport on standalone pages */
 @media (min-height: 600px) {
   .video-background-theme.theme-grid {
     max-height: 100vh;
     max-height: 100dvh;
   }
-
-  .video-background-theme.theme-grid .content-area {
-    overflow-y: auto;
-  }
 }
 
 .video-background-theme.theme-grid .content-area {
   display: flex;
-  align-items: center;
+  align-items: flex-start;   /* fallback: top-align */
+  align-items: safe center;  /* center when fits, fall back to start when overflows */
   justify-content: center;
   padding: var(--space-lg);
   min-height: 0;
   position: relative;
+  overflow-y: auto;
 }
 
 /* Scheduling Box */
@@ -87,9 +100,10 @@ body.rhythm-theme {
   width: 520px;
   max-width: 96vw;
   height: auto;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow: hidden;
   position: relative;
   border: var(--border-width-thin) solid var(--border-medium);
   color: var(--theme-text);
@@ -100,8 +114,8 @@ body.rhythm-theme {
 .slide-container {
   flex: 1 1 auto;
   display: grid;
-  grid-template: auto / 1fr;
-  overflow: visible;
+  grid-template: 1fr / 1fr;
+  overflow: hidden;
   min-height: 0;
 }
 
@@ -114,8 +128,7 @@ body.rhythm-theme {
   opacity: 0;
   transform: translateX(100%);
   transition: var(--slide-transition);
-  overflow: visible;
-  overflow-x: visible;
+  overflow: hidden;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -132,8 +145,9 @@ body.rhythm-theme {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
   color: var(--theme-text);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .slide-title {

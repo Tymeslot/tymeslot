@@ -32,7 +32,7 @@
   <body class={"theme-#{assigns[:theme_id] || "1"} #{theme_class(assigns[:theme_id] || "1")}"}>
     <.noscript_warning message="This scheduling page requires JavaScript to book meetings. Please enable it to continue." />
     <.flash_group flash={@flash} id="scheduling-flash-group" />
-    <main>
+    <main class="scheduling-main">
       {@inner_content}
     </main>
   </body>

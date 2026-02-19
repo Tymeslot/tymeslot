@@ -246,6 +246,7 @@
     border: none;
     padding: 0;
     overflow-x: hidden;
+    overflow-y: visible;
     box-sizing: border-box;
   }
 
@@ -471,15 +472,30 @@
     min-height: var(--min-touch-target);
   }
 
-  /* Comprehensive mobile overflow prevention */
-  html.rhythm-theme,
-  body.rhythm-theme {
+  /* Revert desktop scroll lock — mobile should scroll naturally */
+  html.rhythm-theme {
+    height: auto;
     overflow-x: hidden;
+    overflow-y: auto;
     width: 100%;
     max-width: 100%;
   }
 
+  body.rhythm-theme {
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  body.rhythm-theme > .scheduling-main,
+  body.rhythm-theme > .scheduling-main > [data-phx-main] {
+    height: auto;
+  }
+
   .rhythm-theme-wrapper {
+    height: auto;
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
