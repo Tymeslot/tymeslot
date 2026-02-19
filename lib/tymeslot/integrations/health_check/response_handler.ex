@@ -3,12 +3,13 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   Domain: Failure Response & Recovery Actions
 
   Takes appropriate actions when integrations change health status.
-  Handles deactivation, alert notifications, and recovery logging.
+  Handles alert notifications and recovery logging. Integrations are
+  never auto-deactivated; health status is surfaced without touching
+  the `is_active` flag.
   """
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.{CalendarIntegrationQueries, VideoIntegrationQueries}
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.HealthCheck.Monitor
 
@@ -28,18 +29,16 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     )
 
     send_failure_alert(type, integration, "Initial health check failure")
-    deactivate_integration(type, integration)
   end
 
   def handle_transition(type, integration, {:became_unhealthy, old_status, :unhealthy}) do
-    Logger.error("Integration health critical - deactivating (was #{inspect(old_status)})",
+    Logger.error("Integration health critical (was #{inspect(old_status)})",
       type: type,
       integration_id: integration.id,
       provider: integration.provider
     )
 
     send_failure_alert(type, integration, "Health check failures exceeded threshold")
-    deactivate_integration(type, integration)
   end
 
   def handle_transition(type, integration, {:became_healthy, :unhealthy, :healthy}) do
@@ -111,29 +110,4 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     end
   end
 
-  defp deactivate_integration(:calendar, integration) do
-    case CalendarIntegrationQueries.update(integration, %{is_active: false}) do
-      {:ok, _updated_integration} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to deactivate calendar integration",
-          integration_id: integration.id,
-          reason: reason
-        )
-    end
-  end
-
-  defp deactivate_integration(:video, integration) do
-    case VideoIntegrationQueries.update(integration, %{is_active: false}) do
-      {:ok, _updated_integration} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to deactivate video integration",
-          integration_id: integration.id,
-          reason: reason
-        )
-    end
-  end
 end

@@ -126,19 +126,19 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
 
   describe "calculate_next_backoff/2" do
     test "doubles backoff for transient errors" do
-      health_state = %{backoff_ms: :timer.minutes(5)}
+      health_state = %{backoff_ms: :timer.minutes(30)}
 
       next_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :transient)
 
-      assert next_backoff == :timer.minutes(10)
+      assert next_backoff == :timer.hours(1)
     end
 
     test "keeps backoff unchanged for hard errors" do
-      health_state = %{backoff_ms: :timer.minutes(5)}
+      health_state = %{backoff_ms: :timer.minutes(30)}
 
       next_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :hard)
 
-      assert next_backoff == :timer.minutes(5)
+      assert next_backoff == :timer.minutes(30)
     end
 
     test "respects maximum backoff cap for transient errors" do

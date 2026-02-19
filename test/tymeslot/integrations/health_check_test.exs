@@ -35,7 +35,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
   end
 
   describe "integration health monitoring" do
-    test "deactivates integration after repeated failures" do
+    test "marks integration as unhealthy after repeated failures" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
 
@@ -67,9 +67,9 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       assert status.status == :unhealthy
       assert status.failures == 3
 
-      # Verify it was deactivated in DB
+      # Verify integration remains active in DB (no auto-deactivation)
       {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
-      refute updated.is_active
+      assert updated.is_active == true
     end
 
     test "recovers integration after repeated successes" do

@@ -12,7 +12,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
   - `Scheduler`: Determines when checks should run (backoff, jitter, circuit breakers)
   - `Assessor`: Executes health checks for different integration types
   - `ErrorAnalysis`: Classifies errors and determines recovery strategies
-  - `ResponseHandler`: Takes action on health status changes (deactivate, alert)
+  - `ResponseHandler`: Takes action on health status changes (alert on failure/recovery)
 
   ## Orchestration Value
 
@@ -47,7 +47,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
     Scheduler
   }
 
-  @check_interval :timer.minutes(5)
+  @check_interval :timer.minutes(30)
 
   # Type definitions
   @type health_status :: Monitor.health_status()

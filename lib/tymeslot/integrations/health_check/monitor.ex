@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
   @failure_threshold 3
   @recovery_threshold 2
-  @check_interval :timer.minutes(5)
+  @check_interval :timer.minutes(30)
 
   @type health_status :: :healthy | :degraded | :unhealthy
   @type integration_type :: :calendar | :video

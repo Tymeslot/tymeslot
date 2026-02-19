@@ -12,7 +12,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       assert state.successes == 0
       assert state.last_check == nil
       assert state.status == :healthy
-      assert state.backoff_ms == :timer.minutes(5)
+      assert state.backoff_ms == :timer.minutes(30)
       assert state.last_error_class == nil
     end
   end
@@ -55,7 +55,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       assert new_state.failures == 0
       assert new_state.successes == 1
       assert new_state.status == :degraded
-      assert new_state.backoff_ms == :timer.minutes(5)
+      assert new_state.backoff_ms == :timer.minutes(30)
       assert new_state.last_error_class == nil
       assert %DateTime{} = new_state.last_check
     end

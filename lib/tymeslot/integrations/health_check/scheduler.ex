@@ -16,7 +16,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
 
   @max_jitter_ms 30_000
   @max_backoff :timer.hours(1)
-  @check_interval :timer.minutes(5)
+  @check_interval :timer.minutes(30)
 
   @type integration_type :: :calendar | :video
 
@@ -121,7 +121,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
         },
         scheduled_at: scheduled_at_with_jitter(),
         unique: [
-          period: 300,
+          period: div(@check_interval, 1000),
           keys: [:type, :integration_id],
           states: [:available, :scheduled, :retryable, :executing]
         ]

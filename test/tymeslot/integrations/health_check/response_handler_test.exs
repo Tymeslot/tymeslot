@@ -23,7 +23,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
   end
 
   describe "handle_transition/3 with initial failure" do
-    test "deactivates calendar integration on initial failure" do
+    test "does not deactivate calendar integration on initial failure" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true)
 
@@ -33,12 +33,12 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
                {:initial_failure, nil, :unhealthy}
              ) == :ok
 
-      # Verify integration was deactivated
+      # Verify integration remains active
       {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
-      refute updated.is_active
+      assert updated.is_active == true
     end
 
-    test "deactivates video integration on initial failure" do
+    test "does not deactivate video integration on initial failure" do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true)
 
@@ -48,14 +48,14 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
                {:initial_failure, nil, :unhealthy}
              ) == :ok
 
-      # Verify integration was deactivated
+      # Verify integration remains active
       {:ok, updated} = VideoIntegrationQueries.get(integration.id)
-      refute updated.is_active
+      assert updated.is_active == true
     end
   end
 
   describe "handle_transition/3 with became unhealthy" do
-    test "deactivates calendar integration when becoming unhealthy" do
+    test "does not deactivate calendar integration when becoming unhealthy" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true)
 
@@ -65,12 +65,12 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
                {:became_unhealthy, :degraded, :unhealthy}
              ) == :ok
 
-      # Verify integration was deactivated
+      # Verify integration remains active
       {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
-      refute updated.is_active
+      assert updated.is_active == true
     end
 
-    test "deactivates video integration when becoming unhealthy" do
+    test "does not deactivate video integration when becoming unhealthy" do
       user = insert(:user)
       integration = insert(:video_integration, user: user, is_active: true)
 
@@ -80,16 +80,16 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
                {:became_unhealthy, :healthy, :unhealthy}
              ) == :ok
 
-      # Verify integration was deactivated
+      # Verify integration remains active
       {:ok, updated} = VideoIntegrationQueries.get(integration.id)
-      refute updated.is_active
+      assert updated.is_active == true
     end
   end
 
   describe "handle_transition/3 with became healthy" do
-    test "logs recovery from unhealthy to healthy" do
+    test "sends recovery alert but keeps integration active" do
       user = insert(:user)
-      integration = insert(:calendar_integration, user: user, is_active: false)
+      integration = insert(:calendar_integration, user: user, is_active: true)
 
       assert ResponseHandler.handle_transition(
                :calendar,
@@ -97,15 +97,13 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
                {:became_healthy, :unhealthy, :healthy}
              ) == :ok
 
-      # Note: Recovery doesn't automatically re-activate integrations
-      # User must manually re-enable them
       {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
-      refute updated.is_active
+      assert updated.is_active == true
     end
 
-    test "handles recovery for video integrations" do
+    test "sends recovery alert for video integrations and keeps integration active" do
       user = insert(:user)
-      integration = insert(:video_integration, user: user, is_active: false)
+      integration = insert(:video_integration, user: user, is_active: true)
 
       assert ResponseHandler.handle_transition(
                :video,
@@ -114,7 +112,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
              ) == :ok
 
       {:ok, updated} = VideoIntegrationQueries.get(integration.id)
-      refute updated.is_active
+      assert updated.is_active == true
     end
   end
 
@@ -154,7 +152,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: false)
 
-      # Should succeed even though integration is already inactive
+      # Should succeed and leave the integration inactive (as it was manually deactivated)
       assert ResponseHandler.handle_transition(
                :calendar,
                integration,
