@@ -28,18 +28,21 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
     end
 
     test "exactly one card carries the selection indicator at any time" do
-      # The checkmark SVG path is only rendered on the selected card (:if={@selected}).
+      # data-selected="true" is set on the card container only when selected.
       # Regardless of which type is active, exactly one card should be marked.
       for selected_type <- ["inline", "popup", "link", "floating"] do
         assigns = Map.put(@base_grid_assigns, :selected_embed_type, selected_type)
         html = render_component(&OptionsGrid.options_grid/1, assigns)
 
-        # "border-turquoise-500" is added to the card container only when selected
-        occurrence_count = html |> String.split("border-turquoise-500") |> length()
+        selected_count =
+          html
+          |> String.split(~s(data-selected="true"))
+          |> length()
+          |> Kernel.-(1)
 
-        assert occurrence_count == 2,
+        assert selected_count == 1,
                "Expected exactly one selected card for type=#{selected_type}, " <>
-                 "but found #{occurrence_count - 1} occurrences of selection indicator"
+                 "but found #{selected_count} cards with data-selected=true"
       end
     end
   end

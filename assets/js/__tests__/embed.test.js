@@ -178,6 +178,27 @@ describe('embed()', () => {
 })
 
 describe('postMessage resize handler', () => {
+  test('applies height from resize messages originating from the expected domain', () => {
+    const container = document.createElement('div')
+    container.id = 'booking-container'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#booking-container', 'alice')
+
+    const iframe = document.querySelector('iframe[title="Booking Widget"]')
+    expect(iframe).not.toBeNull()
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 500 }
+      })
+    )
+
+    expect(iframe.style.height).toBe('500px')
+  })
+
   test('ignores resize messages that originate from a different domain', () => {
     const container = document.createElement('div')
     container.id = 'booking-container'
@@ -186,16 +207,27 @@ describe('postMessage resize handler', () => {
     window.TymeslotBooking.embed('#booking-container', 'alice')
 
     const iframe = document.querySelector('iframe[title="Booking Widget"]')
-    const initialHeight = iframe?.style.height ?? ''
+    expect(iframe).not.toBeNull()
 
+    // First establish a known height via a legitimate message so the evil-origin
+    // assertion has a meaningful value to compare against, rather than the empty
+    // initial state (which would pass trivially even if no handler existed).
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 500 }
+      })
+    )
+    expect(iframe.style.height).toBe('500px')
+
+    // A message from an attacker-controlled domain must not change the height
     window.dispatchEvent(
       new MessageEvent('message', {
         origin: 'https://evil.example.com',
         data: { type: 'tymeslot-resize', height: 9999 }
       })
     )
-
-    // Height must not have changed — the message was from the wrong origin
-    expect(iframe?.style.height ?? '').toBe(initialHeight)
+    expect(iframe.style.height).toBe('500px')
   })
 })
