@@ -122,4 +122,26 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
     assert Enum.all?(results, &(&1 == {:error, :timeout}))
     assert counter() == 1
   end
+
+  test "different keys run independently and each compute separately" do
+    n = 3
+
+    tasks =
+      for i <- 1..n do
+        user_id = System.unique_integer([:positive])
+
+        Task.async(fn ->
+          RequestCoalescer.coalesce(user_id, ~D[2024-03-01], ~D[2024-03-07], fn ->
+            Agent.update(__MODULE__.Counter, &(&1 + 1))
+            {:ok, {:result, i}}
+          end)
+        end)
+      end
+
+    results = Task.await_many(tasks, @await_timeout)
+
+    # Each key should have triggered its own fetch
+    assert counter() == n
+    assert Enum.all?(results, &match?({:ok, {:result, _}}, &1))
+  end
 end

@@ -59,6 +59,22 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
     end
   end
 
+  describe "AccountLockout integration with check_auth_rate_limit/2" do
+    # Isolated AccountLockout behaviour (thresholds, durations, counts) is tested in
+    # account_lockout_test.exs. This block covers only the integration point where
+    # check_auth_rate_limit/2 delegates to AccountLockout before the Hammer buckets.
+    test "locked account is blocked by check_auth_rate_limit" do
+      email = "lockout-hammer-#{System.unique_integer([:positive])}@example.com"
+
+      for _i <- 1..20 do
+        AccountLockout.check_and_record_attempt(email, false)
+      end
+
+      assert {:error, :rate_limited, message} = RateLimiter.check_auth_rate_limit(email, nil)
+      assert message =~ "locked"
+    end
+  end
+
   describe "record_auth_attempt/2" do
     test "success clears the lockout counter for the email" do
       email = "clear-on-success@example.com"

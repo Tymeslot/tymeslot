@@ -1,10 +1,14 @@
 defmodule TymeslotWeb.AuthLiveTest do
-  use TymeslotWeb.LiveCase, async: true
-  @moduletag :utils
+  use TymeslotWeb.LiveCase, async: false
+  @moduletag :auth
 
   alias Phoenix.Flash
   alias Tymeslot.Auth
-  alias Tymeslot.Security.Password
+  alias Tymeslot.DatabaseQueries.UserQueries
+  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Repo
+  alias Tymeslot.Security.{Password, RateLimiter, Token}
+  import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
   describe "Login" do
@@ -137,6 +141,144 @@ defmodule TymeslotWeb.AuthLiveTest do
       |> render_click()
 
       assert render(view) =~ "Welcome Back!"
+    end
+  end
+
+  describe "Password Reset Form" do
+    setup do
+      user = insert(:user)
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserQueries.set_reset_token(user, token)
+      %{user: user, token: token}
+    end
+
+    test "valid token renders new password form", %{conn: conn, token: token} do
+      {:ok, _view, html} = live(conn, ~p"/auth/reset-password/#{token}")
+
+      assert html =~ "Reset Your Password"
+      assert html =~ "new-password-form"
+      assert html =~ "New Password"
+      assert html =~ "Confirm New Password"
+    end
+
+    test "invalid token renders invalid_token state", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/auth/reset-password/nonexistent-token-abc")
+
+      assert html =~ "Link Expired or Invalid"
+    end
+
+    test "expired token renders invalid_token state", %{conn: conn, user: user, token: token} do
+      expired_time = DateTime.add(DateTime.utc_now(), -3 * 3600, :second)
+
+      Repo.update_all(
+        from(u in UserSchema, where: u.id == ^user.id),
+        set: [reset_sent_at: expired_time]
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/auth/reset-password/#{token}")
+
+      assert html =~ "Link Expired or Invalid"
+    end
+
+    test "valid submission transitions to success state", %{conn: conn, token: token} do
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password/#{token}")
+
+      view
+      |> form("#new-password-form", %{
+        "password" => "NewSecurePass123!",
+        "password_confirmation" => "NewSecurePass123!"
+      })
+      |> render_submit()
+
+      assert render(view) =~ "Password Reset Successfully"
+    end
+  end
+
+  describe "CSRF validation failure" do
+    test "submit_signup with invalid CSRF token shows security error", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+
+      result =
+        render_hook(view, "submit_signup", %{
+          "user" => %{
+            "email" => "test@example.com",
+            "password" => "ValidPassword123!",
+            "terms_accepted" => "true",
+            "website" => ""
+          },
+          "_csrf_token" => "invalid_token"
+        })
+
+      assert result =~ "Security validation failed"
+    end
+
+    test "submit_reset_request with invalid CSRF token shows security error", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+
+      result =
+        render_hook(view, "submit_reset_request", %{
+          "email" => "test@example.com",
+          "_csrf_token" => "invalid_token"
+        })
+
+      assert result =~ "Security validation failed"
+    end
+
+  end
+
+  describe "rate limiting — password reset" do
+    setup do
+      on_exit(fn -> RateLimiter.clear_all() end)
+      :ok
+    end
+
+    test "submit_reset_request is blocked after exhausting the per-email rate limit", %{
+      conn: conn
+    } do
+      email = "rl-reset-#{System.unique_integer([:positive])}@example.com"
+
+      # Exhaust the 1-hour per-email bucket (limit: 5)
+      for _i <- 1..5 do
+        RateLimiter.check_password_reset_rate_limit(email, "test-rate-limit-ip")
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+
+      result =
+        view
+        |> form("#reset-password-form", %{"email" => email})
+        |> render_submit()
+
+      assert result =~ "Too many"
+    end
+  end
+
+  describe "rate limiting — verification resend" do
+    setup do
+      on_exit(fn -> RateLimiter.clear_all() end)
+      :ok
+    end
+
+    test "resend_verification is blocked after exhausting the per-user rate limit", %{conn: conn} do
+      user = insert(:unverified_user)
+
+      # Exhaust the 1-hour per-user bucket (limit: 5)
+      for _i <- 1..5 do
+        RateLimiter.check_verification_rate_limit(user.id, "test-rate-limit-ip")
+      end
+
+      conn =
+        init_test_session(conn, %{
+          "unverified_user_id" => user.id,
+          "unverified_user_email" => user.email,
+          "unverified_session_timestamp" => DateTime.to_unix(DateTime.utc_now())
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/auth/verify-email")
+
+      render_hook(view, "resend_verification", %{})
+
+      assert render(view) =~ "limit" or render(view) =~ "Too many"
     end
   end
 

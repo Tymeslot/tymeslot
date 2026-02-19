@@ -4,7 +4,9 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   @moduletag :auth
 
   alias Tymeslot.Auth.PasswordReset
-  alias Tymeslot.DatabaseQueries.UserQueries
+  alias Tymeslot.DatabaseQueries.{UserQueries, UserSessionQueries}
+  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, Token}
 
   import Tymeslot.Factory
@@ -36,12 +38,47 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       # OAuth users should get an error
       result = PasswordReset.initiate_reset(oauth_user.email)
 
-      # OAuth users cannot reset passwords
       assert {:error, :oauth_user, _message} = result
     end
   end
 
-  describe "token security" do
+  describe "verify_token/1" do
+    test "with valid token returns {:ok, user_map, message}" do
+      user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserQueries.set_reset_token(user, token)
+
+      assert {:ok, user_map, message} = PasswordReset.verify_token(token)
+      assert user_map.id == user.id
+      assert message =~ "verified"
+    end
+
+    test "with expired token returns {:error, :token_expired, _}" do
+      user = insert(:user)
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserQueries.set_reset_token(user, token)
+
+      # Manually expire the token by setting reset_sent_at to 3 hours ago
+      expired_time = DateTime.add(DateTime.utc_now(), -3 * 3600, :second)
+
+      Repo.update_all(
+        from(u in UserSchema, where: u.id == ^user.id),
+        set: [reset_sent_at: expired_time]
+      )
+
+      assert {:error, :token_expired, message} = PasswordReset.verify_token(token)
+      assert message =~ "expired"
+    end
+
+    test "with non-existent token returns {:error, :invalid_token, _}" do
+      assert {:error, :invalid_token, message} =
+               PasswordReset.verify_token("nonexistent-token-value")
+
+      assert message =~ "Invalid"
+    end
+  end
+
+  describe "reset_password/3" do
     test "reset tokens are single-use" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
       {token, _value} = Token.generate_password_reset_token()
@@ -58,6 +95,30 @@ defmodule Tymeslot.Auth.PasswordResetTest do
                PasswordReset.reset_password(token, "AnotherPass123!", "AnotherPass123!")
     end
 
+    test "invalidates all existing sessions" do
+      user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      sessions = insert_list(3, :user_session, user: user)
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserQueries.set_reset_token(user, token)
+
+      new_password = "NewSecurePassword123!"
+      {:ok, _user_map, _message} = PasswordReset.reset_password(token, new_password, new_password)
+
+      # All sessions should be invalidated
+      Enum.each(sessions, fn session ->
+        assert nil == UserSessionQueries.get_user_by_session_token(session.token)
+      end)
+    end
+
+    test "with mismatched confirmation returns error" do
+      user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserQueries.set_reset_token(user, token)
+
+      assert {:error, _reason, _message} =
+               PasswordReset.reset_password(token, "NewPass123!", "DifferentPass123!")
+    end
+
     test "enforces strong password requirements" do
       user = insert(:user)
       {token, _value} = Token.generate_password_reset_token()
@@ -65,6 +126,21 @@ defmodule Tymeslot.Auth.PasswordResetTest do
 
       # Weak password rejected
       assert {:error, _reason, _changeset} = PasswordReset.reset_password(token, "weak", "weak")
+    end
+  end
+
+  describe "initiate_reset/1 rate limiting" do
+    test "rate limits repeated requests" do
+      insert(:user, email: "ratelimit@example.com")
+
+      # Per-email limit is 5/hour; send 20 requests — first 5 succeed, rest are blocked
+      results =
+        for _i <- 1..20 do
+          PasswordReset.initiate_reset("ratelimit@example.com", ip: "192.168.1.100")
+        end
+
+      rate_limited = Enum.filter(results, &match?({:error, :rate_limited, _msg}, &1))
+      assert length(rate_limited) >= 15
     end
   end
 end

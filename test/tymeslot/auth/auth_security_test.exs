@@ -238,12 +238,17 @@ defmodule Tymeslot.Auth.SecurityTest do
       assert updated.email_change_token_hash != nil
     end
 
-    test "critical actions require fresh authentication" do
-      # This is more of a controller-level test, but important for security
-      # Ensure password changes, email changes, etc. check session age
-      # and require re-authentication if session is too old
-      # Placeholder - implement in controller tests
-      assert true
+    test "password changes require current password" do
+      user =
+        insert(:user, password_hash: Password.hash_password("Current123!"))
+
+      # Wrong password blocks password change
+      assert {:error, _reason} =
+               Auth.update_user_password(user, "Wrong123!", "New123!New", "New123!New")
+
+      # Correct password allows password change
+      assert {:ok, _updated} =
+               Auth.update_user_password(user, "Current123!", "NewPass123!", "NewPass123!")
     end
   end
 end

@@ -132,6 +132,84 @@ defmodule Tymeslot.Auth.AuthActionsTest do
     end
   end
 
+  describe "validate_signup_input/1 — field length boundaries" do
+    test "accepts email of exactly 254 characters" do
+      # 242 'a' + "@example.com" (12) = 254 chars
+      email = String.duplicate("a", 242) <> "@example.com"
+
+      params = %{
+        "email" => email,
+        "password" => "ValidPass1!",
+        "full_name" => "Test User"
+      }
+
+      assert {:ok, _result} = AuthActions.validate_signup_input(params)
+    end
+
+    test "rejects email of 255 characters" do
+      # 243 'a' + "@example.com" (12) = 255 chars
+      email = String.duplicate("a", 243) <> "@example.com"
+
+      params = %{
+        "email" => email,
+        "password" => "ValidPass1!",
+        "full_name" => "Test User"
+      }
+
+      assert {:error, %{email: _msg}} = AuthActions.validate_signup_input(params)
+    end
+
+    test "accepts password of exactly 80 characters" do
+      # "ValidPass1!" (11) + 69 'a' = 80 chars; passes all complexity rules
+      password = "ValidPass1!" <> String.duplicate("a", 69)
+
+      params = %{
+        "email" => "test@example.com",
+        "password" => password,
+        "full_name" => "Test User"
+      }
+
+      assert {:ok, _result} = AuthActions.validate_signup_input(params)
+    end
+
+    test "rejects password of 81 characters" do
+      # "ValidPass1!" (11) + 70 'a' = 81 chars
+      password = "ValidPass1!" <> String.duplicate("a", 70)
+
+      params = %{
+        "email" => "test@example.com",
+        "password" => password,
+        "full_name" => "Test User"
+      }
+
+      assert {:error, %{password: _msg}} = AuthActions.validate_signup_input(params)
+    end
+
+    test "accepts full_name of exactly 100 characters" do
+      full_name = String.duplicate("a", 100)
+
+      params = %{
+        "email" => "test@example.com",
+        "password" => "ValidPass1!",
+        "full_name" => full_name
+      }
+
+      assert {:ok, _result} = AuthActions.validate_signup_input(params)
+    end
+
+    test "rejects full_name of 101 characters" do
+      full_name = String.duplicate("a", 101)
+
+      params = %{
+        "email" => "test@example.com",
+        "password" => "ValidPass1!",
+        "full_name" => full_name
+      }
+
+      assert {:error, %{full_name: _msg}} = AuthActions.validate_signup_input(params)
+    end
+  end
+
   describe "validate_login_input/1" do
     test "sanitizes email and passes through valid login input" do
       params = %{"email" => " TEST@example.com ", "password" => "SomePassword123!"}
