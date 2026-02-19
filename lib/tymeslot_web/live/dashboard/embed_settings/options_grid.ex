@@ -192,6 +192,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       phx-click="select_embed_type"
       phx-value-type={@type}
       phx-target={@myself}
+      data-selected={to_string(@selected)}
     >
       <div :if={@selected} class="absolute -top-3 -right-3 w-8 h-8 bg-turquoise-600 rounded-full flex items-center justify-center text-white shadow-lg z-10">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

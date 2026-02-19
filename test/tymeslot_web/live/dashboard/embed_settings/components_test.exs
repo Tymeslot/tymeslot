@@ -9,14 +9,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection
 
   describe "OptionsGrid component" do
+    @base_grid_assigns %{
+      username: "testuser",
+      base_url: "https://tymeslot.com",
+      booking_url: "https://tymeslot.com/testuser",
+      myself: "myself"
+    }
+
     test "renders all options" do
-      assigns = %{
-        selected_embed_type: "inline",
-        username: "testuser",
-        base_url: "https://tymeslot.com",
-        booking_url: "https://tymeslot.com/testuser",
-        myself: "myself"
-      }
+      assigns = Map.put(@base_grid_assigns, :selected_embed_type, "inline")
 
       html = render_component(&OptionsGrid.options_grid/1, assigns)
       assert html =~ "Inline Embed"
@@ -24,6 +25,25 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.ComponentsTest do
       assert html =~ "Direct Link"
       assert html =~ "Floating Button"
       assert html =~ "Recommended"
+    end
+
+    test "exactly one card carries the selection indicator at any time" do
+      # data-selected="true" is set on the card container only when selected.
+      # Regardless of which type is active, exactly one card should be marked.
+      for selected_type <- ["inline", "popup", "link", "floating"] do
+        assigns = Map.put(@base_grid_assigns, :selected_embed_type, selected_type)
+        html = render_component(&OptionsGrid.options_grid/1, assigns)
+
+        selected_count =
+          html
+          |> String.split(~s(data-selected="true"))
+          |> length()
+          |> Kernel.-(1)
+
+        assert selected_count == 1,
+               "Expected exactly one selected card for type=#{selected_type}, " <>
+                 "but found #{selected_count} cards with data-selected=true"
+      end
     end
   end
 
