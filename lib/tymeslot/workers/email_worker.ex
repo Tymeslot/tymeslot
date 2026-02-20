@@ -252,6 +252,65 @@ defmodule Tymeslot.Workers.EmailWorker do
     end
   end
 
+  @doc """
+  Schedules an integration unhealthy notification email with medium priority.
+
+  Uses a 30-day uniqueness window per user + integration + type so that a
+  re-occurring flap does not immediately re-send after a cooldown expires.
+  The ResponseHandler also tracks `notification_sent_at` in the DB for the same
+  reason; the Oban uniqueness is a belt-and-suspenders safeguard.
+  """
+  @spec schedule_integration_unhealthy_notification(map(), map(), atom() | String.t()) ::
+          :ok | {:error, String.t()}
+  def schedule_integration_unhealthy_notification(user, integration, type) do
+    result =
+      %{
+        "action" => "send_integration_unhealthy_notification",
+        "user_id" => user.id,
+        "integration_id" => integration.id,
+        "integration_type" => to_string(type)
+      }
+      |> new(
+        queue: :emails,
+        priority: 2,
+        unique: [
+          # 30-day uniqueness to match the notification cooldown
+          period: 30 * 24 * 60 * 60,
+          fields: [:args, :queue],
+          keys: [:action, :user_id, :integration_id, :integration_type]
+        ]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        Logger.info("Integration unhealthy notification job scheduled",
+          user_id: user.id,
+          integration_id: integration.id,
+          type: type
+        )
+
+        :ok
+
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
+        Logger.info("Integration unhealthy notification job already exists, skipping duplicate",
+          user_id: user.id,
+          integration_id: integration.id
+        )
+
+        :ok
+
+      {:error, changeset} ->
+        Logger.error("Failed to schedule integration unhealthy notification",
+          user_id: user.id,
+          integration_id: integration.id,
+          error: inspect(changeset)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
   # Private functions
 
   defp handle_result(result, job) do
@@ -406,6 +465,7 @@ defmodule Tymeslot.Workers.EmailWorker do
       "send_email_change_verification" -> ["user_id", "new_email", "verification_url"]
       "send_email_change_notification" -> ["user_id", "new_email"]
       "send_email_change_confirmations" -> ["user_id", "old_email", "new_email"]
+      "send_integration_unhealthy_notification" -> ["user_id", "integration_id", "integration_type"]
       nil -> ["action"]
       _other_action -> []
     end

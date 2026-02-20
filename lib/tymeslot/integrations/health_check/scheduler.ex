@@ -15,54 +15,39 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
   alias Tymeslot.Workers.IntegrationHealthWorker
 
   @max_jitter_ms 30_000
-  @max_backoff :timer.hours(1)
   @check_interval :timer.minutes(30)
 
   @type integration_type :: :calendar | :video
 
   @doc """
   Schedules health check jobs for all active integrations.
-  Returns updated state with scheduled jobs.
+  Health state is read from the database per-integration to determine if a check is due.
   """
-  @spec schedule_all(map(), keyword()) :: {map(), :ok}
-  def schedule_all(state, opts \\ []) do
+  @spec schedule_all(keyword()) :: :ok
+  def schedule_all(opts \\ []) do
     now = DateTime.utc_now()
     force = Keyword.get(opts, :force, false)
 
-    state =
-      Enum.reduce(CalendarIntegrationQueries.list_all_active(), state, fn int, acc ->
-        schedule_if_due(:calendar, int, acc, now, force)
-      end)
+    Enum.each(CalendarIntegrationQueries.list_all_active(), fn int ->
+      schedule_if_due(:calendar, int, now, force)
+    end)
 
-    state =
-      Enum.reduce(VideoIntegrationQueries.list_all_active(), state, fn int, acc ->
-        schedule_if_due(:video, int, acc, now, force)
-      end)
+    Enum.each(VideoIntegrationQueries.list_all_active(), fn int ->
+      schedule_if_due(:video, int, now, force)
+    end)
 
-    {state, :ok}
+    :ok
   end
 
   @doc """
   Determines if a check is due based on health state and current time.
   """
   @spec due_for_check?(Monitor.health_state(), DateTime.t()) :: boolean()
-  def due_for_check?(%{last_check: nil}, _now), do: true
+  def due_for_check?(%{last_check_at: nil}, _now), do: true
 
-  def due_for_check?(%{last_check: last_check, backoff_ms: backoff_ms}, now) do
-    next_time = DateTime.add(last_check, backoff_ms, :millisecond)
+  def due_for_check?(%{last_check_at: last_check_at, backoff_ms: backoff_ms}, now) do
+    next_time = DateTime.add(last_check_at, backoff_ms, :millisecond)
     DateTime.compare(next_time, now) != :gt
-  end
-
-  @doc """
-  Calculates the next backoff duration for transient failures.
-  Uses exponential backoff with a maximum cap.
-  """
-  @spec next_backoff_ms(pos_integer()) :: pos_integer()
-  def next_backoff_ms(current) do
-    current
-    |> max(@check_interval)
-    |> Kernel.*(2)
-    |> min(@max_backoff)
   end
 
   @doc """
@@ -76,8 +61,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
 
   # Private Functions
 
-  defp schedule_if_due(type, integration, state, now, force) do
-    health_state = Monitor.get_state(state, type, integration.id)
+  defp schedule_if_due(type, integration, now, force) do
+    health_state = Monitor.get_state(type, integration.id, integration.user_id)
 
     if force || due_for_check?(health_state, now) do
       Logger.debug("Scheduling integration health check",
@@ -98,8 +83,6 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
         last_error_class: health_state.last_error_class
       )
     end
-
-    state
   end
 
   defp enqueue_if_allowed(type, integration_id) do

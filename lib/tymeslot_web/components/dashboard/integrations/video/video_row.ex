@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
   """
   use TymeslotWeb, :html
 
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Helpers.IntegrationProviders
@@ -12,6 +13,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
   attr :testing_connection, :any, default: nil
   attr :myself, :any, required: true
   attr :icon_size, :string, default: "compact", values: ["compact", "medium", "large", "mini"]
+  attr :health_state, :map, default: nil
 
   @spec video_row(map()) :: Phoenix.LiveView.Rendered.t()
   def video_row(assigns) do
@@ -40,6 +42,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
                   {@integration.name}
                 <% end %>
               </h4>
+              <UIComponents.health_warning_badge
+                :if={@health_state && @health_state.status == :unhealthy}
+              />
             </div>
 
             <!-- Provider Type -->

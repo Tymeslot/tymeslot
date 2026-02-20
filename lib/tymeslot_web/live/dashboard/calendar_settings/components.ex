@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   }
 
   alias TymeslotWeb.Components.Dashboard.Integrations.ProviderCard
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Dashboard.CalendarSettings.Helpers
@@ -136,6 +137,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   attr :validating_integration_id, :integer, required: true
   attr :is_refreshing, :boolean, required: true
   attr :myself, :any, required: true
+  attr :health_states, :map, default: %{}
 
   @spec connected_calendars_section(map()) :: Phoenix.LiveView.Rendered.t()
   def connected_calendars_section(assigns) do
@@ -196,6 +198,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               integration={integration}
               validating_integration_id={@validating_integration_id}
               myself={@myself}
+              health_state={Map.get(@health_states, integration.id)}
             />
           <% end %>
         </div>
@@ -219,6 +222,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               integration={integration}
               validating_integration_id={@validating_integration_id}
               myself={@myself}
+              health_state={Map.get(@health_states, integration.id)}
             />
           <% end %>
         </div>
@@ -234,6 +238,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   attr :validating_integration_id, :integer, required: true
   attr :myself, :any, required: true
   attr :icon_size, :string, default: "compact", values: ["compact", "medium", "large", "mini"]
+  attr :health_state, :map, default: nil
 
   @spec calendar_item(map()) :: Phoenix.LiveView.Rendered.t()
   def calendar_item(assigns) do
@@ -270,6 +275,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               <span :if={!@integration.is_active} class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
                 Paused
               </span>
+              <UIComponents.health_warning_badge
+                :if={@health_state && @health_state.status == :unhealthy}
+              />
             </div>
 
             <!-- Calendar Selection Grid -->

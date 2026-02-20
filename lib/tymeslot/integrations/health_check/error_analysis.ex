@@ -9,10 +9,16 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
 
   require Logger
 
-  alias Tymeslot.Integrations.HealthCheck.Scheduler
-
   @type error_class :: :transient | :hard
   @type analysis_result :: {:ok, any()} | {:error, any(), error_class()}
+
+  # Transient backoff: 5min → 10 → 20 → 40 → 60min (cap)
+  @transient_initial_ms :timer.minutes(5)
+  @hard_backoff_ms :timer.hours(1)
+  @max_backoff_ms :timer.hours(1)
+
+  # Normal check interval — used to detect the first failure after a healthy run
+  @check_interval :timer.minutes(30)
 
   @doc """
   Analyzes a check result and classifies any errors.
@@ -74,22 +80,33 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
 
   @doc """
   Calculates the next backoff duration based on error class and current health state.
+
+  Transient failures use an exponential backoff starting at 5 minutes:
+    5min → 10 → 20 → 40 → 60min (capped)
+
+  Hard failures (auth errors, bad credentials) always use a fixed 60-minute interval
+  since retrying quickly is pointless when credentials are invalid.
   """
   @spec calculate_next_backoff(map(), error_class()) :: pos_integer()
-  def calculate_next_backoff(health_state, :transient) do
-    Scheduler.next_backoff_ms(health_state.backoff_ms)
+  def calculate_next_backoff(%{backoff_ms: current}, :transient)
+      when current == @check_interval do
+    # Coming from a healthy/normal state (exactly at 30min interval) — start the ramp from initial
+    @transient_initial_ms
   end
 
-  def calculate_next_backoff(health_state, :hard) do
-    # Hard failures don't use exponential backoff
-    health_state.backoff_ms
+  def calculate_next_backoff(%{backoff_ms: current}, :transient) do
+    min(current * 2, @max_backoff_ms)
+  end
+
+  def calculate_next_backoff(_health_state, :hard) do
+    @hard_backoff_ms
   end
 
   # Private Functions
 
   defp log_error(reason, :transient, health_state) do
     Logger.warning("Integration health check transient failure",
-      reason: reason,
+      reason: inspect(reason),
       backoff_ms: calculate_next_backoff(health_state, :transient),
       error_class: :transient
     )
@@ -99,7 +116,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
     failures = health_state.failures + 1
 
     Logger.warning("Integration health check failed",
-      reason: reason,
+      reason: inspect(reason),
       failures: failures,
       error_class: :hard
     )

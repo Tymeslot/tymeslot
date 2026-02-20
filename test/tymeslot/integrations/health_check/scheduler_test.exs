@@ -6,85 +6,42 @@ defmodule Tymeslot.Integrations.HealthCheck.SchedulerTest do
 
   describe "due_for_check?/2" do
     test "returns true for integrations never checked" do
-      health_state = %{last_check: nil, backoff_ms: :timer.minutes(5)}
+      health_state = %{last_check_at: nil, backoff_ms: :timer.minutes(5)}
       now = DateTime.utc_now()
 
       assert Scheduler.due_for_check?(health_state, now) == true
     end
 
     test "returns true when backoff period has elapsed" do
-      last_check = DateTime.add(DateTime.utc_now(), -6, :minute)
-      health_state = %{last_check: last_check, backoff_ms: :timer.minutes(5)}
+      last_check_at = DateTime.add(DateTime.utc_now(), -6, :minute)
+      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.minutes(5)}
       now = DateTime.utc_now()
 
       assert Scheduler.due_for_check?(health_state, now) == true
     end
 
     test "returns false when backoff period has not elapsed" do
-      last_check = DateTime.add(DateTime.utc_now(), -3, :minute)
-      health_state = %{last_check: last_check, backoff_ms: :timer.minutes(5)}
+      last_check_at = DateTime.add(DateTime.utc_now(), -3, :minute)
+      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.minutes(5)}
       now = DateTime.utc_now()
 
       assert Scheduler.due_for_check?(health_state, now) == false
     end
 
     test "returns true when exactly at backoff boundary" do
-      last_check = DateTime.add(DateTime.utc_now(), -5, :minute)
-      health_state = %{last_check: last_check, backoff_ms: :timer.minutes(5)}
+      last_check_at = DateTime.add(DateTime.utc_now(), -5, :minute)
+      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.minutes(5)}
       now = DateTime.utc_now()
 
       assert Scheduler.due_for_check?(health_state, now) == true
     end
 
     test "handles longer backoff periods correctly" do
-      last_check = DateTime.add(DateTime.utc_now(), -45, :minute)
-      health_state = %{last_check: last_check, backoff_ms: :timer.hours(1)}
+      last_check_at = DateTime.add(DateTime.utc_now(), -45, :minute)
+      health_state = %{last_check_at: last_check_at, backoff_ms: :timer.hours(1)}
       now = DateTime.utc_now()
 
       assert Scheduler.due_for_check?(health_state, now) == false
-    end
-  end
-
-  describe "next_backoff_ms/1" do
-    test "doubles the current backoff" do
-      current = :timer.minutes(5)
-      next_backoff = Scheduler.next_backoff_ms(current)
-
-      assert next_backoff == :timer.minutes(10)
-    end
-
-    test "caps at maximum backoff (1 hour)" do
-      current = :timer.minutes(45)
-      next_backoff = Scheduler.next_backoff_ms(current)
-
-      assert next_backoff == :timer.hours(1)
-    end
-
-    test "maintains minimum backoff of check interval" do
-      current = :timer.minutes(1)
-      next_backoff = Scheduler.next_backoff_ms(current)
-
-      # Minimum is applied before doubling: max(1min, 5min) = 5min, then 5min * 2 = 10min
-      assert next_backoff == :timer.minutes(10)
-    end
-
-    test "exponential backoff sequence" do
-      expected_sequence = [
-        :timer.minutes(10),
-        :timer.minutes(20),
-        :timer.minutes(40),
-        :timer.hours(1),
-        :timer.hours(1)
-      ]
-
-      result =
-        Enum.reduce(1..5, [], fn _iteration, acc ->
-          current = if acc == [], do: :timer.minutes(5), else: List.last(acc)
-          next_backoff = Scheduler.next_backoff_ms(current)
-          acc ++ [next_backoff]
-        end)
-
-      assert result == expected_sequence
     end
   end
 

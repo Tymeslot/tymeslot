@@ -4,7 +4,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   """
   use TymeslotWeb, :live_component
 
+  alias Tymeslot.DatabaseQueries.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
@@ -31,6 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
      |> assign(:testing_integration_id, nil)
      |> assign(:is_refreshing, false)
      |> assign(:validating_integration_id, nil)
+     |> assign(:health_states, %{})
      |> assign(:available_calendar_providers, Calendar.list_available_providers(:calendar))}
   end
 
@@ -390,7 +393,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   # --- Private Helpers ---
 
   defp load_integrations(socket) do
-    assign(socket, :integrations, Calendar.list_integrations(socket.assigns.current_user.id))
+    user_id = socket.assigns.current_user.id
+    integrations = Calendar.list_integrations(user_id)
+
+    health_states =
+      user_id
+      |> IntegrationHealthStateQueries.list_unhealthy_for_user()
+      |> Enum.filter(&(&1.integration_type == "calendar"))
+      |> Map.new(fn s -> {s.integration_id, Monitor.from_db_record(s)} end)
+
+    socket
+    |> assign(:integrations, integrations)
+    |> assign(:health_states, health_states)
   end
 
   defp setup_config_view(socket, provider) do
@@ -459,6 +473,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
           validating_integration_id={@validating_integration_id}
           is_refreshing={@is_refreshing}
           myself={@myself}
+          health_states={@health_states}
         />
 
         <Components.available_providers_section

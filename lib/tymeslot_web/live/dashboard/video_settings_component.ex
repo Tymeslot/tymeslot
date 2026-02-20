@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   """
   use TymeslotWeb, :live_component
 
+  alias Tymeslot.DatabaseQueries.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
@@ -32,6 +34,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:form_values, %{})
      |> assign(:saving, false)
      |> assign(:testing_connection, nil)
+     |> assign(:health_states, %{})
      |> assign(:available_video_providers, Directory.list(:video))}
   end
 
@@ -296,6 +299,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                     integration={integration}
                     testing_connection={@testing_connection}
                     myself={@myself}
+                    health_state={Map.get(@health_states, integration.id)}
                   />
                 <% end %>
               </div>
@@ -313,6 +317,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                     integration={integration}
                     testing_connection={@testing_connection}
                     myself={@myself}
+                    health_state={Map.get(@health_states, integration.id)}
                   />
                 <% end %>
               </div>
@@ -370,7 +375,16 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   defp load_integrations(socket) do
     user_id = socket.assigns.current_user.id
     integrations = Video.list_integrations(user_id)
-    assign(socket, :integrations, integrations)
+
+    health_states =
+      user_id
+      |> IntegrationHealthStateQueries.list_unhealthy_for_user()
+      |> Enum.filter(&(&1.integration_type == "video"))
+      |> Map.new(fn s -> {s.integration_id, Monitor.from_db_record(s)} end)
+
+    socket
+    |> assign(:integrations, integrations)
+    |> assign(:health_states, health_states)
   end
 
   defp reset_form_state(socket) do

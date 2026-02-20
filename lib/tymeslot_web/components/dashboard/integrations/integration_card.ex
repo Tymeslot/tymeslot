@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationCard do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Integrations.Calendar
+  alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
 
@@ -15,6 +16,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationCard do
       assigns
       |> Map.put_new(:checking_connection, nil)
       |> Map.put_new(:icon_size, "compact")
+      |> Map.put_new(:health_state, nil)
 
     ~H"""
     <div class={[
@@ -29,6 +31,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationCard do
         else: ""
       )
     ]}>
+      <UIComponents.health_warning_badge
+        :if={@health_state && @health_state.status == :unhealthy}
+        class="absolute top-2 right-2 z-10 flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
+      />
       <div class="integration-header">
         <div class="integration-info">
           <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} />

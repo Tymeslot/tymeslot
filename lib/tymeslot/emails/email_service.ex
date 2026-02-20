@@ -21,6 +21,7 @@ defmodule Tymeslot.Emails.EmailService do
     EmailChangeNotification,
     EmailChangeVerification,
     EmailVerification,
+    IntegrationUnhealthy,
     PasswordReset,
     RescheduleRequest
   }
@@ -400,6 +401,31 @@ defmodule Tymeslot.Emails.EmailService do
     )
 
     {old_result, new_result}
+  end
+
+  @doc """
+  Sends an integration unhealthy notification to the integration owner.
+  Called when an integration has been failing health checks for over 48 hours.
+  """
+  @spec send_integration_unhealthy_notification(map(), map(), atom() | String.t()) ::
+          {:ok, any()} | {:error, any()}
+  def send_integration_unhealthy_notification(user, integration, type) do
+    Logger.info("Sending integration unhealthy notification",
+      user_id: user.id,
+      integration_id: integration.id,
+      type: type
+    )
+
+    html_body = IntegrationUnhealthy.render(user, integration, type)
+    type_label = if type == :video, do: "video", else: "calendar"
+
+    email =
+      MjmlEmail.base_email()
+      |> Email.to({user.name || user.email, user.email})
+      |> Email.subject("Your #{type_label} integration may need attention")
+      |> Email.html_body(html_body)
+
+    deliver(email)
   end
 
   @doc """

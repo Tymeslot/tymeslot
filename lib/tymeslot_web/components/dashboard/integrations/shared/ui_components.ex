@@ -122,4 +122,33 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
     </button>
     """
   end
+
+  @doc """
+  Renders a small amber warning badge indicating connection issues for an integration.
+
+  ## Examples
+
+      <.health_warning_badge />
+      <.health_warning_badge class="absolute top-2 right-2 z-10 ..." />
+  """
+  attr :class, :string,
+    default:
+      "flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
+
+  @spec health_warning_badge(map()) :: Phoenix.LiveView.Rendered.t()
+  def health_warning_badge(assigns) do
+    ~H"""
+    <span class={@class}>
+      <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        />
+      </svg>
+      Connection issues
+    </span>
+    """
+  end
 end

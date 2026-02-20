@@ -4,7 +4,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   """
 
   require Logger
-  alias Tymeslot.DatabaseQueries.{MeetingQueries, UserQueries}
+
+  alias Tymeslot.DatabaseQueries.{
+    CalendarIntegrationQueries,
+    IntegrationHealthStateQueries,
+    MeetingQueries,
+    UserQueries,
+    VideoIntegrationQueries
+  }
+
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Utils.ReminderUtils
 
@@ -45,6 +53,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
 
       "send_email_change_notification" ->
         handle_email_change_notification(args)
+
+      "send_integration_unhealthy_notification" ->
+        handle_integration_unhealthy_notification(args)
 
       _other ->
         {:discard, "Unknown action: #{action}"}
@@ -467,6 +478,59 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
         {:discard, "User not found"}
     end
   end
+
+  defp handle_integration_unhealthy_notification(%{
+         "user_id" => user_id,
+         "integration_id" => integration_id,
+         "integration_type" => integration_type
+       }) do
+    with {:ok, user} <- UserQueries.get_user(user_id),
+         {:ok, integration} <- fetch_integration(integration_type, integration_id) do
+      type_atom = String.to_existing_atom(integration_type)
+
+      case email_service_module().send_integration_unhealthy_notification(user, integration, type_atom) do
+        {:ok, _result} ->
+          Logger.info("Integration unhealthy notification sent",
+            user_id: user_id,
+            integration_id: integration_id,
+            type: integration_type
+          )
+
+          IntegrationHealthStateQueries.update_fields(
+            integration_type,
+            integration_id,
+            notification_sent_at: DateTime.utc_now()
+          )
+
+          :ok
+
+        {:error, reason} ->
+          Logger.error("Failed to send integration unhealthy notification",
+            user_id: user_id,
+            integration_id: integration_id,
+            error: inspect(reason)
+          )
+
+          {:error, "Failed to send notification"}
+      end
+    else
+      {:error, :not_found} ->
+        Logger.warning("User or integration not found for unhealthy notification",
+          user_id: user_id,
+          integration_id: integration_id
+        )
+
+        {:discard, "User or integration not found"}
+    end
+  end
+
+  defp fetch_integration("calendar", integration_id),
+    do: CalendarIntegrationQueries.get(integration_id)
+
+  defp fetch_integration("video", integration_id),
+    do: VideoIntegrationQueries.get(integration_id)
+
+  defp fetch_integration(_type, _id), do: {:error, :not_found}
 
   defp email_service_module do
     Application.get_env(:tymeslot, :email_service_module) ||

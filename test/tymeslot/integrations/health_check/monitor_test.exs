@@ -2,6 +2,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
+  alias Tymeslot.DatabaseQueries.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
 
   describe "initial_state/0" do
@@ -10,7 +11,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
 
       assert state.failures == 0
       assert state.successes == 0
-      assert state.last_check == nil
+      assert state.last_check_at == nil
       assert state.status == :healthy
       assert state.backoff_ms == :timer.minutes(30)
       assert state.last_error_class == nil
@@ -44,10 +45,12 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       old_state = %{
         failures: 2,
         successes: 0,
-        last_check: nil,
+        last_check_at: nil,
         status: :degraded,
         backoff_ms: :timer.minutes(5),
-        last_error_class: :hard
+        last_error_class: :hard,
+        became_unhealthy_at: nil,
+        notification_sent_at: nil
       }
 
       new_state = Monitor.update_health(old_state, {:ok, :result})
@@ -57,17 +60,19 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       assert new_state.status == :degraded
       assert new_state.backoff_ms == :timer.minutes(30)
       assert new_state.last_error_class == nil
-      assert %DateTime{} = new_state.last_check
+      assert %DateTime{} = new_state.last_check_at
     end
 
     test "sets status to healthy after 2 consecutive successes" do
       old_state = %{
         failures: 0,
         successes: 1,
-        last_check: DateTime.utc_now(),
+        last_check_at: DateTime.utc_now(),
         status: :degraded,
         backoff_ms: :timer.minutes(5),
-        last_error_class: nil
+        last_error_class: nil,
+        became_unhealthy_at: nil,
+        notification_sent_at: nil
       }
 
       new_state = Monitor.update_health(old_state, {:ok, :result})
@@ -87,17 +92,19 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       assert new_state.successes == 0
       assert new_state.status == :healthy
       assert new_state.last_error_class == :transient
-      assert %DateTime{} = new_state.last_check
+      assert %DateTime{} = new_state.last_check_at
     end
 
     test "preserves existing status" do
       old_state = %{
         failures: 1,
         successes: 0,
-        last_check: DateTime.utc_now(),
+        last_check_at: DateTime.utc_now(),
         status: :degraded,
         backoff_ms: :timer.minutes(5),
-        last_error_class: nil
+        last_error_class: nil,
+        became_unhealthy_at: nil,
+        notification_sent_at: nil
       }
 
       new_state = Monitor.update_health(old_state, {:error, :rate_limited, :transient})
@@ -112,10 +119,12 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       old_state = %{
         failures: 0,
         successes: 1,
-        last_check: DateTime.utc_now(),
+        last_check_at: DateTime.utc_now(),
         status: :healthy,
         backoff_ms: :timer.minutes(5),
-        last_error_class: nil
+        last_error_class: nil,
+        became_unhealthy_at: nil,
+        notification_sent_at: nil
       }
 
       new_state = Monitor.update_health(old_state, {:error, :unauthorized, :hard})
@@ -124,17 +133,19 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       assert new_state.successes == 0
       assert new_state.status == :degraded
       assert new_state.last_error_class == :hard
-      assert %DateTime{} = new_state.last_check
+      assert %DateTime{} = new_state.last_check_at
     end
 
     test "sets status to unhealthy after 3 consecutive hard failures" do
       old_state = %{
         failures: 2,
         successes: 0,
-        last_check: DateTime.utc_now(),
+        last_check_at: DateTime.utc_now(),
         status: :degraded,
         backoff_ms: :timer.minutes(5),
-        last_error_class: :hard
+        last_error_class: :hard,
+        became_unhealthy_at: nil,
+        notification_sent_at: nil
       }
 
       new_state = Monitor.update_health(old_state, {:error, :unauthorized, :hard})
@@ -146,7 +157,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
 
   describe "detect_transition/2" do
     test "detects initial failure" do
-      old_state = %{Monitor.initial_state() | last_check: nil}
+      old_state = %{Monitor.initial_state() | last_check_at: nil}
       new_state = %{old_state | status: :unhealthy, failures: 3}
 
       assert Monitor.detect_transition(old_state, new_state) ==
@@ -154,8 +165,8 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     end
 
     test "detects no change for initial healthy check" do
-      old_state = %{Monitor.initial_state() | last_check: nil}
-      new_state = %{old_state | status: :healthy, last_check: DateTime.utc_now()}
+      old_state = %{Monitor.initial_state() | last_check_at: nil}
+      new_state = %{old_state | status: :healthy, last_check_at: DateTime.utc_now()}
 
       assert Monitor.detect_transition(old_state, new_state) == {:no_change, nil, :healthy}
     end
@@ -163,7 +174,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "detects transition to unhealthy from healthy" do
       old_state = %{
         Monitor.initial_state()
-        | last_check: DateTime.utc_now(),
+        | last_check_at: DateTime.utc_now(),
           status: :healthy
       }
 
@@ -176,7 +187,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "detects transition to unhealthy from degraded" do
       old_state = %{
         Monitor.initial_state()
-        | last_check: DateTime.utc_now(),
+        | last_check_at: DateTime.utc_now(),
           status: :degraded,
           failures: 2
       }
@@ -190,7 +201,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "detects recovery from unhealthy to healthy" do
       old_state = %{
         Monitor.initial_state()
-        | last_check: DateTime.utc_now(),
+        | last_check_at: DateTime.utc_now(),
           status: :unhealthy,
           failures: 3
       }
@@ -204,7 +215,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "detects degradation from healthy to degraded" do
       old_state = %{
         Monitor.initial_state()
-        | last_check: DateTime.utc_now(),
+        | last_check_at: DateTime.utc_now(),
           status: :healthy
       }
 
@@ -217,7 +228,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "detects no change for same status" do
       old_state = %{
         Monitor.initial_state()
-        | last_check: DateTime.utc_now(),
+        | last_check_at: DateTime.utc_now(),
           status: :healthy
       }
 
@@ -229,7 +240,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "detects no change for degraded to degraded" do
       old_state = %{
         Monitor.initial_state()
-        | last_check: DateTime.utc_now(),
+        | last_check_at: DateTime.utc_now(),
           status: :degraded,
           failures: 1
       }
@@ -241,69 +252,104 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     end
   end
 
-  describe "get_state/3 and put_state/4" do
-    test "get_state returns initial state for unknown integration" do
-      state = %{calendar_health: %{}, video_health: %{}}
+  describe "get_state/3 and put_state/3" do
+    test "get_state creates a default healthy record for unknown integration" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
 
-      health = Monitor.get_state(state, :calendar, 123)
+      health = Monitor.get_state(:calendar, integration.id, user.id)
 
-      assert health == Monitor.initial_state()
+      assert health.status == :healthy
+      assert health.failures == 0
+      assert health.successes == 0
+      assert health.last_check_at == nil
     end
 
-    test "get_state returns stored state for known calendar integration" do
+    test "get_state returns existing state from DB" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+
+      {1, _nil} =
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+          status: "degraded",
+          failures: 2,
+          successes: 0,
+          backoff_ms: :timer.minutes(5),
+          last_check_at: DateTime.utc_now()
+        )
+
+      health = Monitor.get_state(:calendar, integration.id, user.id)
+
+      assert health.status == :degraded
+      assert health.failures == 2
+    end
+
+    test "put_state persists health state to DB" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+
+      health_state = %{
+        Monitor.initial_state()
+        | failures: 1,
+          status: :degraded,
+          last_check_at: DateTime.utc_now()
+      }
+
+      assert {1, _nil} = Monitor.put_state(:calendar, integration.id, health_state)
+
+      {:ok, record} = IntegrationHealthStateQueries.get(:calendar, integration.id)
+      assert record.status == "degraded"
+      assert record.failures == 1
+    end
+
+    test "put_state persists video integration state to DB" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user)
+
+      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:video, integration.id, user.id)
+
       health_state = %{Monitor.initial_state() | failures: 2, status: :degraded}
-      state = %{calendar_health: %{123 => health_state}, video_health: %{}}
 
-      health = Monitor.get_state(state, :calendar, 123)
+      assert {1, _nil} = Monitor.put_state(:video, integration.id, health_state)
 
-      assert health == health_state
-    end
-
-    test "get_state returns stored state for known video integration" do
-      health_state = %{Monitor.initial_state() | failures: 1, status: :degraded}
-      state = %{calendar_health: %{}, video_health: %{456 => health_state}}
-
-      health = Monitor.get_state(state, :video, 456)
-
-      assert health == health_state
-    end
-
-    test "put_state updates calendar integration state" do
-      initial_state = %{calendar_health: %{}, video_health: %{}}
-      health_state = %{Monitor.initial_state() | failures: 1}
-
-      new_state = Monitor.put_state(initial_state, :calendar, 123, health_state)
-
-      assert new_state.calendar_health[123] == health_state
-      assert new_state.video_health == %{}
-    end
-
-    test "put_state updates video integration state" do
-      initial_state = %{calendar_health: %{}, video_health: %{}}
-      health_state = %{Monitor.initial_state() | failures: 2}
-
-      new_state = Monitor.put_state(initial_state, :video, 456, health_state)
-
-      assert new_state.video_health[456] == health_state
-      assert new_state.calendar_health == %{}
+      {:ok, record} = IntegrationHealthStateQueries.get(:video, integration.id)
+      assert record.status == "degraded"
+      assert record.failures == 2
     end
   end
 
-  describe "build_user_report/2" do
+  describe "build_user_report/1" do
     test "builds report for user with calendar and video integrations" do
       user = insert(:user)
       cal_int = insert(:calendar_integration, user: user, provider: "google", is_active: true)
       vid_int = insert(:video_integration, user: user, provider: "mirotalk", is_active: true)
 
-      cal_health = %{Monitor.initial_state() | failures: 1, status: :degraded}
-      vid_health = %{Monitor.initial_state() | failures: 3, status: :unhealthy}
+      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, cal_int.id, user.id)
+      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:video, vid_int.id, user.id)
 
-      state = %{
-        calendar_health: %{cal_int.id => cal_health},
-        video_health: %{vid_int.id => vid_health}
-      }
+      {1, _nil} =
+        IntegrationHealthStateQueries.update_fields(:calendar, cal_int.id,
+          status: "degraded",
+          failures: 1,
+          successes: 0,
+          backoff_ms: :timer.minutes(5),
+          last_check_at: DateTime.utc_now()
+        )
 
-      report = Monitor.build_user_report(user.id, state)
+      {1, _nil} =
+        IntegrationHealthStateQueries.update_fields(:video, vid_int.id,
+          status: "unhealthy",
+          failures: 3,
+          successes: 0,
+          backoff_ms: :timer.hours(1),
+          last_check_at: DateTime.utc_now()
+        )
+
+      report = Monitor.build_user_report(user.id)
 
       assert length(report.calendar_integrations) == 1
       assert length(report.video_integrations) == 1
@@ -311,12 +357,12 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       cal_report = Enum.find(report.calendar_integrations, &(&1.id == cal_int.id))
       assert cal_report.provider == "google"
       assert cal_report.is_active == true
-      assert cal_report.health == cal_health
+      assert cal_report.health.status == :degraded
 
       vid_report = Enum.find(report.video_integrations, &(&1.id == vid_int.id))
       assert vid_report.provider == "mirotalk"
       assert vid_report.is_active == true
-      assert vid_report.health == vid_health
+      assert vid_report.health.status == :unhealthy
 
       assert report.summary.healthy_count == 0
       assert report.summary.degraded_count == 1
@@ -327,19 +373,17 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       user = insert(:user)
       cal_int = insert(:calendar_integration, user: user, provider: "google", is_active: true)
 
-      state = %{calendar_health: %{}, video_health: %{}}
-
-      report = Monitor.build_user_report(user.id, state)
+      report = Monitor.build_user_report(user.id)
 
       cal_report = Enum.find(report.calendar_integrations, &(&1.id == cal_int.id))
-      assert cal_report.health == Monitor.initial_state()
+      assert cal_report.health.status == :healthy
+      assert cal_report.health.failures == 0
     end
 
     test "returns empty report for user with no integrations" do
       user = insert(:user)
-      state = %{calendar_health: %{}, video_health: %{}}
 
-      report = Monitor.build_user_report(user.id, state)
+      report = Monitor.build_user_report(user.id)
 
       assert report.calendar_integrations == []
       assert report.video_integrations == []

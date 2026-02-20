@@ -125,30 +125,67 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
   end
 
   describe "calculate_next_backoff/2" do
-    test "doubles backoff for transient errors" do
+    test "resets to short interval on first transient failure from normal check interval" do
+      # When coming from the normal 30min check interval, the first transient failure
+      # resets to the short 5min initial interval.
       health_state = %{backoff_ms: :timer.minutes(30)}
 
       next_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :transient)
 
-      assert next_backoff == :timer.hours(1)
+      assert next_backoff == :timer.minutes(5)
     end
 
-    test "keeps backoff unchanged for hard errors" do
+    test "doubles backoff for subsequent transient errors" do
+      health_state = %{backoff_ms: :timer.minutes(5)}
+
+      next_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :transient)
+
+      assert next_backoff == :timer.minutes(10)
+    end
+
+    test "uses fixed 1-hour interval for hard errors" do
       health_state = %{backoff_ms: :timer.minutes(30)}
 
       next_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :hard)
 
-      assert next_backoff == :timer.minutes(30)
+      assert next_backoff == :timer.hours(1)
+    end
+
+    test "uses fixed 1-hour interval for hard errors regardless of current backoff" do
+      health_state = %{backoff_ms: :timer.minutes(5)}
+
+      next_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :hard)
+
+      assert next_backoff == :timer.hours(1)
     end
 
     test "respects maximum backoff cap for transient errors" do
       # Start near the cap
-      health_state = %{backoff_ms: :timer.minutes(45)}
+      health_state = %{backoff_ms: :timer.minutes(40)}
 
       next_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :transient)
 
       # Should cap at 1 hour
       assert next_backoff == :timer.hours(1)
+    end
+
+    test "transient backoff sequence from initial 5min" do
+      expected_sequence = [
+        :timer.minutes(10),
+        :timer.minutes(20),
+        :timer.minutes(40),
+        :timer.hours(1),
+        :timer.hours(1)
+      ]
+
+      result =
+        Enum.reduce(1..5, [], fn _iteration, acc ->
+          current_ms = if acc == [], do: :timer.minutes(5), else: List.last(acc)
+          next_backoff = ErrorAnalysis.calculate_next_backoff(%{backoff_ms: current_ms}, :transient)
+          acc ++ [next_backoff]
+        end)
+
+      assert result == expected_sequence
     end
   end
 end
