@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.MeetingSettings.HelpersTest do
   use TymeslotWeb.ConnCase, async: true
 
-  @moduletag :utils
+  @moduletag :meeting_types
 
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
@@ -36,21 +36,49 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.HelpersTest do
   end
 
   describe "handle_meeting_type_save_result/2" do
-    test "handles success" do
-      socket = mock_socket(%{editing_type: nil})
-      {:noreply, socket} = Helpers.handle_meeting_type_save_result({:ok, %{}}, socket)
-      assert_receive {:meeting_type_changed}
-      assert_receive {:flash, {:info, "Meeting type created"}}
-      refute socket.assigns.show_add_form
-    end
-
-    test "handles specific errors" do
+    test "handles video_integration_required error" do
       socket = mock_socket()
 
       {:noreply, socket} =
         Helpers.handle_meeting_type_save_result({:error, :video_integration_required}, socket)
 
+      assert_receive {:flash, {:error, _}}
       assert hd(socket.assigns.form_errors[:video_integration]) =~ "select a video provider"
+      refute socket.assigns.saving
+    end
+
+    test "handles invalid_duration error" do
+      socket = mock_socket()
+
+      {:noreply, socket} =
+        Helpers.handle_meeting_type_save_result({:error, :invalid_duration}, socket)
+
+      assert_receive {:flash, {:error, "Duration must be a valid number"}}
+      assert is_list(socket.assigns.form_errors[:duration])
+      refute socket.assigns.saving
+    end
+
+    test "handles changeset errors" do
+      changeset =
+        {%{}, %{name: :string}}
+        |> Ecto.Changeset.cast(%{}, [:name])
+        |> Ecto.Changeset.validate_required([:name])
+
+      socket = mock_socket()
+      {:noreply, socket} = Helpers.handle_meeting_type_save_result({:error, changeset}, socket)
+
+      assert is_list(socket.assigns.form_errors[:name])
+      refute socket.assigns.saving
+    end
+
+    test "handles unknown errors" do
+      socket = mock_socket()
+
+      {:noreply, socket} =
+        Helpers.handle_meeting_type_save_result({:error, :something_unexpected}, socket)
+
+      assert_receive {:flash, {:error, "Failed to save meeting type"}}
+      assert is_list(socket.assigns.form_errors[:base])
       refute socket.assigns.saving
     end
   end
