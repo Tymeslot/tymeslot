@@ -297,6 +297,71 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
     end
   end
 
+  describe "analytics provider script-src origins" do
+    setup do
+      original = Application.get_env(:tymeslot, :analytics_providers)
+      on_exit(fn -> Application.put_env(:tymeslot, :analytics_providers, original) end)
+      :ok
+    end
+
+    test "includes analytics script origin in script-src when a provider is configured", %{
+      conn: conn
+    } do
+      Application.put_env(:tymeslot, :analytics_providers, [
+        %{
+          provider: :umami,
+          script_url: "https://umami.example.com/script.js",
+          website_id: "abc123"
+        }
+      ])
+
+      conn = SecurityHeadersPlug.call(conn, [])
+      [csp] = get_resp_header(conn, "content-security-policy")
+      [script_src_directive] = Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
+
+      assert script_src_directive =~ "https://umami.example.com"
+    end
+
+    test "does not add extra origins to script-src when no providers are configured", %{
+      conn: conn
+    } do
+      Application.put_env(:tymeslot, :analytics_providers, [])
+
+      conn = SecurityHeadersPlug.call(conn, [])
+      [csp] = get_resp_header(conn, "content-security-policy")
+      [script_src_directive] = Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
+
+      assert script_src_directive ==
+               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://js.stripe.com"
+    end
+
+    test "deduplicates origins when two providers share the same host", %{conn: conn} do
+      Application.put_env(:tymeslot, :analytics_providers, [
+        %{
+          provider: :umami,
+          script_url: "https://analytics.example.com/script.js",
+          website_id: "abc"
+        },
+        %{
+          provider: :umami,
+          script_url: "https://analytics.example.com/alt.js",
+          website_id: "def"
+        }
+      ])
+
+      conn = SecurityHeadersPlug.call(conn, [])
+      [csp] = get_resp_header(conn, "content-security-policy")
+      [script_src_directive] = Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
+
+      origin_count =
+        script_src_directive
+        |> String.split(" ")
+        |> Enum.count(&(&1 == "https://analytics.example.com"))
+
+      assert origin_count == 1
+    end
+  end
+
   describe "security header combinations" do
     test "all security headers are present together", %{conn: conn} do
       conn = SecurityHeadersPlug.call(conn, allow_embedding: false)

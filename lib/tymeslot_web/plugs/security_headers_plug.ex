@@ -179,9 +179,33 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     end
   end
 
+  defp analytics_script_origins do
+    providers = Application.get_env(:tymeslot, :analytics_providers, []) || []
+
+    providers
+    |> Enum.flat_map(fn
+      %{script_url: url} when is_binary(url) ->
+        case URI.parse(url) do
+          %URI{scheme: scheme, host: host} when is_binary(scheme) and is_binary(host) ->
+            ["#{scheme}://#{host}"]
+
+          _ ->
+            []
+        end
+
+      _ ->
+        []
+    end)
+    |> Enum.uniq()
+  end
+
   defp csp_header(frame_ancestors) do
+    extra_script_origins = analytics_script_origins()
+
     script_src =
-      "'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://js.stripe.com"
+      (["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.google.com",
+        "https://www.gstatic.com", "https://js.stripe.com"] ++ extra_script_origins)
+      |> Enum.join(" ")
 
     connect_src =
       if Application.get_env(:tymeslot, :environment) == :dev do
