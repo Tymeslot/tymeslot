@@ -35,9 +35,6 @@ ENV MIX_ENV=prod \
 COPY mix.exs mix.lock ./
 COPY config ./config
 
-# Install hex and rebar
-RUN mix local.hex --force && mix local.rebar --force
-
 # Get dependencies using committed lock file
 RUN mix deps.get --only prod
 
