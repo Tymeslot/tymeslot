@@ -21,10 +21,12 @@ cmds = [
   "mix compile",
   "mix assets.deploy",
   # Build the OTP release — produces the self-contained binary used at runtime
-  "mix release tymeslot"
+  "mix release tymeslot",
+  # Make the Railway startup script executable
+  "chmod +x railway_start.sh"
 ]
 
 [start]
-# Run migrations via the release binary, then start the server.
-# Uses eval (same pattern as start.sh) so no Mix is needed in the runtime image.
-cmd = "_build/prod/rel/tymeslot/bin/tymeslot eval 'Ecto.Migrator.with_repo(Tymeslot.Repo, &Ecto.Migrator.run(&1, :up, all: true))' && _build/prod/rel/tymeslot/bin/tymeslot start"
+# Delegate to railway_start.sh which runs migrations then starts the server.
+# Using a script avoids shell-escaping issues with the Elixir lambda in the eval call.
+cmd = "bash railway_start.sh"
