@@ -1,0 +1,30 @@
+# Railway deployment configuration (Nixpacks)
+# Placed in apps/tymeslot/ because Railway's root directory is set to that path.
+#
+# Strategy: build a Mix release during the build phase, then use the compiled
+# release binary at runtime. This mirrors the Docker/Cloudron deployment via
+# start.sh — no Mix required at runtime, migrations run via `eval` before boot.
+
+[phases.setup]
+# Extend default Nix packages rather than replacing them
+nixPkgs = ["..."]
+
+[phases.install]
+cmds = [
+  "mix local.hex --force",
+  "mix local.rebar --force",
+  "mix deps.get --only prod"
+]
+
+[phases.build]
+cmds = [
+  "mix compile",
+  "mix assets.deploy",
+  # Build the OTP release — produces the self-contained binary used at runtime
+  "mix release tymeslot"
+]
+
+[start]
+# Run migrations via the release binary, then start the server.
+# Uses eval (same pattern as start.sh) so no Mix is needed in the runtime image.
+cmd = "_build/prod/rel/tymeslot/bin/tymeslot eval 'Ecto.Migrator.with_repo(Tymeslot.Repo, &Ecto.Migrator.run(&1, :up, all: true))' && _build/prod/rel/tymeslot/bin/tymeslot start"
