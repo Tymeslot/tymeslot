@@ -123,13 +123,20 @@ defmodule TymeslotWeb.VideoOAuthController do
     end
   end
 
-  def teams_callback(conn, %{"error" => error}) do
-    Logger.warning("Teams OAuth error: #{error}")
+  def teams_callback(conn, %{"error" => error} = params) do
+    error_description = Map.get(params, "error_description", "")
+    Logger.warning("Teams OAuth error", error: error, description: error_description)
 
     error_message =
-      case error do
-        "access_denied" -> "Authorization was denied. Please try again."
-        _other -> "Authentication failed. Please try again."
+      cond do
+        microsoft_admin_consent_error?(error_description) ->
+          "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
+
+        error == "access_denied" ->
+          "Authorization was denied. Please try again."
+
+        true ->
+          "Authentication failed. Please try again."
       end
 
     conn
@@ -143,6 +150,16 @@ defmodule TymeslotWeb.VideoOAuthController do
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
     |> redirect(to: "/dashboard/video")
+  end
+
+  # Microsoft returns an error_description containing an AADSTS code when a tenant's
+  # user consent policy requires an IT admin to approve the app before individuals
+  # can authorise it. Detecting these codes lets us show actionable guidance instead
+  # of a generic "access denied" message.
+  @microsoft_admin_consent_codes ~w[AADSTS65001 AADSTS90094 AADSTS90093 AADSTS90095]
+
+  defp microsoft_admin_consent_error?(description) do
+    Enum.any?(@microsoft_admin_consent_codes, &String.contains?(description, &1))
   end
 
   # Private functions

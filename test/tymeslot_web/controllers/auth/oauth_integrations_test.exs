@@ -121,6 +121,24 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
     end
 
+    test "outlook_callback surfaces admin consent message when AADSTS code is present", %{
+      conn: conn
+    } do
+      for code <- ~w[AADSTS65001 AADSTS90094 AADSTS90093 AADSTS90095] do
+        conn =
+          get(conn, ~p"/auth/outlook/calendar/callback", %{
+            "error" => "access_denied",
+            "error_description" =>
+              "#{code}: The user or administrator has not consented to use the application."
+          })
+
+        assert redirected_to(conn) == "/dashboard/calendar"
+
+        assert Flash.get(conn.assigns.flash, :error) =~
+                 "requires admin approval"
+      end
+    end
+
     test "outlook_callback handles exchange failure", %{conn: conn} do
       :meck.expect(OutlookCalendarOAuthHelper, :handle_callback, fn _code, _state, _uri ->
         {:error, :invalid_code}
@@ -221,6 +239,35 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
     test "google_callback handles provider error", %{conn: conn} do
       conn = get(conn, ~p"/auth/google/video/callback", %{"error" => "access_denied"})
+
+      assert redirected_to(conn) == "/dashboard/video"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
+    end
+
+    test "teams_callback surfaces admin consent message when AADSTS code is present", %{
+      conn: conn
+    } do
+      for code <- ~w[AADSTS65001 AADSTS90094 AADSTS90093 AADSTS90095] do
+        conn =
+          get(conn, ~p"/auth/teams/video/callback", %{
+            "error" => "access_denied",
+            "error_description" =>
+              "#{code}: The user or administrator has not consented to use the application."
+          })
+
+        assert redirected_to(conn) == "/dashboard/video"
+
+        assert Flash.get(conn.assigns.flash, :error) =~
+                 "requires admin approval"
+      end
+    end
+
+    test "teams_callback handles plain access_denied without AADSTS code", %{conn: conn} do
+      conn =
+        get(conn, ~p"/auth/teams/video/callback", %{
+          "error" => "access_denied",
+          "error_description" => "The user cancelled the authorization."
+        })
 
       assert redirected_to(conn) == "/dashboard/video"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
