@@ -107,8 +107,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   @doc """
   Assigns a meeting type based on duration if organizer context is present.
   """
-  @spec maybe_assign_meeting_type(Phoenix.LiveView.Socket.t(), integer() | String.t()) ::
+  @spec maybe_assign_meeting_type(Phoenix.LiveView.Socket.t(), integer() | String.t() | nil) ::
           Phoenix.LiveView.Socket.t()
+  def maybe_assign_meeting_type(socket, nil), do: socket
+
   def maybe_assign_meeting_type(socket, duration) do
     duration_str = if is_integer(duration), do: "#{duration}min", else: duration
 
