@@ -6,8 +6,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   alias Tymeslot.DatabaseQueries.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
+  alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal

@@ -8,7 +8,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
   alias Tymeslot.Utils.UrlBuilder
 
   @spec render(map(), map(), atom() | String.t()) :: String.t()
-  def render(user, integration, type) do
+  def render(_user, integration, type) do
     type_label = humanize_type(type)
     provider_label = integration.provider |> to_string() |> String.replace("_", " ") |> String.capitalize()
     settings_url = settings_url_for_type(type)

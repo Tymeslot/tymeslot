@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.HelpersTest do
 
   @moduletag :meeting_types
 
+  alias Ecto.Changeset
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   defp mock_socket(assigns \\ %{}) do
@@ -61,8 +62,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.HelpersTest do
     test "handles changeset errors" do
       changeset =
         {%{}, %{name: :string}}
-        |> Ecto.Changeset.cast(%{}, [:name])
-        |> Ecto.Changeset.validate_required([:name])
+        |> Changeset.cast(%{}, [:name])
+        |> Changeset.validate_required([:name])
 
       socket = mock_socket()
       {:noreply, socket} = Helpers.handle_meeting_type_save_result({:error, changeset}, socket)
