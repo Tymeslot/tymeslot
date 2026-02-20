@@ -45,3 +45,7 @@ config :swoosh, local: false
 
 # Do not print debug messages in production
 config :logger, level: :info
+
+# Use structured JSON logging in production for log aggregation
+config :logger, :default_handler,
+  formatter: {LoggerJSON.Formatters.Basic, metadata: [:request_id, :user_id, :correlation_id]}
