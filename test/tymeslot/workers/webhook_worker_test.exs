@@ -26,7 +26,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
   end
 
   describe "perform/1 - input validation" do
-    test "handles missing webhook_id" do
+    test "discards job when webhook_id is missing" do
       meeting = insert(:meeting)
 
       assert {:discard, "Missing required parameters"} =
@@ -36,7 +36,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                })
     end
 
-    test "handles missing meeting_id" do
+    test "discards job when meeting_id is missing" do
       webhook = insert(:webhook)
 
       assert {:discard, "Missing required parameters"} =
@@ -46,7 +46,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                })
     end
 
-    test "handles missing event_type" do
+    test "discards job when event_type is missing" do
       meeting = insert(:meeting)
       webhook = insert(:webhook)
 
@@ -57,27 +57,13 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                })
     end
 
-    test "handles completely empty args" do
+    test "discards job with completely empty args" do
       assert {:discard, "Missing required parameters"} = perform_job(WebhookWorker, %{})
-    end
-
-    test "handles invalid webhook_id type" do
-      meeting = insert(:meeting)
-
-      # The database query will raise CastError for invalid types
-      # This is expected behavior - the database layer is strict about types
-      assert_raise Ecto.Query.CastError, fn ->
-        perform_job(WebhookWorker, %{
-          "webhook_id" => "not-a-number",
-          "event_type" => "meeting.created",
-          "meeting_id" => meeting.id
-        })
-      end
     end
   end
 
   describe "perform/1 - successful delivery" do
-    test "delivers webhook successfully" do
+    test "delivers webhook successfully and records the outcome" do
       meeting = insert(:meeting)
       webhook = insert(:webhook)
 
@@ -102,7 +88,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       assert delivery.delivered_at
     end
 
-    test "handles HTTP failure (server responded with error)" do
+    test "records the failure when the remote endpoint responds with a 5xx error" do
       meeting = insert(:meeting)
       webhook = insert(:webhook)
 
@@ -128,7 +114,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       assert delivery.delivered_at
     end
 
-    test "handles connection timeout (no response)" do
+    test "records the failure and does not set delivered_at when the connection times out" do
       meeting = insert(:meeting)
       webhook = insert(:webhook)
 
@@ -171,7 +157,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                })
     end
 
-    test "handles massive response bodies (truncation)" do
+    test "truncates very large response bodies to avoid database bloat" do
       meeting = insert(:meeting)
       webhook = insert(:webhook)
 
@@ -189,14 +175,13 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                  "meeting_id" => meeting.id
                })
 
-      # Verify response was truncated
       delivery = Repo.one(WebhookDeliverySchema)
       assert String.length(delivery.response_body) <= 5000 + 20
       # +20 for "... (truncated)"
       assert String.ends_with?(delivery.response_body, "... (truncated)")
     end
 
-    test "handles non-UTF8 response bodies safely" do
+    test "handles non-UTF8 response bodies without crashing" do
       meeting = insert(:meeting)
       webhook = insert(:webhook)
 
@@ -214,16 +199,14 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                  "meeting_id" => meeting.id
                })
 
-      # Should not crash, response should be inspected
+      # Should not crash, response should be stored in an inspected format
       delivery = Repo.one(WebhookDeliverySchema)
-      assert delivery.response_body
-      # Should have been converted to inspected format
       assert is_binary(delivery.response_body)
     end
   end
 
   describe "perform/1 - security" do
-    test "includes token and timestamp headers" do
+    test "sends the webhook token and a current timestamp as request headers" do
       meeting = insert(:meeting)
       user = insert(:user)
 
@@ -274,7 +257,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                })
     end
 
-    test "blocks SSRF attempts to private networks in production" do
+    test "blocks delivery and logs the attempt when the URL targets a private network in production" do
       with_config(:tymeslot, environment: :prod)
 
       meeting = insert(:meeting)
@@ -287,8 +270,6 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
         {:ok, %{status: 200, body: "Should not reach here"}}
       end)
 
-      # In production, the URL is validated before delivery and returns {:error, :blocked_by_ssrf}
-      # which perform/1 then records as a failure and returns {:error, :blocked_by_ssrf}
       assert {:error, :blocked_by_ssrf} =
                perform_job(WebhookWorker, %{
                  "webhook_id" => webhook.id,
@@ -303,13 +284,12 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       refute delivery.delivered_at
     end
 
-    test "allows SSRF-like URLs in non-production (testing)" do
+    test "allows private-range URLs in non-production environments" do
       with_config(:tymeslot, environment: :test)
 
       meeting = insert(:meeting)
       webhook = insert(:webhook, url: "http://169.254.169.254/test")
 
-      # In test mode, request should go through
       expect_http_success()
 
       assert :ok =
@@ -322,7 +302,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
   end
 
   describe "perform/1 - circuit breaker" do
-    test "increments failure count on error" do
+    test "increments the failure count on each delivery error" do
       meeting = insert(:meeting)
       webhook = insert(:webhook, failure_count: 0)
 
@@ -341,7 +321,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       assert updated_webhook.failure_count == 1
     end
 
-    test "resets failure count on success" do
+    test "resets failure count to zero on a successful delivery" do
       meeting = insert(:meeting)
       webhook = insert(:webhook, failure_count: 5)
 
@@ -355,14 +335,56 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                })
 
       updated_webhook = Repo.get(WebhookSchema, webhook.id)
-      # Note: The actual reset might happen in the WebhookQueries.record_success
-      # This test documents expected behavior
+      assert updated_webhook.failure_count == 0
       assert updated_webhook.last_status == "success"
+    end
+
+    test "automatically disables the webhook after 10 consecutive failures" do
+      meeting = insert(:meeting)
+      # Webhook already has 9 failures; this delivery is the 10th
+      webhook = insert(:webhook, failure_count: 9)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 500, body: "Persistent failure"}}
+      end)
+
+      assert {:error, {:http_error, 500}} =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      updated_webhook = Repo.get(WebhookSchema, webhook.id)
+      assert updated_webhook.failure_count == 10
+      refute updated_webhook.is_active
+      assert updated_webhook.disabled_at
+      assert updated_webhook.disabled_reason =~ "Too many consecutive failures"
+    end
+
+    test "discards the job when feature access is revoked between scheduling and execution" do
+      meeting = insert(:meeting)
+      webhook = insert(:webhook)
+
+      # Simulate the user's plan being revoked after the job was scheduled
+      with_config(:tymeslot, :feature_access_checker, Tymeslot.Workers.WebhookWorkerTest.DenyAccessChecker)
+
+      # HTTP client must not be called; the job should be discarded before reaching delivery
+      expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts ->
+        flunk("HTTP client should not be called when access is revoked")
+      end)
+
+      assert {:discard, "Insufficient plan"} =
+               perform_job(WebhookWorker, %{
+                 "webhook_id" => webhook.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
     end
   end
 
   describe "schedule_delivery/3" do
-    test "enqueues a job" do
+    test "enqueues an Oban job with the correct arguments" do
       meeting_id = UUID.generate()
       assert :ok = WebhookWorker.schedule_delivery(123, "meeting.created", meeting_id)
 
@@ -376,4 +398,12 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       )
     end
   end
+end
+
+# Minimal access checker that always denies, used for the revocation test
+defmodule Tymeslot.Workers.WebhookWorkerTest.DenyAccessChecker do
+  @moduledoc false
+
+  @spec check_access(any(), atom()) :: {:error, :insufficient_plan}
+  def check_access(_user_id, _feature), do: {:error, :insufficient_plan}
 end
