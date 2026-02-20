@@ -86,7 +86,9 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       first_email = "first@example.com"
       second_email = "second@example.com"
 
-      {:ok, user_with_first, _message} = Auth.request_email_change(user, first_email, "Password123!")
+      {:ok, user_with_first, _message} =
+        Auth.request_email_change(user, first_email, "Password123!")
+
       assert user_with_first.pending_email == first_email
 
       # Request again with a different email; the previous pending state should be overwritten

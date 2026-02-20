@@ -84,6 +84,5 @@ defmodule Tymeslot.ThemeCustomizationsTest do
       # Check customization is deleted
       assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "2") == nil
     end
-
   end
 end

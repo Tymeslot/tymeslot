@@ -29,8 +29,8 @@ defmodule Tymeslot.Infrastructure.MetricsTest do
 
       Metrics.emit_calendar_operation(:list_events, %{provider: :google}, %{duration: 100})
 
-      assert_receive {:telemetry, ^ref, [:tymeslot, :calendar, :list_events],
-                      %{duration: 100}, %{provider: :google}}
+      assert_receive {:telemetry, ^ref, [:tymeslot, :calendar, :list_events], %{duration: 100},
+                      %{provider: :google}}
     end
   end
 

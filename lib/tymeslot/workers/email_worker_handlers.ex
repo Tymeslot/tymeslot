@@ -488,7 +488,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
          {:ok, integration} <- fetch_integration(integration_type, integration_id) do
       type_atom = String.to_existing_atom(integration_type)
 
-      case email_service_module().send_integration_unhealthy_notification(user, integration, type_atom) do
+      case email_service_module().send_integration_unhealthy_notification(
+             user,
+             integration,
+             type_atom
+           ) do
         {:ok, _result} ->
           Logger.info("Integration unhealthy notification sent",
             user_id: user_id,

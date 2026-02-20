@@ -153,5 +153,4 @@ defmodule TymeslotWeb.BookingHoneypotTest do
     # Should NOT create a meeting (silent drop)
     assert Repo.aggregate(MeetingSchema, :count, :id) == 0
   end
-
 end

@@ -13,7 +13,11 @@ defmodule Tymeslot.Infrastructure.CorrelationIdTest do
       id = CorrelationId.generate()
 
       assert is_binary(id)
-      assert String.match?(id, ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
+
+      assert String.match?(
+               id,
+               ~r/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+             )
     end
 
     test "generates unique IDs" do

@@ -367,7 +367,11 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       webhook = insert(:webhook)
 
       # Simulate the user's plan being revoked after the job was scheduled
-      with_config(:tymeslot, :feature_access_checker, Tymeslot.Workers.WebhookWorkerTest.DenyAccessChecker)
+      with_config(
+        :tymeslot,
+        :feature_access_checker,
+        Tymeslot.Workers.WebhookWorkerTest.DenyAccessChecker
+      )
 
       # HTTP client must not be called; the job should be discarded before reaching delivery
       expect(Tymeslot.HTTPClientMock, :post, 0, fn _url, _body, _headers, _opts ->

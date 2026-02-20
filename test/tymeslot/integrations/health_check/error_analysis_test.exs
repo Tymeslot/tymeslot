@@ -181,7 +181,10 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
       result =
         Enum.reduce(1..5, [], fn _iteration, acc ->
           current_ms = if acc == [], do: :timer.minutes(5), else: List.last(acc)
-          next_backoff = ErrorAnalysis.calculate_next_backoff(%{backoff_ms: current_ms}, :transient)
+
+          next_backoff =
+            ErrorAnalysis.calculate_next_backoff(%{backoff_ms: current_ms}, :transient)
+
           acc ++ [next_backoff]
         end)
 

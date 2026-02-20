@@ -41,7 +41,6 @@ config :tymeslot, TymeslotWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :tymeslot, dev_routes: true
 
-
 # Set a higher stacktrace during development
 config :phoenix, :stacktrace_depth, 20
 

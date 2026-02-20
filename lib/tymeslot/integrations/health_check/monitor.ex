@@ -238,7 +238,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       last_check_at: record.last_check_at,
       status: String.to_existing_atom(record.status),
       backoff_ms: record.backoff_ms,
-      last_error_class: record.last_error_class && String.to_existing_atom(record.last_error_class),
+      last_error_class:
+        record.last_error_class && String.to_existing_atom(record.last_error_class),
       became_unhealthy_at: record.became_unhealthy_at,
       notification_sent_at: record.notification_sent_at
     }

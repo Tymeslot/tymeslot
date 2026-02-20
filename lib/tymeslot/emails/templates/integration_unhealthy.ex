@@ -10,12 +10,14 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
   @spec render(map(), map(), atom() | String.t()) :: String.t()
   def render(_user, integration, type) do
     type_label = humanize_type(type)
-    provider_label = integration.provider |> to_string() |> String.replace("_", " ") |> String.capitalize()
+
+    provider_label =
+      integration.provider |> to_string() |> String.replace("_", " ") |> String.capitalize()
+
     settings_url = settings_url_for_type(type)
 
     mjml_content = """
-    #{Components.alert_box("warning", "One of your #{type_label} integrations (#{provider_label}) has been reporting connection issues for over 48 hours. You may want to check your integration settings.",
-      title: "Integration Connection Issues")}
+    #{Components.alert_box("warning", "One of your #{type_label} integrations (#{provider_label}) has been reporting connection issues for over 48 hours. You may want to check your integration settings.", title: "Integration Connection Issues")}
 
     <mj-section background-color="#ffffff" border-radius="8px" padding="20px">
       <mj-column>
@@ -68,7 +70,9 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
   defp humanize_type(:video), do: "video"
   defp humanize_type(type), do: to_string(type)
 
-  defp settings_url_for_type(:calendar), do: UrlBuilder.build_url("/dashboard/settings?tab=calendars")
+  defp settings_url_for_type(:calendar),
+    do: UrlBuilder.build_url("/dashboard/settings?tab=calendars")
+
   defp settings_url_for_type(:video), do: UrlBuilder.build_url("/dashboard/settings?tab=video")
   defp settings_url_for_type(_other), do: UrlBuilder.build_url("/dashboard/settings")
 end

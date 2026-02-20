@@ -240,8 +240,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
       user = insert(:user)
 
       expect(EmailServiceMock, :send_email_change_confirmations, fn _user,
-                                                                     "old@example.com",
-                                                                     "new@example.com" ->
+                                                                    "old@example.com",
+                                                                    "new@example.com" ->
         {{:ok, "sent"}, {:ok, "sent"}}
       end)
 

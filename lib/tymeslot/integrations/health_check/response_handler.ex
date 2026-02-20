@@ -61,7 +61,12 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     :ok
   end
 
-  def handle_transition(type, integration, {:became_unhealthy, old_status, :unhealthy}, health_state) do
+  def handle_transition(
+        type,
+        integration,
+        {:became_unhealthy, old_status, :unhealthy},
+        health_state
+      ) do
     Logger.error("Integration health critical (was #{inspect(old_status)})",
       type: type,
       integration_id: integration.id,

@@ -269,7 +269,8 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
-      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+      {:ok, _record} =
+        IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
 
       {1, _nil} =
         IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
@@ -290,7 +291,8 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
-      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+      {:ok, _record} =
+        IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
 
       health_state = %{
         Monitor.initial_state()

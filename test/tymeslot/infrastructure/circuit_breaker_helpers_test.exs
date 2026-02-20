@@ -28,8 +28,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpersTest do
       name = via_name()
 
       start_supervised!(
-        {CircuitBreaker,
-         name: name, config: %{failure_threshold: 1, recovery_timeout: 60_000}}
+        {CircuitBreaker, name: name, config: %{failure_threshold: 1, recovery_timeout: 60_000}}
       )
 
       # Open the circuit
@@ -44,9 +43,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpersTest do
     test "returns {:error, reason} when function fails" do
       name = via_name()
 
-      start_supervised!(
-        {CircuitBreaker, name: name, config: %{failure_threshold: 10}}
-      )
+      start_supervised!({CircuitBreaker, name: name, config: %{failure_threshold: 10}})
 
       assert {:error, :some_error} =
                CircuitBreakerHelpers.call_with_breaker(name, :test, "Test", fn ->

@@ -175,7 +175,13 @@ defmodule TymeslotWeb.AuthLiveTest do
     end
 
     test "oauth and transient pages do not set a custom title or meta description", %{conn: conn} do
-      params = %{"oauth_provider" => "github", "oauth_email" => "oauth@example.com", "oauth_verified" => "true", "oauth_email_from_provider" => "true"}
+      params = %{
+        "oauth_provider" => "github",
+        "oauth_email" => "oauth@example.com",
+        "oauth_verified" => "true",
+        "oauth_email_from_provider" => "true"
+      }
+
       {:ok, view, html} = live(conn, ~p"/auth/complete-registration?#{params}")
       assert page_title(view) == "Schedule a Meeting · Tymeslot"
       refute html =~ ~s(<meta name="description")
@@ -256,7 +262,6 @@ defmodule TymeslotWeb.AuthLiveTest do
 
       assert result =~ "Security validation failed"
     end
-
   end
 
   describe "rate limiting — password reset" do

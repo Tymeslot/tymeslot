@@ -457,17 +457,38 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   defp required_fields_for_action(action) do
     case action do
-      "send_confirmation_emails" -> ["meeting_id"]
-      "send_reminder_emails" -> ["meeting_id", "reminder_value", "reminder_unit"]
-      "send_reschedule_request" -> ["meeting_id"]
-      "send_email_verification" -> ["user_id", "verification_url"]
-      "send_password_reset" -> ["user_id", "reset_url"]
-      "send_email_change_verification" -> ["user_id", "new_email", "verification_url"]
-      "send_email_change_notification" -> ["user_id", "new_email"]
-      "send_email_change_confirmations" -> ["user_id", "old_email", "new_email"]
-      "send_integration_unhealthy_notification" -> ["user_id", "integration_id", "integration_type"]
-      nil -> ["action"]
-      _other_action -> []
+      "send_confirmation_emails" ->
+        ["meeting_id"]
+
+      "send_reminder_emails" ->
+        ["meeting_id", "reminder_value", "reminder_unit"]
+
+      "send_reschedule_request" ->
+        ["meeting_id"]
+
+      "send_email_verification" ->
+        ["user_id", "verification_url"]
+
+      "send_password_reset" ->
+        ["user_id", "reset_url"]
+
+      "send_email_change_verification" ->
+        ["user_id", "new_email", "verification_url"]
+
+      "send_email_change_notification" ->
+        ["user_id", "new_email"]
+
+      "send_email_change_confirmations" ->
+        ["user_id", "old_email", "new_email"]
+
+      "send_integration_unhealthy_notification" ->
+        ["user_id", "integration_id", "integration_type"]
+
+      nil ->
+        ["action"]
+
+      _other_action ->
+        []
     end
   end
 end

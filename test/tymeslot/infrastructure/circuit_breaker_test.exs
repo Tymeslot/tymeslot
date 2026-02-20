@@ -114,7 +114,11 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
     test "transitions to half-open after recovery_timeout" do
       name =
         start_breaker(
-          config: %{failure_threshold: 1, recovery_timeout: @time_window_ms, half_open_requests: 1}
+          config: %{
+            failure_threshold: 1,
+            recovery_timeout: @time_window_ms,
+            half_open_requests: 1
+          }
         )
 
       CircuitBreaker.call(name, fn -> {:error, :fail} end)
@@ -133,7 +137,11 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
     test "success closes the circuit after half_open_requests successful calls" do
       name =
         start_breaker(
-          config: %{failure_threshold: 1, recovery_timeout: @time_window_ms, half_open_requests: 2}
+          config: %{
+            failure_threshold: 1,
+            recovery_timeout: @time_window_ms,
+            half_open_requests: 2
+          }
         )
 
       # Open the breaker
@@ -153,7 +161,11 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
     test "failure in half-open immediately reopens the circuit" do
       name =
         start_breaker(
-          config: %{failure_threshold: 1, recovery_timeout: @time_window_ms, half_open_requests: 3}
+          config: %{
+            failure_threshold: 1,
+            recovery_timeout: @time_window_ms,
+            half_open_requests: 3
+          }
         )
 
       CircuitBreaker.call(name, fn -> {:error, :fail} end)
@@ -171,7 +183,11 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
     test "closes circuit after all half_open_requests succeed" do
       name =
         start_breaker(
-          config: %{failure_threshold: 1, recovery_timeout: @time_window_ms, half_open_requests: 2}
+          config: %{
+            failure_threshold: 1,
+            recovery_timeout: @time_window_ms,
+            half_open_requests: 2
+          }
         )
 
       CircuitBreaker.call(name, fn -> {:error, :fail} end)
