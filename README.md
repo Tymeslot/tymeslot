@@ -24,7 +24,7 @@ Enterprise-grade meeting scheduling platform built with Elixir & Phoenix LiveVie
 <tr>
 <td width="50%" align="center">
 
-### 🔓 Truly Open Source
+### 🔓 Open Source (ELv2)
 Fork, audit, contribute—or just use it. No vendor lock-in, ever.
 
 </td>
