@@ -264,7 +264,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       view |> element("button", "Reschedule") |> render_click()
       assert render(view) =~ "Send a reschedule request to"
 
-      view |> element("button[phx-click*='hide_reschedule_modal']", "Cancel") |> render_click()
+      view |> element("#reschedule-request-modal button", "Cancel") |> render_click()
       refute render(view) =~ "Send a reschedule request to"
 
       assert Repo.get(MeetingSchema, meeting.id).status == "confirmed"
