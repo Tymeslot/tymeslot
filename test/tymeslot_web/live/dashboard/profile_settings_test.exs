@@ -161,8 +161,9 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       |> render_change()
 
       # Empty string is treated as a valid clear — no error, name is nil in DB
+      # Ecto's :string type coerces "" to nil on cast, so nil is the persisted value.
       updated_profile = Repo.reload!(profile)
-      assert is_nil(updated_profile.full_name) or updated_profile.full_name == ""
+      assert is_nil(updated_profile.full_name)
     end
   end
 
