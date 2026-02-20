@@ -91,7 +91,7 @@ defmodule TymeslotWeb.Dashboard.Automation.ComponentsTest do
       html = render_component(&Components.webhook_card/1, assigns)
       # The button text changes to "Testing" and it becomes disabled while a test is in progress
       assert html =~ "Testing"
-      assert html =~ ~s(disabled)
+      assert html =~ ~r/<button[^>]+disabled/
     end
   end
 

@@ -12,6 +12,7 @@ defmodule Tymeslot.Webhooks.DispatcherTest do
   alias Tymeslot.Workers.WebhookWorker
 
   setup do
+    # Ensure a predictable default; the worker layer enforces feature access at execution time.
     setup_config(:tymeslot, feature_access_checker: Tymeslot.Features.DefaultAccessChecker)
     :ok
   end
@@ -88,13 +89,13 @@ defmodule Tymeslot.Webhooks.DispatcherTest do
       organizer = insert(:user)
       other_user = insert(:user)
       meeting = insert(:meeting, organizer_user: organizer)
-      insert(:webhook, user: organizer, events: ["meeting.created"])
-      insert(:webhook, user: other_user, events: ["meeting.created"])
+      organizer_webhook = insert(:webhook, user: organizer, events: ["meeting.created"])
+      _other_webhook = insert(:webhook, user: other_user, events: ["meeting.created"])
 
       assert :ok = Dispatcher.dispatch(:meeting_created, meeting)
 
       assert [job] = all_enqueued(worker: WebhookWorker)
-      assert job.args["webhook_id"] != nil
+      assert job.args["webhook_id"] == organizer_webhook.id
     end
   end
 

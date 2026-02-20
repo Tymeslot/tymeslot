@@ -118,6 +118,38 @@ defmodule Tymeslot.Webhooks.PayloadBuilderTest do
 
       refute Map.has_key?(payload.data.meeting, :cancellation)
     end
+
+    test "handles nil cancelled_at and nil reason for cancelled meetings without crashing" do
+      meeting =
+        build(:meeting,
+          status: "cancelled",
+          cancelled_at: nil,
+          cancellation_reason: nil
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.cancelled", meeting, "1")
+
+      cancellation = payload.data.meeting.cancellation
+      assert is_nil(cancellation.cancelled_at)
+      assert is_nil(cancellation.reason)
+    end
+
+    test "handles nil video URLs when video room is enabled without crashing" do
+      meeting =
+        build(:meeting,
+          video_room_enabled: true,
+          video_room_id: "room-abc",
+          organizer_video_url: nil,
+          attendee_video_url: nil
+        )
+
+      payload = PayloadBuilder.build_payload("meeting.created", meeting, "1")
+
+      video = payload.data.meeting.video
+      assert video.enabled == true
+      assert is_nil(video.organizer_url)
+      assert is_nil(video.attendee_url)
+    end
   end
 
   describe "build_test_payload/0" do
