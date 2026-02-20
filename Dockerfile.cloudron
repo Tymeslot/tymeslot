@@ -28,6 +28,7 @@ COPY mix.exs mix.lock ./
 COPY apps/tymeslot/mix.exs apps/tymeslot/mix.exs
 
 RUN mix deps.get --only $MIX_ENV
+# Compile dependencies (cached if mix.exs/mix.lock unchanged)
 RUN mix deps.compile
 
 # Copy source and build assets
@@ -60,7 +61,7 @@ WORKDIR /app
 COPY --from=builder /opt/release ./
 
 # Create needed directories
-RUN mkdir -p /data/logs /app/data/uploads /app/data/tzdata && \
+RUN mkdir -p /data/logs /app/data/uploads && \
     chown -R cloudron:cloudron /data /app/data && \
     chmod -R 700 /data /app/data
 

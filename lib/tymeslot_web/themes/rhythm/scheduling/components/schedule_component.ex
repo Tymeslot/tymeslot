@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
   alias TymeslotWeb.Components.MeetingComponents
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
@@ -123,15 +123,15 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     type="button"
                   >
                     <div class="timezone-display">
-                      <%= if country_code = TimezoneUtils.get_country_code_for_timezone(@user_timezone || "America/New_York") do %>
-                        <%= if TimezoneUtils.flag_exists?(country_code) do %>
+                      <%= if country_code = Timezones.country_code(@user_timezone || "America/New_York") do %>
+                        <%= if Timezones.flag_exists?(country_code) do %>
                           <Flagpack.flag name={country_code} class="timezone-flag" />
                         <% else %>
                           <span class="timezone-flag timezone-flag--fallback">🌐</span>
                         <% end %>
                       <% end %>
                       <span class="timezone-text">
-                        {TimezoneUtils.format_timezone(@user_timezone || "America/New_York")}
+                        {Timezones.format(@user_timezone || "America/New_York")}
                       </span>
                     </div>
                     <div class="timezone-arrow">▼</div>
@@ -156,7 +156,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                         />
                       </div>
                       <div class="timezone-options scroll-y">
-                        <%= for {label, value, offset} <- TimezoneUtils.get_filtered_timezone_options(@timezone_search) do %>
+                        <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>
                           <button
                             class="timezone-option"
                             phx-click="change_timezone"
@@ -165,8 +165,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                             type="button"
                           >
                             <div class="timezone-option-content">
-                              <%= if country_code = TimezoneUtils.get_country_code_for_timezone(value) do %>
-                                <%= if TimezoneUtils.flag_exists?(country_code) do %>
+                              <%= if country_code = Timezones.country_code(value) do %>
+                                <%= if Timezones.flag_exists?(country_code) do %>
                                   <Flagpack.flag name={country_code} class="timezone-option-flag" />
                                 <% else %>
                                   <span class="timezone-option-flag timezone-flag--fallback">🌐</span>

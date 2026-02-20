@@ -295,11 +295,6 @@ if config_env() == :prod do
        ]}
     ]
 
-  # Configure tzdata to use writable directory in production
-  tzdata_dir = "/app/data/tzdata"
-
-  config :tzdata, :data_dir, tzdata_dir
-
   # Configure mailer based on EMAIL_ADAPTER setting
   # Default to smtp for self-hosted deployments
   # Can be overridden with EMAIL_ADAPTER environment variable

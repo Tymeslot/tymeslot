@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
 
   use Phoenix.Component
 
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
   import TymeslotWeb.Components.FlagHelpers
 
   @doc """
@@ -23,8 +23,8 @@ defmodule TymeslotWeb.Dashboard.Availability.Helpers do
 
     %{
       timezone: timezone,
-      timezone_display: TimezoneUtils.format_timezone(timezone),
-      country_code: TimezoneUtils.get_country_code_for_timezone(timezone)
+      timezone_display: Timezones.format(timezone),
+      country_code: Timezones.country_code(timezone)
     }
   end
 

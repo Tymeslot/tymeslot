@@ -5,7 +5,7 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   """
 
   alias Phoenix.HTML
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Endpoint
 
   @doc """
@@ -101,7 +101,7 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   """
   @spec format_duration(integer() | String.t()) :: String.t()
   def format_duration(duration) do
-    TimezoneUtils.format_duration(duration)
+    DateTimeUtils.format_duration(duration)
   end
 
   @doc """

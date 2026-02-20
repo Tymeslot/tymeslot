@@ -41,7 +41,7 @@ RUN mix deps.get --only prod
 # Copy the rest of the application code
 COPY . .
 
-# Compile the project
+# Compile dependencies and application code
 RUN mix do deps.compile + compile
 
 # Install Tailwind and esbuild with retry mechanism
@@ -80,7 +80,7 @@ RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
 
 # App user, data directories, and PostgreSQL data directory in one layer
 RUN useradd --create-home --shell /bin/bash app && \
-    mkdir -p /app /app/data /app/data/uploads /app/data/tzdata && \
+    mkdir -p /app /app/data /app/data/uploads && \
     chown -R app:app /app && \
     mkdir -p /var/lib/postgresql/data && \
     chown -R postgres:postgres /var/lib/postgresql && \

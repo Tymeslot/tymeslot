@@ -8,7 +8,8 @@ defmodule Tymeslot.Bookings.Policy do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.{ReminderUtils, TimezoneUtils}
+  alias Tymeslot.Timezones
+  alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Endpoint
 
   require Logger
@@ -103,7 +104,7 @@ defmodule Tymeslot.Bookings.Policy do
         attendee_message: form_data["message"],
         attendee_phone: nil,
         attendee_company: nil,
-        attendee_timezone: TimezoneUtils.normalize_timezone(user_timezone),
+        attendee_timezone: Timezones.normalize(user_timezone),
         status: "confirmed",
         reminders: reminders
       },

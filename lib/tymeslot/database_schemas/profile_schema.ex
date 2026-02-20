@@ -7,7 +7,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
 
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Core.Registry
 
   @type t :: %__MODULE__{
@@ -120,11 +120,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
         changeset
 
       timezone ->
-        # Check if timezone is in our list of valid options
-        valid_timezones =
-          Enum.map(TimezoneUtils.get_all_timezone_options(), fn {_label, value} -> value end)
-
-        if timezone in valid_timezones do
+        if Timezones.valid?(timezone) do
           changeset
         else
           add_error(changeset, :timezone, "is not a valid timezone")

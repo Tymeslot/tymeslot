@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
   alias Ecto.Changeset
   alias Tymeslot.Auth.Authentication
   alias Tymeslot.Security.Security
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
   alias TymeslotWeb.Helpers.ClientIP
 
   # ========== USER HELPERS ==========
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
         "Europe/Kyiv"
 
     # Normalize timezone to ensure consistency
-    normalized_timezone = TimezoneUtils.normalize_timezone(timezone)
+    normalized_timezone = Timezones.normalize(timezone)
     assign(socket, :user_timezone, normalized_timezone)
   end
 
@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
     case Security.validate_timezone(new_timezone) do
       {:ok, validated} ->
         # Normalize timezone to ensure consistency
-        normalized_timezone = TimezoneUtils.normalize_timezone(validated)
+        normalized_timezone = Timezones.normalize(validated)
         assign(socket, :user_timezone, normalized_timezone)
 
       {:error, _reason} ->

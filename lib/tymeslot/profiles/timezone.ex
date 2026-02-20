@@ -7,7 +7,7 @@ defmodule Tymeslot.Profiles.Timezone do
   """
 
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
 
   @doc """
   Determines a prefill timezone given the current profile timezone and a
@@ -26,7 +26,7 @@ defmodule Tymeslot.Profiles.Timezone do
     if should_use_detected?(current_profile_timezone, default) do
       detected_timezone
       |> fallback_default(default)
-      |> TimezoneUtils.normalize_timezone()
+      |> Timezones.normalize()
     else
       current_profile_timezone
     end

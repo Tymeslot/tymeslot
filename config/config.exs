@@ -190,7 +190,7 @@ config :tailwind,
 config :phoenix, :json_library, Jason
 
 # Configure timezone database
-config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
+config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
 # Authentication configuration
 config :tymeslot, :auth, success_redirect_path: "/dashboard"

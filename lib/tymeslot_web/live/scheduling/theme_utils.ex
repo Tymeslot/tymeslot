@@ -11,7 +11,7 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
 
   alias Tymeslot.Profiles
   alias Tymeslot.Themes.Theme
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
 
   @doc """
   Assigns theme-related data to the socket dynamically based on the theme_id.
@@ -82,17 +82,17 @@ defmodule TymeslotWeb.Live.Scheduling.ThemeUtils do
         Profiles.get_default_timezone()
 
     # Normalize timezone to ensure consistency
-    normalized_timezone = TimezoneUtils.normalize_timezone(timezone)
+    normalized_timezone = Timezones.normalize(timezone)
 
     # Validate timezone and fallback if invalid
     validated_timezone =
-      if TimezoneUtils.valid_timezone?(normalized_timezone) do
+      if Timezones.valid?(normalized_timezone) do
         normalized_timezone
       else
         # Fallback to profile default or UTC if even that is broken
         default_tz = Profiles.get_default_timezone()
 
-        if TimezoneUtils.valid_timezone?(default_tz) do
+        if Timezones.valid?(default_tz) do
           default_tz
         else
           "UTC"

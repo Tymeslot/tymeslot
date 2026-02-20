@@ -150,4 +150,41 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
                DateTimeUtils.parse_time_string(%{not_time: "10:00"})
     end
   end
+
+  describe "format_duration/1" do
+    test "formats duration string" do
+      assert DateTimeUtils.format_duration("15min") == "15 minutes"
+      assert DateTimeUtils.format_duration("30min") == "30 minutes"
+      assert DateTimeUtils.format_duration("60min") == "1 hour"
+      assert DateTimeUtils.format_duration("90min") == "1.5 hours"
+      assert DateTimeUtils.format_duration("120min") == "2 hours"
+    end
+
+    test "formats duration integer" do
+      assert DateTimeUtils.format_duration(15) == "15 minutes"
+      assert DateTimeUtils.format_duration(30) == "30 minutes"
+      assert DateTimeUtils.format_duration(60) == "1 hour"
+      assert DateTimeUtils.format_duration(90) == "1.5 hours"
+      assert DateTimeUtils.format_duration(120) == "2 hours"
+    end
+
+    test "returns unknown for invalid inputs" do
+      assert DateTimeUtils.format_duration("invalid") == "Unknown duration"
+      assert DateTimeUtils.format_duration(nil) == "Unknown duration"
+    end
+  end
+
+  describe "format_date_string/1" do
+    test "formats ISO date string" do
+      assert DateTimeUtils.format_date_string("2024-11-25") == "November 25, 2024"
+    end
+
+    test "returns input for invalid date" do
+      assert DateTimeUtils.format_date_string("not-a-date") == "not-a-date"
+    end
+
+    test "returns fallback for non-string" do
+      assert DateTimeUtils.format_date_string(nil) == "Invalid date"
+    end
+  end
 end

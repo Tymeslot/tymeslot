@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   <.icon name="hero-globe-alt" class="summary-icon hero-icon hero-icon--md" />
                   <div>
                     <div class="summary-value">
-                      {TimezoneUtils.format_timezone(@user_timezone || "America/New_York")}
+                      {Timezones.format(@user_timezone || "America/New_York")}
                     </div>
                     <div class="summary-label">
                       <%= if @meeting_type do %>

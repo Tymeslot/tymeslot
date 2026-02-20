@@ -6,13 +6,13 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
   alias TymeslotWeb.Components.TimezoneDropdown
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
-    timezone_options = TimezoneUtils.get_all_timezone_options()
+    timezone_options = Timezones.all_options()
 
     {:ok,
      socket

@@ -5,9 +5,6 @@ Application.put_env(:tymeslot, Tymeslot.Mailer, adapter: Swoosh.Adapters.Test)
 # Enable test mode to skip sleep calls in workers
 Application.put_env(:tymeslot, :test_mode, true)
 
-# Start required applications
-Application.ensure_all_started(:tzdata)
-
 # Run migrations before tests
 Mix.Task.run("ecto.create", ["--quiet"])
 Mix.Task.run("ecto.migrate", ["--quiet"])

@@ -13,7 +13,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
   alias Ecto.Adapters.SQL.Sandbox
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Repo
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
 
   setup do
     :ok = Sandbox.checkout(Repo)
@@ -37,7 +37,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
     {:ok, profile: profile}
   end
 
-  @timezones Enum.map(TimezoneUtils.get_all_timezone_options(), &elem(&1, 1))
+  @timezones Enum.map(Timezones.all_options(), &elem(&1, 1))
 
   property "month_availability is consistent regardless of user timezone", %{profile: profile} do
     check all(

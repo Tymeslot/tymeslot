@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
 
   use Phoenix.Component
 
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
 
   attr :profile, :map, required: true
   attr :timezone_options, :list, default: []
@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
           <div class="input p-4 hover:bg-white transition-all duration-200">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3 flex-1 min-w-0">
-                <%= if country_code = TimezoneUtils.get_country_code_for_timezone(@profile && @profile.timezone || "UTC") do %>
+                <%= if country_code = Timezones.country_code(@profile && @profile.timezone || "UTC") do %>
                   <.timezone_flag
                     country_code={country_code}
                     safe_mode={@safe_flags}
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                 <% end %>
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-medium text-gray-800 truncate">
-                    {TimezoneUtils.format_timezone((@profile && @profile.timezone) || "UTC")}
+                    {Timezones.format((@profile && @profile.timezone) || "UTC")}
                   </div>
                   <div class="text-xs mt-1 text-gray-600">
                     {get_current_time_display((@profile && @profile.timezone) || "UTC")}
@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
     <!-- Scrollable timezone options -->
             <div class="max-h-48 overflow-y-auto">
               <div class="p-1">
-                <%= for {label, value, offset} <- TimezoneUtils.get_filtered_timezone_options(@timezone_search || "") do %>
+                <%= for {label, value, offset} <- Timezones.search(@timezone_search || "") do %>
                   <div
                     phx-click="change_timezone"
                     phx-value-timezone={value}
@@ -146,7 +146,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                   >
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3 flex-1 min-w-0">
-                        <%= if country_code = TimezoneUtils.get_country_code_for_timezone(value) do %>
+                        <%= if country_code = Timezones.country_code(value) do %>
                           <.timezone_flag
                             country_code={country_code}
                             safe_mode={@safe_flags}
@@ -205,7 +205,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
   end
 
   defp get_timezone_offset(timezone) do
-    TimezoneUtils.get_current_utc_offset(timezone)
+    Timezones.utc_offset(timezone)
   end
 
   defp get_timezone_local_time(timezone) do

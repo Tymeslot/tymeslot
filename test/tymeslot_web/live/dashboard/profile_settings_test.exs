@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
   alias Tymeslot.Repo
 
   alias Ecto.Changeset
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
 
   setup :setup_dashboard_user
 
@@ -298,11 +298,15 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       # Verify search input is visible (means dropdown is open)
       assert render(view) =~ "Search cities"
 
+      # Search for New York to surface it in the filtered list
+      view
+      |> element("#timezone-search")
+      |> render_keyup(%{value: "New York"})
+
       # Click the New York option
-      # We use element with text to be sure
       view |> element("[phx-click='change_timezone']", "New York") |> render_click()
 
-      expected_label = TimezoneUtils.format_timezone("America/New_York")
+      expected_label = Timezones.format("America/New_York")
       assert render(view) =~ "Timezone updated to #{expected_label}"
 
       updated_profile = Repo.reload!(profile)
@@ -317,10 +321,14 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       |> element("#timezone-form-container button[phx-click='toggle_timezone_dropdown']")
       |> render_click()
 
-      # Click an option but override with an invalid timezone value
-      # We use a text filter to pick a specific element from the list
+      # Search to surface a specific timezone, then click it with an invalid override
       view
-      |> element("#timezone-form-container [phx-click='change_timezone']", "Adak, Alaska")
+      |> element("#timezone-search")
+      |> render_keyup(%{value: "Adak"})
+
+      # Click an option but override with an invalid timezone value
+      view
+      |> element("#timezone-form-container [phx-click='change_timezone']", "Adak, United States")
       |> render_click(%{timezone: "Invalid-Timezone-Format"})
 
       assert render(view) =~ "Invalid timezone format"

@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Components.FlagHelpers do
   require Logger
 
   alias Phoenix.LiveView.TagEngine
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
 
   @doc """
   Renders a country flag with automatic fallback if the flag doesn't exist.
@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Components.FlagHelpers do
 
   @spec safe_flag(map()) :: Phoenix.LiveView.Rendered.t()
   def safe_flag(assigns) do
-    if TimezoneUtils.flag_exists?(assigns.country_code) do
+    if Timezones.flag_exists?(assigns.country_code) do
       flag_function = Function.capture(Flagpack, assigns.country_code, 1)
       flag_html = TagEngine.component(flag_function, %{class: assigns.class}, __ENV__)
       assigns = assign(assigns, :flag_html, flag_html)
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Components.FlagHelpers do
 
   @spec timezone_flag(map()) :: Phoenix.LiveView.Rendered.t()
   def timezone_flag(assigns) do
-    country_code = TimezoneUtils.get_country_code_for_timezone(assigns.timezone)
+    country_code = Timezones.country_code(assigns.timezone)
 
     assigns = assign(assigns, :country_code, country_code)
 

@@ -7,7 +7,8 @@ defmodule TymeslotWeb.Components.MeetingComponents do
   alias Calendar
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.{DateTimeUtils, TimezoneUtils}
+  alias Tymeslot.Timezones
+  alias Tymeslot.Utils.DateTimeUtils
 
   # ========== MEETING DISPLAY ==========
 
@@ -558,7 +559,7 @@ defmodule TymeslotWeb.Components.MeetingComponents do
   end
 
   defp format_date(date_string) when is_binary(date_string) do
-    TimezoneUtils.format_date(date_string)
+    DateTimeUtils.format_date_string(date_string)
   end
 
   defp format_date(%Date{} = date) do
@@ -584,7 +585,7 @@ defmodule TymeslotWeb.Components.MeetingComponents do
   end
 
   defp format_duration(duration) when is_binary(duration) do
-    TimezoneUtils.format_duration(duration)
+    DateTimeUtils.format_duration(duration)
   end
 
   defp format_duration(duration) when is_integer(duration) do
@@ -592,7 +593,7 @@ defmodule TymeslotWeb.Components.MeetingComponents do
   end
 
   defp format_timezone(timezone) do
-    TimezoneUtils.format_timezone(timezone)
+    Timezones.format(timezone)
   end
 
   defp duration_card_style(selected, duration) do

@@ -17,7 +17,8 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Themes.{Registry, Theme}
-  alias Tymeslot.Utils.{DateTimeUtils, TimezoneUtils}
+  alias Tymeslot.Timezones
+  alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Core.{Context, ErrorBoundary, EventBus}
@@ -483,10 +484,10 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
         Profiles.get_default_timezone()
 
     # Normalize and validate
-    normalized_timezone = TimezoneUtils.normalize_timezone(timezone)
+    normalized_timezone = Timezones.normalize(timezone)
 
     validated_timezone =
-      if TimezoneUtils.valid_timezone?(normalized_timezone) do
+      if Timezones.valid?(normalized_timezone) do
         normalized_timezone
       else
         Profiles.get_default_timezone()

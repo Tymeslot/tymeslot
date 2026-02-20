@@ -10,7 +10,8 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Security.InputProcessor
-  alias Tymeslot.Utils.{ContextUtils, DateTimeUtils, TimezoneUtils}
+  alias Tymeslot.Timezones
+  alias Tymeslot.Utils.{ContextUtils, DateTimeUtils}
   alias TymeslotWeb.Helpers.ClientIP
 
   require Logger
@@ -648,7 +649,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   @spec handle_timezone_search(Phoenix.LiveView.Socket.t(), String.t()) ::
           Phoenix.LiveView.Socket.t()
   def handle_timezone_search(socket, search_term) do
-    filtered_timezones = TimezoneUtils.get_filtered_timezone_options(search_term)
+    filtered_timezones = Timezones.search(search_term)
     assign(socket, :filtered_timezones, filtered_timezones)
   end
 

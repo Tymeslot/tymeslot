@@ -3,7 +3,7 @@ defmodule TymeslotWeb.OnboardingLive do
 
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles.Timezone
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.BasicSettingsHandlers
   alias TymeslotWeb.OnboardingLive.BasicSettingsStep
@@ -55,7 +55,7 @@ defmodule TymeslotWeb.OnboardingLive do
         |> assign(:step_data, %{})
         |> assign(:show_skip_modal, false)
         |> assign(:steps, StepConfig.get_steps())
-        |> assign(:timezone_options, TimezoneUtils.get_all_timezone_options())
+        |> assign(:timezone_options, Timezones.all_options())
         |> assign(:timezone_dropdown_open, false)
         |> assign(:timezone_search, "")
         |> assign(:page_title, "Welcome")

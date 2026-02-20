@@ -6,7 +6,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Utils.TimezoneUtils
+  alias Tymeslot.Timezones
+  alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -151,7 +152,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         <%= if @meeting_type do %>
                           {gettext("Duration: %{duration}", duration: LocalizationHelpers.format_duration(@meeting_type.duration_minutes))}
                         <% else %>
-                          {gettext("Duration: %{duration}", duration: TimezoneUtils.format_duration(@duration))}
+                          {gettext("Duration: %{duration}", duration: DateTimeUtils.format_duration(@duration))}
                         <% end %>
                       </p>
                     </div>
@@ -323,7 +324,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   end
 
   defp get_timezone_offset(timezone) do
-    TimezoneUtils.get_current_utc_offset(timezone)
+    Timezones.utc_offset(timezone)
   end
 
   defp get_timezone_local_time(timezone) do
@@ -371,7 +372,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
               />
               <div class="flex-1 min-w-0">
                 <div class="text-sm font-medium text-white truncate">
-                  {TimezoneUtils.format_timezone(@user_timezone)}
+                  {Timezones.format(@user_timezone)}
                 </div>
                 <div class="timezone-time-display text-xs mt-1">
                   {get_current_time_display(@user_timezone)}
@@ -442,7 +443,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
     <!-- Scrollable timezone options -->
           <div class="scroll-y max-h-48 md:max-h-56">
             <div class="p-1">
-              <%= for {label, value, offset} <- TimezoneUtils.get_filtered_timezone_options(@timezone_search) do %>
+              <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>
                 <div
                   phx-click="change_timezone"
                   phx-value-timezone={value}

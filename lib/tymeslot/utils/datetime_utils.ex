@@ -498,4 +498,54 @@ defmodule Tymeslot.Utils.DateTimeUtils do
 
     Date.compare(date, current_date) != :lt and Date.compare(date, max_date) != :gt
   end
+
+  # ========== Display Formatting ==========
+
+  @doc """
+  Formats duration string or integer for display.
+  """
+  @spec format_duration(term()) :: String.t()
+  def format_duration(duration) when is_integer(duration) do
+    format_minutes(duration)
+  end
+
+  def format_duration(duration_string) when is_binary(duration_string) do
+    case Regex.run(~r/^(\d+)min$/, duration_string) do
+      [_match, minutes_str] ->
+        minutes_str |> String.to_integer() |> format_minutes()
+
+      _result ->
+        "Unknown duration"
+    end
+  end
+
+  def format_duration(_value), do: "Unknown duration"
+
+  @doc """
+  Formats date string for display.
+  """
+  @spec format_date_string(term()) :: String.t()
+  def format_date_string(date_string) when is_binary(date_string) do
+    case Date.from_iso8601(date_string) do
+      {:ok, date} -> Calendar.strftime(date, "%B %d, %Y")
+      _result -> date_string
+    end
+  end
+
+  def format_date_string(_value), do: "Invalid date"
+
+  defp format_minutes(1), do: "1 minute"
+  defp format_minutes(minutes) when minutes < 60, do: "#{minutes} minutes"
+  defp format_minutes(60), do: "1 hour"
+  defp format_minutes(90), do: "1.5 hours"
+  defp format_minutes(120), do: "2 hours"
+  defp format_minutes(minutes) when rem(minutes, 60) == 0, do: "#{div(minutes, 60)} hours"
+
+  defp format_minutes(minutes) do
+    hours = div(minutes, 60)
+    mins = rem(minutes, 60)
+    hour_text = "#{hours} hour#{if hours > 1, do: "s", else: ""}"
+    minute_text = "#{mins} minute#{if mins > 1, do: "s", else: ""}"
+    "#{hour_text} #{minute_text}"
+  end
 end
