@@ -6,7 +6,7 @@
 
 set -eu
 
-BIN=_build/prod/rel/tymeslot/bin/tymeslot
+BIN=/app/_build/prod/rel/tymeslot/bin/tymeslot
 
 echo "==> Running database migrations"
 $BIN eval 'Ecto.Migrator.with_repo(Tymeslot.Repo, &Ecto.Migrator.run(&1, :up, all: true))'
