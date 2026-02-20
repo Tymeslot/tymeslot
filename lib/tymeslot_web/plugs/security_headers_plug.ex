@@ -189,11 +189,11 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
           %URI{scheme: scheme, host: host} when is_binary(scheme) and is_binary(host) ->
             ["#{scheme}://#{host}"]
 
-          _ ->
+          _uri ->
             []
         end
 
-      _ ->
+      _provider ->
         []
     end)
     |> Enum.uniq()
@@ -203,9 +203,17 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     extra_script_origins = analytics_script_origins()
 
     script_src =
-      (["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.google.com",
-        "https://www.gstatic.com", "https://js.stripe.com"] ++ extra_script_origins)
-      |> Enum.join(" ")
+      Enum.join(
+        [
+          "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+          "https://www.google.com",
+          "https://www.gstatic.com",
+          "https://js.stripe.com"
+        ] ++ extra_script_origins,
+        " "
+      )
 
     connect_src =
       if Application.get_env(:tymeslot, :environment) == :dev do
