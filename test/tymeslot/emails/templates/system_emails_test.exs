@@ -4,6 +4,7 @@ defmodule Tymeslot.Emails.Templates.SystemEmailsTest do
 
   alias Tymeslot.Emails.Templates.{
     CalendarSyncError,
+    IntegrationUnhealthy,
     RescheduleRequest
   }
 
@@ -96,6 +97,83 @@ defmodule Tymeslot.Emails.Templates.SystemEmailsTest do
         assert is_binary(html)
         assert String.length(html) > 500
       end
+    end
+  end
+
+  describe "IntegrationUnhealthy.render/3" do
+    test "generates valid HTML output for calendar type" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :google_calendar}
+
+      html = IntegrationUnhealthy.render(user, integration, :calendar)
+
+      assert is_binary(html)
+      assert String.length(html) > 500
+    end
+
+    test "generates valid HTML output for video type" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :zoom}
+
+      html = IntegrationUnhealthy.render(user, integration, :video)
+
+      assert is_binary(html)
+      assert String.length(html) > 500
+    end
+
+    test "includes humanized provider label" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :google_calendar}
+
+      html = IntegrationUnhealthy.render(user, integration, :calendar)
+
+      assert html =~ "Google calendar"
+    end
+
+    test "includes integration type in content" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :zoom}
+
+      html = IntegrationUnhealthy.render(user, integration, :video)
+
+      assert html =~ "video"
+    end
+
+    test "includes connection issues warning" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :google_calendar}
+
+      html = IntegrationUnhealthy.render(user, integration, :calendar)
+
+      assert html =~ "connection" || html =~ "Connection"
+    end
+
+    test "includes settings action button" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :google_calendar}
+
+      html = IntegrationUnhealthy.render(user, integration, :calendar)
+
+      assert html =~ "Check Integration Settings"
+    end
+
+    test "includes 48 hour threshold mention" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :google_calendar}
+
+      html = IntegrationUnhealthy.render(user, integration, :calendar)
+
+      assert html =~ "48"
+    end
+
+    test "handles unknown integration type" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :custom_service}
+
+      html = IntegrationUnhealthy.render(user, integration, :other)
+
+      assert is_binary(html)
+      assert String.length(html) > 500
     end
   end
 

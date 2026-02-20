@@ -21,7 +21,19 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
       <mj-column>
         #{Components.title_section("What's happening?")}
 
-        #{Components.centered_text("Your <strong>#{provider_label}</strong> #{type_label} integration has been failing health checks consistently for the past 48+ hours. This may affect your ability to sync #{type_label}s or create new bookings.")}
+        <mj-section padding="0 0 12px 0">
+          <mj-column>
+            <mj-text
+              font-size="16px"
+              color="#52525b"
+              line-height="1.5"
+              align="center"
+              css-class="mobile-text"
+            >
+              Your <strong>#{provider_label}</strong> #{type_label} integration has been failing health checks consistently for the past 48+ hours. This may affect your ability to sync #{type_label}s or create new bookings.
+            </mj-text>
+          </mj-column>
+        </mj-section>
 
         #{Components.divider()}
 
