@@ -24,6 +24,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
 
       assert render(view) =~ "Strategy Session"
     end
+
+    test "auto-creates and shows default meeting types for a new user", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      # Default meeting types are auto-created when a user has none; the empty
+      # state should therefore never be visible on first visit.
+      refute render(view) =~ "No meeting types configured yet"
+    end
   end
 
   # ===========================================================================
@@ -240,6 +248,9 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
 
       # The profile value must not have changed to 999
       assert Repo.reload!(profile).buffer_minutes == persisted_value
+
+      # The user must also see an error message explaining the rejection
+      assert render(view) =~ "Buffer minutes cannot exceed 120"
     end
   end
 end
