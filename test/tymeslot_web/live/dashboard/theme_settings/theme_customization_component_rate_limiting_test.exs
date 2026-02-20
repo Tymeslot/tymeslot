@@ -131,7 +131,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponentRateLim
     end
 
     test "multiple users operate independently", %{user_id: base_user_id} do
-      user_ids = [base_user_id, base_user_id + 1, base_user_id + 2]
+      user_2 = insert(:user)
+      user_3 = insert(:user)
+      user_ids = [base_user_id, user_2.id, user_3.id]
 
       test_multiple_users_operate_independently(
         user_ids,

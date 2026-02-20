@@ -64,6 +64,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       conn: conn,
       profile: profile
     } do
+      # "turquoise" is the scheme key whose display name is "Arctic Blue"
       insert(:theme_customization,
         profile: profile,
         theme_id: "1",
@@ -78,8 +79,10 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button[phx-value-theme='1']", "Customize Style")
       |> render_click()
 
-      # The saved scheme name appears in the "Current" badge
-      assert render(view) =~ "Arctic Blue"
+      # The Current badge (span.text-tymeslot-700) shows the loaded scheme's display name.
+      # Scoping to that element rules out "Arctic Blue" appearing only in the scheme card list,
+      # which is always rendered regardless of any saved customization.
+      assert render(view) =~ ~r/text-tymeslot-700">Arctic Blue/
     end
 
     test "changes color scheme and persists it", %{conn: conn, profile: profile} do

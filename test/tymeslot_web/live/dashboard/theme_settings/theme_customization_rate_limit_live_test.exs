@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationRateLimitLiveTes
     test "shows an error flash when a user exceeds the customization rate limit",
          %{conn: conn, user: user} do
       # Pre-exhaust the rate limit for this user outside the LiveView
-      for _i <- 1..150, do: RateLimiter.check_theme_customization_rate_limit(user.id)
+      for _i <- 1..150, do: assert :ok = RateLimiter.check_theme_customization_rate_limit(user.id)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationRateLimitLiveTes
       |> render_click()
 
       # The user should see an error flash, not a silent failure
-      assert render(view) =~ "wait"
+      assert render(view) =~ "reached the limit"
     end
   end
 end
