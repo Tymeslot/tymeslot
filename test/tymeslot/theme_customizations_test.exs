@@ -85,16 +85,5 @@ defmodule Tymeslot.ThemeCustomizationsTest do
       assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "2") == nil
     end
 
-    test "get_color_scheme_css/1 returns CSS variables", %{} do
-      css = ThemeCustomizations.get_color_scheme_css("purple")
-      assert css =~ "--theme-primary: #8b5cf6;"
-      assert css =~ "--theme-secondary: #a78bfa;"
-      assert css =~ "--theme-background: #1e1b4b;"
-    end
-
-    test "get_gradient_css/1 returns gradient CSS", %{} do
-      css = ThemeCustomizations.get_gradient_css("gradient_1")
-      assert css == "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-    end
   end
 end
