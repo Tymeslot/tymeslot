@@ -428,6 +428,23 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Generates a fresh verification token for a user and persists it without sending an email.
+
+  Intended for background workers that need to produce a valid verification URL before
+  delivering their own email (e.g. a 24-hour reminder). Existing tokens expire after 2 hours,
+  so callers must regenerate before building any verification link.
+  """
+  @spec regenerate_verification_token(integer()) :: {:ok, String.t()} | {:error, atom()}
+  def regenerate_verification_token(user_id) do
+    {token, expiry, _purpose} = Token.generate_email_verification_token(user_id)
+
+    case Verification.store_verification_token(user_id, token, expiry) do
+      {:ok, _user} -> {:ok, token}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
   Gets user by session token.
   """
   @spec get_user_by_session_token(String.t()) :: Ecto.Schema.t() | nil

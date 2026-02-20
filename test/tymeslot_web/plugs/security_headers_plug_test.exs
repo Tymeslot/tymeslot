@@ -317,7 +317,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
 
       conn = SecurityHeadersPlug.call(conn, [])
       [csp] = get_resp_header(conn, "content-security-policy")
-      [script_src_directive] = Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
+
+      [script_src_directive] =
+        Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
 
       assert script_src_directive =~ "https://umami.example.com"
     end
@@ -329,7 +331,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
 
       conn = SecurityHeadersPlug.call(conn, [])
       [csp] = get_resp_header(conn, "content-security-policy")
-      [script_src_directive] = Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
+
+      [script_src_directive] =
+        Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
 
       assert script_src_directive ==
                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://js.stripe.com"
@@ -351,7 +355,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
 
       conn = SecurityHeadersPlug.call(conn, [])
       [csp] = get_resp_header(conn, "content-security-policy")
-      [script_src_directive] = Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
+
+      [script_src_directive] =
+        Enum.filter(String.split(csp, "; "), &String.starts_with?(&1, "script-src"))
 
       origin_count =
         script_src_directive
