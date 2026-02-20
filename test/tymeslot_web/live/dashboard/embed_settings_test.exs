@@ -241,7 +241,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       # Pre-exhaust the per-user rate limit via the API to avoid a race with
       # async: false tests that call RateLimiter.clear_all() in their setup
       # (which runs concurrently with async: true tests and would reset the counter).
-      for _ <- 1..10 do
+      for _i <- 1..10 do
         RateLimiter.check_rate("embed_domain_update:#{user.id}", 60_000 * 60, 10)
       end
 
