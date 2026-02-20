@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
   use TymeslotWeb.LiveCase, async: true
-  @moduletag :utils
+  @moduletag :meetings
+  @moduletag :live
 
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
@@ -36,6 +37,25 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert render(view) =~ "Your upcoming appointments will appear here automatically"
     end
 
+    test "shows empty state for the past filter when no past meetings exist", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      view |> element("button", "Past") |> render_click()
+
+      assert render(view) =~ "No past meetings"
+      assert render(view) =~ "meetings in this period yet"
+    end
+
+    test "shows empty state for the cancelled filter when no cancelled meetings exist",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      view |> element("button", "Cancelled") |> render_click()
+
+      assert render(view) =~ "No cancelled meetings"
+      assert render(view) =~ "cancelled appointments to show"
+    end
+
     test "renders upcoming meetings", %{conn: conn, user: user} do
       _meeting =
         insert(:meeting,
@@ -67,6 +87,35 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert render(view) =~ "Active Meeting"
       assert render(view) =~ "Join Meeting"
       assert render(view) =~ "https://tymeslot.com/join/active"
+    end
+
+    test "shows Completed badge for past meetings", %{conn: conn, user: user} do
+      insert(:past_meeting,
+        organizer_user_id: user.id,
+        organizer_email: user.email,
+        attendee_name: "Past Attendee"
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      view |> element("button", "Past") |> render_click()
+
+      assert render(view) =~ "Past Attendee"
+      assert render(view) =~ "Completed"
+    end
+
+    test "renders attendee company when present", %{conn: conn, user: user} do
+      insert(:meeting,
+        organizer_user: user,
+        organizer_email: user.email,
+        attendee_name: "Jane Smith",
+        attendee_company: "Acme Corp"
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      assert render(view) =~ "Jane Smith"
+      assert render(view) =~ "Acme Corp"
     end
 
     test "filters meetings by status", %{conn: conn, user: user} do
@@ -137,6 +186,46 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert updated_meeting.status == "cancelled"
     end
 
+    test "dismissing the cancel modal does not cancel the meeting", %{conn: conn, user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_email: user.email,
+          attendee_name: "Stay Scheduled"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      view |> element("#cancel-meeting-#{meeting.id}") |> render_click()
+      assert render(view) =~ "Are you sure you want to cancel"
+
+      view |> element("button", "Keep Meeting") |> render_click()
+      refute render(view) =~ "Are you sure you want to cancel"
+
+      assert Repo.get(MeetingSchema, meeting.id).status == "confirmed"
+    end
+
+    test "disables cancel and reschedule actions for meetings that have already started",
+         %{conn: conn, user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          attendee_name: "In Progress",
+          start_time: DateTime.add(DateTime.utc_now(), -5, :minute),
+          end_time: DateTime.add(DateTime.utc_now(), 25, :minute)
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      assert has_element?(view, "#cancel-meeting-#{meeting.id}[disabled]")
+
+      assert has_element?(
+               view,
+               "[phx-click='show_reschedule_modal'][phx-value-id='#{meeting.id}'][disabled]"
+             )
+    end
+
     test "sends reschedule request", %{conn: conn, user: user} do
       meeting =
         insert(:meeting,
@@ -160,6 +249,25 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
 
       updated_meeting = Repo.get(MeetingSchema, meeting.id)
       assert updated_meeting.status == "reschedule_requested"
+    end
+
+    test "dismissing the reschedule modal does not send a request", %{conn: conn, user: user} do
+      meeting =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_email: user.email,
+          attendee_name: "Stay Scheduled"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      view |> element("button", "Reschedule") |> render_click()
+      assert render(view) =~ "Send a reschedule request to"
+
+      view |> element("#reschedule-request-modal button", "Cancel") |> render_click()
+      refute render(view) =~ "Send a reschedule request to"
+
+      assert Repo.get(MeetingSchema, meeting.id).status == "confirmed"
     end
 
     test "allows cancelling a meeting with reschedule_requested status", %{conn: conn, user: user} do
