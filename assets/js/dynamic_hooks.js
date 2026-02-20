@@ -60,7 +60,7 @@ export function lazyHook(name, loader) {
     __lazyHook: name,
     __actualHook: null,
     __loading: false,
-    __destroyed: false,
+    _hookDestroyed: false,
     __loadError: null,
 
     async mounted() {
@@ -71,13 +71,13 @@ export function lazyHook(name, loader) {
       }
 
       this.__loading = true;
-      this.__destroyed = false;
+      this._hookDestroyed = false;
 
       try {
         const hook = await loadHook(name, loader);
 
         // Check if destroyed while loading - abort if so
-        if (this.__destroyed) {
+        if (this._hookDestroyed) {
           console.debug(`Hook "${name}" destroyed during load, aborting initialization`);
           return;
         }
@@ -136,7 +136,7 @@ export function lazyHook(name, loader) {
 
     destroyed() {
       // Signal to abort any in-progress loading
-      this.__destroyed = true;
+      this._hookDestroyed = true;
 
       // Clean up actual hook if it was loaded
       if (this.__actualHook && this.__actualHook.destroyed) {

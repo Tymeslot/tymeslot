@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   @spec language_switcher(map()) :: Phoenix.LiveView.Rendered.t()
   def language_switcher(assigns) do
     ~H"""
-    <div class="language-switcher relative" phx-click-away={if @dropdown_open, do: "close_language_dropdown"}>
+    <div class="language-switcher relative" phx-click-away="close_language_dropdown">
       <button
         type="button"
         phx-click="toggle_language_dropdown"
