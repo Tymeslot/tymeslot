@@ -1,0 +1,73 @@
+# syntax=docker/dockerfile:1
+# Railway Dockerfile build for Core (build context: apps/tymeslot/).
+# Alternative to the default Railpack build; use when you need more control
+# over the build process.
+
+# --- Builder ---
+FROM hexpm/elixir:1.19.3-erlang-28.3.2-debian-bookworm-20260202-slim AS builder
+
+ARG MIX_ENV=prod
+ENV MIX_ENV=${MIX_ENV} \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    nodejs \
+    npm \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN mix local.hex --force && mix local.rebar --force
+
+# Dependency layer (cached unless mix.exs/mix.lock change)
+COPY mix.exs mix.lock ./
+COPY config ./config
+RUN mix deps.get --only $MIX_ENV
+RUN mix deps.compile
+
+COPY . .
+
+RUN mix assets.setup
+RUN mix assets.deploy
+
+RUN mix compile && \
+    mix release tymeslot && \
+    mkdir -p _build/prod/rel/tymeslot/apps/tymeslot/config && \
+    cp config/runtime.exs _build/prod/rel/tymeslot/apps/tymeslot/config/
+
+# --- Runtime ---
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl3 \
+    libncurses6 \
+    ca-certificates \
+    locales \
+    tzdata \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
+
+ENV LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8 \
+    MIX_ENV=prod \
+    PHX_SERVER=true \
+    PORT=8080
+
+WORKDIR /app
+
+RUN useradd --create-home --shell /bin/bash appuser && \
+    chown -R appuser:appuser /app
+
+COPY --from=builder --chown=appuser:appuser /app/_build/prod/rel/tymeslot ./
+
+USER appuser
+
+EXPOSE 8080
+
+CMD ["/bin/sh", "-c", "/app/bin/tymeslot eval 'Ecto.Migrator.with_repo(Tymeslot.Repo, &Ecto.Migrator.run(&1, :up, all: true))' && exec /app/bin/tymeslot start"]
