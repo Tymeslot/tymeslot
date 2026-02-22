@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
       caldav: Tymeslot.Integrations.Calendar.CalDAV.Provider,
       radicale: Tymeslot.Integrations.Calendar.Radicale.Provider,
       nextcloud: Tymeslot.Integrations.Calendar.Nextcloud.Provider,
+      zimbra: Tymeslot.Integrations.Calendar.Zimbra.Provider,
       google: Tymeslot.Integrations.Calendar.Google.Provider,
       outlook: Tymeslot.Integrations.Calendar.Outlook.Provider,
       debug: Tymeslot.Integrations.Calendar.DebugCalendarProvider,
@@ -48,6 +49,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
                  caldav: Tymeslot.Integrations.Calendar.CalDAV.Provider,
                  radicale: Tymeslot.Integrations.Calendar.Radicale.Provider,
                  nextcloud: Tymeslot.Integrations.Calendar.Nextcloud.Provider,
+                 zimbra: Tymeslot.Integrations.Calendar.Zimbra.Provider,
                  google: Tymeslot.Integrations.Calendar.Google.Provider,
                  outlook: Tymeslot.Integrations.Calendar.Outlook.Provider,
                  debug: Tymeslot.Integrations.Calendar.DebugCalendarProvider,
@@ -71,7 +73,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
   ## Examples
 
       iex> ProviderRegistry.valid_providers()
-      [:caldav, :radicale, :nextcloud, :google, :outlook]
+      [:caldav, :radicale, :nextcloud, :zimbra, :google, :outlook]
   """
   @spec valid_providers() :: list(atom())
   defdelegate valid_providers(), to: ProviderConfig, as: :all_providers_with_dev
@@ -91,7 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
       {:ok, :google}
       
       iex> ProviderRegistry.validate_provider(:invalid)
-      {:error, "Invalid provider: invalid. Valid providers are: caldav, radicale, nextcloud, google, outlook"}
+      {:error, "Invalid provider: invalid. Valid providers are: caldav, radicale, nextcloud, zimbra, google, outlook"}
   """
   @spec validate_provider(atom() | String.t()) :: {:ok, atom()} | {:error, String.t()}
   defdelegate validate_provider(provider), to: ProviderConfig
