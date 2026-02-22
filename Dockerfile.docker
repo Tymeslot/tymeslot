@@ -38,8 +38,11 @@ COPY config ./config
 # Get dependencies using committed lock file
 RUN mix deps.get --only prod
 
-# Copy the rest of the application code
+# Copy the rest of the application code. Wipe any locally-built assets first
+# so the image build is hermetic — assets are always produced by mix assets.deploy
+# below, never snuck in from the developer's local priv/static/assets/ directory.
 COPY . .
+RUN rm -rf priv/static/assets/
 
 # Compile dependencies and application code
 RUN mix do deps.compile + compile
