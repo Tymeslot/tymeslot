@@ -144,15 +144,27 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
     # Wait for all tasks to complete
     results = Task.await_many(tasks, Base.task_await_timeout_ms())
 
-    # Combine all successful results
-    all_events =
-      results
-      |> Enum.filter(&match?({:ok, _events, _path}, &1))
-      |> Enum.flat_map(fn {:ok, events, _path} -> events end)
-      |> Enum.uniq_by(& &1.uid)
+    successful = Enum.filter(results, &match?({:ok, _events, _path}, &1))
 
-    Logger.info("Total fresh events found across all calendars: #{length(all_events)}")
-    {:ok, all_events}
+    if successful == [] do
+      # All configured calendars failed (circuit open, network error, etc.). Return an error
+      # rather than {:ok, []} — an empty list would make every slot look available, silently
+      # hiding conflicts with external calendar entries.
+      Logger.warning("All calendar fetches failed, cannot determine availability",
+        user_id: user_id,
+        client_count: length(all_clients)
+      )
+
+      {:error, :all_calendars_unavailable}
+    else
+      all_events =
+        successful
+        |> Enum.flat_map(fn {:ok, events, _path} -> events end)
+        |> Enum.uniq_by(& &1.uid)
+
+      Logger.info("Total fresh events found across all calendars: #{length(all_events)}")
+      {:ok, all_events}
+    end
   end
 
   defp fetch_events_for_client_in_range(client, start_datetime, end_datetime) do
