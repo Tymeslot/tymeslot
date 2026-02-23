@@ -33,7 +33,9 @@ defmodule Tymeslot.Timezones.Data do
   @country_overrides %{
     # Simferopol is the capital of Crimea, internationally recognised as Ukraine
     # despite Russian occupation since 2014. TzExtra lists Russia first.
-    "Europe/Simferopol" => "UA"
+    "Europe/Simferopol" => "UA",
+    # Asia/Yangon is Myanmar's timezone; TzExtra lists Cocos Islands (CCK) first.
+    "Asia/Yangon" => "MM"
   }
 
   # Label overrides for entries where the default derivation isn't ideal
