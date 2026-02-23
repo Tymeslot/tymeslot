@@ -233,6 +233,14 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     {:discard, "Meeting not found"}
   end
 
+  defp handle_error_result(:circuit_open, _job) do
+    # The host circuit breaker is open — the CalDAV server is unreachable right now.
+    # Snooze for the circuit recovery timeout (2 min for caldav/zimbra) so the breaker
+    # has time to transition to half-open before the next attempt, rather than burning
+    # retry slots against a still-open circuit.
+    {:snooze, 120}
+  end
+
   defp handle_error_result(:connection_failed, _job) do
     # Network issues - use longer backoff
     # Retry in 1 minute
