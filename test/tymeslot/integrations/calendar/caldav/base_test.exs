@@ -86,7 +86,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
         {:ok, %Req.Response{status: 201, body: ""}}
       end)
 
-      assert {:ok, _} =
+      assert {:ok, _response} =
                Base.put_event(
                  "https://caldav.example.com/calendars/user/personal/event.ics",
                  "user",
@@ -103,7 +103,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
         {:ok, %Req.Response{status: 204, body: ""}}
       end)
 
-      assert {:ok, _} =
+      assert {:ok, _response} =
                Base.delete_event(
                  "https://caldav.example.com/calendars/user/personal/event.ics",
                  "user",
@@ -119,7 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
         {:ok, %Req.Response{status: 200, body: "", headers: [{"etag", "\"abc123\""}]}}
       end)
 
-      assert {:ok, _} =
+      assert {:ok, _response} =
                Base.head_event(
                  "https://caldav.example.com/calendars/user/personal/event.ics",
                  "user",

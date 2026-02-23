@@ -168,7 +168,7 @@ defmodule Tymeslot.Timezones.Data do
   def search("") do
     @options
     |> Enum.take(50)
-    |> Enum.map(fn {label, tz_id} -> {label, tz_id, utc_offset(tz_id)} end)
+    |> Enum.map(fn {label, tz_id} -> {label, tz_id, Formatting.utc_offset(tz_id)} end)
   end
 
   def search(term) do
@@ -177,7 +177,7 @@ defmodule Tymeslot.Timezones.Data do
     @search_index
     |> Enum.filter(fn {key, _entry} -> String.contains?(key, search_lower) end)
     |> Enum.uniq_by(fn {_key, entry} -> entry.timezone_id end)
-    |> Enum.map(fn {_key, entry} -> {entry.label, entry.timezone_id, utc_offset(entry.timezone_id)} end)
+    |> Enum.map(fn {_key, entry} -> {entry.label, entry.timezone_id, Formatting.utc_offset(entry.timezone_id)} end)
     |> Enum.take(50)
   end
 
@@ -230,5 +230,4 @@ defmodule Tymeslot.Timezones.Data do
 
   def flag_exists?(_other), do: false
 
-  defp utc_offset(timezone_id), do: Formatting.utc_offset(timezone_id)
 end

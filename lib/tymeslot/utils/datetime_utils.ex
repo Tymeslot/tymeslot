@@ -131,7 +131,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
         Enum.sort_by(period_slots, fn slot ->
           case parse_time_string(slot) do
             {:ok, time} -> {time.hour, time.minute, time.second}
-            {:error, _} -> {99, 99, 99}
+            {:error, _reason} -> {99, 99, 99}
           end
         end)
 
