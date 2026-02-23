@@ -8,7 +8,18 @@
     "priv",
     "node_modules",
     "behaviour.ex$",
-    "_behaviour.ex$"
+    "_behaviour.ex$",
+    "lib/tymeslot_web/gettext.ex$",
+    "lib/tymeslot/repo.ex$",
+    "lib/tymeslot/mailer.ex$",
+    "lib/tymeslot.ex$",
+    "lib/tymeslot/security/rate_limit.ex$",
+    "lib/tymeslot_web/controllers/debug_theme_controller.ex$",
+    "lib/tymeslot/timezones/country_codes.ex$",
+    "lib/tymeslot_web/components/dashboard/integrations/calendar/caldav_config.ex$",
+    "lib/tymeslot_web/components/dashboard/integrations/calendar/nextcloud_config.ex$",
+    "lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex$",
+    "lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex$"
   ],
-  "file_col_width": 120
+  "file_col_width": 180
 }
