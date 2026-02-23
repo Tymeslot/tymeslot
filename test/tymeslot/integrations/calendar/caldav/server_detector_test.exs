@@ -309,56 +309,54 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorTest do
 
   describe "detect_from_headers/1" do
     test "detects Radicale from Server header" do
-      headers = [{"server", "radicale/3.1.8"}]
+      headers = %{"server" => ["radicale/3.1.8"]}
       assert ServerDetector.detect_from_headers(headers) == :radicale
     end
 
     test "detects Nextcloud from Server header" do
-      headers = [{"server", "Apache/2.4.41 (Ubuntu) Nextcloud"}]
+      headers = %{"server" => ["Apache/2.4.41 (Ubuntu) Nextcloud"]}
       assert ServerDetector.detect_from_headers(headers) == :nextcloud
     end
 
     test "detects Nextcloud from X-Powered-By header" do
-      headers = [{"x-powered-by", "Nextcloud"}]
+      headers = %{"x-powered-by" => ["Nextcloud"]}
       assert ServerDetector.detect_from_headers(headers) == :nextcloud
     end
 
     test "detects ownCloud from Server header" do
-      headers = [{"server", "Apache ownCloud"}]
+      headers = %{"server" => ["Apache ownCloud"]}
       assert ServerDetector.detect_from_headers(headers) == :owncloud
     end
 
     test "detects Baikal from Server header" do
-      headers = [{"server", "Baikal/0.9.3"}]
+      headers = %{"server" => ["Baikal/0.9.3"]}
       assert ServerDetector.detect_from_headers(headers) == :baikal
     end
 
     test "detects SabreDAV from Server header" do
-      headers = [{"server", "SabreDAV/4.3.1"}]
+      headers = %{"server" => ["SabreDAV/4.3.1"]}
       assert ServerDetector.detect_from_headers(headers) == :sabredav
     end
 
     test "detects Zimbra from Server header" do
-      headers = [{"server", "Zimbra/8.8.15"}]
+      headers = %{"server" => ["Zimbra/8.8.15"]}
       assert ServerDetector.detect_from_headers(headers) == :zimbra
     end
 
     test "returns generic for calendar-access in DAV header" do
-      headers = [{"dav", "1, 2, calendar-access"}]
+      headers = %{"dav" => ["1, 2, calendar-access"]}
       assert ServerDetector.detect_from_headers(headers) == :generic
     end
 
     test "returns nil for unrecognized headers" do
-      headers = [{"server", "nginx/1.18.0"}]
+      headers = %{"server" => ["nginx/1.18.0"]}
       assert ServerDetector.detect_from_headers(headers) == nil
     end
 
-    test "handles case-insensitive header names" do
-      headers = [{"Server", "Radicale/3.1.8"}]
-      assert ServerDetector.detect_from_headers(headers) == :radicale
-
-      headers = [{"X-Powered-By", "NextCloud"}]
-      assert ServerDetector.detect_from_headers(headers) == :nextcloud
+    test "handles case-insensitive header values" do
+      # Req normalises header names to lowercase; values may still be mixed-case.
+      assert ServerDetector.detect_from_headers(%{"server" => ["Radicale/3.1.8"]}) == :radicale
+      assert ServerDetector.detect_from_headers(%{"x-powered-by" => ["NextCloud"]}) == :nextcloud
     end
   end
 

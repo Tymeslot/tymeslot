@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorProbeTest do
     test "routes OPTIONS probe through HTTPClient when URL is unrecognised" do
       expect(Tymeslot.HTTPClientMock, :request, fn :options, url, "", _headers, _opts ->
         assert url == "https://mycalendar.example.com/"
-        {:ok, %Req.Response{status: 200, body: "", headers: [{"server", "Radicale/3.0"}]}}
+        {:ok, %Req.Response{status: 200, body: "", headers: %{"server" => ["Radicale/3.0"]}}}
       end)
 
       # URL gives no hostname or path signal, so auto_detect falls through to probe
@@ -32,7 +32,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorProbeTest do
 
     test "returns :generic when probe headers carry no recognisable server" do
       expect(Tymeslot.HTTPClientMock, :request, fn :options, _url, "", _headers, _opts ->
-        {:ok, %Req.Response{status: 200, body: "", headers: []}}
+        {:ok, %Req.Response{status: 200, body: "", headers: %{}}}
       end)
 
       assert {:ok, :generic} =

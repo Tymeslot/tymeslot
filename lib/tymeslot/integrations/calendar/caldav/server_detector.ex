@@ -199,14 +199,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
   Detects server type from HTTP response headers.
 
   Some servers identify themselves in the Server or X-Powered-By headers.
+  Accepts the Req.Response header map format: `%{binary() => [binary()]}`.
   """
-  @spec detect_from_headers(list({String.t(), String.t()})) :: server_type() | nil
-  def detect_from_headers(headers) when is_list(headers) do
-    headers_map = Map.new(headers, fn {k, v} -> {String.downcase(k), String.downcase(v)} end)
-
-    server_header = Map.get(headers_map, "server", "")
-    powered_by = Map.get(headers_map, "x-powered-by", "")
-    dav_header = Map.get(headers_map, "dav", "")
+  @spec detect_from_headers(%{optional(binary()) => [binary()]}) :: server_type() | nil
+  def detect_from_headers(headers) when is_map(headers) do
+    server_header = headers |> Map.get("server", []) |> List.first("") |> String.downcase()
+    powered_by = headers |> Map.get("x-powered-by", []) |> List.first("") |> String.downcase()
+    dav_header = headers |> Map.get("dav", []) |> List.first("") |> String.downcase()
 
     detect_server_from_header(server_header) ||
       detect_server_from_powered_by(powered_by) ||

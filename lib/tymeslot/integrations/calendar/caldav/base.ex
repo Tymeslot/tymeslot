@@ -469,9 +469,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
 
     case head_event(url, client.username, client.password, head_opts) do
       {:ok, %{headers: headers}} ->
-        case Enum.find(headers, fn {k, _v} -> String.downcase(k) == "etag" end) do
-          {_key, etag} -> etag
-          _not_found -> nil
+        case Map.get(headers, "etag") do
+          [etag | _] -> etag
+          _ -> nil
         end
 
       _error ->

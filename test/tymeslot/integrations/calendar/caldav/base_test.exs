@@ -116,7 +116,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
     test "routes HEAD through HTTPClient" do
       expect(Tymeslot.HTTPClientMock, :head, fn url, _headers, _opts ->
         assert url == "https://caldav.example.com/calendars/user/personal/event.ics"
-        {:ok, %Req.Response{status: 200, body: "", headers: [{"etag", "\"abc123\""}]}}
+        {:ok, %Req.Response{status: 200, body: "", headers: %{"etag" => ["\"abc123\""]}}}
       end)
 
       assert {:ok, _response} =
