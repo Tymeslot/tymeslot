@@ -29,7 +29,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
               font-size="16px"
               color="#52525b"
               line-height="1.5"
-              align="center"
+              align="left"
               css-class="mobile-text"
             >
               Your <strong>#{provider_label}</strong> #{type_label} integration has been failing health checks consistently for the past 48+ hours. This may affect your ability to sync #{type_label}s or create new bookings.
