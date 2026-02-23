@@ -109,6 +109,9 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   @doc """
   Groups time slots by time period (Morning, Afternoon, Evening, Night).
 
+  Slots within each period are sorted chronologically by their parsed time value,
+  so times like "7:30 AM" correctly appear before "11:30 AM".
+
   ## Examples
       iex> slots = ["9:00 AM", "2:00 PM", "7:00 PM", "11:00 PM"]
       iex> Tymeslot.Utils.DateTimeUtils.group_slots_by_period(slots)
@@ -123,7 +126,17 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   def group_slots_by_period(slots) do
     slots
     |> Enum.group_by(&get_time_period/1)
-    |> Enum.into(%{})
+    |> Map.new(fn {period, period_slots} ->
+      sorted =
+        Enum.sort_by(period_slots, fn slot ->
+          case parse_time_string(slot) do
+            {:ok, time} -> {time.hour, time.minute, time.second}
+            {:error, _} -> {99, 99, 99}
+          end
+        end)
+
+      {period, sorted}
+    end)
   end
 
   @doc """

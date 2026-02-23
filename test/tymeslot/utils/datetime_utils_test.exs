@@ -187,4 +187,35 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
       assert DateTimeUtils.format_date_string(nil) == "Invalid date"
     end
   end
+
+  describe "group_slots_by_period/1" do
+    test "sorts slots within a period chronologically, not lexicographically" do
+      # "7:30 AM" lexicographically sorts after "11:30 AM" because "7" > "1",
+      # but chronologically it must come first.
+      slots = ["11:30 AM", "7:30 AM", "9:00 AM", "8:00 AM"]
+      result = DateTimeUtils.group_slots_by_period(slots)
+      assert result["Morning"] == ["7:30 AM", "8:00 AM", "9:00 AM", "11:30 AM"]
+    end
+
+    test "early-hour times (07:30) appear before later times (11:30) in the same period" do
+      slots = ["11:30 AM", "7:30 AM"]
+      result = DateTimeUtils.group_slots_by_period(slots)
+      assert result["Morning"] == ["7:30 AM", "11:30 AM"]
+    end
+
+    test "sorts within each period independently" do
+      slots = ["3:00 PM", "1:00 PM", "8:00 PM", "6:00 PM", "10:00 AM", "7:00 AM"]
+      result = DateTimeUtils.group_slots_by_period(slots)
+      assert result["Morning"] == ["7:00 AM", "10:00 AM"]
+      assert result["Afternoon"] == ["1:00 PM", "3:00 PM"]
+      assert result["Evening"] == ["6:00 PM", "8:00 PM"]
+    end
+
+    test "handles 24h format times correctly" do
+      slots = ["14:00", "07:30", "09:00", "13:00"]
+      result = DateTimeUtils.group_slots_by_period(slots)
+      assert result["Morning"] == ["07:30", "09:00"]
+      assert result["Afternoon"] == ["13:00", "14:00"]
+    end
+  end
 end
