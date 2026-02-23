@@ -5,34 +5,28 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
 
   alias Tymeslot.Infrastructure.HTTPClient
 
-  # merge_options/3 tests removed - this function no longer exists with Req.
-  # Timeout configuration is now handled via @operation_timeouts and get_timeout/2.
+  setup do
+    Req.Test.stub(:tymeslot_http, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "ok")
+    end)
+
+    :ok
+  end
 
   describe "request/5 method normalization" do
     test "accepts known string methods and converts to atoms" do
-      # We use a mock or check internal call if possible, but here we can just check if it doesn't error
-      # and if it correctly handles case.
-      assert {:error, exception} =
-               HTTPClient.request("GET", "http://localhost:1")
-
-      assert is_exception(exception)
-
-      assert {:error, exception} =
-               HTTPClient.request("post", "http://localhost:1")
-
-      assert is_exception(exception)
+      assert {:ok, %Req.Response{status: 200}} = HTTPClient.request("GET", "http://localhost/test")
+      assert {:ok, %Req.Response{status: 200}} = HTTPClient.request("post", "http://localhost/test")
     end
 
     test "passes non-standard CalDAV methods as uppercase strings to Req" do
-      # PROPFIND and REPORT are non-standard HTTP methods used by CalDAV.
-      # Finch only accepts standard methods as atoms — non-standard methods must
-      # be uppercase strings. Verify we get a network error (not an ArgumentError
-      # about unsupported atom methods).
-      for method <- [:propfind, :report] do
-        assert {:error, exception} = HTTPClient.request(method, "http://localhost:1")
+      Req.Test.stub(:tymeslot_http, fn conn ->
+        assert conn.method in ["PROPFIND", "REPORT"]
+        Plug.Conn.send_resp(conn, 207, "<xml/>")
+      end)
 
-        refute match?(%ArgumentError{}, exception),
-               "#{method} should not raise ArgumentError — must be passed as an uppercase string to Req"
+      for method <- [:propfind, :report] do
+        assert {:ok, %Req.Response{status: 207}} = HTTPClient.request(method, "http://localhost/cal")
       end
     end
 

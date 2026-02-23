@@ -5,29 +5,22 @@ defmodule Tymeslot.Infrastructure.HTTPMethodTest do
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Calendar.HTTP, as: CalendarHTTP
 
+  setup do
+    Req.Test.stub(:tymeslot_http, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "ok")
+    end)
+
+    :ok
+  end
+
   describe "HTTPClient.request method normalization" do
     test "accepts valid atom methods" do
-      # We don't want to make actual requests, so we check if it reaches merge_options correctly.
-      # Since we can't easily mock HTTPoison without Mox, and we are testing the logic
-      # before the call, we'll just verify it doesn't return an invalid method error for known atoms.
-
-      # We'll use a bogus URL to trigger a network error instead of a validation error
-      assert {:error, exception} =
-               HTTPClient.request(:get, "http://localhost:1")
-
-      assert is_exception(exception)
+      assert {:ok, %Req.Response{status: 200}} = HTTPClient.request(:get, "http://localhost/test")
     end
 
     test "accepts valid string methods (any case)" do
-      assert {:error, exception} =
-               HTTPClient.request("GET", "http://localhost:1")
-
-      assert is_exception(exception)
-
-      assert {:error, exception} =
-               HTTPClient.request("post", "http://localhost:1")
-
-      assert is_exception(exception)
+      assert {:ok, %Req.Response{status: 200}} = HTTPClient.request("GET", "http://localhost/test")
+      assert {:ok, %Req.Response{status: 200}} = HTTPClient.request("post", "http://localhost/test")
     end
 
     test "rejects unknown string methods without creating atoms" do
