@@ -181,6 +181,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
       :radicale ->
         "/#{username}/#{calendar_name}/"
 
+      # Zimbra: Uses /dav/{username}/{calendar}/
+      :zimbra ->
+        "/dav/#{username}/#{calendar_name}/"
+
       # Generic CalDAV: Uses /calendars/{username}/{calendar}/
       _other ->
         "/calendars/#{username}/#{calendar_name}/"

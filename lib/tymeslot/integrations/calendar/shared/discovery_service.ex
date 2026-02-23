@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   alias Tymeslot.Integrations.Calendar.CalDAV
   alias Tymeslot.Integrations.Calendar.Nextcloud
   alias Tymeslot.Integrations.Calendar.Radicale
+  alias Tymeslot.Integrations.Calendar.Zimbra
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
 
   # Cache discovery results for 5 minutes
@@ -170,6 +171,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
           :radicale ->
             perform_radicale_discovery(config)
 
+          :zimbra ->
+            perform_zimbra_discovery(config)
+
           _other ->
             {:error, "Unsupported provider: #{provider}"}
         end
@@ -194,6 +198,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
     # Create Radicale client and discover calendars
     client = Radicale.Provider.new(config)
     Radicale.Provider.discover_calendars(client)
+  end
+
+  defp perform_zimbra_discovery(config) do
+    # Create Zimbra client and discover calendars
+    client = Zimbra.Provider.new(config)
+    Zimbra.Provider.discover_calendars(client)
   end
 
   defp build_cache_key(provider, config) do
