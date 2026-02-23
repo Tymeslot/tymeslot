@@ -470,8 +470,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     case head_event(url, client.username, client.password, head_opts) do
       {:ok, %{headers: headers}} ->
         case Map.get(headers, "etag") do
-          [etag | _] -> etag
-          _ -> nil
+          [etag | _rest] -> etag
+          _other -> nil
         end
 
       _error ->

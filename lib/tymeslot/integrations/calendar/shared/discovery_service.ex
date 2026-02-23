@@ -11,8 +11,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   alias Tymeslot.Integrations.Calendar.CalDAV
   alias Tymeslot.Integrations.Calendar.Nextcloud
   alias Tymeslot.Integrations.Calendar.Radicale
-  alias Tymeslot.Integrations.Calendar.Zimbra
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
+  alias Tymeslot.Integrations.Calendar.Zimbra
 
   # Cache discovery results for 5 minutes
   @cache_ttl_seconds 300
