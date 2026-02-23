@@ -66,6 +66,19 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
         client = Tymeslot.Integrations.Calendar.Radicale.Provider.new(config)
         Tymeslot.Integrations.Calendar.Radicale.Provider.discover_calendars(client)
 
+      "zimbra" ->
+        decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
+
+        config = %{
+          base_url: integration.base_url,
+          username: decrypted.username,
+          password: decrypted.password,
+          calendar_paths: calendar_paths_or_empty(integration)
+        }
+
+        client = Tymeslot.Integrations.Calendar.Zimbra.Provider.new(config)
+        Tymeslot.Integrations.Calendar.Zimbra.Provider.discover_calendars(client)
+
       _unknown ->
         {:error, "Unknown provider: #{provider}"}
     end
