@@ -21,5 +21,7 @@
     "lib/tymeslot_web/components/dashboard/integrations/calendar/radicale_config.ex$",
     "lib/tymeslot_web/components/dashboard/integrations/calendar/zimbra_config.ex$"
   ],
-  "file_col_width": 180
+  "terminal_options": {
+    "file_column_width": 125
+  }
 }
