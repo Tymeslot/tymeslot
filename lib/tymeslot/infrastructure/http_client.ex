@@ -145,16 +145,19 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     # When proxy is configured, connect_options will be set, so don't set finch
     base_options =
       if proxy_options == [] do
-        [
+        {transport_key, transport_val} = req_transport_option()
+
+        base = [
           method: req_method,
           url: url,
           headers: headers,
-          finch: Tymeslot.Finch,
           receive_timeout: timeout,
           # Disable automatic JSON decoding to match HTTPoison behavior
           # Callers handle JSON parsing explicitly with Jason.decode!
           decode_body: false
         ]
+
+        Keyword.put(base, transport_key, transport_val)
       else
         [
           method: req_method,
@@ -195,6 +198,13 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         |> Keyword.delete(:finch)
         |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
         |> Keyword.put(:connect_options, merged_connect_opts)
+    end
+  end
+
+  defp req_transport_option do
+    case Application.get_env(:tymeslot, :req_test_plug) do
+      nil -> {:finch, Tymeslot.Finch}
+      plug -> {:plug, plug}
     end
   end
 

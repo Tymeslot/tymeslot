@@ -88,6 +88,7 @@ config :tymeslot, :google_calendar_oauth_helper, Tymeslot.GoogleOAuthHelperMock
 config :tymeslot, :outlook_calendar_oauth_helper, Tymeslot.OutlookOAuthHelperMock
 config :tymeslot, :teams_oauth_helper, Tymeslot.TeamsOAuthHelperMock
 config :tymeslot, :http_client_module, Tymeslot.HTTPClientMock
+config :tymeslot, :req_test_plug, {Req.Test, :tymeslot_http}
 config :tymeslot, :email_service, Tymeslot.EmailServiceMock
 
 # MiroTalk test configuration

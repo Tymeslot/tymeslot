@@ -2,34 +2,32 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
   use ExUnit.Case, async: false
   @moduletag :integrations
 
-  import Mox
   import Tymeslot.ConfigTestHelpers
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Base
 
-  setup :verify_on_exit!
+  # These tests exercise the real HTTPClient → Req → Req.Test path so that
+  # transport-level bugs (method normalisation, header building, option assembly)
+  # are caught automatically.  The global test config points :http_client_module
+  # at HTTPClientMock; we override it here to use the real HTTPClient.
 
   setup do
-    with_config(:tymeslot, :http_client_module, Tymeslot.HTTPClientMock)
+    with_config(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
     :ok
   end
 
-  # These tests exist to verify that CalDAV operations route through HTTPClient
-  # rather than calling Finch directly. Routing through HTTPClient is what makes
-  # proxy configuration (HTTP_PROXY / HTTPS_PROXY / NO_PROXY) take effect.
-
   describe "propfind/4" do
     test "routes PROPFIND through HTTPClient" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, url, _body, headers, opts ->
-        assert url == "https://caldav.example.com/calendars/user/"
+      Req.Test.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PROPFIND"
+        assert conn.request_path == "/calendars/user/"
 
-        assert Enum.any?(headers, fn {k, _v} ->
-                 String.downcase(k) == "authorization"
-               end)
+        [auth | _rest] = Plug.Conn.get_req_header(conn, "authorization")
+        assert String.starts_with?(auth, "Basic ")
 
-        assert opts[:receive_timeout] != nil
-
-        {:ok, %Req.Response{status: 207, body: "<xml/>"}}
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/xml")
+        |> Plug.Conn.send_resp(207, "<xml/>")
       end)
 
       assert {:ok, %Req.Response{status: 207}} =
@@ -37,8 +35,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
     end
 
     test "returns :unauthorized on 401 response" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 401, body: ""}}
+      Req.Test.stub(:tymeslot_http, fn conn ->
+        Plug.Conn.send_resp(conn, 401, "")
       end)
 
       assert {:error, :unauthorized} =
@@ -48,10 +46,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
 
   describe "report/5" do
     test "routes REPORT through HTTPClient" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :report, url, body, _headers, _opts ->
-        assert url == "https://caldav.example.com/calendars/user/personal/"
-        assert is_binary(body)
-        {:ok, %Req.Response{status: 207, body: "<xml/>"}}
+      Req.Test.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "REPORT"
+        assert conn.request_path == "/calendars/user/personal/"
+
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/xml")
+        |> Plug.Conn.send_resp(207, "<xml/>")
       end)
 
       assert {:ok, %Req.Response{status: 207}} =
@@ -63,9 +64,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
                )
     end
 
-    test "maps Mint.TransportError timeout to :timeout" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :report, _url, _body, _headers, _opts ->
-        {:error, %Mint.TransportError{reason: :timeout}}
+    test "maps transport timeout to :timeout" do
+      Req.Test.stub(:tymeslot_http, fn conn ->
+        Req.Test.transport_error(conn, :timeout)
       end)
 
       assert {:error, :timeout} =
@@ -80,10 +81,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
 
   describe "put_event/5" do
     test "routes PUT through HTTPClient" do
-      expect(Tymeslot.HTTPClientMock, :put, fn url, body, _headers, _opts ->
-        assert url == "https://caldav.example.com/calendars/user/personal/event.ics"
-        assert is_binary(body)
-        {:ok, %Req.Response{status: 201, body: ""}}
+      Req.Test.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT"
+        assert conn.request_path == "/calendars/user/personal/event.ics"
+
+        Plug.Conn.send_resp(conn, 201, "")
       end)
 
       assert {:ok, _response} =
@@ -98,9 +100,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
 
   describe "delete_event/4" do
     test "routes DELETE through HTTPClient" do
-      expect(Tymeslot.HTTPClientMock, :delete, fn url, _headers, _opts ->
-        assert url == "https://caldav.example.com/calendars/user/personal/event.ics"
-        {:ok, %Req.Response{status: 204, body: ""}}
+      Req.Test.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "DELETE"
+        assert conn.request_path == "/calendars/user/personal/event.ics"
+
+        Plug.Conn.send_resp(conn, 204, "")
       end)
 
       assert {:ok, _response} =
@@ -114,9 +118,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
 
   describe "head_event/4" do
     test "routes HEAD through HTTPClient" do
-      expect(Tymeslot.HTTPClientMock, :head, fn url, _headers, _opts ->
-        assert url == "https://caldav.example.com/calendars/user/personal/event.ics"
-        {:ok, %Req.Response{status: 200, body: "", headers: %{"etag" => ["\"abc123\""]}}}
+      Req.Test.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "HEAD"
+        assert conn.request_path == "/calendars/user/personal/event.ics"
+
+        conn
+        |> Plug.Conn.put_resp_header("etag", "\"abc123\"")
+        |> Plug.Conn.send_resp(200, "")
       end)
 
       assert {:ok, _response} =

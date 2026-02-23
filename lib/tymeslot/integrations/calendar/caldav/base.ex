@@ -147,6 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     do: {:error, "Unexpected status: #{status}"}
 
   defp handle_propfind_error(%Mint.TransportError{reason: :timeout}), do: {:error, :timeout}
+  defp handle_propfind_error(%Req.TransportError{reason: :timeout}), do: {:error, :timeout}
 
   defp handle_propfind_error(reason) do
     Logger.debug("CalDAV PROPFIND network error: #{inspect(reason)}")
@@ -192,6 +193,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
         {:error, "Unexpected status: #{status}"}
 
       {:error, %Mint.TransportError{reason: :timeout}} ->
+        {:error, :timeout}
+
+      {:error, %Req.TransportError{reason: :timeout}} ->
         {:error, :timeout}
 
       {:error, %Mint.HTTPError{reason: :timeout}} ->
