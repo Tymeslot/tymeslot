@@ -75,12 +75,12 @@ defmodule TymeslotWeb.Session.LoginComponent do
                 </:trailing_icon>
               </.input>
             </div>
-            <div class="text-fluid-xs sm:text-fluid-sm mt-1 mb-2">
+            <div class="text-fluid-xs sm:text-fluid-sm mt-1 mb-2 text-center">
               <button
                 type="button"
                 phx-click="navigate_to"
                 phx-value-state="reset_password"
-                class="font-medium text-primary-600 hover:text-primary-700 transition duration-300 ease-in-out border-none bg-transparent cursor-pointer"
+                class="btn-link bg-transparent"
               >
                 Forgot password?
               </button>
