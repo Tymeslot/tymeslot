@@ -31,8 +31,10 @@ RUN mix deps.get --only $MIX_ENV
 # Compile dependencies (cached if mix.exs/mix.lock unchanged)
 RUN mix deps.compile
 
-# Copy source and build assets
+# Copy source and build assets. Wipe any locally-built assets first so the
+# image build is hermetic — assets are always produced by mix assets.deploy below.
 COPY . .
+RUN rm -rf apps/tymeslot/priv/static/assets/
 RUN mix assets.setup
 RUN mix assets.deploy
 

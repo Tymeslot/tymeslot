@@ -29,8 +29,10 @@ COPY config ./config
 RUN mix deps.get --only $MIX_ENV
 RUN mix deps.compile
 
+# Wipe any locally-built assets first so the image build is hermetic —
+# assets are always produced by mix assets.deploy below.
 COPY . .
-
+RUN rm -rf priv/static/assets/
 RUN mix assets.setup
 RUN mix assets.deploy
 
