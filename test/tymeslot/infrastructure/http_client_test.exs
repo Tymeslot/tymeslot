@@ -23,6 +23,19 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
       assert is_exception(exception)
     end
 
+    test "passes non-standard CalDAV methods as uppercase strings to Req" do
+      # PROPFIND and REPORT are non-standard HTTP methods used by CalDAV.
+      # Finch only accepts standard methods as atoms — non-standard methods must
+      # be uppercase strings. Verify we get a network error (not an ArgumentError
+      # about unsupported atom methods).
+      for method <- [:propfind, :report] do
+        assert {:error, exception} = HTTPClient.request(method, "http://localhost:1")
+
+        refute match?(%ArgumentError{}, exception),
+               "#{method} should not raise ArgumentError — must be passed as an uppercase string to Req"
+      end
+    end
+
     test "rejects unknown methods without creating atoms" do
       unknown_method = "UNKNOWN_VERB_#{:erlang.unique_integer()}"
 

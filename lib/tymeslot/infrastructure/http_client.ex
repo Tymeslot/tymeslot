@@ -126,6 +126,10 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
 
   # Private functions
 
+  # Standard HTTP methods that Finch accepts as atoms.
+  # Non-standard methods (e.g. PROPFIND, REPORT) must be passed as uppercase strings.
+  @standard_methods ~w(get post put patch delete head options)a
+
   @spec build_req_options(atom(), String.t(), any(), list(), keyword()) :: keyword()
   defp build_req_options(method, url, body, headers, user_options) do
     # Get timeout for this operation
@@ -134,13 +138,15 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
     # Get proxy configuration for this URL (considers NO_PROXY, HTTP vs HTTPS)
     proxy_options = get_proxy_options(url)
 
+    req_method = normalize_method(method)
+
     # Build base request options
     # NOTE: Cannot set both :finch and :connect_options (Req limitation)
     # When proxy is configured, connect_options will be set, so don't set finch
     base_options =
       if proxy_options == [] do
         [
-          method: method,
+          method: req_method,
           url: url,
           headers: headers,
           finch: Tymeslot.Finch,
@@ -151,7 +157,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         ]
       else
         [
-          method: method,
+          method: req_method,
           url: url,
           headers: headers,
           receive_timeout: timeout,
@@ -190,6 +196,12 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
         |> Keyword.merge(Keyword.delete(user_opts_clean, :connect_options))
         |> Keyword.put(:connect_options, merged_connect_opts)
     end
+  end
+
+  defp normalize_method(method) when method in @standard_methods, do: method
+
+  defp normalize_method(method) when is_atom(method) do
+    method |> Atom.to_string() |> String.upcase()
   end
 
   @spec get_proxy_options(String.t()) :: keyword()
