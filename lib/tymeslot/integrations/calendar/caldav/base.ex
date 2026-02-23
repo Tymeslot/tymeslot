@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   Performs a PROPFIND request for calendar discovery with retry logic.
   """
   @spec propfind(String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, Finch.Response.t()} | {:error, error_reason()}
+          {:ok, Req.Response.t()} | {:error, error_reason()}
   def propfind(url, username, password, opts \\ []) do
     retry_opts =
       @default_retry_opts
@@ -113,9 +113,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     body = Keyword.get(opts, :body, XmlHandler.build_propfind_request())
     timeout = get_propfind_timeout(opts)
 
-    request = Finch.build("PROPFIND", url, headers, body)
-
-    case Finch.request(request, Tymeslot.Finch, receive_timeout: timeout) do
+    case http_client().request(:propfind, url, body, headers, receive_timeout: timeout) do
       {:ok, response} -> handle_propfind_response(response)
       {:error, reason} -> handle_propfind_error(reason)
     end
@@ -132,20 +130,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     Keyword.get(opts, :timeout, Keyword.get(opts, :discovery_timeout, 10_000))
   end
 
-  defp handle_propfind_response(%Finch.Response{status: 207} = response), do: {:ok, response}
+  defp handle_propfind_response(%Req.Response{status: 207} = response), do: {:ok, response}
 
-  defp handle_propfind_response(%Finch.Response{status: status} = response)
+  defp handle_propfind_response(%Req.Response{status: status} = response)
        when status in 200..299,
        do: {:ok, response}
 
-  defp handle_propfind_response(%Finch.Response{status: 401}), do: {:error, :unauthorized}
-  defp handle_propfind_response(%Finch.Response{status: 403}), do: {:error, :unauthorized}
-  defp handle_propfind_response(%Finch.Response{status: 404}), do: {:error, :not_found}
+  defp handle_propfind_response(%Req.Response{status: 401}), do: {:error, :unauthorized}
+  defp handle_propfind_response(%Req.Response{status: 403}), do: {:error, :unauthorized}
+  defp handle_propfind_response(%Req.Response{status: 404}), do: {:error, :not_found}
 
-  defp handle_propfind_response(%Finch.Response{status: status}) when status >= 500,
+  defp handle_propfind_response(%Req.Response{status: status}) when status >= 500,
     do: {:error, :server_error}
 
-  defp handle_propfind_response(%Finch.Response{status: status}),
+  defp handle_propfind_response(%Req.Response{status: status}),
     do: {:error, "Unexpected status: #{status}"}
 
   defp handle_propfind_error(%Mint.TransportError{reason: :timeout}), do: {:error, :timeout}
@@ -159,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   Performs a REPORT request for fetching events.
   """
   @spec report(String.t(), String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, Finch.Response.t()} | {:error, error_reason()}
+          {:ok, Req.Response.t()} | {:error, error_reason()}
   def report(url, username, password, body, opts \\ []) do
     headers =
       build_headers(username, password, [
@@ -169,30 +167,28 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
 
     timeout = Keyword.get(opts, :timeout, @report_timeout_ms)
 
-    request = Finch.build("REPORT", url, headers, body)
-
-    case Finch.request(request, Tymeslot.Finch, receive_timeout: timeout) do
-      {:ok, %Finch.Response{status: 207} = response} ->
-        # 207 Multi-Status is the expected response for PROPFIND
+    case http_client().request(:report, url, body, headers, receive_timeout: timeout) do
+      {:ok, %Req.Response{status: 207} = response} ->
+        # 207 Multi-Status is the expected response for REPORT
         {:ok, response}
 
-      {:ok, %Finch.Response{status: status} = response} when status in 200..299 ->
+      {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
         {:ok, response}
 
-      {:ok, %Finch.Response{status: 401}} ->
+      {:ok, %Req.Response{status: 401}} ->
         {:error, :unauthorized}
 
-      {:ok, %Finch.Response{status: 403}} ->
+      {:ok, %Req.Response{status: 403}} ->
         # Radicale returns 403 for auth failures
         {:error, :unauthorized}
 
-      {:ok, %Finch.Response{status: 404}} ->
+      {:ok, %Req.Response{status: 404}} ->
         {:error, :not_found}
 
-      {:ok, %Finch.Response{status: status}} when status >= 500 ->
+      {:ok, %Req.Response{status: status}} when status >= 500 ->
         {:error, :server_error}
 
-      {:ok, %Finch.Response{status: status}} ->
+      {:ok, %Req.Response{status: status}} ->
         {:error, "Unexpected status: #{status}"}
 
       {:error, %Mint.TransportError{reason: :timeout}} ->
@@ -211,16 +207,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   Performs a PUT request to create or update an event.
   """
   @spec put_event(String.t(), String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, Finch.Response.t()} | {:error, error_reason()}
+          {:ok, Req.Response.t()} | {:error, error_reason()}
   def put_event(url, username, password, ical_data, opts \\ []) do
     headers = build_put_event_headers(username, password, opts)
     # Increased default timeout to 60s for background operations (was 10s)
     # Background workers have 90s timeout, so 60s gives buffer for slow CalDAV servers
     timeout = Keyword.get(opts, :timeout, 60_000)
 
-    request = Finch.build(:put, url, headers, ical_data)
-
-    case Finch.request(request, Tymeslot.Finch, receive_timeout: timeout) do
+    case http_client().put(url, ical_data, headers, receive_timeout: timeout) do
       {:ok, response} ->
         handle_put_event_response(response)
 
@@ -234,34 +228,31 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   Performs a DELETE request to remove an event.
   """
   @spec delete_event(String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, Finch.Response.t()} | {:error, error_reason()}
+          {:ok, Req.Response.t()} | {:error, error_reason()}
   def delete_event(url, username, password, opts \\ []) do
     headers = build_headers(username, password, [])
     # Increased default timeout to 60s for background operations (was 10s)
     timeout = Keyword.get(opts, :timeout, 60_000)
 
-    request = Finch.build(:delete, url, headers)
-
-    case Finch.request(request, Tymeslot.Finch, receive_timeout: timeout) do
-      {:ok, %Finch.Response{status: status} = response} when status in [200, 204, 404] ->
+    case http_client().delete(url, headers, receive_timeout: timeout) do
+      {:ok, %Req.Response{status: status} = response} when status in [200, 204, 404] ->
         # 404 is ok for delete - event may already be gone
         {:ok, response}
 
-      {:ok, %Finch.Response{status: 401}} ->
+      {:ok, %Req.Response{status: 401}} ->
         {:error, :unauthorized}
 
-      {:ok, %Finch.Response{status: 403}} ->
+      {:ok, %Req.Response{status: 403}} ->
         # Radicale returns 403 for auth failures
         {:error, :unauthorized}
 
-      {:ok, %Finch.Response{status: status}} when status >= 500 ->
+      {:ok, %Req.Response{status: status}} when status >= 500 ->
         {:error, :server_error}
 
-      {:ok, %Finch.Response{status: status}} ->
+      {:ok, %Req.Response{status: status}} ->
         {:error, "Unexpected status: #{status}"}
 
       {:error, reason} ->
-        Logger.debug("CalDAV DELETE network error: #{inspect(reason)}")
         handle_put_event_error(reason)
     end
   end
@@ -291,24 +282,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     end
   end
 
-  defp handle_put_event_response(%Finch.Response{status: status} = response)
+  defp handle_put_event_response(%Req.Response{status: status} = response)
        when status in [200, 201, 204] do
     {:ok, response}
   end
 
-  defp handle_put_event_response(%Finch.Response{status: 401}), do: {:error, :unauthorized}
-  defp handle_put_event_response(%Finch.Response{status: 403}), do: {:error, :unauthorized}
-  defp handle_put_event_response(%Finch.Response{status: 404}), do: {:error, :not_found}
+  defp handle_put_event_response(%Req.Response{status: 401}), do: {:error, :unauthorized}
+  defp handle_put_event_response(%Req.Response{status: 403}), do: {:error, :unauthorized}
+  defp handle_put_event_response(%Req.Response{status: 404}), do: {:error, :not_found}
 
-  defp handle_put_event_response(%Finch.Response{status: 412}) do
+  defp handle_put_event_response(%Req.Response{status: 412}) do
     {:error, "Precondition failed - event may already exist"}
   end
 
-  defp handle_put_event_response(%Finch.Response{status: status}) when status >= 500 do
+  defp handle_put_event_response(%Req.Response{status: status}) when status >= 500 do
     {:error, :server_error}
   end
 
-  defp handle_put_event_response(%Finch.Response{status: status}) do
+  defp handle_put_event_response(%Req.Response{status: status}) do
     {:error, "Unexpected status: #{status}"}
   end
 
@@ -337,10 +328,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
         end)
 
       case result do
-        {:ok, %Finch.Response{status: 207}} ->
+        {:ok, %Req.Response{status: 207}} ->
           {:ok, "CalDAV connection successful"}
 
-        {:ok, %Finch.Response{}} ->
+        {:ok, %Req.Response{}} ->
           {:ok, "CalDAV connection successful"}
 
         {:error, :unauthorized} ->
@@ -368,7 +359,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
         discovery_url = build_discovery_url(client)
 
         case propfind(discovery_url, client.username, client.password) do
-          {:ok, %Finch.Response{status: 207, body: body}} ->
+          {:ok, %Req.Response{status: 207, body: body}} ->
+            parse_calendar_discovery(body, client)
+
+          {:ok, %Req.Response{body: body}} ->
             parse_calendar_discovery(body, client)
 
           {:error, reason} ->
@@ -399,10 +393,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
              fn -> report(url, client.username, client.password, report_body, report_opts) end,
              retry_opts
            ) do
-        {:ok, %Finch.Response{status: 207, body: body}} ->
+        {:ok, %Req.Response{status: 207, body: body}} ->
           parse_events_response(body)
 
-        {:ok, %Finch.Response{status: status, body: body}} when status in 200..299 ->
+        {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
           # Non-standard: CalDAV REPORT should return 207 Multi-Status
           # Some servers may return 200 OK - accept it but log for debugging
           Logger.warning("CalDAV REPORT returned #{status} instead of 207 Multi-Status",
@@ -434,7 +428,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
       put_opts = Keyword.merge([operation: :create], Keyword.take(opts, [:timeout]))
 
       case put_event(url, client.username, client.password, ical_data, put_opts) do
-        {:ok, %Finch.Response{status: status}} when status in [200, 201, 204] ->
+        {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->
           {:ok, uid}
 
         {:error, reason} ->
@@ -489,7 +483,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
 
   defp put_update(url, client, ical_data, put_opts) do
     case put_event(url, client.username, client.password, ical_data, put_opts) do
-      {:ok, %Finch.Response{status: status}} when status in [200, 201, 204] -> :ok
+      {:ok, %Req.Response{status: status}} when status in [200, 201, 204] -> :ok
       {:error, reason} -> {:error, reason}
     end
   end
@@ -507,7 +501,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
       delete_opts = Keyword.take(opts, [:timeout])
 
       case delete_event(url, client.username, client.password, delete_opts) do
-        {:ok, %Finch.Response{}} ->
+        {:ok, %Req.Response{}} ->
           :ok
 
         {:error, reason} ->
@@ -520,25 +514,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   Performs a HEAD request to fetch current headers (e.g., ETag) for an event resource.
   """
   @spec head_event(String.t(), String.t(), String.t(), keyword()) ::
-          {:ok, Finch.Response.t()} | {:error, error_reason()}
+          {:ok, Req.Response.t()} | {:error, error_reason()}
   def head_event(url, username, password, opts \\ []) do
     headers = build_headers(username, password, [])
     # Increased default timeout to 30s for consistency with REPORT operations
     timeout = Keyword.get(opts, :timeout, 30_000)
 
-    request = Finch.build(:head, url, headers)
-
-    case Finch.request(request, Tymeslot.Finch, receive_timeout: timeout) do
-      {:ok, %Finch.Response{status: status} = response} when status in [200, 204] ->
+    case http_client().head(url, headers, receive_timeout: timeout) do
+      {:ok, %Req.Response{status: status} = response} when status in [200, 204] ->
         {:ok, response}
 
-      {:ok, %Finch.Response{status: 404}} ->
+      {:ok, %Req.Response{status: 404}} ->
         {:error, :not_found}
 
-      {:ok, %Finch.Response{status: 401}} ->
+      {:ok, %Req.Response{status: 401}} ->
         {:error, :unauthorized}
 
-      {:ok, %Finch.Response{status: status}} when status >= 500 ->
+      {:ok, %Req.Response{status: status}} when status >= 500 ->
         {:error, :server_error}
 
       {:error, _error_reason} ->
@@ -716,6 +708,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
         "172.30.",
         "172.31."
       ])
+  end
+
+  defp http_client do
+    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 
   defp extract_host_from_url(url) do

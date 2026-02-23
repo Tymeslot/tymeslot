@@ -437,14 +437,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
       {"Authorization", "Basic " <> Base.encode64("#{username}:#{password}")}
     ]
 
-    request = Finch.build(:options, url, headers)
-
-    case Finch.request(request, Tymeslot.Finch, receive_timeout: 5_000) do
-      {:ok, %Finch.Response{headers: response_headers}} ->
+    case http_client().request(:options, url, "", headers, receive_timeout: 5_000) do
+      {:ok, %Req.Response{headers: response_headers}} ->
         {:ok, response_headers}
 
       {:error, reason} ->
         {:error, "Failed to probe server: #{inspect(reason)}"}
     end
+  end
+
+  defp http_client do
+    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 end
