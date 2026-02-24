@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
       <.section_header icon={:paint_brush} title="Customize Style" class="mb-0" />
 
-      <div class="flex items-center gap-3">
+      <div class="flex items-center justify-between gap-3 md:justify-start">
         <%= if @profile && @profile.username do %>
           <button
             type="button"
@@ -162,12 +162,12 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
       </div>
 
       <div class="space-y-10">
-        <div class="flex flex-wrap gap-3 bg-tymeslot-50/50 p-2 rounded-[1.5rem] border-2 border-tymeslot-50">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-tymeslot-50/50 p-2 rounded-[1.5rem] border-2 border-tymeslot-50">
           <%= for {type, icon_path, label} <- background_tabs() do %>
             <button
               type="button"
               class={[
-                "flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2",
+                "flex items-center justify-center gap-2 px-4 py-3 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 whitespace-nowrap",
                 if(@browsing_type == type,
                   do: "bg-white border-white text-turquoise-600 shadow-xl shadow-tymeslot-200/50 scale-[1.02]",
                   else: "bg-transparent border-transparent text-tymeslot-400 hover:text-tymeslot-600 hover:bg-white/50"
