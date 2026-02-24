@@ -222,7 +222,10 @@ defmodule Tymeslot.Timezones.Data do
 
   def valid?(_other), do: false
 
-  @spec valid_ids() :: MapSet.t()
+  # Dialyzer traces through the compile-time @valid_ids constant and exposes
+  # MapSet's opaque internal map type, producing a false contract_with_opaque.
+  @dialyzer {:no_contracts, valid_ids: 0}
+  @spec valid_ids() :: MapSet.t(String.t())
   def valid_ids, do: @valid_ids
 
   @spec flag_exists?(term()) :: boolean()
