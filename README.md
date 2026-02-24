@@ -20,126 +20,54 @@ Enterprise-grade meeting scheduling platform built with Elixir & Phoenix LiveVie
 
 ## 🎯 Why Choose Tymeslot?
 
-<table>
-<tr>
-<td width="50%" align="center">
-
 ### 🔓 Open Source (ELv2)
-Fork, audit, contribute—or just use it. No vendor lock-in, ever.
-
-</td>
-<td width="50%" align="center">
+Fork, audit, contribute — or just use it. No vendor lock-in, ever.
 
 ### 🏠 Your Data, Your Rules
 Self-host on Docker/Cloudron or use our managed cloud.
 
-</td>
-</tr>
-<tr>
-<td align="center">
-
 ### 🆓 Full-Featured Free Tier
 Everything you need to get started. Forever. No credit card required.
-
-</td>
-<td align="center">
 
 ### 🔒 Privacy-First
 No tracking pixels, no data mining, no selling your data.
 
-</td>
-</tr>
-<tr>
-<td align="center">
-
 ### 🎨 Professional Templates
 Responsive email designs with calendar attachments.
-
-</td>
-<td align="center">
 
 ### ⚡ Built for Performance
 Real-time updates with Phoenix LiveView. Blazing fast.
 
-</td>
-</tr>
-</table>
-
 ## 🔌 Integrations
 
 ### Calendar Providers (6)
+
 <div align="center">
-  <table>
-    <tr>
-      <td align="center" width="33%">
-        <img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="48" title="Google Calendar" /><br/>
-        <sub>Google Calendar</sub>
-      </td>
-      <td align="center" width="33%">
-        <img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook Calendar" height="48" title="Outlook Calendar" /><br/>
-        <sub>Outlook</sub>
-      </td>
-      <td align="center" width="33%">
-        <img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="48" title="CalDAV" /><br/>
-        <sub>CalDAV</sub>
-      </td>
-    </tr>
-    <tr>
-      <td align="center">
-        <img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="48" title="Nextcloud Calendar" /><br/>
-        <sub>Nextcloud</sub>
-      </td>
-      <td align="center">
-        <img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="48" title="Radicale" /><br/>
-        <sub>Radicale</sub>
-      </td>
-      <td align="center">
-        <img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="48" title="Zimbra" /><br/>
-        <sub>Zimbra</sub>
-      </td>
-    </tr>
-  </table>
+  <img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="48" title="Google Calendar" />
+  <img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook Calendar" height="48" title="Outlook Calendar" />
+  <img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="48" title="CalDAV" />
+  <img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="48" title="Nextcloud Calendar" />
+  <img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="48" title="Radicale" />
+  <img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="48" title="Zimbra" />
 </div>
 
+Google Calendar · Outlook · CalDAV · Nextcloud · Radicale · Zimbra
+
 ### Video Conferencing (5)
+
 <div align="center">
-  <table>
-    <tr>
-      <td align="center" width="33%">
-        <img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="48" title="Google Meet" /><br/>
-        <sub>Google Meet</sub>
-      </td>
-      <td align="center" width="33%">
-        <img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="48" title="Microsoft Teams" /><br/>
-        <sub>Microsoft Teams</sub>
-      </td>
-      <td align="center" width="33%">
-        <img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="48" title="MiroTalk P2P" /><br/>
-        <sub>MiroTalk P2P</sub>
-      </td>
-    </tr>
-    <tr>
-      <td align="center">
-        <img src="./priv/static/icons/providers/video/medium/local.png" alt="Local Meeting" height="48" title="In-Person / Phone" /><br/>
-        <sub>In-Person / Phone</sub>
-      </td>
-      <td align="center">
-        <img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom Links" height="48" title="Custom Video Links" /><br/>
-        <sub>Custom Links</sub>
-      </td>
-      <td></td>
-    </tr>
-  </table>
+  <img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="48" title="Google Meet" />
+  <img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="48" title="Microsoft Teams" />
+  <img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="48" title="MiroTalk P2P" />
+  <img src="./priv/static/icons/providers/video/medium/local.png" alt="Local Meeting" height="48" title="In-Person / Phone" />
+  <img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom Links" height="48" title="Custom Video Links" />
 </div>
+
+Google Meet · Microsoft Teams · MiroTalk P2P · In-Person / Phone · Custom Links
 
 ## 💰 Simple, Transparent Pricing
 
-<table>
-<tr>
-<td width="50%">
-
-### 🆓 Free Forever
-**Self-Hosted or Cloud**
+### 🆓 Free Forever — Self-Hosted or Cloud
 
 - ✅ Unlimited bookings & meeting types
 - ✅ All 6 calendar providers
@@ -151,32 +79,20 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 
 **Perfect for:** Individuals, small teams, self-hosters
 
-</td>
-<td width="50%">
+### ⭐ Pro Tier — €5/month · Cloud Only
 
-### ⭐ Pro Tier
-**€5/month · Cloud Only**
-
-- ✅ **Everything in Free**
-- ✅ **Priority support**
-- ✅ **Support open-source development**
-- ✅ **Early access to new features**
+- ✅ Everything in Free
+- ✅ Priority support
+- ✅ Support open-source development
+- ✅ Early access to new features
 
 **Perfect for:** Professional businesses, agencies
 
 [Get Started →](https://tymeslot.app)
 
-</td>
-</tr>
-</table>
-
-> **Self-Hosting**: Always free. Deploy on Docker, Cloudron, or bare metal—no licensing fees, ever.
+> **Self-Hosting**: Always free. Deploy on Docker, Cloudron, or bare metal — no licensing fees, ever.
 
 ## ✨ Feature Highlights
-
-<table>
-<tr>
-<td width="50%">
 
 ### 🔐 Authentication & Users
 - Multi-provider OAuth (Google, GitHub)
@@ -184,19 +100,11 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - Customizable profiles & avatars
 - 4-step onboarding flow
 
-</td>
-<td width="50%">
-
 ### 🧠 Smart Scheduling
 - 90+ timezone-aware cities
 - Custom business hours & breaks
 - Real-time conflict detection
 - Configurable meeting types
-
-</td>
-</tr>
-<tr>
-<td>
 
 ### 📅 Calendar Sync
 - 6 calendar providers
@@ -204,19 +112,11 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - Auto token refresh
 - Calendar discovery
 
-</td>
-<td>
-
 ### 🎥 Video Conferencing
 - 5 video providers
 - Auto room creation
 - Role-based access
 - OAuth integration
-
-</td>
-</tr>
-<tr>
-<td>
 
 ### 📧 Email System
 - Professional templates (MJML)
@@ -224,19 +124,11 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - Calendar attachments
 - Delivery tracking
 
-</td>
-<td>
-
 ### 🔒 Security
 - Rate limiting
 - AES encryption
 - XSS protection
 - Circuit breakers
-
-</td>
-</tr>
-<tr>
-<td>
 
 ### 🌍 Internationalization
 - 3 languages (EN, DE, UK)
@@ -244,19 +136,11 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - Localized booking pages
 - DST handling
 
-</td>
-<td>
-
 ### 🔗 Embedding
 - Secure iframe widgets
 - Domain restrictions
 - Webhook notifications
 - Customizable pages
-
-</td>
-</tr>
-<tr>
-<td>
 
 ### ⏰ Reminders
 - Unlimited per meeting
@@ -264,40 +148,19 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 - Email notifications
 - Automatic retry
 
-</td>
-<td></td>
-</tr>
-</table>
-
 ## 📸 Screenshots
-
-<table>
-<tr>
-<td align="center" width="50%">
 
 **Dashboard & Management**
 
 ![Dashboard](./priv/static/images/screenshots/dashboard.png)
 
-</td>
-<td align="center" width="50%">
-
 **Availability & Scheduling**
 
 ![Availability](./priv/static/images/screenshots/availability.png)
 
-</td>
-</tr>
-<tr>
-<td align="center" colspan="2">
-
 **Embedded Booking Widget**
 
 ![Embedding](./priv/static/images/screenshots/embedding.png)
-
-</td>
-</tr>
-</table>
 
 ## 🆚 Tymeslot vs Calendly
 
@@ -315,54 +178,25 @@ Real-time updates with Phoenix LiveView. Blazing fast.
 
 ## 💼 Perfect For
 
-<table>
-<tr>
-<td width="50%">
-
 ### 👨‍💼 Freelancers & Consultants
-Replace endless email chains with professional booking pages
-
-</td>
-<td width="50%">
+Replace endless email chains with professional booking pages.
 
 ### 🏢 Small Businesses
-Coordinate team availability without enterprise pricing
-
-</td>
-</tr>
-<tr>
-<td>
+Coordinate team availability without enterprise pricing.
 
 ### 🔒 Privacy-Conscious Orgs
-Keep scheduling data on your own infrastructure
-
-</td>
-<td>
+Keep scheduling data on your own infrastructure.
 
 ### 🌍 International Teams
-Multi-language support for global customer bases
-
-</td>
-</tr>
-<tr>
-<td>
+Multi-language support for global customer bases.
 
 ### 💻 Developers & Tech Teams
-Extensible platform with webhook integrations
-
-</td>
-<td>
+Extensible platform with webhook integrations.
 
 ### 📖 Open Source Projects
-Embed booking widgets in your documentation
-
-</td>
-</tr>
-</table>
+Embed booking widgets in your documentation.
 
 ## 🛠️ Built With
-
-<div align="center">
 
 **Backend:** Elixir 1.19 · Phoenix 1.8 · Phoenix LiveView 1.1 · Oban
 **Database:** PostgreSQL 14+ · Ecto SQL
@@ -370,48 +204,19 @@ Embed booking widgets in your documentation
 **Email:** Swoosh · MJML Templates
 **Infrastructure:** Docker · Cloudron Ready
 
-</div>
-
 ## 🚀 Getting Started
 
-<table>
-<tr>
-<td width="50%" align="center">
-
 ### ☁️ Cloud
-[Try Now →](https://tymeslot.app)
-
-Zero setup · Start in 60 seconds
-
-</td>
-<td width="50%" align="center">
+[Try Now →](https://tymeslot.app) — Zero setup · Start in 60 seconds
 
 ### 🐳 Docker
-[Guide →](README-Docker.md)
-
-Self-hosting · Full control
-
-</td>
-</tr>
-<tr>
-<td align="center">
+[Guide →](README-Docker.md) — Self-hosting · Full control
 
 ### 📦 Cloudron
-[Guide →](README-Cloudron.md)
-
-One-click install · Managed platform
-
-</td>
-<td align="center">
+[Guide →](README-Cloudron.md) — One-click install · Managed platform
 
 ### 💻 Development
-[Docs →](CONTRIBUTING.md)
-
-Local setup · Contribute code
-
-</td>
-</tr>
-</table>
+[Docs →](CONTRIBUTING.md) — Local setup · Contribute code
 
 ## 🐳 Quick Start (Docker Image)
 
@@ -431,50 +236,19 @@ This command pulls the image automatically if it is not present locally. For a f
 
 ## 🤝 Contributing
 
-<table>
-<tr>
-<td width="50%" align="center">
+### ⭐ Star the Repo
+[Star →](https://github.com/tymeslot/tymeslot/stargazers) — Help others discover Tymeslot.
 
-### ⭐ Star
-[Star Repo →](https://github.com/tymeslot/tymeslot/stargazers)
+### 💰 Support Development
+[Subscribe →](https://tymeslot.app) — Fund open-source development.
 
-Help others discover Tymeslot
+### 🐛 Report Issues
+[Open Issue →](https://github.com/tymeslot/tymeslot/issues) — Bugs & feature requests.
 
-</td>
-<td width="50%" align="center">
-
-### 💰 Support
-[Subscribe →](https://tymeslot.app)
-
-Fund open-source development
-
-</td>
-</tr>
-<tr>
-<td align="center">
-
-### 🐛 Report
-[Open Issue →](https://github.com/tymeslot/tymeslot/issues)
-
-Bugs & feature requests
-
-</td>
-<td align="center">
-
-### 💻 Code
-[Guidelines →](CONTRIBUTING.md)
-
-Development setup & PR process
-
-</td>
-</tr>
-</table>
+### 💻 Contribute Code
+[Guidelines →](CONTRIBUTING.md) — Development setup & PR process.
 
 ## 🛡️ Security
-
-<table>
-<tr>
-<td width="50%">
 
 **Built-in Protection**
 - ✅ Input sanitization & XSS protection
@@ -483,9 +257,6 @@ Development setup & PR process
 - ✅ Security headers (CSP, HSTS, CSRF)
 - ✅ Spam protection (honeypot + reCAPTCHA v3)
 - ✅ Regular dependency updates
-
-</td>
-<td width="50%">
 
 **Spam Protection**
 
@@ -507,10 +278,6 @@ Get keys at [Google reCAPTCHA](https://www.google.com/recaptcha/admin)
 
 Use our [contact page](https://tymeslot.app/contact) for security issues.
 
-</td>
-</tr>
-</table>
-
 ## 📄 License
 
 This project is licensed under the Elastic License 2.0 - see the [LICENSE](LICENSE) file for details.
@@ -518,24 +285,23 @@ This project is licensed under the Elastic License 2.0 - see the [LICENSE](LICEN
 ## 🏢 About
 
 Tymeslot is developed by:
-- **Luka Karsten Breitig**
+- **[Luka Karsten Breitig](https://lukabreitig.com)**
 - **Diletta Luna OÜ**
 - Sepapaja 6, 15551 Tallinn, Estonia
 
 ## 💬 Community & Support
 
-- 💬 [Join Discussions](https://github.com/tymeslot/tymeslot/discussions) - Get help from the community
-- 🐛 [Report Bugs](https://github.com/tymeslot/tymeslot/issues) - Help us improve
-- 💡 [Request Features](https://github.com/tymeslot/tymeslot/issues) - Share your ideas
-- 📧 [Contact Us](https://tymeslot.app/contact) - Business inquiries
-- ⭐ [Star on GitHub](https://github.com/tymeslot/tymeslot/stargazers) - Show your support
+- 💬 [Join Discussions](https://github.com/tymeslot/tymeslot/discussions) — Get help from the community
+- 🐛 [Report Bugs](https://github.com/tymeslot/tymeslot/issues) — Help us improve
+- 💡 [Request Features](https://github.com/tymeslot/tymeslot/issues) — Share your ideas
+- 📧 [Contact Us](https://tymeslot.app/contact) — Business inquiries
+- ⭐ [Star on GitHub](https://github.com/tymeslot/tymeslot/stargazers) — Show your support
 
 ---
 
 <div align="center">
 
-**Built with ❤️ using Elixir, Phoenix, and LiveView**
-
-Made by [Luka Karsten Breitig](https://github.com/tymeslot) · [Diletta Luna OÜ](https://tymeslot.app) · Tallinn, Estonia
+**Built with ❤️ using Elixir, Phoenix, and LiveView**<br />
+Made by [Luka Karsten Breitig](https://lukabreitig.com) · Diletta Luna OÜ · Tallinn, Estonia
 
 </div>
