@@ -4,6 +4,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorProbeTest do
 
   import Tymeslot.ConfigTestHelpers
 
+  alias Plug.Conn
+  alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalDAV.ServerDetector
 
   # These tests verify that the server probe (OPTIONS request) used when
@@ -19,13 +21,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorProbeTest do
 
   describe "auto_detect/3 server probe" do
     test "routes OPTIONS probe through HTTPClient when URL is unrecognised" do
-      Req.Test.stub(:tymeslot_http, fn conn ->
+      ReqTest.stub(:tymeslot_http, fn conn ->
         assert conn.method == "OPTIONS"
         assert conn.host == "mycalendar.example.com"
 
         conn
-        |> Plug.Conn.put_resp_header("server", "Radicale/3.0")
-        |> Plug.Conn.send_resp(200, "")
+        |> Conn.put_resp_header("server", "Radicale/3.0")
+        |> Conn.send_resp(200, "")
       end)
 
       assert {:ok, :radicale} =
@@ -33,8 +35,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetectorProbeTest do
     end
 
     test "returns :generic when probe headers carry no recognisable server" do
-      Req.Test.stub(:tymeslot_http, fn conn ->
-        Plug.Conn.send_resp(conn, 200, "")
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 200, "")
       end)
 
       assert {:ok, :generic} =

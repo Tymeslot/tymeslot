@@ -3,11 +3,13 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
 
   @moduletag :infrastructure
 
+  alias Plug.Conn
+  alias Req.Test, as: ReqTest
   alias Tymeslot.Infrastructure.HTTPClient
 
   setup do
-    Req.Test.stub(:tymeslot_http, fn conn ->
-      Plug.Conn.send_resp(conn, 200, "ok")
+    ReqTest.stub(:tymeslot_http, fn conn ->
+      Conn.send_resp(conn, 200, "ok")
     end)
 
     :ok
@@ -20,9 +22,9 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
     end
 
     test "passes non-standard CalDAV methods as uppercase strings to Req" do
-      Req.Test.stub(:tymeslot_http, fn conn ->
+      ReqTest.stub(:tymeslot_http, fn conn ->
         assert conn.method in ["PROPFIND", "REPORT"]
-        Plug.Conn.send_resp(conn, 207, "<xml/>")
+        Conn.send_resp(conn, 207, "<xml/>")
       end)
 
       for method <- [:propfind, :report] do

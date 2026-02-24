@@ -2,12 +2,14 @@ defmodule Tymeslot.Infrastructure.HTTPMethodTest do
   use ExUnit.Case, async: true
   @moduletag :infrastructure
 
+  alias Plug.Conn
+  alias Req.Test, as: ReqTest
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Calendar.HTTP, as: CalendarHTTP
 
   setup do
-    Req.Test.stub(:tymeslot_http, fn conn ->
-      Plug.Conn.send_resp(conn, 200, "ok")
+    ReqTest.stub(:tymeslot_http, fn conn ->
+      Conn.send_resp(conn, 200, "ok")
     end)
 
     :ok

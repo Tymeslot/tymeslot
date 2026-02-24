@@ -162,8 +162,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   end
 
   # Computes display data for a single mobile timeline row.
-  defp mobile_row_data(%{is_available: true, start_time: start_time, end_time: end_time, breaks: breaks})
-       when not is_nil(start_time) and not is_nil(end_time) do
+  defp mobile_row_data(%{is_available: true, start_time: %Time{} = start_time, end_time: %Time{} = end_time, breaks: breaks}) do
     start_min = time_to_minutes(start_time)
     end_min = time_to_minutes(end_time)
 
@@ -185,7 +184,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
     }
   end
 
-  defp mobile_row_data(_), do: %{active: false, left: 0, width: 0, label: "Unavailable", breaks: []}
+  defp mobile_row_data(_row), do: %{active: false, left: 0, width: 0, label: "Unavailable", breaks: []}
 
   # Helper Functions
 

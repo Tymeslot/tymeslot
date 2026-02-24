@@ -13,8 +13,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.Dashboard.Integrations.ProviderCard
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
-  alias TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow
   alias TymeslotWeb.Helpers.IntegrationProviders

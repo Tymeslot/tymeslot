@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
 
     case VideoInputValidation.validate_video_integration_form(params_with_provider, []) do
       {:ok, sanitized} ->
-        attrs = Map.merge(params, sanitized) |> map_keys_to_atoms()
+        attrs = map_keys_to_atoms(Map.merge(params, sanitized))
 
         case Video.update_integration(user_id, integration.id, attrs) do
           {:ok, _updated} ->
@@ -296,7 +296,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
   defp parse_integration_id(id) when is_binary(id) do
     case Integer.parse(id) do
       {int, ""} when int > 0 -> {:ok, int}
-      _ -> {:error, :invalid}
+      _other -> {:error, :invalid}
     end
   end
 

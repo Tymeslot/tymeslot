@@ -4,6 +4,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
 
   import Tymeslot.ConfigTestHelpers
 
+  alias Plug.Conn
+  alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalDAV.Base
 
   # These tests exercise the real HTTPClient → Req → Req.Test path so that
@@ -18,16 +20,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
 
   describe "propfind/4" do
     test "routes PROPFIND through HTTPClient" do
-      Req.Test.stub(:tymeslot_http, fn conn ->
+      ReqTest.stub(:tymeslot_http, fn conn ->
         assert conn.method == "PROPFIND"
         assert conn.request_path == "/calendars/user/"
 
-        [auth | _rest] = Plug.Conn.get_req_header(conn, "authorization")
+        [auth | _rest] = Conn.get_req_header(conn, "authorization")
         assert String.starts_with?(auth, "Basic ")
 
         conn
-        |> Plug.Conn.put_resp_header("content-type", "application/xml")
-        |> Plug.Conn.send_resp(207, "<xml/>")
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, "<xml/>")
       end)
 
       assert {:ok, %Req.Response{status: 207}} =
@@ -35,8 +37,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
     end
 
     test "returns :unauthorized on 401 response" do
-      Req.Test.stub(:tymeslot_http, fn conn ->
-        Plug.Conn.send_resp(conn, 401, "")
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        Conn.send_resp(conn, 401, "")
       end)
 
       assert {:error, :unauthorized} =
@@ -46,13 +48,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
 
   describe "report/5" do
     test "routes REPORT through HTTPClient" do
-      Req.Test.stub(:tymeslot_http, fn conn ->
+      ReqTest.stub(:tymeslot_http, fn conn ->
         assert conn.method == "REPORT"
         assert conn.request_path == "/calendars/user/personal/"
 
         conn
-        |> Plug.Conn.put_resp_header("content-type", "application/xml")
-        |> Plug.Conn.send_resp(207, "<xml/>")
+        |> Conn.put_resp_header("content-type", "application/xml")
+        |> Conn.send_resp(207, "<xml/>")
       end)
 
       assert {:ok, %Req.Response{status: 207}} =
@@ -65,8 +67,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
     end
 
     test "maps transport timeout to :timeout" do
-      Req.Test.stub(:tymeslot_http, fn conn ->
-        Req.Test.transport_error(conn, :timeout)
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        ReqTest.transport_error(conn, :timeout)
       end)
 
       assert {:error, :timeout} =
@@ -81,11 +83,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
 
   describe "put_event/5" do
     test "routes PUT through HTTPClient" do
-      Req.Test.stub(:tymeslot_http, fn conn ->
+      ReqTest.stub(:tymeslot_http, fn conn ->
         assert conn.method == "PUT"
         assert conn.request_path == "/calendars/user/personal/event.ics"
 
-        Plug.Conn.send_resp(conn, 201, "")
+        Conn.send_resp(conn, 201, "")
       end)
 
       assert {:ok, _response} =
@@ -100,11 +102,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
 
   describe "delete_event/4" do
     test "routes DELETE through HTTPClient" do
-      Req.Test.stub(:tymeslot_http, fn conn ->
+      ReqTest.stub(:tymeslot_http, fn conn ->
         assert conn.method == "DELETE"
         assert conn.request_path == "/calendars/user/personal/event.ics"
 
-        Plug.Conn.send_resp(conn, 204, "")
+        Conn.send_resp(conn, 204, "")
       end)
 
       assert {:ok, _response} =
@@ -118,13 +120,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.BaseTest do
 
   describe "head_event/4" do
     test "routes HEAD through HTTPClient" do
-      Req.Test.stub(:tymeslot_http, fn conn ->
+      ReqTest.stub(:tymeslot_http, fn conn ->
         assert conn.method == "HEAD"
         assert conn.request_path == "/calendars/user/personal/event.ics"
 
         conn
-        |> Plug.Conn.put_resp_header("etag", "\"abc123\"")
-        |> Plug.Conn.send_resp(200, "")
+        |> Conn.put_resp_header("etag", "\"abc123\"")
+        |> Conn.send_resp(200, "")
       end)
 
       assert {:ok, _response} =
