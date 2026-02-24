@@ -328,7 +328,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
       # Use decrypted credentials only for the HTTP call
       result =
         CredentialManager.with_decrypted_credentials(secure_client, fn decrypted ->
-          case propfind(discovery_url, decrypted.username, decrypted.password, depth: "0") do
+          case propfind(discovery_url, decrypted.username, decrypted.password,
+                 depth: "0",
+                 max_retries: 0
+               ) do
             {:ok, _response} = result ->
               result
 
@@ -380,7 +383,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
       with_caldav_breaker(client, opts, fn ->
         discovery_url = UrlBuilder.build_discovery_url(client)
 
-        case propfind(discovery_url, client.username, client.password) do
+        case propfind(discovery_url, client.username, client.password, max_retries: 0) do
           {:ok, %Req.Response{status: 207, body: body}} ->
             parse_calendar_discovery(body, client)
 
