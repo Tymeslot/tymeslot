@@ -260,15 +260,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       "card-glass p-6 transition-all duration-300 hover:shadow-xl group",
       !@integration.is_active && "opacity-75 grayscale-[0.5] hover:grayscale-0"
     ]}>
-      <div class="flex items-start justify-between gap-8">
-        <!-- Info Column -->
-        <div class="flex items-start gap-5 flex-1 min-w-0">
-          <div class="p-3 bg-slate-50 rounded-2xl group-hover:bg-white group-hover:shadow-md transition-all border border-slate-100 group-hover:border-turquoise-100">
+      <!-- Top row: info + toggle -->
+      <div class="flex items-start justify-between gap-4">
+        <!-- Info -->
+        <div class="flex items-start gap-4 min-w-0">
+          <div class="p-3 bg-slate-50 rounded-2xl group-hover:bg-white group-hover:shadow-md transition-all border border-slate-100 group-hover:border-turquoise-100 flex-shrink-0">
             <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} />
           </div>
 
-          <div class="flex-1 min-w-0 pt-1">
-            <div class="flex items-center gap-3 mb-2">
+          <div class="min-w-0 pt-1">
+            <div class="flex items-center gap-3 mb-2 flex-wrap">
               <h4 class="text-lg font-black text-slate-900 truncate tracking-tight">
                 {@display_name}
               </h4>
@@ -280,80 +281,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               />
             </div>
 
-            <!-- Calendar Selection Grid -->
-            <div :if={@integration.is_active} class="mt-6">
-              <div class="flex items-center gap-2 mb-3">
-                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Syncing {(@integration.calendar_list || []) |> Enum.count(&(&1["selected"] || &1[:selected]))} Calendars
-                </span>
-                <div class="h-px bg-slate-100 flex-1"></div>
-              </div>
-
-              <div class="flex flex-wrap gap-2.5">
-                <%= for calendar <- @integration.calendar_list || [] do %>
-                  <% calendar_id = calendar["id"] || calendar[:id] %>
-                  <% calendar_name = Calendar.extract_calendar_display_name(calendar) %>
-                  <% is_selected = calendar["selected"] || calendar[:selected] %>
-                  <% color = calendar["color"] || calendar[:color] %>
-
-                  <button
-                    phx-click="toggle_calendar_selection"
-                    phx-value-integration_id={@integration.id}
-                    phx-value-calendar_id={calendar_id}
-                    phx-target={@myself}
-                    class={[
-                      "inline-flex items-center gap-2.5 px-3.5 py-2 rounded-token-xl border-2 transition-all text-xs font-bold",
-                      is_selected && "bg-turquoise-50 border-turquoise-400 text-turquoise-900 shadow-sm shadow-turquoise-500/5",
-                      !is_selected && "bg-white border-slate-50 text-slate-400 hover:border-slate-200 hover:bg-slate-50"
-                    ]}
-                  >
-                    <div
-                      :if={color && is_selected}
-                      class="w-2.5 h-2.5 rounded-full ring-2 ring-white"
-                      style={"background-color: #{color}"}
-                    />
-                    <span>{calendar_name}</span>
-                    <span :if={calendar["primary"] || calendar[:primary]} class="text-[9px] font-black bg-slate-200 px-1.5 py-0.5 rounded text-slate-600 uppercase tracking-tighter">
-                      Primary
-                    </span>
-                    <svg :if={is_selected} class="w-3.5 h-3.5 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </button>
-                <% end %>
-
-                <div :if={!@integration.calendar_list || @integration.calendar_list == []} class="flex items-center gap-2 text-slate-400 py-2">
-                  <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span class="text-xs font-medium italic">No calendars found. Try refreshing the integration.</span>
-                </div>
-              </div>
-            </div>
-
-            <p :if={!@integration.is_active} class="text-sm text-slate-400 font-medium italic mt-2">
+            <p :if={!@integration.is_active} class="text-sm text-slate-400 font-medium italic">
               This integration is currently disabled. Toggle the switch to enable conflict checking.
             </p>
           </div>
         </div>
 
-        <!-- Action Column -->
-        <div class="flex items-center gap-3 self-center">
-          <%= if @integration.provider == "google" && Helpers.needs_scope_upgrade?(@integration) do %>
-            <button
-              phx-click="upgrade_google_scope"
-              phx-value-id={@integration.id}
-              phx-target={@myself}
-              class="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
-              title="Upgrade Google Calendar permissions"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Upgrade
-            </button>
-          <% end %>
-
+        <!-- Toggle (top right) -->
+        <div class="flex-shrink-0">
           <StatusSwitch.status_switch
             id={"calendar-toggle-#{@integration.id}"}
             checked={@integration.is_active}
@@ -363,19 +298,87 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             size={:large}
             class="ring-4 ring-slate-50 group-hover:ring-turquoise-50 transition-all"
           />
-
-          <button
-            phx-click="show"
-            phx-value-id={@integration.id}
-            phx-target="#delete-calendar-modal"
-            class="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-            title="Remove Connection"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
         </div>
+      </div>
+
+      <!-- Calendar Selection Grid (full width, active only) -->
+      <div :if={@integration.is_active} class="mt-6">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Syncing {(@integration.calendar_list || []) |> Enum.count(&(&1["selected"] || &1[:selected]))} Calendars
+          </span>
+          <div class="h-px bg-slate-100 flex-1"></div>
+        </div>
+
+        <div class="flex flex-wrap gap-2.5">
+          <%= for calendar <- @integration.calendar_list || [] do %>
+            <% calendar_id = calendar["id"] || calendar[:id] %>
+            <% calendar_name = Calendar.extract_calendar_display_name(calendar) %>
+            <% is_selected = calendar["selected"] || calendar[:selected] %>
+            <% color = calendar["color"] || calendar[:color] %>
+
+            <button
+              phx-click="toggle_calendar_selection"
+              phx-value-integration_id={@integration.id}
+              phx-value-calendar_id={calendar_id}
+              phx-target={@myself}
+              class={[
+                "inline-flex items-center gap-2.5 px-3.5 py-2 rounded-token-xl border-2 transition-all text-xs font-bold",
+                is_selected && "bg-turquoise-50 border-turquoise-400 text-turquoise-900 shadow-sm shadow-turquoise-500/5",
+                !is_selected && "bg-white border-slate-50 text-slate-400 hover:border-slate-200 hover:bg-slate-50"
+              ]}
+            >
+              <div
+                :if={color && is_selected}
+                class="w-2.5 h-2.5 rounded-full ring-2 ring-white"
+                style={"background-color: #{color}"}
+              />
+              <span>{calendar_name}</span>
+              <span :if={calendar["primary"] || calendar[:primary]} class="text-[9px] font-black bg-slate-200 px-1.5 py-0.5 rounded text-slate-600 uppercase tracking-tighter">
+                Primary
+              </span>
+              <svg :if={is_selected} class="w-3.5 h-3.5 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
+          <% end %>
+
+          <div :if={!@integration.calendar_list || @integration.calendar_list == []} class="flex items-center gap-2 text-slate-400 py-2">
+            <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="text-xs font-medium italic">No calendars found. Try refreshing the integration.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom row: action buttons (right-aligned) -->
+      <div class="flex items-center justify-end gap-2 mt-4">
+        <button
+          :if={@integration.provider == "google" && Helpers.needs_scope_upgrade?(@integration)}
+          phx-click="upgrade_google_scope"
+          phx-value-id={@integration.id}
+          phx-target={@myself}
+          class="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-token-xl font-bold border-2 border-amber-100 hover:bg-amber-100 transition-all shadow-sm shadow-amber-500/5"
+          title="Upgrade Google Calendar permissions"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Upgrade
+        </button>
+
+        <button
+          phx-click="show"
+          phx-value-id={@integration.id}
+          phx-target="#delete-calendar-modal"
+          class="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+          title="Remove Connection"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
       </div>
     </div>
     """
