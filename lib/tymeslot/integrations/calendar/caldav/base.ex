@@ -40,7 +40,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   """
 
   alias Tymeslot.Infrastructure.{CalendarCircuitBreaker, RetryLogic}
-  alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
+  alias Tymeslot.Integrations.Calendar.CalDAV.{UrlBuilder, XmlHandler}
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Security.{CredentialManager, RateLimiter}
 
@@ -323,12 +323,30 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     with :ok <- check_rate_limit(:connection, ip_address),
          {:ok, secure_client} <- CredentialManager.encrypt_client_credentials(client) do
       # Try to discover calendars as a connection test
-      discovery_url = build_discovery_url(client)
+      discovery_url = UrlBuilder.build_discovery_url(client)
 
       # Use decrypted credentials only for the HTTP call
       result =
         CredentialManager.with_decrypted_credentials(secure_client, fn decrypted ->
-          propfind(discovery_url, decrypted.username, decrypted.password, depth: "0")
+          case propfind(discovery_url, decrypted.username, decrypted.password, depth: "0") do
+            {:ok, _response} = result ->
+              result
+
+            {:error, reason} when reason in [:not_found, :server_error] ->
+              # The guessed discovery path does not exist on this server.
+              # Fall back to RFC 4791: PROPFIND server root for current-user-principal.
+              # This handles servers like Zimbra where the generic /calendars/{user}/ path
+              # is wrong but the credentials themselves are valid.
+              Logger.debug(
+                "CalDAV discovery path not found (#{reason}), falling back to RFC 4791 probe",
+                base_url: client.base_url
+              )
+
+              rfc4791_probe(client.base_url, decrypted.username, decrypted.password)
+
+            {:error, _reason} = result ->
+              result
+          end
         end)
 
       case result do
@@ -360,7 +378,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     with :ok <- check_rate_limit(:discovery, ip_address),
          :ok <- validate_client_url(client.base_url) do
       with_caldav_breaker(client, opts, fn ->
-        discovery_url = build_discovery_url(client)
+        discovery_url = UrlBuilder.build_discovery_url(client)
 
         case propfind(discovery_url, client.username, client.password) do
           {:ok, %Req.Response{status: 207, body: body}} ->
@@ -368,6 +386,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
 
           {:ok, %Req.Response{body: body}} ->
             parse_calendar_discovery(body, client)
+
+          {:error, reason} when reason in [:not_found, :server_error] ->
+            # Guessed discovery path failed. Follow RFC 4791:
+            # current-user-principal → calendar-home-set → calendar list.
+            Logger.debug(
+              "CalDAV discovery path not found (#{reason}), falling back to RFC 4791 principal discovery",
+              base_url: client.base_url
+            )
+
+            discover_via_rfc4791(client)
 
           {:error, reason} ->
             {:error, reason}
@@ -383,7 +411,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           {:ok, list(map())} | {:error, error_reason()}
   def fetch_events(client, calendar_path, start_time, end_time, opts \\ []) do
     with_caldav_breaker(client, opts, fn ->
-      url = build_calendar_url(client.base_url, calendar_path)
+      url = UrlBuilder.build_calendar_url(client.base_url, calendar_path)
 
       # Build calendar-query XML
       report_body = XmlHandler.build_calendar_query(start_time, end_time)
@@ -424,7 +452,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   def create_calendar_event(client, calendar_path, event_data, opts \\ []) do
     with_caldav_breaker(client, opts, fn ->
       uid = event_data[:uid] || generate_uid()
-      url = build_event_url(client.base_url, calendar_path, uid)
+      url = UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
 
       ical_data = build_ical_data(event_data, uid)
 
@@ -448,7 +476,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           :ok | {:error, error_reason()}
   def update_calendar_event(client, calendar_path, uid, event_data, opts \\ []) do
     with_caldav_breaker(client, opts, fn ->
-      url = build_event_url(client.base_url, calendar_path, uid)
+      url = UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
       ical_data = build_ical_data(Map.put(event_data, :uid, uid), uid)
 
       etag = get_current_etag(url, client, opts)
@@ -499,7 +527,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           :ok | {:error, error_reason()}
   def delete_calendar_event(client, calendar_path, uid, opts \\ []) do
     with_caldav_breaker(client, opts, fn ->
-      url = build_event_url(client.base_url, calendar_path, uid)
+      url = UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
 
       # Pass timeout options through to delete_event
       delete_opts = Keyword.take(opts, [:timeout])
@@ -549,60 +577,44 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
     [auth_header | additional_headers]
   end
 
-  defp build_discovery_url(client) do
-    base_url = String.trim_trailing(client.base_url, "/")
+  # RFC 4791 discovery helpers
 
-    # If URL already looks like a full CalDAV principal URL, use it as-is
-    if looks_like_full_caldav_url?(base_url) do
-      "#{base_url}/"
-    else
-      # Use server-specific path construction
-      case client.provider do
-        :radicale ->
-          "#{base_url}/#{client.username}/"
+  # Probes the server root with a current-user-principal PROPFIND to verify
+  # that credentials are valid when the guessed discovery path fails.
+  # A 207 response here proves the credentials work even if the path was wrong.
+  defp rfc4791_probe(base_url, username, password) do
+    url = UrlBuilder.build_calendar_url(base_url, "/")
+    body = XmlHandler.build_propfind_request(properties: [:current_user_principal])
+    propfind(url, username, password, body: body, depth: "0")
+  end
 
-        :nextcloud ->
-          # Check if base_url already contains a calendar path
-          if String.contains?(base_url, "/calendars/#{client.username}") do
-            # Already a calendar URL - use as is
-            "#{base_url}/"
-          else
-            # base_url already includes /remote.php/dav from normalization
-            "#{base_url}/calendars/#{client.username}/"
-          end
+  # Full RFC 4791 discovery chain:
+  #   1. PROPFIND server root → current-user-principal href
+  #   2. PROPFIND principal URL → calendar-home-set href
+  #   3. PROPFIND calendar-home-set → list of calendars
+  defp discover_via_rfc4791(client) do
+    origin_root = UrlBuilder.build_calendar_url(client.base_url, "/")
 
-        :zimbra ->
-          "#{base_url}/dav/#{client.username}/"
+    with {:ok, %Req.Response{body: principal_xml}} <-
+           propfind(origin_root, client.username, client.password,
+             body: XmlHandler.build_propfind_request(properties: [:current_user_principal]),
+             depth: "0"
+           ),
+         {:ok, principal_href} <- XmlHandler.parse_current_user_principal(principal_xml),
+         principal_url = UrlBuilder.build_calendar_url(client.base_url, principal_href),
+         {:ok, %Req.Response{body: home_xml}} <-
+           propfind(principal_url, client.username, client.password,
+             body: XmlHandler.build_propfind_request(properties: [:calendar_home_set]),
+             depth: "0"
+           ),
+         {:ok, home_href} <- XmlHandler.parse_calendar_home_set(home_xml) do
+      home_url = UrlBuilder.build_calendar_url(client.base_url, home_href)
 
-        _other ->
-          "#{base_url}/calendars/#{client.username}/"
+      case propfind(home_url, client.username, client.password) do
+        {:ok, %Req.Response{body: cal_xml}} -> parse_calendar_discovery(cal_xml, client)
+        {:error, reason} -> {:error, reason}
       end
     end
-  end
-
-  # Detects if a URL already looks like a full CalDAV principal URL
-  # (e.g., /dav/user@example.com or /remote.php/dav/calendars/user)
-  defp looks_like_full_caldav_url?(base_url) do
-    uri = URI.parse(base_url)
-
-    # If path has multiple segments (depth >= 2), assume it's a full CalDAV URL
-    # This allows users to provide complete principal URLs for any server
-    case uri.path do
-      nil -> false
-      "/" -> false
-      path -> length(String.split(path, "/", trim: true)) >= 2
-    end
-  end
-
-  defp build_calendar_url(base_url, calendar_path) do
-    base_url = String.trim_trailing(base_url, "/")
-    calendar_path = String.trim_leading(calendar_path, "/")
-    "#{base_url}/#{calendar_path}"
-  end
-
-  defp build_event_url(base_url, calendar_path, uid) do
-    calendar_url = build_calendar_url(base_url, calendar_path)
-    "#{calendar_url}#{uid}.ics"
   end
 
   defp with_caldav_breaker(client, opts, fun) when is_function(fun, 0) do

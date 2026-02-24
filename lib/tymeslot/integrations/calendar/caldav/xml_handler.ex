@@ -110,13 +110,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   def parse_calendar_query(xml_body) do
     doc = parse_with_security(xml_body)
 
-    # Use namespace-agnostic approach for better compatibility
+    # Use namespace-agnostic XPath throughout — CalDAV servers use many different
+    # namespace prefixes (D:, d:, no prefix, C:, cal:, etc.). local-name() matching
+    # is the only portable approach across all server implementations.
     events =
       doc
       |> xpath(
-        ~x"//response"l,
-        href: ~x"./href/text()"s,
-        etag: ~x".//getetag/text()"s,
+        ~x"//*[local-name()='response']"l,
+        href: ~x"./*[local-name()='href']/text()"s,
+        etag: ~x".//*[local-name()='getetag']/text()"s,
         calendar_data: ~x".//*[local-name()='calendar-data']/text()"s
       )
       |> Enum.map(fn event ->
@@ -138,6 +140,60 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     e ->
       Logger.error("XML parsing error: #{inspect(e)}")
       {:error, "Failed to parse calendar query response"}
+  end
+
+  @doc """
+  Parses the `current-user-principal` href from a PROPFIND response.
+
+  Used for RFC 4791 CalDAV principal discovery: the href points to the
+  principal resource from which `calendar-home-set` can be retrieved.
+  """
+  @spec parse_current_user_principal(String.t()) :: {:ok, String.t()} | {:error, term()}
+  def parse_current_user_principal(xml_body) do
+    doc = parse_with_security(xml_body)
+
+    href =
+      xpath(
+        doc,
+        ~x"//*[local-name()='current-user-principal']/*[local-name()='href']/text()"s
+      )
+
+    if is_binary(href) and href != "" do
+      {:ok, href}
+    else
+      {:error, :not_found}
+    end
+  rescue
+    e ->
+      Logger.error("XML parsing error in current-user-principal: #{inspect(e)}")
+      {:error, "Failed to parse current-user-principal response"}
+  end
+
+  @doc """
+  Parses the `calendar-home-set` href from a PROPFIND response.
+
+  Used for RFC 4791 CalDAV discovery: the href is the root URL under which
+  the user's calendars are listed.
+  """
+  @spec parse_calendar_home_set(String.t()) :: {:ok, String.t()} | {:error, term()}
+  def parse_calendar_home_set(xml_body) do
+    doc = parse_with_security(xml_body)
+
+    href =
+      xpath(
+        doc,
+        ~x"//*[local-name()='calendar-home-set']/*[local-name()='href']/text()"s
+      )
+
+    if is_binary(href) and href != "" do
+      {:ok, href}
+    else
+      {:error, :not_found}
+    end
+  rescue
+    e ->
+      Logger.error("XML parsing error in calendar-home-set: #{inspect(e)}")
+      {:error, "Failed to parse calendar-home-set response"}
   end
 
   @doc """
@@ -185,8 +241,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
       raise "XML document too large"
     end
 
-    # Parse with namespace awareness
-    SweetXml.parse(xml_string, namespace_conformant: true)
+    # Parse with namespace awareness.
+    # xmerl (SweetXml's backend) signals fatal parse errors via Erlang :exit, not
+    # Elixir exceptions. Catch and re-raise as a RuntimeError so the rescue clauses
+    # in each public parser function can handle malformed XML uniformly.
+    try do
+      SweetXml.parse(xml_string, namespace_conformant: true)
+    catch
+      :exit, reason -> raise "XML parse failed: #{inspect(reason)}"
+    end
   end
 
   defp build_prop_element(:displayname), do: "<d:displayname/>"
