@@ -269,6 +269,11 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     """
   end
 
+  defp close_sidebar_js do
+    JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
+    |> JS.add_class("hidden", to: "#dashboard-sidebar-overlay")
+  end
+
   # Private component for navigation links
   attr :patch, :string, default: nil
   attr :navigate, :string, default: nil
@@ -285,6 +290,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     <.link
       patch={@patch}
       navigate={@navigate}
+      phx-click={close_sidebar_js()}
       class={[
         "dashboard-nav-link flex items-center space-x-3 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200",
         if(@current == @action,
