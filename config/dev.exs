@@ -66,7 +66,6 @@ config :tymeslot, Tymeslot.Repo,
 # This allows SaaS to extend Core queues via :oban_additional_queues config
 config :tymeslot, Oban,
   repo: Tymeslot.Repo,
-  stage_interval: 30_000,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 604_800},
     {Oban.Plugins.Cron,
