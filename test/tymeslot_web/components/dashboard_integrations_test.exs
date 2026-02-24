@@ -13,7 +13,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.RadicaleConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents
-  alias TymeslotWeb.Components.Dashboard.Integrations.IntegrationCard
   alias TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm
   alias TymeslotWeb.Components.Dashboard.Integrations.ProviderCard
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
@@ -79,80 +78,6 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert html =~ "My Calendar"
     assert html =~ "Syncing 0 Calendars"
     assert html =~ "No calendars found"
-  end
-
-  test "renders integration_card correctly" do
-    assigns = %{
-      integration: %{
-        id: 1,
-        name: "My Calendar",
-        provider: "google",
-        is_active: true,
-        is_primary: true,
-        base_url: nil,
-        calendar_list: [%{"id" => "cal1", "name" => "Work", "selected" => true}],
-        default_booking_calendar_id: "cal1"
-      },
-      integration_type: :calendar,
-      provider_display_name: "Google Calendar",
-      myself: "some-target"
-    }
-
-    html = render_component(&IntegrationCard.integration_card/1, assigns)
-    _parsed_doc = Floki.parse_document!(html)
-
-    assert html =~ "My Calendar"
-    assert html =~ "Work"
-    assert html =~ "Booking Calendar"
-  end
-
-  test "renders integration_card correctly when inactive with no calendars configured" do
-    assigns = %{
-      integration: %{
-        id: 1,
-        name: "My Calendar",
-        provider: "google",
-        is_active: false,
-        is_primary: false,
-        base_url: nil,
-        calendar_list: [],
-        calendar_paths: [],
-        default_booking_calendar_id: nil
-      },
-      integration_type: :calendar,
-      provider_display_name: "Google Calendar",
-      myself: "some-target"
-    }
-
-    html = render_component(&IntegrationCard.integration_card/1, assigns)
-    doc = Floki.parse_document!(html)
-
-    assert html =~ "Integration is currently disabled"
-    assert html =~ "No specific calendars configured"
-
-    # Calendar manage button is only shown for active integrations
-    assert Floki.find(doc, "button[phx-click='manage_calendars']") == []
-  end
-
-  test "renders integration_card calendar_paths fallback when calendar_list is missing" do
-    assigns = %{
-      integration: %{
-        id: 1,
-        name: "My Calendar",
-        provider: "caldav",
-        is_active: true,
-        is_primary: false,
-        base_url: nil,
-        calendar_list: nil,
-        calendar_paths: ["/cal1", "/cal2"]
-      },
-      integration_type: :calendar,
-      provider_display_name: "CalDAV",
-      myself: "some-target"
-    }
-
-    html = render_component(&IntegrationCard.integration_card/1, assigns)
-    assert html =~ "Connected to 2 calendars"
   end
 
   test "renders provider_card correctly" do
