@@ -1,12 +1,13 @@
-defmodule TymeslotWeb.Dashboard.Automation.ComponentsTest do
+defmodule TymeslotWeb.Dashboard.Automation.WebhookCardTest do
   use TymeslotWeb.ConnCase, async: true
 
   @moduletag :utils
 
   import Phoenix.LiveViewTest
-  alias TymeslotWeb.Dashboard.Automation.Components
 
-  describe "webhook_card" do
+  alias TymeslotWeb.Dashboard.Automation.WebhookCard
+
+  describe "webhook_card/1" do
     test "renders active webhook correctly" do
       webhook = %{
         id: 1,
@@ -29,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.Automation.ComponentsTest do
         on_view_deliveries: "logs"
       }
 
-      html = render_component(&Components.webhook_card/1, assigns)
+      html = render_component(&WebhookCard.webhook_card/1, assigns)
       assert html =~ "Test Webhook"
       assert html =~ "https://example.com/webhook"
       assert html =~ "meeting.created"
@@ -60,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.Automation.ComponentsTest do
         on_view_deliveries: "logs"
       }
 
-      html = render_component(&Components.webhook_card/1, assigns)
+      html = render_component(&WebhookCard.webhook_card/1, assigns)
       assert html =~ "Inactive Webhook"
       assert html =~ "Disabled"
       refute html =~ "Last triggered"
@@ -88,28 +89,10 @@ defmodule TymeslotWeb.Dashboard.Automation.ComponentsTest do
         on_view_deliveries: "logs"
       }
 
-      html = render_component(&Components.webhook_card/1, assigns)
+      html = render_component(&WebhookCard.webhook_card/1, assigns)
       # The button text changes to "Testing" and it becomes disabled while a test is in progress
       assert html =~ "Testing"
       assert html =~ ~r/<button[^>]+disabled/
-    end
-  end
-
-  describe "webhook_empty_state" do
-    test "renders empty state" do
-      assigns = %{on_create: "create"}
-      html = render_component(&Components.webhook_empty_state/1, assigns)
-      assert html =~ "No Webhooks Yet"
-      assert html =~ "Create Your First Webhook"
-    end
-  end
-
-  describe "webhook_documentation" do
-    test "renders documentation" do
-      assigns = %{}
-      html = render_component(&Components.webhook_documentation/1, assigns)
-      assert html =~ "Webhook Integration Guide"
-      assert html =~ "meeting.created"
     end
   end
 end

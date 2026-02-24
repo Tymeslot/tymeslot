@@ -12,9 +12,11 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   alias Tymeslot.Webhooks
   alias Tymeslot.Webhooks.InputValidation, as: WebhookInputValidation
   alias TymeslotWeb.Components.Icons.IconComponents
-  alias TymeslotWeb.Dashboard.Automation.Components
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Dashboard.Automation.Modals
+  alias TymeslotWeb.Dashboard.Automation.WebhookCard
+  alias TymeslotWeb.Dashboard.Automation.WebhookDocumentation
+  alias TymeslotWeb.Dashboard.Automation.WebhookEmptyState
   alias TymeslotWeb.Dashboard.Automation.WebhookFormComponent
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -424,7 +426,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
 
               <div class="grid grid-cols-1 gap-6">
                 <%= for webhook <- @webhooks do %>
-                  <Components.webhook_card
+                  <WebhookCard.webhook_card
                     webhook={webhook}
                     testing={@testing_connection == webhook.id}
                     target={@myself}
@@ -439,11 +441,11 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
             </div>
           <% else %>
             <!-- Empty State -->
-            <Components.webhook_empty_state on_create={JS.push("show_webhook_form", target: @myself)} />
+            <WebhookEmptyState.webhook_empty_state on_create={JS.push("show_webhook_form", target: @myself)} />
           <% end %>
 
           <!-- Documentation Section -->
-          <Components.webhook_documentation />
+          <WebhookDocumentation.webhook_documentation />
         </div>
       <% end %>
     </div>
