@@ -27,12 +27,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
       "card-glass transition-all duration-200",
       !@integration.is_active && "card-glass-unavailable"
     ]}>
-      <div class="flex items-start justify-between gap-6">
+      <!-- Top row: info + toggle -->
+      <div class="flex items-start justify-between gap-4">
         <!-- Left: Info -->
-        <div class="flex items-start gap-4 flex-1 min-w-0">
-          <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} class="mt-1" />
+        <div class="flex items-start gap-4 min-w-0">
+          <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} class="mt-1 flex-shrink-0" />
 
-          <div class="flex-1 min-w-0">
+          <div class="min-w-0">
             <!-- Title -->
             <div class="flex items-center gap-2 mb-1">
               <h4 class="text-base font-bold text-slate-900 truncate">
@@ -64,7 +65,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
             </div>
 
             <!-- Details -->
-            <div class="text-sm text-gray-600">
+            <div class="text-sm text-gray-600 break-all">
               <%= if @integration.is_active do %>
                 <%= if @integration.provider in ["google_meet", "teams"] do %>
                   <span>Authenticated via OAuth</span>
@@ -73,7 +74,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
                   <span>{URI.parse(@integration.base_url).host}</span>
                 <% end %>
                 <%= if Map.get(@integration, :custom_meeting_url) do %>
-                  <span class="truncate"><%= @integration.custom_meeting_url %></span>
+                  <span><%= @integration.custom_meeting_url %></span>
                 <% end %>
               <% else %>
                 <span class="text-gray-500 italic">Integration is currently disabled</span>
@@ -82,8 +83,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
           </div>
         </div>
 
-        <!-- Right: Actions -->
-        <div class="flex items-center gap-2 flex-shrink-0">
+        <!-- Toggle (top right) -->
+        <div class="flex-shrink-0">
           <StatusSwitch.status_switch
             id={"video-toggle-#{@integration.id}"}
             checked={@integration.is_active}
@@ -93,45 +94,48 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
             size={:large}
             class="ring-2 ring-turquoise-300/50"
           />
-
-          <%= if @integration.is_active do %>
-            <button
-              phx-click="test_connection"
-              phx-value-id={@integration.id}
-              phx-target={@myself}
-              disabled={@testing_connection == @integration.id}
-              class="btn btn-sm btn-secondary"
-            >
-              <%= if @testing_connection == @integration.id do %>
-                <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-1" />
-                Testing...
-              <% else %>
-                <.icon name="hero-check-circle" class="w-4 h-4 mr-1" />
-                Test
-              <% end %>
-            </button>
-          <% end %>
-
-          <button
-            phx-click="show"
-            phx-value-id={@integration.id}
-            phx-target="#edit-video-modal"
-            class="text-gray-500 hover:text-turquoise-600 transition-colors p-2"
-            title="Edit Integration"
-          >
-            <.icon name="hero-pencil-square" class="w-5 h-5" />
-          </button>
-
-          <button
-            phx-click="show"
-            phx-value-id={@integration.id}
-            phx-target="#delete-video-modal"
-            class="text-gray-500 hover:text-red-600 transition-colors p-2"
-            title="Delete Integration"
-          >
-            <.icon name="hero-trash" class="w-5 h-5" />
-          </button>
         </div>
+      </div>
+
+      <!-- Bottom row: action buttons (right-aligned) -->
+      <div class="flex items-center justify-end gap-1 mt-2">
+        <%= if @integration.is_active do %>
+          <button
+            phx-click="test_connection"
+            phx-value-id={@integration.id}
+            phx-target={@myself}
+            disabled={@testing_connection == @integration.id}
+            class="btn btn-sm btn-secondary"
+          >
+            <%= if @testing_connection == @integration.id do %>
+              <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-1" />
+              Testing...
+            <% else %>
+              <.icon name="hero-check-circle" class="w-4 h-4 mr-1" />
+              Test
+            <% end %>
+          </button>
+        <% end %>
+
+        <button
+          phx-click="show"
+          phx-value-id={@integration.id}
+          phx-target="#edit-video-modal"
+          class="text-gray-500 hover:text-turquoise-600 transition-colors p-2"
+          title="Edit Integration"
+        >
+          <.icon name="hero-pencil-square" class="w-5 h-5" />
+        </button>
+
+        <button
+          phx-click="show"
+          phx-value-id={@integration.id}
+          phx-target="#delete-video-modal"
+          class="text-gray-500 hover:text-red-600 transition-colors p-2"
+          title="Delete Integration"
+        >
+          <.icon name="hero-trash" class="w-5 h-5" />
+        </button>
       </div>
     </div>
     """

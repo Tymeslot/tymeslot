@@ -2,11 +2,11 @@
 
 /* Modal Overlay & Container */
 .modal-overlay {
-  @apply fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-300;
+  @apply fixed inset-0 z-[9999] overflow-hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-300;
 }
 
 .modal-container {
-  @apply flex items-center justify-center min-h-screen p-6 w-full;
+  @apply flex items-center justify-center h-full p-6 w-full;
 }
 
 /* Modal Content */
@@ -71,9 +71,10 @@
   .modal-container {
     @apply items-end p-0;
   }
-  
+
   .modal-content {
-    @apply rounded-t-[2.5rem] rounded-b-none;
+    @apply rounded-t-[2.5rem] rounded-b-none overflow-y-auto;
+    max-height: 85vh;
     animation: modalSlideUp 0.5s cubic-bezier(0.32, 0.72, 0, 1);
   }
 }
