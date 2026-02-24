@@ -83,8 +83,46 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
           </div>
         </div>
 
-        <!-- Toggle (top right) -->
-        <div class="flex-shrink-0">
+        <!-- Desktop: actions + toggle inline -->
+        <div class="hidden sm:flex items-center gap-1 flex-shrink-0">
+          <%= if @integration.is_active do %>
+            <button
+              phx-click="test_connection"
+              phx-value-id={@integration.id}
+              phx-target={@myself}
+              disabled={@testing_connection == @integration.id}
+              class="btn btn-sm btn-secondary"
+            >
+              <%= if @testing_connection == @integration.id do %>
+                <.icon name="hero-arrow-path" class="animate-spin h-4 w-4 mr-1" />
+                Testing...
+              <% else %>
+                <.icon name="hero-check-circle" class="w-4 h-4 mr-1" />
+                Test
+              <% end %>
+            </button>
+          <% end %>
+
+          <button
+            phx-click="show"
+            phx-value-id={@integration.id}
+            phx-target="#edit-video-modal"
+            class="text-gray-500 hover:text-turquoise-600 transition-colors p-2"
+            title="Edit Integration"
+          >
+            <.icon name="hero-pencil-square" class="w-5 h-5" />
+          </button>
+
+          <button
+            phx-click="show"
+            phx-value-id={@integration.id}
+            phx-target="#delete-video-modal"
+            class="text-gray-500 hover:text-red-600 transition-colors p-2"
+            title="Delete Integration"
+          >
+            <.icon name="hero-trash" class="w-5 h-5" />
+          </button>
+
           <StatusSwitch.status_switch
             id={"video-toggle-#{@integration.id}"}
             checked={@integration.is_active}
@@ -95,10 +133,23 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
             class="ring-2 ring-turquoise-300/50"
           />
         </div>
+
+        <!-- Mobile: toggle only -->
+        <div class="flex-shrink-0 sm:hidden">
+          <StatusSwitch.status_switch
+            id={"video-toggle-mobile-#{@integration.id}"}
+            checked={@integration.is_active}
+            on_change="toggle_integration"
+            target={@myself}
+            phx_value_id={to_string(@integration.id)}
+            size={:large}
+            class="ring-2 ring-turquoise-300/50"
+          />
+        </div>
       </div>
 
-      <!-- Bottom row: action buttons (right-aligned) -->
-      <div class="flex items-center justify-end gap-1 mt-2">
+      <!-- Mobile: action buttons below -->
+      <div class="flex items-center justify-end gap-1 mt-2 sm:hidden">
         <%= if @integration.is_active do %>
           <button
             phx-click="test_connection"
