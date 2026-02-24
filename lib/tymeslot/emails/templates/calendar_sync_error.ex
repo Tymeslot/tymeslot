@@ -6,24 +6,30 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   alias Tymeslot.Emails.Shared.{Components, TemplateHelper, TimezoneHelper}
   alias Tymeslot.Profiles
 
+  @doc """
+  Returns `{html_body, text_body}`, computing the owner's local start time only once.
+  Prefer this over calling `render/2` and `render_text/2` separately when both bodies are needed.
+  """
+  @spec render_both(map(), any()) :: {String.t(), String.t()}
+  def render_both(meeting, error_reason) do
+    error_details = TemplateHelper.format_error_reason(error_reason)
+    owner_start_time = owner_start_time(meeting)
+    {do_render_html(error_details, owner_start_time, meeting), do_render_text(error_details, owner_start_time, meeting)}
+  end
+
   @spec render(map(), any()) :: String.t()
   def render(meeting, error_reason) do
     error_details = TemplateHelper.format_error_reason(error_reason)
+    do_render_html(error_details, owner_start_time(meeting), meeting)
+  end
 
-    # Get owner's timezone from meeting's organizer_user_id
-    owner_timezone =
-      case meeting.organizer_user_id do
-        nil ->
-          # Fallback to default timezone if organizer_user_id is missing
-          "Europe/Kyiv"
+  @spec render_text(map(), any()) :: String.t()
+  def render_text(meeting, error_reason) do
+    error_details = TemplateHelper.format_error_reason(error_reason)
+    do_render_text(error_details, owner_start_time(meeting), meeting)
+  end
 
-        user_id ->
-          Profiles.get_user_timezone(user_id)
-      end
-
-    # Convert meeting time to owner's timezone
-    owner_start_time = TimezoneHelper.convert_to_timezone(meeting.start_time, owner_timezone)
-
+  defp do_render_html(error_details, owner_start_time, meeting) do
     mjml_content = """
     #{Components.alert_box("error",
     "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar.",
@@ -69,5 +75,43 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     """
 
     TemplateHelper.compile_system_template(mjml_content)
+  end
+
+  defp do_render_text(error_details, owner_start_time, meeting) do
+    """
+    Calendar Sync Error — Manual Action Required
+
+    I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar.
+
+    MEETING DETAILS:
+    Date: #{Calendar.strftime(owner_start_time, "%B %d, %Y")}
+    Time: #{Calendar.strftime(owner_start_time, "%I:%M %p")}
+    Duration: #{meeting.duration} minutes
+    Location: #{meeting.location || "Not specified"}
+
+    ERROR DETAILS:
+    #{error_details}
+
+    ACTION REQUIRED:
+    Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.
+
+    Common causes:
+    - CalDAV server temporarily unavailable
+    - Network connectivity issues
+    - Calendar permissions or authentication problems
+    - Maximum retries exceeded
+
+    This is an automated system notification. Please check your calendar sync settings if this issue persists.
+    """
+  end
+
+  defp owner_start_time(meeting) do
+    owner_timezone =
+      case meeting.organizer_user_id do
+        nil -> "Europe/Kyiv"
+        user_id -> Profiles.get_user_timezone(user_id)
+      end
+
+    TimezoneHelper.convert_to_timezone(meeting.start_time, owner_timezone)
   end
 end

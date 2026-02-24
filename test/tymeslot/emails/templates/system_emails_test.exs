@@ -100,6 +100,28 @@ defmodule Tymeslot.Emails.Templates.SystemEmailsTest do
     end
   end
 
+  describe "CalendarSyncError.render_text/2" do
+    test "returns plain text with meeting and error details" do
+      meeting = insert(:meeting, location: "Conference Room A", duration: 60)
+
+      text = CalendarSyncError.render_text(meeting, :network_error)
+
+      assert text =~ "Calendar Sync Error"
+      assert text =~ "Conference Room A"
+      assert text =~ "60 minutes"
+      assert text =~ "manually"
+    end
+
+    test "handles missing organizer_user_id" do
+      meeting = insert(:meeting, organizer_user_id: nil)
+
+      text = CalendarSyncError.render_text(meeting, :unknown_error)
+
+      assert is_binary(text)
+      assert String.length(text) > 100
+    end
+  end
+
   describe "IntegrationUnhealthy.render/3" do
     test "generates valid HTML output for calendar type" do
       user = %{id: 1, email: "user@example.com", name: "Test User"}
@@ -177,14 +199,41 @@ defmodule Tymeslot.Emails.Templates.SystemEmailsTest do
     end
   end
 
+  describe "IntegrationUnhealthy.render_text/3" do
+    test "returns plain text with provider and type details" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :google_calendar}
+
+      text = IntegrationUnhealthy.render_text(user, integration, :calendar)
+
+      assert text =~ "Google calendar"
+      assert text =~ "calendar"
+      assert text =~ "48"
+      assert text =~ "Check Integration Settings"
+    end
+
+    test "handles video type" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :zoom}
+
+      text = IntegrationUnhealthy.render_text(user, integration, :video)
+
+      assert text =~ "Zoom"
+      assert text =~ "video"
+    end
+  end
+
   describe "RescheduleRequest.reschedule_request_email/1" do
-    test "creates valid Swoosh email" do
+    test "creates valid Swoosh email with text_body" do
       meeting = insert(:meeting)
       email = RescheduleRequest.reschedule_request_email(meeting)
 
       assert %Swoosh.Email{} = email
       assert email.subject != nil
       assert email.html_body != nil
+      assert email.text_body != nil
+      assert email.text_body =~ "Reschedule Request"
+      assert email.text_body =~ "Choose a New Time"
     end
 
     test "sets correct recipient as attendee" do
@@ -286,6 +335,47 @@ defmodule Tymeslot.Emails.Templates.SystemEmailsTest do
         assert %Swoosh.Email{} = email
         assert email.html_body != nil
       end
+    end
+  end
+
+  describe "render_text security" do
+    # Plain-text email bodies are not rendered as HTML, so tags are harmless literal
+    # characters. The security properties that matter are: the function never crashes
+    # on adversarial input and the expected structural content is always present.
+
+    test "CalendarSyncError.render_text returns a valid binary with malicious error reason" do
+      meeting = insert(:meeting)
+      text = CalendarSyncError.render_text(meeting, "<script>alert('xss')</script>")
+
+      assert is_binary(text)
+      assert text =~ "Calendar Sync Error"
+      assert text =~ "ACTION REQUIRED"
+    end
+
+    test "CalendarSyncError.render_text returns a valid binary with malicious location" do
+      meeting = insert(:meeting, location: "Room A\nX-Injected: evil-header")
+      text = CalendarSyncError.render_text(meeting, :network_error)
+
+      assert is_binary(text)
+      assert text =~ "Calendar Sync Error"
+    end
+
+    test "IntegrationUnhealthy.render_text returns a valid binary with unusual provider atom" do
+      user = %{id: 1, email: "user@example.com", name: "Test User"}
+      integration = %{provider: :"weird<>provider"}
+
+      text = IntegrationUnhealthy.render_text(user, integration, :calendar)
+
+      assert is_binary(text)
+      assert text =~ "Check Integration Settings"
+    end
+
+    test "RescheduleRequest text_body is always present and contains expected structure with malicious attendee name" do
+      meeting = insert(:meeting, attendee_name: "<script>steal()</script>")
+      email = RescheduleRequest.reschedule_request_email(meeting)
+
+      assert is_binary(email.text_body)
+      assert email.text_body =~ "Choose a New Time"
     end
   end
 end

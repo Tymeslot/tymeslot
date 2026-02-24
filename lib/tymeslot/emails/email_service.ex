@@ -266,13 +266,14 @@ defmodule Tymeslot.Emails.EmailService do
       level: :error
     )
 
-    html_body = CalendarSyncError.render(meeting, error_reason)
+    {html_body, text_body} = CalendarSyncError.render_both(meeting, error_reason)
 
     email =
       MjmlEmail.base_email()
       |> Email.to({meeting.organizer_name || "Calendar Owner", owner_email})
       |> Email.subject("⚠️ Calendar Sync Error - Manual Action Required")
       |> Email.html_body(html_body)
+      |> Email.text_body(text_body)
 
     deliver(email)
   end
@@ -285,12 +286,14 @@ defmodule Tymeslot.Emails.EmailService do
     Logger.info("Sending email verification", user_id: user.id)
 
     html_body = EmailVerification.render(user, verification_url)
+    text_body = EmailVerification.render_text(user, verification_url)
 
     email =
       MjmlEmail.base_email()
       |> Email.to({user.name || user.email, user.email})
       |> Email.subject("Verify your email address")
       |> Email.html_body(html_body)
+      |> Email.text_body(text_body)
 
     deliver(email)
   end
@@ -303,12 +306,14 @@ defmodule Tymeslot.Emails.EmailService do
     Logger.info("Sending password reset email", user_id: user.id)
 
     html_body = PasswordReset.render(user, reset_url)
+    text_body = PasswordReset.render_text(user, reset_url)
 
     email =
       MjmlEmail.base_email()
       |> Email.to({user.name || user.email, user.email})
       |> Email.subject("Reset your password")
       |> Email.html_body(html_body)
+      |> Email.text_body(text_body)
 
     deliver(email)
   end
@@ -325,12 +330,14 @@ defmodule Tymeslot.Emails.EmailService do
     )
 
     html_body = EmailChangeVerification.render(user, new_email, verification_url)
+    text_body = EmailChangeVerification.render_text(user, new_email, verification_url)
 
     email =
       MjmlEmail.base_email()
       |> Email.to({user.name || new_email, new_email})
       |> Email.subject("Verify your new email address")
       |> Email.html_body(html_body)
+      |> Email.text_body(text_body)
 
     deliver(email)
   end
@@ -349,12 +356,14 @@ defmodule Tymeslot.Emails.EmailService do
 
     request_time = DateTime.utc_now()
     html_body = EmailChangeNotification.render(user, new_email, request_time)
+    text_body = EmailChangeNotification.render_text(user, new_email, request_time)
 
     email =
       MjmlEmail.base_email()
       |> Email.to({user.name || user.email, user.email})
       |> Email.subject("⚠️ Email Change Request - Security Alert")
       |> Email.html_body(html_body)
+      |> Email.text_body(text_body)
 
     deliver(email)
   end
@@ -375,23 +384,27 @@ defmodule Tymeslot.Emails.EmailService do
 
     # Send to old email
     html_body_old = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, true)
+    text_body_old = EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, true)
 
     email_old =
       MjmlEmail.base_email()
       |> Email.to({user.name || old_email, old_email})
       |> Email.subject("Email Address Changed - Tymeslot Account")
       |> Email.html_body(html_body_old)
+      |> Email.text_body(text_body_old)
 
     old_result = deliver(email_old)
 
     # Send to new email
     html_body_new = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, false)
+    text_body_new = EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, false)
 
     email_new =
       MjmlEmail.base_email()
       |> Email.to({user.name || new_email, new_email})
       |> Email.subject("Email Address Changed Successfully")
       |> Email.html_body(html_body_new)
+      |> Email.text_body(text_body_new)
 
     new_result = deliver(email_new)
 
@@ -417,6 +430,7 @@ defmodule Tymeslot.Emails.EmailService do
     )
 
     html_body = IntegrationUnhealthy.render(user, integration, type)
+    text_body = IntegrationUnhealthy.render_text(user, integration, type)
     type_label = if type == :video, do: "video", else: "calendar"
 
     email =
@@ -424,6 +438,7 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.to({user.name || user.email, user.email})
       |> Email.subject("Your #{type_label} integration may need attention")
       |> Email.html_body(html_body)
+      |> Email.text_body(text_body)
 
     deliver(email)
   end
@@ -447,21 +462,23 @@ defmodule Tymeslot.Emails.EmailService do
   """
   @spec deliver(Swoosh.Email.t()) :: {:ok, any()} | {:error, any()}
   def deliver(email) do
-    Logger.debug("Delivering email via Mailer",
-      to: email.to,
-      subject: email.subject
-    )
-
-    # Use circuit breaker with retry logic for email delivery
-    CircuitBreaker.call(:email_service_breaker, fn ->
-      Retry.with_backoff(
-        fn -> do_deliver(email) end,
-        max_attempts: 3,
-        initial_delay: 1000,
-        max_delay: 10_000,
-        retriable?: &email_retriable?/1
+    with :ok <- check_text_body(email) do
+      Logger.debug("Delivering email via Mailer",
+        to: email.to,
+        subject: email.subject
       )
-    end)
+
+      # Use circuit breaker with retry logic for email delivery
+      CircuitBreaker.call(:email_service_breaker, fn ->
+        Retry.with_backoff(
+          fn -> do_deliver(email) end,
+          max_attempts: 3,
+          initial_delay: 1000,
+          max_delay: 10_000,
+          retriable?: &email_retriable?/1
+        )
+      end)
+    end
   end
 
   defp do_deliver(email) do
@@ -511,4 +528,14 @@ defmodule Tymeslot.Emails.EmailService do
   defp email_retriable?(:closed), do: true
   defp email_retriable?(:econnrefused), do: true
   defp email_retriable?(_error), do: false
+
+  defp check_text_body(%Swoosh.Email{text_body: body, subject: subject}) when body in [nil, ""] do
+    Logger.error("Refusing to deliver email without a plain-text body",
+      subject: subject
+    )
+
+    {:error, {:missing_text_body, subject}}
+  end
+
+  defp check_text_body(%Swoosh.Email{}), do: :ok
 end

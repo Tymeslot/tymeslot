@@ -394,6 +394,112 @@ defmodule Tymeslot.Emails.Templates.AuthEmailsTest do
     end
   end
 
+  describe "EmailVerification.render_text/2" do
+    test "returns plain text with user name and URL" do
+      user = build_user_data(%{name: "John Doe", email: "john@example.com"})
+      verification_url = "https://example.com/verify/token123"
+
+      text = EmailVerification.render_text(user, verification_url)
+
+      assert text =~ "John Doe"
+      assert text =~ verification_url
+      assert text =~ "24 hours"
+    end
+
+    test "uses email as fallback when name is nil" do
+      user = build_user_data(%{name: nil, email: "user@example.com"})
+      text = EmailVerification.render_text(user, "https://example.com/verify/token")
+
+      assert text =~ "user@example.com"
+    end
+  end
+
+  describe "PasswordReset.render_text/2" do
+    test "returns plain text with user name and URL" do
+      user = build_user_data(%{name: "Alice Johnson", email: "alice@example.com"})
+      reset_url = "https://example.com/reset/token123"
+
+      text = PasswordReset.render_text(user, reset_url)
+
+      assert text =~ "Alice Johnson"
+      assert text =~ reset_url
+      assert text =~ "2 hours"
+    end
+
+    test "uses email as fallback when name is nil" do
+      user = build_user_data(%{name: nil, email: "reset@example.com"})
+      text = PasswordReset.render_text(user, "https://example.com/reset/token")
+
+      assert text =~ "reset@example.com"
+    end
+  end
+
+  describe "EmailChangeVerification.render_text/3" do
+    test "returns plain text with user name, new email, and URL" do
+      user = build_user_data(%{name: "Carol White", email: "carol@example.com"})
+      new_email = "carol.new@example.com"
+      verification_url = "https://example.com/verify-email-change/token123"
+
+      text = EmailChangeVerification.render_text(user, new_email, verification_url)
+
+      assert text =~ "Carol White"
+      assert text =~ new_email
+      assert text =~ verification_url
+      assert text =~ "24 hours"
+    end
+  end
+
+  describe "EmailChangeNotification.render_text/3" do
+    test "returns plain text with request details" do
+      user = build_user_data(%{name: "Eve Davis", email: "eve@example.com"})
+      new_email = "eve.new@example.com"
+      request_time = ~U[2025-01-15 10:30:00Z]
+
+      text = EmailChangeNotification.render_text(user, new_email, request_time)
+
+      assert text =~ "Eve Davis"
+      assert text =~ new_email
+      assert text =~ "eve@example.com"
+      assert text =~ "did NOT request"
+    end
+
+    test "handles nil request_time" do
+      user = build_user_data()
+      text = EmailChangeNotification.render_text(user, "new@example.com", nil)
+
+      assert text =~ "Just now"
+    end
+  end
+
+  describe "EmailChangeConfirmed.render_text/5" do
+    test "returns plain text with change details for new email" do
+      user = build_user_data(%{name: "Grace Lee", email: "grace.new@example.com"})
+      old_email = "grace.old@example.com"
+      new_email = "grace.new@example.com"
+      confirmed_time = ~U[2025-01-15 11:00:00Z]
+
+      text = EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, false)
+
+      assert text =~ old_email
+      assert text =~ new_email
+      assert text =~ "sign in"
+    end
+
+    test "includes recipient notice for old email" do
+      user = build_user_data()
+      text = EmailChangeConfirmed.render_text(user, "old@x.com", "new@x.com", nil, true)
+
+      assert text =~ "previous email address"
+    end
+
+    test "handles nil confirmed_time" do
+      user = build_user_data()
+      text = EmailChangeConfirmed.render_text(user, "old@x.com", "new@x.com", nil, false)
+
+      assert text =~ "Just now"
+    end
+  end
+
   describe "template security and sanitization" do
     test "EmailVerification handles malicious HTML in user name" do
       user = build_user_data(%{name: "<script>alert('xss')</script>", email: "test@example.com"})
@@ -426,6 +532,65 @@ defmodule Tymeslot.Emails.Templates.AuthEmailsTest do
 
       assert is_binary(html)
       assert html =~ new_email
+    end
+  end
+
+  describe "render_text security" do
+    # Plain-text email bodies are not rendered as HTML, so tags are harmless literal
+    # characters. The security properties that matter are: the function never crashes
+    # on adversarial input, the verification/reset URL is always present and intact,
+    # and injection in one field does not displace other expected content.
+
+    test "EmailVerification.render_text returns a valid binary and preserves URL with malicious name" do
+      user = build_user_data(%{name: "<script>alert('xss')</script>", email: "test@example.com"})
+      url = "https://example.com/verify/token"
+      text = EmailVerification.render_text(user, url)
+
+      assert is_binary(text)
+      assert text =~ url
+    end
+
+    test "EmailVerification.render_text URL is intact even when name contains newlines" do
+      user = build_user_data(%{name: "Attacker\n\n", email: "test@example.com"})
+      url = "https://example.com/verify/token"
+      text = EmailVerification.render_text(user, url)
+
+      assert text =~ url
+    end
+
+    test "PasswordReset.render_text returns a valid binary and preserves URL with malicious name" do
+      user = build_user_data(%{name: "<img src=x onerror=alert(1)>", email: "test@example.com"})
+      url = "https://example.com/reset/token"
+      text = PasswordReset.render_text(user, url)
+
+      assert is_binary(text)
+      assert text =~ url
+    end
+
+    test "EmailChangeVerification.render_text returns a valid binary and preserves URL with malicious name" do
+      user = build_user_data(%{name: "<b>Bold</b>", email: "test@example.com"})
+      url = "https://example.com/verify/token"
+      text = EmailChangeVerification.render_text(user, "new@example.com", url)
+
+      assert is_binary(text)
+      assert text =~ url
+    end
+
+    test "EmailChangeNotification.render_text returns a valid binary with malicious user name" do
+      user = build_user_data(%{name: "<script>steal()</script>", email: "test@example.com"})
+      text = EmailChangeNotification.render_text(user, "new@example.com", nil)
+
+      assert is_binary(text)
+      assert text =~ "new@example.com"
+    end
+
+    test "EmailChangeConfirmed.render_text returns a valid binary with malicious user name" do
+      user = build_user_data(%{name: "<script>steal()</script>", email: "new@example.com"})
+      text = EmailChangeConfirmed.render_text(user, "old@example.com", "new@example.com", nil, false)
+
+      assert is_binary(text)
+      assert text =~ "old@example.com"
+      assert text =~ "new@example.com"
     end
   end
 end

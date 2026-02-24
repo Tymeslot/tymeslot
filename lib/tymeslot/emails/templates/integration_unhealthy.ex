@@ -9,12 +9,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
 
   @spec render(map(), map(), atom() | String.t()) :: String.t()
   def render(_user, integration, type) do
-    type_label = humanize_type(type)
-
-    provider_label =
-      integration.provider |> to_string() |> String.replace("_", " ") |> String.capitalize()
-
-    settings_url = settings_url_for_type(type)
+    {type_label, provider_label, settings_url} = labels(integration, type)
 
     mjml_content = """
     #{Components.alert_box("warning", "One of your #{type_label} integrations (#{provider_label}) has been reporting connection issues for over 48 hours. You may want to check your integration settings.", title: "Integration Connection Issues")}
@@ -64,6 +59,40 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
       "Integration Connection Issues",
       "Your #{provider_label} #{type_label} integration needs attention"
     )
+  end
+
+  @spec render_text(map(), map(), atom() | String.t()) :: String.t()
+  def render_text(_user, integration, type) do
+    {type_label, provider_label, settings_url} = labels(integration, type)
+
+    """
+    Integration Connection Issues
+
+    One of your #{type_label} integrations (#{provider_label}) has been reporting connection issues for over 48 hours. You may want to check your integration settings.
+
+    WHAT'S HAPPENING?
+    Your #{provider_label} #{type_label} integration has been failing health checks consistently for the past 48+ hours. This may affect your ability to sync #{type_label}s or create new bookings.
+
+    WHAT SHOULD I DO?
+    - Visit your integration settings to test the connection
+    - Check that your credentials or OAuth tokens are still valid
+    - If you changed your password recently, you may need to reconnect the integration
+    - Contact your #{type_label} provider if the issue persists
+
+    Check Integration Settings:
+    #{settings_url}
+
+    This notification is sent when an integration remains unhealthy for 48+ hours. It will not repeat for 30 days.
+    """
+  end
+
+  defp labels(integration, type) do
+    type_label = humanize_type(type)
+
+    provider_label =
+      integration.provider |> to_string() |> String.replace("_", " ") |> String.capitalize()
+
+    {type_label, provider_label, settings_url_for_type(type)}
   end
 
   defp humanize_type(:calendar), do: "calendar"

@@ -32,4 +32,24 @@ defmodule Tymeslot.Emails.Templates.PasswordReset do
       "Instructions to reset your Tymeslot password."
     )
   end
+
+  @spec render_text(map(), String.t()) :: String.t()
+  def render_text(user, reset_url) do
+    name = user.name || user.email
+
+    """
+    Reset Your Password
+
+    Hi #{name},
+
+    It happens to the best of us! Click the link below to choose a new password and regain access to your account.
+
+    Set New Password:
+    #{reset_url}
+
+    This link is valid for the next 2 hours.
+
+    If you didn't request this change, your account is still secure — you can simply delete this email.
+    """
+  end
 end

@@ -79,6 +79,35 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotification do
     TemplateHelper.compile_system_template(mjml_content, "Security Alert")
   end
 
+  @spec render_text(map(), String.t(), DateTime.t() | nil) :: String.t()
+  def render_text(user, new_email, request_time) do
+    name = user.name || user.email
+
+    """
+    Email Change Request Notification
+
+    Hi #{name},
+
+    This is a security notification to inform you that a request has been made to change your Tymeslot account email address.
+
+    REQUEST DETAILS:
+    New Email: #{new_email}
+    Requested At: #{format_time(request_time)}
+    Current Email: #{user.email}
+    Status: Pending Verification
+
+    WHAT HAPPENS NEXT:
+    - A verification email has been sent to the new address
+    - The change will only be completed after verification
+    - The verification link expires in 24 hours
+    - Your current email remains active until the change is confirmed
+
+    WARNING: If you did NOT request this change, your account may be compromised. Please sign in to your account immediately and change your password.
+
+    If you initiated this change, no further action is required on this email address. You'll need to verify the new email address to complete the change.
+    """
+  end
+
   defp format_time(nil), do: "Just now"
 
   defp format_time(datetime) do

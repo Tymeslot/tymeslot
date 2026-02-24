@@ -44,4 +44,26 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
 
     TemplateHelper.compile_system_template(mjml_content, "Email Change Verification")
   end
+
+  @spec render_text(map(), String.t(), String.t()) :: String.t()
+  def render_text(user, new_email, verification_url) do
+    name = user.name || user.email
+
+    """
+    Verify Your New Email Address
+
+    Hi #{name},
+
+    You've requested to change your Tymeslot email address to #{new_email}.
+
+    To confirm this change, please visit the link below to verify that you have access to this email address.
+
+    Verify New Email Address:
+    #{verification_url}
+
+    This verification link will expire in 24 hours. After verification, your email will be updated and you'll need to use the new email to sign in.
+
+    Important: If you didn't request this email change, please ignore this message. Your account will remain unchanged.
+    """
+  end
 end

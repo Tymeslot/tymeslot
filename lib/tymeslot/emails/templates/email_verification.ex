@@ -30,4 +30,22 @@ defmodule Tymeslot.Emails.Templates.EmailVerification do
       "Welcome to Tymeslot! Please verify your email."
     )
   end
+
+  @spec render_text(map(), String.t()) :: String.t()
+  def render_text(user, verification_url) do
+    name = user.name || user.email
+
+    """
+    Welcome to Tymeslot!
+
+    Hi #{name},
+
+    We're excited to have you on board! To start scheduling meetings and simplify your calendar, please verify your email address.
+
+    Confirm Email & Get Started:
+    #{verification_url}
+
+    For your security, this link expires in 24 hours. If you didn't sign up for Tymeslot, no further action is needed.
+    """
+  end
 end

@@ -69,5 +69,32 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
       "Reschedule Request: #{meeting.title} - #{SharedHelpers.format_date_short(attendee_time)}"
     )
     |> html_body(html_body)
+    |> text_body(build_text_body(meeting, attendee_time))
+  end
+
+  defp build_text_body(meeting, attendee_time) do
+    """
+    Reschedule Request
+
+    Hi #{meeting.attendee_name},
+
+    I need to reschedule our upcoming meeting. Could you please select a new time that works for you?
+
+    CANCELLED APPOINTMENT DETAILS:
+    Date: #{SharedHelpers.format_date_short(attendee_time)}
+    Duration: #{meeting.duration} minutes
+    Location: #{meeting.location || "To be determined"}
+    Type: #{meeting.meeting_type || "Meeting"}
+    Timezone: #{meeting.attendee_timezone || "UTC"}
+
+    I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.
+
+    Choose a New Time:
+    #{meeting.reschedule_url}
+
+    Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.
+
+    Thank you for your understanding and flexibility.
+    """
   end
 end

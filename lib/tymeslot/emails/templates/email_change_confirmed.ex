@@ -92,6 +92,47 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
     TemplateHelper.compile_system_template(mjml_content, "Account Update")
   end
 
+  @spec render_text(map(), String.t(), String.t(), DateTime.t() | nil, boolean()) :: String.t()
+  def render_text(user, old_email, new_email, confirmed_time, is_old_email \\ false) do
+    name = user.name || new_email
+
+    recipient_notice =
+      if is_old_email do
+        "\nNote: This notification is being sent to your previous email address for security purposes.\n"
+      else
+        ""
+      end
+
+    security_notice =
+      if is_old_email do
+        "WARNING: If you did NOT authorize this change, please contact support immediately. You will no longer receive emails at this address."
+      else
+        "For security reasons, we've also sent a copy of this confirmation to your previous email address."
+      end
+
+    """
+    Email Change Confirmed
+
+    Hi #{name},
+    #{recipient_notice}
+    Your Tymeslot account email address has been successfully changed.
+
+    CHANGE DETAILS:
+    Previous Email: #{old_email}
+    New Email: #{new_email}
+    Changed At: #{format_time(confirmed_time)}
+    Status: Active
+
+    WHAT YOU NEED TO KNOW:
+    - Use #{new_email} to sign in from now on
+    - All future emails will be sent to your new address
+    - Your meetings and settings remain unchanged
+    - You may need to sign in again on other devices
+
+    #{security_notice}
+    """
+  end
+
   defp format_time(nil), do: "Just now"
 
   defp format_time(datetime) do
