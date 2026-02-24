@@ -100,6 +100,7 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
     |> URLValidator.validate_url(:base_url)
     |> encrypt_credentials()
     |> foreign_key_constraint(:user_id)
+    |> check_constraint(:provider, name: :calendar_integrations_provider_check)
     |> unique_constraint(:default_booking_calendar_id,
       name: :unique_booking_calendar_per_user
     )
