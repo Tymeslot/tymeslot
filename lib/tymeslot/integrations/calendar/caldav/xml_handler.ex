@@ -88,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
       |> Enum.filter(fn cal -> cal.is_calendar end)
       |> Enum.map(fn cal ->
         %{
-          id: cal.href,
+          id: URI.decode(cal.href),
           name: determine_calendar_name(cal),
           href: cal.href,
           color: cal.calendar_color,
