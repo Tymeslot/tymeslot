@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
   import Mox
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
+  import Tymeslot.TestHelpers.Eventually
 
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.Repo
@@ -65,10 +66,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/video")
 
       view
-      |> element("button", "Test")
+      |> element("div.hidden button[phx-click='test_connection']")
       |> render_click()
 
-      assert render(view) =~ "MiroTalk connection verified"
+      eventually(fn ->
+        assert render(view) =~ "MiroTalk connection verified"
+      end)
     end
 
     test "navigates to setup form for mirotalk", %{conn: conn} do
@@ -151,7 +154,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert render(view) =~ "To Delete"
 
       view
-      |> element("button[title='Delete Integration']")
+      |> element("div.hidden button[title='Delete Integration']")
       |> render_click()
 
       # Confirm delete in modal
