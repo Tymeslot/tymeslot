@@ -71,7 +71,9 @@ defmodule Tymeslot.Integrations.Video.Connection do
     }
   end
 
-  defp build_config(:custom, _integration, _decrypted), do: %{}
+  defp build_config(:custom, integration, _decrypted) do
+    %{custom_meeting_url: integration.custom_meeting_url}
+  end
   defp build_config(:none, _integration, _decrypted), do: %{}
   defp build_config(_provider, _integration, _decrypted), do: %{}
 end

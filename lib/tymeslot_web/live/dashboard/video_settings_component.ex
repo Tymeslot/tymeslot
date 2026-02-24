@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.Dashboard.Integrations.ProviderCard
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
+  alias TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow
@@ -199,27 +200,40 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
     with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
       int_id = normalize_id(id)
-      socket = assign(socket, :testing_connection, int_id)
+      provider = get_provider_name(socket, int_id)
 
-      case Video.test_connection(user_id, int_id) do
-        {:ok, message} ->
-          provider = get_provider_name(socket, int_id)
+      socket =
+        socket
+        |> assign(:testing_connection, int_id)
+        |> start_async(:test_connection, fn ->
+          {provider, Video.test_connection(user_id, int_id)}
+        end)
 
-          notify_parent(
-            {:flash, {:info, IntegrationProviders.format_test_success_message(provider, message)}}
-          )
-
-          {:noreply, assign(socket, :testing_connection, nil)}
-
-        {:error, reason} when is_binary(reason) ->
-          notify_parent({:flash, {:error, reason}})
-          {:noreply, assign(socket, :testing_connection, nil)}
-
-        {:error, reason} ->
-          notify_parent({:flash, {:error, "Connection test failed: #{inspect(reason)}"}})
-          {:noreply, assign(socket, :testing_connection, nil)}
-      end
+      {:noreply, socket}
     end)
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_async(:test_connection, {:ok, {provider, result}}, socket) do
+    case result do
+      {:ok, message} ->
+        notify_parent(
+          {:flash, {:info, IntegrationProviders.format_test_success_message(provider, message)}}
+        )
+
+      {:error, reason} when is_binary(reason) ->
+        notify_parent({:flash, {:error, reason}})
+
+      {:error, reason} ->
+        notify_parent({:flash, {:error, "Connection test failed: #{inspect(reason)}"}})
+    end
+
+    {:noreply, assign(socket, :testing_connection, nil)}
+  end
+
+  def handle_async(:test_connection, {:exit, reason}, socket) do
+    notify_parent({:flash, {:error, "Connection test failed unexpectedly: #{inspect(reason)}"}})
+    {:noreply, assign(socket, :testing_connection, nil)}
   end
 
   @impl Phoenix.LiveComponent
@@ -351,6 +365,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           </div>
         </div>
       <% end %>
+
+      <!-- Edit Integration Modal -->
+      <.live_component
+        module={EditVideoIntegrationModal}
+        id="edit-video-modal"
+        integrations={@integrations}
+        current_user={@current_user}
+      />
 
       <!-- Delete Confirmation Modal -->
       <.live_component

@@ -83,6 +83,16 @@ defmodule Tymeslot.Integrations.Video do
   defp do_create_integration(_unknown, _attrs), do: {:error, :unknown_provider}
 
   # ---------------
+  # Update
+  # ---------------
+  @spec update_integration(pos_integer(), pos_integer(), map()) :: {:ok, any()} | {:error, any()}
+  def update_integration(user_id, id, attrs) when is_integer(user_id) and is_integer(id) do
+    with {:ok, integration} <- VideoIntegrationQueries.get_for_user(id, user_id) do
+      VideoIntegrationQueries.update(integration, attrs)
+    end
+  end
+
+  # ---------------
   # Delete
   # ---------------
   @spec delete_integration(pos_integer(), pos_integer()) :: {:ok, :deleted} | {:error, any()}

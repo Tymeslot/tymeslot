@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
                   <span>{URI.parse(@integration.base_url).host}</span>
                 <% end %>
                 <%= if Map.get(@integration, :custom_meeting_url) do %>
-                  <span>Static meeting URL configured</span>
+                  <span class="truncate"><%= @integration.custom_meeting_url %></span>
                 <% end %>
               <% else %>
                 <span class="text-gray-500 italic">Integration is currently disabled</span>
@@ -111,6 +111,16 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
               <% end %>
             </button>
           <% end %>
+
+          <button
+            phx-click="show"
+            phx-value-id={@integration.id}
+            phx-target="#edit-video-modal"
+            class="text-gray-500 hover:text-turquoise-600 transition-colors p-2"
+            title="Edit Integration"
+          >
+            <.icon name="hero-pencil-square" class="w-5 h-5" />
+          </button>
 
           <button
             phx-click="show"
