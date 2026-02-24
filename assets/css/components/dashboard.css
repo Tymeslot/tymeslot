@@ -367,10 +367,14 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 30;
+    z-index: 60;
     background-color: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
+  }
+
+  .dashboard-sidebar {
+    z-index: 70;
   }
   
   /* Touch-optimized navigation links */
