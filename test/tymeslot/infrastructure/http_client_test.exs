@@ -17,8 +17,11 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
 
   describe "request/5 method normalization" do
     test "accepts known string methods and converts to atoms" do
-      assert {:ok, %Req.Response{status: 200}} = HTTPClient.request("GET", "http://localhost/test")
-      assert {:ok, %Req.Response{status: 200}} = HTTPClient.request("post", "http://localhost/test")
+      assert {:ok, %Req.Response{status: 200}} =
+               HTTPClient.request("GET", "http://localhost/test")
+
+      assert {:ok, %Req.Response{status: 200}} =
+               HTTPClient.request("post", "http://localhost/test")
     end
 
     test "passes non-standard CalDAV methods as uppercase strings to Req" do
@@ -28,7 +31,8 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
       end)
 
       for method <- [:propfind, :report] do
-        assert {:ok, %Req.Response{status: 207}} = HTTPClient.request(method, "http://localhost/cal")
+        assert {:ok, %Req.Response{status: 207}} =
+                 HTTPClient.request(method, "http://localhost/cal")
       end
     end
 

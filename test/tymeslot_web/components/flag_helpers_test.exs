@@ -53,7 +53,11 @@ defmodule TymeslotWeb.Components.FlagHelpersTest do
 
   describe "timezone_flag/1" do
     test "renders flag for a timezone with a known flag" do
-      html = render_component(&FlagHelpers.timezone_flag/1, timezone: "America/New_York", class: "w-6 h-4")
+      html =
+        render_component(&FlagHelpers.timezone_flag/1,
+          timezone: "America/New_York",
+          class: "w-6 h-4"
+        )
 
       assert html =~ "<svg"
     end

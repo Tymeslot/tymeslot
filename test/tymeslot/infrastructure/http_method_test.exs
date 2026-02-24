@@ -21,8 +21,11 @@ defmodule Tymeslot.Infrastructure.HTTPMethodTest do
     end
 
     test "accepts valid string methods (any case)" do
-      assert {:ok, %Req.Response{status: 200}} = HTTPClient.request("GET", "http://localhost/test")
-      assert {:ok, %Req.Response{status: 200}} = HTTPClient.request("post", "http://localhost/test")
+      assert {:ok, %Req.Response{status: 200}} =
+               HTTPClient.request("GET", "http://localhost/test")
+
+      assert {:ok, %Req.Response{status: 200}} =
+               HTTPClient.request("post", "http://localhost/test")
     end
 
     test "rejects unknown string methods without creating atoms" do

@@ -11,7 +11,15 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   @grid_start_minutes 6 * 60
   @grid_total_minutes 990
 
-  @days [{"Monday", 1}, {"Tuesday", 2}, {"Wednesday", 3}, {"Thursday", 4}, {"Friday", 5}, {"Saturday", 6}, {"Sunday", 7}]
+  @days [
+    {"Monday", 1},
+    {"Tuesday", 2},
+    {"Wednesday", 3},
+    {"Thursday", 4},
+    {"Friday", 5},
+    {"Saturday", 6},
+    {"Sunday", 7}
+  ]
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -162,7 +170,12 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   end
 
   # Computes display data for a single mobile timeline row.
-  defp mobile_row_data(%{is_available: true, start_time: %Time{} = start_time, end_time: %Time{} = end_time, breaks: breaks}) do
+  defp mobile_row_data(%{
+         is_available: true,
+         start_time: %Time{} = start_time,
+         end_time: %Time{} = end_time,
+         breaks: breaks
+       }) do
     start_min = time_to_minutes(start_time)
     end_min = time_to_minutes(end_time)
 
@@ -171,7 +184,13 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
       |> Enum.map(fn b ->
         b_start = max(time_to_minutes(b.start_time), start_min)
         b_end = min(time_to_minutes(b.end_time), end_min)
-        if b_end > b_start, do: %{left: bar_left(b_start), width: bar_width(b_start, b_end), label: b.label || "Break"}
+
+        if b_end > b_start,
+          do: %{
+            left: bar_left(b_start),
+            width: bar_width(b_start, b_end),
+            label: b.label || "Break"
+          }
       end)
       |> Enum.reject(&is_nil/1)
 
@@ -184,7 +203,8 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
     }
   end
 
-  defp mobile_row_data(_row), do: %{active: false, left: 0, width: 0, label: "Unavailable", breaks: []}
+  defp mobile_row_data(_row),
+    do: %{active: false, left: 0, width: 0, label: "Unavailable", breaks: []}
 
   # Helper Functions
 

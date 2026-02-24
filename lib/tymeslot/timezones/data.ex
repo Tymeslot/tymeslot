@@ -67,7 +67,7 @@ defmodule Tymeslot.Timezones.Data do
     "America/North_Dakota/New_Salem" => "New Salem"
   }
 
-  @enrich_entry (fn entry, overrides ->
+  @enrich_entry fn entry, overrides ->
     city =
       Map.get(overrides, entry.time_zone_id) ||
         entry.time_zone_id
@@ -83,52 +83,54 @@ defmodule Tymeslot.Timezones.Data do
       country_name: entry.country.name,
       country_code: entry.country.code
     }
-  end)
+  end
 
   # All entries from TzExtra, enriched with city/country info.
   # A timezone_id can appear multiple times (once per country that uses it).
   @all_entries (
-    enrich = @enrich_entry
-    overrides = @label_overrides
+                 enrich = @enrich_entry
+                 overrides = @label_overrides
 
-    TzExtra.countries_time_zones()
-    |> Enum.map(&enrich.(&1, overrides))
-    |> Enum.sort_by(& &1.label)
-  )
+                 TzExtra.countries_time_zones()
+                 |> Enum.map(&enrich.(&1, overrides))
+                 |> Enum.sort_by(& &1.label)
+               )
 
   # Primary entry per timezone_id: first entry wins (TzExtra returns the
   # "home" country first — e.g. Belgium for Europe/Brussels), with
   # @country_overrides applied afterwards for disputed territories.
   @primary_entries (
-    enrich = @enrich_entry
-    label_overrides = @label_overrides
-    country_overrides = @country_overrides
+                     enrich = @enrich_entry
+                     label_overrides = @label_overrides
+                     country_overrides = @country_overrides
 
-    all_tz_entries = TzExtra.countries_time_zones()
+                     all_tz_entries = TzExtra.countries_time_zones()
 
-    # Index all entries by {timezone_id, country_code} for override lookup
-    by_tz_and_country =
-      Map.new(all_tz_entries, fn entry ->
-        {{entry.time_zone_id, entry.country.code}, entry}
-      end)
+                     # Index all entries by {timezone_id, country_code} for override lookup
+                     by_tz_and_country =
+                       Map.new(all_tz_entries, fn entry ->
+                         {{entry.time_zone_id, entry.country.code}, entry}
+                       end)
 
-    all_tz_entries
-    |> Enum.reduce(%{}, fn entry, acc ->
-      Map.put_new(acc, entry.time_zone_id, entry)
-    end)
-    |> Enum.map(fn {tz_id, entry} ->
-      # Apply country override if one exists for this timezone
-      case Map.get(country_overrides, tz_id) do
-        nil ->
-          enrich.(entry, label_overrides)
+                     all_tz_entries
+                     |> Enum.reduce(%{}, fn entry, acc ->
+                       Map.put_new(acc, entry.time_zone_id, entry)
+                     end)
+                     |> Enum.map(fn {tz_id, entry} ->
+                       # Apply country override if one exists for this timezone
+                       case Map.get(country_overrides, tz_id) do
+                         nil ->
+                           enrich.(entry, label_overrides)
 
-        override_code ->
-          override_entry = Map.get(by_tz_and_country, {tz_id, override_code}, entry)
-          enrich.(override_entry, label_overrides)
-      end
-    end)
-    |> Enum.sort_by(& &1.label)
-  )
+                         override_code ->
+                           override_entry =
+                             Map.get(by_tz_and_country, {tz_id, override_code}, entry)
+
+                           enrich.(override_entry, label_overrides)
+                       end
+                     end)
+                     |> Enum.sort_by(& &1.label)
+                   )
 
   # Options list uses deduplicated primary entries (one per timezone_id)
   @options Enum.map(@primary_entries, fn e -> {e.label, e.timezone_id} end)
@@ -140,26 +142,26 @@ defmodule Tymeslot.Timezones.Data do
 
   # Search index uses ALL entries (so searching "Netherlands" finds Europe/Brussels)
   @search_index (
-    primary_by_id = Map.new(@primary_entries, fn e -> {e.timezone_id, e} end)
+                  primary_by_id = Map.new(@primary_entries, fn e -> {e.timezone_id, e} end)
 
-    # Index all entries (including duplicate timezone_ids for different countries)
-    base_index =
-      Enum.map(@all_entries, fn entry ->
-        primary = Map.fetch!(primary_by_id, entry.timezone_id)
-        {String.downcase(entry.label), primary}
-      end)
+                  # Index all entries (including duplicate timezone_ids for different countries)
+                  base_index =
+                    Enum.map(@all_entries, fn entry ->
+                      primary = Map.fetch!(primary_by_id, entry.timezone_id)
+                      {String.downcase(entry.label), primary}
+                    end)
 
-    # Add search aliases
-    alias_index =
-      Enum.flat_map(@search_aliases, fn {alias_name, tz_id} ->
-        case Map.get(primary_by_id, tz_id) do
-          nil -> []
-          entry -> [{alias_name, entry}]
-        end
-      end)
+                  # Add search aliases
+                  alias_index =
+                    Enum.flat_map(@search_aliases, fn {alias_name, tz_id} ->
+                      case Map.get(primary_by_id, tz_id) do
+                        nil -> []
+                        entry -> [{alias_name, entry}]
+                      end
+                    end)
 
-    base_index ++ alias_index
-  )
+                  base_index ++ alias_index
+                )
 
   @spec all_options() :: [{String.t(), String.t()}]
   def all_options, do: @options
@@ -177,7 +179,9 @@ defmodule Tymeslot.Timezones.Data do
     @search_index
     |> Enum.filter(fn {key, _entry} -> String.contains?(key, search_lower) end)
     |> Enum.uniq_by(fn {_key, entry} -> entry.timezone_id end)
-    |> Enum.map(fn {_key, entry} -> {entry.label, entry.timezone_id, Formatting.utc_offset(entry.timezone_id)} end)
+    |> Enum.map(fn {_key, entry} ->
+      {entry.label, entry.timezone_id, Formatting.utc_offset(entry.timezone_id)}
+    end)
     |> Enum.take(50)
   end
 
@@ -229,5 +233,4 @@ defmodule Tymeslot.Timezones.Data do
   end
 
   def flag_exists?(_other), do: false
-
 end
