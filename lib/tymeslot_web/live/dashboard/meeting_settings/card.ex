@@ -17,10 +17,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   def meeting_type_card(assigns) do
     ~H"""
     <div class={[
-      "card-glass flex items-center justify-between py-3 px-4",
+      "card-glass py-3 px-4",
       if(@type.is_active, do: "card-glass-available", else: "card-glass-unavailable")
     ]}>
-      <div class="flex items-center space-x-4 flex-grow min-w-0">
+      <div class="flex items-center gap-3">
         <!-- Drag Handle -->
         <div class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 flex-shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -37,12 +37,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           <span class={[@type.icon, "w-5 h-5 text-tymeslot-600 flex-shrink-0"]} />
         <% end %>
 
-        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 min-w-0 flex-grow">
-          <h3 class="text-token-base font-medium text-tymeslot-800 truncate w-48">
+        <!-- Name + details -->
+        <div class="flex-1 min-w-0">
+          <h3 class="text-token-base font-medium text-tymeslot-800 truncate">
             {@type.name}
           </h3>
-          <div class="flex items-center space-x-3 text-token-xs text-tymeslot-600 flex-shrink-0">
-            <span class="flex items-center w-20 flex-shrink-0">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-token-xs text-tymeslot-600">
+            <span class="flex items-center flex-shrink-0">
               <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
@@ -53,65 +54,62 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               </svg>
               {@type.duration_minutes} min
             </span>
-            <div class="flex flex-col space-y-1 w-52">
-              <%= if @type.allow_video do %>
-                <span class="flex items-center w-full min-w-0">
-                  <%= if @type.video_integration do %>
-                    <span class="mr-1.5 flex-shrink-0">
-                      <ProviderIcon.provider_icon
-                        provider={@type.video_integration.provider}
-                        size={@icon_size}
-                      />
-                    </span>
-                    <span class="flex-1 min-w-0 truncate">
-                      {@type.video_integration.name}
-                    </span>
-                  <% else %>
-                    <svg
-                      class="w-3.5 h-3.5 mr-1 text-blue-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
-                  <span class="flex-1 min-w-0 truncate">Video</span>
-                  <% end %>
-                </span>
-              <% else %>
-                <span class="flex items-center w-full min-w-0">
-                  <ProviderIcon.provider_icon provider="in_person" size={@icon_size} class="mr-1" />
-                  <span class="flex-1 min-w-0 truncate">In-person</span>
-                </span>
-              <% end %>
-              <%= if @type.calendar_integration do %>
-                <span class="flex items-center w-full min-w-0">
+            <%= if @type.allow_video do %>
+              <span class="flex items-center min-w-0">
+                <%= if @type.video_integration do %>
                   <span class="mr-1.5 flex-shrink-0">
                     <ProviderIcon.provider_icon
-                      provider={@type.calendar_integration.provider}
+                      provider={@type.video_integration.provider}
                       size={@icon_size}
                     />
                   </span>
-                  <span class="flex-1 min-w-0 truncate">
-                    {@type.calendar_integration.name}
+                  <span class="truncate max-w-[10rem]">
+                    {@type.video_integration.name}
                   </span>
-                  <span class="ml-1 text-tymeslot-500 flex-shrink-0">
-                    ({calendar_display_name(@type)})
-                  </span>
+                <% else %>
+                  <svg
+                    class="w-3.5 h-3.5 mr-1 text-blue-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span>Video</span>
+                <% end %>
+              </span>
+            <% else %>
+              <span class="flex items-center">
+                <ProviderIcon.provider_icon provider="in_person" size={@icon_size} class="mr-1" />
+                <span>In-person</span>
+              </span>
+            <% end %>
+            <%= if @type.calendar_integration do %>
+              <span class="flex items-center min-w-0">
+                <span class="mr-1.5 flex-shrink-0">
+                  <ProviderIcon.provider_icon
+                    provider={@type.calendar_integration.provider}
+                    size={@icon_size}
+                  />
                 </span>
-              <% end %>
-            </div>
+                <span class="truncate max-w-[8rem]">
+                  {@type.calendar_integration.name}
+                </span>
+                <span class="ml-1 text-tymeslot-500 flex-shrink-0">
+                  ({calendar_display_name(@type)})
+                </span>
+              </span>
+            <% end %>
           </div>
         </div>
-      </div>
 
-      <div class="flex items-center space-x-3 flex-shrink-0 ml-4">
-        <div class="hidden sm:flex items-center space-x-2">
+        <!-- Actions -->
+        <div class="flex items-center gap-1.5 flex-shrink-0">
           <button
             phx-click="edit_type"
             phx-value-id={@type.id}
@@ -145,51 +143,51 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
               />
             </svg>
           </button>
-        </div>
 
-        <button
-          phx-click="toggle_type"
-          phx-value-id={@type.id}
-          phx-target={@myself}
-          class={[
-            "relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2",
-            if(@type.is_active,
-              do: "bg-teal-500 border-teal-500",
-              else: "bg-tymeslot-300 border-tymeslot-300"
-            )
-          ]}
-          role="switch"
-          aria-checked={@type.is_active}
-          aria-label={"Toggle #{@type.name} availability"}
-        >
-          <span class={[
-            "pointer-events-none relative inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-            if(@type.is_active, do: "translate-x-4", else: "translate-x-0")
-          ]}>
+          <button
+            phx-click="toggle_type"
+            phx-value-id={@type.id}
+            phx-target={@myself}
+            class={[
+              "relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2",
+              if(@type.is_active,
+                do: "bg-teal-500 border-teal-500",
+                else: "bg-tymeslot-300 border-tymeslot-300"
+              )
+            ]}
+            role="switch"
+            aria-checked={@type.is_active}
+            aria-label={"Toggle #{@type.name} availability"}
+          >
             <span class={[
-              "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in-out",
-              if(@type.is_active, do: "opacity-0", else: "opacity-100")
+              "pointer-events-none relative inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+              if(@type.is_active, do: "translate-x-4", else: "translate-x-0")
             ]}>
-              <svg class="h-2.5 w-2.5 text-tymeslot-400" fill="none" viewBox="0 0 12 12">
-                <path
-                  d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
+              <span class={[
+                "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in-out",
+                if(@type.is_active, do: "opacity-0", else: "opacity-100")
+              ]}>
+                <svg class="h-2.5 w-2.5 text-tymeslot-400" fill="none" viewBox="0 0 12 12">
+                  <path
+                    d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+              <span class={[
+                "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in-out",
+                if(@type.is_active, do: "opacity-100", else: "opacity-0")
+              ]}>
+                <svg class="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 12 12">
+                  <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 7l-.707.707a1 1 0 001.414 0L5 7zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
+                </svg>
+              </span>
             </span>
-            <span class={[
-              "absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200 ease-in-out",
-              if(@type.is_active, do: "opacity-100", else: "opacity-0")
-            ]}>
-              <svg class="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 12 12">
-                <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 7l-.707.707a1 1 0 001.414 0L5 7zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
-              </svg>
-            </span>
-          </span>
-        </button>
+          </button>
+        </div>
       </div>
     </div>
     """

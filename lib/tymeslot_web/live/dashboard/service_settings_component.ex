@@ -309,7 +309,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
           data-action={if @editing_type, do: "edit-#{@editing_type.id}", else: "new"}
           class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
         >
-          <div class="flex items-center justify-between bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm">
+          <div class="flex items-start justify-between bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm">
             <.section_header
               level={2}
               icon={:grid}
@@ -318,12 +318,12 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
             <button
               phx-click={if @editing_type, do: "close_edit_overlay", else: "toggle_add_form"}
               phx-target={@myself}
-              class="flex items-center gap-2 px-4 py-2 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all"
+              class="flex-shrink-0 p-2 rounded-lg text-tymeslot-500 hover:text-tymeslot-700 hover:bg-tymeslot-100 transition-colors"
+              title="Close"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
               </svg>
-              Close
             </button>
           </div>
 
