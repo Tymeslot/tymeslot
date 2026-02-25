@@ -26,9 +26,13 @@ msgstr "Вкажіть електронну пошту"
 msgid "email_invalid"
 msgstr "Введіть коректну електронну адресу"
 
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:31
+#, elixir-autogen
 msgid "calendar_setup_required"
 msgstr "Ми поки що не можемо показати цю сторінку планування"
 
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:44
+#, elixir-autogen
 msgid "connect_calendar_first"
 msgstr "Якщо ви організатор, підключіть календар на панелі керування."
 

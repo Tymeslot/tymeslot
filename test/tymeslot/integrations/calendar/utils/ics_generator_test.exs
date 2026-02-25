@@ -144,6 +144,72 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
     end
   end
 
+  describe "locale-aware ICS content" do
+    test "translates 'Video Call' location into German" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        meeting_url: "https://meet.example.com/room123"
+      }
+
+      ics_content = IcsGenerator.generate_ics(meeting_details, "de")
+
+      assert ics_content =~ "LOCATION:Videoanruf"
+      refute ics_content =~ "LOCATION:Video Call"
+    end
+
+    test "translates video meeting label in description into German" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        meeting_url: "https://meet.example.com/room123"
+      }
+
+      ics_content = IcsGenerator.generate_ics(meeting_details, "de")
+
+      assert ics_content =~ "Video-Meeting:"
+      refute ics_content =~ "Video meeting:"
+    end
+
+    test "translates attendee message label into German" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        attendee_name: "Klaus",
+        attendee_message: "Freue mich auf unser Gespräch"
+      }
+
+      ics_content = IcsGenerator.generate_ics(meeting_details, "de")
+
+      assert ics_content =~ "Nachricht von Klaus:"
+      refute ics_content =~ "Message from Klaus:"
+    end
+
+    test "English locale produces English strings" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        meeting_url: "https://meet.example.com/room123"
+      }
+
+      ics_content = IcsGenerator.generate_ics(meeting_details, "en")
+
+      assert ics_content =~ "LOCATION:Video Call"
+    end
+  end
+
   describe "escaping and edge cases" do
     test "escapes special iCalendar characters in description" do
       meeting_details = %{
@@ -213,7 +279,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
     end
   end
 
-  describe "generate_ics_attachment/2" do
+  describe "generate_ics_attachment/3" do
     test "creates valid Swoosh attachment with ICS content" do
       meeting_details = %{
         title: "Test Meeting",
@@ -242,7 +308,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
         organizer_email: "john@example.com"
       }
 
-      attachment = IcsGenerator.generate_ics_attachment(meeting_details, "custom-invite.ics")
+      attachment = IcsGenerator.generate_ics_attachment(meeting_details, "en", "custom-invite.ics")
 
       assert attachment.filename == "custom-invite.ics"
     end

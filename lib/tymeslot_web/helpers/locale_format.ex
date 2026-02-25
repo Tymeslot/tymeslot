@@ -12,11 +12,15 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   """
   @spec format_date(Calendar.date(), String.t()) :: String.t()
   def format_date(date, locale) do
+    month_name = format_month_name(date.month, locale)
+    day_padded = String.pad_leading(to_string(date.day), 2, "0")
+
     case locale do
-      "en" -> Calendar.strftime(date, "%B %d, %Y")
-      "de" -> Calendar.strftime(date, "%d. %B %Y")
-      "uk" -> Calendar.strftime(date, "%d %B %Y")
-      _other_locale -> Calendar.strftime(date, "%B %d, %Y")
+      "en" -> "#{month_name} #{day_padded}, #{date.year}"
+      "de" -> "#{date.day}. #{month_name} #{date.year}"
+      "uk" -> "#{date.day} #{month_name} #{date.year}"
+      "fr" -> "#{date.day} #{month_name} #{date.year}"
+      _other_locale -> "#{month_name} #{day_padded}, #{date.year}"
     end
   end
 
@@ -32,6 +36,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       "en" -> Calendar.strftime(time, "%I:%M %p")
       "de" -> Calendar.strftime(time, "%H:%M")
       "uk" -> Calendar.strftime(time, "%H:%M")
+      "fr" -> Calendar.strftime(time, "%H:%M")
       _other_locale -> Calendar.strftime(time, "%I:%M %p")
     end
   end
@@ -60,18 +65,34 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
       "uk" ->
         [
-          "Січень",
-          "Лютий",
-          "Березень",
-          "Квітень",
-          "Травень",
-          "Червень",
-          "Липень",
-          "Серпень",
-          "Вересень",
-          "Жовтень",
-          "Листопад",
-          "Грудень"
+          "січня",
+          "лютого",
+          "березня",
+          "квітня",
+          "травня",
+          "червня",
+          "липня",
+          "серпня",
+          "вересня",
+          "жовтня",
+          "листопада",
+          "грудня"
+        ]
+
+      "fr" ->
+        [
+          "janvier",
+          "février",
+          "mars",
+          "avril",
+          "mai",
+          "juin",
+          "juillet",
+          "août",
+          "septembre",
+          "octobre",
+          "novembre",
+          "décembre"
         ]
 
       _other_locale ->
@@ -116,6 +137,15 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
       {"uk", :narrow} ->
         ["Н", "П", "В", "С", "Ч", "П", "С"]
+
+      {"fr", :full} ->
+        ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]
+
+      {"fr", :short} ->
+        ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"]
+
+      {"fr", :narrow} ->
+        ["D", "L", "M", "M", "J", "V", "S"]
 
       {_other_locale, :full} ->
         ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -183,9 +213,11 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
   defp thousand_separator("de"), do: "."
   defp thousand_separator("uk"), do: " "
+  defp thousand_separator("fr"), do: " "
   defp thousand_separator(_other_locale), do: ","
 
   defp decimal_separator("de"), do: ","
   defp decimal_separator("uk"), do: ","
+  defp decimal_separator("fr"), do: ","
   defp decimal_separator(_other_locale), do: "."
 end

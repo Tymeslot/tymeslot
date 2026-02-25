@@ -368,5 +368,46 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       assert result.time_until == "1 hour"
       assert result.time_until_friendly == "in 1 hour"
     end
+
+    test "includes attendee_locale in appointment details" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert Map.has_key?(result, :attendee_locale)
+      assert is_binary(result.attendee_locale)
+    end
+
+    test "propagates attendee_locale from meeting to appointment details" do
+      %{user: user} = create_user_with_profile()
+      # Default factory sets attendee_locale: "en"
+      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.attendee_locale == "en"
+    end
+
+    test "propagates non-English attendee_locale from meeting to appointment details" do
+      %{user: user} = create_user_with_profile()
+      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600, attendee_locale: "de"})
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.attendee_locale == "de"
+    end
+
+    test "localized_reminder_label reflects attendee_locale" do
+      %{user: user} = create_user_with_profile()
+
+      en_meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600, attendee_locale: "en"})
+      de_meeting = insert_meeting_for_user(user, %{start_offset: 7200, duration: 3600, attendee_locale: "de"})
+
+      en_result = AppointmentBuilder.from_meeting(en_meeting, %{value: 15, unit: "minutes"})
+      de_result = AppointmentBuilder.from_meeting(de_meeting, %{value: 15, unit: "minutes"})
+
+      refute en_result.reminder_time == de_result.reminder_time
+    end
   end
 end

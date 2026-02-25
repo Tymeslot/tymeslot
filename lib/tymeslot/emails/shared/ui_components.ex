@@ -21,6 +21,8 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
   alias Tymeslot.Emails.Shared.Styles
   alias Tymeslot.Security.UrlValidation
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @doc """
   Generates a centered logo header for system emails.
   """
@@ -235,7 +237,7 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
           line-height="1.5"
           align="center"
         >
-          Having trouble with the button? Copy and paste this link into your browser:
+          #{dgettext("emails", "Having trouble with the button? Copy and paste this link into your browser:")}
         </mj-text>
         <mj-text
           font-size="12px"

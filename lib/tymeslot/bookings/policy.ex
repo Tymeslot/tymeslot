@@ -5,6 +5,7 @@ defmodule Tymeslot.Bookings.Policy do
   """
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
+  alias Tymeslot.Locales
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
@@ -105,6 +106,7 @@ defmodule Tymeslot.Bookings.Policy do
         attendee_phone: nil,
         attendee_company: nil,
         attendee_timezone: Timezones.normalize(user_timezone),
+        attendee_locale: Map.get(params, :attendee_locale) || default_locale(),
         status: "confirmed",
         reminders: reminders
       },
@@ -344,4 +346,6 @@ defmodule Tymeslot.Bookings.Policy do
   def app_url do
     Endpoint.url()
   end
+
+  defp default_locale, do: Locales.default_locale()
 end

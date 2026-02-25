@@ -46,6 +46,7 @@ defmodule Tymeslot.Factory do
       attendee_email: sequence(:attendee_email, &"attendee#{&1}@test.com"),
       attendee_message: "Looking forward to our meeting!",
       attendee_timezone: "America/New_York",
+      attendee_locale: "en",
       status: "confirmed"
     }
   end

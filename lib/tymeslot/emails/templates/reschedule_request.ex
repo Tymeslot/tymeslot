@@ -14,87 +14,97 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     TimezoneHelper
   }
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @spec reschedule_request_email(Tymeslot.DatabaseSchemas.MeetingSchema.t()) ::
           Swoosh.Email.t()
   def reschedule_request_email(%Meeting{} = meeting) do
-    # Convert time to attendee's timezone if available
-    attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
+    locale = meeting.attendee_locale || "en"
 
-    meeting_details = %{
-      date: attendee_time,
-      start_time_attendee_tz: attendee_time,
-      duration: meeting.duration,
-      location: meeting.location || "To be determined",
-      meeting_type: meeting.meeting_type || "Meeting",
-      timezone: meeting.attendee_timezone || "UTC"
-    }
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      # Convert time to attendee's timezone if available
+      attendee_time = TimezoneHelper.convert_to_attendee_timezone(meeting)
 
-    mjml_content = """
-    #{Components.title_section("📅 Reschedule Request",
-    subtitle: "Hi #{meeting.attendee_name}, I need to reschedule our upcoming meeting. Could you please select a new time that works for you?")}
-    <!-- Cancelled Meeting Details -->
-    <mj-section padding="20px 0">
-      <mj-column>
-        <mj-text font-size="16px" font-weight="600" padding-bottom="10px">
-          Cancelled Appointment Details
-        </mj-text>
-        #{Components.meeting_details_table(meeting_details)}
-      </mj-column>
-    </mj-section>
-    <!-- Call to Action -->
-    <mj-section padding="12px 0">
-      <mj-column>
-        <mj-text font-size="16px" color="#3f3f46" line-height="24px" padding-bottom="16px">
-          I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.
-        </mj-text>
-        <mj-button href="#{meeting.reschedule_url}" background-color="#7c3aed" color="#ffffff" font-size="16px" font-weight="600" padding="20px 0" inner-padding="12px 30px" border-radius="8px">
-          Choose a New Time
-        </mj-button>
-        <mj-text font-size="14px" color="#52525b" line-height="20px" padding-top="16px">
-          Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.
-        </mj-text>
-        <mj-text font-size="14px" color="#52525b" padding-top="12px" align="center">
-          Thank you for your understanding and flexibility.
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    """
+      meeting_details = %{
+        date: attendee_time,
+        start_time_attendee_tz: attendee_time,
+        duration: meeting.duration,
+        location: meeting.location || dgettext("emails", "To be determined"),
+        location_type: if(meeting.meeting_url, do: :video, else: :custom),
+        meeting_type: meeting.meeting_type || dgettext("emails", "Meeting"),
+        timezone: meeting.attendee_timezone || "UTC"
+      }
 
-    html_body = TemplateHelper.compile_system_template(mjml_content)
+      mjml_content = """
+      #{Components.title_section("📅 #{dgettext("emails", "Reschedule Request")}",
+      subtitle: dgettext("emails", "Hi %{name}, I need to reschedule our upcoming meeting. Could you please select a new time that works for you?", name: meeting.attendee_name))}
+      <!-- Cancelled Meeting Details -->
+      <mj-section padding="20px 0">
+        <mj-column>
+          <mj-text font-size="16px" font-weight="600" padding-bottom="10px">
+            #{dgettext("emails", "Cancelled Appointment Details")}
+          </mj-text>
+          #{Components.meeting_details_table(meeting_details, locale)}
+        </mj-column>
+      </mj-section>
+      <!-- Call to Action -->
+      <mj-section padding="12px 0">
+        <mj-column>
+          <mj-text font-size="16px" color="#3f3f46" line-height="24px" padding-bottom="16px">
+            #{dgettext("emails", "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.")}
+          </mj-text>
+          <mj-button href="#{meeting.reschedule_url}" background-color="#7c3aed" color="#ffffff" font-size="16px" font-weight="600" padding="20px 0" inner-padding="12px 30px" border-radius="8px">
+            #{dgettext("emails", "Choose a New Time")}
+          </mj-button>
+          <mj-text font-size="14px" color="#52525b" line-height="20px" padding-top="16px">
+            #{dgettext("emails", "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.")}
+          </mj-text>
+          <mj-text font-size="14px" color="#52525b" padding-top="12px" align="center">
+            #{dgettext("emails", "Thank you for your understanding and flexibility.")}
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      """
 
-    MjmlEmail.base_email()
-    |> to({meeting.attendee_name, meeting.attendee_email})
-    |> from({meeting.organizer_name, MjmlEmail.fetch_from_email()})
-    |> subject(
-      "Reschedule Request: #{meeting.title} - #{SharedHelpers.format_date_short(attendee_time)}"
-    )
-    |> html_body(html_body)
-    |> text_body(build_text_body(meeting, attendee_time))
+      html_body = TemplateHelper.compile_system_template(mjml_content)
+
+      MjmlEmail.base_email()
+      |> to({meeting.attendee_name, meeting.attendee_email})
+      |> from({meeting.organizer_name, MjmlEmail.fetch_from_email()})
+      |> subject(
+        dgettext("emails", "Reschedule Request: %{title} - %{date}",
+          title: meeting.title,
+          date: SharedHelpers.format_date_short(attendee_time, locale)
+        )
+      )
+      |> html_body(html_body)
+      |> text_body(build_text_body(meeting, attendee_time, locale))
+    end)
   end
 
-  defp build_text_body(meeting, attendee_time) do
+  defp build_text_body(meeting, attendee_time, locale) do
     """
-    Reschedule Request
+    #{dgettext("emails", "Reschedule Request")}
 
-    Hi #{meeting.attendee_name},
+    #{dgettext("emails", "Hi %{name},", name: meeting.attendee_name)}
 
-    I need to reschedule our upcoming meeting. Could you please select a new time that works for you?
+    #{dgettext("emails", "I need to reschedule our upcoming meeting. Could you please select a new time that works for you?")}
 
-    CANCELLED APPOINTMENT DETAILS:
-    Date: #{SharedHelpers.format_date_short(attendee_time)}
-    Duration: #{meeting.duration} minutes
-    Location: #{meeting.location || "To be determined"}
-    Type: #{meeting.meeting_type || "Meeting"}
-    Timezone: #{meeting.attendee_timezone || "UTC"}
+    #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
+    #{dgettext("emails", "Date:")} #{SharedHelpers.format_date_short(attendee_time, locale)}
+    #{dgettext("emails", "Duration:")} #{SharedHelpers.format_duration(meeting.duration, locale)}
+    #{dgettext("emails", "Location:")} #{meeting.location || dgettext("emails", "To be determined")}
+    #{dgettext("emails", "Type:")} #{meeting.meeting_type || dgettext("emails", "Meeting")}
+    #{dgettext("emails", "Timezone:")} #{meeting.attendee_timezone || "UTC"}
 
-    I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.
+    #{dgettext("emails", "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.")}
 
-    Choose a New Time:
+    #{dgettext("emails", "Choose a New Time:")}
     #{meeting.reschedule_url}
 
-    Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.
+    #{dgettext("emails", "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.")}
 
-    Thank you for your understanding and flexibility.
+    #{dgettext("emails", "Thank you for your understanding and flexibility.")}
     """
   end
 end

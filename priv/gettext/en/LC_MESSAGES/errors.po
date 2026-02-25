@@ -26,9 +26,13 @@ msgstr "Email is required"
 msgid "email_invalid"
 msgstr "Please enter a valid email address"
 
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:31
+#, elixir-autogen
 msgid "calendar_setup_required"
 msgstr "We can't show this scheduling page yet"
 
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:44
+#, elixir-autogen
 msgid "connect_calendar_first"
 msgstr "If you are the organizer, please connect a calendar in your dashboard."
 

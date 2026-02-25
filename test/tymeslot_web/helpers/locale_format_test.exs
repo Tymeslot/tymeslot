@@ -10,23 +10,24 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_date(date, "en") == "March 15, 2026"
     end
 
-    test "formats date in German (note: Calendar.strftime doesn't localize month names)" do
+    test "formats date in German" do
       date = ~D[2026-03-15]
-      # Calendar.strftime doesn't use locale-aware month names, it uses system locale
-      # For proper localization, use LocaleFormat.get_month_names/1 directly
-      assert LocaleFormat.format_date(date, "de") == "15. March 2026"
+      assert LocaleFormat.format_date(date, "de") == "15. März 2026"
     end
 
-    test "formats date in Ukrainian (note: Calendar.strftime doesn't localize month names)" do
+    test "formats date in Ukrainian" do
       date = ~D[2026-03-15]
-      # Note: Calendar.strftime doesn't localize month names
-      # This test documents current behavior - LocaleFormat.get_month_names should be used instead
-      assert LocaleFormat.format_date(date, "uk") == "15 March 2026"
+      assert LocaleFormat.format_date(date, "uk") == "15 березня 2026"
+    end
+
+    test "formats date in French" do
+      date = ~D[2026-03-15]
+      assert LocaleFormat.format_date(date, "fr") == "15 mars 2026"
     end
 
     test "falls back to English for unknown locale" do
       date = ~D[2026-03-15]
-      assert LocaleFormat.format_date(date, "fr") == "March 15, 2026"
+      assert LocaleFormat.format_date(date, "es") == "March 15, 2026"
     end
   end
 
@@ -61,9 +62,14 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_time(time, "en") == "12:00 PM"
     end
 
+    test "formats time in 24-hour format for French" do
+      time = ~T[14:30:00]
+      assert LocaleFormat.format_time(time, "fr") == "14:30"
+    end
+
     test "falls back to English for unknown locale" do
       time = ~T[14:30:00]
-      assert LocaleFormat.format_time(time, "fr") == "02:30 PM"
+      assert LocaleFormat.format_time(time, "es") == "02:30 PM"
     end
   end
 
@@ -83,15 +89,24 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert Enum.at(months, 11) == "Dezember"
     end
 
-    test "returns Ukrainian month names" do
+    test "returns Ukrainian month names in genitive case" do
       months = LocaleFormat.get_month_names("uk")
       assert length(months) == 12
-      assert Enum.at(months, 0) == "Січень"
-      assert Enum.at(months, 11) == "Грудень"
+      assert Enum.at(months, 0) == "січня"
+      assert Enum.at(months, 11) == "грудня"
+    end
+
+    test "returns French month names" do
+      months = LocaleFormat.get_month_names("fr")
+      assert length(months) == 12
+      assert Enum.at(months, 0) == "janvier"
+      assert Enum.at(months, 2) == "mars"
+      assert Enum.at(months, 7) == "août"
+      assert Enum.at(months, 11) == "décembre"
     end
 
     test "falls back to English for unknown locale" do
-      months = LocaleFormat.get_month_names("fr")
+      months = LocaleFormat.get_month_names("es")
       assert Enum.at(months, 0) == "January"
     end
   end
@@ -259,6 +274,41 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
 
       assert monday == "Monday"
       assert sunday == "Sunday"
+    end
+  end
+
+  describe "French locale" do
+    test "returns French full weekday names" do
+      weekdays = LocaleFormat.get_weekday_names("fr", :full)
+      assert length(weekdays) == 7
+      assert Enum.at(weekdays, 0) == "dimanche"
+      assert Enum.at(weekdays, 1) == "lundi"
+      assert Enum.at(weekdays, 6) == "samedi"
+    end
+
+    test "returns French short weekday names" do
+      weekdays = LocaleFormat.get_weekday_names("fr", :short)
+      assert Enum.at(weekdays, 0) == "dim"
+      assert Enum.at(weekdays, 1) == "lun"
+    end
+
+    test "returns French narrow weekday names" do
+      weekdays = LocaleFormat.get_weekday_names("fr", :narrow)
+      assert weekdays == ["D", "L", "M", "M", "J", "V", "S"]
+    end
+
+    test "formats numbers with space thousand separator and comma decimal" do
+      assert LocaleFormat.format_number(1234.56, "fr") == "1 234,56"
+    end
+
+    test "formats month name in French" do
+      assert LocaleFormat.format_month_name(1, "fr") == "janvier"
+      assert LocaleFormat.format_month_name(8, "fr") == "août"
+    end
+
+    test "formats weekday name in French" do
+      assert LocaleFormat.format_weekday_name(1, "fr", :full) == "lundi"
+      assert LocaleFormat.format_weekday_name(7, "fr", :full) == "dimanche"
     end
   end
 

@@ -7,6 +7,8 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.Locales
+
   @type t :: %__MODULE__{
           id: binary() | nil,
           uid: String.t() | nil,
@@ -30,6 +32,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
           attendee_phone: String.t() | nil,
           attendee_company: String.t() | nil,
           attendee_timezone: String.t() | nil,
+          attendee_locale: String.t(),
           view_url: String.t() | nil,
           reschedule_url: String.t() | nil,
           cancel_url: String.t() | nil,
@@ -103,6 +106,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
     field(:attendee_phone, :string)
     field(:attendee_company, :string)
     field(:attendee_timezone, :string)
+    field(:attendee_locale, :string, default: "en")
 
     # URLs and links
     field(:view_url, :string)
@@ -164,6 +168,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
     :attendee_phone,
     :attendee_company,
     :attendee_timezone,
+    :attendee_locale,
     :view_url,
     :reschedule_url,
     :cancel_url,
@@ -197,6 +202,10 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
     |> validate_format(:organizer_email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/)
     |> validate_format(:attendee_email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/)
     |> validate_inclusion(:status, @valid_statuses)
+    |> validate_required([:attendee_locale])
+    |> validate_inclusion(:attendee_locale, supported_locale_codes(),
+      message: "is not a supported locale"
+    )
     |> validate_time_order()
     |> calculate_duration()
     |> unique_constraint(:uid)
@@ -279,4 +288,6 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
   end
 
   def duration_text(_meeting), do: "Unknown duration"
+
+  defp supported_locale_codes, do: Locales.supported_codes()
 end

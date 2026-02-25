@@ -18,26 +18,36 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   alias Tymeslot.Emails.Shared.{SharedHelpers, Styles}
   alias Tymeslot.Security.UrlValidation
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @doc """
   Generates a polished meeting details card with modern 2026 styling.
   Features refined typography, icon-label pairs, and responsive two-column grid.
   """
   @spec meeting_details_table(map()) :: String.t()
-  def meeting_details_table(details) do
-    """
-    <mj-section
-      background-color="#{Styles.background_color(:gray)}"
-      border-radius="#{Styles.card_radius()}"
-      padding="16px 16px"
-      css-class="mobile-card"
-    >
-      <mj-column>
-        #{detail_row("📅", "Date", SharedHelpers.format_date(details.date), "🕐", "Time", format_meeting_time(details))}
-        #{detail_row("⏱️", "Duration", SharedHelpers.format_duration(details.duration), location_icon(details[:location]), "Location", details[:location] || "TBD")}
-        #{meeting_type_detail_section(details[:meeting_type])}
-      </mj-column>
-    </mj-section>
-    """
+  def meeting_details_table(details), do: meeting_details_table(details, "en")
+
+  @doc """
+  Generates a locale-aware meeting details card.
+  """
+  @spec meeting_details_table(map(), String.t()) :: String.t()
+  def meeting_details_table(details, locale) do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      """
+      <mj-section
+        background-color="#{Styles.background_color(:gray)}"
+        border-radius="#{Styles.card_radius()}"
+        padding="16px 16px"
+        css-class="mobile-card"
+      >
+        <mj-column>
+          #{detail_row("📅", dgettext("emails", "Date"), SharedHelpers.format_date(details.date, locale), "🕐", dgettext("emails", "Time"), format_meeting_time(details, locale))}
+          #{detail_row("⏱️", dgettext("emails", "Duration"), SharedHelpers.format_duration(details.duration, locale), location_icon(details[:location_type]), dgettext("emails", "Location"), details[:location] || dgettext("emails", "TBD"))}
+          #{meeting_type_detail_section(details[:meeting_type])}
+        </mj-column>
+      </mj-section>
+      """
+    end)
   end
 
   @doc """
@@ -57,8 +67,8 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   @spec video_meeting_section(String.t(), keyword()) :: String.t()
   def video_meeting_section(meeting_url, opts \\ []) do
     style = Keyword.get(opts, :style, :default)
-    title = Keyword.get(opts, :title, "Join Video Meeting")
-    button_text_base = Keyword.get(opts, :button_text, "Join Meeting")
+    title = Keyword.get(opts, :title, dgettext("emails", "Join Video Meeting"))
+    button_text_base = Keyword.get(opts, :button_text, dgettext("emails", "Join Meeting"))
     show_time_note = Keyword.get(opts, :show_time_note, false)
 
     # Sanitize user-provided text
@@ -176,20 +186,26 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   Formats meeting time with timezone information.
   """
   @spec format_meeting_time(map()) :: String.t()
-  def format_meeting_time(details) do
+  def format_meeting_time(details), do: format_meeting_time(details, "en")
+
+  @doc """
+  Formats meeting time with timezone information, locale-aware.
+  """
+  @spec format_meeting_time(map(), String.t()) :: String.t()
+  def format_meeting_time(details, locale) do
     case details do
       %{start_time: %DateTime{} = start_time, timezone: timezone} ->
-        formatted_time = SharedHelpers.format_time(start_time)
+        formatted_time = SharedHelpers.format_time(start_time, locale)
 
         if timezone && timezone != "UTC",
           do: "#{formatted_time} (#{timezone})",
           else: formatted_time
 
       %{start_time: %DateTime{} = start_time} ->
-        SharedHelpers.format_time(start_time)
+        SharedHelpers.format_time(start_time, locale)
 
       _other ->
-        "TBD"
+        dgettext("emails", "TBD")
     end
   end
 
@@ -297,7 +313,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
 
       """
       <mj-text align="center" font-size="12px" color="#{note_color}" padding="8px 0 0 0">
-        Meeting will start at the scheduled time
+        #{dgettext("emails", "Meeting will start at the scheduled time")}
       </mj-text>
       """
     else
@@ -359,10 +375,10 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
     """
   end
 
-  defp location_icon("Video Call"), do: "📹"
-  defp location_icon("Phone Call"), do: "📞"
-  defp location_icon("In Person"), do: "📍"
-  defp location_icon(_arg), do: "📍"
+  defp location_icon(:video), do: "📹"
+  defp location_icon(:phone), do: "📞"
+  defp location_icon(:in_person), do: "📍"
+  defp location_icon(_location_type), do: "📍"
 
   defp badge_background(:blue), do: Styles.background_color(:blue_light)
   defp badge_background(:green), do: Styles.background_color(:green_light)

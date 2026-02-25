@@ -269,4 +269,58 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendeeTest do
       end
     end
   end
+
+  describe "locale rendering" do
+    test "renders without error for all supported locales" do
+      for locale <- ["en", "de", "uk", "fr"] do
+        details = build_appointment_details(%{attendee_locale: locale})
+        email = AppointmentConfirmationAttendee.confirmation_email("a@b.com", details)
+
+        assert %Swoosh.Email{} = email,
+               "Expected valid Swoosh email for locale #{locale}"
+
+        assert is_binary(email.html_body),
+               "Expected html_body for locale #{locale}"
+
+        assert is_binary(email.text_body),
+               "Expected text_body for locale #{locale}"
+      end
+    end
+
+    test "German email translates subject and key body labels" do
+      details = build_appointment_details(%{attendee_locale: "de"})
+      email = AppointmentConfirmationAttendee.confirmation_email("a@b.com", details)
+
+      assert email.subject =~ "Termin bestätigt"
+      refute email.subject =~ "Appointment Confirmed"
+      assert email.text_body =~ "Termin bestätigt"
+      assert email.text_body =~ "TERMIN-DETAILS:"
+    end
+
+    test "French email translates subject and key body labels" do
+      details = build_appointment_details(%{attendee_locale: "fr"})
+      email = AppointmentConfirmationAttendee.confirmation_email("a@b.com", details)
+
+      assert email.subject =~ "Rendez-vous confirmé"
+      refute email.subject =~ "Appointment Confirmed"
+      assert email.text_body =~ "Rendez-vous confirmé"
+    end
+
+    test "Ukrainian email translates subject and key body labels" do
+      details = build_appointment_details(%{attendee_locale: "uk"})
+      email = AppointmentConfirmationAttendee.confirmation_email("a@b.com", details)
+
+      assert email.subject =~ "Зустріч підтверджено"
+      refute email.subject =~ "Appointment Confirmed"
+      assert email.text_body =~ "Зустріч підтверджено"
+    end
+
+    test "non-English subject uses numeric date format" do
+      details = build_appointment_details(%{attendee_locale: "de", date: ~D[2026-01-15]})
+      email = AppointmentConfirmationAttendee.confirmation_email("a@b.com", details)
+
+      assert email.subject =~ "15.1."
+      refute email.subject =~ "Jan"
+    end
+  end
 end

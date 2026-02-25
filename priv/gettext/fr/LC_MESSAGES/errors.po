@@ -26,9 +26,13 @@ msgstr "E-mail requis"
 msgid "email_invalid"
 msgstr "Adresse e-mail invalide"
 
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:31
+#, elixir-autogen
 msgid "calendar_setup_required"
 msgstr "Configuration du calendrier requise"
 
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:44
+#, elixir-autogen
 msgid "connect_calendar_first"
 msgstr "Veuillez d'abord connecter votre calendrier"
 

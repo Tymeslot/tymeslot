@@ -338,6 +338,51 @@ defmodule Tymeslot.Emails.Templates.SystemEmailsTest do
     end
   end
 
+  describe "RescheduleRequest locale rendering" do
+    test "renders without error for all supported locales" do
+      for locale <- ["en", "de", "uk", "fr"] do
+        meeting = insert(:meeting, attendee_locale: locale)
+        email = RescheduleRequest.reschedule_request_email(meeting)
+
+        assert %Swoosh.Email{} = email,
+               "Expected valid Swoosh email for locale #{locale}"
+
+        assert is_binary(email.html_body),
+               "Expected html_body for locale #{locale}"
+
+        assert is_binary(email.text_body),
+               "Expected text_body for locale #{locale}"
+      end
+    end
+
+    test "German reschedule request translates subject and body" do
+      meeting = insert(:meeting, attendee_locale: "de")
+      email = RescheduleRequest.reschedule_request_email(meeting)
+
+      assert email.subject =~ "Verschiebungsanfrage"
+      refute email.subject =~ "Reschedule Request"
+      assert email.text_body =~ "Anfrage zur Terminverschiebung"
+    end
+
+    test "French reschedule request translates subject and body" do
+      meeting = insert(:meeting, attendee_locale: "fr")
+      email = RescheduleRequest.reschedule_request_email(meeting)
+
+      assert email.subject =~ "Demande de report"
+      refute email.subject =~ "Reschedule Request"
+      assert email.text_body =~ "Demande de report"
+    end
+
+    test "Ukrainian reschedule request translates subject and body" do
+      meeting = insert(:meeting, attendee_locale: "uk")
+      email = RescheduleRequest.reschedule_request_email(meeting)
+
+      assert email.subject =~ "Запит на перенесення"
+      refute email.subject =~ "Reschedule Request"
+      assert email.text_body =~ "Запит на перенесення"
+    end
+  end
+
   describe "render_text security" do
     # Plain-text email bodies are not rendered as HTML, so tags are harmless literal
     # characters. The security properties that matter are: the function never crashes

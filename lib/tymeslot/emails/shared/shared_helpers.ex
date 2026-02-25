@@ -7,6 +7,9 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   alias Phoenix.HTML
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.Helpers.LocaleFormat
+
+  use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
   Formats a date into a full readable format.
@@ -30,12 +33,27 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   end
 
   @doc """
+  Formats a date according to locale conventions.
+  Delegates to LocaleFormat for locale-aware formatting.
+  """
+  @spec format_date(Date.t() | DateTime.t() | NaiveDateTime.t(), String.t()) :: String.t()
+  def format_date(%Date{} = date, locale), do: LocaleFormat.format_date(date, locale)
+
+  def format_date(%DateTime{} = datetime, locale) do
+    datetime |> DateTime.to_date() |> format_date(locale)
+  end
+
+  def format_date(%NaiveDateTime{} = datetime, locale) do
+    datetime |> NaiveDateTime.to_date() |> format_date(locale)
+  end
+
+  @doc """
   Formats a date into a short readable format.
   Example: "Nov 25"
   """
   @spec format_date_short(Date.t() | DateTime.t() | NaiveDateTime.t()) :: String.t()
   def format_date_short(%Date{} = date) do
-    Calendar.strftime(date, "%b %d")
+    "#{Calendar.strftime(date, "%b")} #{date.day}"
   end
 
   def format_date_short(%DateTime{} = datetime) do
@@ -51,12 +69,40 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   end
 
   @doc """
+  Formats a date into a short locale-aware format.
+  English: "Nov 25", others: "25.11."
+  """
+  @spec format_date_short(Date.t() | DateTime.t() | NaiveDateTime.t(), String.t()) :: String.t()
+  def format_date_short(%Date{} = date, "en"), do: "#{Calendar.strftime(date, "%b")} #{date.day}"
+  def format_date_short(%Date{} = date, "fr"), do: "#{date.day}/#{date.month}"
+  def format_date_short(%Date{} = date, _locale), do: "#{date.day}.#{date.month}."
+
+  def format_date_short(%DateTime{} = datetime, locale) do
+    datetime |> DateTime.to_date() |> format_date_short(locale)
+  end
+
+  def format_date_short(%NaiveDateTime{} = datetime, locale) do
+    datetime |> NaiveDateTime.to_date() |> format_date_short(locale)
+  end
+
+  @doc """
   Formats a time with timezone.
   Example: "02:30 PM PST"
   """
   @spec format_time(DateTime.t()) :: String.t()
   def format_time(%DateTime{} = datetime) do
     Calendar.strftime(datetime, "%I:%M %p %Z")
+  end
+
+  @doc """
+  Formats a time with timezone, locale-aware.
+  Example (en): "02:30 PM PST", (de): "14:30 PST"
+  """
+  @spec format_time(DateTime.t(), String.t()) :: String.t()
+  def format_time(%DateTime{} = datetime, locale) do
+    time = DateTime.to_time(datetime)
+    tz = Calendar.strftime(datetime, "%Z")
+    "#{LocaleFormat.format_time(time, locale)} #{tz}"
   end
 
   @doc """
@@ -102,6 +148,16 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   @spec format_duration(integer() | String.t()) :: String.t()
   def format_duration(duration) do
     DateTimeUtils.format_duration(duration)
+  end
+
+  @doc """
+  Formats a meeting duration in a locale-aware way.
+  Example (en): "30 minutes", "1 hour"; (de): "30 Minuten", "1 Stunde"
+  """
+  @spec format_duration(integer() | String.t(), String.t()) :: String.t()
+  def format_duration(duration, locale) do
+    minutes = parse_duration_minutes(duration)
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn -> format_localized_duration(minutes) end)
   end
 
   @doc """
@@ -231,6 +287,37 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
     |> String.trim()
     |> HTML.html_escape()
     |> HTML.safe_to_string()
+  end
+
+  defp parse_duration_minutes(minutes) when is_integer(minutes) and minutes > 0, do: minutes
+
+  defp parse_duration_minutes(str) when is_binary(str) do
+    case Regex.run(~r/^(\d+)min$/, str) do
+      [_full, m] -> String.to_integer(m)
+      _no_match -> 0
+    end
+  end
+
+  defp parse_duration_minutes(_other), do: 0
+
+  defp format_localized_duration(0), do: ""
+
+  defp format_localized_duration(m) when m < 60 do
+    "#{m} #{dngettext("emails", "minute", "minutes", m)}"
+  end
+
+  defp format_localized_duration(60), do: "1 #{dngettext("emails", "hour", "hours", 1)}"
+  defp format_localized_duration(90), do: "1.5 #{dngettext("emails", "hour", "hours", 2)}"
+
+  defp format_localized_duration(m) when rem(m, 60) == 0 do
+    hours = div(m, 60)
+    "#{hours} #{dngettext("emails", "hour", "hours", hours)}"
+  end
+
+  defp format_localized_duration(m) do
+    h = div(m, 60)
+    mins = rem(m, 60)
+    "#{h} #{dngettext("emails", "hour", "hours", h)} #{mins} #{dngettext("emails", "minute", "minutes", mins)}"
   end
 
   @doc """

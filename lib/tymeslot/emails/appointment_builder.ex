@@ -8,26 +8,33 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ReminderUtils
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @default_timezone "Europe/Kyiv"
 
   @spec from_meeting(map(), map() | nil) :: map()
   def from_meeting(meeting, reminder_interval \\ nil) do
-    owner_timezone = owner_timezone(meeting)
-    attendee_timezone = attendee_timezone(meeting, owner_timezone)
+    attendee_locale = Map.get(meeting, :attendee_locale, "en")
 
-    base_details = base_details(meeting)
-    timezone_details = timezone_details(meeting, owner_timezone, attendee_timezone)
-    participant_details = participant_details(meeting)
-    preparation_details = preparation_details()
-    url_details = url_details(meeting)
-    reminder_details = reminder_details(meeting, reminder_interval)
+    Gettext.with_locale(TymeslotWeb.Gettext, attendee_locale, fn ->
+      owner_timezone = owner_timezone(meeting)
+      attendee_timezone = attendee_timezone(meeting, owner_timezone)
 
-    base_details
-    |> Map.merge(timezone_details)
-    |> Map.merge(participant_details)
-    |> Map.merge(preparation_details)
-    |> Map.merge(url_details)
-    |> Map.merge(reminder_details)
+      base_details = base_details(meeting)
+      timezone_details = timezone_details(meeting, owner_timezone, attendee_timezone)
+      participant_details = participant_details(meeting)
+      preparation_details = preparation_details()
+      url_details = url_details(meeting)
+      reminder_details = reminder_details(meeting, reminder_interval)
+
+      base_details
+      |> Map.merge(timezone_details)
+      |> Map.merge(participant_details)
+      |> Map.merge(preparation_details)
+      |> Map.merge(url_details)
+      |> Map.merge(reminder_details)
+      |> Map.put(:attendee_locale, attendee_locale)
+    end)
   end
 
   defp owner_timezone(meeting) do
@@ -69,9 +76,19 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       date: DateTime.to_date(meeting.start_time),
       duration: meeting.duration,
       location: format_location(meeting),
+      location_type: determine_location_type(meeting),
       location_details: format_location_details(meeting),
       meeting_type: meeting.meeting_type
     }
+  end
+
+  defp determine_location_type(meeting) do
+    cond do
+      meeting.meeting_url -> :video
+      meeting.location == "Phone Call" -> :phone
+      meeting.location == "In Person" -> :in_person
+      true -> :custom
+    end
   end
 
   defp timezone_details(meeting, owner_timezone, attendee_timezone) do
@@ -90,7 +107,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
       organizer_title: meeting.organizer_title,
-      organizer_contact_info: "reply to this email",
+      organizer_contact_info: dgettext("emails", "reply to this email"),
 
       # Attendee details
       attendee_name: meeting.attendee_name,
@@ -103,9 +120,9 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   defp preparation_details do
     %{
-      contact_info: "reply to this email",
+      contact_info: dgettext("emails", "reply to this email"),
       allow_contact: true,
-      time_until_friendly: "in 30 minutes"
+      time_until_friendly: dgettext("emails", "in 30 minutes")
     }
   end
 
@@ -134,15 +151,16 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   end
 
   defp build_reminder_details_from_interval(%{value: value, unit: unit}) do
-    reminder_label = ReminderUtils.format_reminder_label(value, unit)
+    reminder_label = localized_reminder_label(value, unit)
 
     %{
       reminder_time: reminder_label,
+      reminder_raw: %{value: value, unit: unit},
       default_reminder_time: reminder_label,
       time_until: reminder_label,
-      time_until_friendly: "in #{reminder_label}",
+      time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
       reminders_enabled: true,
-      reminders_summary: "Reminder #{reminder_label} before the appointment."
+      reminders_summary: dgettext("emails", "Reminder %{label} before the appointment.", label: reminder_label)
     }
   end
 
@@ -155,7 +173,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
           time_until: nil,
           time_until_friendly: nil,
           reminders_enabled: false,
-          reminders_summary: "No reminder emails are scheduled for this appointment."
+          reminders_summary: dgettext("emails", "No reminder emails are scheduled for this appointment.")
         }
 
       legacy_label ->
@@ -163,23 +181,24 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
           reminder_time: legacy_label,
           default_reminder_time: legacy_label,
           time_until: legacy_label,
-          time_until_friendly: "in #{legacy_label}",
+          time_until_friendly: dgettext("emails", "in %{label}", label: legacy_label),
           reminders_enabled: true,
-          reminders_summary: "I'll send you a reminder #{legacy_label} before our appointment."
+          reminders_summary: dgettext("emails", "I'll send you a reminder %{label} before our appointment.", label: legacy_label)
         }
     end
   end
 
   defp handle_normalized_reminders([reminder], _meeting) do
-    reminder_label = ReminderUtils.format_reminder_label(reminder.value, reminder.unit)
+    reminder_label = localized_reminder_label(reminder.value, reminder.unit)
 
     %{
       reminder_time: reminder_label,
+      reminder_raw: %{value: reminder.value, unit: reminder.unit},
       default_reminder_time: reminder_label,
       time_until: reminder_label,
-      time_until_friendly: "in #{reminder_label}",
+      time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
       reminders_enabled: true,
-      reminders_summary: "I'll send you a reminder #{reminder_label} before our appointment."
+      reminders_summary: dgettext("emails", "I'll send you a reminder %{label} before our appointment.", label: reminder_label)
     }
   end
 
@@ -189,32 +208,33 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
         ReminderUtils.reminder_interval_seconds(value, unit)
       end)
 
-    reminder_label = ReminderUtils.format_reminder_label(closest.value, closest.unit)
+    reminder_label = localized_reminder_label(closest.value, closest.unit)
 
     %{
       reminder_time: reminder_label,
+      reminder_raw: %{value: closest.value, unit: closest.unit},
       default_reminder_time: reminder_label,
       time_until: reminder_label,
-      time_until_friendly: "in #{reminder_label}",
+      time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
       reminders_enabled: true,
       reminders_summary:
-        "You'll receive #{length(reminder_list)} reminders before the appointment."
+        dgettext("emails", "You'll receive %{count} reminders before the appointment.", count: length(reminder_list))
     }
   end
 
   defp format_location(meeting) do
     if meeting.meeting_url do
-      "Video Call"
+      dgettext("emails", "Video Call")
     else
-      meeting.location || "To be determined"
+      meeting.location || dgettext("emails", "To be determined")
     end
   end
 
   defp format_location_details(meeting) do
     if meeting.meeting_url do
-      "Video Call"
+      dgettext("emails", "Video Call")
     else
-      meeting.location || "Location to be determined"
+      meeting.location || dgettext("emails", "Location to be determined")
     end
   end
 
@@ -235,5 +255,22 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   defp legacy_reminder_label(meeting) do
     meeting.reminder_time || meeting.default_reminder_time
+  end
+
+  # Formats a reminder label using locale-aware unit words.
+  # Must be called from within a Gettext.with_locale block.
+  defp localized_reminder_label(value, unit) do
+    value = ReminderUtils.parse_reminder_value(value)
+    unit = ReminderUtils.normalize_reminder_unit(unit)
+
+    unit_word =
+      case unit do
+        "minutes" -> dngettext("emails", "minute", "minutes", value)
+        "hours" -> dngettext("emails", "hour", "hours", value)
+        "days" -> dngettext("emails", "day", "days", value)
+        _other -> dngettext("emails", "minute", "minutes", value)
+      end
+
+    "#{value} #{unit_word}"
   end
 end

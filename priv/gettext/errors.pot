@@ -32,9 +32,13 @@ msgstr ""
 msgid "email_invalid"
 msgstr ""
 
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:31
+#, elixir-autogen
 msgid "calendar_setup_required"
 msgstr ""
 
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:44
+#, elixir-autogen
 msgid "connect_calendar_first"
 msgstr ""
 

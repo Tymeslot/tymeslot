@@ -10,6 +10,8 @@ defmodule Tymeslot.Emails.Shared.CalendarComponents do
 
   alias Tymeslot.Emails.Shared.{SharedHelpers, Styles}
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @doc """
   Generates calendar integration links section.
   """
@@ -27,7 +29,7 @@ defmodule Tymeslot.Emails.Shared.CalendarComponents do
           color="#{Styles.calendar_color(:text_muted)}"
           padding-bottom="16px"
         >
-          Add to your calendar:
+          #{dgettext("emails", "Add to your calendar:")}
         </mj-text>
       </mj-column>
     </mj-section>

@@ -53,7 +53,7 @@ defmodule Tymeslot.Emails.Shared.SharedHelpersTest do
     test "handles different months correctly" do
       dates = [
         {~D[2024-01-15], "Jan 15"},
-        {~D[2024-02-01], "Feb 01"},
+        {~D[2024-02-01], "Feb 1"},
         {~D[2024-12-31], "Dec 31"}
       ]
 
@@ -366,6 +366,104 @@ defmodule Tymeslot.Emails.Shared.SharedHelpersTest do
 
     test "handles empty string" do
       assert SharedHelpers.sanitize_for_email("") == ""
+    end
+  end
+
+  describe "format_date_short/2" do
+    test "English locale uses abbreviated month name" do
+      assert SharedHelpers.format_date_short(~D[2024-11-25], "en") == "Nov 25"
+      assert SharedHelpers.format_date_short(~D[2024-01-05], "en") == "Jan 5"
+      assert SharedHelpers.format_date_short(~D[2024-12-31], "en") == "Dec 31"
+    end
+
+    test "de/uk locales use dot-separated day.month. format" do
+      for locale <- ["de", "uk"] do
+        assert SharedHelpers.format_date_short(~D[2024-11-25], locale) == "25.11.",
+               "Expected 25.11. for locale #{locale}"
+
+        assert SharedHelpers.format_date_short(~D[2024-01-05], locale) == "5.1.",
+               "Expected 5.1. for locale #{locale}"
+      end
+    end
+
+    test "French locale uses slash-separated day/month format" do
+      assert SharedHelpers.format_date_short(~D[2024-11-25], "fr") == "25/11"
+      assert SharedHelpers.format_date_short(~D[2024-01-05], "fr") == "5/1"
+    end
+
+    test "works with DateTime input" do
+      assert SharedHelpers.format_date_short(~U[2024-11-25 14:30:00Z], "en") == "Nov 25"
+      assert SharedHelpers.format_date_short(~U[2024-11-25 14:30:00Z], "de") == "25.11."
+    end
+
+    test "works with NaiveDateTime input" do
+      assert SharedHelpers.format_date_short(~N[2024-11-25 14:30:00], "fr") == "25/11"
+    end
+  end
+
+  describe "format_time/2" do
+    test "formats time in 12-hour format for English" do
+      datetime = ~U[2026-01-15 14:30:00Z]
+      result = SharedHelpers.format_time(datetime, "en")
+      assert result =~ "02:30 PM"
+    end
+
+    test "formats time in 24-hour format for German" do
+      datetime = ~U[2026-01-15 14:30:00Z]
+      result = SharedHelpers.format_time(datetime, "de")
+      assert result =~ "14:30"
+      refute result =~ "PM"
+    end
+
+    test "formats time in 24-hour format for French" do
+      datetime = ~U[2026-01-15 14:30:00Z]
+      result = SharedHelpers.format_time(datetime, "fr")
+      assert result =~ "14:30"
+      refute result =~ "PM"
+    end
+
+    test "formats time in 24-hour format for Ukrainian" do
+      datetime = ~U[2026-01-15 14:30:00Z]
+      result = SharedHelpers.format_time(datetime, "uk")
+      assert result =~ "14:30"
+      refute result =~ "PM"
+    end
+
+    test "includes timezone abbreviation" do
+      datetime = ~U[2026-01-15 14:30:00Z]
+      result = SharedHelpers.format_time(datetime, "en")
+      assert result =~ "UTC"
+    end
+  end
+
+  describe "format_duration/2" do
+    test "formats durations in English" do
+      assert SharedHelpers.format_duration(1, "en") == "1 minute"
+      assert SharedHelpers.format_duration(30, "en") == "30 minutes"
+      assert SharedHelpers.format_duration(60, "en") == "1 hour"
+      assert SharedHelpers.format_duration(90, "en") == "1.5 hours"
+      assert SharedHelpers.format_duration(120, "en") == "2 hours"
+    end
+
+    test "formats durations in German" do
+      assert SharedHelpers.format_duration(1, "de") == "1 Minute"
+      assert SharedHelpers.format_duration(30, "de") == "30 Minuten"
+      assert SharedHelpers.format_duration(60, "de") == "1 Stunde"
+      assert SharedHelpers.format_duration(120, "de") == "2 Stunden"
+    end
+
+    test "formats durations in French" do
+      assert SharedHelpers.format_duration(1, "fr") == "1 minute"
+      assert SharedHelpers.format_duration(30, "fr") == "30 minutes"
+      assert SharedHelpers.format_duration(60, "fr") == "1 heure"
+      assert SharedHelpers.format_duration(120, "fr") == "2 heures"
+    end
+
+    test "formats durations in Ukrainian" do
+      assert SharedHelpers.format_duration(1, "uk") == "1 хвилина"
+      assert SharedHelpers.format_duration(30, "uk") == "30 хвилин"
+      assert SharedHelpers.format_duration(60, "uk") == "1 година"
+      assert SharedHelpers.format_duration(120, "uk") == "2 години"
     end
   end
 end

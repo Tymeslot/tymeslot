@@ -26,9 +26,13 @@ msgstr "E-Mail erforderlich"
 msgid "email_invalid"
 msgstr "Bitte geben Sie eine gültige E-Mail-Adresse ein"
 
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:31
+#, elixir-autogen
 msgid "calendar_setup_required"
 msgstr "Diese Buchungsseite ist noch nicht verfügbar"
 
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:44
+#, elixir-autogen
 msgid "connect_calendar_first"
 msgstr "Falls Sie der Veranstalter sind: Bitte verknüpfen Sie einen Kalender in Ihrem Dashboard."
 

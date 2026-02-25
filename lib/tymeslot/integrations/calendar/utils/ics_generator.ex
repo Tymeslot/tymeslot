@@ -5,60 +5,50 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   require Logger
 
+  use Gettext, backend: TymeslotWeb.Gettext
+
   @doc """
   Generates an ICS file content for a meeting/appointment.
 
   ## Parameters
     - meeting_details: Map containing meeting information
-
-  ## Expected fields in meeting_details:
-    - title: Meeting title/summary
-    - description: Meeting description (optional)
-    - attendee_message: Message from attendee (optional)
-    - meeting_url: Video meeting URL (optional)
-    - start_time: DateTime for meeting start
-    - end_time: DateTime for meeting end
-    - location: Meeting location (optional)
-    - uid: Unique identifier for the event
-    - organizer_email: Organizer's email
-    - organizer_name: Organizer's name (optional)
-    - attendee_email: Attendee's email (optional)
-    - attendee_name: Attendee's name (optional)
+    - locale: Locale for translated strings (default: "en")
   """
-  @spec generate_ics(map()) :: String.t()
-  @dialyzer {:nowarn_function, generate_ics: 1}
-  def generate_ics(meeting_details) do
-    event = %Magical.Event{
-      summary: Map.get(meeting_details, :title, "Meeting"),
-      description: build_ics_description(meeting_details),
-      dtstart: meeting_details.start_time,
-      dtend: meeting_details.end_time,
-      location: determine_location(meeting_details),
-      uid:
-        "#{Map.get(meeting_details, :uid, UUID.uuid4())}@#{Application.get_env(:tymeslot, :email)[:domain]}",
-      organizer: format_organizer(meeting_details),
-      attendee: format_attendees(meeting_details),
-      status: "CONFIRMED"
-    }
+  @spec generate_ics(map(), String.t()) :: String.t()
+  @dialyzer {:nowarn_function, generate_ics: 2}
+  def generate_ics(meeting_details, locale \\ "en") do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      event = %Magical.Event{
+        summary: Map.get(meeting_details, :title, dgettext("emails", "Meeting")),
+        description: build_ics_description(meeting_details),
+        dtstart: meeting_details.start_time,
+        dtend: meeting_details.end_time,
+        location: determine_location(meeting_details),
+        uid:
+          "#{Map.get(meeting_details, :uid, UUID.uuid4())}@#{Application.get_env(:tymeslot, :email)[:domain]}",
+        organizer: format_organizer(meeting_details),
+        attendee: format_attendees(meeting_details),
+        status: "CONFIRMED"
+      }
 
-    calendar = %Magical.Calendar{events: [event]}
+      calendar = %Magical.Calendar{events: [event]}
 
-    try do
-      Magical.to_ics(calendar)
-    rescue
-      error ->
-        Logger.error("Failed to generate ICS with Magical library", error: inspect(error))
-        # Fallback to basic ICS generation
-        generate_basic_ics(event)
-    end
+      try do
+        Magical.to_ics(calendar)
+      rescue
+        error ->
+          Logger.error("Failed to generate ICS with Magical library", error: inspect(error))
+          generate_basic_ics(event)
+      end
+    end)
   end
 
   @doc """
   Generates a Swoosh email attachment with ICS content.
   """
-  @spec generate_ics_attachment(map(), String.t()) :: Swoosh.Attachment.t()
-  def generate_ics_attachment(meeting_details, filename \\ "meeting.ics") do
-    ics_content = generate_ics(meeting_details)
+  @spec generate_ics_attachment(map(), String.t(), String.t()) :: Swoosh.Attachment.t()
+  def generate_ics_attachment(meeting_details, locale \\ "en", filename \\ "meeting.ics") do
+    ics_content = generate_ics(meeting_details, locale)
 
     %Swoosh.Attachment{
       filename: filename,
@@ -79,7 +69,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
     case organizer_name do
       name when is_binary(name) and name != "" ->
-        "CN=#{name}:mailto:#{organizer_email}"
+        quoted_name = String.replace(name, "\"", "'")
+        "CN=\"#{quoted_name}\":mailto:#{organizer_email}"
 
       _other ->
         "mailto:#{organizer_email}"
@@ -95,7 +86,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
         case attendee_name do
           name when is_binary(name) and name != "" ->
-            "CN=#{name}:mailto:#{email}"
+            quoted_name = String.replace(name, "\"", "'")
+            "CN=\"#{quoted_name}\":mailto:#{email}"
 
           _other ->
             "mailto:#{email}"
@@ -121,7 +113,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   defp build_attendee_message_section(meeting_details) do
     case Map.get(meeting_details, :attendee_message) do
       message when is_binary(message) and message != "" ->
-        "Message from #{Map.get(meeting_details, :attendee_name, "attendee")}:\n#{String.trim(message)}"
+        attendee_label = Map.get(meeting_details, :attendee_name, dgettext("emails", "attendee"))
+        "#{dgettext("emails", "Message from %{name}:", name: attendee_label)}\n#{String.trim(message)}"
 
       _other ->
         nil
@@ -131,7 +124,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   defp build_video_url_section(meeting_details) do
     case Map.get(meeting_details, :meeting_url) do
       url when is_binary(url) and url != "" ->
-        "Video meeting: #{url}"
+        "#{dgettext("emails", "Video meeting:")} #{url}"
 
       _other ->
         nil
@@ -139,12 +132,15 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   end
 
   defp determine_location(meeting_details) do
-    cond do
-      Map.get(meeting_details, :meeting_url) ->
-        "Video Call"
+    meeting_url = Map.get(meeting_details, :meeting_url)
+    location = Map.get(meeting_details, :location)
 
-      Map.get(meeting_details, :location) ->
-        Map.get(meeting_details, :location)
+    cond do
+      is_binary(meeting_url) and meeting_url != "" ->
+        dgettext("emails", "Video Call")
+
+      is_binary(location) and location != "" ->
+        location
 
       true ->
         ""
@@ -152,6 +148,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   end
 
   defp generate_basic_ics(event) do
+    attendee_line = if event.attendee, do: "ATTENDEE:#{event.attendee}\n", else: ""
+
     """
     BEGIN:VCALENDAR
     VERSION:2.0
@@ -162,12 +160,11 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     DTSTAMP:#{format_datetime_utc(DateTime.utc_now())}
     DTSTART:#{format_datetime_utc(event.dtstart)}
     DTEND:#{format_datetime_utc(event.dtend)}
-    SUMMARY:#{event.summary || "Meeting"}
+    SUMMARY:#{escape_ical_text(event.summary || dgettext("emails", "Meeting"))}
     DESCRIPTION:#{escape_ical_text(event.description)}
     LOCATION:#{escape_ical_text(event.location)}
     ORGANIZER:#{event.organizer}
-    #{if event.attendee, do: "ATTENDEE:#{event.attendee}", else: ""}
-    STATUS:#{event.status}
+    #{attendee_line}STATUS:#{event.status}
     END:VEVENT
     END:VCALENDAR
     """
@@ -186,9 +183,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   defp format_datetime_utc(datetime) do
     datetime
-    |> DateTime.to_iso8601()
-    |> String.replace(~r/[-:]/, "")
-    |> String.replace("T", "T")
-    |> String.replace("Z", "Z")
+    |> DateTime.shift_zone!("Etc/UTC")
+    |> DateTime.truncate(:second)
+    |> Calendar.strftime("%Y%m%dT%H%M%SZ")
   end
 end

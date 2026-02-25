@@ -21,10 +21,12 @@ defmodule Tymeslot.Emails.Shared.Components do
 
   # Meeting Components delegation
   defdelegate meeting_details_table(details), to: MeetingComponents
+  defdelegate meeting_details_table(details, locale), to: MeetingComponents
   defdelegate video_meeting_section(meeting_url, opts \\ []), to: MeetingComponents
   defdelegate time_alert_badge(time_text, opts \\ []), to: MeetingComponents
   defdelegate meeting_actions_bar(actions), to: MeetingComponents
   defdelegate format_meeting_time(details), to: MeetingComponents
+  defdelegate format_meeting_time(details, locale), to: MeetingComponents
 
   # UI Components delegation
   defdelegate action_button(text, url, opts \\ []), to: UiComponents

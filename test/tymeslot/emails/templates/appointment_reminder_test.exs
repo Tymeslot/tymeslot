@@ -236,4 +236,49 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       assert email.html_body != nil
     end
   end
+
+  describe "AppointmentReminderAttendee locale rendering" do
+    test "renders without error for all supported locales" do
+      for locale <- ["en", "de", "uk", "fr"] do
+        details = build_appointment_details(%{attendee_locale: locale})
+        email = AppointmentReminderAttendee.reminder_email("a@b.com", details)
+
+        assert %Swoosh.Email{} = email,
+               "Expected valid Swoosh email for locale #{locale}"
+
+        assert is_binary(email.html_body),
+               "Expected html_body for locale #{locale}"
+
+        assert is_binary(email.text_body),
+               "Expected text_body for locale #{locale}"
+      end
+    end
+
+    test "German reminder uses translated subject and body header" do
+      details = build_appointment_details(%{attendee_locale: "de"})
+      email = AppointmentReminderAttendee.reminder_email("a@b.com", details)
+
+      assert email.subject =~ "Erinnerung"
+      refute email.subject =~ "Reminder"
+      assert email.text_body =~ "ERINNERUNG:"
+    end
+
+    test "French reminder uses translated subject" do
+      details = build_appointment_details(%{attendee_locale: "fr"})
+      email = AppointmentReminderAttendee.reminder_email("a@b.com", details)
+
+      assert email.subject =~ "Rappel"
+      refute email.subject =~ "Reminder"
+      assert email.text_body =~ "RAPPEL :"
+    end
+
+    test "Ukrainian reminder uses translated subject" do
+      details = build_appointment_details(%{attendee_locale: "uk"})
+      email = AppointmentReminderAttendee.reminder_email("a@b.com", details)
+
+      assert email.subject =~ "Нагадування"
+      refute email.subject =~ "Reminder"
+      assert email.text_body =~ "НАГАДУВАННЯ:"
+    end
+  end
 end

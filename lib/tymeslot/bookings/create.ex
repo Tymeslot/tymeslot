@@ -6,6 +6,7 @@ defmodule Tymeslot.Bookings.Create do
 
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
+  alias Tymeslot.Locales
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Repo
@@ -108,7 +109,8 @@ defmodule Tymeslot.Bookings.Create do
         date: date,
         organizer_user_id: Map.get(meeting_params, :organizer_user_id),
         meeting_type_id: Map.get(meeting_params, :meeting_type_id),
-        video_integration_id: Map.get(meeting_params, :video_integration_id)
+        video_integration_id: Map.get(meeting_params, :video_integration_id),
+        attendee_locale: Map.get(meeting_params, :attendee_locale) || default_locale()
       }
 
       {:ok, booking_data}
@@ -118,6 +120,8 @@ defmodule Tymeslot.Bookings.Create do
       error -> error
     end
   end
+
+  defp default_locale, do: Locales.default_locale()
 
   defp normalize_date_input(%Date{} = date), do: {:ok, Date.to_iso8601(date)}
   defp normalize_date_input(date) when is_binary(date), do: {:ok, date}
