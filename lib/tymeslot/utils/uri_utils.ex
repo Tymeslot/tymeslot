@@ -5,14 +5,11 @@ defmodule Tymeslot.Utils.UriUtils do
 
   @doc """
   Decodes a percent-encoded URI string. Returns the original string unchanged
-  if the input contains malformed percent-sequences (e.g. `%GG`), rather than
-  raising.
+  if the input contains malformed percent-sequences (e.g. `%GG`).
   """
   @spec safe_decode(String.t()) :: String.t()
   def safe_decode(str) do
     URI.decode(str)
-  rescue
-    ArgumentError -> str
   end
 
   @doc """

@@ -82,6 +82,32 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       assert unified["selected"] == false
     end
 
+    test "preserves unselected status when exact key is in map with selected: false" do
+      # Guards against || short-circuiting past an explicit false — a decoded
+      # variant must not shadow an exact-match false.
+      discovered = [
+        %{
+          "id" => "/dav/user@example.org/Calendar",
+          "path" => "/dav/user@example.org/Calendar",
+          "name" => "Calendar",
+          "type" => "calendar"
+        }
+      ]
+
+      existing = [
+        %{
+          "id" => "/dav/user@example.org/Calendar",
+          "path" => "/dav/user@example.org/Calendar",
+          "name" => "Calendar",
+          "selected" => false
+        }
+      ]
+
+      [unified] = Selection.unify_discovered_with_existing(discovered, existing)
+
+      assert unified["selected"] == false
+    end
+
     test "preserves unselected status (selected: false) regardless of encoding" do
       discovered = [
         %{

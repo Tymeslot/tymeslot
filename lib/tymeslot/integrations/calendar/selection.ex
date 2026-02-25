@@ -23,7 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
     selected_calendar_info =
       discovered
-      |> Enum.filter(fn cal -> Enum.any?(selected_paths, &UriUtils.uri_safe_match?(fetch(cal, "path"), &1)) end)
+      |> Enum.filter(fn cal -> path_in_selected?(fetch(cal, "path"), selected_paths) end)
       |> Enum.map(fn cal ->
         %{
           "id" => fetch(cal, "id") || fetch(cal, :id) || fetch(cal, "path"),
@@ -63,12 +63,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     Enum.map(discovered, fn cal ->
       path = fetch(cal, "path")
       id = fetch(cal, "id") || path
-      selected =
-        Map.get(existing_map, path) ||
-          Map.get(existing_map, id) ||
-          (path && Map.get(existing_map, UriUtils.safe_decode(path))) ||
-          (id && Map.get(existing_map, UriUtils.safe_decode(id))) ||
-          false
+      selected = lookup_selection(existing_map, [path, id])
 
       %{
         "id" => id,
@@ -112,6 +107,25 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     else
       Map.get(map, Atom.to_string(key))
     end
+  end
+
+  defp path_in_selected?(path, selected_paths) do
+    Enum.any?(selected_paths, &UriUtils.uri_safe_match?(path, &1))
+  end
+
+  # Looks up a selection boolean for a calendar identified by any of the given
+  # keys (tried in order). Treats false and true as distinct — unlike `||`, this
+  # returns false immediately when a key is present with that value rather than
+  # continuing to the next candidate.
+  defp lookup_selection(existing_map, keys) do
+    keys
+    |> Enum.flat_map(fn
+      nil -> []
+      key -> [key, UriUtils.safe_decode(key)]
+    end)
+    |> Enum.find_value(false, fn key ->
+      if Map.has_key?(existing_map, key), do: Map.fetch!(existing_map, key)
+    end)
   end
 
   defp maybe_put(acc, nil, _val), do: acc
