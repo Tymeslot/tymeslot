@@ -314,8 +314,10 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
         selected_video_integration_id: nil
       }
 
-      assert {:ok, _meeting_type} =
+      assert {:ok, meeting_type} =
                MeetingTypes.create_meeting_type_from_form(user.id, form_params, ui_state)
+
+      assert meeting_type.target_calendar_id == decoded_id
     end
   end
 

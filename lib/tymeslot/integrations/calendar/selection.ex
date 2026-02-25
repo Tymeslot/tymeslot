@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Utils.UriUtils
 
   @doc """
   Build the params fragment based on selected calendar paths and discovered items.
@@ -22,7 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
     selected_calendar_info =
       discovered
-      |> Enum.filter(fn cal -> fetch(cal, "path") in selected_paths end)
+      |> Enum.filter(fn cal -> Enum.any?(selected_paths, &UriUtils.uri_safe_match?(fetch(cal, "path"), &1)) end)
       |> Enum.map(fn cal ->
         %{
           "id" => fetch(cal, "id") || fetch(cal, :id) || fetch(cal, "path"),
@@ -65,8 +66,8 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
       selected =
         Map.get(existing_map, path) ||
           Map.get(existing_map, id) ||
-          (path && Map.get(existing_map, URI.decode(path))) ||
-          (id && Map.get(existing_map, URI.decode(id))) ||
+          (path && Map.get(existing_map, UriUtils.safe_decode(path))) ||
+          (id && Map.get(existing_map, UriUtils.safe_decode(id))) ||
           false
 
       %{
@@ -119,20 +120,9 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   defp maybe_put_decoded(acc, nil, _val), do: acc
 
   defp maybe_put_decoded(acc, key, val) do
-    decoded = URI.decode(key)
+    decoded = UriUtils.safe_decode(key)
     if decoded == key, do: acc, else: Map.put(acc, decoded, val)
   end
-
-  @doc """
-  Compares two URI strings for equality, treating percent-encoded and decoded
-  forms as equivalent (per RFC 3986). Returns `false` if either argument is nil.
-  """
-  @spec uri_safe_match?(String.t() | nil, String.t() | nil) :: boolean()
-  def uri_safe_match?(a, b) when is_binary(a) and is_binary(b) do
-    a == b || URI.decode(a) == URI.decode(b)
-  end
-
-  def uri_safe_match?(_a, _b), do: false
 
   @doc """
   Update calendar selection for an integration.
@@ -144,7 +134,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     calendar_list =
       Enum.map(integration.calendar_list || [], fn cal ->
         cal_id = cal["id"] || cal[:id]
-        is_selected = cal_id in selected_calendar_ids
+        is_selected = Enum.any?(selected_calendar_ids, &UriUtils.uri_safe_match?(cal_id, &1))
         base_map = Enum.into(cal, %{})
 
         Map.merge(
