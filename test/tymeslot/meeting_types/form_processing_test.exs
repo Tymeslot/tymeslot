@@ -244,6 +244,81 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
 
       assert meeting_type.target_calendar_id == nextcloud_path
     end
+
+    test "validates target calendar when ID is percent-encoded in calendar_list" do
+      user = insert(:user)
+
+      # Zimbra-style: server returns percent-encoded href
+      encoded_id = "/dav/user%40example.org/Calendar"
+
+      calendar_integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_list: [
+            %{"id" => encoded_id, "name" => "Calendar", "selected" => true}
+          ]
+        )
+
+      form_params = %{
+        "name" => "Zimbra Meeting",
+        "duration" => "30",
+        "description" => "Test percent-encoded calendar ID",
+        "is_active" => "true",
+        "calendar_integration_id" => calendar_integration.id,
+        "target_calendar_id" => encoded_id
+      }
+
+      ui_state = %{
+        meeting_mode: "personal",
+        selected_icon: "hero-clock",
+        selected_video_integration_id: nil
+      }
+
+      assert {:ok, meeting_type} =
+               MeetingTypes.create_meeting_type_from_form(user.id, form_params, ui_state)
+
+      assert meeting_type.target_calendar_id == encoded_id
+    end
+
+    test "validates target calendar when encoding differs between stored ID and target" do
+      user = insert(:user)
+
+      # calendar_list stores encoded form, target uses decoded form
+      encoded_id = "/dav/user%40example.org/Calendar"
+      decoded_id = "/dav/user@example.org/Calendar"
+
+      calendar_integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_list: [
+            %{"id" => encoded_id, "name" => "Calendar", "selected" => true}
+          ]
+        )
+
+      form_params = %{
+        "name" => "Encoding Mismatch Meeting",
+        "duration" => "30",
+        "description" => "Target uses decoded form",
+        "is_active" => "true",
+        "calendar_integration_id" => calendar_integration.id,
+        "target_calendar_id" => decoded_id
+      }
+
+      ui_state = %{
+        meeting_mode: "personal",
+        selected_icon: "hero-clock",
+        selected_video_integration_id: nil
+      }
+
+      assert {:ok, meeting_type} =
+               MeetingTypes.create_meeting_type_from_form(user.id, form_params, ui_state)
+
+      assert meeting_type.target_calendar_id == decoded_id
+    end
   end
 
   # =====================================

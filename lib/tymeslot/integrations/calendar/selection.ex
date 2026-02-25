@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Utils.UriUtils
 
   @doc """
   Build the params fragment based on selected calendar paths and discovered items.
@@ -22,7 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
     selected_calendar_info =
       discovered
-      |> Enum.filter(fn cal -> fetch(cal, "path") in selected_paths end)
+      |> Enum.filter(fn cal -> path_in_selected?(fetch(cal, "path"), selected_paths) end)
       |> Enum.map(fn cal ->
         %{
           "id" => fetch(cal, "id") || fetch(cal, :id) || fetch(cal, "path"),
@@ -62,7 +63,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     Enum.map(discovered, fn cal ->
       path = fetch(cal, "path")
       id = fetch(cal, "id") || path
-      selected = Map.get(existing_map, path, Map.get(existing_map, id, false))
+      selected = lookup_selection(existing_map, [path, id])
 
       %{
         "id" => id,
@@ -83,6 +84,8 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
       acc
       |> maybe_put(path, selected)
       |> maybe_put(id, selected)
+      |> maybe_put_decoded(path, selected)
+      |> maybe_put_decoded(id, selected)
     end)
   end
 
@@ -106,8 +109,34 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     end
   end
 
+  defp path_in_selected?(path, selected_paths) do
+    Enum.any?(selected_paths, &UriUtils.uri_safe_match?(path, &1))
+  end
+
+  # Looks up a selection boolean for a calendar identified by any of the given
+  # keys (tried in order). Treats false and true as distinct — unlike `||`, this
+  # returns false immediately when a key is present with that value rather than
+  # continuing to the next candidate.
+  defp lookup_selection(existing_map, keys) do
+    keys
+    |> Enum.flat_map(fn
+      nil -> []
+      key -> [key, UriUtils.safe_decode(key)]
+    end)
+    |> Enum.find_value(false, fn key ->
+      if Map.has_key?(existing_map, key), do: Map.fetch!(existing_map, key)
+    end)
+  end
+
   defp maybe_put(acc, nil, _val), do: acc
   defp maybe_put(acc, key, val), do: Map.put(acc, key, val)
+
+  defp maybe_put_decoded(acc, nil, _val), do: acc
+
+  defp maybe_put_decoded(acc, key, val) do
+    decoded = UriUtils.safe_decode(key)
+    if decoded == key, do: acc, else: Map.put(acc, decoded, val)
+  end
 
   @doc """
   Update calendar selection for an integration.
@@ -119,7 +148,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     calendar_list =
       Enum.map(integration.calendar_list || [], fn cal ->
         cal_id = cal["id"] || cal[:id]
-        is_selected = cal_id in selected_calendar_ids
+        is_selected = Enum.any?(selected_calendar_ids, &UriUtils.uri_safe_match?(cal_id, &1))
         base_map = Enum.into(cal, %{})
 
         Map.merge(
