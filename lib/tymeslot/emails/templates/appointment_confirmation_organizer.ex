@@ -61,11 +61,16 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizer do
   end
 
   defp text_body(appointment_details) do
-    meeting_details = TextBodyHelper.format_meeting_details(appointment_details, organizer_locale())
+    meeting_details =
+      TextBodyHelper.format_meeting_details(appointment_details, organizer_locale())
+
     attendee_info = TextBodyHelper.format_attendee_info(appointment_details, organizer_locale())
 
     video_section =
-      TextBodyHelper.format_video_section(Map.get(appointment_details, :meeting_url), organizer_locale())
+      TextBodyHelper.format_video_section(
+        Map.get(appointment_details, :meeting_url),
+        organizer_locale()
+      )
 
     action_links = TextBodyHelper.format_action_links(appointment_details, organizer_locale())
 

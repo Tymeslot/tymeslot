@@ -384,7 +384,9 @@ defmodule Tymeslot.Emails.EmailService do
 
     # Send to old email
     html_body_old = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, true)
-    text_body_old = EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, true)
+
+    text_body_old =
+      EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, true)
 
     email_old =
       MjmlEmail.base_email()
@@ -397,7 +399,9 @@ defmodule Tymeslot.Emails.EmailService do
 
     # Send to new email
     html_body_new = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, false)
-    text_body_new = EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, false)
+
+    text_body_new =
+      EmailChangeConfirmed.render_text(user, old_email, new_email, confirmed_time, false)
 
     email_new =
       MjmlEmail.base_email()

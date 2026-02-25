@@ -317,6 +317,7 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   defp format_localized_duration(m) do
     h = div(m, 60)
     mins = rem(m, 60)
+
     "#{h} #{dngettext("emails", "hour", "hours", h)} #{mins} #{dngettext("emails", "minute", "minutes", mins)}"
   end
 

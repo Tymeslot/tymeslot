@@ -114,6 +114,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     case Map.get(meeting_details, :attendee_message) do
       message when is_binary(message) and message != "" ->
         attendee_label = Map.get(meeting_details, :attendee_name, dgettext("emails", "attendee"))
+
         "#{dgettext("emails", "Message from %{name}:", name: attendee_label)}\n#{String.trim(message)}"
 
       _other ->

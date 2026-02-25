@@ -391,7 +391,9 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
 
     test "propagates non-English attendee_locale from meeting to appointment details" do
       %{user: user} = create_user_with_profile()
-      meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600, attendee_locale: "de"})
+
+      meeting =
+        insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600, attendee_locale: "de"})
 
       result = AppointmentBuilder.from_meeting(meeting)
 
@@ -401,8 +403,11 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
     test "localized_reminder_label reflects attendee_locale" do
       %{user: user} = create_user_with_profile()
 
-      en_meeting = insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600, attendee_locale: "en"})
-      de_meeting = insert_meeting_for_user(user, %{start_offset: 7200, duration: 3600, attendee_locale: "de"})
+      en_meeting =
+        insert_meeting_for_user(user, %{start_offset: 3600, duration: 3600, attendee_locale: "en"})
+
+      de_meeting =
+        insert_meeting_for_user(user, %{start_offset: 7200, duration: 3600, attendee_locale: "de"})
 
       en_result = AppointmentBuilder.from_meeting(en_meeting, %{value: 15, unit: "minutes"})
       de_result = AppointmentBuilder.from_meeting(de_meeting, %{value: 15, unit: "minutes"})

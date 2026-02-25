@@ -308,7 +308,8 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
         organizer_email: "john@example.com"
       }
 
-      attachment = IcsGenerator.generate_ics_attachment(meeting_details, "en", "custom-invite.ics")
+      attachment =
+        IcsGenerator.generate_ics_attachment(meeting_details, "en", "custom-invite.ics")
 
       assert attachment.filename == "custom-invite.ics"
     end

@@ -86,7 +86,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendee do
 
   defp build_text_body(appointment_details, locale) do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
-    video_section = TextBodyHelper.format_video_section(appointment_details.attendee_video_url, locale)
+
+    video_section =
+      TextBodyHelper.format_video_section(appointment_details.attendee_video_url, locale)
+
     action_links = TextBodyHelper.format_action_links(appointment_details, locale)
 
     """

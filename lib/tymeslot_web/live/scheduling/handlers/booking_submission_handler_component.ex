@@ -325,7 +325,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         user_timezone: socket.assigns.user_timezone,
         organizer_user_id: socket.assigns.organizer_user_id,
         meeting_type_id: get_meeting_type_id(socket),
-        attendee_locale: socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
+        attendee_locale:
+          socket.assigns[:locale] || Application.get_env(:tymeslot, :locales)[:default] || "en",
         # Always true for public booking flow
         with_video_room: true
       }

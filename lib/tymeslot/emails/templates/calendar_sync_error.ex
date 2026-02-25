@@ -14,7 +14,9 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   def render_both(meeting, error_reason) do
     error_details = TemplateHelper.format_error_reason(error_reason)
     owner_start_time = owner_start_time(meeting)
-    {do_render_html(error_details, owner_start_time, meeting), do_render_text(error_details, owner_start_time, meeting)}
+
+    {do_render_html(error_details, owner_start_time, meeting),
+     do_render_text(error_details, owner_start_time, meeting)}
   end
 
   @spec render(map(), any()) :: String.t()

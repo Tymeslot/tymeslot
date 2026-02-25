@@ -23,10 +23,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderAttendee do
     locale = Map.get(appointment_details, :attendee_locale, "en")
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      time_str = LocaleFormat.format_time(
-        DateTime.to_time(appointment_details.start_time_attendee_tz),
-        locale
-      )
+      time_str =
+        LocaleFormat.format_time(
+          DateTime.to_time(appointment_details.start_time_attendee_tz),
+          locale
+        )
 
       mjml_content = """
       #{Components.time_alert_badge(appointment_details.time_until, icon: "⏰", color: :blue)}
@@ -114,7 +115,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderAttendee do
 
       MjmlEmail.base_email()
       |> to({appointment_details.attendee_name, attendee_email})
-      |> subject(dgettext("emails", "Reminder: Our meeting is %{time_until}", time_until: appointment_details.time_until))
+      |> subject(
+        dgettext("emails", "Reminder: Our meeting is %{time_until}",
+          time_until: appointment_details.time_until
+        )
+      )
       |> html_body(html_body)
       |> text_body(build_text_body(appointment_details, locale))
     end)

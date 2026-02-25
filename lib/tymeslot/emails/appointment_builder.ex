@@ -160,7 +160,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       time_until: reminder_label,
       time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
       reminders_enabled: true,
-      reminders_summary: dgettext("emails", "Reminder %{label} before the appointment.", label: reminder_label)
+      reminders_summary:
+        dgettext("emails", "Reminder %{label} before the appointment.", label: reminder_label)
     }
   end
 
@@ -173,7 +174,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
           time_until: nil,
           time_until_friendly: nil,
           reminders_enabled: false,
-          reminders_summary: dgettext("emails", "No reminder emails are scheduled for this appointment.")
+          reminders_summary:
+            dgettext("emails", "No reminder emails are scheduled for this appointment.")
         }
 
       legacy_label ->
@@ -183,7 +185,10 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
           time_until: legacy_label,
           time_until_friendly: dgettext("emails", "in %{label}", label: legacy_label),
           reminders_enabled: true,
-          reminders_summary: dgettext("emails", "I'll send you a reminder %{label} before our appointment.", label: legacy_label)
+          reminders_summary:
+            dgettext("emails", "I'll send you a reminder %{label} before our appointment.",
+              label: legacy_label
+            )
         }
     end
   end
@@ -198,7 +203,10 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       time_until: reminder_label,
       time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
       reminders_enabled: true,
-      reminders_summary: dgettext("emails", "I'll send you a reminder %{label} before our appointment.", label: reminder_label)
+      reminders_summary:
+        dgettext("emails", "I'll send you a reminder %{label} before our appointment.",
+          label: reminder_label
+        )
     }
   end
 
@@ -218,7 +226,9 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       time_until_friendly: dgettext("emails", "in %{label}", label: reminder_label),
       reminders_enabled: true,
       reminders_summary:
-        dgettext("emails", "You'll receive %{count} reminders before the appointment.", count: length(reminder_list))
+        dgettext("emails", "You'll receive %{count} reminders before the appointment.",
+          count: length(reminder_list)
+        )
     }
   end
 

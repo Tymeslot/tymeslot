@@ -116,7 +116,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
   defp organizer_locale, do: Locales.default_locale()
 
   defp text_body_organizer(appointment_details) do
-    meeting_details = TextBodyHelper.format_meeting_details(appointment_details, organizer_locale())
+    meeting_details =
+      TextBodyHelper.format_meeting_details(appointment_details, organizer_locale())
+
     attendee_info = TextBodyHelper.format_attendee_info(appointment_details, organizer_locale())
 
     """

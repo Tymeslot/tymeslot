@@ -183,7 +183,8 @@ defmodule TymeslotWeb.VideoOAuthController do
     end
   end
 
-  defp validate_state_parameter(_arg, _secret), do: {:error, :invalid_state, "Missing state parameter"}
+  defp validate_state_parameter(_arg, _secret),
+    do: {:error, :invalid_state, "Missing state parameter"}
 
   defp google_state_secret do
     Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||

@@ -56,11 +56,14 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   """
   @spec format_action_links(map()) :: String.t()
   def format_action_links(appointment_details),
-    do: format_action_links(appointment_details, Map.get(appointment_details, :attendee_locale, "en"))
+    do:
+      format_action_links(
+        appointment_details,
+        Map.get(appointment_details, :attendee_locale, "en")
+      )
 
   @spec format_action_links(map(), String.t()) :: String.t()
   def format_action_links(appointment_details, locale) do
-
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       links = []
 
@@ -95,11 +98,14 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   """
   @spec format_attendee_info(map()) :: String.t()
   def format_attendee_info(appointment_details),
-    do: format_attendee_info(appointment_details, Map.get(appointment_details, :attendee_locale, "en"))
+    do:
+      format_attendee_info(
+        appointment_details,
+        Map.get(appointment_details, :attendee_locale, "en")
+      )
 
   @spec format_attendee_info(map(), String.t()) :: String.t()
   def format_attendee_info(appointment_details, locale) do
-
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       info = [
         "#{dgettext("emails", "Name:")} #{appointment_details.attendee_name}",

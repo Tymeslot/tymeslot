@@ -586,7 +586,9 @@ defmodule Tymeslot.Emails.Templates.AuthEmailsTest do
 
     test "EmailChangeConfirmed.render_text returns a valid binary with malicious user name" do
       user = build_user_data(%{name: "<script>steal()</script>", email: "new@example.com"})
-      text = EmailChangeConfirmed.render_text(user, "old@example.com", "new@example.com", nil, false)
+
+      text =
+        EmailChangeConfirmed.render_text(user, "old@example.com", "new@example.com", nil, false)
 
       assert is_binary(text)
       assert text =~ "old@example.com"
