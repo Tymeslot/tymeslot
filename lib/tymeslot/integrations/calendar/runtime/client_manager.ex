@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
 
@@ -441,7 +442,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   end
 
   defp calendar_matches_id?(calendar, calendar_id) do
-    (calendar["id"] || calendar[:id]) == calendar_id
+    Selection.uri_safe_match?(calendar["id"] || calendar[:id], calendar_id)
   end
 
   defp create_adapter_client(provider_type, config) do

@@ -62,7 +62,12 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     Enum.map(discovered, fn cal ->
       path = fetch(cal, "path")
       id = fetch(cal, "id") || path
-      selected = Map.get(existing_map, path, Map.get(existing_map, id, false))
+      selected =
+        Map.get(existing_map, path) ||
+          Map.get(existing_map, id) ||
+          (path && Map.get(existing_map, URI.decode(path))) ||
+          (id && Map.get(existing_map, URI.decode(id))) ||
+          false
 
       %{
         "id" => id,
@@ -83,6 +88,8 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
       acc
       |> maybe_put(path, selected)
       |> maybe_put(id, selected)
+      |> maybe_put_decoded(path, selected)
+      |> maybe_put_decoded(id, selected)
     end)
   end
 
@@ -108,6 +115,24 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
   defp maybe_put(acc, nil, _val), do: acc
   defp maybe_put(acc, key, val), do: Map.put(acc, key, val)
+
+  defp maybe_put_decoded(acc, nil, _val), do: acc
+
+  defp maybe_put_decoded(acc, key, val) do
+    decoded = URI.decode(key)
+    if decoded == key, do: acc, else: Map.put(acc, decoded, val)
+  end
+
+  @doc """
+  Compares two URI strings for equality, treating percent-encoded and decoded
+  forms as equivalent (per RFC 3986). Returns `false` if either argument is nil.
+  """
+  @spec uri_safe_match?(String.t() | nil, String.t() | nil) :: boolean()
+  def uri_safe_match?(a, b) when is_binary(a) and is_binary(b) do
+    a == b || URI.decode(a) == URI.decode(b)
+  end
+
+  def uri_safe_match?(_a, _b), do: false
 
   @doc """
   Update calendar selection for an integration.

@@ -5,6 +5,7 @@ defmodule Tymeslot.MeetingTypes do
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.DatabaseQueries.MeetingTypeQueries
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Utils.ReminderUtils
   require Logger
 
@@ -339,7 +340,7 @@ defmodule Tymeslot.MeetingTypes do
     else
       found? =
         Enum.any?(calendar_list, fn cal ->
-          (cal["id"] || cal[:id]) == target_calendar_id
+          Selection.uri_safe_match?(cal["id"] || cal[:id], target_calendar_id)
         end)
 
       if found? do
