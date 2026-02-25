@@ -23,7 +23,7 @@ defmodule TymeslotWeb.VideoOAuthController do
     redirect_uri = "#{Endpoint.url()}/auth/google/video/callback"
 
     with :ok <- RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)),
-         :ok <- validate_state_parameter(state),
+         :ok <- validate_state_parameter(state, google_state_secret()),
          {:ok, tokens} <- GoogleOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
          {:ok, _integration} <- create_google_meet_integration(tokens) do
       DashboardContext.invalidate_integration_status(tokens.user_id)
@@ -85,7 +85,7 @@ defmodule TymeslotWeb.VideoOAuthController do
     redirect_uri = "#{Endpoint.url()}/auth/teams/video/callback"
 
     with :ok <- RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)),
-         :ok <- validate_state_parameter(state),
+         :ok <- validate_state_parameter(state, teams_state_secret()),
          {:ok, tokens} <- TeamsOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
          :ok <- validate_teams_tokens(tokens),
          {:ok, _integration} <- create_teams_integration(tokens) do
@@ -176,19 +176,25 @@ defmodule TymeslotWeb.VideoOAuthController do
     end
   end
 
-  defp validate_state_parameter(state) when is_binary(state) do
-    case State.validate(state, state_secret()) do
+  defp validate_state_parameter(state, secret) when is_binary(state) do
+    case State.validate(state, secret) do
       {:ok, _result} -> :ok
       {:error, reason} -> {:error, :invalid_state, reason}
     end
   end
 
-  defp validate_state_parameter(_arg), do: {:error, :invalid_state, "Missing state parameter"}
+  defp validate_state_parameter(_arg, _secret), do: {:error, :invalid_state, "Missing state parameter"}
 
-  defp state_secret do
+  defp google_state_secret do
+    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
+      System.get_env("GOOGLE_STATE_SECRET") ||
+      raise "Google OAuth state secret not configured"
+  end
+
+  defp teams_state_secret do
     Application.get_env(:tymeslot, :outlook_oauth)[:state_secret] ||
       System.get_env("OUTLOOK_STATE_SECRET") ||
-      raise "OAuth state secret not configured"
+      raise "Outlook OAuth state secret not configured"
   end
 
   defp create_google_meet_integration(tokens) do

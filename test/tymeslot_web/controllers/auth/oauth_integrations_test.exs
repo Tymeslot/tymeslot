@@ -152,6 +152,131 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     end
   end
 
+  # These tests run State.validate for real (no mock) to verify that each callback
+  # passes the correct provider secret. Google Meet must use the Google OAuth secret;
+  # Teams must use the Outlook OAuth secret. Using the wrong one must be rejected.
+  describe "VideoOAuthController secret routing" do
+    @google_secret "google_test_state_secret"
+    @outlook_secret "outlook_test_state_secret"
+
+    setup do
+      original_google_oauth = Application.get_env(:tymeslot, :google_oauth)
+      original_outlook_oauth = Application.get_env(:tymeslot, :outlook_oauth)
+
+      Application.put_env(
+        :tymeslot,
+        :google_oauth,
+        Keyword.merge(original_google_oauth || [], state_secret: @google_secret)
+      )
+
+      Application.put_env(
+        :tymeslot,
+        :outlook_oauth,
+        Keyword.merge(original_outlook_oauth || [], state_secret: @outlook_secret)
+      )
+
+      on_exit(fn ->
+        if is_nil(original_google_oauth),
+          do: Application.delete_env(:tymeslot, :google_oauth),
+          else: Application.put_env(:tymeslot, :google_oauth, original_google_oauth)
+
+        if is_nil(original_outlook_oauth),
+          do: Application.delete_env(:tymeslot, :outlook_oauth),
+          else: Application.put_env(:tymeslot, :outlook_oauth, original_outlook_oauth)
+      end)
+
+      :ok
+    end
+
+    test "google_callback accepts state signed with Google secret", %{conn: conn} do
+      user_id = 1001
+      state = State.generate(user_id, @google_secret)
+
+      :meck.expect(GoogleOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, ^state ->
+        {:ok,
+         %{
+           user_id: user_id,
+           access_token: "at",
+           refresh_token: "rt",
+           expires_at: DateTime.utc_now(),
+           scope: "scope"
+         }}
+      end)
+
+      :meck.expect(VideoIntegrationQueries, :create, fn _attrs ->
+        {:ok,
+         %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+           id: 10,
+           user_id: user_id,
+           name: "Google Meet",
+           provider: "google_meet"
+         }}
+      end)
+
+      Factory.insert(:user, id: user_id)
+
+      conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => state})
+
+      assert redirected_to(conn) == "/dashboard/video"
+      assert Flash.get(conn.assigns.flash, :info) =~ "Google Meet connected successfully"
+    end
+
+    test "google_callback rejects state signed with Outlook secret", %{conn: conn} do
+      user_id = 1002
+      state = State.generate(user_id, @outlook_secret)
+
+      conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => state})
+
+      assert redirected_to(conn) == "/dashboard/video"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication state"
+    end
+
+    test "teams_callback accepts state signed with Outlook secret", %{conn: conn} do
+      user_id = 1003
+      state = State.generate(user_id, @outlook_secret)
+
+      :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, ^state ->
+        {:ok,
+         %{
+           user_id: user_id,
+           access_token: "at",
+           refresh_token: "rt",
+           expires_at: DateTime.utc_now(),
+           scope: "scope",
+           tenant_id: "t-id",
+           teams_user_id: "u-id"
+         }}
+      end)
+
+      :meck.expect(VideoIntegrationQueries, :create, fn _attrs ->
+        {:ok,
+         %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+           id: 11,
+           user_id: user_id,
+           name: "Microsoft Teams",
+           provider: "teams"
+         }}
+      end)
+
+      Factory.insert(:user, id: user_id)
+
+      conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => state})
+
+      assert redirected_to(conn) == "/dashboard/video"
+      assert Flash.get(conn.assigns.flash, :info) =~ "Microsoft Teams connected successfully"
+    end
+
+    test "teams_callback rejects state signed with Google secret", %{conn: conn} do
+      user_id = 1004
+      state = State.generate(user_id, @google_secret)
+
+      conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => state})
+
+      assert redirected_to(conn) == "/dashboard/video"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication state"
+    end
+  end
+
   describe "VideoOAuthController" do
     setup do
       :meck.expect(State, :validate, fn _state, _secret -> {:ok, %{user_id: 123}} end)
