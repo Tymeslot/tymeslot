@@ -14,8 +14,8 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.CalendarManagement
-  alias Tymeslot.Utils.UriUtils
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Utils.UriUtils
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()

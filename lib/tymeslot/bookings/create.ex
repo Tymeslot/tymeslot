@@ -6,8 +6,8 @@ defmodule Tymeslot.Bookings.Create do
 
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
-  alias Tymeslot.Locales
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
+  alias Tymeslot.Locales
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoRoomWorker

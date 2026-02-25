@@ -5,8 +5,8 @@ defmodule Tymeslot.Bookings.Policy do
   """
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
-  alias Tymeslot.Locales
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Locales
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
