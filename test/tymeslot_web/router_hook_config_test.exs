@@ -54,6 +54,6 @@ defmodule TymeslotWeb.RouterHookConfigTest do
         assert Router.dashboard_additional_hooks() == []
       end)
 
-    assert log =~ "Expected :dashboard_additional_hooks to be a list. Ignoring invalid value"
+    assert log =~ "Expected :dashboard_additional_hooks to be a list; ignoring invalid value"
   end
 end

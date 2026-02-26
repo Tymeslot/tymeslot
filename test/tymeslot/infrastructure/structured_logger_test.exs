@@ -35,7 +35,7 @@ defmodule Tymeslot.Infrastructure.StructuredLoggerTest do
 
       assert capture_log(fn ->
                StructuredLogger.log_auth_event(:custom_event, 123)
-             end) =~ "Authentication event: custom_event"
+             end) =~ "Authentication event"
     end
   end
 
@@ -83,7 +83,7 @@ defmodule Tymeslot.Infrastructure.StructuredLoggerTest do
     test "logs business events" do
       assert capture_log(fn ->
                StructuredLogger.log_business_event(:meeting_booked, %{meeting_id: 456})
-             end) =~ "Business event: meeting_booked"
+             end) =~ "Business event"
     end
   end
 

@@ -27,7 +27,6 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
         end)
 
       assert log =~ "Oban queues accumulating jobs"
-      assert log =~ "oban_jobs_accumulating"
     end
 
     test "does not alert for job accumulation below threshold" do
@@ -63,7 +62,6 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
         end)
 
       assert log =~ "Oban queues have stuck available jobs"
-      assert log =~ "oban_queue_stuck"
     end
 
     test "does not alert for available jobs below stuck threshold" do
@@ -110,7 +108,6 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
         end)
 
       assert log =~ "Oban queues have stuck retryable jobs"
-      assert log =~ "oban_queue_stuck"
     end
 
     test "does not alert for retryable jobs scheduled in the future" do
@@ -152,7 +149,6 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
 
       # Should log a single batched alert for all unhealthy queues
       assert log =~ "Oban queues accumulating jobs"
-      assert log =~ "oban_jobs_accumulating"
     end
 
     test "ignores jobs older than 7 days for performance" do

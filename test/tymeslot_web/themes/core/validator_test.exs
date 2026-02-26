@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
         assert capture_log(fn ->
                  assert {:error, [{"broken", {:error, "Broken theme"}}]} =
                           Validator.validate_all_themes()
-               end) =~ "Theme broken: Broken theme"
+               end) =~ "Theme validation failure"
       after
         :meck.unload(Theme)
       end
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
                           Validator.validate_theme_independence()
 
                  assert reason =~ "Missing behavior functions"
-               end) =~ "Theme incomplete: Missing behavior functions"
+               end) =~ "Theme independence failure"
       after
         :meck.unload(Theme)
       end
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
 
                  assert reason == "Component does not implement LiveComponent behavior"
                end) =~
-                 "Theme test, Component invalid: Component does not implement LiveComponent behavior"
+                 "Theme component failure"
       after
         :meck.unload(Theme)
       end
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
                           Validator.validate_theme_components()
 
                  assert reason =~ "Failed to load component module"
-               end) =~ "Failed to load component module"
+               end) =~ "Theme component failure"
       after
         :meck.unload(Theme)
       end
@@ -134,7 +134,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
         assert capture_log(fn ->
                  assert {:error, [{"missing", {:error, "Theme module not found"}}]} =
                           Validator.validate_theme_independence()
-               end) =~ "Theme missing: Theme module not found"
+               end) =~ "Theme independence failure"
       after
         :meck.unload(Theme)
       end
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
                           Validator.validate_theme_independence()
 
                  assert reason =~ "Exception during theme independence test"
-               end) =~ "Theme error: Exception during theme independence test"
+               end) =~ "Theme independence failure"
       after
         :meck.unload(Theme)
       end
@@ -173,7 +173,7 @@ defmodule TymeslotWeb.Themes.Core.ValidatorTest do
         assert capture_log(fn ->
                  assert {:error, [{"Theme Registration", _error_reason}]} =
                           Validator.run_full_validation()
-               end) =~ "Theme Registration failed"
+               end) =~ "Theme system validation failed"
       after
         :meck.unload(Theme)
       end

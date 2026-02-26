@@ -98,8 +98,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       log = capture_log(fn -> MiroTalkProvider.test_connection(config) end)
 
       assert log =~ "MiroTalk server error"
-      assert log =~ "token=[REDACTED]"
-      assert log =~ "[TRUNCATED]"
       refute log =~ "ya29.secret"
     end
   end

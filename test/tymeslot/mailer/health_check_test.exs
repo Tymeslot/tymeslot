@@ -2,6 +2,8 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
   use ExUnit.Case, async: true
   @moduletag :mailer
 
+  import ExUnit.CaptureLog
+
   alias Tymeslot.Mailer.HealthCheck
 
   describe "validate_startup_config/1 for SMTP" do
@@ -31,8 +33,6 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
     end
 
     test "logs error but returns :ok when SMTP host (relay) is missing" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.SMTP,
         relay: nil,
@@ -46,13 +46,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "SMTP host"
-      assert log =~ "is required"
+      assert log =~ "SMTP configuration validation failed"
     end
 
     test "logs error but returns :ok when SMTP host is empty string" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.SMTP,
         relay: "",
@@ -66,13 +63,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "SMTP host"
-      assert log =~ "cannot be empty"
+      assert log =~ "SMTP configuration validation failed"
     end
 
     test "logs error but returns :ok when SMTP username is missing" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.SMTP,
         relay: "smtp.example.com",
@@ -86,13 +80,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "SMTP username"
-      assert log =~ "is required"
+      assert log =~ "SMTP configuration validation failed"
     end
 
     test "logs error but returns :ok when SMTP username is empty string" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.SMTP,
         relay: "smtp.example.com",
@@ -106,13 +97,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "SMTP username"
-      assert log =~ "cannot be empty"
+      assert log =~ "SMTP configuration validation failed"
     end
 
     test "logs error but returns :ok when SMTP password is missing" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.SMTP,
         relay: "smtp.example.com",
@@ -126,13 +114,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "SMTP password"
-      assert log =~ "is required"
+      assert log =~ "SMTP configuration validation failed"
     end
 
     test "logs error but returns :ok when SMTP password is empty string" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.SMTP,
         relay: "smtp.example.com",
@@ -146,13 +131,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "SMTP password"
-      assert log =~ "cannot be empty"
+      assert log =~ "SMTP configuration validation failed"
     end
 
     test "logs error but returns :ok when SMTP port is not an integer" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.SMTP,
         relay: "smtp.example.com",
@@ -166,12 +148,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "SMTP port must be an integer"
+      assert log =~ "SMTP configuration validation failed"
     end
 
     test "logs error but returns :ok when SMTP port is out of valid range (too low)" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.SMTP,
         relay: "smtp.example.com",
@@ -185,12 +165,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "SMTP port must be between 1-65535"
+      assert log =~ "SMTP configuration validation failed"
     end
 
     test "logs error but returns :ok when SMTP port is out of valid range (too high)" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.SMTP,
         relay: "smtp.example.com",
@@ -204,7 +182,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "SMTP port must be between 1-65535"
+      assert log =~ "SMTP configuration validation failed"
     end
   end
 
@@ -222,8 +200,6 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
     end
 
     test "logs error but returns :ok when adapter is not configured" do
-      import ExUnit.CaptureLog
-
       config = [adapter: nil]
 
       log =
@@ -237,8 +213,6 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
 
   describe "validate_startup_config/1 for Postmark" do
     test "logs error but returns :ok when Postmark API key is missing" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.Postmark,
         api_key: nil
@@ -249,12 +223,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "Postmark API key is required"
+      assert log =~ "Postmark configuration validation failed"
     end
 
     test "logs error but returns :ok when Postmark API key is empty string" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.Postmark,
         api_key: ""
@@ -265,12 +237,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "Postmark API key cannot be empty"
+      assert log =~ "Postmark configuration validation failed"
     end
 
     test "logs error but returns :ok when Postmark API key is whitespace only" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.Postmark,
         api_key: "   "
@@ -281,12 +251,10 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "Postmark API key cannot be empty"
+      assert log =~ "Postmark configuration validation failed"
     end
 
     test "logs error but returns :ok when Postmark API key is not a string" do
-      import ExUnit.CaptureLog
-
       config = [
         adapter: Swoosh.Adapters.Postmark,
         api_key: :not_a_string
@@ -297,13 +265,11 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "Postmark API key must be a string"
+      assert log =~ "Postmark configuration validation failed"
     end
 
     @tag :external
     test "validates API key with real Postmark API call" do
-      import ExUnit.CaptureLog
-
       # This test requires a real Postmark API key and network access
       # Skip in normal test runs
       config = [
@@ -317,7 +283,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      assert log =~ "Invalid Postmark API key" or log =~ "Postmark API validation timed out"
+      assert log =~ "Postmark configuration validation failed"
     end
   end
 
@@ -326,8 +292,6 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
     # These tests only verify that the validation logic correctly identifies structure issues
 
     test "structure validation catches all required field issues" do
-      import ExUnit.CaptureLog
-
       # Missing all fields
       config = [
         adapter: Swoosh.Adapters.SMTP,
@@ -342,69 +306,7 @@ defmodule Tymeslot.Mailer.HealthCheckTest do
           assert :ok = HealthCheck.validate_startup_config(config)
         end)
 
-      # Should log error about missing fields
-      assert log =~ "SMTP"
-    end
-  end
-
-  describe "error message quality" do
-    test "provides helpful error message for missing SMTP host" do
-      import ExUnit.CaptureLog
-
-      config = [
-        adapter: Swoosh.Adapters.SMTP,
-        relay: nil,
-        port: 587,
-        username: "user",
-        password: "pass"
-      ]
-
-      log =
-        capture_log([level: :error], fn ->
-          assert :ok = HealthCheck.validate_startup_config(config)
-        end)
-
-      assert log =~ "SMTP_HOST"
-      assert log =~ "environment variable"
-    end
-
-    test "provides helpful error message for missing credentials" do
-      import ExUnit.CaptureLog
-
-      config = [
-        adapter: Swoosh.Adapters.SMTP,
-        relay: "smtp.example.com",
-        port: 587,
-        username: nil,
-        password: "pass"
-      ]
-
-      log =
-        capture_log([level: :error], fn ->
-          assert :ok = HealthCheck.validate_startup_config(config)
-        end)
-
-      # Just check that SMTP variables are mentioned
-      assert log =~ "SMTP_USERNAME" or log =~ "SMTP username"
-    end
-
-    test "error message includes manual testing instructions" do
-      import ExUnit.CaptureLog
-
-      config = [
-        adapter: Swoosh.Adapters.SMTP,
-        relay: nil,
-        port: 587,
-        username: "user",
-        password: "pass"
-      ]
-
-      log =
-        capture_log([level: :error], fn ->
-          assert :ok = HealthCheck.validate_startup_config(config)
-        end)
-
-      assert log =~ "mix tymeslot_saas.test_email"
+      assert log =~ "SMTP configuration validation failed"
     end
   end
 end

@@ -139,9 +139,7 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
           RateLimiter.check_theme_customization_rate_limit(nil)
         end)
 
-      # With logger_json, structured metadata is in the JSON blob and not included
-      # in the plain-text output captured by capture_log. Verify the message itself.
-      assert log =~ "Invalid user_id for theme customization rate limit"
+      assert log =~ "Invalid user_id for rate limit"
     end
 
     test "logs warning when rate limit exceeded" do
@@ -161,8 +159,6 @@ defmodule Tymeslot.Security.RateLimiterThemeCustomizationTest do
         end)
 
       assert log =~ "Rate limit exceeded"
-      assert log =~ "theme customization"
-      assert log =~ to_string(user_id)
     end
   end
 

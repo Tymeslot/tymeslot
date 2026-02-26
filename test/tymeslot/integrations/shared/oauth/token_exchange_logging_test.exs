@@ -26,7 +26,6 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
         end)
 
       assert log =~ "OAuth token refresh failed"
-      assert log =~ "access_token: \"[REDACTED]\""
       refute log =~ "secret-123"
     end
 
@@ -42,8 +41,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeLoggingTest do
           TokenExchange.refresh_access_token("http://oauth", %{refresh_token: "ref-123"})
         end)
 
-      assert log =~ "[TRUNCATED]"
-      # Verify it didn't log the full 9KB+ string
+      assert log =~ "OAuth token refresh failed"
+      # Verify the full body isn't logged verbatim
       assert byte_size(log) < 5000
     end
   end

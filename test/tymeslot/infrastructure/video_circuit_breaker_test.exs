@@ -61,7 +61,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
           assert {:error, :circuit_open} = result
         end)
 
-      assert log =~ "Video circuit breaker open"
+      assert log =~ "Circuit breaker open"
     end
 
     test "propagates operation failure" do
@@ -75,7 +75,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
           assert {:error, :api_timeout} = result
         end)
 
-      assert log =~ "Video operation failed"
+      assert log =~ "Operation failed"
     end
 
     test "catches exceptions and returns error" do
@@ -90,8 +90,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreakerTest do
           assert {:error, _reason} = result
         end)
 
-      # The circuit breaker logs "Video operation failed" when an exception occurs
-      assert log =~ "Video operation failed"
+      assert log =~ "Circuit breaker caught exception"
     end
 
     test "works for all valid video providers" do
