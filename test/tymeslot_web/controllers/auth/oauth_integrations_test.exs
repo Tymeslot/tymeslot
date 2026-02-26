@@ -32,8 +32,15 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       :meck.new(mod, [:passthrough])
     end
 
-    # Ensure required OAuth state secret exists (VideoOAuthController.state_secret/0 can raise)
+    # Ensure required OAuth state secrets exist (VideoOAuthController.{google,teams}_state_secret/0 can raise)
+    original_google_oauth = Application.get_env(:tymeslot, :google_oauth)
     original_outlook_oauth = Application.get_env(:tymeslot, :outlook_oauth)
+
+    Application.put_env(
+      :tymeslot,
+      :google_oauth,
+      Keyword.merge(original_google_oauth || [], state_secret: "test_google_state_secret")
+    )
 
     Application.put_env(
       :tymeslot,
@@ -63,6 +70,12 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         Application.delete_env(:tymeslot, :video_providers)
       else
         Application.put_env(:tymeslot, :video_providers, original_video_providers)
+      end
+
+      if is_nil(original_google_oauth) do
+        Application.delete_env(:tymeslot, :google_oauth)
+      else
+        Application.put_env(:tymeslot, :google_oauth, original_google_oauth)
       end
 
       if is_nil(original_outlook_oauth) do
