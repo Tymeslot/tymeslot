@@ -203,7 +203,10 @@ defmodule Tymeslot.Integrations.HealthCheck do
         # Step 7: Handle transition (logging, user notification)
         ResponseHandler.handle_transition(type, integration, transition, new_health_state)
 
-        check_result
+        case check_result do
+          {:error, _} = error -> error
+          _ -> :ok
+        end
 
       {:error, :not_found} ->
         :ok
