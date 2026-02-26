@@ -11,10 +11,12 @@ defmodule CredoChecks.NoStringInterpolationInLogger do
       # Bad — interpolation bakes dynamic data into the message string
       Logger.info("Meeting \#{meeting.id} created by user \#{user_id}")
       Logger.error("OAuth failed at \#{operation}: \#{inspect(reason)}")
+      Logger.debug(fn -> "Slow query took \#{ms}ms" end)
 
       # Good — static message, variable data in keyword metadata
       Logger.info("Meeting created", meeting_id: meeting.id, user_id: user_id)
       Logger.error("OAuth failed", operation: operation, reason: inspect(reason))
+      Logger.debug(fn -> "Slow query" end)
   """
 
   use Credo.Check,
@@ -24,12 +26,15 @@ defmodule CredoChecks.NoStringInterpolationInLogger do
       check: """
       Logger message contains string interpolation. Move dynamic data to keyword
       metadata instead so log lines are stable and queryable in aggregation systems.
+      This applies to both direct messages and lazy function forms.
 
       Bad:
           Logger.info("Meeting \#{id} created by user \#{user_id}")
+          Logger.debug(fn -> "Slow query took \#{ms}ms" end)
 
       Good:
           Logger.info("Meeting created", meeting_id: id, user_id: user_id)
+          Logger.debug(fn -> "Slow query" end)
       """
     ]
 
@@ -47,13 +52,14 @@ defmodule CredoChecks.NoStringInterpolationInLogger do
 
   # Logger.level("interpolated #{message}")
   # Logger.level("interpolated #{message}", metadata)
+  # Logger.level(fn -> "interpolated #{message}" end)
   defp traverse(
          {{:., _, [{:__aliases__, _, [:Logger]}, level]}, meta, [message | _]} = ast,
          issues,
          issue_meta
        )
        when level in @logger_levels do
-    if interpolated_binary?(message) do
+    if interpolated_message?(message) do
       issue =
         format_issue(issue_meta,
           message:
@@ -70,6 +76,19 @@ defmodule CredoChecks.NoStringInterpolationInLogger do
   end
 
   defp traverse(ast, issues, _issue_meta), do: {ast, issues}
+
+  # Unwrap lazy function form: fn -> body end — check if the body contains interpolation.
+  # A single-expression body has the form {:fn, _, [{:->, _, [[], expr]}]}.
+  # A multi-expression body has the form {:fn, _, [{:->, _, [[], {:__block__, _, exprs}]}]}.
+  defp interpolated_message?({:fn, _, [{:->, _, [[], body]}]}) do
+    body_expressions(body)
+    |> Enum.any?(&interpolated_binary?/1)
+  end
+
+  defp interpolated_message?(node), do: interpolated_binary?(node)
+
+  defp body_expressions({:__block__, _, exprs}), do: exprs
+  defp body_expressions(expr), do: [expr]
 
   # An interpolated binary is a {:<<>>, _, parts} node that contains at least
   # one {:"::", _, [expr, {:binary, _, nil}]} interpolation segment.
