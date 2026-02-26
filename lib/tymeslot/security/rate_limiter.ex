@@ -627,7 +627,7 @@ defmodule Tymeslot.Security.RateLimiter do
 
   @spec invalid_user_id(String.t(), any()) :: {:error, :invalid_user_id}
   defp invalid_user_id(operation, user_id) do
-    Logger.error("Invalid user_id for #{operation} rate limit", user_id: inspect(user_id))
+    Logger.error("Invalid user_id for rate limit", operation: operation, user_id: inspect(user_id))
     {:error, :invalid_user_id}
   end
 
@@ -641,7 +641,9 @@ defmodule Tymeslot.Security.RateLimiter do
       {:error, :rate_limited} ->
         window_minutes = div(window_ms, 60_000)
 
-        Logger.warning("Rate limit exceeded for #{operation}: #{identifier}",
+        Logger.warning("Rate limit exceeded",
+          operation: operation,
+          identifier: identifier,
           bucket: bucket_key,
           limit: limit,
           window_minutes: window_minutes

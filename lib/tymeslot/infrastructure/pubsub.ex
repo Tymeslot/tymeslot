@@ -23,10 +23,10 @@ defmodule Tymeslot.Infrastructure.PubSub do
 
     case Phoenix.PubSub.broadcast(Tymeslot.PubSub, "auth:user_registered", message) do
       :ok ->
-        Logger.info("Broadcasted user_registered event for user_id=#{user.id}")
+        Logger.info("Broadcasted user_registered event", user_id: user.id)
 
       {:error, reason} ->
-        Logger.warning("Failed to broadcast user_registered event: #{inspect(reason)}")
+        Logger.warning("Failed to broadcast user_registered event", reason: inspect(reason))
     end
 
     :ok

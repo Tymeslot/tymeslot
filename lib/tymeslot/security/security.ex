@@ -253,10 +253,7 @@ defmodule Tymeslot.Security.Security do
   """
   @spec log_security_event(String.t(), map(), term()) :: :ok
   def log_security_event(event_type, details, _unused_socket_or_conn) do
-    Logger.warning("Security Event: #{event_type}",
-      details: details,
-      timestamp: DateTime.utc_now()
-    )
+    Logger.warning("Security event", event: event_type, details: details)
   end
 
   @doc """

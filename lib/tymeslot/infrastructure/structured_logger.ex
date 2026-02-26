@@ -56,7 +56,7 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
         Logger.error("Account locked due to too many failed attempts", merged_metadata)
 
       _other ->
-        Logger.info("Authentication event: #{event}", merged_metadata)
+        Logger.info("Authentication event", merged_metadata)
     end
   end
 
@@ -101,7 +101,7 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
   end
 
   defp log_by_phase(phase, metadata) do
-    Logger.info("API event: #{phase}", metadata)
+    Logger.info("API event", metadata)
   end
 
   defp log_response_by_status(metadata) do
@@ -182,7 +182,7 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
 
     merged_metadata = base_metadata ++ Map.to_list(metadata)
 
-    Logger.info("Business event: #{event}", merged_metadata)
+    Logger.info("Business event", merged_metadata)
   end
 
   @doc """

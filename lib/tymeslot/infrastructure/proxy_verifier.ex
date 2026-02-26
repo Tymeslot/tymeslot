@@ -114,7 +114,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
 
       config ->
         result = %{result | proxy_configured: true, details: %{config: sanitize_config(config)}}
-        Logger.info("Proxy configured: #{format_proxy_info(config)}")
+        Logger.info("Proxy configured", proxy: format_proxy_info(config))
 
         # Step 2: Test proxy connectivity and traffic flow
         test_proxy_connectivity(config, test_url, timeout, result)
@@ -132,7 +132,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
         {:error, "No proxy configured"}
 
       config ->
-        Logger.debug("Proxy configured: #{format_proxy_info(config)}")
+        Logger.debug("Proxy configured", proxy: format_proxy_info(config))
 
         # Try a simple HTTP request with short timeout
         case test_request("https://httpbin.org/status/200", timeout: 5_000) do
@@ -169,7 +169,9 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
         end
 
       proxy_config ->
-        Logger.info("Testing proxy connectivity to #{proxy_config.host}:#{proxy_config.port}...")
+        Logger.info("Testing proxy connectivity",
+          proxy: "#{proxy_config.host}:#{proxy_config.port}"
+        )
         test_with_proxy(proxy_config, test_url, timeout, result)
     end
   end
@@ -200,7 +202,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
 
   defp handle_successful_response(response, proxy_config, test_url, result) do
     if response.status in 200..299 do
-      Logger.info("✓ Proxy connectivity verified: received #{response.status} response")
+      Logger.info("Proxy connectivity verified", status: response.status)
 
       result = %{
         result
@@ -240,7 +242,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
   defp verify_httpbin_response(response, result) do
     case Jason.decode(response.body) do
       {:ok, %{"origin" => origin}} ->
-        Logger.info("✓ Request origin IP: #{origin}")
+        Logger.info("Request origin IP verified", origin_ip: origin)
         %{result | details: Map.put(result.details, :origin_ip, origin)}
 
       _result ->

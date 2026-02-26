@@ -282,9 +282,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   @impl GenServer
   def handle_info(:timeout, state) do
-    Logger.info("Circuit breaker #{inspect(state.name)} stopping due to inactivity",
-      name: state.name
-    )
+    Logger.info("Circuit breaker stopping due to inactivity", name: state.name)
 
     {:stop, :normal, state}
   end
@@ -293,7 +291,10 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   def handle_info(msg, state) do
     # In tests, Swoosh's TestAdapter sends {:email, email} messages to the process that calls deliver.
     # When deliver is wrapped in a circuit breaker, this GenServer receives those messages.
-    Logger.debug("Circuit breaker #{state.name} received message: #{inspect(msg)}")
+    Logger.debug("Circuit breaker received unexpected message",
+      name: state.name,
+      message: inspect(msg)
+    )
     {:noreply, state, @idle_timeout}
   end
 

@@ -221,7 +221,10 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
 
     # Log proxy usage for debugging
     if proxy_config do
-      Logger.debug("Using proxy #{proxy_config.host}:#{proxy_config.port} for #{url}")
+      Logger.debug("Using proxy for request",
+          proxy: "#{proxy_config.host}:#{proxy_config.port}",
+          url: url
+        )
     end
 
     # Build Req-compatible proxy options
