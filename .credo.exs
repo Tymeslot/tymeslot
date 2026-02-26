@@ -21,6 +21,8 @@
         "test/support/tag_taxonomy.ex",
         "dev_support/credo_checks/empty_files.ex",
         "dev_support/credo_checks/large_modules.ex",
+        "dev_support/credo_checks/no_map_metadata_in_logger.ex",
+        "dev_support/credo_checks/no_string_interpolation_in_logger.ex",
         "dev_support/credo_checks/require_dashboard_section_header.ex",
         "dev_support/credo_checks/thin_wrapper_functions.ex",
         "dev_support/credo_checks/use_core_inputs.ex",
@@ -107,6 +109,9 @@
           {CredoChecks.UseCoreInputs, []},
           {CredoChecks.RequireDashboardSectionHeader, [priority: :low]},
           {CredoChecks.TestModuleTagRequired, [priority: :high]},
+          # Logger hygiene: violations are :low while being cleared; raise to :high after Phase 3-4
+          {CredoChecks.NoStringInterpolationInLogger, [priority: :low]},
+          {CredoChecks.NoMapMetadataInLogger, [priority: :low]},
 
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)
