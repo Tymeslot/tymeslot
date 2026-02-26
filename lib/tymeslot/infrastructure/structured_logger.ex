@@ -100,7 +100,7 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
     Logger.error("API request failed", metadata)
   end
 
-  defp log_by_phase(phase, metadata) do
+  defp log_by_phase(_phase, metadata) do
     Logger.info("API event", metadata)
   end
 
