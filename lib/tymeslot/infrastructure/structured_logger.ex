@@ -27,14 +27,14 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
   """
   @spec log_auth_event(atom(), String.t() | integer() | nil, map()) :: :ok
   def log_auth_event(event, user_id, metadata \\ %{}) do
-    base_metadata = %{
+    base_metadata = [
       domain: :authentication,
       event: event,
       user_id: user_id,
       correlation_id: CorrelationId.get_from_process()
-    }
+    ]
 
-    merged_metadata = Map.merge(base_metadata, metadata)
+    merged_metadata = base_metadata ++ Map.to_list(metadata)
 
     case event do
       :login_success ->
@@ -78,14 +78,14 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
   end
 
   defp build_api_metadata(service, phase, metadata) do
-    base_metadata = %{
+    base_metadata = [
       domain: :external_api,
       service: service,
       phase: phase,
       correlation_id: CorrelationId.get_from_process()
-    }
+    ]
 
-    Map.merge(base_metadata, metadata)
+    base_metadata ++ Map.to_list(metadata)
   end
 
   defp log_by_phase(:request, metadata) do
@@ -137,14 +137,14 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
   """
   @spec log_database_operation(atom(), atom(), map()) :: :ok
   def log_database_operation(operation, table, metadata \\ %{}) do
-    base_metadata = %{
+    base_metadata = [
       domain: :database,
       operation: operation,
       table: table,
       correlation_id: CorrelationId.get_from_process()
-    }
+    ]
 
-    merged_metadata = Map.merge(base_metadata, metadata)
+    merged_metadata = base_metadata ++ Map.to_list(metadata)
 
     duration = metadata[:duration_ms]
 
@@ -174,13 +174,13 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
   """
   @spec log_business_event(atom(), map()) :: :ok
   def log_business_event(event, metadata \\ %{}) do
-    base_metadata = %{
+    base_metadata = [
       domain: :business,
       event: event,
       correlation_id: CorrelationId.get_from_process()
-    }
+    ]
 
-    merged_metadata = Map.merge(base_metadata, metadata)
+    merged_metadata = base_metadata ++ Map.to_list(metadata)
 
     Logger.info("Business event: #{event}", merged_metadata)
   end
@@ -198,13 +198,13 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
   """
   @spec log_error(atom(), String.t(), map()) :: :ok
   def log_error(error_type, message, metadata \\ %{}) do
-    base_metadata = %{
+    base_metadata = [
       domain: :error,
       error_type: error_type,
       correlation_id: CorrelationId.get_from_process()
-    }
+    ]
 
-    merged_metadata = Map.merge(base_metadata, metadata)
+    merged_metadata = base_metadata ++ Map.to_list(metadata)
 
     Logger.error(message, merged_metadata)
   end
@@ -221,13 +221,15 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
         user_id: user.id,
         request_id: request_id
       })
-      
+
       logger.(:info, "Processing user request", %{action: "update_profile"})
   """
   @spec with_context(map()) :: (atom(), String.t(), map() -> :ok)
   def with_context(context) do
+    context_kw = Map.to_list(context)
+
     fn level, message, metadata ->
-      merged_metadata = Map.merge(context, metadata)
+      merged_metadata = context_kw ++ Map.to_list(metadata)
 
       case level do
         :debug -> Logger.debug(message, merged_metadata)
@@ -250,35 +252,36 @@ defmodule Tymeslot.Infrastructure.StructuredLogger do
   @spec with_timing(atom(), map(), function()) :: any()
   def with_timing(operation, metadata \\ %{}, fun) do
     start_time = System.monotonic_time(:millisecond)
+    metadata_kw = Map.to_list(metadata)
 
     try do
       result = fun.()
 
       duration = System.monotonic_time(:millisecond) - start_time
 
-      base_metadata = %{
+      base_metadata = [
         operation: operation,
         duration_ms: duration,
         status: :success,
         correlation_id: CorrelationId.get_from_process()
-      }
+      ]
 
-      Logger.info("Operation completed", Map.merge(base_metadata, metadata))
+      Logger.info("Operation completed", base_metadata ++ metadata_kw)
 
       result
     rescue
       error ->
         duration = System.monotonic_time(:millisecond) - start_time
 
-        base_metadata = %{
+        base_metadata = [
           operation: operation,
           duration_ms: duration,
           status: :error,
           error: Exception.format(:error, error),
           correlation_id: CorrelationId.get_from_process()
-        }
+        ]
 
-        Logger.error("Operation failed", Map.merge(base_metadata, metadata))
+        Logger.error("Operation failed", base_metadata ++ metadata_kw)
 
         reraise error, __STACKTRACE__
     end

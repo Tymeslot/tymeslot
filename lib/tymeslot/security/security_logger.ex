@@ -30,8 +30,7 @@ defmodule Tymeslot.Security.SecurityLogger do
       pattern_type: pattern_type,
       ip_address: sanitized_metadata[:ip],
       user_id: sanitized_metadata[:user_id],
-      user_agent: sanitized_metadata[:user_agent],
-      timestamp: DateTime.utc_now()
+      user_agent: sanitized_metadata[:user_agent]
     )
   end
 
@@ -46,8 +45,7 @@ defmodule Tymeslot.Security.SecurityLogger do
       field: field,
       error_type: error_type,
       ip_address: sanitized_metadata[:ip],
-      user_id: sanitized_metadata[:user_id],
-      timestamp: DateTime.utc_now()
+      user_id: sanitized_metadata[:user_id]
     )
   end
 
@@ -61,8 +59,7 @@ defmodule Tymeslot.Security.SecurityLogger do
     Logger.debug("Validation successful",
       field: field,
       ip_address: sanitized_metadata[:ip],
-      user_id: sanitized_metadata[:user_id],
-      timestamp: DateTime.utc_now()
+      user_id: sanitized_metadata[:user_id]
     )
   end
 
@@ -110,21 +107,24 @@ defmodule Tymeslot.Security.SecurityLogger do
   """
   @spec log_security_event(String.t(), map()) :: :ok
   def log_security_event(event_type, details \\ %{}) do
-    metadata = %{
+    Logger.info("Security event",
       event_type: event_type,
-      timestamp: DateTime.to_iso8601(DateTime.utc_now()),
       user_id: details[:user_id],
       ip_address: details[:ip_address],
       user_agent: details[:user_agent],
-      session_id: details[:session_id],
-      additional_data: details[:additional_data] || %{}
-    }
-
-    Logger.info("Security Event: #{event_type}", metadata)
+      session_id: details[:session_id]
+    )
 
     # Also send to external monitoring if configured
     if Application.get_env(:tymeslot, :security_monitoring_enabled, false) do
-      send_to_monitoring_service(metadata)
+      send_to_monitoring_service(%{
+        event_type: event_type,
+        user_id: details[:user_id],
+        ip_address: details[:ip_address],
+        user_agent: details[:user_agent],
+        session_id: details[:session_id],
+        additional_data: details[:additional_data] || %{}
+      })
     end
 
     :ok

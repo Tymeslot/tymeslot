@@ -18,6 +18,10 @@ defmodule Tymeslot.Application do
     validate_config!()
     Logger.info("Starting Tymeslot application")
 
+    # Attach Oban's structured telemetry logger — emits job start/stop/exception
+    # events with job_id, queue, worker, attempt, and duration_ms automatically.
+    Oban.Telemetry.attach_default_logger(encode: false)
+
     # Set up telemetry handlers for metrics
     Metrics.setup_handlers()
 

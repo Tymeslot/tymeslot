@@ -43,6 +43,7 @@ defmodule TymeslotWeb do
         plug :put_secure_browser_headers
         plug TymeslotWeb.Plugs.SecurityHeadersPlug
         plug TymeslotWeb.Plugs.FetchCurrentUser
+        plug TymeslotWeb.Plugs.SetLoggerMetadata
         plug TymeslotWeb.Plugs.ThemePlug
       end
 
@@ -55,6 +56,7 @@ defmodule TymeslotWeb do
         plug :put_secure_browser_headers
         plug TymeslotWeb.Plugs.SecurityHeadersPlug, allow_embedding: true
         plug TymeslotWeb.Plugs.FetchCurrentUser
+        plug TymeslotWeb.Plugs.SetLoggerMetadata
         plug TymeslotWeb.Plugs.LocalePlug
         plug TymeslotWeb.Plugs.ThemePlug
         plug TymeslotWeb.Plugs.ThemeProtectionPlug
