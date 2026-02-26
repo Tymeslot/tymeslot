@@ -129,7 +129,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
                  "meeting_id" => meeting.id
                })
 
-      assert reason =~ ":timeout"
+      assert inspect(reason) =~ "timeout"
 
       delivery = Repo.one(WebhookDeliverySchema)
       assert delivery.error_message =~ "timeout"
