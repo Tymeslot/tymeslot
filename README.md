@@ -12,7 +12,7 @@ Enterprise-grade meeting scheduling platform built with Elixir & Phoenix LiveVie
 [![Phoenix LiveView](https://img.shields.io/badge/Phoenix%20LiveView-1.1-red.svg)](https://github.com/phoenixframework/phoenix_live_view)
 [![GitHub stars](https://img.shields.io/github/stars/tymeslot/tymeslot?style=social)](https://github.com/tymeslot/tymeslot/stargazers)
 
-[🚀 Try Cloud Version](https://tymeslot.app) · [📖 Documentation](https://github.com/tymeslot/tymeslot/wiki) · [🐛 Report Bug](https://github.com/tymeslot/tymeslot/issues)
+[🚀 Try Cloud Version](https://tymeslot.app) · [📖 Documentation](https://tymeslot.app/docs) · [🐛 Report Bug](https://github.com/tymeslot/tymeslot/issues)
 
 </div>
 
@@ -215,9 +215,6 @@ Embed booking widgets in your documentation.
 ### 📦 Cloudron
 [Guide →](README-Cloudron.md) — One-click install · Managed platform
 
-### 💻 Development
-[Docs →](CONTRIBUTING.md) — Local setup · Contribute code
-
 ## 🐳 Quick Start (Docker Image)
 
 If you already have Docker installed, you can pull and run the image in one step:
@@ -246,7 +243,7 @@ This command pulls the image automatically if it is not present locally. For a f
 [Open Issue →](https://github.com/tymeslot/tymeslot/issues) — Bugs & feature requests.
 
 ### 💻 Contribute Code
-[Guidelines →](CONTRIBUTING.md) — Development setup & PR process.
+[Guidelines →](CONTRIBUTING.md) — Local setup, development workflow & PR process.
 
 ## 🛡️ Security
 
