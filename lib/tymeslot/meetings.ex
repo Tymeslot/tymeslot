@@ -7,7 +7,6 @@ defmodule Tymeslot.Meetings do
 
   require Logger
 
-  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{Cancel, Create, Reschedule, RescheduleRequest}
   alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.DatabaseSchemas.MeetingSchema
@@ -59,26 +58,6 @@ defmodule Tymeslot.Meetings do
           {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
   def create_appointment(meeting_params, validated_form_data) do
     Create.execute(meeting_params, validated_form_data, skip_calendar_check: true)
-  end
-
-  @doc """
-  Parses duration string into minutes.
-  """
-  @spec parse_duration_minutes(String.t()) :: non_neg_integer()
-  def parse_duration_minutes(duration) do
-    case duration do
-      "15min" -> 15
-      "30min" -> 30
-      _other -> 30
-    end
-  end
-
-  @doc """
-  Parses time slot string into Time struct.
-  """
-  @spec parse_time_slot(String.t()) :: Time.t()
-  def parse_time_slot(slot_string) do
-    TimeSlots.parse_time_slot(slot_string)
   end
 
   @doc """

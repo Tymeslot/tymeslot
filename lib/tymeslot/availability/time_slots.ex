@@ -126,7 +126,7 @@ defmodule Tymeslot.Availability.TimeSlots do
   def parse_duration(duration) when is_integer(duration), do: duration
 
   def parse_duration(duration) when is_binary(duration) do
-    case Regex.run(~r/^\s*(\d+)\s*(?:min)?\s*$/i, duration) do
+    case Regex.run(~r/^\s*(\d+)\s*(?:-?\s*min(?:utes?)?)?\s*$/i, duration) do
       [_first, minutes_str] ->
         case Integer.parse(minutes_str) do
           {minutes, ""} when minutes > 0 -> minutes

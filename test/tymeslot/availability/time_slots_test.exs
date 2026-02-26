@@ -116,6 +116,27 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
       assert TimeSlots.parse_duration("30MIN") == 30
       assert TimeSlots.parse_duration("60Min") == 60
     end
+
+    test "parses URL slug format (N-minutes)" do
+      assert TimeSlots.parse_duration("60-minutes") == 60
+      assert TimeSlots.parse_duration("45-minutes") == 45
+      assert TimeSlots.parse_duration("15-minutes") == 15
+    end
+
+    test "parses 'minutes' variant without hyphen" do
+      assert TimeSlots.parse_duration("30minutes") == 30
+      assert TimeSlots.parse_duration("60 minutes") == 60
+    end
+
+    test "parses 'minute' singular" do
+      assert TimeSlots.parse_duration("1min") == 1
+      assert TimeSlots.parse_duration("1-minute") == 1
+    end
+
+    test "defaults to 30 for zero or negative" do
+      assert TimeSlots.parse_duration("0") == 30
+      assert TimeSlots.parse_duration("0min") == 30
+    end
   end
 
   describe "generate_slots_for_range/4" do

@@ -29,6 +29,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   import Phoenix.LiveView, only: [put_flash: 3]
 
   alias Phoenix.Component
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Security.InputProcessor
@@ -321,7 +322,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       meeting_params: %{
         date: socket.assigns.selected_date,
         time: socket.assigns.selected_time,
-        duration: socket.assigns.duration || socket.assigns.selected_duration,
+        duration: resolve_duration_minutes(socket),
         user_timezone: socket.assigns.user_timezone,
         organizer_user_id: socket.assigns.organizer_user_id,
         meeting_type_id: get_meeting_type_id(socket),
@@ -355,6 +356,19 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
       {:error, reason} ->
         handle_booking_error(socket, reason)
+    end
+  end
+
+  defp resolve_duration_minutes(socket) do
+    case socket.assigns[:meeting_type] do
+      %{duration_minutes: mins} when is_integer(mins) ->
+        mins
+
+      _other ->
+        case socket.assigns[:duration] || socket.assigns[:selected_duration] do
+          nil -> 30
+          val -> TimeSlots.parse_duration(val)
+        end
     end
   end
 

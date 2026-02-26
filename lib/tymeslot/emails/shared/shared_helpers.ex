@@ -292,7 +292,7 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   defp parse_duration_minutes(minutes) when is_integer(minutes) and minutes > 0, do: minutes
 
   defp parse_duration_minutes(str) when is_binary(str) do
-    case Regex.run(~r/^(\d+)min$/, str) do
+    case Regex.run(~r/^\s*(\d+)\s*(?:-?\s*min(?:utes?)?)?\s*$/i, str) do
       [_full, m] -> String.to_integer(m)
       _no_match -> 0
     end

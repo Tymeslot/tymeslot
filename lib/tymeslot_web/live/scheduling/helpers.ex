@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   """
 
   alias Phoenix.Component
-  alias Tymeslot.Availability.{BusinessHours, Calculate}
+  alias Tymeslot.Availability.{BusinessHours, Calculate, TimeSlots}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar
@@ -160,7 +160,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   """
   @spec get_available_slots(
           String.t(),
-          String.t(),
+          String.t() | integer(),
           String.t(),
           integer(),
           map(),
@@ -506,20 +506,13 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
     end
   end
 
-  defp parse_duration_minutes(duration) when is_binary(duration) do
-    case Regex.run(~r/^(\d+)min$/, duration) do
-      [_full_match, minutes] ->
-        mins = String.to_integer(minutes)
-        # Limit to 24 hours (1440 minutes)
-        cond do
-          mins <= 0 -> 30
-          mins > 1440 -> 1440
-          true -> mins
-        end
+  defp parse_duration_minutes(duration) when is_integer(duration) and duration > 0 do
+    min(duration, 1440)
+  end
 
-      _no_match ->
-        30
-    end
+  defp parse_duration_minutes(duration) when is_binary(duration) do
+    mins = TimeSlots.parse_duration(duration)
+    min(mins, 1440)
   end
 
   defp parse_duration_minutes(_other), do: 30

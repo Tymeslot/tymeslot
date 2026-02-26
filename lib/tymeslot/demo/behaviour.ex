@@ -110,7 +110,7 @@ defmodule Tymeslot.Demo.Behaviour do
   """
   @callback get_available_slots(
               date_string :: String.t(),
-              duration :: String.t(),
+              duration :: String.t() | integer(),
               user_timezone :: String.t(),
               organizer_user_id :: integer(),
               organizer_profile :: map(),

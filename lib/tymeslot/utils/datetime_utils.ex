@@ -168,38 +168,9 @@ defmodule Tymeslot.Utils.DateTimeUtils do
       iex> Tymeslot.Utils.DateTimeUtils.format_duration_for_url(30)
       "30min"
   """
-  @spec format_duration_for_url(non_neg_integer() | String.t()) :: String.t()
+  @spec format_duration_for_url(non_neg_integer()) :: String.t()
   def format_duration_for_url(duration_minutes) when is_integer(duration_minutes) do
     "#{duration_minutes}min"
-  end
-
-  def format_duration_for_url(duration_string) when is_binary(duration_string) do
-    case duration_string do
-      "15min" -> "15min"
-      "30min" -> "30min"
-      # Default fallback
-      _unknown -> "30min"
-    end
-  end
-
-  @doc """
-  Parses duration from URL format to minutes.
-
-  ## Examples
-      iex> Tymeslot.Utils.DateTimeUtils.parse_duration_from_url("15min")
-      15
-
-      iex> Tymeslot.Utils.DateTimeUtils.parse_duration_from_url("30min")
-      30
-  """
-  @spec parse_duration_from_url(String.t()) :: non_neg_integer()
-  def parse_duration_from_url(duration_string) do
-    case duration_string do
-      "15min" -> 15
-      "30min" -> 30
-      # Default fallback
-      _unknown -> 30
-    end
   end
 
   @doc """
@@ -523,7 +494,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   end
 
   def format_duration(duration_string) when is_binary(duration_string) do
-    case Regex.run(~r/^(\d+)min$/, duration_string) do
+    case Regex.run(~r/^\s*(\d+)\s*(?:-?\s*min(?:utes?)?)?\s*$/i, duration_string) do
       [_match, minutes_str] ->
         minutes_str |> String.to_integer() |> format_minutes()
 

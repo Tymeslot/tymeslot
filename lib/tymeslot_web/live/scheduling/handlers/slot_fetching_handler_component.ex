@@ -57,10 +57,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
       debug_calendar_module: socket.private[:debug_calendar_module]
     }
 
-    # If duration is a slug, we should use the actual duration in minutes
+    # Prefer the integer from meeting_type to avoid slug-parsing issues
     duration_to_fetch =
       case socket.assigns[:meeting_type] do
-        %{duration_minutes: mins} -> "#{mins}min"
+        %{duration_minutes: mins} when is_integer(mins) -> mins
         _other -> duration
       end
 

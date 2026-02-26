@@ -24,44 +24,6 @@ defmodule Tymeslot.MeetingsTest do
     :ok
   end
 
-  describe "parse_duration_minutes/1" do
-    test "parses 15min duration" do
-      assert Meetings.parse_duration_minutes("15min") == 15
-    end
-
-    test "parses 30min duration" do
-      assert Meetings.parse_duration_minutes("30min") == 30
-    end
-
-    test "defaults to 30 for unknown duration" do
-      assert Meetings.parse_duration_minutes("60min") == 30
-      assert Meetings.parse_duration_minutes("unknown") == 30
-      assert Meetings.parse_duration_minutes("") == 30
-    end
-  end
-
-  describe "parse_time_slot/1" do
-    test "parses 12-hour time format with AM" do
-      result = Meetings.parse_time_slot("9:00 AM")
-      assert %Time{hour: 9, minute: 0} = result
-    end
-
-    test "parses 12-hour time format with PM" do
-      result = Meetings.parse_time_slot("2:30 PM")
-      assert %Time{hour: 14, minute: 30} = result
-    end
-
-    test "parses noon correctly" do
-      result = Meetings.parse_time_slot("12:00 PM")
-      assert %Time{hour: 12, minute: 0} = result
-    end
-
-    test "parses midnight correctly" do
-      result = Meetings.parse_time_slot("12:00 AM")
-      assert %Time{hour: 0, minute: 0} = result
-    end
-  end
-
   describe "create_datetime_safe/3" do
     test "creates datetime with valid timezone" do
       date = ~D[2025-06-15]
