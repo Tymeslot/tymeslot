@@ -66,8 +66,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     total_refunded = calculate_total_refunded(charge)
     customer_id = charge["customer"]
 
-    Logger.info(
-      "REFUND RECEIVED - Processing refund for charge: #{charge_id}, total refunded: #{total_refunded}/#{charge_amount}",
+    Logger.info("Refund received",
       charge_id: charge_id,
       customer_id: customer_id,
       total_refunded: total_refunded,
@@ -89,7 +88,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     # Find the subscription by Stripe customer ID for local notifications
     case CustomerLookup.get_subscription_by_customer_id(customer_id) do
       nil ->
-        Logger.warning("REFUND UNLINKED - No subscription found for customer #{customer_id}",
+        Logger.warning("Refund unlinked - no subscription found",
           charge_id: charge_id,
           customer_id: customer_id
         )
@@ -118,8 +117,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
               charge_amount
             )
           else
-            Logger.info(
-              "REFUND BELOW THRESHOLD - Not revoking access for user #{subscription.user_id}",
+            Logger.info("Refund below threshold - not revoking access",
               user_id: subscription.user_id,
               charge_id: charge_id,
               total_refunded: total_refunded,
@@ -164,7 +162,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     refund_id = refund["id"]
     status = refund["status"]
 
-    Logger.info("Refund #{refund_id} status updated to: #{status}")
+    Logger.info("Refund status updated", refund_id: refund_id, status: status)
 
     # Track refund status changes (succeeded, failed, pending)
     # This is mainly for logging/auditing purposes
@@ -273,7 +271,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   defp ensure_revoked_access(subscription, charge_id, customer_id, total_refunded, charge_amount) do
     case revoke_subscription_access(customer_id) do
       {:ok, _result} ->
-        Logger.info("REFUND PROCESSED - Revoked Pro access for user #{subscription.user_id}",
+        Logger.info("Refund processed - access revoked",
           user_id: subscription.user_id,
           charge_id: charge_id,
           customer_id: customer_id,
@@ -293,11 +291,10 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
         :ok
 
       {:error, reason} ->
-        Logger.error(
-          "REFUND ERROR - Failed to revoke access for user #{subscription.user_id}: #{inspect(reason)}",
+        Logger.error("Refund error - failed to revoke access",
           user_id: subscription.user_id,
           charge_id: charge_id,
-          error: reason
+          error: inspect(reason)
         )
 
         {:error, :retry_later, "Subscription revocation failed"}

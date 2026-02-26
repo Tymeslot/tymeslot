@@ -210,7 +210,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
         :ok
 
       {:error, error} ->
-        Logger.error("Failed to mark subscription transaction as failed: #{inspect(error)}")
+        Logger.error("Failed to mark subscription transaction as failed", error: inspect(error))
         {:error, :transaction_update_failed}
     end
   end
@@ -219,7 +219,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
     if ChangesetHelpers.unique_pending_transaction_error?(changeset) do
       case pending_subscription_checkout_url_with_retry(user_id, amount, product_identifier) do
         {:ok, checkout_url} ->
-          Logger.info("Returning existing subscription checkout URL for user #{user_id}")
+          Logger.info("Returning existing subscription checkout URL", user_id: user_id)
           {:ok, %{checkout_url: checkout_url}}
 
         {:error, :checkout_conflict} ->

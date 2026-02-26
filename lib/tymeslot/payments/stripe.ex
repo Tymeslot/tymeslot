@@ -35,7 +35,7 @@ defmodule Tymeslot.Payments.Stripe do
   @spec create_customer(map()) :: stripe_result()
   def create_customer(params) when is_map(params) do
     email = params.email
-    Logger.info("Creating Stripe customer for email: #{email}")
+    Logger.info("Creating Stripe customer", email: email)
 
     customer_params =
       Map.merge(
@@ -59,7 +59,7 @@ defmodule Tymeslot.Payments.Stripe do
   @spec create_session(map(), integer(), map(), String.t(), String.t()) :: stripe_result()
   def create_session(customer, amount, transaction, success_url, cancel_url)
       when is_integer(amount) do
-    Logger.info("Creating Stripe session for customer: #{customer.id}")
+    Logger.info("Creating Stripe session", customer_id: customer.id)
 
     session_params = build_session_params(customer, amount, transaction, success_url, cancel_url)
     idempotency_key = generate_idempotency_key("session_create", transaction.id)
@@ -76,11 +76,11 @@ defmodule Tymeslot.Payments.Stripe do
   def verify_session(session_id) when is_binary(session_id) do
     case session_mod().retrieve(session_id, %{}, api_key_opts()) do
       {:ok, session} ->
-        Logger.info("Session verified successfully: #{session_id}")
+        Logger.info("Session verified successfully", session_id: session_id)
         {:ok, session}
 
       error ->
-        Logger.error("Failed to verify session: #{inspect(error)}")
+        Logger.error("Failed to verify session", error: inspect(error))
         error
     end
   end
@@ -221,7 +221,7 @@ defmodule Tymeslot.Payments.Stripe do
   """
   @spec cancel_subscription(String.t(), keyword()) :: stripe_result()
   def cancel_subscription(subscription_id, opts \\ []) when is_binary(subscription_id) do
-    Logger.info("Canceling Stripe subscription: #{subscription_id}")
+    Logger.info("Canceling Stripe subscription", subscription_id: subscription_id)
 
     at_period_end = Keyword.get(opts, :at_period_end, true)
 
@@ -250,7 +250,10 @@ defmodule Tymeslot.Payments.Stripe do
   @spec update_subscription(String.t(), String.t(), map()) :: stripe_result()
   def update_subscription(subscription_id, new_price_id, opts \\ %{})
       when is_binary(subscription_id) and is_binary(new_price_id) do
-    Logger.info("Updating Stripe subscription: #{subscription_id} to price: #{new_price_id}")
+    Logger.info("Updating Stripe subscription",
+      subscription_id: subscription_id,
+      new_price_id: new_price_id
+    )
 
     idempotency_key =
       generate_idempotency_key("subscription_update", "#{subscription_id}_#{new_price_id}")
@@ -274,7 +277,7 @@ defmodule Tymeslot.Payments.Stripe do
   """
   @spec get_subscription(String.t()) :: stripe_result()
   def get_subscription(subscription_id) when is_binary(subscription_id) do
-    Logger.info("Retrieving Stripe subscription: #{subscription_id}")
+    Logger.info("Retrieving Stripe subscription", subscription_id: subscription_id)
 
     RetryHelper.execute_with_retry(fn ->
       subscription_mod().retrieve(subscription_id, %{}, api_key_opts())
@@ -286,7 +289,7 @@ defmodule Tymeslot.Payments.Stripe do
   """
   @spec get_charge(String.t()) :: stripe_result()
   def get_charge(charge_id) when is_binary(charge_id) do
-    Logger.info("Retrieving Stripe charge: #{charge_id}")
+    Logger.info("Retrieving Stripe charge", charge_id: charge_id)
 
     RetryHelper.execute_with_retry(fn ->
       charge_mod().retrieve(charge_id, %{}, api_key_opts())
@@ -330,7 +333,7 @@ defmodule Tymeslot.Payments.Stripe do
   @spec create_billing_portal_session(String.t(), String.t()) :: stripe_result()
   def create_billing_portal_session(customer_id, return_url)
       when is_binary(customer_id) and is_binary(return_url) do
-    Logger.info("Creating Stripe billing portal session for customer: #{customer_id}")
+    Logger.info("Creating Stripe billing portal session", customer_id: customer_id)
 
     RetryHelper.execute_with_retry(fn ->
       BillingPortal.Session.create(

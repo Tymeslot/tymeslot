@@ -49,8 +49,9 @@ defmodule Tymeslot.Payments.Initiation do
           )
 
         {:ok, existing_transaction} ->
-          Logger.info(
-            "Superseding existing pending transaction #{existing_transaction.id} for user #{user_id}"
+          Logger.info("Superseding existing pending transaction",
+            transaction_id: existing_transaction.id,
+            user_id: user_id
           )
 
           with :ok <- PendingTransactions.supersede_pending_transaction(existing_transaction) do
@@ -99,13 +100,13 @@ defmodule Tymeslot.Payments.Initiation do
              cancel_url
            ),
          {:ok, _updated} <- DatabaseOperations.update_transaction_session(transaction, session) do
-      Logger.info("Payment initiated for user #{user_id}, transaction created")
+      Logger.info("Payment initiated", user_id: user_id)
       {:ok, session.url}
     else
       {:error, %Ecto.Changeset{} = changeset} ->
         if ChangesetHelpers.unique_pending_transaction_error?(changeset) do
-          Logger.info(
-            "Race condition detected for user #{user_id} in create_new_payment_transaction, retrying..."
+          Logger.info("Race condition detected, retrying payment transaction creation",
+            user_id: user_id
           )
 
           initiate_payment(
@@ -118,12 +119,12 @@ defmodule Tymeslot.Payments.Initiation do
             metadata
           )
         else
-          Logger.error("Failed to create transaction: #{inspect(changeset.errors)}")
+          Logger.error("Failed to create transaction", errors: inspect(changeset.errors))
           {:error, :transaction_creation_failed}
         end
 
       {:error, error} ->
-        Logger.error("Payment initiation failed: #{inspect(error)}")
+        Logger.error("Payment initiation failed", error: inspect(error))
         {:error, error}
     end
   end

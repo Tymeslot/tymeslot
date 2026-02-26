@@ -37,7 +37,7 @@ defmodule Tymeslot.Payments.PubSub do
 
       case PubSub.broadcast(pubsub_server, "payment:payment_successful", message) do
         :ok ->
-          Logger.info("Broadcasted payment_successful event for user_id=#{transaction.user_id}")
+          Logger.info("Broadcasted payment_successful event", user_id: transaction.user_id)
           :ok
 
         {:error, reason} ->
@@ -185,12 +185,12 @@ defmodule Tymeslot.Payments.PubSub do
         if Process.whereis(pubsub_module) do
           pubsub_module
         else
-          Logger.warning("PubSub server #{pubsub_module_name} not running")
+          Logger.warning("PubSub server not running", module: pubsub_module_name)
           nil
         end
       rescue
         ArgumentError ->
-          Logger.warning("PubSub module #{pubsub_module_name} does not exist")
+          Logger.warning("PubSub module does not exist", module: pubsub_module_name)
           nil
       end
     end
@@ -228,9 +228,7 @@ defmodule Tymeslot.Payments.PubSub do
 
       case PubSub.broadcast(pubsub_server, "payment:subscription_successful", message) do
         :ok ->
-          Logger.info(
-            "Broadcasted subscription_successful event for user_id=#{transaction.user_id}"
-          )
+          Logger.info("Broadcasted subscription_successful event", user_id: transaction.user_id)
 
           :ok
 
@@ -285,7 +283,7 @@ defmodule Tymeslot.Payments.PubSub do
 
       case PubSub.broadcast(pubsub_server, "payment:subscription_failed", message) do
         :ok ->
-          Logger.info("Broadcasted subscription_failed event for user_id=#{transaction.user_id}")
+          Logger.info("Broadcasted subscription_failed event", user_id: transaction.user_id)
           :ok
 
         {:error, reason} ->

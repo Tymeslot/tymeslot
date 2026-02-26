@@ -94,8 +94,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
         else
           case find_user_by_customer(customer_id) do
             nil ->
-              Logger.warning(
-                "DISPUTE UNLINKED - Could not find user for dispute on charge: #{charge_id}",
+              Logger.warning("Dispute unlinked - could not find user",
                 dispute_id: dispute_id,
                 charge_id: charge_id
               )
@@ -106,7 +105,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
               {:ok, :dispute_logged}
 
             user_id ->
-              Logger.info("DISPUTE LOGGED - One-time dispute for user #{user_id}",
+              Logger.info("Dispute logged for one-time payment",
                 user_id: user_id,
                 dispute_id: dispute_id,
                 charge_id: charge_id
@@ -135,7 +134,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     status = dispute["status"]
     charge_id = dispute["charge"]
 
-    Logger.info("Dispute #{dispute_id} status updated to: #{status}")
+    Logger.info("Dispute status updated", dispute_id: dispute_id, status: status)
 
     case fetch_charge(charge_id) do
       {:ok, charge} ->
@@ -162,7 +161,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     status = dispute["status"]
     charge_id = dispute["charge"]
 
-    Logger.info("DISPUTE CLOSED - Dispute #{dispute_id} closed with status: #{status}",
+    Logger.info("Dispute closed",
       dispute_id: dispute_id,
       status: status
     )
@@ -211,9 +210,9 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
         {:ok, charge}
 
       {:error, reason} ->
-        Logger.error(
-          "DISPUTE LINK ERROR - Failed to fetch charge from Stripe: #{inspect(reason)}",
-          charge_id: charge_id
+        Logger.error("Failed to fetch charge from Stripe",
+          charge_id: charge_id,
+          reason: inspect(reason)
         )
 
         {:error, :stripe_api_error, "Failed to fetch charge from Stripe API"}
@@ -284,11 +283,15 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
 
           case Mailer.deliver(email_struct) do
             {:ok, _result} ->
-              Logger.info("Dispute email (#{template_fun}) sent to #{email}")
+              Logger.info("Dispute email sent", template: template_fun, email: email)
               :ok
 
             {:error, reason} ->
-              Logger.error("Failed to send dispute email (#{template_fun}): #{inspect(reason)}")
+              Logger.error("Failed to send dispute email",
+                template: template_fun,
+                reason: inspect(reason)
+              )
+
               :ok
           end
         else

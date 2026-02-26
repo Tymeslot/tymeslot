@@ -16,7 +16,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookUtils do
 
     case repo.get(UserSchema, user_id) do
       nil ->
-        Logger.warning("User not found for ID #{user_id}")
+        Logger.warning("User not found", user_id: user_id)
         :ok
 
       user ->

@@ -104,7 +104,7 @@ defmodule Tymeslot.Payments.MetadataSanitizer do
             {:cont, {:ok, Map.put(acc, key, sanitized_value)}}
 
           {:error, reason} ->
-            Logger.warning("Metadata validation failed for key '#{key}': #{reason}")
+            Logger.warning("Metadata validation failed", key: key, reason: reason)
             {:halt, {:error, reason}}
         end
       end)
@@ -115,7 +115,7 @@ defmodule Tymeslot.Payments.MetadataSanitizer do
         filtered_out = Map.keys(metadata) -- Map.keys(filtered)
 
         if filtered_out != [] do
-          Logger.debug("Filtered out non-whitelisted metadata keys: #{inspect(filtered_out)}")
+          Logger.debug("Filtered out non-whitelisted metadata keys", keys: filtered_out)
         end
 
         {:ok, filtered}

@@ -53,7 +53,7 @@ defmodule Tymeslot.Payments.Webhooks.Security.SignatureVerifier do
         {:ok, event}
 
       {:error, reason} ->
-        Logger.error("Stripe signature verification failed: #{inspect(reason)}")
+        Logger.error("Stripe signature verification failed", reason: inspect(reason))
 
         {:error,
          %WebhookError.SignatureError{
@@ -64,7 +64,7 @@ defmodule Tymeslot.Payments.Webhooks.Security.SignatureVerifier do
     end
   rescue
     e ->
-      Logger.error("Exception during signature verification: #{inspect(e)}")
+      Logger.error("Exception during signature verification", error: Exception.message(e))
 
       {:error,
        %WebhookError.SignatureError{

@@ -22,7 +22,7 @@ defmodule Tymeslot.Payments.Webhooks.ChargeHandler do
 
     # For charge events, we don't process payments since the checkout.session.completed
     # event already handled the payment processing. We just log the charge success.
-    Logger.info("Charge succeeded for charge: #{Map.get(charge, "id")}")
+    Logger.info("Charge succeeded", charge_id: Map.get(charge, "id"))
     {:ok, :charge_logged}
   end
 
@@ -32,7 +32,7 @@ defmodule Tymeslot.Payments.Webhooks.ChargeHandler do
 
     # For charge events, we just log the failure. The main payment flow
     # should be handled by checkout.session events, not individual charges.
-    Logger.warning("Charge failed for charge: #{Map.get(charge, "id")}")
+    Logger.warning("Charge failed", charge_id: Map.get(charge, "id"))
     {:ok, :charge_failed_logged}
   end
 end

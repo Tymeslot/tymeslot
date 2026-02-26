@@ -28,8 +28,7 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
     # customer_id = subscription_object["customer"]
     trial_end = subscription_object["trial_end"]
 
-    Logger.info(
-      "TRIAL ENDING SOON - Processing trial_will_end for subscription: #{subscription_id}",
+    Logger.info("Trial ending soon",
       subscription_id: subscription_id,
       trial_end: trial_end
     )
@@ -47,7 +46,7 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
         # Find subscription in our database for local notifications
         case find_subscription(subscription_id) do
           nil ->
-            Logger.warning("TRIAL ENDING UNKNOWN - Subscription not found: #{subscription_id}",
+            Logger.warning("Trial ending - subscription not found",
               subscription_id: subscription_id
             )
 
@@ -67,8 +66,9 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
         end
 
       _other ->
-        Logger.error("TRIAL ENDING ERROR - Invalid trial_end timestamp: #{inspect(trial_end)}",
-          subscription_id: subscription_id
+        Logger.error("Trial ending - invalid timestamp",
+          subscription_id: subscription_id,
+          trial_end: inspect(trial_end)
         )
 
         {:error, :invalid_timestamp}

@@ -53,7 +53,7 @@ defmodule Tymeslot.Payments.PendingTransactions do
         :ok
 
       {:error, error} ->
-        Logger.error("Failed to supersede pending transaction: #{inspect(error)}")
+        Logger.error("Failed to supersede pending transaction", error: inspect(error))
         {:error, :transaction_update_failed}
     end
   end
@@ -66,7 +66,8 @@ defmodule Tymeslot.Payments.PendingTransactions do
         :ok
 
       {:ok, pending_transactions} ->
-        Logger.info("Superseding pending transactions for user #{user_id}",
+        Logger.info("Superseding pending transactions",
+          user_id: user_id,
           count: length(pending_transactions)
         )
 

@@ -71,7 +71,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
   end
 
   defp handle_exception(exception, event_type, stacktrace) do
-    Logger.error("Error processing webhook event: #{inspect(exception)}",
+    Logger.error("Error processing webhook event",
       event_type: event_type,
       error: inspect(exception),
       stacktrace: stacktrace
@@ -145,7 +145,8 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
     handler.process(normalized_event, object)
   rescue
     exception ->
-      Logger.error("Handler error: #{inspect(exception)}",
+      Logger.error("Handler error",
+        error: inspect(exception),
         handler: handler,
         stacktrace: __STACKTRACE__
       )
@@ -179,7 +180,8 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
       # We set webhook_id to nil if the schema allows, or skip if it's strictly for outgoing.
       # Given the schema, webhook_id is required. We'll log it to Logger for now
       # unless we want to create a dedicated 'stripe_events' table.
-      Logger.debug("Stripe event logged to system: #{event_type}",
+      Logger.debug("Stripe event logged to system",
+        event_type: event_type,
         details: attrs
       )
     end)
