@@ -7,7 +7,7 @@ defmodule Tymeslot.Application do
   require Logger
 
   alias Phoenix.PubSub
-  alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Infrastructure.{Metrics, ObanLogger}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
   alias Tymeslot.Integrations.Shared.Lock
@@ -21,6 +21,9 @@ defmodule Tymeslot.Application do
     # Attach Oban's structured telemetry logger — emits job start/stop/exception
     # events with job_id, queue, worker, attempt, and duration_ms automatically.
     Oban.Telemetry.attach_default_logger(encode: false)
+
+    # Set correlation_id in Logger metadata for every Oban job process
+    ObanLogger.attach()
 
     # Set up telemetry handlers for metrics
     Metrics.setup_handlers()
