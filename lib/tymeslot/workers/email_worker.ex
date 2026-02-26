@@ -37,15 +37,18 @@ defmodule Tymeslot.Workers.EmailWorker do
   Implements exponential backoff for retries.
   """
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"action" => action} = args, attempt: _current_attempt} = job) do
+  def perform(%Oban.Job{args: %{"action" => action} = args, attempt: attempt} = job) do
+    Logger.metadata(job_id: job.id, attempt: attempt)
+    if user_id = args["user_id"], do: Logger.metadata(user_id: user_id)
+
     execute_email_job_with_timeout(action, args, job)
   end
 
-  def perform(%Oban.Job{args: args} = job) do
+  def perform(%Oban.Job{args: args, attempt: attempt} = job) do
+    Logger.metadata(job_id: job.id, attempt: attempt)
+
     Logger.error("EmailWorker job missing action parameter",
-      args: inspect(args),
-      job_id: job.id,
-      attempt: job.attempt
+      arg_keys: Map.keys(args)
     )
 
     {:discard, "Missing action parameter"}
@@ -84,10 +87,10 @@ defmodule Tymeslot.Workers.EmailWorker do
         # Return success since job already exists
         :ok
 
-      {:error, changeset} ->
+      {:error, reason} ->
         Logger.error("Failed to schedule confirmation emails",
           meeting_id: meeting_id,
-          error: inspect(changeset)
+          error: format_insert_error(reason)
         )
 
         {:error, "Failed to schedule job"}
@@ -130,10 +133,10 @@ defmodule Tymeslot.Workers.EmailWorker do
 
         :ok
 
-      {:error, changeset} ->
+      {:error, reason} ->
         Logger.error("Failed to schedule email verification",
           user_id: user_id,
-          error: inspect(changeset)
+          error: format_insert_error(reason)
         )
 
         {:error, "Failed to schedule job"}
@@ -176,10 +179,10 @@ defmodule Tymeslot.Workers.EmailWorker do
 
         :ok
 
-      {:error, changeset} ->
+      {:error, reason} ->
         Logger.error("Failed to schedule password reset email",
           user_id: user_id,
-          error: inspect(changeset)
+          error: format_insert_error(reason)
         )
 
         {:error, "Failed to schedule job"}
@@ -238,10 +241,10 @@ defmodule Tymeslot.Workers.EmailWorker do
 
             :ok
 
-          {:error, changeset} ->
+          {:error, reason} ->
             Logger.error("Failed to schedule reminder emails",
               meeting_id: meeting_id,
-              error: inspect(changeset)
+              error: format_insert_error(reason)
             )
 
             {:error, "Failed to schedule job"}
@@ -300,11 +303,11 @@ defmodule Tymeslot.Workers.EmailWorker do
 
         :ok
 
-      {:error, changeset} ->
+      {:error, reason} ->
         Logger.error("Failed to schedule integration unhealthy notification",
           user_id: user.id,
           integration_id: integration.id,
-          error: inspect(changeset)
+          error: format_insert_error(reason)
         )
 
         {:error, "Failed to schedule job"}
@@ -312,6 +315,12 @@ defmodule Tymeslot.Workers.EmailWorker do
   end
 
   # Private functions
+
+  defp format_insert_error(%Changeset{} = changeset) do
+    Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+  end
+
+  defp format_insert_error(other), do: inspect(other)
 
   defp handle_result(result, job) do
     case result do
@@ -367,7 +376,7 @@ defmodule Tymeslot.Workers.EmailWorker do
   end
 
   defp handle_unexpected_email_result(result) do
-    Logger.error("Unexpected result from email job", result: inspect(result))
+    Logger.error("Unexpected result from email job", result: result)
     {:error, "Unexpected result"}
   end
 

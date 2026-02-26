@@ -27,17 +27,22 @@ defmodule Tymeslot.Workers.WebhookWorker do
   @delivery_timeout_ms 10_000
 
   @impl Oban.Worker
-  def perform(%Oban.Job{
-        args: %{
-          "webhook_id" => webhook_id,
-          "event_type" => event_type,
-          "meeting_id" => meeting_id
-        },
-        attempt: attempt
-      }) do
+  def perform(
+        %Oban.Job{
+          args: %{
+            "webhook_id" => webhook_id,
+            "event_type" => event_type,
+            "meeting_id" => meeting_id
+          },
+          attempt: attempt
+        } = job
+      ) do
+    Logger.metadata(job_id: job.id, attempt: attempt)
+
     feature = :automations_allowed
 
     with {:ok, webhook} <- WebhookQueries.get_webhook(webhook_id),
+         :ok = Logger.metadata(user_id: webhook.user_id),
          :ok <- check_feature_access(webhook.user_id, webhook_id, event_type, feature),
          {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
          {:ok, _delivery} <- deliver_webhook(webhook, event_type, meeting, attempt) do
@@ -77,8 +82,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
         Logger.warning("Webhook delivery failed",
           webhook_id: webhook_id,
           event_type: event_type,
-          attempt: attempt,
-          reason: inspect(reason)
+          reason: reason
         )
 
         # Note: failure is already recorded in log_and_update_status
@@ -88,9 +92,11 @@ defmodule Tymeslot.Workers.WebhookWorker do
     end
   end
 
-  def perform(%Oban.Job{args: args}) do
+  def perform(%Oban.Job{id: job_id, args: args, attempt: attempt}) do
+    Logger.metadata(job_id: job_id, attempt: attempt)
+
     Logger.error("WebhookWorker job missing required parameters",
-      args: inspect(args)
+      arg_keys: Map.keys(args)
     )
 
     {:discard, "Missing required parameters"}
@@ -140,7 +146,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
         Logger.error("Failed to schedule webhook delivery",
           webhook_id: webhook_id,
           event_type: event_type,
-          reason: inspect(reason)
+          reason: reason
         )
 
         {:error, reason}
@@ -262,10 +268,10 @@ defmodule Tymeslot.Workers.WebhookWorker do
         {:ok, status, response_body}
 
       {:error, %{reason: reason}} ->
-        {:error, inspect(reason)}
+        {:error, reason}
 
       {:error, reason} ->
-        {:error, inspect(reason)}
+        {:error, reason}
     end
   end
 

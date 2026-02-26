@@ -17,6 +17,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     # Highest priority for video room creation
     priority: 0
 
+  alias Ecto.Changeset
   alias Tymeslot.DatabaseQueries.{MeetingQueries, MeetingTypeQueries}
   alias Tymeslot.Meetings
   alias Tymeslot.Utils.ReminderUtils
@@ -41,50 +42,37 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     # Ensure meeting_id is a string to satisfy downstream specs
     meeting_id = to_string(meeting_id)
 
-    # Apply exponential backoff for retries (but not on first attempt)
-    if attempt > 1 and not Application.get_env(:tymeslot, :test_mode, false) do
-      backoff_ms = calculate_backoff(attempt)
+    Logger.metadata(job_id: job.id, attempt: attempt)
 
-      Logger.info("Retrying video room creation after backoff",
-        meeting_id: meeting_id,
-        attempt: attempt,
-        backoff_ms: backoff_ms
-      )
+    case MeetingQueries.get_meeting(meeting_id) do
+      {:ok, meeting} ->
+        Logger.metadata(user_id: meeting.organizer_user_id)
 
-      Process.sleep(backoff_ms)
-    end
+        # Apply exponential backoff for retries (but not on first attempt)
+        if attempt > 1 and not Application.get_env(:tymeslot, :test_mode, false) do
+          backoff_ms = calculate_backoff(attempt)
 
-    Logger.info("Starting video room creation",
-      meeting_id: meeting_id,
-      send_emails: send_emails,
-      attempt: attempt
-    )
+          Logger.info("Retrying video room creation after backoff",
+            meeting_id: meeting_id,
+            backoff_ms: backoff_ms
+          )
 
-    # Execute with timeout
-    task =
-      Task.async(fn ->
-        Meetings.add_video_room_to_meeting(meeting_id)
-      end)
+          Process.sleep(backoff_ms)
+        end
 
-    case Task.yield(task, @video_api_timeout_ms) || Task.shutdown(task) do
-      {:ok, {:ok, meeting}} ->
-        :ok = handle_success(meeting, send_emails)
-        :ok
-
-      {:ok, {:error, reason}} ->
-        result_after_error = handle_error(reason, meeting_id, send_emails, attempt, job)
-        handle_result(result_after_error, job)
-
-      {:ok, other_result} ->
-        handle_result(other_result, job)
-
-      nil ->
-        Logger.error("Video room creation timed out",
+        Logger.info("Starting video room creation",
           meeting_id: meeting_id,
-          timeout_ms: @video_api_timeout_ms
+          send_emails: send_emails
         )
 
-        handle_timeout_with_fallback(meeting_id, send_emails, attempt, job)
+        execute_with_timeout(meeting_id, send_emails, attempt, job)
+
+      {:error, :not_found} ->
+        Logger.warning("Meeting not found, discarding video room job",
+          meeting_id: meeting_id
+        )
+
+        {:discard, "Meeting not found"}
     end
   end
 
@@ -121,10 +109,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
         # Return success since job already exists
         :ok
 
-      {:error, changeset} ->
+      {:error, reason} ->
         Logger.error("Failed to schedule video room creation",
           meeting_id: meeting_id,
-          error: inspect(changeset)
+          error: format_insert_error(reason)
         )
 
         {:error, "Failed to schedule job"}
@@ -168,10 +156,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
         # Return success since job already exists
         :ok
 
-      {:error, changeset} ->
+      {:error, reason} ->
         Logger.error("Failed to schedule video room creation with emails",
           meeting_id: meeting_id,
-          error: inspect(changeset)
+          error: format_insert_error(reason)
         )
 
         {:error, "Failed to schedule job"}
@@ -179,6 +167,37 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   end
 
   # Private functions
+
+  defp format_insert_error(%Changeset{} = changeset) do
+    Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+  end
+
+  defp format_insert_error(other), do: inspect(other)
+
+  defp execute_with_timeout(meeting_id, send_emails, attempt, job) do
+    task = Task.async(fn -> Meetings.add_video_room_to_meeting(meeting_id) end)
+
+    case Task.yield(task, @video_api_timeout_ms) || Task.shutdown(task) do
+      {:ok, {:ok, meeting}} ->
+        :ok = handle_success(meeting, send_emails)
+        :ok
+
+      {:ok, {:error, reason}} ->
+        result_after_error = handle_error(reason, meeting_id, send_emails, attempt, job)
+        handle_result(result_after_error, job)
+
+      {:ok, other_result} ->
+        handle_result(other_result, job)
+
+      nil ->
+        Logger.error("Video room creation timed out",
+          meeting_id: meeting_id,
+          timeout_ms: @video_api_timeout_ms
+        )
+
+        handle_timeout_with_fallback(meeting_id, send_emails, attempt, job)
+    end
+  end
 
   defp handle_result(result, job) do
     case result do
@@ -243,7 +262,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   end
 
   defp handle_unexpected_video_result(result) do
-    Logger.error("Unexpected result from video room job", result: inspect(result))
+    Logger.error("Unexpected result from video room job", result: result)
     {:error, "Unexpected result"}
   end
 
@@ -280,8 +299,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   defp handle_error(reason, meeting_id, send_emails, attempt, _current_job) do
     Logger.error("Failed to create video room",
       meeting_id: meeting_id,
-      reason: inspect(reason),
-      attempt: attempt
+      reason: reason
     )
 
     # Categorize the error
@@ -308,7 +326,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
           Logger.warning(
             "Video room creation failed after 5 attempts, sending fallback emails and entering recovery",
             meeting_id: meeting_id,
-            reason: inspect(reason)
+            reason: reason
           )
 
           send_fallback_emails(meeting_id)

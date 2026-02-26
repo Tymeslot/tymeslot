@@ -111,7 +111,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
         Logger.debug("No old Stripe webhook events to clean up")
 
       error ->
-        Logger.error("Failed to clean up Stripe webhook events", error: inspect(error))
+        Logger.error("Failed to clean up Stripe webhook events", error: error)
     end
   end
 end

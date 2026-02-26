@@ -121,8 +121,15 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
       recent_date = DateTime.add(DateTime.utc_now(), -10, :day)
       payload = %{"type" => "invoice.paid", "data" => %{"amount" => 1000}}
 
-      old_id = insert_webhook_event("evt_old_payload_#{System.unique_integer()}", old_date, payload: payload)
-      recent_id = insert_webhook_event("evt_recent_payload_#{System.unique_integer()}", recent_date, payload: payload)
+      old_id =
+        insert_webhook_event("evt_old_payload_#{System.unique_integer()}", old_date,
+          payload: payload
+        )
+
+      recent_id =
+        insert_webhook_event("evt_recent_payload_#{System.unique_integer()}", recent_date,
+          payload: payload
+        )
 
       assert :ok = perform_job(WebhookCleanupWorker, %{})
 
@@ -138,7 +145,10 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
       date_15 = DateTime.add(DateTime.utc_now(), -15, :day)
       payload = %{"type" => "invoice.paid"}
 
-      event_id = insert_webhook_event("evt_15d_payload_#{System.unique_integer()}", date_15, payload: payload)
+      event_id =
+        insert_webhook_event("evt_15d_payload_#{System.unique_integer()}", date_15,
+          payload: payload
+        )
 
       # With 10-day retention the 15-day-old payload should be nullified
       assert :ok = perform_job(WebhookCleanupWorker, %{"payload_retention_days" => 10})

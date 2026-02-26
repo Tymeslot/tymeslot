@@ -20,7 +20,7 @@ defmodule Tymeslot.Workers.ExpiredSessionCleanupWorker do
     end
   rescue
     error ->
-      Logger.error("Expired session cleanup failed", error: inspect(error))
+      Logger.error("Expired session cleanup failed", error: error)
       # Don't retry aggressively; log and acknowledge to avoid repeated failures
       :ok
   end

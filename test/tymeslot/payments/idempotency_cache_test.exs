@@ -65,7 +65,12 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
   describe "mark_processed/3 payload storage" do
     test "stores payload in database when provided" do
       event_id = generate_event_id()
-      payload = %{"id" => event_id, "type" => "invoice.paid", "data" => %{"object" => %{"amount" => 1000}}}
+
+      payload = %{
+        "id" => event_id,
+        "type" => "invoice.paid",
+        "data" => %{"object" => %{"amount" => 1000}}
+      }
 
       IdempotencyCache.mark_processed(event_id, "invoice.paid", payload)
 

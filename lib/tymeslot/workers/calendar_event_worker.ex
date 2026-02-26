@@ -21,7 +21,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     # High priority for calendar sync
     priority: 1
 
-  alias Ecto.UUID
+  alias Ecto.{Changeset, UUID}
   alias Tymeslot.DatabaseQueries.MeetingQueries
   require Logger
 
@@ -36,6 +36,8 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   def perform(
         %Oban.Job{args: %{"action" => action, "meeting_id" => meeting_id}, attempt: attempt} = job
       ) do
+    Logger.metadata(job_id: job.id, attempt: attempt)
+
     if Application.get_env(:tymeslot, :test_mode, false) do
       # In test mode, run synchronously to avoid SQL sandbox and Mox allowance issues
       # with child processes created by Task.async
@@ -120,10 +122,10 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
         :ok
 
-      {:error, changeset} ->
+      {:error, reason} ->
         Logger.error("Failed to schedule calendar event creation",
           meeting_id: meeting_id,
-          error: inspect(changeset)
+          error: format_insert_error(reason)
         )
 
         {:error, "Failed to schedule job"}
@@ -171,6 +173,12 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   end
 
   # Private functions
+
+  defp format_insert_error(%Changeset{} = changeset) do
+    Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+  end
+
+  defp format_insert_error(other), do: inspect(other)
 
   defp handle_result(result, job) do
     case result do
@@ -290,13 +298,15 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   end
 
   defp handle_unexpected_result(result) do
-    Logger.error("Unexpected result from calendar job", result: inspect(result))
+    Logger.error("Unexpected result from calendar job", result: result)
     {:error, "Unexpected result"}
   end
 
   defp handle_calendar_creation(meeting_id, attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
+        Logger.metadata(user_id: meeting.organizer_user_id)
+
         # If the meeting already has an external UID (not a UUID), it means
         # another worker (like VideoRoomWorker for Teams) already created the event.
         # In this case, we switch to an update operation to ensure all fields are synced.
@@ -332,6 +342,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp handle_calendar_update(meeting_id, _attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
+        Logger.metadata(user_id: meeting.organizer_user_id)
         Logger.info("Updating calendar event", meeting_id: meeting_id, uid: meeting.uid)
         event_data = build_event_data(meeting)
         update_or_create_calendar_event(meeting_id, meeting.uid, event_data)
@@ -390,6 +401,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp handle_calendar_deletion(meeting_id, _attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} ->
+        Logger.metadata(user_id: meeting.organizer_user_id)
         Logger.info("Deleting calendar event", meeting_id: meeting_id, uid: meeting.uid)
 
         case calendar_module().delete_event(meeting.uid, meeting) do
@@ -464,8 +476,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       reason ->
         Logger.error("Failed to create calendar event",
           meeting_id: meeting_id,
-          reason: inspect(reason),
-          attempt: attempt
+          reason: reason
         )
 
         # On final attempt, send error notification
@@ -481,7 +492,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp send_calendar_error_notification(meeting, error_reason) do
     Logger.info("Sending calendar sync error notification to owner",
       meeting_id: meeting.id,
-      error: inspect(error_reason)
+      error: error_reason
     )
 
     # Send error notification email to calendar owner only

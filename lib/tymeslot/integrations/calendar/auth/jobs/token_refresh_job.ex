@@ -53,18 +53,27 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"integration_id" => integration_id}}) do
+  def perform(%Oban.Job{
+        id: job_id,
+        attempt: attempt,
+        args: %{"integration_id" => integration_id}
+      }) do
+    Logger.metadata(job_id: job_id, attempt: attempt)
+
     # Single integration refresh (for retry jobs)
     case CalendarIntegrationQueries.get(integration_id) do
       {:error, :not_found} ->
         {:discard, "Integration not found"}
 
       {:ok, integration} ->
+        Logger.metadata(user_id: integration.user_id)
         refresh_integration_token(integration)
     end
   end
 
-  def perform(%Oban.Job{}) do
+  def perform(%Oban.Job{id: job_id, attempt: attempt}) do
+    Logger.metadata(job_id: job_id, attempt: attempt)
+
     # Bulk refresh for periodic job
     refresh_expiring_tokens()
   end
