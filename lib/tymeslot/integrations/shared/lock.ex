@@ -210,7 +210,11 @@ defmodule Tymeslot.Integrations.Shared.Lock do
         case :ets.lookup(@table, key) do
           [{^key, _timestamp, ^pid}] ->
             :ets.delete(@table, key)
-            Logger.debug("Released lock for #{inspect(key)} because process #{inspect(pid)} died")
+
+            Logger.debug("Released lock because process died",
+              key: inspect(key),
+              pid: inspect(pid)
+            )
 
           _different_holder ->
             :ok

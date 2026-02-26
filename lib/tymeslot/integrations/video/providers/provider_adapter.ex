@@ -20,7 +20,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   @spec create_meeting_room(atom(), map()) :: {:ok, map()} | {:error, term()}
   def create_meeting_room(provider_type, config) do
     Metrics.time_operation(:video_create_room, %{provider: provider_type}, fn ->
-      Logger.info("Creating meeting room with #{provider_type} provider")
+      Logger.info("Creating meeting room", provider: provider_type)
 
       with {:ok, provider_module} <- ProviderRegistry.get_provider(provider_type),
            :ok <- provider_module.validate_config(config),
@@ -45,7 +45,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
           {:error, :unknown_provider}
 
         {:error, _reason} = error ->
-          Logger.error("Failed to create meeting room with #{provider_type}",
+          Logger.error("Failed to create meeting room",
+            provider: provider_type,
             reason: inspect(error)
           )
 
@@ -151,7 +152,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   """
   @spec test_connection(atom(), map()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(provider_type, config) do
-    Logger.info("Testing connection to #{provider_type} provider")
+    Logger.info("Testing connection to provider", provider: provider_type)
 
     case ProviderRegistry.test_provider_connection(provider_type, config) do
       {:ok, message} ->

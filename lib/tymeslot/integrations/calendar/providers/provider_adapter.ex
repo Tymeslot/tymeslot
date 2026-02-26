@@ -37,11 +37,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @spec get_events(map()) :: {:ok, list()} | {:error, term()}
   def get_events(adapter_client) do
     Metrics.time_operation(:calendar_get_events, %{provider: adapter_client.provider_type}, fn ->
-      Logger.debug("Getting events from #{adapter_client.provider_type} calendar")
+      Logger.debug("Getting events from calendar", provider: adapter_client.provider_type)
 
       case adapter_client.provider_module.get_events(adapter_client.client) do
         {:ok, events} = result ->
-          Logger.debug("Successfully retrieved #{length(events)} events")
+          Logger.debug("Successfully retrieved events", event_count: length(events))
           result
 
         {:error, reason} = error ->
@@ -63,7 +63,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
       :calendar_get_events_range,
       %{provider: adapter_client.provider_type},
       fn ->
-        Logger.debug("Getting events from #{adapter_client.provider_type} calendar",
+        Logger.debug("Getting events from calendar",
+          provider: adapter_client.provider_type,
           start_time: start_time,
           end_time: end_time
         )
@@ -74,11 +75,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
                end_time
              ) do
           {:ok, events} = result ->
-            Logger.debug("Successfully retrieved #{length(events)} events in range")
+            Logger.debug("Successfully retrieved events in range", event_count: length(events))
             result
 
           {:error, reason} = error ->
-            Logger.error("Failed to get events in range from #{adapter_client.provider_type}",
+            Logger.error("Failed to get events in range",
+              provider: adapter_client.provider_type,
               reason: inspect(reason)
             )
 
@@ -97,7 +99,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
       :calendar_create_event,
       %{provider: adapter_client.provider_type},
       fn ->
-        Logger.info("Creating event in #{adapter_client.provider_type} calendar")
+        Logger.info("Creating event in calendar", provider: adapter_client.provider_type)
 
         case adapter_client.provider_module.create_event(adapter_client.client, event_data) do
           {:ok, _result} = result ->
@@ -105,7 +107,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             result
 
           {:error, reason} = error ->
-            Logger.error("Failed to create event in #{adapter_client.provider_type}",
+            Logger.error("Failed to create event",
+              provider: adapter_client.provider_type,
               reason: inspect(reason)
             )
 
@@ -124,7 +127,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
       :calendar_update_event,
       %{provider: adapter_client.provider_type},
       fn ->
-        Logger.info("Updating event in #{adapter_client.provider_type} calendar", uid: uid)
+        Logger.info("Updating event in calendar", provider: adapter_client.provider_type, uid: uid)
 
         case adapter_client.provider_module.update_event(adapter_client.client, uid, event_data) do
           :ok ->
@@ -137,7 +140,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             :ok
 
           {:error, reason} = error ->
-            Logger.error("Failed to update event in #{adapter_client.provider_type}",
+            Logger.error("Failed to update event",
+              provider: adapter_client.provider_type,
               uid: uid,
               reason: inspect(reason)
             )
@@ -157,7 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
       :calendar_delete_event,
       %{provider: adapter_client.provider_type},
       fn ->
-        Logger.info("Deleting event from #{adapter_client.provider_type} calendar", uid: uid)
+        Logger.info("Deleting event from calendar", provider: adapter_client.provider_type, uid: uid)
 
         case adapter_client.provider_module.delete_event(adapter_client.client, uid) do
           :ok ->
@@ -170,7 +174,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             :ok
 
           {:error, reason} = error ->
-            Logger.error("Failed to delete event from #{adapter_client.provider_type}",
+            Logger.error("Failed to delete event",
+              provider: adapter_client.provider_type,
               uid: uid,
               reason: inspect(reason)
             )

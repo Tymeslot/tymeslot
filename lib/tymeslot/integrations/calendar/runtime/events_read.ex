@@ -27,7 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
     case {ensure_utc(start_date), ensure_utc(end_date)} do
       {{:ok, start_utc}, {:ok, end_utc}} ->
         all_clients = clients_fun.()
-        Logger.info("Fetching from #{length(all_clients)} calendar(s) in parallel")
+        Logger.info("Fetching from calendars in parallel", calendar_count: length(all_clients))
 
         tasks =
           Enum.map(all_clients, fn client ->
@@ -45,7 +45,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
           |> Enum.flat_map(fn {:ok, events, _path} -> events end)
           |> Enum.uniq_by(& &1.uid)
 
-        Logger.info("Total events found across all calendars: #{length(all_events)}")
+        Logger.info("Total events found across all calendars", event_count: length(all_events))
         {:ok, all_events}
 
       _result ->
@@ -64,8 +64,8 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
         wrap_events_result(client, {:ok, events})
 
       error ->
-        Logger.warning(
-          "Failed to fetch from calendar #{get_calendar_path(client)}, trying fallback"
+        Logger.warning("Failed to fetch from calendar, trying fallback",
+          calendar_path: get_calendar_path(client)
         )
 
         case fallback_list_events_for_client(client, start_utc, end_utc, error) do
@@ -88,15 +88,18 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
               DateTime.compare(end_time, start_utc) == :gt
           end)
 
-        Logger.info(
-          "Fallback filtering for #{get_calendar_path(client)}: #{length(filtered)} events from #{length(all_events)} total"
+        Logger.info("Fallback filtering applied",
+          calendar_path: get_calendar_path(client),
+          filtered_count: length(filtered),
+          total_count: length(all_events)
         )
 
         {:ok, filtered}
 
       error ->
-        Logger.error(
-          "Fallback also failed for calendar #{get_calendar_path(client)}: #{Redactor.redact(error)}"
+        Logger.error("Fallback also failed for calendar",
+          calendar_path: get_calendar_path(client),
+          error: Redactor.redact(error)
         )
 
         error
@@ -134,13 +137,19 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   defp wrap_events_result(client, result, _log_level \\ nil)
 
   defp wrap_events_result(client, {:ok, events}, _log_level) do
-    Logger.debug("Calendar #{get_calendar_path(client)} returned #{length(events)} events")
+    Logger.debug("Calendar returned events",
+      calendar_path: get_calendar_path(client),
+      event_count: length(events)
+    )
     {:ok, events, get_calendar_path(client)}
   end
 
   defp wrap_events_result(client, {:error, error}, _log_level) do
     path = get_calendar_path(client)
-    Logger.error("Failed to fetch from calendar #{path}: #{Redactor.redact(error)}")
+    Logger.error("Failed to fetch from calendar",
+      calendar_path: path,
+      error: Redactor.redact(error)
+    )
     {:error, error, path}
   end
 

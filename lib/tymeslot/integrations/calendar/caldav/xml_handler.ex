@@ -99,7 +99,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     {:ok, calendars}
   rescue
     e ->
-      Logger.error("XML parsing error: #{inspect(e)}")
+      Logger.error("XML parsing error", error: inspect(e))
       {:error, "Failed to parse calendar discovery response"}
   end
 
@@ -138,7 +138,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     {:ok, events}
   rescue
     e ->
-      Logger.error("XML parsing error: #{inspect(e)}")
+      Logger.error("XML parsing error", error: inspect(e))
       {:error, "Failed to parse calendar query response"}
   end
 
@@ -165,7 +165,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     end
   rescue
     e ->
-      Logger.error("XML parsing error in current-user-principal: #{inspect(e)}")
+      Logger.error("XML parsing error in current-user-principal", error: inspect(e))
       {:error, "Failed to parse current-user-principal response"}
   end
 
@@ -192,7 +192,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     end
   rescue
     e ->
-      Logger.error("XML parsing error in calendar-home-set: #{inspect(e)}")
+      Logger.error("XML parsing error in calendar-home-set", error: inspect(e))
       {:error, "Failed to parse calendar-home-set response"}
   end
 
@@ -220,7 +220,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     {:ok, capabilities}
   rescue
     e ->
-      Logger.error("XML parsing error: #{inspect(e)}")
+      Logger.error("XML parsing error", error: inspect(e))
       {:error, "Failed to parse server capabilities"}
   end
 

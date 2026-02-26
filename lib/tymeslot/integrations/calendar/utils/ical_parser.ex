@@ -48,7 +48,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     result
   rescue
     error ->
-      Logger.error("Failed to parse iCal content: #{inspect(error)}")
+      Logger.error("Failed to parse iCal content", error: inspect(error))
       {:error, "Parse error: #{inspect(error)}"}
   end
 

@@ -210,7 +210,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         create_debug_client(integration)
 
       _unknown_provider ->
-        Logger.warning("Unknown provider type: #{inspect(provider_type)}")
+        Logger.warning("Unknown provider type", provider_type: inspect(provider_type))
         []
     end
   end
@@ -261,7 +261,9 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
           adapter_client
 
         {:error, reason} ->
-          Logger.error("Failed to create #{provider_type} client for path #{path}",
+          Logger.error("Failed to create calendar client",
+            provider_type: provider_type,
+            path: path,
             reason: reason
           )
 

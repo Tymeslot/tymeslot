@@ -70,7 +70,10 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
         updated_request = %{request | waiters: [from | waiters]}
         new_state = put_in(state.requests[key], updated_request)
 
-        Logger.debug("Coalescing request for #{inspect(key)}, #{length(waiters) + 1} waiters")
+        Logger.debug("Coalescing request",
+          key: inspect(key),
+          waiter_count: length(waiters) + 1
+        )
 
         # Don't reply yet - we'll reply when the task completes
         {:noreply, new_state}
@@ -104,7 +107,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
           waiters = get_in(state, [:requests, key, :waiters]) || []
           Process.demonitor(ref, [:flush])
 
-          Logger.warning("Fetch task crashed for #{inspect(key)}", reason: inspect(reason))
+          Logger.warning("Fetch task crashed", key: inspect(key), reason: inspect(reason))
 
           Enum.each(waiters, fn waiter -> GenServer.reply(waiter, {:error, :task_died}) end)
           {:noreply, %{state | requests: Map.delete(state.requests, key)}}
@@ -127,8 +130,10 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
 
         elapsed = System.monotonic_time(:millisecond) - start_time
 
-        Logger.debug(
-          "Request for #{inspect(key)} completed in #{elapsed}ms, served #{length(waiters)} clients"
+        Logger.debug("Request completed",
+          key: inspect(key),
+          duration_ms: elapsed,
+          clients_served: length(waiters)
         )
 
         {:noreply, %{state | requests: requests}}
@@ -137,7 +142,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
 
   @impl GenServer
   def handle_info(msg, state) do
-    Logger.warning("RequestCoalescer received unexpected message: #{inspect(msg)}")
+    Logger.warning("RequestCoalescer received unexpected message", message: inspect(msg))
     {:noreply, state}
   end
 

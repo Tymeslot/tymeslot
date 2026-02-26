@@ -53,12 +53,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
     else
       with :miss <- get_cached_result(cache_key),
            {:ok, calendars} = result <- perform_discovery(provider, config) do
-        Logger.debug("Cache miss, performing discovery for #{provider}")
+        Logger.debug("Cache miss, performing discovery", provider: provider)
         cache_result(cache_key, calendars)
         result
       else
         {:ok, calendars} ->
-          Logger.debug("Using cached discovery results for #{provider}")
+          Logger.debug("Using cached discovery results", provider: provider)
           {:ok, calendars}
 
         error ->

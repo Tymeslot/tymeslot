@@ -58,8 +58,9 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
           _other ->
             redacted_body = Redactor.redact_and_truncate(resp_body)
 
-            Logger.error("OAuth token exchange failed: #{redacted_body}",
-              status: status
+            Logger.error("OAuth token exchange failed",
+              status: status,
+              body: redacted_body
             )
 
             {:error, "OAuth token exchange failed: HTTP #{status} (see logs for details)"}
@@ -94,8 +95,9 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
           _other ->
             redacted_body = Redactor.redact_and_truncate(resp_body)
 
-            Logger.error("OAuth token refresh failed: #{redacted_body}",
-              status: status
+            Logger.error("OAuth token refresh failed",
+              status: status,
+              body: redacted_body
             )
 
             {:error, {:http_error, status, "OAuth token refresh failed (see logs for details)"}}

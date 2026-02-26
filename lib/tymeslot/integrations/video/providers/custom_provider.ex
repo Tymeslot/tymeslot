@@ -127,7 +127,10 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
         hashed_id = hash_meeting_id(meeting_id)
         processed = String.replace(url, TemplateConfig.template_variable(), hashed_id)
 
-        Logger.debug("Processing URL template: #{mask_url(url)} -> #{mask_url(processed)}")
+        Logger.debug("Processing URL template",
+          input_url: mask_url(url),
+          output_url: mask_url(processed)
+        )
 
         {:ok, processed}
 
@@ -143,7 +146,10 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
           hashed_id = hash_meeting_id(string_id)
           processed = String.replace(url, TemplateConfig.template_variable(), hashed_id)
 
-          Logger.debug("Processing URL template: #{mask_url(url)} -> #{mask_url(processed)}")
+          Logger.debug("Processing URL template",
+          input_url: mask_url(url),
+          output_url: mask_url(processed)
+        )
 
           {:ok, processed}
         else

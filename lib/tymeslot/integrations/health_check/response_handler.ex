@@ -67,7 +67,8 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
         {:became_unhealthy, old_status, :unhealthy},
         health_state
       ) do
-    Logger.error("Integration health critical (was #{inspect(old_status)})",
+    Logger.error("Integration health critical",
+      previous_status: inspect(old_status),
       type: type,
       integration_id: integration.id,
       provider: integration.provider

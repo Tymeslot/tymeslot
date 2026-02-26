@@ -150,7 +150,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   defp handle_propfind_error(%Req.TransportError{reason: :timeout}), do: {:error, :timeout}
 
   defp handle_propfind_error(reason) do
-    Logger.debug("CalDAV PROPFIND network error: #{inspect(reason)}")
+    Logger.debug("CalDAV PROPFIND network error", reason: inspect(reason))
     {:error, :network_error}
   end
 
@@ -202,7 +202,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
         {:error, :timeout}
 
       {:error, reason} ->
-        Logger.debug("CalDAV REPORT network error: #{inspect(reason)}")
+        Logger.debug("CalDAV REPORT network error", reason: inspect(reason))
         {:error, :network_error}
     end
   end
@@ -223,7 +223,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
         handle_put_event_response(response)
 
       {:error, reason} ->
-        Logger.debug("CalDAV PUT network error: #{inspect(reason)}")
+        Logger.debug("CalDAV PUT network error", reason: inspect(reason))
         {:error, :network_error}
     end
   end
@@ -308,7 +308,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   end
 
   defp handle_put_event_error(reason) do
-    Logger.debug("CalDAV PUT/DELETE network error: #{inspect(reason)}")
+    Logger.debug("CalDAV PUT/DELETE network error", reason: inspect(reason))
     {:error, :network_error}
   end
 
@@ -434,7 +434,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
         {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
           # Non-standard: CalDAV REPORT should return 207 Multi-Status
           # Some servers may return 200 OK - accept it but log for debugging
-          Logger.warning("CalDAV REPORT returned #{status} instead of 207 Multi-Status",
+          Logger.warning("CalDAV REPORT returned unexpected status",
+            status: status,
+            expected: 207,
             url: url,
             provider: Map.get(client, :provider, :caldav)
           )

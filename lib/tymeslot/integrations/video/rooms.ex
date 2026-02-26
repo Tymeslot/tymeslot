@@ -39,7 +39,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   end
 
   defp create_room_with_provider(provider_type, config) do
-    Logger.info("Using #{provider_type} provider for meeting room creation")
+    Logger.info("Using provider for meeting room creation", provider_type: provider_type)
 
     case ProviderAdapter.create_meeting_room(provider_type, config) do
       {:ok, meeting_context} ->

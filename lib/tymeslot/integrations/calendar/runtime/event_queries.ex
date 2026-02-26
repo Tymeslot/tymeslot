@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
         %{calendar_count: length(all_clients)},
         fn ->
           Logger.info("Listing all calendar events from all calendars")
-          Logger.info("Fetching from #{length(all_clients)} calendar(s) in parallel")
+          Logger.info("Fetching from calendars in parallel", calendar_count: length(all_clients))
 
           results =
             all_clients
@@ -60,7 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
               |> Enum.flat_map(&extract_events/1)
               |> Enum.uniq_by(& &1.uid)
 
-            Logger.info("Total events found across all calendars: #{length(all_events)}")
+            Logger.info("Total events found across all calendars", event_count: length(all_events))
             {:ok, all_events}
           end
         end
@@ -162,7 +162,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
         |> Enum.flat_map(fn {:ok, events, _path} -> events end)
         |> Enum.uniq_by(& &1.uid)
 
-      Logger.info("Total fresh events found across all calendars: #{length(all_events)}")
+      Logger.info("Total fresh events found across all calendars", event_count: length(all_events))
       {:ok, all_events}
     end
   end

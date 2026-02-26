@@ -42,7 +42,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
 
     query_string = URI.encode_query(params)
     url = "#{@oauth_base_url}/authorize?" <> query_string
-    Logger.info("Generated Teams OAuth URL with scope: #{@teams_scope}")
+    Logger.info("Generated Teams OAuth URL", scope: @teams_scope)
     url
   end
 

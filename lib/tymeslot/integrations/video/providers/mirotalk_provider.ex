@@ -139,9 +139,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
        when status >= 500 do
     redacted_body = Redactor.redact_and_truncate(body)
 
-    Logger.error("MiroTalk server error: #{redacted_body}",
-      status: status
-    )
+    Logger.error("MiroTalk server error", status: status, body: redacted_body)
 
     {:error, "MiroTalk server error (status #{status}) - Please try again later"}
   end
@@ -224,14 +222,12 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       {:ok, %Req.Response{status: status, body: body}} ->
         redacted_body = Redactor.redact_and_truncate(body)
 
-        Logger.error("MiroTalk API error: #{redacted_body}",
-          status: status
-        )
+        Logger.error("MiroTalk API error", status: status, body: redacted_body)
 
         {:error, {:http_error, status, "MiroTalk API error (see logs for details)"}}
 
       {:error, reason} ->
-        Logger.error("Failed to create MiroTalk room: #{Redactor.redact(reason)}")
+        Logger.error("Failed to create MiroTalk room", error: Redactor.redact(reason))
         {:error, reason}
     end
   end
@@ -548,9 +544,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
         redacted_body = Redactor.redact_and_truncate(body)
 
-        Logger.error("#{error_msg}: #{redacted_body}",
-          status: status
-        )
+        Logger.error("MiroTalk API error", message: error_msg, status: status, body: redacted_body)
 
         {:error, {:http_error, status, "#{error_msg} (see logs for details)"}}
 
