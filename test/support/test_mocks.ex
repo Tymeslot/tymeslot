@@ -461,6 +461,7 @@ defmodule Tymeslot.TestMocks do
     @moduledoc "Behaviour for Stripe Session operations"
     @callback create(map(), list()) :: {:ok, map()} | {:error, any()}
     @callback retrieve(String.t(), map(), list()) :: {:ok, map()} | {:error, any()}
+    @callback expire(String.t(), map(), list()) :: {:ok, map()} | {:error, any()}
   end
 
   defmodule StripeSubscriptionBehaviour do

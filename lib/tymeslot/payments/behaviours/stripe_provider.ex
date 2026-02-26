@@ -44,6 +44,9 @@ defmodule Tymeslot.Payments.Behaviours.StripeProvider do
             ) ::
               {:ok, map()} | {:error, term()}
 
+  @callback expire_checkout_session(session_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+
   @callback list_subscriptions(params :: map()) ::
               {:ok, map()} | {:error, term()}
 

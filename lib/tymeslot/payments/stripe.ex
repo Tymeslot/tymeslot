@@ -198,6 +198,18 @@ defmodule Tymeslot.Payments.Stripe do
   end
 
   @doc """
+  Expires a Stripe checkout session, preventing it from being completed.
+  """
+  @spec expire_checkout_session(String.t()) :: stripe_result()
+  def expire_checkout_session(session_id) when is_binary(session_id) do
+    Logger.info("Expiring Stripe checkout session", session_id: session_id)
+
+    RetryHelper.execute_with_retry(fn ->
+      session_mod().expire(session_id, %{}, api_key_opts())
+    end)
+  end
+
+  @doc """
   Creates a Stripe checkout session for subscription processing.
   """
   @spec create_checkout_session_for_subscription(map()) :: stripe_result()

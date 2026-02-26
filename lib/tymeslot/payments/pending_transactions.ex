@@ -39,6 +39,8 @@ defmodule Tymeslot.Payments.PendingTransactions do
 
   @spec supersede_pending_transaction(transaction()) :: :ok | {:error, term()}
   def supersede_pending_transaction(transaction) do
+    expire_checkout_session_if_present(transaction)
+
     update_attrs = %{
       status: "failed",
       metadata:
@@ -56,6 +58,25 @@ defmodule Tymeslot.Payments.PendingTransactions do
         Logger.error("Failed to supersede pending transaction", error: inspect(error))
         {:error, :transaction_update_failed}
     end
+  end
+
+  defp expire_checkout_session_if_present(%{stripe_id: "cs_" <> _rest = session_id}) do
+    case stripe_provider().expire_checkout_session(session_id) do
+      {:ok, _session} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to expire superseded checkout session",
+          session_id: session_id,
+          reason: inspect(reason)
+        )
+    end
+  end
+
+  defp expire_checkout_session_if_present(_transaction), do: :ok
+
+  defp stripe_provider do
+    Application.get_env(:tymeslot, :stripe_provider, Tymeslot.Payments.Stripe)
   end
 
   @spec supersede_pending_transaction_if_needed(pos_integer()) ::

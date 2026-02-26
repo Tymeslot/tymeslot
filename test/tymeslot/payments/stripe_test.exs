@@ -122,6 +122,28 @@ defmodule Tymeslot.Payments.StripeTest do
     end
   end
 
+  describe "expire_checkout_session/1" do
+    test "successfully expires a checkout session" do
+      session_id = "cs_live_abc123"
+
+      expect(StripeSessionMock, :expire, fn ^session_id, %{}, _opts ->
+        {:ok, %{id: session_id, status: "expired"}}
+      end)
+
+      assert {:ok, %{status: "expired"}} = Stripe.expire_checkout_session(session_id)
+    end
+
+    test "returns error when session cannot be expired" do
+      session_id = "cs_live_abc123"
+
+      expect(StripeSessionMock, :expire, 3, fn ^session_id, %{}, _opts ->
+        {:error, %{__struct__: Stripe.Error, source: :network, message: "Network timeout"}}
+      end)
+
+      assert {:error, %{source: :network}} = Stripe.expire_checkout_session(session_id)
+    end
+  end
+
   describe "error handling" do
     test "returns error when API key is missing" do
       Application.delete_env(:tymeslot, :stripe_secret_key)
