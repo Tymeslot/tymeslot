@@ -104,6 +104,8 @@ defmodule TymeslotWeb do
       use Phoenix.LiveView,
         layout: {TymeslotWeb.Layouts, :app}
 
+      on_mount TymeslotWeb.Hooks.LoggerMetadataHook
+
       unquote(html_helpers())
     end
   end
