@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Layouts do
 
       other ->
         require Logger
-        Logger.error("Invalid theme extension configuration: #{inspect(other)}")
+        Logger.error("Invalid theme extension configuration", value: inspect(other))
         false
     end)
   end

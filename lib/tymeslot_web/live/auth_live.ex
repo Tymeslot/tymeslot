@@ -69,14 +69,14 @@ defmodule TymeslotWeb.AuthLive do
 
   @impl Phoenix.LiveView
   def handle_event("navigate_to", %{"state" => state}, socket) do
-    Logger.info("AuthLive: navigate_to event received with state: #{state}")
+    Logger.info("AuthLive: navigate_to event received", state: state)
 
     if StateHelper.valid_state?(state) do
       path = StateHelper.get_path_for_state(String.to_existing_atom(state))
-      Logger.info("AuthLive: navigating to #{path}")
+      Logger.info("AuthLive: navigating", path: path)
       {:noreply, push_patch(socket, to: path)}
     else
-      Logger.warning("AuthLive: invalid state #{state}")
+      Logger.warning("AuthLive: invalid state", state: state)
       {:noreply, socket}
     end
   end

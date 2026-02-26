@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Themes.Core.Validator do
         Logger.error("❌ Theme validation failures:")
 
         Enum.each(failed_themes, fn {theme_id, {:error, reason}} ->
-          Logger.error("  - Theme #{theme_id}: #{reason}")
+          Logger.error("Theme validation failure", theme_id: theme_id, reason: reason)
         end)
 
         {:error, failed_themes}
@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Themes.Core.Validator do
   def validate_theme_independence do
     all_themes = Theme.all_themes()
 
-    Logger.info("🔍 Testing theme independence for #{Enum.count(all_themes)} themes...")
+    Logger.info("Testing theme independence", theme_count: Enum.count(all_themes))
 
     results =
       Enum.map(all_themes, fn {theme_id, _theme_info} ->
@@ -65,7 +65,7 @@ defmodule TymeslotWeb.Themes.Core.Validator do
   def validate_theme_components do
     all_themes = Theme.all_themes()
 
-    Logger.info("🧩 Testing theme components for #{Enum.count(all_themes)} themes...")
+    Logger.info("Testing theme components", theme_count: Enum.count(all_themes))
 
     results =
       Enum.flat_map(all_themes, fn {theme_id, _theme_info} ->
@@ -85,7 +85,11 @@ defmodule TymeslotWeb.Themes.Core.Validator do
       Logger.error("❌ Theme component loading failures:")
 
       Enum.each(failed_components, fn {{theme_id, component_name}, {:error, reason}} ->
-        Logger.error("  - Theme #{theme_id}, Component #{component_name}: #{reason}")
+        Logger.error("Theme component failure",
+          theme_id: theme_id,
+          component: component_name,
+          reason: reason
+        )
       end)
 
       {:error, failed_components}

@@ -188,7 +188,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
             render_error(assigns, "Theme render function not found")
 
           e ->
-            Logger.error("Error rendering theme #{theme_id}: #{inspect(e)}")
+            Logger.error("Error rendering theme", theme_id: theme_id, error: inspect(e))
             render_error(assigns, "Theme rendering failed")
         end
     end
@@ -197,7 +197,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   defp delegate_to_theme(theme_id, function, args) do
     case Theme.get_live_view_module(theme_id) do
       nil ->
-        Logger.error("Theme module not found for theme_id: #{theme_id}")
+        Logger.error("Theme module not found", theme_id: theme_id)
         handle_theme_error(function, args)
 
       module ->

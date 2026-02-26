@@ -37,7 +37,9 @@ defmodule TymeslotWeb.Components.FlagHelpers do
     else
       # Log missing flag for monitoring
       if assigns.country_code do
-        Logger.warning("Missing flag for country code: #{inspect(assigns.country_code)}")
+        Logger.warning("Missing flag for country code",
+          country_code: inspect(assigns.country_code)
+        )
       end
 
       if assigns.show_fallback do

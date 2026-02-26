@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
 
       {:error, reason} ->
         require Logger
-        Logger.error("Failed to fetch available slots: #{inspect(reason)}")
+        Logger.error("Failed to fetch available slots", reason: inspect(reason))
 
         socket =
           socket

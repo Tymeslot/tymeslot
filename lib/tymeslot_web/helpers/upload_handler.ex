@@ -136,13 +136,13 @@ defmodule TymeslotWeb.Helpers.UploadHandler do
           {:ok, processed_entry}
         else
           {:error, reason} ->
-            Logger.warning("Upload validation failed", %{
+            Logger.warning("Upload validation failed",
               upload_key: upload_key,
               upload_type: upload_type,
               reason: reason,
               filename: entry.client_name,
               metadata: metadata
-            })
+            )
 
             {:ok, {:error, reason}}
         end

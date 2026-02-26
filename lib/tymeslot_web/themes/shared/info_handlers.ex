@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
     Process.demonitor(ref, [:flush])
 
     if ref == socket.assigns[:availability_task_ref] do
-      Logger.warning("Month availability fetch failed: #{inspect(reason)}")
+      Logger.warning("Month availability fetch failed", reason: inspect(reason))
 
       socket =
         socket
@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_availability_down(socket, ref, reason) do
     if ref == socket.assigns[:availability_task_ref] do
-      Logger.warning("Month availability task failed: #{inspect(reason)}")
+      Logger.warning("Month availability task failed", reason: inspect(reason))
 
       socket =
         socket

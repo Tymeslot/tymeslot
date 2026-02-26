@@ -426,7 +426,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
         |> assign(:availability_task_ref, nil)
 
       {:error, reason} ->
-        Logger.warning("Month availability fetch failed in sync mode: #{inspect(reason)}")
+        Logger.warning("Month availability fetch failed in sync mode", reason: inspect(reason))
 
         socket
         |> assign(:month_availability_map, nil)

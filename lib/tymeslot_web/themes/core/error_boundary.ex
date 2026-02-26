@@ -136,7 +136,9 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundary do
     """)
 
     if Application.get_env(:tymeslot, :debug_theme_errors, false) do
-      Logger.error("Stacktrace: #{Exception.format_stacktrace(context.stacktrace)}")
+      Logger.error("Theme error stacktrace",
+        stacktrace: Exception.format_stacktrace(context.stacktrace)
+      )
     end
   end
 

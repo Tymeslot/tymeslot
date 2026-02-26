@@ -31,7 +31,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
   end
 
   def google_callback(conn, %{"error" => error}) do
-    Logger.warning("Google Calendar OAuth error: #{error}")
+    Logger.warning("Google Calendar OAuth error", error: error)
 
     error_message =
       case error do
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
   end
 
   def google_callback(conn, params) do
-    Logger.warning("Invalid Google Calendar OAuth callback params: #{inspect(params)}")
+    Logger.warning("Invalid Google Calendar OAuth callback params", params: inspect(params))
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
             |> redirect(to: "/dashboard/calendar")
 
           {:error, reason} ->
-            Logger.error("Outlook Calendar OAuth callback failed: #{inspect(reason)}")
+            Logger.error("Outlook Calendar OAuth callback failed", reason: inspect(reason))
 
             conn
             |> put_flash(:error, "Failed to connect Outlook Calendar. Please try again.")
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
   end
 
   def outlook_callback(conn, params) do
-    Logger.warning("Invalid Outlook Calendar OAuth callback params: #{inspect(params)}")
+    Logger.warning("Invalid Outlook Calendar OAuth callback params", params: inspect(params))
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")

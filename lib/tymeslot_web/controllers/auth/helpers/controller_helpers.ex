@@ -109,7 +109,7 @@ defmodule TymeslotWeb.AuthControllerHelpers do
   @spec handle_generic_error(Plug.Conn.t(), any(), String.t(), String.t()) :: Plug.Conn.t()
   def handle_generic_error(conn, reason, user_message, redirect_path \\ "/") do
     require Logger
-    Logger.error("Authentication error: #{inspect(reason)}")
+    Logger.error("Authentication error", reason: inspect(reason))
 
     conn
     |> put_flash(:error, user_message)

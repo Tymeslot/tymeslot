@@ -119,7 +119,10 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
             Controller.redirect(updated_conn, external: authorize_url)
 
           {:error, reason} ->
-            Logger.error("Failed to generate #{service_name} OAuth URL: #{inspect(reason)}")
+            Logger.error("Failed to generate OAuth URL",
+              service: service_name,
+              reason: inspect(reason)
+            )
 
             conn
             |> Controller.put_flash(
@@ -171,7 +174,7 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
         |> Controller.redirect(to: redirect_path)
 
       {:error, reason} ->
-        Logger.error("#{service_name} OAuth callback failed: #{inspect(reason)}")
+        Logger.error("OAuth callback failed", service: service_name, reason: inspect(reason))
 
         conn
         |> Controller.put_flash(

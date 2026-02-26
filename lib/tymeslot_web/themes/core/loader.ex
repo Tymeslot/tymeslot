@@ -25,11 +25,11 @@ defmodule TymeslotWeb.Themes.Core.Loader do
       {:ok, module}
     else
       {:error, :theme_not_found} = error ->
-        Logger.error("Theme not found with ID: #{theme_id}")
+        Logger.error("Theme not found", theme_id: theme_id)
         error
 
       {:error, reason} = error ->
-        Logger.error("Failed to load theme #{theme_id}: #{inspect(reason)}")
+        Logger.error("Failed to load theme", theme_id: theme_id, reason: inspect(reason))
         error
     end
   end

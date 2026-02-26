@@ -152,7 +152,7 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
         socket
 
       {:error, reason, message} ->
-        Logger.error("Invalid reset token: #{inspect(reason)}")
+        Logger.error("Invalid reset token", reason: inspect(reason))
 
         socket
         |> assign(:current_state, :invalid_token)

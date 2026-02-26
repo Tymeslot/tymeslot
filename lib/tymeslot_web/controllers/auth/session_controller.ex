@@ -37,7 +37,7 @@ defmodule TymeslotWeb.SessionController do
             |> redirect(to: redirect_path)
 
           {:error, _reason, details} ->
-            Logger.error("Failed to create session: #{details}")
+            Logger.error("Failed to create session", details: details)
 
             conn
             |> put_flash(:error, "Failed to create session. Please try again.")
@@ -102,7 +102,7 @@ defmodule TymeslotWeb.SessionController do
             )
 
           {:error, reason} ->
-            Logger.error("Invalid email verification token: #{inspect(reason)}")
+            Logger.error("Invalid email verification token", reason: inspect(reason))
 
             conn
             |> put_flash(:error, "The email verification link is invalid or has expired.")
@@ -187,7 +187,7 @@ defmodule TymeslotWeb.SessionController do
          _current_ip
        ) do
     if should_auto_login do
-      Logger.info("Auto-login approved for user #{verified_user.id} - IP match confirmed")
+      Logger.info("Auto-login approved - IP match confirmed", user_id: verified_user.id)
 
       case Session.create_session(conn, verified_user) do
         {:ok, updated_conn, _token} ->
@@ -200,7 +200,7 @@ defmodule TymeslotWeb.SessionController do
           |> redirect(to: get_success_redirect_path())
 
         {:error, _reason, details} ->
-          Logger.error("Failed to create session after verification: #{details}")
+          Logger.error("Failed to create session after verification", details: details)
 
           conn
           |> put_flash(
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.SessionController do
           |> redirect(to: "/auth/login")
       end
     else
-      Logger.info("Auto-login denied for user #{verified_user.id} - IP mismatch")
+      Logger.info("Auto-login denied - IP mismatch", user_id: verified_user.id)
 
       conn
       |> put_flash(:info, "Your email has been successfully verified! Please log in to continue.")

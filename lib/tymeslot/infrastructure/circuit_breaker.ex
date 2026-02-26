@@ -295,6 +295,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       name: state.name,
       message: inspect(msg)
     )
+
     {:noreply, state, @idle_timeout}
   end
 

@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlug do
 
   defp maybe_cache_body(conn, body) do
     if matches_webhook_path?(conn.request_path) do
-      Logger.debug("WebhookBodyCachePlug: Caching raw body for: #{conn.request_path}")
+      Logger.debug("WebhookBodyCachePlug: Caching raw body", path: conn.request_path)
       Conn.assign(conn, :raw_body, body)
     else
       conn

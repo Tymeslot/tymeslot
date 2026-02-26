@@ -123,7 +123,7 @@ defmodule TymeslotWeb.DashboardLive do
       case ExtensionSchema.validate_all(extensions) do
         :ok -> :ok
         {:error, errors} ->
-          Logger.error("Invalid dashboard extensions: \#{inspect(errors)}")
+          Logger.error("Invalid dashboard extensions", errors: inspect(errors))
           raise "Dashboard extension validation failed"
       end
 

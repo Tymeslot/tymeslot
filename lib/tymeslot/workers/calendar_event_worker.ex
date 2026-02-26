@@ -221,7 +221,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     action = job.args["action"]
 
     if action in ["update", "delete"] do
-      Logger.info("Calendar event not found for #{action}, considering success")
+      Logger.info("Calendar event not found, considering success", action: action)
       :ok
     else
       {:error, :not_found}

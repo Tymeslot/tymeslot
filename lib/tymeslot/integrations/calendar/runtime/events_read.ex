@@ -141,15 +141,18 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
       calendar_path: get_calendar_path(client),
       event_count: length(events)
     )
+
     {:ok, events, get_calendar_path(client)}
   end
 
   defp wrap_events_result(client, {:error, error}, _log_level) do
     path = get_calendar_path(client)
+
     Logger.error("Failed to fetch from calendar",
       calendar_path: path,
       error: Redactor.redact(error)
     )
+
     {:error, error, path}
   end
 

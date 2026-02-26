@@ -106,6 +106,7 @@ defmodule Tymeslot.Payments.DatabaseOperations do
         Logger.error("Transaction not found for checkout session",
           checkout_session_id: checkout_session_id
         )
+
         {:error, :transaction_not_found}
 
       {:ok, transaction} ->

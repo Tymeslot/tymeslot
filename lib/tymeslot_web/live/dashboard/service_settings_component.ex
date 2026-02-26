@@ -218,7 +218,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
           {:noreply, socket}
 
         {:error, reason} ->
-          Logger.error("Failed to reorder meeting types: #{inspect(reason)}")
+          Logger.error("Failed to reorder meeting types", reason: inspect(reason))
           Flash.error("Failed to reorder meeting types")
           {:noreply, socket}
       end

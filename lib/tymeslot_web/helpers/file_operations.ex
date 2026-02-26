@@ -29,29 +29,26 @@ defmodule TymeslotWeb.Helpers.FileOperations do
   def safe_delete_file(file_path, context \\ %{}) do
     case delete_file_with_retry(file_path, @max_retries) do
       :ok ->
-        Logger.info("File deleted successfully", %{
-          file_path: file_path,
-          context: context
-        })
+        Logger.info("File deleted successfully", file_path: file_path, context: context)
 
         :ok
 
       {:error, :enoent} ->
         # File doesn't exist - this is fine
-        Logger.debug("File deletion skipped - file not found", %{
+        Logger.debug("File deletion skipped - file not found",
           file_path: file_path,
           context: context
-        })
+        )
 
         :ok
 
       {:error, reason} ->
-        Logger.warning("File deletion failed after retries", %{
+        Logger.warning("File deletion failed after retries",
           file_path: file_path,
           reason: reason,
           context: context,
           max_retries: @max_retries
-        })
+        )
 
         # Don't fail the operation
         :ok
@@ -142,24 +139,21 @@ defmodule TymeslotWeb.Helpers.FileOperations do
             :ok
 
           {:error, reason} ->
-            Logger.warning("Failed to set directory permissions", %{
+            Logger.warning("Failed to set directory permissions",
               dir_path: dir_path,
               reason: reason
-            })
+            )
 
             # Continue anyway
             :ok
         end
 
       {:error, :eacces} ->
-        Logger.error("Permission denied creating directory", %{dir_path: dir_path})
+        Logger.error("Permission denied creating directory", dir_path: dir_path)
         {:error, :permission_denied}
 
       {:error, reason} ->
-        Logger.error("Failed to create directory", %{
-          dir_path: dir_path,
-          reason: reason
-        })
+        Logger.error("Failed to create directory", dir_path: dir_path, reason: reason)
 
         {:error, reason}
     end
@@ -201,12 +195,12 @@ defmodule TymeslotWeb.Helpers.FileOperations do
             {:ok, dest_path}
 
           {:error, reason} ->
-            Logger.error("File move failed (rename and copy both failed)", %{
+            Logger.error("File move failed (rename and copy both failed)",
               source: source_path,
               destination: dest_path,
               reason: reason,
               rollback_info: rollback_info
-            })
+            )
 
             {:error, reason}
         end
@@ -229,12 +223,12 @@ defmodule TymeslotWeb.Helpers.FileOperations do
         delay = @retry_backoff_base * round(:math.pow(2, @max_retries - retries_left))
         Process.sleep(delay)
 
-        Logger.debug("Retrying file deletion", %{
+        Logger.debug("Retrying file deletion",
           file_path: file_path,
           retries_left: retries_left - 1,
           delay_ms: delay,
           last_error: reason
-        })
+        )
 
         delete_file_with_retry(file_path, retries_left - 1)
     end

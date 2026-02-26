@@ -147,9 +147,9 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
           processed = String.replace(url, TemplateConfig.template_variable(), hashed_id)
 
           Logger.debug("Processing URL template",
-          input_url: mask_url(url),
-          output_url: mask_url(processed)
-        )
+            input_url: mask_url(url),
+            output_url: mask_url(processed)
+          )
 
           {:ok, processed}
         else

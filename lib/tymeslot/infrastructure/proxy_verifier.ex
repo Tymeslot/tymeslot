@@ -172,6 +172,7 @@ defmodule Tymeslot.Infrastructure.ProxyVerifier do
         Logger.info("Testing proxy connectivity",
           proxy: "#{proxy_config.host}:#{proxy_config.port}"
         )
+
         test_with_proxy(proxy_config, test_url, timeout, result)
     end
   end

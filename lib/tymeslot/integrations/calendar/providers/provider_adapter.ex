@@ -127,7 +127,10 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
       :calendar_update_event,
       %{provider: adapter_client.provider_type},
       fn ->
-        Logger.info("Updating event in calendar", provider: adapter_client.provider_type, uid: uid)
+        Logger.info("Updating event in calendar",
+          provider: adapter_client.provider_type,
+          uid: uid
+        )
 
         case adapter_client.provider_module.update_event(adapter_client.client, uid, event_data) do
           :ok ->
@@ -161,7 +164,10 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
       :calendar_delete_event,
       %{provider: adapter_client.provider_type},
       fn ->
-        Logger.info("Deleting event from calendar", provider: adapter_client.provider_type, uid: uid)
+        Logger.info("Deleting event from calendar",
+          provider: adapter_client.provider_type,
+          uid: uid
+        )
 
         case adapter_client.provider_module.delete_event(adapter_client.client, uid) do
           :ok ->

@@ -358,7 +358,7 @@ defmodule TymeslotWeb.OAuthController do
 
   @spec handle_oauth_creation_error(Plug.Conn.t(), any(), map()) :: Plug.Conn.t()
   defp handle_oauth_creation_error(conn, reason, params) do
-    Logger.error("Failed to create user from OAuth completion: #{inspect(reason)}")
+    Logger.error("Failed to create user from OAuth completion", reason: inspect(reason))
 
     # If this is a validation error, redirect back to registration with the data
     case reason do

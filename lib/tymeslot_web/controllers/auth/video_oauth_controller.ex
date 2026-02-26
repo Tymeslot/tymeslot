@@ -47,7 +47,7 @@ defmodule TymeslotWeb.VideoOAuthController do
         |> redirect(to: "/dashboard/video")
 
       {:error, reason} ->
-        Logger.error("Google Meet OAuth flow failed: #{inspect(reason)}")
+        Logger.error("Google Meet OAuth flow failed", reason: inspect(reason))
 
         conn
         |> put_flash(:error, "Failed to connect Google Meet. Please try again.")
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.VideoOAuthController do
   end
 
   def google_callback(conn, %{"error" => error}) do
-    Logger.warning("Google Meet OAuth error: #{error}")
+    Logger.warning("Google Meet OAuth error", error: error)
 
     error_message =
       case error do
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.VideoOAuthController do
   end
 
   def google_callback(conn, params) do
-    Logger.warning("Invalid Google Meet OAuth callback params: #{inspect(params)}")
+    Logger.warning("Invalid Google Meet OAuth callback params", params: inspect(params))
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.VideoOAuthController do
         |> redirect(to: "/dashboard/video")
 
       {:error, reason} ->
-        Logger.error("Teams OAuth flow failed: #{inspect(reason)}")
+        Logger.error("Teams OAuth flow failed", reason: inspect(reason))
 
         message =
           if is_binary(reason),
@@ -145,7 +145,7 @@ defmodule TymeslotWeb.VideoOAuthController do
   end
 
   def teams_callback(conn, params) do
-    Logger.warning("Invalid Teams OAuth callback params: #{inspect(params)}")
+    Logger.warning("Invalid Teams OAuth callback params", params: inspect(params))
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")

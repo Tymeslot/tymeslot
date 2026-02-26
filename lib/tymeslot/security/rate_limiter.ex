@@ -627,7 +627,11 @@ defmodule Tymeslot.Security.RateLimiter do
 
   @spec invalid_user_id(String.t(), any()) :: {:error, :invalid_user_id}
   defp invalid_user_id(operation, user_id) do
-    Logger.error("Invalid user_id for rate limit", operation: operation, user_id: inspect(user_id))
+    Logger.error("Invalid user_id for rate limit",
+      operation: operation,
+      user_id: inspect(user_id)
+    )
+
     {:error, :invalid_user_id}
   end
 

@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           end
 
         {:error, errors} ->
-          Logger.warning("Form validation failed: #{inspect(errors)}")
+          Logger.warning("Form validation failed", errors: inspect(errors))
           form = Component.to_form(booking_params)
 
           socket =
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         {:ok, socket}
 
       {:deny, _limit} ->
-        Logger.warning("Booking rate limit exceeded for IP: #{inspect(client_ip)}")
+        Logger.warning("Booking rate limit exceeded", client_ip: inspect(client_ip))
 
         socket =
           socket

@@ -71,11 +71,17 @@ defmodule Tymeslot.Payments.CustomerLookup do
     if subscription_schema && Code.ensure_loaded?(subscription_schema) do
       case repo.get_by(subscription_schema, stripe_customer_id: stripe_customer_id) do
         nil ->
-          Logger.debug("No subscription found for Stripe customer", stripe_customer_id: stripe_customer_id)
+          Logger.debug("No subscription found for Stripe customer",
+            stripe_customer_id: stripe_customer_id
+          )
+
           nil
 
         subscription ->
-          Logger.debug("Found subscription for Stripe customer", stripe_customer_id: stripe_customer_id)
+          Logger.debug("Found subscription for Stripe customer",
+            stripe_customer_id: stripe_customer_id
+          )
+
           subscription
       end
     else

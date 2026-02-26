@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlug do
              {:ok, event} <- verify_webhook(conn, raw_body),
              {:ok, event_id} <- require_event_id(event),
              {:ok, :reserved} <- reserve_event(event_id) do
-          Logger.info("Stripe webhook validated successfully: #{event_type(event)}")
+          Logger.info("Stripe webhook validated successfully", event_type: event_type(event))
           Conn.assign(conn, :stripe_event, event)
         else
           {:ok, :already_processed} ->
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlug do
         end
 
       {:error, :rate_limited} ->
-        Logger.warning("Webhook rate limit exceeded for IP: #{client_ip}")
+        Logger.warning("Webhook rate limit exceeded", client_ip: client_ip)
 
         conn
         |> Conn.put_resp_content_type("application/json")
@@ -140,7 +140,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlug do
             {:ok, "", conn}
 
           {:error, reason} ->
-            Logger.error("Failed to read body: #{inspect(reason)}")
+            Logger.error("Failed to read body", reason: inspect(reason))
             {:ok, "", conn}
         end
 
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Plugs.StripeWebhookPlug do
         {:ok, raw_body, conn}
 
       _invalid_body ->
-        Logger.error("Invalid raw_body in assigns: #{inspect(conn.assigns[:raw_body])}")
+        Logger.error("Invalid raw_body in assigns", value: inspect(conn.assigns[:raw_body]))
         {:ok, "", conn}
     end
   end

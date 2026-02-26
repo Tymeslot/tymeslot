@@ -116,7 +116,13 @@ defmodule Tymeslot.Payments.RetryHelper do
        ) do
     if attempt < max_attempts and retryable_fn.(error) do
       delay = calculate_delay(attempt, base_delay_ms, backoff_multiplier)
-      Logger.warning("Retrying operation", delay_ms: delay, attempt: attempt, max_attempts: max_attempts)
+
+      Logger.warning("Retrying operation",
+        delay_ms: delay,
+        attempt: attempt,
+        max_attempts: max_attempts
+      )
+
       Process.sleep(delay)
 
       do_retry(

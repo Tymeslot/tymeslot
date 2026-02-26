@@ -544,7 +544,11 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
         redacted_body = Redactor.redact_and_truncate(body)
 
-        Logger.error("MiroTalk API error", message: error_msg, status: status, body: redacted_body)
+        Logger.error("MiroTalk API error",
+          message: error_msg,
+          status: status,
+          body: redacted_body
+        )
 
         {:error, {:http_error, status, "#{error_msg} (see logs for details)"}}
 
