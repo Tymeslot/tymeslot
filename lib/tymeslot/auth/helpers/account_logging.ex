@@ -22,7 +22,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   @spec log_operation_success(String.t(), String.t() | integer(), map()) :: :ok
   def log_operation_success(operation, identifier, context \\ %{}) do
     Logger.info(
-      "#{String.capitalize(operation)} successful",
+      "Account operation successful",
       build_metadata(
         [
           {:operation, operation},
@@ -50,7 +50,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
           :ok
   def log_operation_failure(operation, identifier, reason, context \\ %{}) do
     Logger.warning(
-      "#{String.capitalize(operation)} failed",
+      "Account operation failed",
       build_metadata(
         [
           {:operation, operation},
@@ -77,7 +77,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   @spec log_rate_limit_exceeded(String.t(), String.t() | integer(), map()) :: :ok
   def log_rate_limit_exceeded(operation, identifier, context \\ %{}) do
     Logger.warning(
-      "Rate limit exceeded for #{operation}",
+      "Rate limit exceeded",
       build_metadata(
         [
           {:operation, operation},
@@ -104,7 +104,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   @spec log_validation_failure(String.t(), String.t() | integer(), map() | list(), map()) :: :ok
   def log_validation_failure(operation, identifier, errors, context \\ %{}) do
     Logger.warning(
-      "#{String.capitalize(operation)} input validation failed",
+      "Account input validation failed",
       build_metadata(
         [
           {:operation, operation},
@@ -156,7 +156,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   @spec log_user_verified(map(), String.t(), map()) :: :ok
   def log_user_verified(user, verification_type, context \\ %{}) do
     Logger.info(
-      "User #{verification_type} verification successful",
+      "User verification successful",
       build_metadata(
         [
           {:user_id, user.id},
@@ -209,7 +209,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   @spec log_password_reset(map(), String.t(), map()) :: :ok
   def log_password_reset(user, stage, context \\ %{}) do
     Logger.info(
-      "Password reset #{stage}",
+      "Password reset",
       build_metadata(
         [
           {:user_id, user.id},
@@ -237,7 +237,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   @spec log_security_event(String.t(), String.t() | integer(), String.t(), map()) :: :ok
   def log_security_event(event_type, identifier, details, context \\ %{}) do
     Logger.warning(
-      "Security event: #{event_type}",
+      "Security event",
       build_metadata(
         [
           {:event_type, event_type},

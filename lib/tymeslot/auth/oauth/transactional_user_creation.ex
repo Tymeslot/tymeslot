@@ -62,7 +62,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
         {:error, :user_already_exists, reason}
 
       {:error, {operation, reason}} ->
-        Logger.error("OAuth user creation failed at #{operation}: #{inspect(reason)}")
+        Logger.error("OAuth user creation failed", operation: operation, reason: inspect(reason))
         {:error, operation, reason}
     end
   end
@@ -105,7 +105,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
         {:ok, %{user: user, created: created}}
 
       {:error, {operation, reason}} ->
-        Logger.error("OAuth find_or_create failed at #{operation}: #{inspect(reason)}")
+        Logger.error("OAuth find_or_create failed", operation: operation, reason: inspect(reason))
         {:error, reason}
     end
   end
@@ -156,11 +156,11 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
 
     case ProfileQueries.create_profile_in_transaction(repo, profile_attrs) do
       {:ok, profile} ->
-        Logger.info("Created profile for user_id=#{user.id}")
+        Logger.info("Created profile", user_id: user.id)
         {:ok, profile}
 
       {:error, reason} ->
-        Logger.error("Profile creation failed for user_id=#{user.id}: #{inspect(reason)}")
+        Logger.error("Profile creation failed", user_id: user.id, reason: inspect(reason))
         {:error, {:create_profile, reason}}
     end
   end

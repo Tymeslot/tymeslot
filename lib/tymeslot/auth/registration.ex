@@ -145,7 +145,7 @@ defmodule Tymeslot.Auth.Registration do
         # Create user profile with default settings
         case ProfileQueries.create_profile(user.id) do
           {:ok, _profile} ->
-            Logger.info("Created profile for user_id=#{user.id}")
+            Logger.info("Created profile", user_id: user.id)
 
             # Notify apps about successful registration via PubSub
             metadata = Keyword.get(opts, :metadata, %{})
@@ -153,14 +153,14 @@ defmodule Tymeslot.Auth.Registration do
             {:ok, user}
 
           {:error, reason} ->
-            Logger.error("Profile creation failed for user_id=#{user.id}: #{inspect(reason)}")
+            Logger.error("Profile creation failed", user_id: user.id, reason: inspect(reason))
 
             {:error, :profile_creation,
              "Account created but profile creation failed: #{inspect(reason)}"}
         end
 
       {:error, reason} ->
-        Logger.error("Verification failed for user_id=#{user.id}: #{inspect(reason)}")
+        Logger.error("Verification failed", user_id: user.id, reason: inspect(reason))
         {:error, :verification, "Account created but verification failed: #{inspect(reason)}"}
     end
   end
@@ -181,7 +181,7 @@ defmodule Tymeslot.Auth.Registration do
       {:error, changeset} ->
         # Log only the constraint errors without sensitive data
         constraint_errors = extract_constraint_errors(changeset)
-        Logger.error("User creation failed with constraints: #{inspect(constraint_errors)}")
+        Logger.error("User creation failed with constraints", errors: inspect(constraint_errors))
         {:error, :auth, ErrorFormatting.format_changeset_errors(changeset)}
     end
   end

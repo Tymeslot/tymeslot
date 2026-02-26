@@ -68,7 +68,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
         end
 
       {:error, reason} ->
-        Logger.error("OAuth user creation failed: #{inspect(reason)}")
+        Logger.error("OAuth user creation failed", reason: inspect(reason))
         {:error, reason}
     end
   end

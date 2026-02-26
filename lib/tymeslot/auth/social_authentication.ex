@@ -104,13 +104,13 @@ defmodule Tymeslot.Auth.SocialAuthentication do
           {:ok, Map.from_struct(user), message}
 
         {:error, :user_already_exists, reason} ->
-          Logger.warning("User already exists during OAuth registration: #{reason}")
+          Logger.warning("User already exists during OAuth registration", reason: reason)
 
           {:error, :user_already_exists,
            "This email is already registered. Please sign in instead."}
 
         {:error, operation, reason} ->
-          Logger.error("Registration failed at #{operation}: #{inspect(reason)}")
+          Logger.error("Registration failed", operation: operation, reason: inspect(reason))
           {:error, :registration_failed, format_error_reason(reason)}
       end
     else
@@ -204,13 +204,13 @@ defmodule Tymeslot.Auth.SocialAuthentication do
         :ok
 
       {:ok, _user} ->
-        Logger.warning("Email already registered: #{email}")
+        Logger.warning("Email already registered", email: email)
         {:error, "This email is already registered. Please use a different email address."}
     end
   end
 
   def check_email_availability(other) do
-    Logger.warning("Invalid email format: #{inspect(other)}")
+    Logger.warning("Invalid email format", value: inspect(other))
     {:error, "Invalid email format"}
   end
 

@@ -26,7 +26,7 @@ defmodule Tymeslot.Auth.Verification do
   def store_verification_token(user_id, token, _expiry, ip_address \\ nil) do
     case Config.user_queries_module().get_user(user_id) do
       nil ->
-        Logger.error("User not found when storing verification token for user_id=#{user_id}")
+        Logger.error("User not found when storing verification token", user_id: user_id)
         {:error, :user_not_found}
 
       {:ok, user} ->
@@ -35,12 +35,12 @@ defmodule Tymeslot.Auth.Verification do
             {:ok, updated_user}
 
           {:error, _changeset} ->
-            Logger.error("Token storage failed for user_id=#{user_id}")
+            Logger.error("Token storage failed", user_id: user_id)
             {:error, :token_storage_failed}
         end
 
       {:error, :not_found} ->
-        Logger.error("User not found when storing verification token for user_id=#{user_id}")
+        Logger.error("User not found when storing verification token", user_id: user_id)
         {:error, :user_not_found}
 
       user when is_struct(user) ->
@@ -49,7 +49,7 @@ defmodule Tymeslot.Auth.Verification do
             {:ok, updated_user}
 
           {:error, _changeset} ->
-            Logger.error("Token storage failed for user_id=#{user_id}")
+            Logger.error("Token storage failed", user_id: user_id)
             {:error, :token_storage_failed}
         end
     end
@@ -70,7 +70,7 @@ defmodule Tymeslot.Auth.Verification do
     with {:ok, user} <- fetch_user_by_token(token),
          :ok <- check_token_expiration(user),
          {:ok, updated_user} <- mark_user_as_verified(user.id) do
-      Logger.info("Email verification successful for user_id=#{updated_user.id}")
+      Logger.info("Email verification successful", user_id: updated_user.id)
       {:ok, updated_user}
     else
       {:error, :token_expired} = error ->
@@ -84,7 +84,7 @@ defmodule Tymeslot.Auth.Verification do
         error
 
       {:error, reason} = error ->
-        Logger.error("Email verification failed - unexpected error: #{inspect(reason)}")
+        Logger.error("Email verification failed", reason: inspect(reason))
         AccountLogging.log_operation_failure("email_verification", token, reason)
         error
     end
@@ -148,11 +148,11 @@ defmodule Tymeslot.Auth.Verification do
         resend_verification_email(socket_or_conn, user)
 
       {:error, :not_found} ->
-        Logger.warning("Attempted to resend verification for non-existent email: #{email}")
+        Logger.warning("Attempted to resend verification for non-existent email", email: email)
         {:error, :user_not_found}
 
       other ->
-        Logger.error("Unexpected return from get_user_by_email/1: #{inspect(other)}")
+        Logger.error("Unexpected return from get_user_by_email/1", result: inspect(other))
         {:error, :user_not_found}
     end
   end
@@ -187,11 +187,11 @@ defmodule Tymeslot.Auth.Verification do
   defp mark_user_as_verified(user_id) do
     case Config.user_queries_module().get_user(user_id) do
       nil ->
-        Logger.error("User not found when marking as verified: user_id=#{user_id}")
+        Logger.error("User not found when marking as verified", user_id: user_id)
         {:error, :user_not_found}
 
       {:error, :not_found} ->
-        Logger.error("User not found when marking as verified: user_id=#{user_id}")
+        Logger.error("User not found when marking as verified", user_id: user_id)
         {:error, :user_not_found}
 
       {:ok, user} ->
@@ -230,16 +230,16 @@ defmodule Tymeslot.Auth.Verification do
             {:ok, updated_user}
 
           {:error, _reason} ->
-            Logger.error("Failed to send verification email to user_id=#{user.id}")
+            Logger.error("Failed to send verification email", user_id: user.id)
             {:error, :email_send_failed}
         end
 
       {:error, :token_storage_failed} ->
-        Logger.error("Failed to store verification token for user_id=#{user.id}")
+        Logger.error("Failed to store verification token", user_id: user.id)
         {:error, :token_storage_failed}
 
       {:error, _reason} ->
-        Logger.error("Unknown error during email verification for user_id=#{user.id}")
+        Logger.error("Unknown error during email verification", user_id: user.id)
         {:error, :unknown}
     end
   end
@@ -261,7 +261,7 @@ defmodule Tymeslot.Auth.Verification do
     # Use the email worker to send the verification email asynchronously
     case EmailWorker.schedule_email_verification(user.id, verification_url) do
       :ok ->
-        Logger.info("Verification email job scheduled for user_id=#{user.id}")
+        Logger.info("Verification email job scheduled", user_id: user.id)
         {:ok, self()}
 
       {:error, reason} ->

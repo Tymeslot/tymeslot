@@ -66,7 +66,7 @@ defmodule Tymeslot.Auth.Session do
         result
 
       {:error, changeset} ->
-        Logger.error("Failed to create session: #{inspect(changeset)}")
+        Logger.error("Failed to create session", error: inspect(changeset))
         {:error, :session_creation_failed, "Failed to create session"}
     end
   end
@@ -188,7 +188,7 @@ defmodule Tymeslot.Auth.Session do
     %{address: address}
   rescue
     error ->
-      Logger.error("Unexpected error getting peer data: #{inspect(error)}")
+      Logger.error("Unexpected error getting peer data", error: inspect(error))
       %{address: "unknown"}
   end
 end

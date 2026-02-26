@@ -86,8 +86,9 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
         |> Controller.redirect(to: context.success_path)
 
       {:error, reason, _message} ->
-        Logger.error(
-          "Failed to create session after #{context.provider} auth: #{inspect(reason)}"
+        Logger.error("Failed to create session after OAuth auth",
+          provider: context.provider,
+          reason: inspect(reason)
         )
 
         conn
@@ -139,7 +140,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   end
 
   defp handle_oauth_error(conn, provider, error, login_path) do
-    Logger.error("#{provider_name(provider)} OAuth error: #{inspect(error)}")
+    Logger.error("OAuth error", provider: provider_name(provider), error: inspect(error))
 
     conn
     |> Controller.put_flash(:error, "Failed to authenticate with #{provider_name(provider)}.")
@@ -147,7 +148,10 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   end
 
   defp handle_general_error(conn, provider, reason, login_path) do
-    Logger.error("#{provider_name(provider)} authentication error: #{inspect(reason)}")
+    Logger.error("OAuth authentication error",
+      provider: provider_name(provider),
+      reason: inspect(reason)
+    )
 
     conn
     |> Controller.put_flash(

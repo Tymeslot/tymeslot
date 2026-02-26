@@ -295,11 +295,11 @@ defmodule Tymeslot.Auth.AuthActions do
     {:ok, converted}
   rescue
     ArgumentError ->
-      Logger.error("Invalid atom key in profile params: #{inspect(profile_params)}")
+      Logger.error("Invalid atom key in profile params", params: inspect(profile_params))
       {:error, :invalid_profile_params}
 
     error ->
-      Logger.error("Unexpected error converting profile params: #{inspect(error)}")
+      Logger.error("Unexpected error converting profile params", error: inspect(error))
       {:error, :conversion_failed}
   end
 

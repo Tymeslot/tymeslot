@@ -73,8 +73,9 @@ defmodule Tymeslot.Auth.OAuth.Authenticator do
             {:ok, conn, "Successfully signed in with #{provider_name}."}
 
           {:error, reason, _message} ->
-            Logger.error(
-              "Failed to create session after #{provider_name} auth: #{inspect(reason)}"
+            Logger.error("Failed to create session after OAuth auth",
+              provider: provider_name,
+              reason: inspect(reason)
             )
 
             {:error, conn, :session_creation_failed,
@@ -87,11 +88,14 @@ defmodule Tymeslot.Auth.OAuth.Authenticator do
       end
     else
       {:error, %OAuth2.Error{} = error} ->
-        Logger.error("#{provider_name} OAuth error: #{inspect(error)}")
+        Logger.error("OAuth error", provider: provider_name, error: inspect(error))
         {:error, conn, :oauth_error, "Failed to authenticate with #{provider_name}."}
 
       {:error, reason} ->
-        Logger.error("#{provider_name} authentication error: #{inspect(reason)}")
+        Logger.error("OAuth authentication error",
+          provider: provider_name,
+          reason: inspect(reason)
+        )
 
         {:error, conn, :authentication_error,
          "An error occurred during #{provider_name} authentication."}

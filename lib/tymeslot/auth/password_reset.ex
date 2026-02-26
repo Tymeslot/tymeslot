@@ -129,19 +129,19 @@ defmodule Tymeslot.Auth.PasswordReset do
   defp send_reset_email_and_log(user, reset_url) do
     case send_password_reset_email(user, reset_url) do
       {:ok, _email_result} ->
-        Logger.info("Password reset email sent", %{
+        Logger.info("Password reset email sent",
           user_id: user.id,
           email: user.email,
           event: :password_reset_email_sent
-        })
+        )
 
       {:error, reason} ->
-        Logger.error("Failed to send password reset email", %{
+        Logger.error("Failed to send password reset email",
           user_id: user.id,
           email: user.email,
           reason: inspect(reason),
           event: :password_reset_email_failed
-        })
+        )
     end
   end
 
@@ -180,11 +180,11 @@ defmodule Tymeslot.Auth.PasswordReset do
   def verify_token(token, _unused_opts \\ []) do
     case Config.user_queries_module().get_user_by_reset_token(token) do
       {:error, :not_found} ->
-        Logger.warning("Invalid password reset token", %{
+        Logger.warning("Invalid password reset token",
           # Log only part of the token for security
           token: String.slice(token, 0, 8) <> "...",
           event: :password_reset_invalid_token
-        })
+        )
 
         {:error, :invalid_token, "Invalid or expired password reset token."}
 
@@ -197,11 +197,11 @@ defmodule Tymeslot.Auth.PasswordReset do
             {:ok, Map.from_struct(user), "Token verified successfully."}
 
           {:error, :token_expired} ->
-            Logger.warning("Password reset token expired", %{
+            Logger.warning("Password reset token expired",
               user_id: user.id,
               email: user.email,
               event: :password_reset_token_expired
-            })
+            )
 
             {:error, :token_expired,
              "Your reset token has expired. Please request a new password reset."}
@@ -283,12 +283,12 @@ defmodule Tymeslot.Auth.PasswordReset do
         {:ok, updated_user}
 
       {:error, errors} ->
-        Logger.error("Failed to update password", %{
+        Logger.error("Failed to update password",
           user_id: user.id,
           email: user.email,
           errors: inspect(errors),
           event: :password_reset_update_password_failed
-        })
+        )
 
         {:error, :invalid_password,
          "The password couldn't be updated. Please try again with a different password."}
@@ -361,12 +361,13 @@ defmodule Tymeslot.Auth.PasswordReset do
     # Use the email worker to send the password reset email asynchronously
     case EmailWorker.schedule_password_reset(user.id, reset_url) do
       :ok ->
-        Logger.info("Password reset email job scheduled for user_id=#{user.id}")
+        Logger.info("Password reset email job scheduled", user_id: user.id)
         {:ok, :ok}
 
       {:error, reason} ->
-        Logger.error(
-          "Failed to schedule password reset email for user_id=#{user.id}: #{inspect(reason)}"
+        Logger.error("Failed to schedule password reset email",
+          user_id: user.id,
+          reason: inspect(reason)
         )
 
         {:error, reason}
@@ -377,11 +378,11 @@ defmodule Tymeslot.Auth.PasswordReset do
   defp invalidate_all_sessions(user) do
     case UserSessionQueries.delete_user_sessions(user.id) do
       {_deleted_count, _deleted_sessions} ->
-        Logger.info("Invalidated all sessions after password reset", %{
+        Logger.info("Invalidated all sessions after password reset",
           user_id: user.id,
           email: user.email,
           event: :sessions_invalidated_password_reset
-        })
+        )
 
         :ok
     end
