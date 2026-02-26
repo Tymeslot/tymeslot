@@ -12,6 +12,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookEventSchema do
           id: integer() | nil,
           stripe_event_id: String.t() | nil,
           event_type: String.t() | nil,
+          payload: map() | nil,
           processed_at: DateTime.t() | nil,
           inserted_at: NaiveDateTime.t() | nil
         }
@@ -19,6 +20,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookEventSchema do
   schema "webhook_events" do
     field :stripe_event_id, :string
     field :event_type, :string
+    field :payload, :map
     field :processed_at, :utc_datetime
 
     timestamps(updated_at: false)
@@ -30,7 +32,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookEventSchema do
   @spec changeset(t() | Ecto.Changeset.t(), map()) :: Ecto.Changeset.t()
   def changeset(webhook_event, attrs) do
     webhook_event
-    |> cast(attrs, [:stripe_event_id, :event_type, :processed_at])
+    |> cast(attrs, [:stripe_event_id, :event_type, :payload, :processed_at])
     |> validate_required([:stripe_event_id, :event_type, :processed_at])
     |> unique_constraint(:stripe_event_id)
   end

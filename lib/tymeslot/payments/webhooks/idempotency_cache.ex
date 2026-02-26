@@ -80,15 +80,17 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
 
   @doc """
   Mark an event as processed in both cache and database.
+
+  Optionally accepts the full event payload for post-hoc debugging.
   """
-  @spec mark_processed(String.t(), String.t() | nil) :: :ok
-  def mark_processed(event_id, event_type \\ "unknown") do
+  @spec mark_processed(String.t(), String.t() | nil, map() | nil) :: :ok
+  def mark_processed(event_id, event_type \\ "unknown", payload \\ nil) do
     event_type = event_type || "unknown"
     # Mark as processed in ETS cache with configured TTL (default 24 hours)
     put(event_id, :processed, processed_ttl())
 
     # Also store in database for long-term deduplication
-    store_in_database(event_id, event_type)
+    store_in_database(event_id, event_type, payload)
     :ok
   end
 
@@ -145,10 +147,11 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
     end
   end
 
-  defp store_in_database(event_id, event_type) do
+  defp store_in_database(event_id, event_type, payload) do
     attrs = %{
       stripe_event_id: event_id,
       event_type: event_type,
+      payload: payload,
       processed_at: DateTime.utc_now(:second)
     }
 

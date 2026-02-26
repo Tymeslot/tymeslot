@@ -93,25 +93,58 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
   describe "perform/1 - incoming Stripe webhook event cleanup" do
     # Use insert_all to bypass Ecto's autogenerate for inserted_at, which would
     # override any value we set via Repo.insert!/1 with the current timestamp.
-    defp insert_webhook_event(stripe_event_id, dt) do
+    defp insert_webhook_event(stripe_event_id, dt, opts \\ []) do
       truncated = DateTime.truncate(dt, :second)
       naive = DateTime.to_naive(truncated)
 
+      base_attrs = %{
+        stripe_event_id: stripe_event_id,
+        event_type: "customer.subscription.updated",
+        processed_at: truncated,
+        inserted_at: naive
+      }
+
+      attrs =
+        case Keyword.get(opts, :payload) do
+          nil -> base_attrs
+          payload -> Map.put(base_attrs, :payload, payload)
+        end
+
       {1, [%{id: id}]} =
-        Repo.insert_all(
-          "webhook_events",
-          [
-            %{
-              stripe_event_id: stripe_event_id,
-              event_type: "customer.subscription.updated",
-              processed_at: truncated,
-              inserted_at: naive
-            }
-          ],
-          returning: [:id]
-        )
+        Repo.insert_all("webhook_events", [attrs], returning: [:id])
 
       id
+    end
+
+    test "nullifies payloads older than 30 days but keeps the row" do
+      old_date = DateTime.add(DateTime.utc_now(), -31, :day)
+      recent_date = DateTime.add(DateTime.utc_now(), -10, :day)
+      payload = %{"type" => "invoice.paid", "data" => %{"amount" => 1000}}
+
+      old_id = insert_webhook_event("evt_old_payload_#{System.unique_integer()}", old_date, payload: payload)
+      recent_id = insert_webhook_event("evt_recent_payload_#{System.unique_integer()}", recent_date, payload: payload)
+
+      assert :ok = perform_job(WebhookCleanupWorker, %{})
+
+      old_event = Repo.get(WebhookEventSchema, old_id)
+      assert old_event, "row should still exist"
+      assert is_nil(old_event.payload), "payload should be nullified"
+
+      recent_event = Repo.get(WebhookEventSchema, recent_id)
+      assert recent_event.payload == payload, "recent payload should be preserved"
+    end
+
+    test "respects the payload_retention_days argument" do
+      date_15 = DateTime.add(DateTime.utc_now(), -15, :day)
+      payload = %{"type" => "invoice.paid"}
+
+      event_id = insert_webhook_event("evt_15d_payload_#{System.unique_integer()}", date_15, payload: payload)
+
+      # With 10-day retention the 15-day-old payload should be nullified
+      assert :ok = perform_job(WebhookCleanupWorker, %{"payload_retention_days" => 10})
+
+      event = Repo.get(WebhookEventSchema, event_id)
+      assert is_nil(event.payload)
     end
 
     test "removes Stripe event records older than the retention period" do

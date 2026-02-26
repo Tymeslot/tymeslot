@@ -6,8 +6,10 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Stripe.Error, as: StripeError
+  alias Tymeslot.DatabaseSchemas.WebhookEventSchema, as: WebhookEvent
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.PaymentTestHelpers
+  alias Tymeslot.Repo
   alias Tymeslot.TestFixtures
 
   setup :verify_on_exit!
@@ -183,6 +185,22 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
         |> post("/webhooks/stripe", payload)
 
       assert response(conn2, 503)
+    end
+
+    test "persists event payload to database on successful processing", %{conn: conn} do
+      session = PaymentTestHelpers.mock_stripe_checkout_session()
+      event = PaymentTestHelpers.mock_stripe_webhook_event("checkout.session.completed", session)
+      event_id = event["id"] || event[:id]
+
+      payload = Jason.encode!(event)
+
+      conn
+      |> put_req_header("content-type", "application/json")
+      |> assign(:raw_body, payload)
+      |> post("/webhooks/stripe", payload)
+
+      record = Repo.get_by!(WebhookEvent, stripe_event_id: event_id)
+      assert record.payload["type"] == "checkout.session.completed"
     end
 
     test "handles unknown event types gracefully", %{conn: conn} do

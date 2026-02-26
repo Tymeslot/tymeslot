@@ -27,6 +27,9 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
     # Clean up outgoing webhook deliveries
     cleanup_outgoing_webhooks(args)
 
+    # Nullify payloads on incoming Stripe events past the payload retention window
+    nullify_stale_payloads(args)
+
     # Clean up incoming Stripe webhook events
     cleanup_incoming_webhook_events(args)
 
@@ -48,6 +51,34 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
       deleted_count: count,
       retention_days: retention_days
     )
+  end
+
+  defp nullify_stale_payloads(args) do
+    retention_days =
+      Map.get(args, "payload_retention_days") ||
+        get_in(Application.get_env(:tymeslot, :payments, []), [:retention, :payload_days]) ||
+        30
+
+    cutoff_date =
+      DateTime.utc_now()
+      |> DateTime.add(-retention_days, :day)
+      |> DateTime.to_naive()
+
+    query =
+      from(w in WebhookEvent,
+        where: w.inserted_at < ^cutoff_date and not is_nil(w.payload)
+      )
+
+    case Repo.update_all(query, set: [payload: nil]) do
+      {count, _nil} when count > 0 ->
+        Logger.info("Nullified stale webhook payloads",
+          count: count,
+          retention_days: retention_days
+        )
+
+      {0, _nil} ->
+        Logger.debug("No stale webhook payloads to nullify")
+    end
   end
 
   defp cleanup_incoming_webhook_events(args) do

@@ -45,7 +45,7 @@ defmodule TymeslotWeb.StripeWebhookController do
 
             # Mark as processed in cache and database to prevent duplicate processing
             if event_id do
-              IdempotencyCache.mark_processed(event_id, event_type)
+              IdempotencyCache.mark_processed(event_id, event_type, event)
             end
 
             # Always return 200 to acknowledge receipt
@@ -69,7 +69,7 @@ defmodule TymeslotWeb.StripeWebhookController do
             # Mark as processed even on error if it's not a retryable error
             # This prevents infinite retries for errors we can't fix
             if event_id do
-              IdempotencyCache.mark_processed(event_id, event_type)
+              IdempotencyCache.mark_processed(event_id, event_type, event)
             end
 
             # Always return 200 to Stripe for other errors

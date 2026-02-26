@@ -2,7 +2,9 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
   use Tymeslot.DataCase, async: false
   @moduletag :payments
 
+  alias Tymeslot.DatabaseSchemas.WebhookEventSchema, as: WebhookEvent
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
+  alias Tymeslot.Repo
 
   setup do
     # Clear cache before each test
@@ -57,6 +59,27 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
       # Both are now processed
       assert {:ok, :already_processed} = IdempotencyCache.check_idempotency(event_id1)
       assert {:ok, :already_processed} = IdempotencyCache.check_idempotency(event_id2)
+    end
+  end
+
+  describe "mark_processed/3 payload storage" do
+    test "stores payload in database when provided" do
+      event_id = generate_event_id()
+      payload = %{"id" => event_id, "type" => "invoice.paid", "data" => %{"object" => %{"amount" => 1000}}}
+
+      IdempotencyCache.mark_processed(event_id, "invoice.paid", payload)
+
+      record = Repo.get_by!(WebhookEvent, stripe_event_id: event_id)
+      assert record.payload == payload
+    end
+
+    test "stores nil payload when omitted" do
+      event_id = generate_event_id()
+
+      IdempotencyCache.mark_processed(event_id, "invoice.paid")
+
+      record = Repo.get_by!(WebhookEvent, stripe_event_id: event_id)
+      assert is_nil(record.payload)
     end
   end
 
