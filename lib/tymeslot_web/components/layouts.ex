@@ -142,8 +142,9 @@ defmodule TymeslotWeb.Layouts do
         else
           require Logger
 
-          Logger.warning(
-            "Theme extension {#{inspect(mod)}, :#{func}} is configured but not available."
+          Logger.warning("Theme extension is configured but not available",
+            module: inspect(mod),
+            function: func
           )
 
           false

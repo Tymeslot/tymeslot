@@ -134,7 +134,8 @@ defmodule TymeslotWeb.Router do
 
         other ->
           Logger.warning(
-            "Expected :dashboard_additional_hooks to be a list. Ignoring invalid value: #{inspect(other)}"
+            "Expected :dashboard_additional_hooks to be a list; ignoring invalid value",
+            value: inspect(other)
           )
 
           []

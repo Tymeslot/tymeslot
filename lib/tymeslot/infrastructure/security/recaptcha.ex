@@ -27,7 +27,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
     # Reject tokens that exceed 5KB (real reCAPTCHA tokens are ~500 bytes)
     # This prevents DoS attacks with huge token payloads
     if byte_size(token) > 5_000 do
-      Logger.warning("reCAPTCHA token exceeds size limit (#{byte_size(token)} bytes)")
+      Logger.warning("reCAPTCHA token exceeds size limit", token_size: byte_size(token))
       {:error, :invalid_token}
     else
       case secret_key() do
@@ -73,11 +73,14 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
         )
 
       {:ok, %Req.Response{status: status_code}} ->
-        Logger.error("reCAPTCHA verification failed with status: #{status_code}")
+        Logger.error("reCAPTCHA verification failed with unexpected status",
+          status_code: status_code
+        )
+
         {:error, :recaptcha_request_failed}
 
       {:error, exception} ->
-        Logger.error("reCAPTCHA verification request error: #{inspect(exception)}")
+        Logger.error("reCAPTCHA verification request error", error: inspect(exception))
         {:error, :recaptcha_network_error}
     end
   end
@@ -97,15 +100,18 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
         end
 
       {:ok, %{"success" => false, "error-codes" => error_codes}} ->
-        Logger.error("reCAPTCHA verification failed with errors: #{inspect(error_codes)}")
+        Logger.error("reCAPTCHA verification failed with errors",
+          error_codes: inspect(error_codes)
+        )
+
         {:error, :recaptcha_verification_failed}
 
       {:ok, response} ->
-        Logger.error("Unexpected reCAPTCHA response format: #{inspect(response)}")
+        Logger.error("Unexpected reCAPTCHA response format", response: inspect(response))
         {:error, :recaptcha_invalid_response}
 
       {:error, reason} ->
-        Logger.error("Failed to parse reCAPTCHA response: #{inspect(reason)}")
+        Logger.error("Failed to parse reCAPTCHA response", reason: inspect(reason))
         {:error, :recaptcha_parse_error}
     end
   end
@@ -178,7 +184,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
     if score >= min_score do
       :ok
     else
-      Logger.warning("reCAPTCHA score too low: #{score} (minimum: #{min_score})")
+      Logger.warning("reCAPTCHA score too low", score: score, minimum: min_score)
       {:error, :recaptcha_score_too_low}
     end
   end
@@ -194,8 +200,8 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
   # Reject when min_score is not a number and not nil (configuration error)
   # This catches bugs like signup_min_score: "0.5" instead of 0.5
   def validate_min_score(_score, min_score) when not is_number(min_score) and min_score != nil do
-    Logger.error(
-      "reCAPTCHA min_score configuration is invalid (not a number): #{inspect(min_score)}"
+    Logger.error("reCAPTCHA min_score configuration is invalid (not a number)",
+      min_score: inspect(min_score)
     )
 
     {:error, :recaptcha_configuration_error}

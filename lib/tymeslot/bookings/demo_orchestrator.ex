@@ -175,10 +175,10 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
       }
 
       # Log what would have happened in production
-      Logger.info("Demo mode: Would have created meeting #{mock_meeting.uid}")
+      Logger.info("Demo mode: Would have created meeting", meeting_uid: mock_meeting.uid)
 
-      Logger.info(
-        "Demo mode: Would have sent confirmation email to #{mock_meeting.attendee_email}"
+      Logger.info("Demo mode: Would have sent confirmation email",
+        attendee_email: mock_meeting.attendee_email
       )
 
       Logger.info("Demo mode: Would have created calendar event")

@@ -265,8 +265,9 @@ defmodule Tymeslot.Auth.Verification do
         {:ok, self()}
 
       {:error, reason} ->
-        Logger.error(
-          "Failed to schedule verification email for user_id=#{user.id}: #{inspect(reason)}"
+        Logger.error("Failed to schedule verification email",
+          user_id: user.id,
+          reason: inspect(reason)
         )
 
         {:error, reason}

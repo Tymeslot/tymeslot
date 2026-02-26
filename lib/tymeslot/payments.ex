@@ -94,7 +94,7 @@ defmodule Tymeslot.Payments do
   @spec process_successful_payment(stripe_id(), map(), non_neg_integer()) ::
           {:ok, :payment_processed} | {:error, term()}
   def process_successful_payment(stripe_id, tax_info, discount_amount \\ 0) do
-    Logger.info("Processing successful payment for stripe_id: #{stripe_id}")
+    Logger.info("Processing successful payment", stripe_id: stripe_id)
 
     with {:ok, _session} <- Config.stripe_provider().verify_session(stripe_id),
          {:ok, :payment_processed} <-
@@ -102,11 +102,11 @@ defmodule Tymeslot.Payments do
       {:ok, :payment_processed}
     else
       {:error, :transaction_not_found} ->
-        Logger.error("Transaction not found for successful payment: #{stripe_id}")
+        Logger.error("Transaction not found for successful payment", stripe_id: stripe_id)
         {:error, :transaction_not_found}
 
       {:error, reason} ->
-        Logger.error("Failed to process payment: #{inspect(reason)}")
+        Logger.error("Failed to process payment", reason: inspect(reason))
         {:error, reason}
     end
   end
@@ -124,7 +124,7 @@ defmodule Tymeslot.Payments do
   @spec process_failed_payment(stripe_id()) ::
           {:ok, :payment_failed | :transaction_not_found} | {:error, String.t()}
   def process_failed_payment(stripe_id) do
-    Logger.info("Processing failed payment for stripe_id: #{stripe_id}")
+    Logger.info("Processing failed payment", stripe_id: stripe_id)
     DatabaseOperations.process_failed_payment(stripe_id)
   end
 

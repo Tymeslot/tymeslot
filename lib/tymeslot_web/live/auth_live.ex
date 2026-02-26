@@ -60,9 +60,7 @@ defmodule TymeslotWeb.AuthLive do
       |> StateHelper.clear_errors()
       |> PageMetaHelper.assign_page_meta()
 
-    Logger.info(
-      "AuthLive: handle_params completed, current_state: #{socket.assigns.current_state}"
-    )
+    Logger.info("AuthLive: handle_params completed", current_state: socket.assigns.current_state)
 
     {:noreply, socket}
   end

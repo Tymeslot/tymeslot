@@ -48,10 +48,10 @@ defmodule TymeslotWeb.Themes.Core.Validator do
       Logger.info("✅ All themes are properly independent")
       :ok
     else
-      Logger.error("❌ Theme independence failures:")
+      Logger.error("Theme independence failures", failure_count: length(failed_tests))
 
       Enum.each(failed_tests, fn {theme_id, {:error, reason}} ->
-        Logger.error("  - Theme #{theme_id}: #{reason}")
+        Logger.error("Theme independence failure", theme_id: theme_id, reason: reason)
       end)
 
       {:error, failed_tests}
@@ -115,10 +115,10 @@ defmodule TymeslotWeb.Themes.Core.Validator do
       Logger.info("🎉 All theme system validations passed!")
       :ok
     else
-      Logger.error("💥 Theme system validation failures:")
+      Logger.error("Theme system validation failures", failure_count: length(failed_validations))
 
       Enum.each(failed_validations, fn {validation_name, _error} ->
-        Logger.error("  - #{validation_name} failed")
+        Logger.error("Theme system validation failed", validation: validation_name)
       end)
 
       {:error, failed_validations}

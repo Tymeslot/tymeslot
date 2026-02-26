@@ -287,20 +287,20 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
 
     case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
       {:error, :not_found} ->
-        Logger.warning(
-          "Could not find integration to update tokens for integration ID: #{integration_id}"
+        Logger.warning("Could not find integration to update tokens",
+          integration_id: integration_id
         )
 
       {:ok, integration} ->
         case VideoIntegrationQueries.update(integration, attrs) do
           {:ok, _updated} ->
-            Logger.info(
-              "Updated Teams OAuth tokens in database for integration ID: #{integration_id}"
+            Logger.info("Updated Teams OAuth tokens in database",
+              integration_id: integration_id
             )
 
           {:error, reason} ->
-            Logger.error(
-              "Failed to update Teams OAuth tokens in database for integration ID: #{integration_id}",
+            Logger.error("Failed to update Teams OAuth tokens in database",
+              integration_id: integration_id,
               reason: inspect(reason)
             )
         end

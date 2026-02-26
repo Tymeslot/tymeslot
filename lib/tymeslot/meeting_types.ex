@@ -16,7 +16,7 @@ defmodule Tymeslot.MeetingTypes do
   def get_active_meeting_types(user_id) do
     case MeetingTypeQueries.has_meeting_types?(user_id) do
       false ->
-        Logger.info("Creating default meeting types for user #{user_id}")
+        Logger.info("Creating default meeting types for user", user_id: user_id)
         MeetingTypeQueries.create_default_meeting_types(user_id)
         MeetingTypeQueries.list_active_meeting_types(user_id)
 
@@ -32,7 +32,7 @@ defmodule Tymeslot.MeetingTypes do
   def get_all_meeting_types(user_id) do
     case MeetingTypeQueries.has_meeting_types?(user_id) do
       false ->
-        Logger.info("Creating default meeting types for user #{user_id}")
+        Logger.info("Creating default meeting types for user", user_id: user_id)
         MeetingTypeQueries.create_default_meeting_types(user_id)
         MeetingTypeQueries.list_all_meeting_types(user_id)
 

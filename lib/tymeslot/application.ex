@@ -184,12 +184,11 @@ defmodule Tymeslot.Application do
             Enum.join(config.no_proxy, ", ")
           end
 
-        Logger.info("""
-        HTTP/HTTPS PROXY CONFIGURED FOR OUTBOUND REQUESTS:
-        HTTP Proxy:  #{http_info}
-        HTTPS Proxy: #{https_info}
-        NO_PROXY:    #{no_proxy_info}
-        """)
+        Logger.info("HTTP/HTTPS proxy configured for outbound requests",
+          http_proxy: http_info,
+          https_proxy: https_info,
+          no_proxy: no_proxy_info
+        )
 
         :ok
     end
@@ -265,17 +264,11 @@ defmodule Tymeslot.Application do
     # Default Postgres max_connections is often 100
     # Docker embedded Postgres typically uses max_connections=100
     if pool_size >= 60 do
-      Logger.info("""
-      HIGH DATABASE CONNECTION POOL SIZE: #{pool_size}
-      With Oban max concurrency of #{max_oban_concurrency}, you may use up to #{pool_size} connections.
-      Ensure your PostgreSQL max_connections is configured appropriately (recommend >= #{pool_size + 40}).
-
-      For Docker deployments, the embedded Postgres uses max_connections=100 by default.
-      For production, consider increasing max_connections in postgresql.conf if needed.
-
-      To check your database's max_connections:
-        SELECT current_setting('max_connections');
-      """)
+      Logger.info("High database connection pool size detected",
+        pool_size: pool_size,
+        max_oban_concurrency: max_oban_concurrency,
+        recommended_min_connections: pool_size + 40
+      )
     end
 
     :ok

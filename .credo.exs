@@ -110,8 +110,8 @@
           {CredoChecks.RequireDashboardSectionHeader, [priority: :low]},
           {CredoChecks.TestModuleTagRequired, [priority: :high]},
           # Logger hygiene: violations are :low while being cleared; raise to :high after Phase 3-4
-          {CredoChecks.NoStringInterpolationInLogger, [priority: :low]},
-          {CredoChecks.NoMapMetadataInLogger, [priority: :low]},
+          {CredoChecks.NoStringInterpolationInLogger, [priority: :high]},
+          {CredoChecks.NoMapMetadataInLogger, [priority: :high]},
 
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)

@@ -40,8 +40,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   defp owner_timezone(meeting) do
     case meeting.organizer_user_id do
       nil ->
-        Logger.error(
-          "Missing organizer_user_id for meeting #{meeting.uid}, using default timezone"
+        Logger.error("Missing organizer_user_id for meeting, using default timezone",
+          meeting_uid: meeting.uid
         )
 
         @default_timezone
@@ -55,7 +55,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     case meeting.attendee_timezone do
       nil ->
         Logger.warning(
-          "Missing attendee_timezone for meeting #{meeting.uid}, using organizer timezone as emergency fallback"
+          "Missing attendee_timezone for meeting, using organizer timezone as emergency fallback",
+          meeting_uid: meeting.uid
         )
 
         owner_timezone
@@ -254,7 +255,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
         shifted
 
       {:error, reason} ->
-        Logger.error("Timezone conversion failed for #{timezone}",
+        Logger.error("Timezone conversion failed",
+          timezone: timezone,
           reason: inspect(reason),
           datetime: datetime
         )

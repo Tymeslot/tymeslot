@@ -153,15 +153,18 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
           module.render_meeting_action(assigns, action)
         rescue
           e in UndefinedFunctionError ->
-            Logger.error(
-              "render_meeting_action not implemented in theme module #{inspect(module)}: #{inspect(e)}"
+            Logger.error("render_meeting_action not implemented in theme module",
+              module: inspect(module),
+              error: inspect(e)
             )
 
             render_error(assigns, "Meeting action rendering not implemented for this theme")
 
           e ->
-            Logger.error(
-              "Error rendering meeting action #{action} for theme #{theme_id}: #{inspect(e)}"
+            Logger.error("Error rendering meeting action",
+              action: action,
+              theme_id: theme_id,
+              error: inspect(e)
             )
 
             render_error(assigns, "Meeting action rendering failed")
@@ -181,8 +184,9 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
           module.render(assigns)
         rescue
           e in UndefinedFunctionError ->
-            Logger.error(
-              "Render function not implemented in theme module #{inspect(module)}: #{inspect(e)}"
+            Logger.error("Render function not implemented in theme module",
+              module: inspect(module),
+              error: inspect(e)
             )
 
             render_error(assigns, "Theme render function not found")

@@ -129,11 +129,12 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundary do
   end
 
   defp log_theme_error(context) do
-    Logger.error("""
-    Theme error in #{context.theme_id}.#{context.function}:
-    Error: #{inspect(context.error)}
-    Args: #{inspect(context.args)}
-    """)
+    Logger.error("Theme error",
+      theme_id: context.theme_id,
+      function: context.function,
+      error: inspect(context.error),
+      args: inspect(context.args)
+    )
 
     if Application.get_env(:tymeslot, :debug_theme_errors, false) do
       Logger.error("Theme error stacktrace",

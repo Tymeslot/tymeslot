@@ -261,12 +261,10 @@ defmodule Tymeslot.Dashboard.ExtensionSchema do
         :ok
 
       {:error, errors} ->
-        Logger.error("""
-        Invalid dashboard extensions in config key :#{config_key}
-
-        Errors:
-        #{format_errors(errors)}
-        """)
+        Logger.error("Invalid dashboard extensions in config",
+          config_key: config_key,
+          errors: format_errors(errors)
+        )
 
         raise "Dashboard extension validation failed. Check logs for details."
     end

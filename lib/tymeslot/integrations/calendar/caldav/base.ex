@@ -340,8 +340,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
               # Fall back to RFC 4791: PROPFIND server root for current-user-principal.
               # This handles servers like Zimbra where the generic /calendars/{user}/ path
               # is wrong but the credentials themselves are valid.
-              Logger.debug(
-                "CalDAV discovery path not found (#{reason}), falling back to RFC 4791 probe",
+              Logger.debug("CalDAV discovery path not found; falling back to RFC 4791 probe",
+                reason: reason,
                 base_url: client.base_url
               )
 
@@ -394,7 +394,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
             # Guessed discovery path failed. Follow RFC 4791:
             # current-user-principal → calendar-home-set → calendar list.
             Logger.debug(
-              "CalDAV discovery path not found (#{reason}), falling back to RFC 4791 principal discovery",
+              "CalDAV discovery path not found; falling back to RFC 4791 principal discovery",
+              reason: reason,
               base_url: client.base_url
             )
 

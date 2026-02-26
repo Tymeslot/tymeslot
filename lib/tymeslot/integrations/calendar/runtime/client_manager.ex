@@ -222,7 +222,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         [adapter_client]
 
       {:error, reason} ->
-        Logger.error("Failed to create #{provider_type} client", reason: reason)
+        Logger.error("Failed to create calendar client",
+          provider_type: provider_type,
+          reason: reason
+        )
+
         []
     end
   end
@@ -454,7 +458,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         adapter_client
 
       {:error, reason} ->
-        Logger.error("Failed to create #{provider_type} client", reason: reason)
+        Logger.error("Failed to create calendar client",
+          provider_type: provider_type,
+          reason: reason
+        )
+
         nil
     end
   end

@@ -181,7 +181,7 @@ defmodule Tymeslot.Mailer.SMTPConfig do
           load_castore_certs()
 
         [_first_cert | _rest] = certs ->
-          Logger.debug("Using OS certificate store (#{length(certs)} certificates)")
+          Logger.debug("Using OS certificate store", cert_count: length(certs))
           certs
       end
 

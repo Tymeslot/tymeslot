@@ -84,8 +84,9 @@ defmodule Tymeslot.DatabaseQueries.ProfileQueries do
         # Log successful update for debugging
         require Logger
 
-        Logger.info(
-          "Profile updated successfully: user_id=#{updated_profile.user_id}, timezone=#{updated_profile.timezone}"
+        Logger.info("Profile updated successfully",
+          user_id: updated_profile.user_id,
+          timezone: updated_profile.timezone
         )
 
         result

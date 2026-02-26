@@ -89,8 +89,8 @@ defmodule Tymeslot.Notifications.Recipients do
       nil ->
         require Logger
 
-        Logger.error(
-          "Missing organizer_user_id for meeting #{meeting.uid}, using default timezone"
+        Logger.error("Missing organizer_user_id for meeting; using default timezone",
+          meeting_uid: meeting.uid
         )
 
         "Europe/Kyiv"
@@ -112,7 +112,8 @@ defmodule Tymeslot.Notifications.Recipients do
         require Logger
 
         Logger.warning(
-          "Missing attendee_timezone for meeting #{meeting.uid}, using organizer timezone as emergency fallback"
+          "Missing attendee_timezone for meeting; using organizer timezone as emergency fallback",
+          meeting_uid: meeting.uid
         )
 
         get_organizer_timezone(meeting)

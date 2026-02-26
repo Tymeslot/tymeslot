@@ -91,7 +91,7 @@ defmodule Tymeslot.Themes.Theme do
         false
 
       {:error, reason} ->
-        Logger.warning("Theme #{id} validation failed: #{reason}")
+        Logger.warning("Theme validation failed", theme_id: id, reason: reason)
         false
     end
   end
@@ -186,7 +186,7 @@ defmodule Tymeslot.Themes.Theme do
       Logger.info("All themes validated successfully")
       :ok
     else
-      Logger.error("Theme validation failures: #{inspect(failed_themes)}")
+      Logger.error("Theme validation failures", failures: inspect(failed_themes))
       {:error, failed_themes}
     end
   end

@@ -206,15 +206,15 @@ defmodule Tymeslot.Bookings.Policy do
         {:error, "Cannot cancel a completed meeting"}
 
       meeting_is_current?(meeting) ->
-        Logger.info(
-          "Blocked cancellation for meeting #{meeting.uid}: meeting has already started"
+        Logger.info("Blocked cancellation: meeting has already started",
+          meeting_uid: meeting.uid
         )
 
         {:error, "Cannot cancel a meeting that has already started"}
 
       meeting_is_past?(meeting) ->
-        Logger.info(
-          "Blocked cancellation for meeting #{meeting.uid}: meeting has already occurred"
+        Logger.info("Blocked cancellation: meeting has already occurred",
+          meeting_uid: meeting.uid
         )
 
         {:error, "Cannot cancel a meeting that has already occurred"}
@@ -238,11 +238,11 @@ defmodule Tymeslot.Bookings.Policy do
         {:error, "Cannot reschedule a completed meeting"}
 
       meeting_is_current?(meeting) ->
-        Logger.info("Blocked reschedule for meeting #{meeting.uid}: meeting has already started")
+        Logger.info("Blocked reschedule: meeting has already started", meeting_uid: meeting.uid)
         {:error, "Cannot reschedule a meeting that has already started"}
 
       meeting_is_past?(meeting) ->
-        Logger.info("Blocked reschedule for meeting #{meeting.uid}: meeting has already occurred")
+        Logger.info("Blocked reschedule: meeting has already occurred", meeting_uid: meeting.uid)
         {:error, "Cannot reschedule a meeting that has already occurred"}
 
       true ->

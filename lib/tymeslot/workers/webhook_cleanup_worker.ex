@@ -71,8 +71,9 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
 
     case Repo.delete_all(query) do
       {count, nil} when count > 0 ->
-        Logger.info(
-          "Cleaned up #{count} old Stripe webhook events older than #{retention_days} days"
+        Logger.info("Cleaned up old Stripe webhook events",
+          count: count,
+          retention_days: retention_days
         )
 
       {0, nil} ->

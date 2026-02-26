@@ -72,33 +72,20 @@ defmodule Tymeslot.Mailer.HealthCheck do
           :ok
         else
           {:error, reason} ->
-            Logger.error("""
-            ╔═══════════════════════════════════════════════════════════════════════════════╗
-            ║                                                                               ║
-            ║  ⚠️  EMAIL SYSTEM NOT VALIDATED - EMAILS WILL FAIL  ⚠️                        ║
-            ║                                                                               ║
-            ╚═══════════════════════════════════════════════════════════════════════════════╝
-
-            ✗ SMTP configuration validation failed: #{reason}
-
-            Please verify your SMTP environment variables:
-            - SMTP_HOST: SMTP server hostname
-            - SMTP_PORT: SMTP server port (default: 587)
-            - SMTP_USERNAME: SMTP username
-            - SMTP_PASSWORD: SMTP password
-
-            To test SMTP manually, run:
-              mix tymeslot_saas.test_email your-email@example.com
-
-            Application will start but emails WILL FAIL until configuration is fixed.
-            """)
+            Logger.error(
+              "SMTP configuration validation failed; emails will not be sent until configuration is fixed",
+              reason: reason
+            )
 
             # Return :ok to allow app to start despite validation failure
             :ok
         end
 
       adapter when adapter in [Swoosh.Adapters.Test, Swoosh.Adapters.Local] ->
-        Logger.info("Mailer configured with #{inspect(adapter)} (no validation needed)")
+        Logger.info("Mailer configured with dev/test adapter; no validation needed",
+          adapter: inspect(adapter)
+        )
+
         :ok
 
       Swoosh.Adapters.Postmark ->
@@ -108,37 +95,24 @@ defmodule Tymeslot.Mailer.HealthCheck do
             :ok
 
           {:error, reason} ->
-            Logger.error("""
-            ╔═══════════════════════════════════════════════════════════════════════════════╗
-            ║                                                                               ║
-            ║  ⚠️  EMAIL SYSTEM NOT VALIDATED - EMAILS WILL FAIL  ⚠️                        ║
-            ║                                                                               ║
-            ╚═══════════════════════════════════════════════════════════════════════════════╝
-
-            ✗ Postmark configuration validation failed: #{reason}
-
-            Application will start but emails WILL FAIL until configuration is fixed.
-            """)
+            Logger.error(
+              "Postmark configuration validation failed; emails will not be sent until configuration is fixed",
+              reason: reason
+            )
 
             # Return :ok to allow app to start
             :ok
         end
 
       nil ->
-        Logger.error("""
-        ╔═══════════════════════════════════════════════════════════════════════════════╗
-        ║                                                                               ║
-        ║  ⚠️  EMAIL SYSTEM NOT CONFIGURED - NO EMAILS WILL BE SENT  ⚠️                 ║
-        ║                                                                               ║
-        ╚═══════════════════════════════════════════════════════════════════════════════╝
-
-        ✗ Mailer adapter not configured. Set EMAIL_ADAPTER environment variable.
-        """)
+        Logger.error(
+          "Mailer adapter not configured; no emails will be sent. Set the EMAIL_ADAPTER environment variable."
+        )
 
         :ok
 
       adapter ->
-        Logger.warning("Unknown mailer adapter: #{inspect(adapter)}, skipping validation")
+        Logger.warning("Unknown mailer adapter; skipping validation", adapter: inspect(adapter))
         :ok
     end
   end
@@ -279,7 +253,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
     dns_timeout = 3_000
     connection_timeout = 5_000
 
-    Logger.info("Testing SMTP connection to #{host_string}:#{port}...")
+    Logger.info("Testing SMTP connection", host: host_string, port: port)
 
     # First, resolve DNS separately to provide better error messages
     with :ok <- test_dns_resolution(host, host_string, dns_timeout),
@@ -341,7 +315,10 @@ defmodule Tymeslot.Mailer.HealthCheck do
                   :ok
                 else
                   # Server responded but not with expected close message
-                  Logger.debug("Unexpected QUIT response: #{String.slice(response, 0, 50)}")
+                  Logger.debug("Unexpected QUIT response from SMTP server",
+                    response: String.slice(response, 0, 50)
+                  )
+
                   :ok
                 end
 
@@ -400,7 +377,10 @@ defmodule Tymeslot.Mailer.HealthCheck do
                 if String.starts_with?(response, "221") do
                   :ok
                 else
-                  Logger.debug("Unexpected QUIT response: #{String.slice(response, 0, 50)}")
+                  Logger.debug("Unexpected QUIT response from SMTP server",
+                    response: String.slice(response, 0, 50)
+                  )
+
                   :ok
                 end
 

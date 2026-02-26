@@ -381,8 +381,8 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
             start -> "#{System.monotonic_time() - start}ns"
           end
 
-        Logger.debug(
-          "Cancelling previous availability fetch task due to user navigation (task was running for #{duration})",
+        Logger.debug("Cancelling previous availability fetch task due to user navigation",
+          duration: duration,
           user_id: Map.get(socket.assigns, :organizer_user_id),
           month: Map.get(socket.assigns, :current_month),
           year: Map.get(socket.assigns, :current_year)

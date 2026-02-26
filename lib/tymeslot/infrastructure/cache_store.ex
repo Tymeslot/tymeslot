@@ -252,9 +252,9 @@ defmodule Tymeslot.Infrastructure.CacheStore do
           exception: Exception.message(exception)
         )
 
-        Logger.debug(fn ->
-          "Stacktrace: #{Exception.format_stacktrace(stacktrace)}"
-        end)
+        Logger.debug("Cache computation stacktrace",
+          stacktrace: Exception.format_stacktrace(stacktrace)
+        )
 
         {:error, :computation_failed}
 
@@ -266,9 +266,9 @@ defmodule Tymeslot.Infrastructure.CacheStore do
           reason: inspect(reason)
         )
 
-        Logger.debug(fn ->
-          "Stacktrace: #{Exception.format_stacktrace(stacktrace)}"
-        end)
+        Logger.debug("Cache computation stacktrace",
+          stacktrace: Exception.format_stacktrace(stacktrace)
+        )
 
         {:error, :computation_failed}
     end

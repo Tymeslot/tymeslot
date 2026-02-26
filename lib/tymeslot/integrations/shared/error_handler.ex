@@ -84,8 +84,10 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
           normalized_error
 
         other ->
-          Logger.warning(
-            "Unexpected return value from #{operation} (#{provider}): #{inspect(other)}"
+          Logger.warning("Unexpected return value from integration operation",
+            operation: operation,
+            provider: provider,
+            value: inspect(other)
           )
 
           other

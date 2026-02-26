@@ -85,8 +85,8 @@ defmodule Tymeslot.Integrations.Video.Providers.CustomProvider do
             }
           )
 
-          Logger.info(
-            "Successfully created custom video meeting with URL: #{mask_url(processed_url)}"
+          Logger.info("Successfully created custom video meeting",
+            url: mask_url(processed_url)
           )
 
           {:ok, room_data}

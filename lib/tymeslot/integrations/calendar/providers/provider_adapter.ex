@@ -45,7 +45,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           result
 
         {:error, reason} = error ->
-          Logger.error("Failed to get events from #{adapter_client.provider_type}",
+          Logger.error("Failed to get events from calendar provider",
+            provider_type: adapter_client.provider_type,
             reason: inspect(reason)
           )
 

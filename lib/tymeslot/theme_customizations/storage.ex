@@ -44,15 +44,15 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
         :ok
 
       {:error, :eacces} ->
-        Logger.error("Permission denied creating directory: #{dir_path}")
+        Logger.error("Permission denied creating directory", dir_path: dir_path)
         raise "Failed to create upload directory due to permissions: #{dir_path}"
 
       {:error, :enospc} ->
-        Logger.error("No space left on device for directory: #{dir_path}")
+        Logger.error("No space left on device for directory", dir_path: dir_path)
         raise "No space left on device to create directory: #{dir_path}"
 
       {:error, reason} ->
-        Logger.error("Failed to create directory #{dir_path}: #{reason}")
+        Logger.error("Failed to create directory", dir_path: dir_path, reason: reason)
         raise "Failed to create upload directory: #{dir_path} (#{reason})"
     end
   end

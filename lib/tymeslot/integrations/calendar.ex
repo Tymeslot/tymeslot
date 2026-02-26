@@ -513,8 +513,8 @@ defmodule Tymeslot.Integrations.Calendar do
     if Code.ensure_loaded?(mod) do
       mod
     else
-      Logger.warning(
-        "Configured calendar_module #{inspect(mod)} is not loaded. Falling back to Operations."
+      Logger.warning("Configured calendar_module is not loaded, falling back to Operations",
+        calendar_module: inspect(mod)
       )
 
       Tymeslot.Integrations.Calendar.Operations
