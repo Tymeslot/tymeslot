@@ -68,14 +68,8 @@ defmodule TymeslotWeb.OAuthController do
   defp do_provider_auth(conn, :google, params), do: google_auth(conn, params)
 
   defp disabled_redirect(conn, provider_atom) do
-    provider_name =
-      case provider_atom do
-        :github -> "GitHub"
-        :google -> "Google"
-      end
-
     conn
-    |> put_flash(:error, "#{provider_name} authentication is not available")
+    |> put_flash(:error, "#{provider_name(provider_atom)} authentication is not available")
     |> redirect(to: ~p"/auth/login")
   end
 
@@ -155,10 +149,11 @@ defmodule TymeslotWeb.OAuthController do
     case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
       :ok ->
         paths = get_redirect_paths(conn)
-        # Clear the oauth_intent session after handling
+
         conn
         |> delete_session(:oauth_intent)
-        |> OAuthHelper.handle_oauth_callback(code, state, :github, paths)
+        |> OAuthHelper.handle_oauth_callback(%{code: code, state: state, provider: :github})
+        |> respond_to_oauth_result(paths)
 
       {:error, :rate_limited, _message} ->
         AuthControllerHelpers.handle_rate_limited(
@@ -186,10 +181,11 @@ defmodule TymeslotWeb.OAuthController do
     case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
       :ok ->
         paths = get_redirect_paths(conn)
-        # Clear the oauth_intent session after handling
+
         conn
         |> delete_session(:oauth_intent)
-        |> OAuthHelper.handle_oauth_callback(code, state, :google, paths)
+        |> OAuthHelper.handle_oauth_callback(%{code: code, state: state, provider: :google})
+        |> respond_to_oauth_result(paths)
 
       {:error, :rate_limited, _message} ->
         AuthControllerHelpers.handle_rate_limited(
@@ -474,22 +470,58 @@ defmodule TymeslotWeb.OAuthController do
     "Welcome! Successfully signed up with #{String.capitalize(provider)}."
   end
 
+  @spec respond_to_oauth_result(
+          Tymeslot.Auth.OAuth.HelperBehaviour.flow_result(),
+          keyword()
+        ) :: Plug.Conn.t()
+  defp respond_to_oauth_result({:ok, authed_conn, provider}, paths) do
+    authed_conn
+    |> put_flash(:info, "Successfully signed in with #{provider_name(provider)}.")
+    |> redirect(to: paths[:success_path])
+  end
+
+  defp respond_to_oauth_result({:registration_required, state_conn, _provider, params}, _paths) do
+    redirect(state_conn, to: ~p"/auth/complete-registration?#{params}")
+  end
+
+  defp respond_to_oauth_result({:error, :invalid_state, flow_conn}, paths) do
+    flow_conn
+    |> put_flash(:error, "Security validation failed. Please try again.")
+    |> redirect(to: paths[:login_path])
+  end
+
+  defp respond_to_oauth_result({:error, :oauth_error, provider, flow_conn}, paths) do
+    flow_conn
+    |> put_flash(:error, "Failed to authenticate with #{provider_name(provider)}.")
+    |> redirect(to: paths[:login_path])
+  end
+
+  defp respond_to_oauth_result({:error, :general_error, provider, flow_conn}, paths) do
+    flow_conn
+    |> put_flash(:error, "An error occurred during #{provider_name(provider)} authentication.")
+    |> redirect(to: paths[:login_path])
+  end
+
+  defp respond_to_oauth_result({:error, :session_failed, provider, flow_conn}, paths) do
+    flow_conn
+    |> put_flash(
+      :error,
+      "#{provider_name(provider)} authentication succeeded but session creation failed."
+    )
+    |> redirect(to: paths[:login_path])
+  end
+
+  defp provider_name(:github), do: "GitHub"
+  defp provider_name(:google), do: "Google"
+
   @spec get_redirect_paths(Plug.Conn.t()) :: keyword()
   defp get_redirect_paths(conn) do
     configured_success_path = Application.get_env(:tymeslot, :auth)[:success_redirect_path]
 
     success_path = sanitize_redirect_path(conn.params["success_path"], configured_success_path)
-    # For security failures (invalid state, etc.), use the security failure path
     login_path = ~p"/?auth=login"
 
-    registration_path =
-      sanitize_redirect_path(conn.params["registration_path"], ~p"/auth/complete-registration")
-
-    [
-      success_path: success_path,
-      login_path: login_path,
-      registration_path: registration_path
-    ]
+    [success_path: success_path, login_path: login_path]
   end
 
   defp sanitize_redirect_path(path, default) do

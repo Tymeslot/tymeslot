@@ -22,9 +22,15 @@ defmodule Tymeslot.Auth.OAuth.HelperBehaviour do
   @callback update_client_headers(OAuth2.Client.t(), atom()) :: OAuth2.Client.t()
   @callback parse_access_token(String.t()) :: String.t()
 
-  @callback handle_oauth_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  @callback handle_oauth_callback(Plug.Conn.t(), String.t(), String.t() | nil, atom(), keyword()) ::
-              Plug.Conn.t()
+  @type flow_result ::
+          {:ok, Plug.Conn.t(), atom()}
+          | {:registration_required, Plug.Conn.t(), atom(), map()}
+          | {:error, :invalid_state, Plug.Conn.t()}
+          | {:error, :oauth_error, atom(), Plug.Conn.t()}
+          | {:error, :general_error, atom(), Plug.Conn.t()}
+          | {:error, :session_failed, atom(), Plug.Conn.t()}
+
+  @callback handle_oauth_callback(Plug.Conn.t(), map()) :: flow_result()
 end
 
 defmodule Tymeslot.Auth.OAuth.ProviderBehaviour do

@@ -129,9 +129,4 @@ defmodule Tymeslot.Auth.OAuth.Helper do
     FlowHandler.handle_oauth_callback(conn, params)
   end
 
-  @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def handle_oauth_callback(conn, code, state, provider, opts) do
-    params = %{code: code, state: state, provider: provider, opts: opts}
-    handle_oauth_callback(conn, params)
-  end
 end

@@ -3,7 +3,6 @@ defmodule TymeslotWeb.OAuthControllerTest do
   @moduletag :utils
 
   alias Ecto.Changeset
-  alias Phoenix.Controller
   alias Phoenix.Flash
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
   alias Tymeslot.Factory
@@ -105,24 +104,103 @@ defmodule TymeslotWeb.OAuthControllerTest do
   end
 
   describe "GET /auth/:provider/callback" do
-    test "handles successful callback", %{conn: conn} do
+    test "successful login: puts success flash and redirects", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           "code",
-                                                           "state",
-                                                           :github,
-                                                           _paths ->
-        # We need to make sure flash is fetched if the helper uses it
-        conn = Controller.fetch_flash(conn, [])
-
-        conn
-        |> Controller.put_flash(:info, "Successfully authenticated")
-        |> Controller.redirect(to: "/dashboard")
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:ok, conn, :github}
       end)
 
       conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard"
-      assert Flash.get(conn.assigns.flash, :info) =~ "Successfully authenticated"
+      assert Flash.get(conn.assigns.flash, :info) == "Successfully signed in with GitHub."
+      # Redirect goes to configured success path; verify it's a valid internal path.
+      assert String.starts_with?(redirected_to(conn), "/")
+    end
+
+    test "registration required: redirects to /auth/complete-registration with params", %{conn: conn} do
+      registration_params = %{
+        "auth" => "oauth_complete",
+        "oauth_provider" => "github",
+        "oauth_email" => "user@example.com",
+        "oauth_missing" => "name"
+      }
+
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:registration_required, conn, :github, registration_params}
+      end)
+
+      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
+
+      location = redirected_to(conn)
+      assert String.starts_with?(location, "/auth/complete-registration?")
+      query = location |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+      assert query["auth"] == "oauth_complete"
+      assert query["oauth_provider"] == "github"
+    end
+
+    test "registration_path query param is ignored; always redirects to /auth/complete-registration", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:registration_required, conn, :github, %{"auth" => "oauth_complete", "oauth_provider" => "github"}}
+      end)
+
+      conn =
+        get(conn, ~p"/auth/github/callback", %{
+          "code" => "code",
+          "state" => "state",
+          "registration_path" => "/custom/registration"
+        })
+
+      assert String.starts_with?(redirected_to(conn), "/auth/complete-registration")
+    end
+
+    test "invalid state: puts security error flash and redirects to login", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:error, :invalid_state, conn}
+      end)
+
+      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/?auth=login"
+      assert Flash.get(conn.assigns.flash, :error) == "Security validation failed. Please try again."
+    end
+
+    test "OAuth error: puts provider error flash and redirects to login", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :google} ->
+        {:error, :oauth_error, :google, conn}
+      end)
+
+      conn = get(conn, ~p"/auth/google/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/?auth=login"
+      assert Flash.get(conn.assigns.flash, :error) == "Failed to authenticate with Google."
+    end
+
+    test "general error: puts provider error flash and redirects to login", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:error, :general_error, :github, conn}
+      end)
+
+      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/?auth=login"
+      assert Flash.get(conn.assigns.flash, :error) =~ "An error occurred during GitHub authentication."
+    end
+
+    test "session failed: puts session failure flash and redirects to login", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:error, :session_failed, :github, conn}
+      end)
+
+      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/?auth=login"
+      assert Flash.get(conn.assigns.flash, :error) =~ "session creation failed"
     end
 
     test "rejects OAuth callback without authorization code", %{conn: conn} do

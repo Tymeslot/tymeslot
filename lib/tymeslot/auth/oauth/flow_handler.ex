@@ -1,166 +1,135 @@
 defmodule Tymeslot.Auth.OAuth.FlowHandler do
   @moduledoc """
-  Orchestrates the OAuth flow, typically called from controllers.
+  Orchestrates the OAuth callback flow, returning tagged result tuples.
+
+  All presentation concerns (flash messages, HTTP redirects) are the
+  responsibility of the calling controller.
   """
 
   require Logger
-  alias Phoenix.Controller
-  alias Tymeslot.Auth.OAuth.{Client, State, URLs, UserProcessor, UserRegistration}
+
+  alias Tymeslot.Auth.OAuth.{Client, HelperBehaviour, State, URLs, UserProcessor, UserRegistration}
   alias Tymeslot.Auth.Session
 
   @type provider :: :github | :google
+  @type flow_result :: HelperBehaviour.flow_result()
 
   @doc """
   Handles the complete OAuth callback flow.
+
+  Returns a tagged tuple describing the outcome. Callers are responsible for
+  translating each variant into flash messages and HTTP redirects:
+
+  - `{:ok, conn, provider}` — session established; redirect to success path.
+  - `{:registration_required, conn, provider, params}` — new user; redirect to
+    the registration form, passing `params` as query string.
+  - `{:error, :invalid_state, conn}` — CSRF state mismatch.
+  - `{:error, :oauth_error, provider, conn}` — OAuth2 protocol error.
+  - `{:error, :general_error, provider, conn}` — unexpected error during token
+    exchange or user processing.
+  - `{:error, :session_failed, provider, conn}` — OAuth succeeded but session
+    creation failed.
   """
-  @spec handle_oauth_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def handle_oauth_callback(conn, %{code: code, state: state, provider: provider} = params) do
-    opts = Map.get(params, :opts, [])
-
-    context = %{
-      code: code,
-      provider: provider,
-      success_path: Keyword.get(opts, :success_path, "/"),
-      login_path: Keyword.get(opts, :login_path, "/auth/login"),
-      registration_path: Keyword.get(opts, :registration_path, "/auth/complete-registration")
-    }
-
-    conn
-    |> validate_oauth_state(state, context)
-    |> process_oauth_response(context)
-    |> complete_oauth_flow(context)
+  @spec handle_oauth_callback(Plug.Conn.t(), map()) :: flow_result()
+  def handle_oauth_callback(conn, %{code: code, state: state, provider: provider}) do
+    with {:ok, conn} <- validate_oauth_state(conn, state),
+         {:ok, conn, user} <- process_oauth_response(conn, code, provider) do
+      complete_oauth_flow(conn, user, provider)
+    end
   end
 
   # Private helpers
 
-  defp validate_oauth_state(conn, state, context) do
+  defp validate_oauth_state(conn, state) do
     case State.validate_state(conn, state) do
       :ok ->
-        State.clear_oauth_state(conn)
+        {:ok, State.clear_oauth_state(conn)}
 
       {:error, :invalid_state} ->
-        {:error, handle_invalid_state(conn, context.login_path)}
+        Logger.warning("OAuth callback received with invalid or missing state parameter")
+        {:error, :invalid_state, conn}
     end
   end
 
-  defp process_oauth_response({:error, conn}, _context), do: {:error, conn}
-
-  defp process_oauth_response(conn, %{code: code, provider: provider} = context) do
+  defp process_oauth_response(conn, code, provider) do
     full_callback_url = URLs.callback_url(conn, URLs.callback_path(provider))
     client = Client.build(provider, full_callback_url, "")
 
     with {:ok, client} <- Client.exchange_code_for_token(client, code),
          {:ok, user_info} <- Client.get_user_info(client, provider),
-         {:ok, user} <- UserProcessor.process_user(provider, user_info),
-         enhanced_user <- UserProcessor.enhance_user_data(provider, user, client) do
-      {conn, enhanced_user}
+         {:ok, user} <- UserProcessor.process_user(provider, user_info) do
+      enhanced_user = UserProcessor.enhance_user_data(provider, user, client)
+      {:ok, conn, enhanced_user}
     else
       {:error, %OAuth2.Error{} = error} ->
-        {:error, handle_oauth_error(conn, provider, error, context.login_path)}
+        Logger.error("OAuth error", provider: to_string(provider), error: inspect(error))
+        {:error, :oauth_error, provider, conn}
 
       {:error, reason} ->
-        {:error, handle_general_error(conn, provider, reason, context.login_path)}
-    end
-  end
-
-  defp complete_oauth_flow({:error, conn}, _context), do: conn
-
-  defp complete_oauth_flow({conn, user}, context) do
-    case UserRegistration.find_existing_user(context.provider, user) do
-      {:ok, existing_user} ->
-        create_user_session(conn, existing_user, context)
-
-      {:error, :not_found} ->
-        handle_new_user_registration(conn, context.provider, user, context.registration_path)
-    end
-  end
-
-  defp create_user_session(conn, user, context) do
-    case Session.create_session(conn, %{id: user.id}) do
-      {:ok, conn, _token} ->
-        conn
-        |> Controller.put_flash(
-          :info,
-          "Successfully signed in with #{provider_name(context.provider)}."
-        )
-        |> Controller.redirect(to: context.success_path)
-
-      {:error, reason, _message} ->
-        Logger.error("Failed to create session after OAuth auth",
-          provider: context.provider,
+        Logger.error("OAuth authentication error",
+          provider: to_string(provider),
           reason: inspect(reason)
         )
 
-        conn
-        |> Controller.put_flash(:error, "Authentication succeeded but session creation failed.")
-        |> Controller.redirect(to: context.login_path)
+        {:error, :general_error, provider, conn}
     end
   end
 
-  defp handle_new_user_registration(conn, provider, user, registration_path) do
+  defp complete_oauth_flow(conn, user, provider) do
+    case UserRegistration.find_existing_user(provider, user) do
+      {:ok, existing_user} ->
+        create_user_session(conn, existing_user, provider)
+
+      {:error, :not_found} ->
+        handle_new_user_registration(conn, provider, user)
+    end
+  end
+
+  defp create_user_session(conn, user, provider) do
+    case Session.create_session(conn, %{id: user.id}) do
+      {:ok, conn, _token} ->
+        {:ok, conn, provider}
+
+      {:error, reason, _message} ->
+        Logger.error("Failed to create session after OAuth auth",
+          provider: to_string(provider),
+          reason: inspect(reason)
+        )
+
+        {:error, :session_failed, provider, conn}
+    end
+  end
+
+  defp handle_new_user_registration(conn, provider, user) do
     case UserRegistration.check_oauth_requirements(provider, user) do
       {:missing, missing_fields} ->
-        params = build_modal_params(provider, user, missing_fields)
-        query_params = URI.encode_query(params)
-        Controller.redirect(conn, to: "#{registration_path}?#{query_params}")
+        {:registration_required, conn, provider, build_modal_params(provider, user, missing_fields)}
 
       :complete ->
-        # This case should ideally not happen if requirements are checked correctly
-        # but we handle it for robustness.
-        Controller.redirect(conn, to: "/")
+        # All required fields are present but no account exists yet. Route the
+        # user through the registration form for explicit confirmation rather
+        # than silently auto-creating an account.
+        Logger.warning(
+          "OAuth user data is complete but no account found; routing to registration",
+          provider: to_string(provider)
+        )
+
+        {:registration_required, conn, provider, build_modal_params(provider, user, [])}
     end
   end
 
   defp build_modal_params(provider, user, missing_fields) do
-    base_params = %{
-      "auth" => "oauth_complete",
-      "oauth_provider" => to_string(provider),
-      "oauth_missing" => Enum.join(missing_fields, ",")
-    }
-
     email_from_provider = user.email != nil and String.trim(user.email) != ""
 
-    oauth_data = %{
+    %{
+      "auth" => "oauth_complete",
+      "oauth_provider" => to_string(provider),
+      "oauth_missing" => Enum.join(missing_fields, ","),
       "oauth_email" => user.email || "",
       "oauth_verified" => to_string(user.is_verified),
       "oauth_email_from_provider" => to_string(email_from_provider),
-      "oauth_#{provider}_id" => Map.get(user, String.to_existing_atom("#{provider}_user_id")),
+      "oauth_#{provider}_id" => to_string(Map.get(user, String.to_existing_atom("#{provider}_user_id")) || ""),
       "oauth_name" => user.name || ""
     }
-
-    Map.merge(base_params, oauth_data)
   end
-
-  defp handle_invalid_state(conn, login_path) do
-    Logger.warning("OAuth callback received with invalid or missing state parameter")
-
-    conn
-    |> Controller.put_flash(:error, "Security validation failed. Please try again.")
-    |> Controller.redirect(to: login_path)
-  end
-
-  defp handle_oauth_error(conn, provider, error, login_path) do
-    Logger.error("OAuth error", provider: provider_name(provider), error: inspect(error))
-
-    conn
-    |> Controller.put_flash(:error, "Failed to authenticate with #{provider_name(provider)}.")
-    |> Controller.redirect(to: login_path)
-  end
-
-  defp handle_general_error(conn, provider, reason, login_path) do
-    Logger.error("OAuth authentication error",
-      provider: provider_name(provider),
-      reason: inspect(reason)
-    )
-
-    conn
-    |> Controller.put_flash(
-      :error,
-      "An error occurred during #{provider_name(provider)} authentication."
-    )
-    |> Controller.redirect(to: login_path)
-  end
-
-  defp provider_name(:github), do: "GitHub"
-  defp provider_name(:google), do: "Google"
 end
