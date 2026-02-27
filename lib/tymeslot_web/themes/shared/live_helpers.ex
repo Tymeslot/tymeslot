@@ -3,6 +3,11 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   Shared LiveView helpers for scheduling themes.
   """
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: TymeslotWeb.Endpoint,
+    router: TymeslotWeb.Router,
+    statics: TymeslotWeb.static_paths()
+
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, redirect: 2]
 
@@ -203,7 +208,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
             ThemeFlow.resolve_meeting_type_for_slug(socket.assigns[:organizer_user_id], slug)} do
       socket
       |> put_flash(:error, "Invalid meeting type")
-      |> redirect(to: "/#{socket.assigns[:username_context]}")
+      |> redirect(to: ~p"/#{socket.assigns[:username_context]}")
     else
       {:meeting_type, meeting_type} ->
         socket

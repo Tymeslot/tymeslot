@@ -2,6 +2,11 @@ defmodule TymeslotWeb.Plugs.RequireAuthPlug do
   @moduledoc """
   Demo plug to require authentication.
   """
+  use Phoenix.VerifiedRoutes,
+    endpoint: TymeslotWeb.Endpoint,
+    router: TymeslotWeb.Router,
+    statics: TymeslotWeb.static_paths()
+
   import Plug.Conn
 
   alias Phoenix.Controller
@@ -16,7 +21,7 @@ defmodule TymeslotWeb.Plugs.RequireAuthPlug do
     else
       conn
       |> Controller.put_flash(:error, "You must be logged in to access this page.")
-      |> Controller.redirect(to: "/auth/login")
+      |> Controller.redirect(to: ~p"/auth/login")
       |> halt()
     end
   end

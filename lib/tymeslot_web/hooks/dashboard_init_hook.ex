@@ -3,6 +3,11 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   Consolidated hook for dashboard initialization.
   Handles onboarding checks, profile loading, and common dashboard state.
   """
+  use Phoenix.VerifiedRoutes,
+    endpoint: TymeslotWeb.Endpoint,
+    router: TymeslotWeb.Router,
+    statics: TymeslotWeb.static_paths()
+
   require Logger
   import Phoenix.LiveView
   import Phoenix.Component
@@ -23,7 +28,7 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
         {:cont, socket}
 
       !Auth.onboarding_completed?(user) ->
-        {:halt, redirect(socket, to: "/onboarding")}
+        {:halt, redirect(socket, to: ~p"/onboarding")}
 
       true ->
         profile =
