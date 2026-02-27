@@ -98,7 +98,7 @@ defmodule Tymeslot.Integrations.Common.UserResolver do
         access_token: "token123",
         refresh_token: "refresh123",
         expires_at: ~U[2024-12-31 23:59:59Z],
-        scope: "calendar.readonly"
+        scope: "https://www.googleapis.com/auth/calendar"
       })
   """
   @spec create_oauth_integration(integer(), integration_type(), String.t(), map(), map()) ::
