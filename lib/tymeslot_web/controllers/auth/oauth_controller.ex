@@ -579,6 +579,9 @@ defmodule TymeslotWeb.OAuthController do
         :email_already_taken ->
           "This email address is already associated with another account. Please use a different email or sign in to your existing account."
 
+        :registration_disabled ->
+          "Registration is currently disabled."
+
         _unknown_error ->
           "Authentication failed. Please try again."
       end

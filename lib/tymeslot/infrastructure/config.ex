@@ -113,6 +113,14 @@ defmodule Tymeslot.Infrastructure.Config do
   end
 
   @doc """
+  Checks if new user registration is enabled.
+  """
+  @spec registration_enabled?() :: boolean()
+  def registration_enabled? do
+    app_config_module().registration_enabled?()
+  end
+
+  @doc """
   Checks if legal agreements should be enforced.
   """
   @spec enforce_legal_agreements?() :: boolean()

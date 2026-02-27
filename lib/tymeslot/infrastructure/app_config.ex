@@ -3,6 +3,7 @@ defmodule Tymeslot.Infrastructure.AppConfigBehaviour do
   Behaviour for application-wide configuration that might differ between Core and SaaS.
   """
 
+  @callback registration_enabled?() :: boolean()
   @callback enforce_legal_agreements?() :: boolean()
   @callback show_marketing_links?() :: boolean()
   @callback logo_links_to_marketing?() :: boolean()
@@ -14,6 +15,11 @@ defmodule Tymeslot.Infrastructure.AppConfig do
   Default implementation of AppConfigBehaviour for Tymeslot Core.
   """
   @behaviour Tymeslot.Infrastructure.AppConfigBehaviour
+
+  @impl Tymeslot.Infrastructure.AppConfigBehaviour
+  def registration_enabled? do
+    Application.get_env(:tymeslot, :registration_enabled, true)
+  end
 
   @impl Tymeslot.Infrastructure.AppConfigBehaviour
   def enforce_legal_agreements? do

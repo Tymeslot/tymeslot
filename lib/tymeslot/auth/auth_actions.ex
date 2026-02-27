@@ -23,6 +23,14 @@ defmodule Tymeslot.Auth.AuthActions do
   @spec complete_oauth_registration(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t(), String.t()} | {:error, String.t()}
   def complete_oauth_registration(params, socket) do
+    if Config.registration_enabled?() do
+      do_complete_oauth_registration(params, socket)
+    else
+      {:error, "Registration is currently disabled."}
+    end
+  end
+
+  defp do_complete_oauth_registration(params, socket) do
     auth_params = extract_auth_params(params)
     profile_params = params["profile"] || %{}
 
@@ -104,6 +112,14 @@ defmodule Tymeslot.Auth.AuthActions do
   @spec register_user(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, atom(), String.t()} | {:error, String.t()}
   def register_user(user_params, socket) do
+    if Config.registration_enabled?() do
+      do_register_user(user_params, socket)
+    else
+      {:error, "Registration is currently disabled."}
+    end
+  end
+
+  defp do_register_user(user_params, socket) do
     converted_params = convert_terms_accepted(user_params)
 
     metadata = %{
@@ -339,6 +355,7 @@ defmodule Tymeslot.Auth.AuthActions do
       :email_not_verified -> "Email not verified by provider"
       :invalid_token -> get_token_error_message(:invalid_token)
       :token_expired -> get_token_error_message(:token_expired)
+      :registration_disabled -> "Registration is currently disabled."
       # OAuth registration errors
       :invalid_profile_params -> get_oauth_error_message(:invalid_profile_params)
       :conversion_failed -> get_oauth_error_message(:conversion_failed)

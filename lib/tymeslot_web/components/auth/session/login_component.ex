@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
   import TymeslotWeb.Shared.Auth.FormComponents
   import TymeslotWeb.Shared.Auth.ButtonComponents
   import TymeslotWeb.Components.CoreComponents
+  alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @doc """
@@ -133,12 +134,14 @@ defmodule TymeslotWeb.Session.LoginComponent do
         <.social_auth_buttons />
       </:social>
       <:footer>
-        <.auth_footer
-          prompt="Don't have an account?"
-          phx-click="navigate_to"
-          phx-value-state="signup"
-          link_text="Sign up"
-        />
+        <%= if Config.registration_enabled?() do %>
+          <.auth_footer
+            prompt="Don't have an account?"
+            phx-click="navigate_to"
+            phx-value-state="signup"
+            link_text="Sign up"
+          />
+        <% end %>
       </:footer>
     </.auth_card_layout>
     """

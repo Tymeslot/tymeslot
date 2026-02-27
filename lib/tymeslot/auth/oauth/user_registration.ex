@@ -42,6 +42,14 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   """
   @spec create_oauth_user(provider, map(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def create_oauth_user(provider, oauth_user, profile_params \\ %{}, opts \\ []) do
+    if Config.registration_enabled?() do
+      do_create_oauth_user(provider, oauth_user, profile_params, opts)
+    else
+      {:error, :registration_disabled}
+    end
+  end
+
+  defp do_create_oauth_user(provider, oauth_user, profile_params, opts) do
     placeholder_password = "$2b$12$oauth_user_no_password_placeholder_hash_not_for_authentication"
     email_verified = determine_email_verification_status(oauth_user)
     metadata = Keyword.get(opts, :metadata, %{})

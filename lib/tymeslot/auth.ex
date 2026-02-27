@@ -10,7 +10,7 @@ defmodule Tymeslot.Auth do
   alias Ecto.Changeset
   alias Tymeslot.Auth.{Authentication, PasswordReset, Registration, Session, Verification}
   alias Tymeslot.DatabaseQueries.{UserQueries, UserSessionQueries}
-  alias Tymeslot.Infrastructure.PubSub
+  alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Security.{Password, Token}
   alias Tymeslot.Utils.{ChangesetUtils, UrlBuilder}
@@ -328,14 +328,18 @@ defmodule Tymeslot.Auth do
   @spec register_user(map(), term(), keyword()) ::
           {:ok, term(), String.t()} | {:error, term(), String.t()}
   def register_user(params, socket_or_conn, opts \\ []) do
-    with {:ok, user, message} <- Registration.register_user(params, socket_or_conn, opts) do
-      # Broadcast registration event
-      Task.start(fn ->
-        metadata = Keyword.get(opts, :metadata, %{})
-        PubSub.broadcast_user_registered(user, metadata)
-      end)
+    if Config.registration_enabled?() do
+      with {:ok, user, message} <- Registration.register_user(params, socket_or_conn, opts) do
+        # Broadcast registration event
+        Task.start(fn ->
+          metadata = Keyword.get(opts, :metadata, %{})
+          PubSub.broadcast_user_registered(user, metadata)
+        end)
 
-      {:ok, user, message}
+        {:ok, user, message}
+      end
+    else
+      {:error, :registration_disabled, "Registration is currently disabled."}
     end
   end
 

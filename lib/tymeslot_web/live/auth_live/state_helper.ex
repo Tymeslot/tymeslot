@@ -4,7 +4,9 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
   Extracted from AuthLive to separate concerns and improve maintainability.
   """
 
+  alias Phoenix.LiveView
   alias Tymeslot.Auth.PasswordReset
+  alias Tymeslot.Infrastructure.Config
   import Phoenix.Component, only: [assign: 3]
   require Logger
 
@@ -28,7 +30,16 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
           Phoenix.LiveView.Socket.t()
   def determine_auth_state(socket, params, uri) do
     state = get_auth_state_from_uri(uri, params)
-    assign(socket, :current_state, state)
+    socket = assign(socket, :current_state, state)
+
+    if state == :signup and not Config.registration_enabled?() do
+      socket
+      |> assign(:current_state, :login)
+      |> LiveView.put_flash(:info, "Registration is currently disabled.")
+      |> LiveView.push_patch(to: "/auth/login")
+    else
+      socket
+    end
   end
 
   @doc """

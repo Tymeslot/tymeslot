@@ -69,13 +69,19 @@ defmodule TymeslotWeb.AuthLive do
   def handle_event("navigate_to", %{"state" => state}, socket) do
     Logger.info("AuthLive: navigate_to event received", state: state)
 
-    if StateHelper.valid_state?(state) do
-      path = StateHelper.get_path_for_state(String.to_existing_atom(state))
-      Logger.info("AuthLive: navigating", path: path)
-      {:noreply, push_patch(socket, to: path)}
-    else
-      Logger.warning("AuthLive: invalid state", state: state)
-      {:noreply, socket}
+    cond do
+      state == "signup" and not Config.registration_enabled?() ->
+        Logger.info("AuthLive: signup navigation blocked (registration disabled)")
+        {:noreply, put_flash(socket, :info, "Registration is currently disabled.")}
+
+      StateHelper.valid_state?(state) ->
+        path = StateHelper.get_path_for_state(String.to_existing_atom(state))
+        Logger.info("AuthLive: navigating", path: path)
+        {:noreply, push_patch(socket, to: path)}
+
+      true ->
+        Logger.warning("AuthLive: invalid state", state: state)
+        {:noreply, socket}
     end
   end
 

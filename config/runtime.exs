@@ -480,6 +480,8 @@ if config_env() in [:dev, :test] do
   config :tymeslot, :trial_period_days, parse_int.("TRIAL_PERIOD_DAYS", 7)
 end
 
+config :tymeslot, registration_enabled: System.get_env("REGISTRATION_ENABLED", "true") == "true"
+
 # Social Authentication Configuration
 # These environment variables control whether social login is enabled
 config :tymeslot, :social_auth,

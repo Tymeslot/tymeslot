@@ -10,6 +10,8 @@ config :tymeslot,
   generators: [timestamp_type: :utc_datetime],
 
   # --- Feature Flags ---
+  # Controls whether new user registration is allowed
+  registration_enabled: true,
   # Controls whether users must accept T&C/Privacy during registration
   enforce_legal_agreements: false,
   # Whether to show marketing-related links (Docs, etc) in navigation
