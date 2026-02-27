@@ -26,6 +26,13 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert flash["info"] == "Registration is currently disabled."
     end
 
+    test "redirects /auth/complete-registration to login with flash", %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
+               live(conn, ~p"/auth/complete-registration")
+
+      assert flash["info"] == "Registration is currently disabled."
+    end
+
     test "hides sign up link on login page", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/auth/login")
       refute html =~ "Sign up"

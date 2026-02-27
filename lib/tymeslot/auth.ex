@@ -8,7 +8,7 @@ defmodule Tymeslot.Auth do
   """
 
   alias Ecto.Changeset
-  alias Tymeslot.Auth.{Authentication, PasswordReset, Registration, Session, Verification}
+  alias Tymeslot.Auth.{AuthActions, Authentication, PasswordReset, Registration, Session, Verification}
   alias Tymeslot.DatabaseQueries.{UserQueries, UserSessionQueries}
   alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Security.FieldValidators.EmailValidator
@@ -339,7 +339,7 @@ defmodule Tymeslot.Auth do
         {:ok, user, message}
       end
     else
-      {:error, :registration_disabled, "Registration is currently disabled."}
+      {:error, :registration_disabled, AuthActions.registration_disabled_message()}
     end
   end
 

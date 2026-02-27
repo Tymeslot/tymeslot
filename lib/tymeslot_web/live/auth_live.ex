@@ -72,7 +72,7 @@ defmodule TymeslotWeb.AuthLive do
     cond do
       state == "signup" and not Config.registration_enabled?() ->
         Logger.info("AuthLive: signup navigation blocked (registration disabled)")
-        {:noreply, put_flash(socket, :info, "Registration is currently disabled.")}
+        {:noreply, put_flash(socket, :info, AuthActions.registration_disabled_message())}
 
       StateHelper.valid_state?(state) ->
         path = StateHelper.get_path_for_state(String.to_existing_atom(state))

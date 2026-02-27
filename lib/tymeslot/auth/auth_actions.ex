@@ -15,6 +15,14 @@ defmodule Tymeslot.Auth.AuthActions do
 
   require Logger
 
+  @registration_disabled_message "Registration is currently disabled."
+
+  @doc """
+  Returns the user-facing message for when registration is disabled.
+  """
+  @spec registration_disabled_message() :: String.t()
+  def registration_disabled_message, do: @registration_disabled_message
+
   # OAuth Registration Actions
 
   @doc """
@@ -26,7 +34,7 @@ defmodule Tymeslot.Auth.AuthActions do
     if Config.registration_enabled?() do
       do_complete_oauth_registration(params, socket)
     else
-      {:error, "Registration is currently disabled."}
+      {:error, @registration_disabled_message}
     end
   end
 
@@ -115,7 +123,7 @@ defmodule Tymeslot.Auth.AuthActions do
     if Config.registration_enabled?() do
       do_register_user(user_params, socket)
     else
-      {:error, "Registration is currently disabled."}
+      {:error, @registration_disabled_message}
     end
   end
 
@@ -355,7 +363,7 @@ defmodule Tymeslot.Auth.AuthActions do
       :email_not_verified -> "Email not verified by provider"
       :invalid_token -> get_token_error_message(:invalid_token)
       :token_expired -> get_token_error_message(:token_expired)
-      :registration_disabled -> "Registration is currently disabled."
+      :registration_disabled -> @registration_disabled_message
       # OAuth registration errors
       :invalid_profile_params -> get_oauth_error_message(:invalid_profile_params)
       :conversion_failed -> get_oauth_error_message(:conversion_failed)

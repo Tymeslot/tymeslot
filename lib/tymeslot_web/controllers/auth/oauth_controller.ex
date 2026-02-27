@@ -10,7 +10,7 @@ defmodule TymeslotWeb.OAuthController do
   alias Tymeslot.Auth.OAuth.Google
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
   alias Tymeslot.Auth.OAuth.URLs
-  alias Tymeslot.Auth.{Session, SocialAuthentication, Verification}
+  alias Tymeslot.Auth.{AuthActions, Session, SocialAuthentication, Verification}
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AuthControllerHelpers
@@ -580,7 +580,7 @@ defmodule TymeslotWeb.OAuthController do
           "This email address is already associated with another account. Please use a different email or sign in to your existing account."
 
         :registration_disabled ->
-          "Registration is currently disabled."
+          AuthActions.registration_disabled_message()
 
         _unknown_error ->
           "Authentication failed. Please try again."
