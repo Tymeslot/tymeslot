@@ -42,9 +42,13 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
 
   @spec terms_checkbox(map()) :: Phoenix.LiveView.Rendered.t()
   def terms_checkbox(assigns) do
-    assigns = assign_new(assigns, :name, fn -> "user[terms_accepted]" end)
-    assigns = assign_new(assigns, :style, fn -> :simple end)
-    assigns = assign_new(assigns, :class, fn -> "" end)
+    assigns =
+      assigns
+      |> assign_new(:name, fn -> "user[terms_accepted]" end)
+      |> assign_new(:style, fn -> :simple end)
+      |> assign_new(:class, fn -> "" end)
+      |> assign(:terms_url, Application.get_env(:tymeslot, :legal_terms_url))
+      |> assign(:privacy_url, Application.get_env(:tymeslot, :legal_privacy_url))
 
     ~H"""
     <div class={["flex items-start gap-3", @class]}>
@@ -59,7 +63,7 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
       <label for="terms" class="text-sm text-slate-500 font-medium leading-relaxed">
         I accept the
         <a
-          href="/legal/terms-and-conditions"
+          href={@terms_url}
           target="_blank"
           class="text-turquoise-600 hover:text-turquoise-700 font-bold underline decoration-turquoise-100 underline-offset-4"
         >
@@ -67,7 +71,7 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
         </a>
         and
         <a
-          href="/legal/privacy-policy"
+          href={@privacy_url}
           target="_blank"
           class="text-turquoise-600 hover:text-turquoise-700 font-bold underline decoration-turquoise-100 underline-offset-4"
         >

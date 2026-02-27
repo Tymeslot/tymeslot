@@ -221,6 +221,8 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
   """
   @spec new_password_set_page(map()) :: Phoenix.LiveView.Rendered.t()
   def new_password_set_page(assigns) do
+    assigns = assign(assigns, :contact_url, Application.get_env(:tymeslot, :contact_url))
+
     ~H"""
     <.auth_card_layout title="Success!">
       <:form>
@@ -243,8 +245,8 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
           </.auth_link_button>
         </div>
       </:form>
-      <:footer>
-        <.auth_footer prompt="Need help?" href="/contact" link_text="Contact Support" />
+      <:footer :if={@contact_url}>
+        <.auth_footer prompt="Need help?" href={@contact_url} link_text="Contact Support" />
       </:footer>
     </.auth_card_layout>
     """
