@@ -309,7 +309,44 @@ defmodule Tymeslot.Auth.AuthActionsTest do
     end
   end
 
+  describe "register_user/2 — registration disabled" do
+    test "returns error when registration is disabled" do
+      original = Application.get_env(:tymeslot, :registration_enabled)
+      Application.put_env(:tymeslot, :registration_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
+      }
+
+      assert {:error, "Registration is currently disabled."} =
+               AuthActions.register_user(%{"email" => "test@example.com"}, socket)
+    end
+  end
+
   describe "complete_oauth_registration/2" do
+    test "returns error when registration is disabled" do
+      original = Application.get_env(:tymeslot, :registration_enabled)
+      Application.put_env(:tymeslot, :registration_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
+
+      params = %{
+        "auth" => %{
+          "provider" => "github",
+          "email" => "test@example.com",
+          "terms_accepted" => "true"
+        },
+        "profile" => %{}
+      }
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
+      }
+
+      assert {:error, "Registration is currently disabled."} =
+               AuthActions.complete_oauth_registration(params, socket)
+    end
+
     test "requires terms acceptance when enforced" do
       original = Application.get_env(:tymeslot, :enforce_legal_agreements)
       Application.put_env(:tymeslot, :enforce_legal_agreements, true)

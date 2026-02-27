@@ -84,6 +84,25 @@ defmodule Tymeslot.AuthTest do
     end
   end
 
+  describe "register_user/3 — registration disabled" do
+    test "returns registration_disabled error when flag is off" do
+      original = Application.get_env(:tymeslot, :registration_enabled)
+      Application.put_env(:tymeslot, :registration_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
+
+      params = %{
+        "email" => "new@example.com",
+        "password" => "ValidPassword123!",
+        "password_confirmation" => "ValidPassword123!",
+        "name" => "New User",
+        "terms_accepted" => "true"
+      }
+
+      assert {:error, :registration_disabled, "Registration is currently disabled."} =
+               Auth.register_user(params, %Plug.Conn{})
+    end
+  end
+
   describe "password_reset" do
     test "oauth users cannot reset passwords" do
       oauth_user = insert(:user, provider: "google", password_hash: nil)

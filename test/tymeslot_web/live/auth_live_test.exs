@@ -11,6 +11,37 @@ defmodule TymeslotWeb.AuthLiveTest do
   import Ecto.Query, only: [from: 2]
   import Tymeslot.Factory
 
+  describe "Registration disabled" do
+    setup do
+      original = Application.get_env(:tymeslot, :registration_enabled)
+      Application.put_env(:tymeslot, :registration_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
+      :ok
+    end
+
+    test "redirects /auth/signup to login with flash", %{conn: conn} do
+      assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
+               live(conn, ~p"/auth/signup")
+
+      assert flash["info"] == "Registration is currently disabled."
+    end
+
+    test "hides sign up link on login page", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/auth/login")
+      refute html =~ "Sign up"
+    end
+
+    test "blocks navigate_to signup event", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/auth/login")
+
+      render_hook(view, "navigate_to", %{"state" => "signup"})
+
+      html = render(view)
+      assert html =~ "Registration is currently disabled."
+      assert html =~ "Welcome Back!"
+    end
+  end
+
   describe "Login" do
     test "renders login page", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/auth/login")
