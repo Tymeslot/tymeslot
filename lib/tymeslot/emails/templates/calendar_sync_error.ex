@@ -110,7 +110,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   defp owner_start_time(meeting) do
     owner_timezone =
       case meeting.organizer_user_id do
-        nil -> "Europe/Kyiv"
+        nil -> Profiles.get_default_timezone()
         user_id -> Profiles.get_user_timezone(user_id)
       end
 

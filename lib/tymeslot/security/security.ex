@@ -7,6 +7,7 @@ defmodule Tymeslot.Security.Security do
   require Logger
 
   alias Phoenix.LiveView
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
 
   @doc """
@@ -161,7 +162,7 @@ defmodule Tymeslot.Security.Security do
           {:ok, DateTime.t()} | {:error, String.t()}
   def validate_business_hours(time, timezone) do
     # Convert to the business timezone (adjust as needed)
-    business_timezone = "Europe/Kyiv"
+    business_timezone = Profiles.get_default_timezone()
 
     try do
       case DateTime.new(Date.utc_today(), time, timezone) do

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.Authentication
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.Security
   alias Tymeslot.Timezones
   alias TymeslotWeb.Helpers.ClientIP
@@ -42,7 +43,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpers do
     timezone =
       params["timezone"] ||
         get_connect_params(socket)["timezone"] ||
-        "Europe/Kyiv"
+        Profiles.get_default_timezone()
 
     # Normalize timezone to ensure consistency
     normalized_timezone = Timezones.normalize(timezone)

@@ -49,7 +49,7 @@ defmodule Tymeslot.OnboardingTest do
     test "create_dev_profile/0 returns a mock profile" do
       profile = Onboarding.create_dev_profile()
       assert profile.id == 1
-      assert profile.timezone == "Europe/Kyiv"
+      assert profile.timezone == "Europe/Tallinn"
     end
 
     test "create_dev_user/0 returns a mock user" do

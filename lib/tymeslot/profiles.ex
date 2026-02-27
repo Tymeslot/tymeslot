@@ -119,7 +119,7 @@ defmodule Tymeslot.Profiles do
   Gets the default timezone.
   """
   @spec get_default_timezone() :: timezone
-  def get_default_timezone, do: "Europe/Kyiv"
+  def get_default_timezone, do: "Europe/Tallinn"
 
   @doc """
   Updates the timezone for a profile.

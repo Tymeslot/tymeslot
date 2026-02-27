@@ -21,9 +21,9 @@ let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("
 // Detect user timezone
 function getUserTimezone() {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Kyiv"
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Tallinn"
   } catch (e) {
-    return "Europe/Kyiv"
+    return "Europe/Tallinn"
   }
 }
 

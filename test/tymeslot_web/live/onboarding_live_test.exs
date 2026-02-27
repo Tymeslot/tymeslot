@@ -88,7 +88,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       assert profile.full_name == "Test User"
       assert profile.username == "testuser123"
       # Without connect_params, timezone stays at default
-      assert profile.timezone == "Europe/Kyiv"
+      assert profile.timezone == "Europe/Tallinn"
       # Scheduling defaults are preserved when not changed
       assert profile.buffer_minutes == 15
       assert profile.advance_booking_days == 90

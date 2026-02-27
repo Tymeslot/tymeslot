@@ -20,6 +20,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.WebhookDeliverySchema
   alias Tymeslot.DatabaseSchemas.WebhookSchema
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
 
@@ -118,7 +119,7 @@ defmodule Tymeslot.Factory do
   @spec profile_factory() :: Tymeslot.DatabaseSchemas.ProfileSchema.t()
   def profile_factory do
     %ProfileSchema{
-      timezone: "Europe/Kyiv",
+      timezone: Profiles.get_default_timezone(),
       buffer_minutes: 15,
       advance_booking_days: 90,
       min_advance_hours: 3,

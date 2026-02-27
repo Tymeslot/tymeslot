@@ -10,7 +10,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  @default_timezone "Europe/Kyiv"
+  @default_timezone Profiles.get_default_timezone()
 
   @spec from_meeting(map(), map() | nil) :: map()
   def from_meeting(meeting, reminder_interval \\ nil) do

@@ -31,7 +31,7 @@ defmodule Tymeslot.Bookings.Policy do
       case organizer_user_id do
         nil ->
           # Fallback when no user specified
-          {"Europe/Kyiv", 15, 90, 3}
+          {Profiles.get_default_timezone(), 15, 90, 3}
 
         user_id ->
           settings = Profiles.get_profile_settings(user_id)

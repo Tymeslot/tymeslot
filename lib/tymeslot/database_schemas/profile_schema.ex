@@ -39,7 +39,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
   schema "profiles" do
     field(:username, :string)
     field(:full_name, :string)
-    field(:timezone, :string, default: "Europe/Kyiv")
+    field(:timezone, :string, default: "Europe/Tallinn")
     field(:buffer_minutes, :integer, default: 15)
     field(:advance_booking_days, :integer, default: 90)
     field(:min_advance_hours, :integer, default: 3)

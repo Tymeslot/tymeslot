@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.InputProcessor
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.{ContextUtils, DateTimeUtils}
@@ -518,7 +519,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   defp parse_duration_minutes(_other), do: 30
 
   defp get_owner_timezone(organizer_profile) do
-    {:ok, organizer_profile.timezone || "Europe/Kyiv"}
+    {:ok, organizer_profile.timezone || Profiles.get_default_timezone()}
   end
 
   defp get_duration_minutes(socket) do

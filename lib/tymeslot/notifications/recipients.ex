@@ -93,7 +93,7 @@ defmodule Tymeslot.Notifications.Recipients do
           meeting_uid: meeting.uid
         )
 
-        "Europe/Kyiv"
+        Profiles.get_default_timezone()
 
       user_id ->
         Profiles.get_user_timezone(user_id)
