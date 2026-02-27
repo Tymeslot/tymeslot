@@ -45,9 +45,16 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   @doc """
   Creates a user, logs them in, and mounts the onboarding LiveView.
   Returns the view, the html, and the user.
+
+  ## Options
+
+    * `:connect_params` - map of connect params passed to the LiveView mount
+      (e.g., `%{"timezone" => "Europe/Paris"}`)
+
   """
-  @spec setup_onboarding(Plug.Conn.t(), map(), map() | nil) :: {:ok, any(), String.t(), any()}
-  def setup_onboarding(conn, user_params \\ %{}, profile_params \\ nil) do
+  @spec setup_onboarding(Plug.Conn.t(), map(), map() | nil, keyword()) ::
+          {:ok, any(), String.t(), any()}
+  def setup_onboarding(conn, user_params \\ %{}, profile_params \\ nil, opts \\ []) do
     user = insert(:user, Map.put_new(user_params, :onboarding_completed_at, nil))
 
     if profile_params do
@@ -55,6 +62,13 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
     end
 
     conn = log_in_user(conn, user)
+
+    conn =
+      case Keyword.get(opts, :connect_params) do
+        nil -> conn
+        params -> put_connect_params(conn, params)
+      end
+
     {:ok, view, html} = live(conn, "/onboarding")
     {:ok, view, html, user}
   end

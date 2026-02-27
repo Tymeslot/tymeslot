@@ -2,6 +2,7 @@ defmodule TymeslotWeb.OnboardingLive do
   use TymeslotWeb, :live_view
 
   alias Tymeslot.Onboarding
+  alias Tymeslot.Profiles
   alias Tymeslot.Profiles.Timezone
   alias Tymeslot.Timezones
   alias TymeslotWeb.CustomInputModeHelper
@@ -40,13 +41,24 @@ defmodule TymeslotWeb.OnboardingLive do
       connect_params = get_connect_params(socket) || %{}
       detected_timezone = connect_params["timezone"]
 
-      # Decide prefill value in the context (pure function, no persistence)
+      # Decide prefill value (pure function) and persist immediately so the DB
+      # stays in sync with what the UI displays.  Without this, the in-memory
+      # struct fools Ecto's change tracking and the timezone never reaches the DB.
       prefilled_timezone = Timezone.prefill_timezone(profile.timezone, detected_timezone)
-      prefilled_profile = Map.put(profile, :timezone, prefilled_timezone)
+
+      profile =
+        if prefilled_timezone != profile.timezone do
+          case Profiles.update_timezone(profile, prefilled_timezone) do
+            {:ok, updated_profile} -> updated_profile
+            {:error, _reason} -> Map.put(profile, :timezone, prefilled_timezone)
+          end
+        else
+          profile
+        end
 
       socket =
         socket
-        |> assign(:profile, prefilled_profile)
+        |> assign(:profile, profile)
         |> assign(:form_data, %{
           "full_name" => default_full_name,
           "username" => profile.username || ""

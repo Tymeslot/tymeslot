@@ -83,14 +83,23 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       user = Repo.reload!(user)
       assert user.onboarding_completed_at != nil
 
-      # Verify profile was created and updated
+      # Verify profile was created and updated with all fields
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
       assert profile.full_name == "Test User"
       assert profile.username == "testuser123"
+      # Without connect_params, timezone stays at default
+      assert profile.timezone == "Europe/Kyiv"
+      # Scheduling defaults are preserved when not changed
+      assert profile.buffer_minutes == 15
+      assert profile.advance_booking_days == 90
+      assert profile.min_advance_hours == 3
     end
 
-    test "onboarding persists data through all steps", %{conn: conn} do
-      {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Jane Doe"})
+    test "onboarding persists all fields including detected timezone", %{conn: conn} do
+      {:ok, view, _html, user} =
+        setup_onboarding(conn, %{name: "Jane Doe"}, nil,
+          connect_params: %{"timezone" => "Europe/Paris"}
+        )
 
       # Navigate to basic settings
       view
@@ -119,10 +128,22 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       |> element("button[phx-click='next_step']")
       |> render_click()
 
-      # Verify all data was persisted
+      # Verify all data was persisted — including the browser-detected timezone
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
       assert profile.full_name == "Jane Doe Updated"
       assert profile.username == "janedoe2024"
+      assert profile.timezone == "Europe/Paris"
+    end
+
+    test "detected timezone is persisted to DB on mount", %{conn: conn} do
+      {:ok, _view, _html, user} =
+        setup_onboarding(conn, %{name: "TZ User"}, nil,
+          connect_params: %{"timezone" => "America/New_York"}
+        )
+
+      # The browser-detected timezone should already be in the DB after mount
+      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      assert profile.timezone == "America/New_York"
     end
 
     test "onboarding with custom scheduling preference values", %{conn: conn} do
@@ -236,6 +257,28 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       # Profile should now exist
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
       assert profile.user_id == user.id
+    end
+
+    test "existing non-default timezone is preserved on mount", %{conn: conn} do
+      user = insert(:user, onboarding_completed_at: nil)
+
+      insert(:profile,
+        user: user,
+        username: "tz_user",
+        full_name: "TZ User",
+        timezone: "America/New_York"
+      )
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> put_connect_params(%{"timezone" => "Europe/Paris"})
+
+      {:ok, _view, _html} = live(conn, ~p"/onboarding")
+
+      # The explicitly set timezone should NOT be overwritten by browser detection
+      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      assert profile.timezone == "America/New_York"
     end
 
     test "existing profile is loaded on mount", %{conn: conn} do
