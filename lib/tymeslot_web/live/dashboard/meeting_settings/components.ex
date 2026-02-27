@@ -640,6 +640,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
                   class={[
                     "glass-selector !h-20",
                     if(@selected_calendar_integration_id == integration.id, do: "glass-selector--active"),
+                    if(not integration.is_active, do: "opacity-60"),
                     if(@refreshing_calendars, do: "opacity-50 cursor-not-allowed")
                   ]}
                   title={integration.name}
@@ -649,6 +650,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
                     <span class="text-token-sm font-medium truncate max-w-full">
                       {integration.name}
                     </span>
+                    <%= if not integration.is_active do %>
+                      <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full leading-tight">
+                        Reconnect
+                      </span>
+                    <% end %>
                   </div>
                 </button>
               <% end %>

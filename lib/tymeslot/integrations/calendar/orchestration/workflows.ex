@@ -41,11 +41,24 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
               )
 
               # Update the integration's calendar_list in the database so it's persisted
-              CalendarManagement.update_calendar_integration(integration, %{
-                calendar_list: calendars
-              })
+              case CalendarManagement.update_calendar_integration(integration, %{
+                     calendar_list: calendars
+                   }) do
+                {:ok, _} ->
+                  send(parent, {:calendar_list_refreshed, component_id, integration_id, calendars})
 
-              send(parent, {:calendar_list_refreshed, component_id, integration_id, calendars})
+                {:error, reason} ->
+                  Logger.error("Failed to persist calendar list",
+                    integration_id: integration_id,
+                    error: inspect(reason)
+                  )
+
+                  send(
+                    parent,
+                    {:calendar_list_refreshed, component_id, integration_id,
+                     integration.calendar_list}
+                  )
+              end
 
             {:error, reason} ->
               Logger.error("Failed to discover calendars",

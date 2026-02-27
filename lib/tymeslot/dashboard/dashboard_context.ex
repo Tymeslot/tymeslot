@@ -109,7 +109,7 @@ defmodule Tymeslot.Dashboard.DashboardContext do
     %{
       meeting_types: MeetingTypes.get_all_meeting_types(user_id),
       video_integrations: VideoIntegrationQueries.list_active_for_user_public(user_id),
-      calendar_integrations: CalendarManagement.list_active_calendar_integrations(user_id)
+      calendar_integrations: CalendarManagement.list_calendar_integrations(user_id)
     }
   end
 
