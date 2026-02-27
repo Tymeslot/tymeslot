@@ -204,8 +204,8 @@ defmodule Tymeslot.Integrations.HealthCheck do
         ResponseHandler.handle_transition(type, integration, transition, new_health_state)
 
         case check_result do
-          {:error, _} = error -> error
-          _ -> :ok
+          {:error, _reason} = error -> error
+          _ok -> :ok
         end
 
       {:error, :not_found} ->
