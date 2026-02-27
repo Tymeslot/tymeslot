@@ -30,28 +30,28 @@ defmodule TymeslotWeb.VideoOAuthController do
 
       conn
       |> put_flash(:info, "Google Meet connected successfully!")
-      |> redirect(to: "/dashboard/video")
+      |> redirect(to: ~p"/dashboard/video")
     else
       {:error, :rate_limited, message} ->
         Logger.warning("Rate limit exceeded for Google Meet OAuth callback")
 
         conn
         |> put_flash(:error, message)
-        |> redirect(to: "/dashboard/video")
+        |> redirect(to: ~p"/dashboard/video")
 
       {:error, :invalid_state, _reason} ->
         Logger.warning("Invalid state parameter in Google Meet OAuth callback")
 
         conn
         |> put_flash(:error, "Invalid authentication state. Please try again.")
-        |> redirect(to: "/dashboard/video")
+        |> redirect(to: ~p"/dashboard/video")
 
       {:error, reason} ->
         Logger.error("Google Meet OAuth flow failed", reason: inspect(reason))
 
         conn
         |> put_flash(:error, "Failed to connect Google Meet. Please try again.")
-        |> redirect(to: "/dashboard/video")
+        |> redirect(to: ~p"/dashboard/video")
     end
   end
 
@@ -66,7 +66,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: "/dashboard/video")
+    |> redirect(to: ~p"/dashboard/video")
   end
 
   def google_callback(conn, params) do
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
-    |> redirect(to: "/dashboard/video")
+    |> redirect(to: ~p"/dashboard/video")
   end
 
   @doc """
@@ -93,21 +93,21 @@ defmodule TymeslotWeb.VideoOAuthController do
 
       conn
       |> put_flash(:info, "Microsoft Teams connected successfully!")
-      |> redirect(to: "/dashboard/video")
+      |> redirect(to: ~p"/dashboard/video")
     else
       {:error, :rate_limited, message} ->
         Logger.warning("Rate limit exceeded for Teams OAuth callback")
 
         conn
         |> put_flash(:error, message)
-        |> redirect(to: "/dashboard/video")
+        |> redirect(to: ~p"/dashboard/video")
 
       {:error, :invalid_state, _reason} ->
         Logger.warning("Invalid state parameter in Teams OAuth callback")
 
         conn
         |> put_flash(:error, "Invalid authentication state. Please try again.")
-        |> redirect(to: "/dashboard/video")
+        |> redirect(to: ~p"/dashboard/video")
 
       {:error, reason} ->
         Logger.error("Teams OAuth flow failed", reason: inspect(reason))
@@ -119,7 +119,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
         conn
         |> put_flash(:error, message)
-        |> redirect(to: "/dashboard/video")
+        |> redirect(to: ~p"/dashboard/video")
     end
   end
 
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: "/dashboard/video")
+    |> redirect(to: ~p"/dashboard/video")
   end
 
   def teams_callback(conn, params) do
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
-    |> redirect(to: "/dashboard/video")
+    |> redirect(to: ~p"/dashboard/video")
   end
 
   # Microsoft returns an error_description containing an AADSTS code when a tenant's

@@ -9,18 +9,18 @@ defmodule TymeslotWeb.FallbackController do
       {:ok, _context} ->
         conn
         |> put_flash(:error, "Page not found. Redirected to profile.")
-        |> redirect(to: "/#{username}")
+        |> redirect(to: ~p"/#{username}")
 
       _error ->
         conn
         |> put_flash(:error, "Page not found.")
-        |> redirect(to: "/")
+        |> redirect(to: ~p"/")
     end
   end
 
   def index(conn, _params) do
     conn
     |> put_flash(:error, "Page not found.")
-    |> redirect(to: "/")
+    |> redirect(to: ~p"/")
   end
 end

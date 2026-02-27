@@ -41,7 +41,7 @@ defmodule TymeslotWeb.SessionController do
 
             conn
             |> put_flash(:error, "Failed to create session. Please try again.")
-            |> redirect(to: "/auth/login")
+            |> redirect(to: ~p"/auth/login")
         end
 
       {:error, :email_not_verified, message} ->
@@ -51,12 +51,12 @@ defmodule TymeslotWeb.SessionController do
         |> put_session(:unverified_user_email, email)
         |> put_session(:unverified_session_timestamp, DateTime.to_unix(DateTime.utc_now()))
         |> put_flash(:error, message)
-        |> redirect(to: "/auth/verify-email")
+        |> redirect(to: ~p"/auth/verify-email")
 
       {:error, _reason, message} ->
         conn
         |> put_flash(:error, message)
-        |> redirect(to: "/auth/login")
+        |> redirect(to: ~p"/auth/login")
     end
   end
 
@@ -84,7 +84,7 @@ defmodule TymeslotWeb.SessionController do
       {:error, :not_found} ->
         conn
         |> put_flash(:error, "The email verification link is invalid or has expired.")
-        |> redirect(to: "/auth/login")
+        |> redirect(to: ~p"/auth/login")
 
       {:ok, user_before_verification} ->
         # Check if IP matches to decide whether to auto-login after verification.
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.SessionController do
 
             conn
             |> put_flash(:error, "The email verification link is invalid or has expired.")
-            |> redirect(to: "/auth/login")
+            |> redirect(to: ~p"/auth/login")
         end
     end
   end
@@ -207,14 +207,14 @@ defmodule TymeslotWeb.SessionController do
             :info,
             "Your email has been successfully verified! Please log in to continue."
           )
-          |> redirect(to: "/auth/login")
+          |> redirect(to: ~p"/auth/login")
       end
     else
       Logger.info("Auto-login denied - IP mismatch", user_id: verified_user.id)
 
       conn
       |> put_flash(:info, "Your email has been successfully verified! Please log in to continue.")
-      |> redirect(to: "/auth/login")
+      |> redirect(to: ~p"/auth/login")
     end
   end
 end

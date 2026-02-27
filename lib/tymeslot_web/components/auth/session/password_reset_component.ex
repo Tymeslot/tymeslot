@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
           </p>
         </div>
         <div class="mt-8">
-          <.auth_link_button href="/auth/login">
+          <.auth_link_button href={~p"/auth/login"}>
             Back to Login
           </.auth_link_button>
         </div>
@@ -135,7 +135,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
       <:footer>
         <.auth_footer
           prompt="Didn't receive the email?"
-          href="/auth/reset-password"
+          href={~p"/auth/reset-password"}
           link_text="Try again"
         />
       </:footer>
@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
         <.auth_form
           id="new-password-form"
           class="space-y-4 sm:space-y-5"
-          action={"/auth/reset-password/#{@reset_token}"}
+          action={~p"/auth/reset-password/#{@reset_token}"}
           phx-submit="submit_password_reset"
           csrf_token={@csrf_token}
         >
@@ -238,7 +238,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
           </p>
         </div>
         <div class="mt-8">
-          <.auth_link_button href="/auth/login">
+          <.auth_link_button href={~p"/auth/login"}>
             Go to Login
           </.auth_link_button>
         </div>

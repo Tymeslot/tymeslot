@@ -38,13 +38,13 @@ defmodule TymeslotWeb.Shared.SocialAuthButtons do
           :if={@google_enabled}
           provider="google"
           label={if @signup, do: "Join with Google", else: "Google"}
-          href="/auth/google"
+          href={~p"/auth/google"}
         />
         <.social_auth_button
           :if={@github_enabled}
           provider="github"
           label={if @signup, do: "Join with GitHub", else: "GitHub"}
-          href="/auth/github"
+          href={~p"/auth/github"}
         />
       </div>
     </div>

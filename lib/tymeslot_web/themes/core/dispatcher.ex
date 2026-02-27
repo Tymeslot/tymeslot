@@ -307,7 +307,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
       {:ok,
        socket
        |> LiveView.put_flash(:error, "Page not found. Redirected to homepage.")
-       |> LiveView.redirect(to: "/")}
+       |> LiveView.redirect(to: ~p"/")}
     else
       # Create theme context without profile
       case Context.from_params(params) do
@@ -360,7 +360,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
         {:ok,
          socket
          |> put_flash(:error, reason)
-         |> push_navigate(to: "/")}
+         |> push_navigate(to: ~p"/")}
     end
   end
 

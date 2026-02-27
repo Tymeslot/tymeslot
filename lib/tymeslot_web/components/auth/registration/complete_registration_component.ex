@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
         <.auth_form
           id="complete-registration-form"
           class="space-y-3 sm:space-y-4"
-          action="/auth/complete"
+          action={~p"/auth/complete"}
         >
           <!-- Hidden OAuth fields -->
           <.oauth_hidden_fields temp_user={@temp_user} />
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
         </.auth_form>
       </:form>
       <:footer>
-        <.auth_footer prompt="Want to start over?" href="/auth/login" link_text="Return to login" />
+        <.auth_footer prompt="Want to start over?" href={~p"/auth/login"} link_text="Return to login" />
       </:footer>
     </.auth_card_layout>
     """
