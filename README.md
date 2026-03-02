@@ -271,6 +271,21 @@ export RECAPTCHA_BOOKING_ENABLED="true"
 
 Get keys at [Google reCAPTCHA](https://www.google.com/recaptcha/admin)
 
+**Registration Control**
+
+Disable new user sign-ups without taking down the app — useful for invite-only or closed deployments:
+
+```bash
+export REGISTRATION_ENABLED="false"
+```
+
+When disabled:
+- The sign-up page and "Sign up" link are hidden
+- Email and OAuth registration attempts are rejected with an informative message
+- Existing users can still log in normally
+
+Defaults to `true` (registration open) when the variable is unset.
+
 **Report Vulnerabilities**
 
 Use our [contact page](https://tymeslot.app/contact) for security issues.
