@@ -8,8 +8,8 @@ defmodule TymeslotWeb.OAuthController do
 
   alias Tymeslot.Auth.OAuth.GitHub
   alias Tymeslot.Auth.OAuth.Google
-  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
   alias Tymeslot.Auth.OAuth.URLs
+  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
   alias Tymeslot.Auth.{AuthActions, Session, SocialAuthentication, Verification}
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.RateLimiter
@@ -145,24 +145,8 @@ defmodule TymeslotWeb.OAuthController do
   Handles GitHub OAuth callback.
   """
   @spec github_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def github_callback(conn, %{"code" => code, "state" => state}) do
-    case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        paths = get_redirect_paths(conn)
-
-        conn
-        |> delete_session(:oauth_intent)
-        |> OAuthHelper.handle_oauth_callback(%{code: code, state: state, provider: :github})
-        |> respond_to_oauth_result(paths)
-
-      {:error, :rate_limited, _message} ->
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          "Too many authentication attempts. Please try again later.",
-          get_login_path(conn)
-        )
-    end
-  end
+  def github_callback(conn, %{"code" => code, "state" => state}),
+    do: handle_provider_callback(conn, :github, code, state)
 
   def github_callback(conn, _params) do
     conn
@@ -177,24 +161,8 @@ defmodule TymeslotWeb.OAuthController do
   Handles Google OAuth callback.
   """
   @spec google_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def google_callback(conn, %{"code" => code, "state" => state}) do
-    case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        paths = get_redirect_paths(conn)
-
-        conn
-        |> delete_session(:oauth_intent)
-        |> OAuthHelper.handle_oauth_callback(%{code: code, state: state, provider: :google})
-        |> respond_to_oauth_result(paths)
-
-      {:error, :rate_limited, _message} ->
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          "Too many authentication attempts. Please try again later.",
-          get_login_path(conn)
-        )
-    end
-  end
+  def google_callback(conn, %{"code" => code, "state" => state}),
+    do: handle_provider_callback(conn, :google, code, state)
 
   def google_callback(conn, _params) do
     conn
@@ -224,6 +192,25 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   # Private helper functions
+
+  defp handle_provider_callback(conn, provider, code, state) do
+    case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
+      :ok ->
+        paths = get_redirect_paths(conn)
+
+        conn
+        |> delete_session(:oauth_intent)
+        |> OAuthHelper.handle_oauth_callback(%{code: code, state: state, provider: provider})
+        |> respond_to_oauth_result(paths)
+
+      {:error, :rate_limited, _message} ->
+        AuthControllerHelpers.handle_rate_limited(
+          conn,
+          "Too many authentication attempts. Please try again later.",
+          get_login_path(conn)
+        )
+    end
+  end
 
   defp process_oauth_completion(conn, params) do
     if Config.registration_enabled?() do
