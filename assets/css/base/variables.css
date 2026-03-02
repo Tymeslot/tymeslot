@@ -267,21 +267,3 @@
   --oauth-button-text: rgba(255, 255, 255, 0.95);
 }
 
-/* Dark Mode Variables */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg-primary: #09090b;
-    --color-bg-secondary: #18181b;
-    --color-bg-tertiary: #27272a;
-    --color-bg-inverse: #ffffff;
-    
-    --color-text-primary: #fafafa;
-    --color-text-secondary: #a1a1aa;
-    --color-text-tertiary: #71717a;
-    --color-text-inverse: #18181b;
-    
-    --color-border-light: #3f3f46;
-    --color-border-default: #52525b;
-    --color-border-dark: #71717a;
-  }
-}
