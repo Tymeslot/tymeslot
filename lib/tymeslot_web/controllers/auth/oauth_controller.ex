@@ -6,11 +6,11 @@ defmodule TymeslotWeb.OAuthController do
   use TymeslotWeb, :controller
   require Logger
 
+  alias Tymeslot.Auth.{AuthActions, Session, SocialAuthentication, Verification}
   alias Tymeslot.Auth.OAuth.GitHub
   alias Tymeslot.Auth.OAuth.Google
-  alias Tymeslot.Auth.OAuth.URLs
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
-  alias Tymeslot.Auth.{AuthActions, Session, SocialAuthentication, Verification}
+  alias Tymeslot.Auth.OAuth.URLs
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AuthControllerHelpers
