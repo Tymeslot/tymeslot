@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
 
   alias Tymeslot.Auth.OAuth.{Client, HelperBehaviour, State, URLs, UserProcessor, UserRegistration}
   alias Tymeslot.Auth.Session
+  alias Tymeslot.Infrastructure.Config
 
   @type provider :: :github | :google
   @type flow_result :: HelperBehaviour.flow_result()
@@ -101,20 +102,24 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   end
 
   defp handle_new_user_registration(conn, provider, user) do
-    case UserRegistration.check_oauth_requirements(provider, user) do
-      {:missing, missing_fields} ->
-        {:registration_required, conn, provider, build_modal_params(provider, user, missing_fields)}
+    if Config.registration_enabled?() do
+      case UserRegistration.check_oauth_requirements(provider, user) do
+        {:missing, missing_fields} ->
+          {:registration_required, conn, provider, build_modal_params(provider, user, missing_fields)}
 
-      :complete ->
-        # All required fields are present but no account exists yet. Route the
-        # user through the registration form for explicit confirmation rather
-        # than silently auto-creating an account.
-        Logger.warning(
-          "OAuth user data is complete but no account found; routing to registration",
-          provider: to_string(provider)
-        )
+        :complete ->
+          # All required fields are present but no account exists yet. Route the
+          # user through the registration form for explicit confirmation rather
+          # than silently auto-creating an account.
+          Logger.warning(
+            "OAuth user data is complete but no account found; routing to registration",
+            provider: to_string(provider)
+          )
 
-        {:registration_required, conn, provider, build_modal_params(provider, user, [])}
+          {:registration_required, conn, provider, build_modal_params(provider, user, [])}
+      end
+    else
+      {:error, :registration_disabled, provider, conn}
     end
   end
 

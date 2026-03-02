@@ -9,6 +9,7 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   alias Plug.Conn
   alias Plug.Crypto
   alias Tymeslot.Auth.OAuth.TransactionalUserCreation
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.PubSub
 
   @type provider :: String.t()
@@ -88,6 +89,14 @@ defmodule Tymeslot.Auth.SocialAuthentication do
   @spec finalize_social_login_registration(map(), map(), map(), keyword()) ::
           {:ok, map(), String.t()} | {:error, atom()} | {:error, atom(), any()}
   def finalize_social_login_registration(auth_params, profile_params, temp_user, opts \\ []) do
+    if Config.registration_enabled?() do
+      do_finalize_social_login_registration(auth_params, profile_params, temp_user, opts)
+    else
+      {:error, :registration_disabled}
+    end
+  end
+
+  defp do_finalize_social_login_registration(auth_params, profile_params, temp_user, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
 
     with :ok <- validate_provider_response(auth_params),

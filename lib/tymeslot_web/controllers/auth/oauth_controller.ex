@@ -226,6 +226,16 @@ defmodule TymeslotWeb.OAuthController do
   # Private helper functions
 
   defp process_oauth_completion(conn, params) do
+    if Config.registration_enabled?() do
+      do_process_oauth_completion(conn, params)
+    else
+      conn
+      |> put_flash(:info, AuthActions.registration_disabled_message())
+      |> redirect(to: ~p"/auth/login")
+    end
+  end
+
+  defp do_process_oauth_completion(conn, params) do
     oauth_data = build_oauth_data(params)
     profile_params = build_profile_params(params)
 
@@ -508,6 +518,12 @@ defmodule TymeslotWeb.OAuthController do
       :error,
       "#{provider_name(provider)} authentication succeeded but session creation failed."
     )
+    |> redirect(to: paths[:login_path])
+  end
+
+  defp respond_to_oauth_result({:error, :registration_disabled, _provider, flow_conn}, paths) do
+    flow_conn
+    |> put_flash(:info, AuthActions.registration_disabled_message())
     |> redirect(to: paths[:login_path])
   end
 

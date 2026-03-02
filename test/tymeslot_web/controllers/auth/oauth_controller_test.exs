@@ -234,6 +234,18 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Too many authentication attempts"
     end
+
+    test "redirects to login with info flash when registration is disabled for new user", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:error, :registration_disabled, :github, conn}
+      end)
+
+      conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/?auth=login"
+      assert Flash.get(conn.assigns.flash, :info) =~ "Registration is currently disabled"
+    end
   end
 
   describe "POST /auth/complete" do
@@ -382,6 +394,27 @@ defmodule TymeslotWeb.OAuthControllerTest do
       conn = post(conn, ~p"/auth/complete", %{"oauth_provider" => "github"})
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Too many registration attempts"
+    end
+
+    test "redirects to login with info flash when registration is disabled", %{conn: conn} do
+      original_value = Application.get_env(:tymeslot, :registration_enabled, true)
+      Application.put_env(:tymeslot, :registration_enabled, false)
+
+      on_exit(fn ->
+        Application.put_env(:tymeslot, :registration_enabled, original_value)
+      end)
+
+      user_data = %{
+        "oauth_provider" => "github",
+        "oauth_email" => "new@example.com",
+        "oauth_github_id" => "12345",
+        "terms_accepted" => "on"
+      }
+
+      conn = post(conn, ~p"/auth/complete", user_data)
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :info) =~ "Registration is currently disabled"
     end
   end
 end
