@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
   attr :language_dropdown_open, :boolean, default: nil
   attr :organizer_user_id, :integer, default: nil
   attr :should_show_branding, :boolean, default: false
+  attr :show_language_switcher, :boolean, default: nil
   slot :inner_block, required: true
 
   @doc """
@@ -27,8 +28,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
       assigns[:theme_customization] &&
         get_background_type(assigns[:theme_customization]) == "video"
 
-    # Check if language switcher should be visible (only on slide 1/overview)
-    show_language_switcher = assigns[:current_state] == :overview
+    # Show language switcher when explicitly requested or on overview slide
+    show_language_switcher =
+      if is_boolean(assigns[:show_language_switcher]),
+        do: assigns[:show_language_switcher],
+        else: assigns[:current_state] == :overview
 
     assigns =
       assigns

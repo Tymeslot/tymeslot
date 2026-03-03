@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
   import TymeslotWeb.Components.CoreComponents
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
   attr :theme_customization, :map, required: true
@@ -28,6 +29,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
       custom_css={@custom_css}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      show_language_switcher={true}
     >
       <!-- Scheduling Box with Glass Effect -->
       <div class="scheduling-box">
@@ -63,7 +65,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
     <!-- Meeting Ticket Card -->
                 <div class="meeting-ticket">
                   <div class="ticket-header">
-                    <span class="ticket-label">Current Meeting Details</span>
+                    <span class="ticket-label">{gettext("Current Meeting Details")}</span>
                     <span class="ticket-badge">{@meeting.duration} min</span>
                   </div>
 
@@ -74,9 +76,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                       </div>
                       <div class="ticket-info">
                         <span class="ticket-value">
-                          {Calendar.strftime(@meeting.start_time, "%B %d, %Y")}
+                          {LocaleFormat.format_date(@meeting.start_time, @locale)}
                         </span>
-                        <span class="ticket-sublabel">Date</span>
+                        <span class="ticket-sublabel">{gettext("Date")}</span>
                       </div>
                     </div>
 
@@ -86,7 +88,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                       </div>
                       <div class="ticket-info">
                         <span class="ticket-value">
-                          {Calendar.strftime(@meeting.start_time, "%I:%M %p")}
+                          {LocaleFormat.format_time(@meeting.start_time, @locale)}
                         </span>
                         <span class="ticket-sublabel">{@meeting.attendee_timezone}</span>
                       </div>
@@ -97,7 +99,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                         <.icon name="hero-user" class="hero-icon hero-icon--md" />
                       </div>
                       <div class="ticket-info">
-                        <span class="ticket-sublabel">Meeting with</span>
+                        <span class="ticket-sublabel">{gettext("Meeting with")}</span>
                         <span class="ticket-value">{@meeting.organizer_name}</span>
                       </div>
                     </div>
@@ -106,7 +108,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                   <div class="ticket-footer">
                     <div class="email-confirmation">
                       <p class="ticket-footer-message">
-                        Ready to pick a new time? Let's find one that works better for you.
+                        {gettext("Ready to pick a new time? Let's find one that works better for you.")}
                       </p>
                     </div>
                   </div>
@@ -119,7 +121,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Reschedule do
                     class="action-button-primary"
                     type="button"
                   >
-                    <span>Go to Calendar</span>
+                    <span>{gettext("Go to Calendar")}</span>
                     <svg
                       fill="none"
                       stroke="currentColor"

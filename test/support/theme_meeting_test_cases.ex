@@ -126,4 +126,180 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
     assert html =~ organizer_name
     assert html =~ "#{duration} min"
   end
+
+  # --- Locale-switched helpers ---
+
+  @doc """
+  Sets up the cancel confirmed view with a specific locale query param.
+  """
+  @spec setup_cancel_confirmed_view(Plug.Conn.t(), term(), term(), String.t()) :: map()
+  def setup_cancel_confirmed_view(conn, profile, meeting, locale) do
+    {:ok, view, _html} =
+      live(
+        conn,
+        ~p"/#{profile.username}/meeting/#{meeting.uid}/cancel-confirmed?locale=#{locale}"
+      )
+
+    %{view: view}
+  end
+
+  @doc """
+  Sets up the reschedule view with a specific locale query param.
+  """
+  @spec setup_reschedule_view(Plug.Conn.t(), term(), term(), String.t()) :: map()
+  def setup_reschedule_view(conn, profile, meeting, locale) do
+    {:ok, view, _html} =
+      live(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/reschedule?locale=#{locale}")
+
+    %{view: view}
+  end
+
+  @doc """
+  Sets up the cancel view with a specific locale query param.
+  """
+  @spec setup_cancel_view(Plug.Conn.t(), term(), term(), String.t()) :: map()
+  def setup_cancel_view(conn, profile, meeting, locale) do
+    {:ok, view, _html} =
+      live(conn, ~p"/#{profile.username}/meeting/#{meeting.uid}/cancel?locale=#{locale}")
+
+    %{view: view}
+  end
+
+  @doc """
+  Tests that the cancel confirmed page renders translated strings for a given locale.
+  Verifies that English strings are replaced with the locale's translations.
+  """
+  @spec test_cancel_confirmed_translations(term(), String.t()) :: term()
+  def test_cancel_confirmed_translations(view, locale) do
+    html = render(view)
+    translations = translated_cancel_confirmed_strings(locale)
+
+    # Translated strings must appear
+    assert html =~ translations.meeting_cancelled
+    assert html =~ translations.successfully_cancelled
+    assert html =~ translations.cancellation_emails_sent
+
+    # English originals must not appear
+    refute html =~ "Meeting Cancelled"
+    refute html =~ "Your meeting has been successfully cancelled."
+    refute html =~ "Cancellation emails have been sent"
+  end
+
+  @doc """
+  Tests that the cancel page renders translated strings for a given locale.
+  """
+  @spec test_cancel_translations(term(), String.t()) :: term()
+  def test_cancel_translations(view, locale) do
+    html = render(view)
+    translations = translated_cancel_strings(locale)
+
+    assert html =~ translations.cancel_appointment
+    assert html =~ translations.are_you_sure
+    assert html =~ translations.cancellation_email_warning
+    assert html =~ translations.yes_cancel
+    assert html =~ translations.keep_meeting
+
+    refute html =~ "Cancel Appointment"
+    refute html =~ "Are you sure you want to cancel this appointment?"
+    refute html =~ "A cancellation email will be sent to all participants"
+    refute html =~ "Yes, Cancel Meeting"
+    refute html =~ "Keep Meeting"
+  end
+
+  @doc """
+  Tests that the cancel page in meeting_kept state renders translated strings.
+  Triggers the keep_meeting event and verifies the confirmed view is translated.
+  """
+  @spec test_cancel_kept_translations(term(), String.t()) :: term()
+  def test_cancel_kept_translations(view, locale) do
+    render_click(view, "keep_meeting")
+    html = render(view)
+    translations = translated_cancel_kept_strings(locale)
+
+    assert html =~ translations.meeting_confirmed
+    assert html =~ translations.still_scheduled
+    assert html =~ translations.look_forward
+    assert html =~ translations.done
+
+    refute html =~ "Meeting Confirmed"
+    refute html =~ "Great! Your meeting is still scheduled as planned."
+    refute html =~ "We look forward to seeing you at the scheduled time."
+    refute html =~ "Done"
+  end
+
+  @doc """
+  Tests that the reschedule page renders translated strings for a given locale.
+  """
+  @spec test_reschedule_translations(term(), String.t()) :: term()
+  def test_reschedule_translations(view, locale) do
+    html = render(view)
+    translations = translated_reschedule_strings(locale)
+
+    assert html =~ translations.reschedule_appointment
+    assert html =~ translations.select_new_time
+
+    refute html =~ "Reschedule Appointment"
+    refute html =~ "Select a new time for your meeting"
+  end
+
+  # --- Convenience wrappers that set up a view and run translation assertions ---
+
+  @doc """
+  Tests all three meeting pages (cancel, cancel confirmed, reschedule)
+  render correctly in the given locale. Sets up each view with a locale
+  query param and asserts translated strings appear instead of English.
+  """
+  @spec test_all_meeting_pages_in_locale(Plug.Conn.t(), map(), String.t()) :: term()
+  def test_all_meeting_pages_in_locale(conn, %{profile: profile, meeting: meeting}, locale) do
+    %{view: cancel_view} = setup_cancel_view(conn, profile, meeting, locale)
+    test_cancel_translations(cancel_view, locale)
+
+    # Test meeting_kept state on a fresh cancel view (keep_meeting mutates the view)
+    %{view: cancel_kept_view} = setup_cancel_view(conn, profile, meeting, locale)
+    test_cancel_kept_translations(cancel_kept_view, locale)
+
+    %{view: confirmed_view} = setup_cancel_confirmed_view(conn, profile, meeting, locale)
+    test_cancel_confirmed_translations(confirmed_view, locale)
+
+    %{view: reschedule_view} = setup_reschedule_view(conn, profile, meeting, locale)
+    test_reschedule_translations(reschedule_view, locale)
+  end
+
+  # German translations for each page — German is the test locale because
+  # its strings are visually distinct from English in every case.
+
+  defp translated_cancel_confirmed_strings("de") do
+    %{
+      meeting_cancelled: "Termin abgesagt",
+      successfully_cancelled: "Ihr Termin wurde erfolgreich abgesagt.",
+      cancellation_emails_sent:
+        "Die Absage-E-Mails wurden an alle Teilnehmer versendet."
+    }
+  end
+
+  defp translated_cancel_kept_strings("de") do
+    %{
+      meeting_confirmed: "Termin bestätigt",
+      still_scheduled: "Großartig! Ihr Termin ist weiterhin wie geplant.",
+      look_forward: "Wir freuen uns, Sie zur geplanten Zeit zu begrüßen.",
+      done: "Fertig"
+    }
+  end
+
+  defp translated_cancel_strings("de") do
+    %{
+      cancel_appointment: "Termin absagen",
+      are_you_sure: "Sind Sie sicher, dass Sie diesen Termin absagen möchten?",
+      cancellation_email_warning: "Eine Absage-E-Mail wird an alle Teilnehmer gesendet",
+      yes_cancel: "Ja, Termin absagen",
+      keep_meeting: "Termin beibehalten"
+    }
+  end
+
+  defp translated_reschedule_strings("de") do
+    %{
+      reschedule_appointment: "Termin verschieben",
+      select_new_time: "Wählen Sie eine neue Zeit für Ihren Termin"
+    }
+  end
 end

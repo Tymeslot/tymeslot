@@ -50,4 +50,9 @@ defmodule TymeslotWeb.Live.Themes.QuillMeetingTest do
       )
     end
   end
+
+  @tag :capture_log
+  test "meeting pages render translated strings in non-English locale", %{conn: conn} = context do
+    ThemeMeetingTestCases.test_all_meeting_pages_in_locale(conn, context, "de")
+  end
 end

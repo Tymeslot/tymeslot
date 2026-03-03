@@ -99,7 +99,6 @@
   background: linear-gradient(135deg, var(--surface-light) 0%, var(--surface-subtle) 100%);
   border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-2xl);
-  overflow: hidden;
   box-shadow: var(--shadow-lg);
 }
 
@@ -110,6 +109,7 @@
   padding: var(--space-md) var(--space-lg);
   background: var(--surface-subtle);
   border-bottom: var(--border-width-thin) solid var(--border-subtle);
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
 }
 
 .ticket-label {
@@ -165,6 +165,7 @@
   padding: var(--space-md) var(--space-lg);
   background: rgba(255, 255, 255, 0.03);
   border-top: var(--border-width-thin) solid var(--border-subtle);
+  border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
 }
 
 .ticket-footer-message {

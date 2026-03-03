@@ -24,6 +24,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
       custom_css={@custom_css}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      show_language_switcher={true}
     >
       <!-- Scheduling Box with Glass Effect -->
       <div class="scheduling-box">
@@ -69,7 +70,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                         />
                       </svg>
                       <span>
-                        <strong>Cancellation emails have been sent</strong> to all participants.
+                        <strong>{gettext("Cancellation emails have been sent to all participants.")}</strong>
                       </span>
                     </div>
                   </div>
@@ -82,7 +83,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                     class="action-button-primary action-button-full-width"
                     type="button"
                   >
-                    Schedule a New Meeting
+                    {gettext("Schedule a New Meeting")}
                   </button>
                 </div>
               </div>

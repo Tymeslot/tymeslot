@@ -3,8 +3,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
   Quill theme cancel component with glassmorphism styling.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
 
   import TymeslotWeb.Components.CoreComponents
@@ -28,6 +30,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
       custom_css={@custom_css}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      show_language_switcher={true}
     >
       <div class="min-h-screen flex items-center justify-center px-4 py-8">
         <div class="w-full max-w-2xl">
@@ -57,10 +60,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     class="text-3xl font-bold mb-2"
                     style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.1);"
                   >
-                    Meeting Confirmed
+                    {gettext("Meeting Confirmed")}
                   </h1>
                   <p class="text-lg" style="color: rgba(255,255,255,0.9);">
-                    Great! Your meeting is still scheduled as planned.
+                    {gettext("Great! Your meeting is still scheduled as planned.")}
                   </p>
                 </div>
                 
@@ -72,7 +75,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                   <div class="p-6">
                     <div class="flex items-center justify-between mb-4">
                       <h3 class="text-lg font-semibold" style="color: rgba(255,255,255,0.95);">
-                        Meeting Details
+                        {gettext("Meeting Details")}
                       </h3>
                       <span
                         class="px-3 py-1 rounded-full text-sm font-medium"
@@ -93,12 +96,12 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                         </div>
                         <div class="flex-1">
                           <div class="font-medium" style="color: rgba(255,255,255,0.95);">
-                            {Calendar.strftime(@meeting.start_time, "%B %d, %Y")}
+                            {LocaleFormat.format_date(@meeting.start_time, @locale)}
                           </div>
-                          <div class="text-sm" style="color: rgba(255,255,255,0.6);">Date</div>
+                          <div class="text-sm" style="color: rgba(255,255,255,0.6);">{gettext("Date")}</div>
                         </div>
                       </div>
-                      
+
     <!-- Time Row -->
                       <div class="flex items-center gap-4">
                         <div
@@ -109,14 +112,14 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                         </div>
                         <div class="flex-1">
                           <div class="font-medium" style="color: rgba(255,255,255,0.95);">
-                            {Calendar.strftime(@meeting.start_time, "%I:%M %p")}
+                            {LocaleFormat.format_time(@meeting.start_time, @locale)}
                           </div>
                           <div class="text-sm" style="color: rgba(255,255,255,0.6);">
                             {@meeting.attendee_timezone}
                           </div>
                         </div>
                       </div>
-                      
+
     <!-- Organizer Row -->
                       <div
                         class="flex items-center gap-4 pt-4"
@@ -130,7 +133,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                         </div>
                         <div class="flex-1">
                           <div class="text-sm" style="color: rgba(255,255,255,0.6);">
-                            Meeting with
+                            {gettext("Meeting with")}
                           </div>
                           <div class="font-medium" style="color: var(--theme-primary);">
                             {@meeting.organizer_name}
@@ -140,15 +143,15 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     </div>
                   </div>
                 </div>
-                
+
     <!-- Success Message -->
                 <div class="text-center">
                   <p class="mb-6" style="color: rgba(255,255,255,0.85);">
-                    We look forward to seeing you at the scheduled time.
+                    {gettext("We look forward to seeing you at the scheduled time.")}
                   </p>
 
                   <.action_button type="button" phx-click={JS.navigate("/")} variant={:primary}>
-                    Done
+                    {gettext("Done")}
                   </.action_button>
                 </div>
               <% else %>
@@ -175,10 +178,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     class="text-3xl font-bold mb-2"
                     style="color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.1);"
                   >
-                    Cancel Appointment
+                    {gettext("Cancel Appointment")}
                   </h1>
                   <p class="text-lg" style="color: rgba(255,255,255,0.9);">
-                    Are you sure you want to cancel this appointment?
+                    {gettext("Are you sure you want to cancel this appointment?")}
                   </p>
                 </div>
                 
@@ -190,7 +193,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                   <div class="p-6">
                     <div class="flex items-center justify-between mb-4">
                       <h3 class="text-lg font-semibold" style="color: rgba(255,255,255,0.95);">
-                        Meeting Details
+                        {gettext("Meeting Details")}
                       </h3>
                       <span
                         class="px-3 py-1 rounded-full text-sm font-medium"
@@ -211,12 +214,12 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                         </div>
                         <div class="flex-1">
                           <div class="font-medium" style="color: rgba(255,255,255,0.95);">
-                            {Calendar.strftime(@meeting.start_time, "%B %d, %Y")}
+                            {LocaleFormat.format_date(@meeting.start_time, @locale)}
                           </div>
-                          <div class="text-sm" style="color: rgba(255,255,255,0.6);">Date</div>
+                          <div class="text-sm" style="color: rgba(255,255,255,0.6);">{gettext("Date")}</div>
                         </div>
                       </div>
-                      
+
     <!-- Time Row -->
                       <div class="flex items-center gap-4">
                         <div
@@ -227,14 +230,14 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                         </div>
                         <div class="flex-1">
                           <div class="font-medium" style="color: rgba(255,255,255,0.95);">
-                            {Calendar.strftime(@meeting.start_time, "%I:%M %p")}
+                            {LocaleFormat.format_time(@meeting.start_time, @locale)}
                           </div>
                           <div class="text-sm" style="color: rgba(255,255,255,0.6);">
                             {@meeting.attendee_timezone}
                           </div>
                         </div>
                       </div>
-                      
+
     <!-- Organizer Row -->
                       <div
                         class="flex items-center gap-4 pt-4"
@@ -248,7 +251,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                         </div>
                         <div class="flex-1">
                           <div class="text-sm" style="color: rgba(255,255,255,0.6);">
-                            Meeting with
+                            {gettext("Meeting with")}
                           </div>
                           <div class="font-medium" style="color: var(--theme-primary);">
                             {@meeting.organizer_name}
@@ -277,7 +280,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     />
                   </svg>
                   <div class="text-sm" style="color: rgba(255,255,255,0.85);">
-                    A cancellation email will be sent to all participants
+                    {gettext("A cancellation email will be sent to all participants")}
                   </div>
                 </div>
                 
@@ -287,12 +290,12 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     type="button"
                     phx-click="cancel_meeting"
                     loading={@loading}
-                    loading_text="Cancelling..."
+                    loading_text={gettext("Cancelling...")}
                     variant={:danger}
                     data-testid="cancel-meeting"
                     class="flex-1"
                   >
-                    Yes, Cancel Meeting
+                    {gettext("Yes, Cancel Meeting")}
                   </.loading_button>
 
                   <.action_button
@@ -303,7 +306,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     disabled={@loading}
                     class="flex-1"
                   >
-                    Keep Meeting
+                    {gettext("Keep Meeting")}
                   </.action_button>
                 </div>
               <% end %>

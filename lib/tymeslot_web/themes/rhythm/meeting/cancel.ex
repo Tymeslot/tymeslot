@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
   import TymeslotWeb.Components.CoreComponents
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper
 
   attr :theme_customization, :map, required: true
@@ -29,6 +30,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
       custom_css={@custom_css}
       locale={@locale}
       language_dropdown_open={@language_dropdown_open}
+      show_language_switcher={true}
     >
       <!-- Scheduling Box with Glass Effect -->
       <div class="scheduling-box">
@@ -108,9 +110,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       </div>
                       <div class="ticket-info">
                         <span class="ticket-value">
-                          {Calendar.strftime(@meeting.start_time, "%B %d, %Y")}
+                          {LocaleFormat.format_date(@meeting.start_time, @locale)}
                         </span>
-                        <span class="ticket-sublabel">Date</span>
+                        <span class="ticket-sublabel">{gettext("Date")}</span>
                       </div>
                     </div>
 
@@ -120,7 +122,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       </div>
                       <div class="ticket-info">
                         <span class="ticket-value">
-                          {Calendar.strftime(@meeting.start_time, "%I:%M %p")}
+                          {LocaleFormat.format_time(@meeting.start_time, @locale)}
                         </span>
                         <span class="ticket-sublabel">{@meeting.attendee_timezone}</span>
                       </div>
@@ -131,7 +133,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                         <.icon name="hero-user" class="hero-icon hero-icon--md" />
                       </div>
                       <div class="ticket-info">
-                        <span class="ticket-sublabel">Meeting with</span>
+                        <span class="ticket-sublabel">{gettext("Meeting with")}</span>
                         <span class="ticket-value">{@meeting.organizer_name}</span>
                       </div>
                     </div>
@@ -153,7 +155,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
-                        <span>We look forward to seeing you at the scheduled time.</span>
+                        <span>{gettext("We look forward to seeing you at the scheduled time.")}</span>
                       </div>
                     </div>
                   <% else %>
@@ -167,7 +169,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                           />
                         </svg>
-                        <span>A cancellation email will be sent to all participants</span>
+                        <span>{gettext("A cancellation email will be sent to all participants")}</span>
                       </div>
                     </div>
                   <% end %>
@@ -181,7 +183,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       class="action-button-primary action-button-success"
                       type="button"
                     >
-                      Done
+                      {gettext("Done")}
                     </button>
                   </div>
                 <% else %>
@@ -194,9 +196,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       disabled={@loading}
                     >
                       <%= if @loading do %>
-                        Cancelling...
+                        {gettext("Cancelling...")}
                       <% else %>
-                        Yes, Cancel Meeting
+                        {gettext("Yes, Cancel Meeting")}
                       <% end %>
                     </button>
 
@@ -207,7 +209,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                       data-testid="keep-meeting"
                       disabled={@loading}
                     >
-                      Keep Meeting
+                      {gettext("Keep Meeting")}
                     </button>
                   </div>
                 <% end %>
