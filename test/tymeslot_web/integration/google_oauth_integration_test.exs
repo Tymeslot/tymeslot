@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
         access_token: "mock_access_token_#{System.system_time()}",
         refresh_token: "mock_refresh_token_#{System.system_time()}",
         expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-        scope: "https://www.googleapis.com/auth/calendar"
+        scope: "https://www.googleapis.com/auth/calendar.events"
       }
 
       # Act: Create calendar integration
