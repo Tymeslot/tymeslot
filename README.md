@@ -96,6 +96,7 @@ Google Meet · Microsoft Teams · MiroTalk P2P · In-Person / Phone · Custom Li
 
 ### 🔐 Authentication & Users
 - Multi-provider OAuth (Google, GitHub)
+- Generic OAuth/OIDC SSO (Keycloak, Authentik, Okta, Azure AD, etc.)
 - Email/password with verification
 - Customizable profiles & avatars
 - 4-step onboarding flow

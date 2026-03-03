@@ -164,11 +164,11 @@ defmodule Tymeslot.Auth.OAuth.Client do
     config = Application.get_env(:tymeslot, :oauth_provider, [])
 
     %{
-      client_id: Keyword.get(config, :client_id),
-      client_secret: Keyword.get(config, :client_secret),
-      site: Keyword.get(config, :site),
-      authorize_url: Keyword.get(config, :authorize_url),
-      token_url: Keyword.get(config, :token_url)
+      client_id: Keyword.fetch!(config, :client_id),
+      client_secret: Keyword.fetch!(config, :client_secret),
+      site: Keyword.fetch!(config, :site),
+      authorize_url: Keyword.fetch!(config, :authorize_url),
+      token_url: Keyword.fetch!(config, :token_url)
     }
   end
 

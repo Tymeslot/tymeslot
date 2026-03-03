@@ -90,6 +90,7 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuthTest do
       user_info = %{
         "sub" => "user-abc-123",
         "email" => "sso@example.com",
+        "email_verified" => true,
         "name" => "SSO User"
       }
 
@@ -101,12 +102,31 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuthTest do
       assert user.email_from_provider == true
     end
 
+    test "respects email_verified claim from IdP" do
+      user_info = %{
+        "sub" => "user-unverified",
+        "email" => "unverified@example.com",
+        "email_verified" => false
+      }
+
+      assert {:ok, user} = UserProcessor.process_user(:oauth, user_info)
+      assert user.is_verified == false
+    end
+
+    test "defaults is_verified to false when email_verified claim is absent" do
+      user_info = %{"sub" => "user-no-claim", "email" => "noclaim@example.com"}
+
+      assert {:ok, user} = UserProcessor.process_user(:oauth, user_info)
+      assert user.is_verified == false
+    end
+
     test "handles missing email gracefully" do
       user_info = %{"sub" => "user-no-email"}
 
       assert {:ok, user} = UserProcessor.process_user(:oauth, user_info)
       assert user.provider_uid == "user-no-email"
       assert user.email == nil
+      assert user.is_verified == false
       assert user.email_from_provider == false
     end
 
