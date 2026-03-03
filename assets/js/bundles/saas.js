@@ -7,9 +7,11 @@
 
 import { initializeBundle } from "./bundle_utils"
 import { RecaptchaV3Hook } from "../hooks/recaptcha_v3_hook"
+import { DocsToc } from "../hooks/docs_toc"
 
 const SaasHooks = {
-  RecaptchaV3: RecaptchaV3Hook
+  RecaptchaV3: RecaptchaV3Hook,
+  DocsToc
 };
 
 initializeBundle("saas", SaasHooks).catch(error => {
