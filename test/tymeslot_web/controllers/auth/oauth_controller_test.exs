@@ -315,7 +315,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
         is_verified: true,
         email_from_provider: true,
         provider_uid: "",
-        github_user_id: 12345,
+        github_user_id: 12_345,
         google_user_id: nil
       }
 
@@ -341,7 +341,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
         email: "new@example.com",
         is_verified: true,
         email_from_provider: true,
-        github_user_id: 12345
+        github_user_id: 12_345
       }
 
       conn =
@@ -359,7 +359,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
         email: nil,
         is_verified: false,
         email_from_provider: false,
-        github_user_id: 12345
+        github_user_id: 12_345
       }
 
       conn =
@@ -377,7 +377,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
         email: "unverified@example.com",
         is_verified: false,
         email_from_provider: false,
-        github_user_id: 12345
+        github_user_id: 12_345
       }
 
       :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
@@ -407,7 +407,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
         email: "fail@example.com",
         is_verified: true,
         email_from_provider: true,
-        github_user_id: 12345
+        github_user_id: 12_345
       }
 
       :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
@@ -430,7 +430,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
         email: "error@example.com",
         is_verified: true,
         email_from_provider: true,
-        github_user_id: 12345
+        github_user_id: 12_345
       }
 
       :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
@@ -501,7 +501,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
         Application.put_env(:tymeslot, :registration_enabled, original_value)
       end)
 
-      session_data = %{provider: "github", email: "new@example.com", github_user_id: 12345}
+      session_data = %{provider: "github", email: "new@example.com", github_user_id: 12_345}
 
       conn =
         conn

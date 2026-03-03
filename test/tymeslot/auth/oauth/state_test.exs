@@ -5,7 +5,8 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
   alias Tymeslot.Auth.OAuth.State
 
   defp build_conn do
-    Plug.Test.conn(:get, "/")
+    :get
+    |> Plug.Test.conn("/")
     |> Plug.Test.init_test_session(%{})
   end
 

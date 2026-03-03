@@ -119,7 +119,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
 
     test "non-string email value" do
       assert {:ok, user} =
-               UserProcessor.process_user(:oauth, %{"sub" => "1", "email" => 12345})
+               UserProcessor.process_user(:oauth, %{"sub" => "1", "email" => 12_345})
 
       assert user.email == nil
     end
