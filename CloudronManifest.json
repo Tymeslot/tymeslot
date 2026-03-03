@@ -4,7 +4,7 @@
   "author": "Luka Karsten Breitig",
   "description": "A meeting scheduler application with CalDAV integration",
   "tagline": "Smart meeting scheduling with CalDAV",
-  "version": "0.99.12",
+  "version": "0.99.13",
   "healthCheckPath": "/healthcheck",
   "httpPort": 4000,
   "postInstallMessage": "Thank you for installing Tymeslot!",
