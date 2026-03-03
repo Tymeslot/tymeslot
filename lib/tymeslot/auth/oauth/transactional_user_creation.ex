@@ -186,13 +186,21 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
 
   defp handle_user_not_found_by_provider(repo, provider, provider_uid, auth_params) do
     email = auth_params["email"]
+    email_verified = auth_params["is_verified"] == true
 
-    case UserQueries.get_user_by_email(email, repo) do
-      {:error, :not_found} ->
-        create_new_user(repo, auth_params)
+    # Only link to an existing account by email when the provider has verified the
+    # address. Trusting an unverified email could let an attacker claim any address
+    # and silently take over the matching account.
+    if email_verified do
+      case UserQueries.get_user_by_email(email, repo) do
+        {:error, :not_found} ->
+          create_new_user(repo, auth_params)
 
-      {:ok, existing_user} ->
-        link_provider_to_existing_user(repo, existing_user, provider, provider_uid)
+        {:ok, existing_user} ->
+          link_provider_to_existing_user(repo, existing_user, provider, provider_uid)
+      end
+    else
+      create_new_user(repo, auth_params)
     end
   end
 

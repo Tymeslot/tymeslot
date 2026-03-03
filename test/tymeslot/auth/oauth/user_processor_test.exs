@@ -1,5 +1,5 @@
 defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   @moduletag :auth
 
   alias Tymeslot.Auth.OAuth.UserProcessor
@@ -22,7 +22,25 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
       assert user.email_from_provider == true
     end
 
-    test ":oauth falls back to id when sub is missing" do
+    test ":oauth rejects id/user_id fallback when allow_id_fallback is disabled" do
+      Application.put_env(:tymeslot, :oauth_provider, allow_id_fallback: false)
+
+      on_exit(fn -> Application.delete_env(:tymeslot, :oauth_provider) end)
+
+      user_info = %{
+        "id" => "alt-456",
+        "email" => "alt@example.com",
+        "name" => "Alt User"
+      }
+
+      assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
+    end
+
+    test ":oauth falls back to id when sub is missing and allow_id_fallback is enabled" do
+      Application.put_env(:tymeslot, :oauth_provider, allow_id_fallback: true)
+
+      on_exit(fn -> Application.delete_env(:tymeslot, :oauth_provider) end)
+
       user_info = %{
         "id" => "alt-456",
         "email" => "alt@example.com",
@@ -35,7 +53,11 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
       assert user.email == "alt@example.com"
     end
 
-    test ":oauth falls back to user_id when sub and id are missing" do
+    test ":oauth falls back to user_id when sub and id are missing and allow_id_fallback is enabled" do
+      Application.put_env(:tymeslot, :oauth_provider, allow_id_fallback: true)
+
+      on_exit(fn -> Application.delete_env(:tymeslot, :oauth_provider) end)
+
       user_info = %{
         "user_id" => "uid-789",
         "email" => "uid@example.com"
@@ -47,7 +69,17 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
     end
 
     test ":oauth returns error when no identifier is available" do
+      Application.put_env(:tymeslot, :oauth_provider, allow_id_fallback: true)
+
+      on_exit(fn -> Application.delete_env(:tymeslot, :oauth_provider) end)
+
       user_info = %{"email" => "no-id@example.com"}
+
+      assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
+    end
+
+    test ":oauth rejects empty string provider_uid" do
+      user_info = %{"sub" => "", "email" => "empty@example.com"}
 
       assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
     end
@@ -109,6 +141,24 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
 
     test "unknown provider returns error" do
       assert {:error, :invalid_user_info} = UserProcessor.process_user(:unknown, %{})
+    end
+  end
+
+  describe "registration_complete? edge cases" do
+    alias Tymeslot.Auth.OAuth.UserRegistration
+
+    test ":oauth rejects empty email" do
+      refute UserRegistration.registration_complete?(:oauth, %{
+               email: "",
+               provider_uid: "sub-123"
+             })
+    end
+
+    test ":oauth rejects empty provider_uid" do
+      refute UserRegistration.registration_complete?(:oauth, %{
+               email: "test@example.com",
+               provider_uid: ""
+             })
     end
   end
 

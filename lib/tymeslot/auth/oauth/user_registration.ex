@@ -41,8 +41,18 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
     user_queries = Config.user_queries_module()
 
     case user_queries.get_user_by_provider("oauth", uid) do
-      {:ok, found_user} -> {:ok, found_user}
-      {:error, :not_found} -> find_user_by_email(user_queries, Map.get(user, :email))
+      {:ok, found_user} ->
+        {:ok, found_user}
+
+      {:error, :not_found} ->
+        # Only fall back to email lookup when the IdP has verified the email.
+        # Trusting an unverified email would let a rogue IdP claim any address
+        # and gain access to an existing account.
+        if Map.get(user, :is_verified, false) do
+          find_user_by_email(user_queries, Map.get(user, :email))
+        else
+          {:error, :not_found}
+        end
     end
   end
 
@@ -98,7 +108,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
       do: true
 
   def registration_complete?(:oauth, %{email: email, provider_uid: uid})
-      when is_binary(email) and is_binary(uid),
+      when is_binary(email) and is_binary(uid) and email != "" and uid != "",
       do: true
 
   def registration_complete?(_provider, _user_data), do: false

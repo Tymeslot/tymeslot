@@ -38,7 +38,8 @@ defmodule Tymeslot.Auth.OAuth.State do
           {:error, :invalid_state}
         end
 
-      # Backward-compat: bare string without timestamp (pre-upgrade sessions)
+      # TODO(v0.99.16): Remove this clause after one release cycle. Pre-upgrade
+      # sessions stored bare strings without timestamps and have no TTL enforcement.
       stored_state when is_binary(stored_state) ->
         if Plug.Crypto.secure_compare(stored_state, received_state),
           do: :ok,

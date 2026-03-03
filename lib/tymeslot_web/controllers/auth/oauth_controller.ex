@@ -310,6 +310,7 @@ defmodule TymeslotWeb.OAuthController do
 
       {:error, :unsupported_oauth_provider} ->
         conn
+        |> delete_session(:pending_oauth_registration)
         |> put_flash(:error, "Unsupported OAuth provider.")
         |> redirect(to: ~p"/auth/login")
     end

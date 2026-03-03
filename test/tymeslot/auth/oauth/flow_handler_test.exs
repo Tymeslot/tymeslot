@@ -194,6 +194,42 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
     assert {:error, :general_error, :github, _conn} = invoke_github_callback()
   end
 
+  describe "registration disabled" do
+    test "returns {:error, :registration_disabled, provider, conn} when registration is off" do
+      user_info = %{"id" => 999}
+      processed_user = %{email: "new@example.com", github_user_id: 999, name: "New", is_verified: true}
+      enhanced_user = Map.put(processed_user, :email_from_provider, true)
+
+      setup_pre_exchange_mocks()
+
+      :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
+        {:ok, :authed_client}
+      end)
+
+      :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
+      :meck.expect(UserProcessor, :process_user, fn :github, ^user_info -> {:ok, processed_user} end)
+
+      :meck.expect(UserProcessor, :enhance_user_data, fn :github, ^processed_user, :authed_client ->
+        enhanced_user
+      end)
+
+      :meck.expect(UserRegistration, :find_existing_user, fn :github, ^enhanced_user ->
+        {:error, :not_found}
+      end)
+
+      original = Application.get_env(:tymeslot, :registration_enabled)
+      Application.put_env(:tymeslot, :registration_enabled, false)
+
+      on_exit(fn ->
+        if is_nil(original),
+          do: Application.delete_env(:tymeslot, :registration_enabled),
+          else: Application.put_env(:tymeslot, :registration_enabled, original)
+      end)
+
+      assert {:error, :registration_disabled, :github, _conn} = invoke_github_callback()
+    end
+  end
+
   describe "generic OAuth (:oauth) provider flow" do
     defp setup_oauth_pre_exchange_mocks do
       :meck.expect(State, :validate_state, fn _conn, "state" -> :ok end)

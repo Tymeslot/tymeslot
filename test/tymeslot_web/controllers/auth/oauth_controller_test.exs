@@ -286,6 +286,43 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert String.starts_with?(redirected_to(conn), "/")
     end
 
+    test "rejects open redirect via success_path parameter", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:ok, conn, :github}
+      end)
+
+      conn =
+        get(conn, ~p"/auth/github/callback", %{
+          "code" => "code",
+          "state" => "state",
+          "success_path" => "https://evil.com/steal"
+        })
+
+      # Should redirect to default success path, NOT to the evil URL
+      redirect = redirected_to(conn)
+      refute redirect =~ "evil.com"
+      assert String.starts_with?(redirect, "/")
+    end
+
+    test "rejects protocol-relative redirect via success_path", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:ok, conn, :github}
+      end)
+
+      conn =
+        get(conn, ~p"/auth/github/callback", %{
+          "code" => "code",
+          "state" => "state",
+          "success_path" => "//evil.com/steal"
+        })
+
+      redirect = redirected_to(conn)
+      refute redirect =~ "evil.com"
+      assert String.starts_with?(redirect, "/")
+    end
+
     test "generic oauth callback without code redirects with error", %{conn: conn} do
       conn = get(conn, ~p"/auth/oauth/callback", %{"state" => "some_state"})
 
@@ -491,6 +528,50 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       assert redirected_to(conn) == "/dashboard"
       assert Flash.get(conn.assigns.flash, :info) =~ "Successfully signed up"
+    end
+
+    test "clears session data after successful completion", %{conn: conn} do
+      session_data = %{
+        provider: "github",
+        email: "cleanup@example.com",
+        name: "Cleanup User",
+        is_verified: true,
+        email_from_provider: true,
+        provider_uid: "",
+        github_user_id: 99_999,
+        google_user_id: nil
+      }
+
+      :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
+        user = Factory.insert(:user, email: "cleanup@example.com", provider: "github")
+        {:ok, user}
+      end)
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
+
+      assert redirected_to(conn) == "/dashboard"
+      assert get_session(conn, :pending_oauth_registration) == nil
+    end
+
+    test "clears session on unsupported provider", %{conn: conn} do
+      session_data = %{
+        provider: "totally_unsupported",
+        email: "bad@example.com",
+        is_verified: true,
+        email_from_provider: true
+      }
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Unsupported OAuth provider"
+      assert get_session(conn, :pending_oauth_registration) == nil
     end
 
     test "redirects to login with info flash when registration is disabled", %{conn: conn} do

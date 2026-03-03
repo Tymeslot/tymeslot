@@ -45,16 +45,29 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   end
 
   def process_user(:oauth, user_info) when is_map(user_info) do
-    case Map.get(user_info, "id") || Map.get(user_info, "user_id") do
-      nil ->
-        {:error, :invalid_user_info}
+    # Non-OIDC providers may return "id" or "user_id" instead of the standard
+    # "sub" claim. Because these identifiers are not standardized, they can
+    # collide across different IdPs. Only accept them when the admin has
+    # explicitly opted in via OAUTH_ALLOW_ID_FALLBACK=true.
+    if allow_id_fallback?() do
+      case Map.get(user_info, "id") || Map.get(user_info, "user_id") do
+        nil ->
+          {:error, :invalid_user_info}
 
-      uid ->
-        Logger.warning("OAuth provider returned no \"sub\" claim; falling back to alternative ID",
-          key_used: if(Map.has_key?(user_info, "id"), do: "id", else: "user_id")
-        )
+        uid ->
+          Logger.warning(
+            "OAuth provider returned no \"sub\" claim; falling back to alternative ID",
+            key_used: if(Map.has_key?(user_info, "id"), do: "id", else: "user_id")
+          )
 
-        build_oauth_user(user_info, uid)
+          build_oauth_user(user_info, uid)
+      end
+    else
+      Logger.error(
+        "OAuth provider did not return a \"sub\" claim and OAUTH_ALLOW_ID_FALLBACK is not enabled"
+      )
+
+      {:error, :invalid_user_info}
     end
   end
 
@@ -107,19 +120,30 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
 
   # Private helpers
 
+  defp allow_id_fallback? do
+    config = Application.get_env(:tymeslot, :oauth_provider, [])
+    Keyword.get(config, :allow_id_fallback, false)
+  end
+
   defp build_oauth_user(user_info, provider_uid) do
-    email = extract_email(user_info)
-    email_from_provider = email != nil and String.trim(email) != ""
+    uid_string = to_string(provider_uid)
 
-    user = %{
-      email: email,
-      provider_uid: to_string(provider_uid),
-      name: Map.get(user_info, "name"),
-      is_verified: Map.get(user_info, "email_verified", false) in [true, "true"],
-      email_from_provider: email_from_provider
-    }
+    if uid_string == "" do
+      {:error, :invalid_user_info}
+    else
+      email = extract_email(user_info)
+      email_from_provider = email != nil and String.trim(email) != ""
 
-    {:ok, user}
+      user = %{
+        email: email,
+        provider_uid: uid_string,
+        name: Map.get(user_info, "name"),
+        is_verified: Map.get(user_info, "email_verified", false) in [true, "true"],
+        email_from_provider: email_from_provider
+      }
+
+      {:ok, user}
+    end
   end
 
   defp extract_email(user_info) do

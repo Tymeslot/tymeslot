@@ -498,7 +498,8 @@ config :tymeslot, :oauth_provider,
   authorize_url: System.get_env("OAUTH_AUTHORIZE_URL"),
   token_url: System.get_env("OAUTH_TOKEN_URL"),
   userinfo_url: System.get_env("OAUTH_USERINFO_URL"),
-  scope: System.get_env("OAUTH_SCOPE", "openid email profile")
+  scope: System.get_env("OAUTH_SCOPE", "openid email profile"),
+  allow_id_fallback: System.get_env("OAUTH_ALLOW_ID_FALLBACK", "false") == "true"
 
 if System.get_env("ENABLE_OAUTH_AUTH") == "true" do
   required_oauth_vars = %{
@@ -524,6 +525,31 @@ if System.get_env("ENABLE_OAUTH_AUTH") == "true" do
 
     Set all required variables or disable OAuth with ENABLE_OAUTH_AUTH=false.
     See the OIDC/SSO documentation for configuration details.
+    """
+  end
+
+  # Enforce HTTPS for OAuth URLs that carry secret material (tokens, credentials).
+  # The token and userinfo endpoints receive the client_secret and access tokens;
+  # sending these over plaintext HTTP would expose credentials to network observers.
+  https_required_vars = %{
+    "OAUTH_TOKEN_URL" => System.get_env("OAUTH_TOKEN_URL"),
+    "OAUTH_USERINFO_URL" => System.get_env("OAUTH_USERINFO_URL")
+  }
+
+  non_https =
+    https_required_vars
+    |> Enum.reject(fn {_key, val} -> is_nil(val) or String.starts_with?(val, "https://") end)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.sort()
+
+  if non_https != [] do
+    raise """
+    ENABLE_OAUTH_AUTH is true but the following URLs must use HTTPS:
+
+      #{Enum.join(non_https, "\n  ")}
+
+    OAuth token and userinfo endpoints carry secret material (client credentials,
+    access tokens) and must not be served over plaintext HTTP.
     """
   end
 end
