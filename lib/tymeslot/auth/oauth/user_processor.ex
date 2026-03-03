@@ -3,6 +3,8 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   Processes user information returned from OAuth providers.
   """
 
+  require Logger
+
   alias Tymeslot.Auth.OAuth.Client
 
   @type provider :: :github | :google | :oauth
@@ -39,18 +41,21 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   end
 
   def process_user(:oauth, %{"sub" => provider_uid} = user_info) do
-    email = extract_email(user_info)
-    email_from_provider = email != nil and String.trim(email) != ""
+    build_oauth_user(user_info, provider_uid)
+  end
 
-    user = %{
-      email: email,
-      provider_uid: to_string(provider_uid),
-      name: Map.get(user_info, "name"),
-      is_verified: Map.get(user_info, "email_verified", false) == true,
-      email_from_provider: email_from_provider
-    }
+  def process_user(:oauth, user_info) when is_map(user_info) do
+    case Map.get(user_info, "id") || Map.get(user_info, "user_id") do
+      nil ->
+        {:error, :invalid_user_info}
 
-    {:ok, user}
+      uid ->
+        Logger.warning("OAuth provider returned no \"sub\" claim; falling back to alternative ID",
+          key_used: if(Map.has_key?(user_info, "id"), do: "id", else: "user_id")
+        )
+
+        build_oauth_user(user_info, uid)
+    end
   end
 
   def process_user(_provider, _user_info), do: {:error, :invalid_user_info}
@@ -102,11 +107,27 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
 
   # Private helpers
 
+  defp build_oauth_user(user_info, provider_uid) do
+    email = extract_email(user_info)
+    email_from_provider = email != nil and String.trim(email) != ""
+
+    user = %{
+      email: email,
+      provider_uid: to_string(provider_uid),
+      name: Map.get(user_info, "name"),
+      is_verified: Map.get(user_info, "email_verified", false) == true,
+      email_from_provider: email_from_provider
+    }
+
+    {:ok, user}
+  end
+
   defp extract_email(user_info) do
     case Map.get(user_info, "email") do
       nil -> nil
       "" -> nil
       email when is_binary(email) -> email
+      _other -> nil
     end
   end
 

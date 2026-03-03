@@ -157,11 +157,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   defp determine_email_verification_status(%{email_from_provider: false}), do: false
 
   defp determine_email_verification_status(oauth_user) do
-    if oauth_user.email && String.trim(oauth_user.email) != "" do
-      true
-    else
-      oauth_user.is_verified || false
-    end
+    Map.get(oauth_user, :is_verified, false)
   end
 
   defp build_auth_params(:oauth, oauth_user, email_verified, placeholder_password) do

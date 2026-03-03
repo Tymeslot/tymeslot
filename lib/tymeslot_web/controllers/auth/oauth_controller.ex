@@ -64,6 +64,7 @@ defmodule TymeslotWeb.OAuthController do
       :github -> Keyword.get(social_auth_config, :github_enabled, false)
       :google -> Keyword.get(social_auth_config, :google_enabled, false)
       :oauth -> Keyword.get(social_auth_config, :oauth_enabled, false)
+      _ -> false
     end
   end
 
