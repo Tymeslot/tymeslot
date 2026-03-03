@@ -115,7 +115,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
       email: email,
       provider_uid: to_string(provider_uid),
       name: Map.get(user_info, "name"),
-      is_verified: Map.get(user_info, "email_verified", false) == true,
+      is_verified: Map.get(user_info, "email_verified", false) in [true, "true"],
       email_from_provider: email_from_provider
     }
 

@@ -77,6 +77,17 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
       assert missing.is_verified == false
     end
 
+    test ":oauth accepts string \"true\" for email_verified claim" do
+      assert {:ok, user} =
+               UserProcessor.process_user(:oauth, %{
+                 "sub" => "4",
+                 "email" => "a@b.com",
+                 "email_verified" => "true"
+               })
+
+      assert user.is_verified == true
+    end
+
     test ":github with valid user info" do
       user_info = %{"id" => 123, "email" => "gh@example.com", "name" => "GH User"}
 

@@ -200,6 +200,11 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
 
   defp handle_user_verification_status(user, _email_verified, _email), do: {:ok, user}
 
+  # NOTE: All generic OAuth users share provider="oauth" regardless of which IdP
+  # issued the credentials. If the admin switches IdPs (e.g., Keycloak → Authentik),
+  # `provider_uid` values from the old IdP remain in the database. A new IdP user
+  # whose `sub` collides with an old IdP user would be incorrectly matched. Switching
+  # IdPs requires clearing stale `provider="oauth"` rows from the users table.
   defp check_oauth_account_linking(:oauth, user, oauth_user) do
     if Map.get(user, :provider_uid) == Map.get(oauth_user, :provider_uid) do
       :should_link_account
