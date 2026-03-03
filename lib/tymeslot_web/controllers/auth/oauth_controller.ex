@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.OAuthController do
   @moduledoc """
-  Handles OAuth authentication flows for GitHub and Google.
+  Handles OAuth authentication flows for GitHub, Google, and generic
+  OAuth/OIDC SSO providers.
   """
 
   use TymeslotWeb, :controller

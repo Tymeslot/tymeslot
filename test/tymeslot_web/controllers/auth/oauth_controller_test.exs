@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.OAuthControllerTest do
   use TymeslotWeb.ConnCase, async: false
-  @moduletag :utils
+  @moduletag :auth
 
   alias Ecto.Changeset
   alias Phoenix.Flash

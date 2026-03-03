@@ -51,6 +51,9 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   """
   @spec create_oauth_user(provider, map(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def create_oauth_user(provider, oauth_user, profile_params \\ %{}, opts \\ []) do
+    # Intentionally invalid bcrypt hash — ensures OAuth users can never authenticate
+    # via password login. The "$2b$12$" prefix makes it look like a real hash to
+    # any code that checks for presence, but it will never match any input.
     placeholder_password = "$2b$12$oauth_user_no_password_placeholder_hash_not_for_authentication"
     email_verified = determine_email_verification_status(oauth_user)
     metadata = Keyword.get(opts, :metadata, %{})

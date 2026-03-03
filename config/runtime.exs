@@ -500,6 +500,34 @@ config :tymeslot, :oauth_provider,
   userinfo_url: System.get_env("OAUTH_USERINFO_URL"),
   scope: System.get_env("OAUTH_SCOPE", "openid email profile")
 
+if System.get_env("ENABLE_OAUTH_AUTH") == "true" do
+  required_oauth_vars = %{
+    "OAUTH_CLIENT_ID" => System.get_env("OAUTH_CLIENT_ID"),
+    "OAUTH_CLIENT_SECRET" => System.get_env("OAUTH_CLIENT_SECRET"),
+    "OAUTH_PROVIDER_URL" => System.get_env("OAUTH_PROVIDER_URL"),
+    "OAUTH_AUTHORIZE_URL" => System.get_env("OAUTH_AUTHORIZE_URL"),
+    "OAUTH_TOKEN_URL" => System.get_env("OAUTH_TOKEN_URL"),
+    "OAUTH_USERINFO_URL" => System.get_env("OAUTH_USERINFO_URL")
+  }
+
+  missing =
+    required_oauth_vars
+    |> Enum.filter(fn {_key, val} -> is_nil(val) or String.trim(val) == "" end)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.sort()
+
+  if missing != [] do
+    raise """
+    ENABLE_OAUTH_AUTH is true but required environment variables are missing or empty:
+
+      #{Enum.join(missing, "\n  ")}
+
+    Set all required variables or disable OAuth with ENABLE_OAUTH_AUTH=false.
+    See the OIDC/SSO documentation for configuration details.
+    """
+  end
+end
+
 # reCAPTCHA configuration (runtime)
 # Signup and booking protection are configurable and will automatically disable if keys are missing.
 # RECAPTCHA_SIGNUP_ENABLED and RECAPTCHA_BOOKING_ENABLED are read directly by the respective
