@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
   alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
 
   @doc """
@@ -30,6 +31,7 @@ defmodule Tymeslot.Bookings.Reschedule do
          :ok <- validate_can_reschedule(original_meeting),
          {:ok, new_times} <- prepare_new_times(new_params, original_meeting.organizer_user_id),
          {:ok, updated_meeting} <- apply_time_update_and_schedule_job(original_meeting, new_times) do
+      send_reschedule_notifications(updated_meeting, original_meeting)
       {:ok, updated_meeting}
     else
       {:error, :not_found} -> {:error, "Original meeting not found"}
@@ -100,5 +102,21 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   defp schedule_calendar_job(updated) do
     CalendarJobs.schedule_job(updated, "update")
+  end
+
+  defp send_reschedule_notifications(updated_meeting, original_meeting) do
+    case Events.meeting_rescheduled(updated_meeting, original_meeting) do
+      {:ok, _result} ->
+        Logger.info("Reschedule notifications sent", meeting_id: updated_meeting.id)
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to send reschedule notifications",
+          meeting_id: updated_meeting.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
   end
 end
