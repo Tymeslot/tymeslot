@@ -46,6 +46,7 @@ defmodule TymeslotWeb.AuthLive do
       |> assign(:client_ip, client_ip)
       |> assign(:user_agent, user_agent)
       |> assign(:unverified_user, unverified_user)
+      |> assign(:pending_oauth_registration, session["pending_oauth_registration"])
 
     {:ok, socket}
   end

@@ -267,15 +267,16 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   defp do_process_oauth_completion(conn, params) do
-    oauth_data = build_oauth_data(params)
-    profile_params = build_profile_params(params)
+    case get_session(conn, :pending_oauth_registration) do
+      nil ->
+        conn
+        |> put_flash(:error, "Missing OAuth provider information. Please try again.")
+        |> redirect(to: ~p"/auth/login")
 
-    if is_nil(oauth_data.provider) do
-      conn
-      |> put_flash(:error, "Missing OAuth provider information. Please try again.")
-      |> redirect(to: ~p"/auth/login")
-    else
-      handle_oauth_with_provider(conn, oauth_data, params, profile_params)
+      session_data ->
+        oauth_data = build_oauth_data_from_session(session_data, params)
+        profile_params = build_profile_params(params)
+        handle_oauth_with_provider(conn, oauth_data, params, profile_params)
     end
   end
 
@@ -312,26 +313,25 @@ defmodule TymeslotWeb.OAuthController do
     end
   end
 
-  @spec build_oauth_data(map()) :: map()
-  defp build_oauth_data(params) do
-    email_from_provider = params["oauth_email_from_provider"] == "true"
-
-    # Email can come from form submission (auth[email]) or OAuth redirect (oauth_email)
+  @spec build_oauth_data_from_session(map(), map()) :: map()
+  defp build_oauth_data_from_session(session_data, params) do
+    # User-editable fields come from the form submission; everything else from the session
     email =
-      case get_in(params, ["auth", "email"]) do
-        nil -> params["oauth_email"]
-        form_email -> form_email
+      if session_data[:email_from_provider] do
+        session_data[:email]
+      else
+        get_in(params, ["auth", "email"]) || session_data[:email]
       end
 
     %{
-      provider: params["oauth_provider"],
+      provider: session_data[:provider],
       email: email,
-      is_verified: params["oauth_verified"] == "true",
-      email_from_provider: email_from_provider,
-      github_user_id: params["oauth_github_id"],
-      google_user_id: params["oauth_google_id"],
-      provider_uid: params["oauth_provider_uid"],
-      name: params["oauth_name"] || "",
+      is_verified: session_data[:is_verified] == true,
+      email_from_provider: session_data[:email_from_provider] == true,
+      github_user_id: session_data[:github_user_id],
+      google_user_id: session_data[:google_user_id],
+      provider_uid: session_data[:provider_uid],
+      name: session_data[:name] || "",
       terms_accepted: get_terms_accepted(params)
     }
   end
@@ -347,6 +347,8 @@ defmodule TymeslotWeb.OAuthController do
 
   @spec handle_oauth_user_creation(Plug.Conn.t(), map(), map()) :: Plug.Conn.t()
   defp handle_oauth_user_creation(conn, user, oauth_data) do
+    conn = delete_session(conn, :pending_oauth_registration)
+
     if Map.get(user, :needs_email_verification, false) do
       handle_email_verification_flow(conn, user, oauth_data)
     else
@@ -444,25 +446,8 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   @spec redirect_to_registration_with_error(Plug.Conn.t(), any(), map()) :: Plug.Conn.t()
-  defp redirect_to_registration_with_error(conn, error, params) do
-    # Fix the email_from_provider flag when email is actually missing/empty
-    email = params["oauth_email"]
-    email_actually_provided = email && String.trim(email) != ""
-
-    # Build query params to maintain OAuth data and show error
-    query_params =
-      params
-      |> Map.take([
-        "oauth_provider",
-        "oauth_verified",
-        "oauth_email",
-        "oauth_github_id",
-        "oauth_google_id",
-        "oauth_provider_uid",
-        "oauth_name"
-      ])
-      |> Map.put("oauth_email_from_provider", to_string(email_actually_provided))
-      |> Map.put("error", format_error_for_params(error))
+  defp redirect_to_registration_with_error(conn, error, _params) do
+    query_params = %{"error" => format_error_for_params(error)}
 
     conn
     |> put_flash(:error, format_error_for_flash(error))
@@ -523,8 +508,10 @@ defmodule TymeslotWeb.OAuthController do
     |> redirect(to: paths[:success_path])
   end
 
-  defp respond_to_oauth_result({:registration_required, state_conn, _provider, params}, _paths) do
-    redirect(state_conn, to: ~p"/auth/complete-registration?#{params}")
+  defp respond_to_oauth_result({:registration_required, state_conn, _provider, data}, _paths) do
+    state_conn
+    |> put_session(:pending_oauth_registration, data)
+    |> redirect(to: ~p"/auth/complete-registration")
   end
 
   defp respond_to_oauth_result({:error, :invalid_state, flow_conn}, paths) do

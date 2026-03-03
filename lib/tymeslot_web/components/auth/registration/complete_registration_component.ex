@@ -28,9 +28,6 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
           class="space-y-3 sm:space-y-4"
           action={~p"/auth/complete"}
         >
-          <!-- Hidden OAuth fields -->
-          <.oauth_hidden_fields temp_user={@temp_user} />
-
           <.full_name_input />
           <.email_input email_required={@email_required} temp_user={@temp_user} />
           <%= if Application.get_env(:tymeslot, :enforce_legal_agreements, false) do %>
@@ -81,26 +78,4 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
     """
   end
 
-  defp oauth_hidden_fields(assigns) do
-    ~H"""
-    <div>
-      <input type="hidden" name="oauth_provider" value={@temp_user.provider} />
-      <input type="hidden" name="oauth_verified" value={to_string(@temp_user.verified_email)} />
-      <input type="hidden" name="oauth_email" value={@temp_user.email} />
-      <input type="hidden" name="oauth_email_from_provider" value="true" />
-      <%= if @temp_user[:name] do %>
-        <input type="hidden" name="oauth_name" value={@temp_user.name} />
-      <% end %>
-      <%= if @temp_user.github_user_id do %>
-        <input type="hidden" name="oauth_github_id" value={@temp_user.github_user_id} />
-      <% end %>
-      <%= if @temp_user.google_user_id do %>
-        <input type="hidden" name="oauth_google_id" value={@temp_user.google_user_id} />
-      <% end %>
-      <%= if @temp_user[:provider_uid] do %>
-        <input type="hidden" name="oauth_provider_uid" value={@temp_user.provider_uid} />
-      <% end %>
-    </div>
-    """
-  end
 end

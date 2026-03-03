@@ -72,20 +72,28 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
         |> validate_reset_token(params["token"])
 
       :complete_registration ->
-        has_oauth_error = params["error"] != nil
+        case socket.assigns[:pending_oauth_registration] do
+          nil ->
+            socket
+            |> LiveView.put_flash(:error, "No pending registration found. Please sign in again.")
+            |> LiveView.redirect(to: "/auth/login")
 
-        socket
-        |> assign(:temp_user, %{
-          provider: params["oauth_provider"],
-          email: params["oauth_email"],
-          name: params["oauth_name"],
-          verified_email: params["oauth_verified"] == "true",
-          github_user_id: params["oauth_github_id"],
-          google_user_id: params["oauth_google_id"],
-          provider_uid: params["oauth_provider_uid"]
-        })
-        |> assign(:email_required, params["oauth_email_from_provider"] != "true")
-        |> assign(:has_oauth_error, has_oauth_error)
+          reg_data ->
+            has_oauth_error = params["error"] != nil
+
+            socket
+            |> assign(:temp_user, %{
+              provider: reg_data[:provider],
+              email: reg_data[:email],
+              name: reg_data[:name],
+              verified_email: reg_data[:is_verified] == true,
+              github_user_id: reg_data[:github_user_id],
+              google_user_id: reg_data[:google_user_id],
+              provider_uid: reg_data[:provider_uid]
+            })
+            |> assign(:email_required, reg_data[:email_from_provider] != true)
+            |> assign(:has_oauth_error, has_oauth_error)
+        end
 
       _other_state ->
         socket

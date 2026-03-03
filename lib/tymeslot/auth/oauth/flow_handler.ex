@@ -104,8 +104,8 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   defp handle_new_user_registration(conn, provider, user) do
     if Config.registration_enabled?() do
       case UserRegistration.check_oauth_requirements(provider, user) do
-        {:missing, missing_fields} ->
-          {:registration_required, conn, provider, build_modal_params(provider, user, missing_fields)}
+        {:missing, _missing_fields} ->
+          {:registration_required, conn, provider, build_registration_data(provider, user)}
 
         :complete ->
           # All required fields are present but no account exists yet. Route the
@@ -116,36 +116,25 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
             provider: to_string(provider)
           )
 
-          {:registration_required, conn, provider, build_modal_params(provider, user, [])}
+          {:registration_required, conn, provider, build_registration_data(provider, user)}
       end
     else
       {:error, :registration_disabled, provider, conn}
     end
   end
 
-  defp build_modal_params(provider, user, missing_fields) do
-    email_from_provider = user.email != nil and String.trim(user.email) != ""
+  defp build_registration_data(provider, user) do
+    email_from_provider = user.email != nil and String.trim(user.email || "") != ""
 
-    base_params = %{
-      "auth" => "oauth_complete",
-      "oauth_provider" => to_string(provider),
-      "oauth_missing" => Enum.join(missing_fields, ","),
-      "oauth_email" => user.email || "",
-      "oauth_verified" => to_string(user.is_verified),
-      "oauth_email_from_provider" => to_string(email_from_provider),
-      "oauth_name" => user.name || ""
+    %{
+      provider: to_string(provider),
+      email: user.email || "",
+      name: user.name || "",
+      is_verified: user.is_verified == true,
+      email_from_provider: email_from_provider,
+      provider_uid: to_string(Map.get(user, :provider_uid) || ""),
+      github_user_id: Map.get(user, :github_user_id),
+      google_user_id: Map.get(user, :google_user_id)
     }
-
-    add_provider_id_param(base_params, provider, user)
-  end
-
-  defp add_provider_id_param(params, :oauth, user) do
-    Map.put(params, "oauth_provider_uid", to_string(Map.get(user, :provider_uid) || ""))
-  end
-
-  defp add_provider_id_param(params, provider, user) do
-    key = "oauth_#{provider}_id"
-    value = to_string(Map.get(user, String.to_existing_atom("#{provider}_user_id")) || "")
-    Map.put(params, key, value)
   end
 end
