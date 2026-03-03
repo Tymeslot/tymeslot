@@ -3,7 +3,7 @@ defmodule Tymeslot.Auth.OAuth.ClientBehaviour do
   Behaviour for OAuth Client to allow mocking in tests.
   """
 
-  @type provider :: :github | :google
+  @type provider :: :github | :google | :oauth
 
   @callback build(provider, String.t(), String.t()) :: OAuth2.Client.t()
   @callback exchange_code_for_token(OAuth2.Client.t(), String.t()) ::

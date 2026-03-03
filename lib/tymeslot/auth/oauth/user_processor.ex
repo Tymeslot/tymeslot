@@ -3,7 +3,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   Processes user information returned from OAuth providers.
   """
 
-  @type provider :: :github | :google
+  @type provider :: :github | :google | :oauth
 
   @doc """
   Processes the raw user info from the provider into a normalized user map.
@@ -31,6 +31,21 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
       name: Map.get(user_info, "name"),
       is_verified: true,
       email_from_provider: true
+    }
+
+    {:ok, user}
+  end
+
+  def process_user(:oauth, %{"sub" => provider_uid} = user_info) do
+    email = extract_email(user_info)
+    email_from_provider = email != nil and String.trim(email) != ""
+
+    user = %{
+      email: email,
+      provider_uid: to_string(provider_uid),
+      name: Map.get(user_info, "name"),
+      is_verified: true,
+      email_from_provider: email_from_provider
     }
 
     {:ok, user}

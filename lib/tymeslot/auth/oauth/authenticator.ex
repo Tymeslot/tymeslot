@@ -10,13 +10,14 @@ defmodule Tymeslot.Auth.OAuth.Authenticator do
 
   alias Tymeslot.Auth.Session
 
-  @type provider :: :github | :google
+  @type provider :: :github | :google | :oauth
   @type registration_params :: %{
           provider: String.t(),
           email: String.t(),
           verified_email: boolean(),
           github_user_id: integer() | nil,
-          google_user_id: integer() | nil
+          google_user_id: integer() | nil,
+          provider_uid: String.t() | nil
         }
 
   @doc """

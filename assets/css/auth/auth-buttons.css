@@ -36,6 +36,10 @@
   @apply border-slate-200 bg-slate-100/30;
 }
 
+.btn-oauth-oauth:hover {
+  @apply border-indigo-100 bg-indigo-50/30;
+}
+
 /* Auth section divider */
 .auth-divider {
   @apply relative flex items-center my-6 w-full;

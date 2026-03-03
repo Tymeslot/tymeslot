@@ -486,7 +486,19 @@ config :tymeslot, registration_enabled: System.get_env("REGISTRATION_ENABLED", "
 # These environment variables control whether social login is enabled
 config :tymeslot, :social_auth,
   google_enabled: System.get_env("ENABLE_GOOGLE_AUTH", "false") == "true",
-  github_enabled: System.get_env("ENABLE_GITHUB_AUTH", "false") == "true"
+  github_enabled: System.get_env("ENABLE_GITHUB_AUTH", "false") == "true",
+  oauth_enabled: System.get_env("ENABLE_OAUTH_AUTH", "false") == "true"
+
+# Generic OAuth / OIDC Provider Configuration
+# For SSO authentication with any OAuth2/OIDC-compliant identity provider
+config :tymeslot, :oauth_provider,
+  client_id: System.get_env("OAUTH_CLIENT_ID"),
+  client_secret: System.get_env("OAUTH_CLIENT_SECRET"),
+  site: System.get_env("OAUTH_PROVIDER_URL"),
+  authorize_url: System.get_env("OAUTH_AUTHORIZE_URL"),
+  token_url: System.get_env("OAUTH_TOKEN_URL"),
+  userinfo_url: System.get_env("OAUTH_USERINFO_URL"),
+  scope: System.get_env("OAUTH_SCOPE", "openid email profile")
 
 # reCAPTCHA configuration (runtime)
 # Signup and booking protection are configurable and will automatically disable if keys are missing.

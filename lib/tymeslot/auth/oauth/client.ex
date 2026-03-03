@@ -8,7 +8,7 @@ defmodule Tymeslot.Auth.OAuth.Client do
 
   alias OAuth2.Client
 
-  @type provider :: :github | :google
+  @type provider :: :github | :google | :oauth
 
   @doc """
   Build an OAuth2 client for a provider with redirect_uri and state.
@@ -32,6 +32,22 @@ defmodule Tymeslot.Auth.OAuth.Client do
 
   def build(:google, redirect_uri, state) do
     config = google_oauth_config()
+
+    Client.new(
+      strategy: OAuth2.Strategy.AuthCode,
+      client_id: config.client_id,
+      client_secret: config.client_secret,
+      redirect_uri: redirect_uri,
+      site: config.site,
+      authorize_url: config.authorize_url,
+      token_url: config.token_url,
+      headers: [{"User-Agent", app_user_agent()}],
+      params: %{"state" => state}
+    )
+  end
+
+  def build(:oauth, redirect_uri, state) do
+    config = generic_oauth_config()
 
     Client.new(
       strategy: OAuth2.Strategy.AuthCode,
@@ -76,6 +92,15 @@ defmodule Tymeslot.Auth.OAuth.Client do
     }
   end
 
+  def with_auth_header(client, :oauth) do
+    access_token = parse_access_token(client.token.access_token)
+
+    %{
+      client
+      | headers: [{"User-Agent", app_user_agent()}, {"Authorization", "Bearer #{access_token}"}]
+    }
+  end
+
   @doc """
   Fetches user information from the provider.
   """
@@ -92,6 +117,11 @@ defmodule Tymeslot.Auth.OAuth.Client do
 
   defp user_info_url(:github), do: "https://api.github.com/user"
   defp user_info_url(:google), do: "https://www.googleapis.com/oauth2/v1/userinfo"
+
+  defp user_info_url(:oauth) do
+    config = Application.get_env(:tymeslot, :oauth_provider, [])
+    Keyword.fetch!(config, :userinfo_url)
+  end
 
   defp decode_oauth_body(body) when is_binary(body), do: Jason.decode(body)
   defp decode_oauth_body(body) when is_map(body), do: {:ok, body}
@@ -127,6 +157,18 @@ defmodule Tymeslot.Auth.OAuth.Client do
       site: "https://accounts.google.com",
       authorize_url: "https://accounts.google.com/o/oauth2/v2/auth",
       token_url: "https://oauth2.googleapis.com/token"
+    }
+  end
+
+  defp generic_oauth_config do
+    config = Application.get_env(:tymeslot, :oauth_provider, [])
+
+    %{
+      client_id: Keyword.get(config, :client_id),
+      client_secret: Keyword.get(config, :client_secret),
+      site: Keyword.get(config, :site),
+      authorize_url: Keyword.get(config, :authorize_url),
+      token_url: Keyword.get(config, :token_url)
     }
   end
 

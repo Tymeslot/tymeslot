@@ -85,6 +85,17 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
            half_open_requests: 1
          }},
         id: :oauth_google_breaker
+      ),
+      Supervisor.child_spec(
+        {Tymeslot.Infrastructure.CircuitBreaker,
+         name: :oauth_generic_breaker,
+         config: %{
+           failure_threshold: 3,
+           time_window: :timer.minutes(2),
+           recovery_timeout: :timer.minutes(5),
+           half_open_requests: 1
+         }},
+        id: :oauth_generic_breaker
       )
     ]
 

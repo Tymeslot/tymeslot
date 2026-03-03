@@ -12,7 +12,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   alias Tymeslot.Auth.Session
   alias Tymeslot.Infrastructure.Config
 
-  @type provider :: :github | :google
+  @type provider :: :github | :google | :oauth
   @type flow_result :: HelperBehaviour.flow_result()
 
   @doc """
@@ -126,15 +126,26 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   defp build_modal_params(provider, user, missing_fields) do
     email_from_provider = user.email != nil and String.trim(user.email) != ""
 
-    %{
+    base_params = %{
       "auth" => "oauth_complete",
       "oauth_provider" => to_string(provider),
       "oauth_missing" => Enum.join(missing_fields, ","),
       "oauth_email" => user.email || "",
       "oauth_verified" => to_string(user.is_verified),
       "oauth_email_from_provider" => to_string(email_from_provider),
-      "oauth_#{provider}_id" => to_string(Map.get(user, String.to_existing_atom("#{provider}_user_id")) || ""),
       "oauth_name" => user.name || ""
     }
+
+    add_provider_id_param(base_params, provider, user)
+  end
+
+  defp add_provider_id_param(params, :oauth, user) do
+    Map.put(params, "oauth_provider_uid", to_string(Map.get(user, :provider_uid) || ""))
+  end
+
+  defp add_provider_id_param(params, provider, user) do
+    key = "oauth_#{provider}_id"
+    value = to_string(Map.get(user, String.to_existing_atom("#{provider}_user_id")) || "")
+    Map.put(params, key, value)
   end
 end

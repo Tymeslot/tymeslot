@@ -8,7 +8,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.PubSub
 
-  @type provider :: :github | :google
+  @type provider :: :github | :google | :oauth
 
   @doc """
   Finds an existing user in the database by OAuth provider information.
@@ -35,6 +35,15 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
       google_id,
       email
     )
+  end
+
+  def find_existing_user(:oauth, %{provider_uid: uid} = user) do
+    user_queries = Config.user_queries_module()
+
+    case user_queries.get_user_by_provider("oauth", uid) do
+      {:ok, found_user} -> {:ok, found_user}
+      {:error, :not_found} -> find_user_by_email(user_queries, Map.get(user, :email))
+    end
   end
 
   @doc """
@@ -83,6 +92,10 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
 
   def registration_complete?(:google, %{email: email, google_user_id: id})
       when is_binary(email) and is_binary(id),
+      do: true
+
+  def registration_complete?(:oauth, %{email: email, provider_uid: uid})
+      when is_binary(email) and is_binary(uid),
       do: true
 
   def registration_complete?(_provider, _user_data), do: false
@@ -151,6 +164,21 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
     end
   end
 
+  defp build_auth_params(:oauth, oauth_user, email_verified, placeholder_password) do
+    %{
+      "provider" => "oauth",
+      "email" => oauth_user.email,
+      "is_verified" => email_verified,
+      "provider_uid" => Map.get(oauth_user, :provider_uid),
+      "terms_accepted" =>
+        if(Config.enforce_legal_agreements?(),
+          do: "true",
+          else: "false"
+        ),
+      "hashed_password" => placeholder_password
+    }
+  end
+
   defp build_auth_params(provider, oauth_user, email_verified, placeholder_password) do
     %{
       "provider" => to_string(provider),
@@ -172,6 +200,14 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   end
 
   defp handle_user_verification_status(user, _email_verified, _email), do: {:ok, user}
+
+  defp check_oauth_account_linking(:oauth, user, oauth_user) do
+    if Map.get(user, :provider_uid) == Map.get(oauth_user, :provider_uid) do
+      :should_link_account
+    else
+      :email_already_taken
+    end
+  end
 
   defp check_oauth_account_linking(provider, user, oauth_user) do
     provider_id_field = String.to_existing_atom("#{provider}_user_id")

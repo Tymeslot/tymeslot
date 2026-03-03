@@ -84,7 +84,7 @@ defmodule Tymeslot.Auth.ErrorFormatter do
   end
 
   defp format_oauth_error(:oauth_user) do
-    "This email is associated with a social login. Please use Google or GitHub to sign in."
+    "This email is associated with a social login. Please use your original sign-in method."
   end
 
   defp format_oauth_error(:user_already_exists) do

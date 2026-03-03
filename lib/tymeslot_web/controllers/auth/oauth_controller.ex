@@ -7,8 +7,7 @@ defmodule TymeslotWeb.OAuthController do
   require Logger
 
   alias Tymeslot.Auth.{AuthActions, Session, SocialAuthentication, Verification}
-  alias Tymeslot.Auth.OAuth.GitHub
-  alias Tymeslot.Auth.OAuth.Google
+  alias Tymeslot.Auth.OAuth.{GenericOAuth, GitHub, Google}
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
   alias Tymeslot.Auth.OAuth.URLs
   alias Tymeslot.Infrastructure.Config
@@ -26,6 +25,9 @@ defmodule TymeslotWeb.OAuthController do
 
   def request(conn, %{"provider" => "google"} = params),
     do: dispatch_request(conn, :google, params)
+
+  def request(conn, %{"provider" => "oauth"} = params),
+    do: dispatch_request(conn, :oauth, params)
 
   def request(conn, %{"provider" => provider}) do
     conn
@@ -61,11 +63,13 @@ defmodule TymeslotWeb.OAuthController do
     case provider_atom do
       :github -> Keyword.get(social_auth_config, :github_enabled, false)
       :google -> Keyword.get(social_auth_config, :google_enabled, false)
+      :oauth -> Keyword.get(social_auth_config, :oauth_enabled, false)
     end
   end
 
   defp do_provider_auth(conn, :github, params), do: github_auth(conn, params)
   defp do_provider_auth(conn, :google, params), do: google_auth(conn, params)
+  defp do_provider_auth(conn, :oauth, params), do: oauth_auth(conn, params)
 
   defp disabled_redirect(conn, provider_atom) do
     conn
@@ -114,6 +118,26 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   @doc """
+  Initiates generic OAuth/OIDC authentication flow.
+  """
+  @spec oauth_auth(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def oauth_auth(conn, _params) do
+    case RateLimiter.check_oauth_initiation_rate_limit(ClientIP.get(conn)) do
+      :ok ->
+        redirect_uri = URLs.callback_url(conn, "/auth/oauth/callback")
+        {updated_conn, authorize_url} = GenericOAuth.authorize_url(conn, redirect_uri)
+        redirect(updated_conn, external: authorize_url)
+
+      {:error, :rate_limited, _message} ->
+        AuthControllerHelpers.handle_rate_limited(
+          conn,
+          "Too many OAuth attempts. Please try again later.",
+          ~p"/auth/login"
+        )
+    end
+  end
+
+  @doc """
   Generic OAuth callback handler that dispatches to provider-specific functions.
   """
   @spec callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
@@ -123,6 +147,10 @@ defmodule TymeslotWeb.OAuthController do
 
   def callback(conn, %{"provider" => "google"} = params) do
     google_callback(conn, Map.delete(params, "provider"))
+  end
+
+  def callback(conn, %{"provider" => "oauth"} = params) do
+    oauth_callback(conn, Map.delete(params, "provider"))
   end
 
   def callback(conn, %{"provider" => provider}) do
@@ -169,6 +197,22 @@ defmodule TymeslotWeb.OAuthController do
     |> put_flash(
       :error,
       "Google authentication failed - missing authorization code or security token."
+    )
+    |> redirect(to: ~p"/?auth=login")
+  end
+
+  @doc """
+  Handles generic OAuth/OIDC callback.
+  """
+  @spec oauth_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def oauth_callback(conn, %{"code" => code, "state" => state}),
+    do: handle_provider_callback(conn, :oauth, code, state)
+
+  def oauth_callback(conn, _params) do
+    conn
+    |> put_flash(
+      :error,
+      "SSO authentication failed - missing authorization code or security token."
     )
     |> redirect(to: ~p"/?auth=login")
   end
@@ -286,6 +330,7 @@ defmodule TymeslotWeb.OAuthController do
       email_from_provider: email_from_provider,
       github_user_id: params["oauth_github_id"],
       google_user_id: params["oauth_google_id"],
+      provider_uid: params["oauth_provider_uid"],
       name: params["oauth_name"] || "",
       terms_accepted: get_terms_accepted(params)
     }
@@ -413,6 +458,7 @@ defmodule TymeslotWeb.OAuthController do
         "oauth_email",
         "oauth_github_id",
         "oauth_google_id",
+        "oauth_provider_uid",
         "oauth_name"
       ])
       |> Map.put("oauth_email_from_provider", to_string(email_actually_provided))
@@ -516,6 +562,7 @@ defmodule TymeslotWeb.OAuthController do
 
   defp provider_name(:github), do: "GitHub"
   defp provider_name(:google), do: "Google"
+  defp provider_name(:oauth), do: "SSO"
 
   @spec get_redirect_paths(Plug.Conn.t()) :: keyword()
   defp get_redirect_paths(conn) do
@@ -548,11 +595,12 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   @spec validate_oauth_provider(String.t() | nil) ::
-          {:ok, :github | :google} | {:error, :unsupported_oauth_provider}
+          {:ok, :github | :google | :oauth} | {:error, :unsupported_oauth_provider}
   defp validate_oauth_provider(provider) do
     case provider do
       "github" -> {:ok, :github}
       "google" -> {:ok, :google}
+      "oauth" -> {:ok, :oauth}
       _unsupported -> {:error, :unsupported_oauth_provider}
     end
   end

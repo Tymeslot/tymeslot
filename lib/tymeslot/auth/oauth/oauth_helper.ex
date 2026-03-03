@@ -23,7 +23,7 @@ defmodule Tymeslot.Auth.OAuth.Helper do
     UserRegistration
   }
 
-  @type provider :: :github | :google
+  @type provider :: :github | :google | :oauth
   @type oauth_client :: OAuth2.Client.t()
 
   # --- Client & Token ---

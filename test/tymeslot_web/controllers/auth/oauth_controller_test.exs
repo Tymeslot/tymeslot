@@ -101,6 +101,33 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Too many OAuth attempts"
     end
+
+    test "initiates generic oauth auth when enabled", %{conn: conn} do
+      Application.put_env(:tymeslot, :social_auth, oauth_enabled: true)
+
+      Application.put_env(:tymeslot, :oauth_provider,
+        client_id: "test-id",
+        client_secret: "test-secret",
+        site: "https://idp.example.com",
+        authorize_url: "https://idp.example.com/authorize",
+        token_url: "https://idp.example.com/token",
+        userinfo_url: "https://idp.example.com/userinfo",
+        scope: "openid email profile"
+      )
+
+      conn = get(conn, ~p"/auth/oauth")
+
+      assert redirected_to(conn) =~ "idp.example.com/authorize"
+    end
+
+    test "redirects if generic oauth provider disabled", %{conn: conn} do
+      Application.put_env(:tymeslot, :social_auth, oauth_enabled: false)
+
+      conn = get(conn, ~p"/auth/oauth")
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) =~ "SSO authentication is not available"
+    end
   end
 
   describe "GET /auth/:provider/callback" do
@@ -245,6 +272,25 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       assert redirected_to(conn) == "/?auth=login"
       assert Flash.get(conn.assigns.flash, :info) =~ "Registration is currently disabled"
+    end
+
+    test "successful generic oauth callback redirects to dashboard", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :oauth} ->
+        {:ok, conn, :oauth}
+      end)
+
+      conn = get(conn, ~p"/auth/oauth/callback", %{"code" => "code", "state" => "state"})
+
+      assert Flash.get(conn.assigns.flash, :info) == "Successfully signed in with SSO."
+      assert String.starts_with?(redirected_to(conn), "/")
+    end
+
+    test "generic oauth callback without code redirects with error", %{conn: conn} do
+      conn = get(conn, ~p"/auth/oauth/callback", %{"state" => "some_state"})
+
+      assert redirected_to(conn) == "/?auth=login"
+      assert Flash.get(conn.assigns.flash, :error) =~ "SSO authentication failed"
     end
   end
 
@@ -394,6 +440,32 @@ defmodule TymeslotWeb.OAuthControllerTest do
       conn = post(conn, ~p"/auth/complete", %{"oauth_provider" => "github"})
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Too many registration attempts"
+    end
+
+    test "creates generic oauth user and logs in", %{conn: conn} do
+      user_data = %{
+        "oauth_provider" => "oauth",
+        "oauth_email" => "sso@example.com",
+        "oauth_provider_uid" => "sub-12345",
+        "oauth_name" => "SSO User",
+        "terms_accepted" => "on"
+      }
+
+      :meck.expect(OAuthHelper, :create_oauth_user, fn :oauth, _data, _profile, _opts ->
+        user =
+          Factory.insert(:user,
+            email: "sso@example.com",
+            provider: "oauth",
+            provider_uid: "sub-12345"
+          )
+
+        {:ok, user}
+      end)
+
+      conn = post(conn, ~p"/auth/complete", user_data)
+
+      assert redirected_to(conn) == "/dashboard"
+      assert Flash.get(conn.assigns.flash, :info) =~ "Successfully signed up"
     end
 
     test "redirects to login with info flash when registration is disabled", %{conn: conn} do

@@ -130,6 +130,14 @@ defmodule Tymeslot.AuthTestHelpers do
   end
 
   @doc """
+  Creates a generic OAuth/SSO user using the provider/provider_uid columns.
+  """
+  @spec create_generic_oauth_user(map()) :: term()
+  def create_generic_oauth_user(attrs \\ %{}) do
+    create_oauth_user("oauth", attrs)
+  end
+
+  @doc """
   Triggers account lockout for a user.
   """
   @spec trigger_account_lockout(term()) :: term()

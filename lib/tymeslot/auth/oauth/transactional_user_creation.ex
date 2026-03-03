@@ -179,6 +179,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     case provider do
       :github -> UserQueries.get_user_by_github_id(provider_uid, repo)
       :google -> UserQueries.get_user_by_google_id(provider_uid, repo)
+      :oauth -> UserQueries.get_user_by_provider("oauth", provider_uid, repo)
       _other -> {:error, :not_found}
     end
   end
@@ -217,11 +218,13 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     case provider do
       :github -> %{github_user_id: provider_uid}
       :google -> %{google_user_id: provider_uid}
+      :oauth -> %{provider: "oauth", provider_uid: provider_uid}
       _other -> %{}
     end
   end
 
   defp provider_uid_field(:github), do: "github_user_id"
   defp provider_uid_field(:google), do: "google_user_id"
+  defp provider_uid_field(:oauth), do: "provider_uid"
   defp provider_uid_field(_arg), do: nil
 end

@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
       p when p in ["mirotalk", "google_meet", "teams", "custom", "in_person", "local", "none"] ->
         "video"
 
-      "github" ->
+      p when p in ["github", "oauth"] ->
         "oauth"
 
       "google" ->

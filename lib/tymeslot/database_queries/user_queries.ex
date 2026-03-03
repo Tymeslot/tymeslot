@@ -394,6 +394,20 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
   end
 
   @doc """
+  Gets a user by provider and provider uid using a specific repo (for transactions).
+  Returns {:ok, user} if found, {:error, :not_found} otherwise.
+  """
+  @spec get_user_by_provider(String.t(), String.t(), Ecto.Repo.t()) ::
+          {:ok, UserSchema.t()} | {:error, :not_found}
+  def get_user_by_provider(provider, provider_uid, repo)
+      when is_binary(provider) and is_binary(provider_uid) do
+    case repo.get_by(UserSchema, provider: provider, provider_uid: provider_uid) do
+      nil -> {:error, :not_found}
+      user -> {:ok, user}
+    end
+  end
+
+  @doc """
   Gets a user by GitHub ID using a specific repo (for transactions).
   Returns {:ok, user} if found, {:error, :not_found} otherwise.
   """

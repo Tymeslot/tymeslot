@@ -108,6 +108,16 @@ defmodule Tymeslot.Auth.SocialAuthenticationTest do
       assert {:error, :invalid_provider} =
                SocialAuthentication.validate_provider_response(params)
     end
+
+    test "returns :ok for valid generic OAuth provider response" do
+      params = %{
+        "email" => "sso@example.com",
+        "provider" => "oauth",
+        "verified_email" => true
+      }
+
+      assert :ok = SocialAuthentication.validate_provider_response(params)
+    end
   end
 
   describe "check_email_availability/1" do
@@ -306,6 +316,36 @@ defmodule Tymeslot.Auth.SocialAuthenticationTest do
 
       assert user.email == "github@example.com"
       assert user.github_user_id == "gh456"
+      assert message =~ "Welcome"
+    end
+
+    test "successfully finalizes registration for generic OAuth user" do
+      auth_params = %{
+        "email" => "sso@example.com",
+        "provider" => "oauth",
+        "verified_email" => true,
+        "provider_uid" => "sub-789"
+      }
+
+      profile_params = %{full_name: "SSO User"}
+
+      temp_user = %{
+        provider: "oauth",
+        email: "sso@example.com",
+        verified_email: true,
+        provider_uid: "sub-789"
+      }
+
+      assert {:ok, user, message} =
+               SocialAuthentication.finalize_social_login_registration(
+                 auth_params,
+                 profile_params,
+                 temp_user
+               )
+
+      assert user.email == "sso@example.com"
+      assert user.provider == "oauth"
+      assert user.provider_uid == "sub-789"
       assert message =~ "Welcome"
     end
   end
