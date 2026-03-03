@@ -83,16 +83,7 @@ defmodule Tymeslot.Auth.OAuth.Client do
     }
   end
 
-  def with_auth_header(client, :google) do
-    access_token = parse_access_token(client.token.access_token)
-
-    %{
-      client
-      | headers: [{"User-Agent", app_user_agent()}, {"Authorization", "Bearer #{access_token}"}]
-    }
-  end
-
-  def with_auth_header(client, :oauth) do
+  def with_auth_header(client, provider) when provider in [:google, :oauth] do
     access_token = parse_access_token(client.token.access_token)
 
     %{

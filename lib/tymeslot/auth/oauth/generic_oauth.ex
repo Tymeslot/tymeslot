@@ -12,7 +12,7 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuth do
   require Logger
 
   alias OAuth2.Client
-  alias Tymeslot.Auth.OAuth.{Authenticator, Helper}
+  alias Tymeslot.Auth.OAuth.Helper
 
   @doc """
   Returns the generic OAuth authorization URL with secure state parameter.
@@ -29,7 +29,8 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuth do
   @doc """
   Handles the OAuth callback.
   """
-  @spec handle_callback(Plug.Conn.t(), String.t(), String.t(), String.t()) :: Plug.Conn.t()
+  @spec handle_callback(Plug.Conn.t(), String.t(), String.t(), String.t()) ::
+          Tymeslot.Auth.OAuth.HelperBehaviour.flow_result()
   def handle_callback(conn, code, state, _redirect_uri) do
     oauth_helper().handle_oauth_callback(conn, %{
       code: code,
@@ -60,32 +61,6 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuth do
   """
   @spec registration_complete?(map()) :: boolean()
   def registration_complete?(user), do: oauth_helper().registration_complete?(:oauth, user)
-
-  @doc """
-  Complete generic OAuth authentication flow.
-  """
-  @spec authenticate(Plug.Conn.t(), String.t()) ::
-          {:ok, Plug.Conn.t(), String.t()}
-          | {:ok, Plug.Conn.t(), :incomplete_registration, map()}
-          | {:error, Plug.Conn.t(), atom(), String.t()}
-  def authenticate(conn, code) do
-    Authenticator.authenticate(
-      conn,
-      code,
-      :oauth,
-      get_callback_url(),
-      &process_user/1,
-      &registration_complete?/1,
-      fn user ->
-        %{
-          provider: "oauth",
-          email: user.email,
-          verified_email: user.is_verified,
-          provider_uid: user.provider_uid
-        }
-      end
-    )
-  end
 
   defp oauth_helper do
     Application.get_env(:tymeslot, :oauth_helper_module, Helper)

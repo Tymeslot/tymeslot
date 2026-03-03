@@ -3,6 +3,8 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   Processes user information returned from OAuth providers.
   """
 
+  alias Tymeslot.Auth.OAuth.Client
+
   @type provider :: :github | :google | :oauth
 
   @doc """
@@ -85,6 +87,19 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
     end
   end
 
+  @doc """
+  Fetches the authenticated user's email addresses from the GitHub API.
+  """
+  @spec get_github_user_emails(OAuth2.Client.t()) :: {:ok, list(map())} | {:error, any()}
+  def get_github_user_emails(client) do
+    client = Client.with_auth_header(client, :github)
+
+    case OAuth2.Client.get(client, "https://api.github.com/user/emails") do
+      {:ok, %OAuth2.Response{body: body}} -> parse_user_emails_body(body)
+      err -> err
+    end
+  end
+
   # Private helpers
 
   defp extract_email(user_info) do
@@ -92,19 +107,6 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
       nil -> nil
       "" -> nil
       email when is_binary(email) -> email
-    end
-  end
-
-  defp get_github_user_emails(client) do
-    # This logic is currently in OauthHelper, but we can move it here or keep it delegated.
-    # For now, let's assume we'll use the one in Client if we move it there,
-    # but since OauthHelper is the one being refactored, we'll implement it here for now.
-    alias Tymeslot.Auth.OAuth.Client
-    client = Client.with_auth_header(client, :github)
-
-    case OAuth2.Client.get(client, "https://api.github.com/user/emails") do
-      {:ok, %OAuth2.Response{body: body}} -> parse_user_emails_body(body)
-      err -> err
     end
   end
 

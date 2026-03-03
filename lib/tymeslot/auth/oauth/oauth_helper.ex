@@ -61,19 +61,8 @@ defmodule Tymeslot.Auth.OAuth.Helper do
 
   @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def get_github_user_emails(client) do
-    # Delegating to UserProcessor which now handles this logic
-    # But for the sake of the behaviour, we keep it here.
-    client = Client.with_auth_header(client, :github)
-
-    case OAuth2.Client.get(client, "https://api.github.com/user/emails") do
-      {:ok, %OAuth2.Response{body: body}} -> decode_oauth_body(body)
-      err -> err
-    end
+    UserProcessor.get_github_user_emails(client)
   end
-
-  defp decode_oauth_body(body) when is_binary(body), do: Jason.decode(body)
-  defp decode_oauth_body(body) when is_map(body), do: {:ok, body}
-  defp decode_oauth_body(other), do: {:error, {:unexpected_body, other}}
 
   @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def process_user(provider, user_info) do
