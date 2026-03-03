@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "0.99.11",
+      version: "0.99.12",
       elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -152,7 +152,8 @@ defmodule Tymeslot.MixProject do
         "tailwind quill",
         "tailwind rhythm",
         "esbuild tymeslot",
-        "esbuild bundles"
+        "esbuild bundles",
+        "esbuild embed"
       ],
       "assets.deploy": [
         "tailwind tymeslot --minify",
@@ -160,6 +161,7 @@ defmodule Tymeslot.MixProject do
         "tailwind rhythm --minify",
         "esbuild tymeslot --minify",
         "esbuild bundles --minify",
+        "esbuild embed --minify",
         "phx.digest"
       ]
     ]

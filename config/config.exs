@@ -165,6 +165,11 @@ config :esbuild,
         --external:/fonts/* --external:/images/*),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ],
+  embed: [
+    args: ~w(js/embed.js --bundle --target=es2017 --outfile=../priv/static/embed.js),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
 
 # Configure tailwind
