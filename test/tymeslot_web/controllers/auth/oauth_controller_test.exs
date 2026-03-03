@@ -144,32 +144,32 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert String.starts_with?(redirected_to(conn), "/")
     end
 
-    test "registration required: redirects to /auth/complete-registration with params", %{conn: conn} do
-      registration_params = %{
-        "auth" => "oauth_complete",
-        "oauth_provider" => "github",
-        "oauth_email" => "user@example.com",
-        "oauth_missing" => "name"
+    test "registration required: stores data in session and redirects to /auth/complete-registration", %{conn: conn} do
+      registration_data = %{
+        provider: "github",
+        email: "user@example.com",
+        name: "Test User",
+        is_verified: true,
+        email_from_provider: true,
+        provider_uid: "",
+        github_user_id: 123,
+        google_user_id: nil
       }
 
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
                                                            %{code: "code", state: "state", provider: :github} ->
-        {:registration_required, conn, :github, registration_params}
+        {:registration_required, conn, :github, registration_data}
       end)
 
       conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
 
-      location = redirected_to(conn)
-      assert String.starts_with?(location, "/auth/complete-registration?")
-      query = location |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
-      assert query["auth"] == "oauth_complete"
-      assert query["oauth_provider"] == "github"
+      assert redirected_to(conn) == "/auth/complete-registration"
     end
 
     test "registration_path query param is ignored; always redirects to /auth/complete-registration", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
                                                            %{code: "code", state: "state", provider: :github} ->
-        {:registration_required, conn, :github, %{"auth" => "oauth_complete", "oauth_provider" => "github"}}
+        {:registration_required, conn, :github, %{provider: "github", email: "u@e.com"}}
       end)
 
       conn =
@@ -179,7 +179,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
           "registration_path" => "/custom/registration"
         })
 
-      assert String.starts_with?(redirected_to(conn), "/auth/complete-registration")
+      assert redirected_to(conn) == "/auth/complete-registration"
     end
 
     test "invalid state: puts security error flash and redirects to login", %{conn: conn} do
@@ -308,12 +308,15 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "creates user and logs in", %{conn: conn} do
-      user_data = %{
-        "oauth_provider" => "github",
-        "oauth_email" => "new@example.com",
-        "oauth_github_id" => "12345",
-        "oauth_name" => "New User",
-        "terms_accepted" => "on"
+      session_data = %{
+        provider: "github",
+        email: "new@example.com",
+        name: "New User",
+        is_verified: true,
+        email_from_provider: true,
+        provider_uid: "",
+        github_user_id: 12345,
+        google_user_id: nil
       }
 
       :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
@@ -321,7 +324,10 @@ defmodule TymeslotWeb.OAuthControllerTest do
         {:ok, user}
       end)
 
-      conn = post(conn, ~p"/auth/complete", user_data)
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/dashboard"
       assert Flash.get(conn.assigns.flash, :info) =~ "Successfully signed up"
@@ -330,38 +336,48 @@ defmodule TymeslotWeb.OAuthControllerTest do
     test "requires terms acceptance when enforced", %{conn: conn} do
       Application.put_env(:tymeslot, :enforce_legal_agreements, true)
 
-      user_data = %{
-        "oauth_provider" => "github",
-        "oauth_email" => "new@example.com",
-        "oauth_github_id" => "12345"
+      session_data = %{
+        provider: "github",
+        email: "new@example.com",
+        is_verified: true,
+        email_from_provider: true,
+        github_user_id: 12345
       }
 
-      conn = post(conn, ~p"/auth/complete", user_data)
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{})
 
       assert redirected_to(conn) =~ "/auth/complete-registration"
       assert Flash.get(conn.assigns.flash, :error) =~ "must accept the terms"
     end
 
     test "fails if email missing", %{conn: conn} do
-      user_data = %{
-        "oauth_provider" => "github",
-        "oauth_github_id" => "12345",
-        "terms_accepted" => "on"
+      session_data = %{
+        provider: "github",
+        email: nil,
+        is_verified: false,
+        email_from_provider: false,
+        github_user_id: 12345
       }
 
-      conn = post(conn, ~p"/auth/complete", user_data)
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) =~ "/auth/complete-registration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Email address is required"
     end
 
     test "creates user and requires email verification if needed", %{conn: conn} do
-      user_data = %{
-        "oauth_provider" => "github",
-        "oauth_email" => "unverified@example.com",
-        "oauth_github_id" => "12345",
-        "oauth_verified" => "false",
-        "terms_accepted" => "on"
+      session_data = %{
+        provider: "github",
+        email: "unverified@example.com",
+        is_verified: false,
+        email_from_provider: false,
+        github_user_id: 12345
       }
 
       :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
@@ -372,23 +388,26 @@ defmodule TymeslotWeb.OAuthControllerTest do
             verified_at: nil
           )
 
-        # Add the virtual field that the controller checks
         user = Map.put(user, :needs_email_verification, true)
         {:ok, user}
       end)
 
-      conn = post(conn, ~p"/auth/complete", user_data)
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{"auth" => %{"email" => "unverified@example.com"}, "terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/dashboard"
       assert Flash.get(conn.assigns.flash, :info) =~ "Please check your email to verify"
     end
 
     test "handles user creation failure with changeset", %{conn: conn} do
-      user_data = %{
-        "oauth_provider" => "github",
-        "oauth_email" => "fail@example.com",
-        "oauth_github_id" => "12345",
-        "terms_accepted" => "on"
+      session_data = %{
+        provider: "github",
+        email: "fail@example.com",
+        is_verified: true,
+        email_from_provider: true,
+        github_user_id: 12345
       }
 
       :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
@@ -396,40 +415,42 @@ defmodule TymeslotWeb.OAuthControllerTest do
         {:error, changeset}
       end)
 
-      conn = post(conn, ~p"/auth/complete", user_data)
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) =~ "/auth/complete-registration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Email address is required"
     end
 
     test "handles user creation failure with other errors", %{conn: conn} do
-      user_data = %{
-        "oauth_provider" => "github",
-        "oauth_email" => "error@example.com",
-        "oauth_github_id" => "12345",
-        "terms_accepted" => "on"
+      session_data = %{
+        provider: "github",
+        email: "error@example.com",
+        is_verified: true,
+        email_from_provider: true,
+        github_user_id: 12345
       }
 
       :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
         {:error, :user_creation_failed}
       end)
 
-      conn = post(conn, ~p"/auth/complete", user_data)
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Failed to create user account"
     end
 
-    test "rejects unsupported oauth_provider", %{conn: conn} do
-      user_data = %{
-        "oauth_provider" => "totally_new_provider",
-        "oauth_email" => "new@example.com"
-      }
-
-      conn = post(conn, ~p"/auth/complete", user_data)
+    test "redirects to login when no session data present", %{conn: conn} do
+      conn = post(conn, ~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/auth/login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Unsupported OAuth provider"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Missing OAuth provider information"
     end
 
     test "handles rate limited completion", %{conn: conn} do
@@ -437,18 +458,19 @@ defmodule TymeslotWeb.OAuthControllerTest do
         {:error, :rate_limited, "Too many attempts"}
       end)
 
-      conn = post(conn, ~p"/auth/complete", %{"oauth_provider" => "github"})
+      conn = post(conn, ~p"/auth/complete", %{})
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Too many registration attempts"
     end
 
     test "creates generic oauth user and logs in", %{conn: conn} do
-      user_data = %{
-        "oauth_provider" => "oauth",
-        "oauth_email" => "sso@example.com",
-        "oauth_provider_uid" => "sub-12345",
-        "oauth_name" => "SSO User",
-        "terms_accepted" => "on"
+      session_data = %{
+        provider: "oauth",
+        email: "sso@example.com",
+        name: "SSO User",
+        is_verified: true,
+        email_from_provider: true,
+        provider_uid: "sub-12345"
       }
 
       :meck.expect(OAuthHelper, :create_oauth_user, fn :oauth, _data, _profile, _opts ->
@@ -462,7 +484,10 @@ defmodule TymeslotWeb.OAuthControllerTest do
         {:ok, user}
       end)
 
-      conn = post(conn, ~p"/auth/complete", user_data)
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/dashboard"
       assert Flash.get(conn.assigns.flash, :info) =~ "Successfully signed up"
@@ -476,14 +501,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
         Application.put_env(:tymeslot, :registration_enabled, original_value)
       end)
 
-      user_data = %{
-        "oauth_provider" => "github",
-        "oauth_email" => "new@example.com",
-        "oauth_github_id" => "12345",
-        "terms_accepted" => "on"
-      }
+      session_data = %{provider: "github", email: "new@example.com", github_user_id: 12345}
 
-      conn = post(conn, ~p"/auth/complete", user_data)
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :info) =~ "Registration is currently disabled"

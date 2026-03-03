@@ -132,16 +132,14 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
       {:missing, [:email]}
     end)
 
-    assert {:registration_required, _conn, :github, params} = invoke_github_callback()
+    assert {:registration_required, _conn, :github, data} = invoke_github_callback()
 
-    assert params["auth"] == "oauth_complete"
-    assert params["oauth_provider"] == "github"
-    assert params["oauth_missing"] == "email"
-    assert params["oauth_email"] == ""
-    assert params["oauth_verified"] == "false"
-    assert params["oauth_email_from_provider"] == "false"
-    assert params["oauth_github_id"] == "123"
-    assert params["oauth_name"] == "New User"
+    assert data.provider == "github"
+    assert data.email == ""
+    assert data.is_verified == false
+    assert data.email_from_provider == false
+    assert data.github_user_id == 123
+    assert data.name == "New User"
   end
 
   test "returns {:registration_required, conn, provider, params} with empty missing_fields when data is complete" do
@@ -170,10 +168,10 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
       :complete
     end)
 
-    assert {:registration_required, _conn, :github, params} = invoke_github_callback()
+    assert {:registration_required, _conn, :github, data} = invoke_github_callback()
 
-    assert params["oauth_missing"] == ""
-    assert params["oauth_email"] == "complete@example.com"
+    assert data.email == "complete@example.com"
+    assert data.provider == "github"
   end
 
   test "returns {:error, :oauth_error, provider, conn} when provider returns OAuth2 error" do
@@ -270,16 +268,16 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
         :complete
       end)
 
-      assert {:registration_required, _conn, :oauth, params} =
+      assert {:registration_required, _conn, :oauth, data} =
                FlowHandler.handle_oauth_callback(base_conn(), %{
                  code: "code",
                  state: "state",
                  provider: :oauth
                })
 
-      assert params["oauth_provider"] == "oauth"
-      assert params["oauth_provider_uid"] == "new-user-789"
-      assert params["oauth_email"] == "new-sso@example.com"
+      assert data.provider == "oauth"
+      assert data.provider_uid == "new-user-789"
+      assert data.email == "new-sso@example.com"
     end
   end
 
