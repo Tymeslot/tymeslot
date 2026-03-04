@@ -34,7 +34,7 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
 
       {conn, state} = State.generate_and_store_state(conn)
 
-      stored_state = Conn.get_session(conn, "_oauth_state")
+      {stored_state, _timestamp} = Conn.get_session(conn, "_oauth_state")
       assert stored_state == state
     end
   end
