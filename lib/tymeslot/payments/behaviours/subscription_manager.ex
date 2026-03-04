@@ -31,6 +31,12 @@ defmodule Tymeslot.Payments.Behaviours.SubscriptionManager do
               metadata :: map()
             ) :: {:ok, map()} | {:error, term()}
 
+  @callback update_subscription_status(
+              stripe_customer_id :: String.t(),
+              status :: String.t(),
+              canceled_at :: DateTime.t() | nil
+            ) :: {:ok, struct()} | {:error, term()}
+
   @doc """
   Checks if branding should be shown for a user.
   """
