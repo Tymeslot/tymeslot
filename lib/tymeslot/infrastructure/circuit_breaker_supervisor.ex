@@ -10,23 +10,6 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
   alias Tymeslot.Integrations.Calendar.ProviderConfig, as: CalendarProviderConfig
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
 
-  # Query providers with circuit breaker enabled from ProviderConfig
-  @calendar_providers Enum.filter(
-                        CalendarProviderConfig.all_providers(),
-                        &CalendarProviderConfig.circuit_breaker_enabled?/1
-                      )
-  @calendar_breaker_names Enum.into(@calendar_providers, %{}, fn p ->
-                            {p, :"calendar_breaker_#{p}"}
-                          end)
-
-  # Query video providers with circuit breaker enabled from ProviderConfig
-  @video_providers Enum.filter(
-                     VideoProviderConfig.all_providers(),
-                     &VideoProviderConfig.circuit_breaker_enabled?/1
-                   )
-  @video_breaker_names Enum.into(@video_providers, %{}, fn p ->
-                         {p, :"video_breaker_#{p}"}
-                       end)
 
   @spec start_link(any()) :: Supervisor.on_start()
   def start_link(init_arg) do
@@ -94,28 +77,22 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
   end
 
   defp build_calendar_breakers do
-    Enum.map(@calendar_providers, fn provider ->
-      name = Map.fetch!(@calendar_breaker_names, provider)
-      # Use configuration from CalendarCircuitBreaker to avoid duplication
+    CalendarProviderConfig.all_providers()
+    |> Enum.filter(&CalendarProviderConfig.circuit_breaker_enabled?/1)
+    |> Enum.map(fn provider ->
+      name = :"calendar_breaker_#{provider}"
       config = CalendarCircuitBreaker.get_config(provider)
-
-      Supervisor.child_spec(
-        {Tymeslot.Infrastructure.CircuitBreaker, name: name, config: config},
-        id: name
-      )
+      Supervisor.child_spec({Tymeslot.Infrastructure.CircuitBreaker, name: name, config: config}, id: name)
     end)
   end
 
   defp build_video_breakers do
-    Enum.map(@video_providers, fn provider ->
-      name = Map.fetch!(@video_breaker_names, provider)
-      # Use configuration from VideoCircuitBreaker to avoid duplication
+    VideoProviderConfig.all_providers()
+    |> Enum.filter(&VideoProviderConfig.circuit_breaker_enabled?/1)
+    |> Enum.map(fn provider ->
+      name = :"video_breaker_#{provider}"
       config = VideoCircuitBreaker.get_config(provider)
-
-      Supervisor.child_spec(
-        {Tymeslot.Infrastructure.CircuitBreaker, name: name, config: config},
-        id: name
-      )
+      Supervisor.child_spec({Tymeslot.Infrastructure.CircuitBreaker, name: name, config: config}, id: name)
     end)
   end
 end
