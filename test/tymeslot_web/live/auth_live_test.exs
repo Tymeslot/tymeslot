@@ -213,14 +213,21 @@ defmodule TymeslotWeb.AuthLiveTest do
     end
 
     test "oauth and transient pages do not set a custom title or meta description", %{conn: conn} do
-      params = %{
-        "oauth_provider" => "github",
-        "oauth_email" => "oauth@example.com",
-        "oauth_verified" => "true",
-        "oauth_email_from_provider" => "true"
-      }
+      conn =
+        init_test_session(conn, %{
+          "pending_oauth_registration" => %{
+            provider: "github",
+            email: "oauth@example.com",
+            name: nil,
+            is_verified: true,
+            email_from_provider: true,
+            provider_uid: "12345",
+            github_user_id: nil,
+            google_user_id: nil
+          }
+        })
 
-      {:ok, view, html} = live(conn, ~p"/auth/complete-registration?#{params}")
+      {:ok, view, html} = live(conn, ~p"/auth/complete-registration")
       assert page_title(view) == "Schedule a Meeting · Tymeslot"
       refute html =~ ~s(<meta name="description")
     end
@@ -366,31 +373,43 @@ defmodule TymeslotWeb.AuthLiveTest do
   end
 
   describe "OAuth Completion" do
-    test "renders complete registration form with data from params", %{conn: conn} do
-      params = %{
-        "oauth_provider" => "github",
-        "oauth_email" => "oauth@example.com",
-        "oauth_verified" => "true",
-        "oauth_github_id" => "12345",
-        "oauth_email_from_provider" => "true"
-      }
+    test "renders complete registration form with session data", %{conn: conn} do
+      conn =
+        init_test_session(conn, %{
+          "pending_oauth_registration" => %{
+            provider: "github",
+            email: "oauth@example.com",
+            name: nil,
+            is_verified: true,
+            email_from_provider: true,
+            provider_uid: "12345",
+            github_user_id: "12345",
+            google_user_id: nil
+          }
+        })
 
-      {:ok, _view, html} = live(conn, ~p"/auth/complete-registration?#{params}")
+      {:ok, _view, html} = live(conn, ~p"/auth/complete-registration")
 
       assert html =~ "Complete Your Registration"
       assert html =~ "oauth@example.com"
     end
 
     test "successful OAuth completion", %{conn: conn} do
-      params = %{
-        "oauth_provider" => "github",
-        "oauth_email" => "oauth_new@example.com",
-        "oauth_verified" => "true",
-        "oauth_github_id" => "gh_new_123",
-        "oauth_email_from_provider" => "true"
-      }
+      conn =
+        init_test_session(conn, %{
+          "pending_oauth_registration" => %{
+            provider: "github",
+            email: "oauth_new@example.com",
+            name: nil,
+            is_verified: true,
+            email_from_provider: true,
+            provider_uid: "gh_new_123",
+            github_user_id: "gh_new_123",
+            google_user_id: nil
+          }
+        })
 
-      {:ok, view, _html} = live(conn, ~p"/auth/complete-registration?#{params}")
+      {:ok, view, _html} = live(conn, ~p"/auth/complete-registration")
 
       form =
         form(view, "#complete-registration-form", %{
