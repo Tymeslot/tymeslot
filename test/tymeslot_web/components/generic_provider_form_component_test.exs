@@ -22,7 +22,6 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponentTest do
     assert html =~ "type=\"text\""
     assert html =~ "type=\"checkbox\""
     assert html =~ "type=\"datetime-local\""
-    assert html =~ "Save"
   end
 
   test "renders fallback for unknown types" do

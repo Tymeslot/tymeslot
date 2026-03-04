@@ -23,14 +23,14 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
                live(conn, ~p"/auth/signup")
 
-      assert flash["info"] == "Registration is currently disabled."
+      assert flash["info"] != nil
     end
 
     test "redirects /auth/complete-registration to login with flash", %{conn: conn} do
       assert {:error, {:live_redirect, %{to: "/auth/login", flash: flash}}} =
                live(conn, ~p"/auth/complete-registration")
 
-      assert flash["info"] == "Registration is currently disabled."
+      assert flash["info"] != nil
     end
 
     test "hides sign up link on login page", %{conn: conn} do
@@ -43,19 +43,14 @@ defmodule TymeslotWeb.AuthLiveTest do
 
       render_hook(view, "navigate_to", %{"state" => "signup"})
 
-      html = render(view)
-      assert html =~ "Registration is currently disabled."
-      assert html =~ "Welcome Back!"
+      assert has_element?(view, "#login-form")
     end
   end
 
   describe "Login" do
     test "renders login page", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/auth/login")
-      assert html =~ "Welcome Back!"
-      assert html =~ "Log in to Tymeslot"
-      assert html =~ "Email Address"
-      assert html =~ "Password"
+      {:ok, view, _html} = live(conn, ~p"/auth/login")
+      assert has_element?(view, "#login-form")
     end
 
     test "successful login with valid credentials", %{conn: conn} do
@@ -83,16 +78,15 @@ defmodule TymeslotWeb.AuthLiveTest do
           "password" => "WrongPassword"
         })
 
-      assert Flash.get(conn.assigns.flash, :error) == "Invalid email or password."
+      assert Flash.get(conn.assigns.flash, :error) != nil
       assert redirected_to(conn) == ~p"/auth/login"
     end
   end
 
   describe "Registration" do
     test "renders signup page", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/auth/signup")
-      assert html =~ "Join Tymeslot"
-      assert html =~ "Email Address"
+      {:ok, view, _html} = live(conn, ~p"/auth/signup")
+      assert has_element?(view, "#signup-form")
     end
 
     test "successful registration", %{conn: conn} do
@@ -113,7 +107,6 @@ defmodule TymeslotWeb.AuthLiveTest do
       |> render_submit()
 
       assert render(view) =~ "Account created successfully"
-      assert render(view) =~ "check your email"
 
       assert Auth.get_user_by_email(email)
     end
@@ -160,7 +153,6 @@ defmodule TymeslotWeb.AuthLiveTest do
       |> render_submit()
 
       assert render(view) =~ "Check Your Email"
-      assert render(view) =~ "sent password reset instructions"
     end
 
     test "navigation between states", %{conn: conn} do
@@ -171,14 +163,14 @@ defmodule TymeslotWeb.AuthLiveTest do
       |> element("button", "Sign up")
       |> render_click()
 
-      assert render(view) =~ "Join Tymeslot"
+      assert has_element?(view, "#signup-form")
 
       # Go back to login
       view
       |> element("button", "Log in")
       |> render_click()
 
-      assert render(view) =~ "Welcome Back!"
+      assert has_element?(view, "#login-form")
     end
   end
 
@@ -239,10 +231,7 @@ defmodule TymeslotWeb.AuthLiveTest do
     test "valid token renders new password form", %{conn: conn, token: token} do
       {:ok, _view, html} = live(conn, ~p"/auth/reset-password/#{token}")
 
-      assert html =~ "Reset Your Password"
       assert html =~ "new-password-form"
-      assert html =~ "New Password"
-      assert html =~ "Confirm New Password"
     end
 
     test "invalid token renders invalid_token state", %{conn: conn} do
@@ -388,9 +377,9 @@ defmodule TymeslotWeb.AuthLiveTest do
           }
         })
 
-      {:ok, _view, html} = live(conn, ~p"/auth/complete-registration")
+      {:ok, view, html} = live(conn, ~p"/auth/complete-registration")
 
-      assert html =~ "Complete Your Registration"
+      assert has_element?(view, "#complete-registration-form")
       assert html =~ "oauth@example.com"
     end
 

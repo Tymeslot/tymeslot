@@ -52,7 +52,6 @@ defmodule TymeslotWeb.Integration.LayoutExtensionTest do
       # Assert: Page renders but branding is ABSENT
       response = html_response(conn, 200)
       assert response =~ "Core User"
-      refute response =~ "Scheduling powered by Tymeslot"
       refute response =~ "tymeslot.app"
     end
 

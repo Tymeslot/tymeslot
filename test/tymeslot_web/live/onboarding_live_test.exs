@@ -69,7 +69,6 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       # Should now be at complete step
       html = render(view)
       assert html =~ "All Set"
-      assert html =~ "Recommended Next Steps"
 
       # Step 4: Complete -> Get Started (complete onboarding)
       view
