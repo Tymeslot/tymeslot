@@ -44,7 +44,7 @@ defmodule Tymeslot.Auth.OAuth.Google do
     - {:error, conn, reason} - Authentication failed (e.g., invalid state)
   """
   @spec handle_callback(Plug.Conn.t(), String.t(), String.t(), String.t()) ::
-          Plug.Conn.t()
+          Tymeslot.Auth.OAuth.HelperBehaviour.flow_result()
   def handle_callback(conn, code, state, _redirect_uri) do
     oauth_helper().handle_oauth_callback(conn, %{
       code: code,

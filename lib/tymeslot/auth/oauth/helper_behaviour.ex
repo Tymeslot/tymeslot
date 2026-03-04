@@ -40,7 +40,7 @@ defmodule Tymeslot.Auth.OAuth.ProviderBehaviour do
   """
   @callback authorize_url(Plug.Conn.t(), String.t()) :: {Plug.Conn.t(), String.t()}
   @callback handle_callback(Plug.Conn.t(), String.t(), String.t(), String.t()) ::
-              Plug.Conn.t()
+              Tymeslot.Auth.OAuth.HelperBehaviour.flow_result()
   @callback process_user(map()) :: {:ok, map()} | {:error, any()}
   @callback registration_complete?(map()) :: boolean()
   @callback get_callback_url() :: String.t()

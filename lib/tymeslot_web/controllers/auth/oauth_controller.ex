@@ -57,7 +57,6 @@ defmodule TymeslotWeb.OAuthController do
       :github -> Keyword.get(social_auth_config, :github_enabled, false)
       :google -> Keyword.get(social_auth_config, :google_enabled, false)
       :oauth -> Keyword.get(social_auth_config, :oauth_enabled, false)
-      _other -> false
     end
   end
 
@@ -386,8 +385,6 @@ defmodule TymeslotWeb.OAuthController do
   defp format_error_for_params(:email_required), do: "email_required"
   defp format_error_for_params(:invalid_email), do: "invalid_email"
   defp format_error_for_params(:terms_not_accepted), do: "terms_not_accepted"
-
-  defp format_error_for_params(:email_already_taken), do: "email_already_taken"
 
   defp format_error_for_params(error_message) when is_binary(error_message) do
     "unknown_error"
