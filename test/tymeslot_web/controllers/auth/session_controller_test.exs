@@ -123,6 +123,41 @@ defmodule TymeslotWeb.SessionControllerTest do
     end
   end
 
+  describe "POST /auth/session — password auth disabled" do
+    setup do
+      original = Application.get_env(:tymeslot, :password_auth_enabled)
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :password_auth_enabled, original) end)
+
+      password = "Password1234!"
+
+      user =
+        Factory.insert(:user,
+          password: password,
+          password_hash: Password.hash_password(password),
+          verified_at: DateTime.utc_now()
+        )
+
+      %{user: user, password: password}
+    end
+
+    test "rejects password login and redirects with error flash", %{
+      conn: conn,
+      user: user,
+      password: password
+    } do
+      conn =
+        post(conn, ~p"/auth/session", %{
+          "email" => user.email,
+          "password" => password
+        })
+
+      assert redirected_to(conn) == "/auth/login"
+      assert Flash.get(conn.assigns.flash, :error) =~ "Password authentication is currently disabled"
+      refute get_session(conn, :user_token)
+    end
+  end
+
   describe "rate limiting — POST /auth/session" do
     setup do
       on_exit(fn -> RateLimiter.clear_all() end)

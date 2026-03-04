@@ -481,6 +481,7 @@ if config_env() in [:dev, :test] do
 end
 
 config :tymeslot, registration_enabled: System.get_env("REGISTRATION_ENABLED", "true") == "true"
+config :tymeslot, password_auth_enabled: System.get_env("PASSWORD_AUTH_ENABLED", "true") == "true"
 
 # Social Authentication Configuration
 # These environment variables control whether social login is enabled

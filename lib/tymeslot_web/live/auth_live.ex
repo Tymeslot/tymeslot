@@ -71,9 +71,17 @@ defmodule TymeslotWeb.AuthLive do
     Logger.info("AuthLive: navigate_to event received", state: state)
 
     cond do
+      state == "signup" and not Config.password_auth_enabled?() ->
+        Logger.info("AuthLive: signup navigation blocked (password auth disabled)")
+        {:noreply, put_flash(socket, :info, AuthActions.password_auth_disabled_message())}
+
       state == "signup" and not Config.registration_enabled?() ->
         Logger.info("AuthLive: signup navigation blocked (registration disabled)")
         {:noreply, put_flash(socket, :info, AuthActions.registration_disabled_message())}
+
+      state == "reset_password" and not Config.password_auth_enabled?() ->
+        Logger.info("AuthLive: reset_password navigation blocked (password auth disabled)")
+        {:noreply, put_flash(socket, :info, AuthActions.password_auth_disabled_message())}
 
       StateHelper.valid_state?(state) ->
         path = StateHelper.get_path_for_state(String.to_existing_atom(state))

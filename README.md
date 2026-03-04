@@ -291,6 +291,27 @@ How to set `REGISTRATION_ENABLED=false` depends on your deployment:
 | Railway | Set `REGISTRATION_ENABLED` to `false` in the Railway dashboard under Variables |
 | Cloudron | Set `REGISTRATION_ENABLED` to `false` in the Cloudron app settings |
 
+**Password Authentication Control**
+
+Disable email/password login entirely and require OAuth — useful for SSO-only deployments (Keycloak, Authentik, Google Workspace, etc.) where you want to enforce identity-provider authentication. Defaults to `true` (password auth enabled) when the variable is unset.
+
+When disabled:
+- The login form, sign-up page, and password reset flow are hidden
+- Direct `POST /auth/session` requests are rejected with an error redirect
+- Password-based registration and reset attempts return an informative error
+- OAuth login and registration continue to work normally
+- Existing users with passwords can still sign in via OAuth if configured
+
+How to set `PASSWORD_AUTH_ENABLED=false` depends on your deployment:
+
+| Deployment | How to set it |
+|---|---|
+| Local dev | Add `PASSWORD_AUTH_ENABLED=false` to your `.env` file and `export` it before starting the server, or run `export PASSWORD_AUTH_ENABLED=false` directly |
+| Docker Compose | Add `PASSWORD_AUTH_ENABLED=false` to your `.env` file — it is forwarded to the container automatically |
+| `docker run` | Pass `-e PASSWORD_AUTH_ENABLED=false`, or use `--env-file .env` to load your `.env` file |
+| Railway | Set `PASSWORD_AUTH_ENABLED` to `false` in the Railway dashboard under Variables |
+| Cloudron | Set `PASSWORD_AUTH_ENABLED` to `false` in the Cloudron app settings |
+
 **Report Vulnerabilities**
 
 Use our [contact page](https://tymeslot.app/contact) for security issues.

@@ -28,18 +28,32 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
   """
   @spec determine_auth_state(Phoenix.LiveView.Socket.t(), map(), String.t()) ::
           Phoenix.LiveView.Socket.t()
+  @password_reset_states [:reset_password, :reset_password_form, :reset_password_sent]
+
   def determine_auth_state(socket, params, uri) do
     state = get_auth_state_from_uri(uri, params)
     socket = assign(socket, :current_state, state)
 
-    if state in [:signup, :complete_registration] and not Config.registration_enabled?() do
-      socket
-      |> assign(:current_state, :login)
-      |> LiveView.put_flash(:info, AuthActions.registration_disabled_message())
-      |> LiveView.push_patch(to: "/auth/login")
-    else
-      socket
+    cond do
+      state == :signup and not Config.password_auth_enabled?() ->
+        redirect_to_login(socket, AuthActions.password_auth_disabled_message())
+
+      state in [:signup, :complete_registration] and not Config.registration_enabled?() ->
+        redirect_to_login(socket, AuthActions.registration_disabled_message())
+
+      state in @password_reset_states and not Config.password_auth_enabled?() ->
+        redirect_to_login(socket, AuthActions.password_auth_disabled_message())
+
+      true ->
+        socket
     end
+  end
+
+  defp redirect_to_login(socket, message) do
+    socket
+    |> assign(:current_state, :login)
+    |> LiveView.put_flash(:info, message)
+    |> LiveView.push_patch(to: "/auth/login")
   end
 
   @doc """

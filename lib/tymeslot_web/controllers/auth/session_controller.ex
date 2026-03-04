@@ -6,7 +6,7 @@ defmodule TymeslotWeb.SessionController do
   use TymeslotWeb, :controller
 
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.{Authentication, Session, Verification}
+  alias Tymeslot.Auth.{AuthActions, Authentication, Session, Verification}
   alias Tymeslot.Infrastructure.Config
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -17,7 +17,17 @@ defmodule TymeslotWeb.SessionController do
   This is called by LiveView after successful authentication to establish HTTP session.
   """
   @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def create(conn, %{"email" => email, "password" => password} = params) do
+  def create(conn, %{"email" => _email, "password" => _password} = params) do
+    if Config.password_auth_enabled?() do
+      do_create(conn, params)
+    else
+      conn
+      |> put_flash(:error, AuthActions.password_auth_disabled_message())
+      |> redirect(to: ~p"/auth/login")
+    end
+  end
+
+  defp do_create(conn, %{"email" => email, "password" => password} = params) do
     ip = ClientIP.get(conn)
     user_agent = List.first(get_req_header(conn, "user-agent"))
 
@@ -45,7 +55,6 @@ defmodule TymeslotWeb.SessionController do
         end
 
       {:error, :email_not_verified, message} ->
-        # Store unverified user info in session for resend functionality
         conn
         |> put_session(:unverified_user_id, get_unverified_user_id(email))
         |> put_session(:unverified_user_email, email)

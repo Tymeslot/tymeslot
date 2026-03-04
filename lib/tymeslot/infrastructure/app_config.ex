@@ -4,6 +4,7 @@ defmodule Tymeslot.Infrastructure.AppConfigBehaviour do
   """
 
   @callback registration_enabled?() :: boolean()
+  @callback password_auth_enabled?() :: boolean()
   @callback enforce_legal_agreements?() :: boolean()
   @callback show_marketing_links?() :: boolean()
   @callback logo_links_to_marketing?() :: boolean()
@@ -19,6 +20,11 @@ defmodule Tymeslot.Infrastructure.AppConfig do
   @impl Tymeslot.Infrastructure.AppConfigBehaviour
   def registration_enabled? do
     Application.get_env(:tymeslot, :registration_enabled, true)
+  end
+
+  @impl Tymeslot.Infrastructure.AppConfigBehaviour
+  def password_auth_enabled? do
+    Application.get_env(:tymeslot, :password_auth_enabled, true)
   end
 
   @impl Tymeslot.Infrastructure.AppConfigBehaviour

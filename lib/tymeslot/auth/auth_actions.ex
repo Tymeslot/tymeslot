@@ -16,12 +16,19 @@ defmodule Tymeslot.Auth.AuthActions do
   require Logger
 
   @registration_disabled_message "Registration is currently disabled."
+  @password_auth_disabled_message "Password authentication is currently disabled."
 
   @doc """
   Returns the user-facing message for when registration is disabled.
   """
   @spec registration_disabled_message() :: String.t()
   def registration_disabled_message, do: @registration_disabled_message
+
+  @doc """
+  Returns the user-facing message for when password authentication is disabled.
+  """
+  @spec password_auth_disabled_message() :: String.t()
+  def password_auth_disabled_message, do: @password_auth_disabled_message
 
   # OAuth Registration Actions
 
@@ -120,10 +127,10 @@ defmodule Tymeslot.Auth.AuthActions do
   @spec register_user(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, atom(), String.t()} | {:error, String.t()}
   def register_user(user_params, socket) do
-    if Config.registration_enabled?() do
-      do_register_user(user_params, socket)
-    else
-      {:error, @registration_disabled_message}
+    cond do
+      not Config.password_auth_enabled?() -> {:error, @password_auth_disabled_message}
+      not Config.registration_enabled?() -> {:error, @registration_disabled_message}
+      true -> do_register_user(user_params, socket)
     end
   end
 
@@ -159,6 +166,14 @@ defmodule Tymeslot.Auth.AuthActions do
   @spec request_password_reset(String.t(), term()) ::
           {:ok, atom(), String.t()} | {:error, String.t()}
   def request_password_reset(email, socket) do
+    if Config.password_auth_enabled?() do
+      do_request_password_reset(email, socket)
+    else
+      {:error, @password_auth_disabled_message}
+    end
+  end
+
+  defp do_request_password_reset(email, socket) do
     ip = safe_client_ip(socket)
 
     case PasswordReset.initiate_reset(email, socket_or_conn: socket, ip: ip) do
@@ -176,6 +191,14 @@ defmodule Tymeslot.Auth.AuthActions do
   @spec reset_password(String.t(), String.t(), String.t(), term()) ::
           {:ok, atom(), String.t()} | {:error, String.t()}
   def reset_password(token, password, password_confirmation, _socket) do
+    if Config.password_auth_enabled?() do
+      do_reset_password(token, password, password_confirmation)
+    else
+      {:error, @password_auth_disabled_message}
+    end
+  end
+
+  defp do_reset_password(token, password, password_confirmation) do
     case PasswordReset.reset_password(token, password, password_confirmation) do
       {:ok, _user, _message} ->
         {:ok, :password_reset_success,

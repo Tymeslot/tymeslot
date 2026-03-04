@@ -324,6 +324,70 @@ defmodule Tymeslot.Auth.AuthActionsTest do
     end
   end
 
+  describe "register_user/2 — password auth disabled" do
+    test "returns password auth error when password_auth_enabled is false" do
+      original = Application.get_env(:tymeslot, :password_auth_enabled)
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :password_auth_enabled, original) end)
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
+      }
+
+      assert {:error, "Password authentication is currently disabled."} =
+               AuthActions.register_user(%{"email" => "test@example.com"}, socket)
+    end
+
+    test "password auth error takes priority over registration disabled" do
+      original_password = Application.get_env(:tymeslot, :password_auth_enabled)
+      original_registration = Application.get_env(:tymeslot, :registration_enabled)
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      Application.put_env(:tymeslot, :registration_enabled, true)
+
+      on_exit(fn ->
+        Application.put_env(:tymeslot, :password_auth_enabled, original_password)
+        Application.put_env(:tymeslot, :registration_enabled, original_registration)
+      end)
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
+      }
+
+      assert {:error, "Password authentication is currently disabled."} =
+               AuthActions.register_user(%{"email" => "test@example.com"}, socket)
+    end
+  end
+
+  describe "request_password_reset/2 — password auth disabled" do
+    test "returns error when password_auth_enabled is false" do
+      original = Application.get_env(:tymeslot, :password_auth_enabled)
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :password_auth_enabled, original) end)
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
+      }
+
+      assert {:error, "Password authentication is currently disabled."} =
+               AuthActions.request_password_reset("test@example.com", socket)
+    end
+  end
+
+  describe "reset_password/4 — password auth disabled" do
+    test "returns error when password_auth_enabled is false" do
+      original = Application.get_env(:tymeslot, :password_auth_enabled)
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      on_exit(fn -> Application.put_env(:tymeslot, :password_auth_enabled, original) end)
+
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
+      }
+
+      assert {:error, "Password authentication is currently disabled."} =
+               AuthActions.reset_password("some-token", "NewPass123!", "NewPass123!", socket)
+    end
+  end
+
   describe "complete_oauth_registration/2" do
     test "returns error when registration is disabled" do
       original = Application.get_env(:tymeslot, :registration_enabled)

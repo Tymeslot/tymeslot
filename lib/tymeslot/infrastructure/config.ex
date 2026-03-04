@@ -121,6 +121,15 @@ defmodule Tymeslot.Infrastructure.Config do
   end
 
   @doc """
+  Checks if password-based authentication is enabled.
+  When disabled, only OAuth login flows are available.
+  """
+  @spec password_auth_enabled?() :: boolean()
+  def password_auth_enabled? do
+    app_config_module().password_auth_enabled?()
+  end
+
+  @doc """
   Checks if legal agreements should be enforced.
   """
   @spec enforce_legal_agreements?() :: boolean()
