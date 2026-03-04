@@ -5,6 +5,8 @@ defmodule Tymeslot.Auth.OAuth.State do
 
   import Plug.Conn
 
+  alias Plug.Crypto
+
   @state_session_key "_oauth_state"
   @state_ttl_seconds 600
 
@@ -31,17 +33,16 @@ defmodule Tymeslot.Auth.OAuth.State do
   def validate_state(conn, received_state) when is_binary(received_state) do
     case get_session(conn, @state_session_key) do
       {stored_state, timestamp} when is_binary(stored_state) ->
-        if Plug.Crypto.secure_compare(stored_state, received_state) and
+        if Crypto.secure_compare(stored_state, received_state) and
              not expired?(timestamp) do
           :ok
         else
           {:error, :invalid_state}
         end
 
-      # TODO(v0.99.16): Remove this clause after one release cycle. Pre-upgrade
-      # sessions stored bare strings without timestamps and have no TTL enforcement.
+      # Pre-upgrade sessions stored bare strings without timestamps and have no TTL enforcement.
       stored_state when is_binary(stored_state) ->
-        if Plug.Crypto.secure_compare(stored_state, received_state),
+        if Crypto.secure_compare(stored_state, received_state),
           do: :ok,
           else: {:error, :invalid_state}
 

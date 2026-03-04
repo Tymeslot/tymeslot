@@ -2,12 +2,14 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
   use ExUnit.Case, async: true
   @moduletag :auth
 
+  alias Plug.Conn
+  alias Plug.Test
   alias Tymeslot.Auth.OAuth.State
 
   defp build_conn do
     :get
-    |> Plug.Test.conn("/")
-    |> Plug.Test.init_test_session(%{})
+    |> Test.conn("/")
+    |> Test.init_test_session(%{})
   end
 
   describe "generate_and_store_state/1" do
@@ -16,7 +18,7 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
 
       assert is_binary(state)
       assert byte_size(state) > 0
-      assert {^state, timestamp} = Plug.Conn.get_session(conn, "_oauth_state")
+      assert {^state, timestamp} = Conn.get_session(conn, "_oauth_state")
       assert is_integer(timestamp)
     end
 
@@ -60,7 +62,7 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       expired_timestamp = System.system_time(:second) - 660
       state = "test-state"
 
-      conn = Plug.Conn.put_session(conn, "_oauth_state", {state, expired_timestamp})
+      conn = Conn.put_session(conn, "_oauth_state", {state, expired_timestamp})
 
       assert {:error, :invalid_state} = State.validate_state(conn, state)
     end
@@ -72,7 +74,7 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       recent_timestamp = System.system_time(:second) - 300
       state = "test-state"
 
-      conn = Plug.Conn.put_session(conn, "_oauth_state", {state, recent_timestamp})
+      conn = Conn.put_session(conn, "_oauth_state", {state, recent_timestamp})
 
       assert :ok = State.validate_state(conn, state)
     end
@@ -81,7 +83,7 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       conn = build_conn()
       state = "legacy-state-value"
 
-      conn = Plug.Conn.put_session(conn, "_oauth_state", state)
+      conn = Conn.put_session(conn, "_oauth_state", state)
 
       assert :ok = State.validate_state(conn, state)
     end
@@ -89,7 +91,7 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
     test "backward compat: rejects mismatched bare string state" do
       conn = build_conn()
 
-      conn = Plug.Conn.put_session(conn, "_oauth_state", "stored-value")
+      conn = Conn.put_session(conn, "_oauth_state", "stored-value")
 
       assert {:error, :invalid_state} = State.validate_state(conn, "different-value")
     end
@@ -106,7 +108,7 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       # 601 seconds ago — just past the 600-second TTL
       timestamp = System.system_time(:second) - 601
 
-      conn = Plug.Conn.put_session(conn, "_oauth_state", {state, timestamp})
+      conn = Conn.put_session(conn, "_oauth_state", {state, timestamp})
 
       assert {:error, :invalid_state} = State.validate_state(conn, state)
     end
@@ -116,7 +118,7 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       state = "boundary-state"
       timestamp = System.system_time(:second) - 600
 
-      conn = Plug.Conn.put_session(conn, "_oauth_state", {state, timestamp})
+      conn = Conn.put_session(conn, "_oauth_state", {state, timestamp})
 
       assert :ok = State.validate_state(conn, state)
     end
@@ -128,7 +130,7 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
 
       conn = State.clear_oauth_state(conn)
 
-      assert Plug.Conn.get_session(conn, "_oauth_state") == nil
+      assert Conn.get_session(conn, "_oauth_state") == nil
     end
   end
 end

@@ -4,6 +4,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
   alias Ecto.Changeset
   alias Phoenix.Flash
+  alias Plug.Test
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.DashboardCache
@@ -402,7 +403,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/dashboard"
@@ -422,7 +423,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{})
 
       assert redirected_to(conn) =~ "/auth/complete-registration"
@@ -440,7 +441,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) =~ "/auth/complete-registration"
@@ -470,7 +471,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{"auth" => %{"email" => "unverified@example.com"}, "terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/dashboard"
@@ -493,7 +494,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) =~ "/auth/complete-registration"
@@ -515,7 +516,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/auth/login"
@@ -562,7 +563,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/dashboard"
@@ -588,7 +589,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/dashboard"
@@ -605,7 +606,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/auth/login"
@@ -635,7 +636,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{
           "auth" => %{
             "provider" => "google",
@@ -666,7 +667,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{
           "auth" => %{"email" => "user-provided@example.com"},
           "terms_accepted" => "on"
@@ -687,7 +688,7 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       conn =
         conn
-        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> Test.init_test_session(%{pending_oauth_registration: session_data})
         |> post(~p"/auth/complete", %{"terms_accepted" => "on"})
 
       assert redirected_to(conn) == "/auth/login"
