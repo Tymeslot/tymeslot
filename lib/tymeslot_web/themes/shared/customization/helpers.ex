@@ -188,6 +188,29 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   def get_background_value(_other), do: nil
 
   @doc """
+  Prepares common wrapper assigns for theme wrapper components.
+
+  Computes and assigns `has_video_background`, `video_poster`, and
+  `show_language_switcher` so each theme wrapper doesn't duplicate this logic.
+  """
+  @spec prepare_wrapper_assigns(map()) :: map()
+  def prepare_wrapper_assigns(assigns) do
+    has_video_background =
+      assigns[:theme_customization] &&
+        get_background_type(assigns[:theme_customization]) == "video"
+
+    show_language_switcher =
+      if is_boolean(assigns[:show_language_switcher]),
+        do: assigns[:show_language_switcher],
+        else: assigns[:current_state] == :overview
+
+    assigns
+    |> assign(:has_video_background, has_video_background)
+    |> assign(:video_poster, get_background_video_poster(assigns[:theme_customization]))
+    |> assign(:show_language_switcher, show_language_switcher)
+  end
+
+  @doc """
   Gets a poster image path for video background presets, if available.
   """
   @spec get_background_video_poster(map() | struct() | nil) :: String.t() | nil

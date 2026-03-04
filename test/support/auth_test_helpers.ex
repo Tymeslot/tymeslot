@@ -48,6 +48,23 @@ defmodule Tymeslot.AuthTestHelpers do
   end
 
   @doc """
+  Sets up common state for OAuth `authorize_url/2` tests.
+
+  Creates a test conn, binds `redirect_uri`, and registers the
+  `generate_and_store_state` mock expectation. Returns `{conn, redirect_uri}`.
+  """
+  @spec setup_oauth_authorize_url(Conn.t()) :: {Conn.t(), String.t()}
+  def setup_oauth_authorize_url(conn) do
+    redirect_uri = "http://callback"
+
+    Mox.expect(Tymeslot.Auth.OAuth.HelperMock, :generate_and_store_state, 1, fn ^conn ->
+      {conn, "state123"}
+    end)
+
+    {conn, redirect_uri}
+  end
+
+  @doc """
   Creates a valid OAuth state for testing.
   """
   @spec create_oauth_state(Conn.t()) :: Conn.t()

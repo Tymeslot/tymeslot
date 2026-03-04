@@ -6,6 +6,7 @@ defmodule Tymeslot.Auth.OAuth.GitHubTest do
   alias Tymeslot.Auth.OAuth.GitHub
   alias Tymeslot.Auth.OAuth.HelperMock
   import Mox
+  import Tymeslot.AuthTestHelpers, only: [setup_oauth_authorize_url: 1]
 
   setup :verify_on_exit!
 
@@ -24,9 +25,7 @@ defmodule Tymeslot.Auth.OAuth.GitHubTest do
 
   test "authorize_url/2 generates state and builds client" do
     conn = PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
-    redirect_uri = "http://callback"
-
-    expect(HelperMock, :generate_and_store_state, fn ^conn -> {conn, "state123"} end)
+    {conn, redirect_uri} = setup_oauth_authorize_url(conn)
 
     expect(HelperMock, :build_oauth_client, fn :github, ^redirect_uri, "state123" ->
       %OAuth2.Client{

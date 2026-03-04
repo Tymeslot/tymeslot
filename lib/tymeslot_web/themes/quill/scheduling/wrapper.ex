@@ -24,22 +24,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
   """
   @spec quill_wrapper(map()) :: Phoenix.LiveView.Rendered.t()
   def quill_wrapper(assigns) do
-    # Check if video background is active
-    has_video_background =
-      assigns[:theme_customization] &&
-        get_background_type(assigns[:theme_customization]) == "video"
-
-    # Show language switcher when explicitly requested or on overview slide
-    show_language_switcher =
-      if is_boolean(assigns[:show_language_switcher]),
-        do: assigns[:show_language_switcher],
-        else: assigns[:current_state] == :overview
-
-    assigns =
-      assigns
-      |> assign(:has_video_background, has_video_background)
-      |> assign(:video_poster, get_background_video_poster(assigns[:theme_customization]))
-      |> assign(:show_language_switcher, show_language_switcher)
+    assigns = prepare_wrapper_assigns(assigns)
 
     ~H"""
     <div class="quill-theme-wrapper theme-1" data-locale={assigns[:locale]}>
