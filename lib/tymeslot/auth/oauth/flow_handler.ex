@@ -124,14 +124,12 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   end
 
   defp build_registration_data(provider, user) do
-    email_from_provider = user.email != nil and String.trim(user.email || "") != ""
-
     %{
       provider: to_string(provider),
       email: user.email || "",
       name: user.name || "",
       is_verified: user.is_verified == true,
-      email_from_provider: email_from_provider,
+      email_from_provider: Map.get(user, :email_from_provider, false),
       provider_uid: to_string(Map.get(user, :provider_uid) || ""),
       github_user_id: Map.get(user, :github_user_id),
       google_user_id: Map.get(user, :google_user_id)

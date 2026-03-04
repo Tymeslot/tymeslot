@@ -14,40 +14,8 @@ defmodule Tymeslot.Auth.OAuth.Client do
   Build an OAuth2 client for a provider with redirect_uri and state.
   """
   @spec build(provider, String.t(), String.t()) :: Client.t()
-  def build(:github, redirect_uri, state) do
-    config = github_oauth_config()
-
-    Client.new(
-      strategy: OAuth2.Strategy.AuthCode,
-      client_id: config.client_id,
-      client_secret: config.client_secret,
-      redirect_uri: redirect_uri,
-      site: config.site,
-      authorize_url: config.authorize_url,
-      token_url: config.token_url,
-      headers: [{"User-Agent", app_user_agent()}],
-      params: %{"state" => state}
-    )
-  end
-
-  def build(:google, redirect_uri, state) do
-    config = google_oauth_config()
-
-    Client.new(
-      strategy: OAuth2.Strategy.AuthCode,
-      client_id: config.client_id,
-      client_secret: config.client_secret,
-      redirect_uri: redirect_uri,
-      site: config.site,
-      authorize_url: config.authorize_url,
-      token_url: config.token_url,
-      headers: [{"User-Agent", app_user_agent()}],
-      params: %{"state" => state}
-    )
-  end
-
-  def build(:oauth, redirect_uri, state) do
-    config = generic_oauth_config()
+  def build(provider, redirect_uri, state) do
+    config = provider_config(provider)
 
     Client.new(
       strategy: OAuth2.Strategy.AuthCode,
@@ -129,6 +97,10 @@ defmodule Tymeslot.Auth.OAuth.Client do
     end
   end
 
+  defp provider_config(:github), do: github_oauth_config()
+  defp provider_config(:google), do: google_oauth_config()
+  defp provider_config(:oauth), do: generic_oauth_config()
+
   # Provider configuration
 
   defp github_oauth_config do
@@ -153,6 +125,21 @@ defmodule Tymeslot.Auth.OAuth.Client do
 
   defp generic_oauth_config do
     config = Application.get_env(:tymeslot, :oauth_provider, [])
+
+    required_keys = [:client_id, :client_secret, :site, :authorize_url, :token_url]
+
+    missing =
+      Enum.filter(required_keys, fn key ->
+        case Keyword.fetch(config, key) do
+          {:ok, val} when val != nil -> false
+          _missing_or_nil -> true
+        end
+      end)
+
+    if missing != [] do
+      raise "Generic OAuth config incomplete — missing keys: #{inspect(missing)}. " <>
+              "Set the corresponding OAUTH_* environment variables."
+    end
 
     %{
       client_id: Keyword.fetch!(config, :client_id),

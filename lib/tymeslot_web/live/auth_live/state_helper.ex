@@ -155,7 +155,10 @@ defmodule TymeslotWeb.AuthLive.StateHelper do
     ]
   end
 
-  defp uri_matches?(uri, path), do: String.contains?(uri, path)
+  defp uri_matches?(uri, path) do
+    uri_path = URI.parse(uri).path || ""
+    uri_path == path or String.starts_with?(uri_path, path <> "?")
+  end
 
   defp reset_password_with_token?(uri, params) do
     uri_matches?(uri, "/auth/reset-password") and Map.has_key?(params, "token")

@@ -43,18 +43,10 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   defp dispatch_request(conn, provider_atom, params) do
-    intent = get_session(conn, :oauth_intent) || :authentication
-
-    case intent do
-      :authentication ->
-        if social_auth_enabled?(provider_atom) do
-          do_provider_auth(conn, provider_atom, params)
-        else
-          disabled_redirect(conn, provider_atom)
-        end
-
-      _other_intent ->
-        do_provider_auth(conn, provider_atom, params)
+    if social_auth_enabled?(provider_atom) do
+      do_provider_auth(conn, provider_atom, params)
+    else
+      disabled_redirect(conn, provider_atom)
     end
   end
 
@@ -69,9 +61,25 @@ defmodule TymeslotWeb.OAuthController do
     end
   end
 
-  defp do_provider_auth(conn, :github, params), do: github_auth(conn, params)
-  defp do_provider_auth(conn, :google, params), do: google_auth(conn, params)
-  defp do_provider_auth(conn, :oauth, params), do: oauth_auth(conn, params)
+  defp do_provider_auth(conn, provider, _params) do
+    case RateLimiter.check_oauth_initiation_rate_limit(ClientIP.get(conn)) do
+      :ok ->
+        redirect_uri = URLs.callback_url(conn, URLs.callback_path(provider))
+        {updated_conn, authorize_url} = provider_module(provider).authorize_url(conn, redirect_uri)
+        redirect(updated_conn, external: authorize_url)
+
+      {:error, :rate_limited, _message} ->
+        AuthControllerHelpers.handle_rate_limited(
+          conn,
+          "Too many OAuth attempts. Please try again later.",
+          ~p"/auth/login"
+        )
+    end
+  end
+
+  defp provider_module(:github), do: GitHub
+  defp provider_module(:google), do: Google
+  defp provider_module(:oauth), do: GenericOAuth
 
   defp disabled_redirect(conn, provider_atom) do
     conn
@@ -80,143 +88,43 @@ defmodule TymeslotWeb.OAuthController do
   end
 
   @doc """
-  Initiates GitHub OAuth authentication flow.
-  """
-  @spec github_auth(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def github_auth(conn, _params) do
-    case RateLimiter.check_oauth_initiation_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        redirect_uri = URLs.callback_url(conn, "/auth/github/callback")
-        {updated_conn, authorize_url} = GitHub.authorize_url(conn, redirect_uri)
-        redirect(updated_conn, external: authorize_url)
-
-      {:error, :rate_limited, _message} ->
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          "Too many OAuth attempts. Please try again later.",
-          ~p"/auth/login"
-        )
-    end
-  end
-
-  @doc """
-  Initiates Google OAuth authentication flow.
-  """
-  @spec google_auth(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def google_auth(conn, _params) do
-    case RateLimiter.check_oauth_initiation_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        redirect_uri = URLs.callback_url(conn, "/auth/google/callback")
-        {updated_conn, authorize_url} = Google.authorize_url(conn, redirect_uri)
-        redirect(updated_conn, external: authorize_url)
-
-      {:error, :rate_limited, _message} ->
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          "Too many OAuth attempts. Please try again later.",
-          ~p"/auth/login"
-        )
-    end
-  end
-
-  @doc """
-  Initiates generic OAuth/OIDC authentication flow.
-  """
-  @spec oauth_auth(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def oauth_auth(conn, _params) do
-    case RateLimiter.check_oauth_initiation_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        redirect_uri = URLs.callback_url(conn, "/auth/oauth/callback")
-        {updated_conn, authorize_url} = GenericOAuth.authorize_url(conn, redirect_uri)
-        redirect(updated_conn, external: authorize_url)
-
-      {:error, :rate_limited, _message} ->
-        AuthControllerHelpers.handle_rate_limited(
-          conn,
-          "Too many OAuth attempts. Please try again later.",
-          ~p"/auth/login"
-        )
-    end
-  end
-
-  @doc """
-  Generic OAuth callback handler that dispatches to provider-specific functions.
+  Generic OAuth callback handler. Validates the provider, then delegates to the shared
+  callback handler or returns a provider-specific error.
   """
   @spec callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def callback(conn, %{"provider" => "github"} = params) do
-    github_callback(conn, Map.delete(params, "provider"))
-  end
+  def callback(conn, %{"provider" => provider, "code" => code, "state" => state}) do
+    case validate_oauth_provider(provider) do
+      {:ok, provider_atom} ->
+        handle_provider_callback(conn, provider_atom, code, state)
 
-  def callback(conn, %{"provider" => "google"} = params) do
-    google_callback(conn, Map.delete(params, "provider"))
-  end
-
-  def callback(conn, %{"provider" => "oauth"} = params) do
-    oauth_callback(conn, Map.delete(params, "provider"))
+      {:error, :unsupported_oauth_provider} ->
+        conn
+        |> put_flash(:error, "Unsupported OAuth provider: #{provider}")
+        |> redirect(to: get_login_path(conn))
+    end
   end
 
   def callback(conn, %{"provider" => provider}) do
-    login_path = get_login_path(conn)
+    case validate_oauth_provider(provider) do
+      {:ok, provider_atom} ->
+        conn
+        |> put_flash(
+          :error,
+          "#{provider_name(provider_atom)} authentication failed - missing authorization code or security token."
+        )
+        |> redirect(to: ~p"/?auth=login")
 
-    conn
-    |> put_flash(:error, "Unsupported OAuth provider: #{provider}")
-    |> redirect(to: login_path)
+      {:error, :unsupported_oauth_provider} ->
+        conn
+        |> put_flash(:error, "Unsupported OAuth provider: #{provider}")
+        |> redirect(to: get_login_path(conn))
+    end
   end
 
   def callback(conn, _params) do
-    login_path = get_login_path(conn)
-
     conn
     |> put_flash(:error, "OAuth authentication failed - missing provider.")
-    |> redirect(to: login_path)
-  end
-
-  @doc """
-  Handles GitHub OAuth callback.
-  """
-  @spec github_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def github_callback(conn, %{"code" => code, "state" => state}),
-    do: handle_provider_callback(conn, :github, code, state)
-
-  def github_callback(conn, _params) do
-    conn
-    |> put_flash(
-      :error,
-      "GitHub authentication failed - missing authorization code or security token."
-    )
-    |> redirect(to: ~p"/?auth=login")
-  end
-
-  @doc """
-  Handles Google OAuth callback.
-  """
-  @spec google_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def google_callback(conn, %{"code" => code, "state" => state}),
-    do: handle_provider_callback(conn, :google, code, state)
-
-  def google_callback(conn, _params) do
-    conn
-    |> put_flash(
-      :error,
-      "Google authentication failed - missing authorization code or security token."
-    )
-    |> redirect(to: ~p"/?auth=login")
-  end
-
-  @doc """
-  Handles generic OAuth/OIDC callback.
-  """
-  @spec oauth_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def oauth_callback(conn, %{"code" => code, "state" => state}),
-    do: handle_provider_callback(conn, :oauth, code, state)
-
-  def oauth_callback(conn, _params) do
-    conn
-    |> put_flash(
-      :error,
-      "SSO authentication failed - missing authorization code or security token."
-    )
-    |> redirect(to: ~p"/?auth=login")
+    |> redirect(to: get_login_path(conn))
   end
 
   @doc """
@@ -355,12 +263,7 @@ defmodule TymeslotWeb.OAuthController do
     if Map.get(user, :needs_email_verification, false) do
       handle_email_verification_flow(conn, user, oauth_data)
     else
-      create_session_and_redirect(
-        conn,
-        user,
-        oauth_data,
-        get_welcome_message(oauth_data.provider)
-      )
+      create_session_and_redirect(conn, user, get_welcome_message(oauth_data.provider))
     end
   end
 
@@ -371,7 +274,7 @@ defmodule TymeslotWeb.OAuthController do
         message =
           "Welcome! Successfully signed up with #{String.capitalize(oauth_data.provider)}. Please check your email to verify your account."
 
-        create_session_and_redirect(conn, user, oauth_data, message)
+        create_session_and_redirect(conn, user, message)
 
       {:error, :rate_limited, _rate_limit_message} ->
         handle_rate_limited_error(conn)
@@ -380,12 +283,12 @@ defmodule TymeslotWeb.OAuthController do
         message =
           "Welcome! Successfully signed up with #{String.capitalize(oauth_data.provider)}. Verification email could not be sent - please contact support if needed."
 
-        create_session_and_redirect(conn, user, oauth_data, message)
+        create_session_and_redirect(conn, user, message)
     end
   end
 
-  @spec create_session_and_redirect(Plug.Conn.t(), map(), map(), String.t()) :: Plug.Conn.t()
-  defp create_session_and_redirect(conn, user, _unused_oauth_data, success_message) do
+  @spec create_session_and_redirect(Plug.Conn.t(), map(), String.t()) :: Plug.Conn.t()
+  defp create_session_and_redirect(conn, user, success_message) do
     case Session.create_session(conn, user) do
       {:ok, updated_conn, _session_token} ->
         updated_conn
@@ -484,8 +387,11 @@ defmodule TymeslotWeb.OAuthController do
   defp format_error_for_params(:invalid_email), do: "invalid_email"
   defp format_error_for_params(:terms_not_accepted), do: "terms_not_accepted"
 
-  defp format_error_for_params(error_message) when is_binary(error_message),
-    do: "email_already_taken"
+  defp format_error_for_params(:email_already_taken), do: "email_already_taken"
+
+  defp format_error_for_params(error_message) when is_binary(error_message) do
+    "unknown_error"
+  end
 
   @spec handle_rate_limited_error(Plug.Conn.t()) :: Plug.Conn.t()
   defp handle_rate_limited_error(conn) do
@@ -567,8 +473,10 @@ defmodule TymeslotWeb.OAuthController do
   defp sanitize_redirect_path(path, default) do
     case path do
       p when is_binary(p) ->
-        if String.starts_with?(p, "/") and not String.contains?(p, "://") and
-             not String.starts_with?(p, "//") do
+        decoded = URI.decode(p)
+
+        if String.starts_with?(p, "/") and not String.contains?(decoded, "://") and
+             not String.starts_with?(decoded, "//") and is_nil(URI.parse(p).host) do
           p
         else
           default
@@ -600,7 +508,7 @@ defmodule TymeslotWeb.OAuthController do
     error_message =
       case reason do
         %Ecto.Changeset{} = changeset ->
-          format_changeset_errors(changeset)
+          format_error_for_flash(changeset)
 
         :user_creation_failed ->
           "Failed to create user account. Please try again."
@@ -630,19 +538,6 @@ defmodule TymeslotWeb.OAuthController do
     conn
     |> put_flash(:error, error_message)
     |> redirect(to: redirect_path)
-  end
-
-  defp format_changeset_errors(%Ecto.Changeset{errors: errors}) do
-    case errors do
-      [email: {"can't be blank", _opts}] ->
-        "Email address is required to complete registration."
-
-      [email: {message, _opts}] when is_binary(message) ->
-        "Email #{message}. Please provide a valid email address."
-
-      _other_errors ->
-        "Registration failed due to validation errors. Please check your information and try again."
-    end
   end
 
   defp get_terms_accepted(params) do

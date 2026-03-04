@@ -142,9 +142,39 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
     test "unknown provider returns error" do
       assert {:error, :invalid_user_info} = UserProcessor.process_user(:unknown, %{})
     end
+
+    test ":oauth with integer sub claim coerces to string" do
+      user_info = %{"sub" => 12_345, "email" => "int@example.com"}
+
+      assert {:ok, user} = UserProcessor.process_user(:oauth, user_info)
+      assert user.provider_uid == "12345"
+    end
+
+    test ":oauth rejects boolean provider_uid" do
+      user_info = %{"sub" => false, "email" => "bool@example.com"}
+
+      assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
+    end
+
+    test ":oauth rejects atom provider_uid" do
+      user_info = %{"sub" => :some_atom, "email" => "atom@example.com"}
+
+      assert {:error, :invalid_user_info} = UserProcessor.process_user(:oauth, user_info)
+    end
+
+    test ":oauth with string \"false\" for email_verified" do
+      assert {:ok, user} =
+               UserProcessor.process_user(:oauth, %{
+                 "sub" => "5",
+                 "email" => "a@b.com",
+                 "email_verified" => "false"
+               })
+
+      assert user.is_verified == false
+    end
   end
 
-  describe "registration_complete? edge cases" do
+  describe "UserRegistration.registration_complete? edge cases" do
     alias Tymeslot.Auth.OAuth.UserRegistration
 
     test ":oauth rejects empty email" do
@@ -158,6 +188,34 @@ defmodule Tymeslot.Auth.OAuth.UserProcessorTest do
       refute UserRegistration.registration_complete?(:oauth, %{
                email: "test@example.com",
                provider_uid: ""
+             })
+    end
+
+    test ":oauth rejects nil email" do
+      refute UserRegistration.registration_complete?(:oauth, %{
+               email: nil,
+               provider_uid: "sub-123"
+             })
+    end
+
+    test ":oauth rejects nil provider_uid" do
+      refute UserRegistration.registration_complete?(:oauth, %{
+               email: "test@example.com",
+               provider_uid: nil
+             })
+    end
+
+    test ":github rejects empty email" do
+      refute UserRegistration.registration_complete?(:github, %{
+               email: "",
+               github_user_id: "123"
+             })
+    end
+
+    test ":google rejects empty email" do
+      refute UserRegistration.registration_complete?(:google, %{
+               email: "",
+               google_user_id: "123"
              })
     end
   end

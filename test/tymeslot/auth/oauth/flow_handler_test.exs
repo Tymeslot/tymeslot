@@ -184,6 +184,37 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
     assert {:error, :oauth_error, :github, _conn} = invoke_github_callback()
   end
 
+  test "returns {:error, :general_error, provider, conn} when get_user_info fails" do
+    setup_pre_exchange_mocks()
+
+    :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
+      {:ok, :authed_client}
+    end)
+
+    :meck.expect(Client, :get_user_info, fn :authed_client, :github ->
+      {:error, :user_info_unavailable}
+    end)
+
+    assert {:error, :general_error, :github, _conn} = invoke_github_callback()
+  end
+
+  test "returns {:error, :general_error, provider, conn} when process_user fails" do
+    user_info = %{"id" => 123}
+    setup_pre_exchange_mocks()
+
+    :meck.expect(Client, :exchange_code_for_token, fn :oauth_client, "code" ->
+      {:ok, :authed_client}
+    end)
+
+    :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
+
+    :meck.expect(UserProcessor, :process_user, fn :github, ^user_info ->
+      {:error, :invalid_user_info}
+    end)
+
+    assert {:error, :general_error, :github, _conn} = invoke_github_callback()
+  end
+
   test "returns {:error, :general_error, provider, conn} on unexpected token exchange failure" do
     setup_pre_exchange_mocks()
 

@@ -35,12 +35,7 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuth do
     oauth_helper().handle_oauth_callback(conn, %{
       code: code,
       state: state,
-      provider: :oauth,
-      opts: [
-        success_path: "/dashboard",
-        login_path: "/?auth=login",
-        registration_path: "/?auth=oauth_complete"
-      ]
+      provider: :oauth
     })
   end
 

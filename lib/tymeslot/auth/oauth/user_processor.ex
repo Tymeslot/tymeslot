@@ -96,6 +96,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
             nil -> false
             "" -> false
             email when is_binary(email) -> String.trim(email) != ""
+            _other -> false
           end
 
         Map.put(user, :email_from_provider, email_provided)
@@ -125,7 +126,8 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
     Keyword.get(config, :allow_id_fallback, false)
   end
 
-  defp build_oauth_user(user_info, provider_uid) do
+  defp build_oauth_user(user_info, provider_uid)
+       when is_binary(provider_uid) or is_integer(provider_uid) do
     uid_string = to_string(provider_uid)
 
     if uid_string == "" do
@@ -145,6 +147,8 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
       {:ok, user}
     end
   end
+
+  defp build_oauth_user(_user_info, _provider_uid), do: {:error, :invalid_user_info}
 
   defp extract_email(user_info) do
     case Map.get(user_info, "email") do

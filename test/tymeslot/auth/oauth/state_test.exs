@@ -11,12 +11,13 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
   end
 
   describe "generate_and_store_state/1" do
-    test "returns a {conn, state} tuple with a non-empty state string" do
+    test "returns a {conn, state} tuple and stores {state, timestamp} in session" do
       {conn, state} = State.generate_and_store_state(build_conn())
 
       assert is_binary(state)
       assert byte_size(state) > 0
-      assert Plug.Conn.get_session(conn, "_oauth_state") != nil
+      assert {^state, timestamp} = Plug.Conn.get_session(conn, "_oauth_state")
+      assert is_integer(timestamp)
     end
 
     test "generates unique states across calls" do
@@ -91,6 +92,33 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       conn = Plug.Conn.put_session(conn, "_oauth_state", "stored-value")
 
       assert {:error, :invalid_state} = State.validate_state(conn, "different-value")
+    end
+
+    test "returns error for empty string state with no session" do
+      conn = build_conn()
+
+      assert {:error, :invalid_state} = State.validate_state(conn, "")
+    end
+
+    test "rejects state at exact TTL boundary (601 seconds)" do
+      conn = build_conn()
+      state = "boundary-state"
+      # 601 seconds ago — just past the 600-second TTL
+      timestamp = System.system_time(:second) - 601
+
+      conn = Plug.Conn.put_session(conn, "_oauth_state", {state, timestamp})
+
+      assert {:error, :invalid_state} = State.validate_state(conn, state)
+    end
+
+    test "accepts state at exactly 600 seconds (not yet expired)" do
+      conn = build_conn()
+      state = "boundary-state"
+      timestamp = System.system_time(:second) - 600
+
+      conn = Plug.Conn.put_session(conn, "_oauth_state", {state, timestamp})
+
+      assert :ok = State.validate_state(conn, state)
     end
   end
 

@@ -528,10 +528,12 @@ if System.get_env("ENABLE_OAUTH_AUTH") == "true" do
     """
   end
 
-  # Enforce HTTPS for OAuth URLs that carry secret material (tokens, credentials).
-  # The token and userinfo endpoints receive the client_secret and access tokens;
-  # sending these over plaintext HTTP would expose credentials to network observers.
+  # Enforce HTTPS for OAuth URLs that carry secret material or security tokens.
+  # The authorize URL carries the state parameter and returns the authorization code;
+  # the token and userinfo endpoints receive the client_secret and access tokens.
+  # Sending any of these over plaintext HTTP would expose credentials to network observers.
   https_required_vars = %{
+    "OAUTH_AUTHORIZE_URL" => System.get_env("OAUTH_AUTHORIZE_URL"),
     "OAUTH_TOKEN_URL" => System.get_env("OAUTH_TOKEN_URL"),
     "OAUTH_USERINFO_URL" => System.get_env("OAUTH_USERINFO_URL")
   }

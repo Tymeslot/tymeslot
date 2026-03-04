@@ -61,14 +61,10 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   """
   @spec create_oauth_user(provider, map(), map(), keyword()) :: {:ok, map()} | {:error, any()}
   def create_oauth_user(provider, oauth_user, profile_params \\ %{}, opts \\ []) do
-    # Intentionally invalid bcrypt hash — ensures OAuth users can never authenticate
-    # via password login. The "$2b$12$" prefix makes it look like a real hash to
-    # any code that checks for presence, but it will never match any input.
-    placeholder_password = "$2b$12$oauth_user_no_password_placeholder_hash_not_for_authentication"
     email_verified = determine_email_verification_status(oauth_user)
     metadata = Keyword.get(opts, :metadata, %{})
 
-    auth_params = build_auth_params(provider, oauth_user, email_verified, placeholder_password)
+    auth_params = build_auth_params(provider, oauth_user, email_verified)
 
     case TransactionalUserCreation.find_or_create_oauth_user(
            provider,
@@ -77,11 +73,9 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
            opts
          ) do
       {:ok, %{user: user, created: true}} ->
-        case handle_user_verification_status(user, email_verified, oauth_user.email) do
-          {:ok, updated_user} ->
-            PubSub.broadcast_user_registered(updated_user, metadata)
-            {:ok, updated_user}
-        end
+        {:ok, updated_user} = handle_user_verification_status(user, email_verified, oauth_user.email)
+        PubSub.broadcast_user_registered(updated_user, metadata)
+        {:ok, updated_user}
 
       {:ok, %{user: user, created: false}} ->
         case check_oauth_account_linking(provider, user, oauth_user) do
@@ -100,11 +94,11 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   """
   @spec registration_complete?(provider, map()) :: boolean()
   def registration_complete?(:github, %{email: email, github_user_id: id})
-      when is_binary(email) and is_binary(id),
+      when is_binary(email) and email != "" and is_binary(id) and id != "",
       do: true
 
   def registration_complete?(:google, %{email: email, google_user_id: id})
-      when is_binary(email) and is_binary(id),
+      when is_binary(email) and email != "" and is_binary(id) and id != "",
       do: true
 
   def registration_complete?(:oauth, %{email: email, provider_uid: uid})
@@ -141,9 +135,17 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
 
   defp normalize_github_id(github_id) do
     case github_id do
-      id when is_integer(id) -> id
-      id when is_binary(id) -> String.to_integer(id)
-      _invalid -> nil
+      id when is_integer(id) ->
+        id
+
+      id when is_binary(id) ->
+        case Integer.parse(id) do
+          {int, ""} -> int
+          _other -> nil
+        end
+
+      _invalid ->
+        nil
     end
   end
 
@@ -173,7 +175,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
     Map.get(oauth_user, :is_verified, false)
   end
 
-  defp build_auth_params(:oauth, oauth_user, email_verified, placeholder_password) do
+  defp build_auth_params(:oauth, oauth_user, email_verified) do
     %{
       "provider" => "oauth",
       "email" => oauth_user.email,
@@ -183,12 +185,11 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
         if(Config.enforce_legal_agreements?(),
           do: "true",
           else: "false"
-        ),
-      "hashed_password" => placeholder_password
+        )
     }
   end
 
-  defp build_auth_params(provider, oauth_user, email_verified, placeholder_password) do
+  defp build_auth_params(provider, oauth_user, email_verified) do
     %{
       "provider" => to_string(provider),
       "email" => oauth_user.email,
@@ -199,8 +200,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
         if(Config.enforce_legal_agreements?(),
           do: "true",
           else: "false"
-        ),
-      "hashed_password" => placeholder_password
+        )
     }
   end
 

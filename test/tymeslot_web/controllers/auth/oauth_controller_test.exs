@@ -115,6 +115,8 @@ defmodule TymeslotWeb.OAuthControllerTest do
         scope: "openid email profile"
       )
 
+      on_exit(fn -> Application.delete_env(:tymeslot, :oauth_provider) end)
+
       conn = get(conn, ~p"/auth/oauth")
 
       assert redirected_to(conn) =~ "idp.example.com/authorize"
@@ -164,6 +166,10 @@ defmodule TymeslotWeb.OAuthControllerTest do
       conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
 
       assert redirected_to(conn) == "/auth/complete-registration"
+      assert session_data = get_session(conn, :pending_oauth_registration)
+      assert session_data.provider == "github"
+      assert session_data.email == "user@example.com"
+      assert session_data.github_user_id == 123
     end
 
     test "registration_path query param is ignored; always redirects to /auth/complete-registration", %{conn: conn} do
@@ -284,6 +290,39 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
       assert Flash.get(conn.assigns.flash, :info) == "Successfully signed in with SSO."
       assert String.starts_with?(redirected_to(conn), "/")
+    end
+
+    test "respects valid internal success_path", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:ok, conn, :github}
+      end)
+
+      conn =
+        get(conn, ~p"/auth/github/callback", %{
+          "code" => "code",
+          "state" => "state",
+          "success_path" => "/settings"
+        })
+
+      assert redirected_to(conn) == "/settings"
+    end
+
+    test "rejects URL-encoded open redirect via success_path", %{conn: conn} do
+      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
+                                                           %{code: "code", state: "state", provider: :github} ->
+        {:ok, conn, :github}
+      end)
+
+      conn =
+        get(conn, ~p"/auth/github/callback", %{
+          "code" => "code",
+          "state" => "state",
+          "success_path" => "/%2f%2fevil.com"
+        })
+
+      redirect = redirected_to(conn)
+      refute redirect =~ "evil.com"
     end
 
     test "rejects open redirect via success_path parameter", %{conn: conn} do
@@ -572,6 +611,68 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "Unsupported OAuth provider"
       assert get_session(conn, :pending_oauth_registration) == nil
+    end
+
+    test "session data takes precedence over form-submitted provider", %{conn: conn} do
+      session_data = %{
+        provider: "github",
+        email: "session@example.com",
+        name: "Session User",
+        is_verified: true,
+        email_from_provider: true,
+        provider_uid: "",
+        github_user_id: 99_999,
+        google_user_id: nil
+      }
+
+      :meck.expect(OAuthHelper, :create_oauth_user, fn :github, oauth_data, _profile, _opts ->
+        # Verify the provider from session is used, not any form-submitted value
+        assert oauth_data.provider == "github"
+        assert oauth_data.email == "session@example.com"
+        user = Factory.insert(:user, email: "session@example.com", provider: "github")
+        {:ok, user}
+      end)
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{
+          "auth" => %{
+            "provider" => "google",
+            "email" => "attacker@evil.com"
+          },
+          "terms_accepted" => "on"
+        })
+
+      assert redirected_to(conn) == "/dashboard"
+    end
+
+    test "uses user-provided email when email_from_provider is false", %{conn: conn} do
+      session_data = %{
+        provider: "oauth",
+        email: nil,
+        name: "SSO User",
+        is_verified: false,
+        email_from_provider: false,
+        provider_uid: "sub-123"
+      }
+
+      :meck.expect(OAuthHelper, :create_oauth_user, fn :oauth, oauth_data, _profile, _opts ->
+        assert oauth_data.email == "user-provided@example.com"
+        assert oauth_data.email_from_provider == false
+        user = Factory.insert(:user, email: "user-provided@example.com", provider: "oauth")
+        {:ok, user}
+      end)
+
+      conn =
+        conn
+        |> Plug.Test.init_test_session(%{pending_oauth_registration: session_data})
+        |> post(~p"/auth/complete", %{
+          "auth" => %{"email" => "user-provided@example.com"},
+          "terms_accepted" => "on"
+        })
+
+      assert redirected_to(conn) == "/dashboard"
     end
 
     test "redirects to login with info flash when registration is disabled", %{conn: conn} do
