@@ -108,6 +108,20 @@ defmodule Tymeslot.Integrations.CalendarTest do
   end
 
   describe "calendar_module configuration" do
+    setup do
+      original_module = Application.get_env(:tymeslot, :calendar_module)
+
+      on_exit(fn ->
+        if original_module do
+          Application.put_env(:tymeslot, :calendar_module, original_module)
+        else
+          Application.delete_env(:tymeslot, :calendar_module)
+        end
+      end)
+
+      :ok
+    end
+
     test "falls back to Operations when configured module does not exist" do
       # Set to a non-existent module
       Application.put_env(:tymeslot, :calendar_module, NonExistentModule)
@@ -116,8 +130,6 @@ defmodule Tymeslot.Integrations.CalendarTest do
       # If it falls back to Operations, it will try to call Operations.get_event.
       # Since no integrations are set up in this test context, it should return an error.
       assert {:error, _reason} = Calendar.get_event("some-uid")
-    after
-      Application.delete_env(:tymeslot, :calendar_module)
     end
   end
 

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.BookingHoneypotTest do
 
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
@@ -24,6 +25,7 @@ defmodule TymeslotWeb.BookingHoneypotTest do
   setup tags do
     Mox.set_mox_from_context(tags)
     RateLimiter.clear_all()
+    AvailabilityCache.clear_all()
 
     # Disable reCAPTCHA so these tests focus on honeypot detection only,
     # regardless of RECAPTCHA_BOOKING_ENABLED environment variable.
