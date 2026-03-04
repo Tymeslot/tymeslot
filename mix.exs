@@ -130,7 +130,9 @@ defmodule Tymeslot.MixProject do
       {:flagpack, "~> 0.6"},
       # Plug for setting conn.remote_ip from proxy headers
       {:remote_ip, "~> 1.1"},
-      {:stream_data, "~> 1.1", only: :test}
+      {:stream_data, "~> 1.1", only: :test},
+      {:wallaby, "~> 0.30", only: :test, runtime: false},
+      {:phoenix_ecto, "~> 4.6", only: :test}
     ]
   end
 

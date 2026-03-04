@@ -73,7 +73,9 @@ defmodule Tymeslot.Test.TagTaxonomy do
       # General-purpose exclusion / environment markers
       :external,
       :integration_test,
-      :umbrella
+      :umbrella,
+      # Browser-based E2E tests — run with E2E=true mix test --only e2e
+      :e2e
     ]
   }
 

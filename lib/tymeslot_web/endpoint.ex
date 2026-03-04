@@ -28,6 +28,11 @@ defmodule TymeslotWeb.Endpoint do
       connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]
     ]
 
+  # Allow Wallaby browser tests to share the Ecto sandbox connection
+  if Application.compile_env(:tymeslot, :environment) == :test do
+    plug Phoenix.Ecto.SQL.Sandbox
+  end
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phx.digest

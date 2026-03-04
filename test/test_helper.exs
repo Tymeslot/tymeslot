@@ -106,7 +106,7 @@ max_cases =
       end
   end
 
-ExUnit.start(exclude: [:backup_tests, :oauth_integration, :calendar_integration])
+ExUnit.start(exclude: [:backup_tests, :oauth_integration, :calendar_integration, :e2e])
 
 # Configure ExUnit to exclude backup tests, OAuth integration tests, and calendar
 # integration tests by default. Integration tests now run by default.
@@ -114,7 +114,8 @@ exunit_config = [
   exclude: [
     backup_tests: true,
     oauth_integration: true,
-    calendar_integration: true
+    calendar_integration: true,
+    e2e: true
   ]
 ]
 
@@ -126,3 +127,8 @@ exunit_config =
   end
 
 ExUnit.configure(exunit_config)
+
+# Start Wallaby for E2E browser tests
+if System.get_env("E2E") == "true" do
+  {:ok, _apps} = Application.ensure_all_started(:wallaby)
+end
