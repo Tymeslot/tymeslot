@@ -91,7 +91,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
       auth_params = %{
         "email" => "link@example.com",
         "google_user_id" => "333",
-        "provider" => "google"
+        "provider" => "google",
+        "is_verified" => true
       }
 
       assert {:ok, %{user: user, created: false}} =
