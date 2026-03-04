@@ -13,10 +13,8 @@ defmodule TymeslotWeb.Shared.SocialAuthButtons do
   Renders the social authentication buttons section with a divider.
   Only shows buttons for providers that are enabled in the configuration.
   Usage:
-    <.social_auth_buttons signup={true} /> # For signup page
-    <.social_auth_buttons /> # For login page
+    <.social_auth_buttons /> # For signup or login page
   """
-  attr :signup, :boolean, default: false
   @spec social_auth_buttons(map()) :: Phoenix.LiveView.Rendered.t()
   def social_auth_buttons(assigns) do
     social_auth_config = Application.get_env(:tymeslot, :social_auth, [])
@@ -42,19 +40,19 @@ defmodule TymeslotWeb.Shared.SocialAuthButtons do
         <.social_auth_button
           :if={@google_enabled}
           provider="google"
-          label={if @signup, do: "Join with Google", else: "Google"}
+          label="Google"
           href={~p"/auth/google"}
         />
         <.social_auth_button
           :if={@github_enabled}
           provider="github"
-          label={if @signup, do: "Join with GitHub", else: "GitHub"}
+          label="GitHub"
           href={~p"/auth/github"}
         />
         <.social_auth_button
           :if={@oauth_enabled}
           provider="oauth"
-          label={if @signup, do: "Join with SSO", else: "SSO"}
+          label="SSO"
           href={~p"/auth/oauth"}
         />
       </div>

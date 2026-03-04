@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
         </.auth_form>
       </:form>
       <:social>
-        <.social_auth_buttons signup={true} />
+        <.social_auth_buttons />
       </:social>
       <:footer>
         <.auth_footer
