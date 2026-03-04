@@ -274,18 +274,22 @@ Get keys at [Google reCAPTCHA](https://www.google.com/recaptcha/admin)
 
 **Registration Control**
 
-Disable new user sign-ups without taking down the app — useful for invite-only or closed deployments:
-
-```bash
-export REGISTRATION_ENABLED="false"
-```
+Disable new user sign-ups without taking down the app — useful for invite-only or closed deployments. Defaults to `true` (registration open) when the variable is unset.
 
 When disabled:
 - The sign-up page and "Sign up" link are hidden
 - Email and OAuth registration attempts are rejected with an informative message
 - Existing users can still log in normally
 
-Defaults to `true` (registration open) when the variable is unset.
+How to set `REGISTRATION_ENABLED=false` depends on your deployment:
+
+| Deployment | How to set it |
+|---|---|
+| Local dev | Add `REGISTRATION_ENABLED=false` to your `.env` file and `export` it before starting the server, or run `export REGISTRATION_ENABLED=false` directly |
+| Docker Compose | Add `REGISTRATION_ENABLED=false` to your `.env` file — it is forwarded to the container automatically |
+| `docker run` | Pass `-e REGISTRATION_ENABLED=false`, or use `--env-file .env` to load your `.env` file |
+| Railway | Set `REGISTRATION_ENABLED` to `false` in the Railway dashboard under Variables |
+| Cloudron | Set `REGISTRATION_ENABLED` to `false` in the Cloudron app settings |
 
 **Report Vulnerabilities**
 

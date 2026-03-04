@@ -33,6 +33,7 @@ services:
       # Optional configurations
       PORT: ${PORT:-4000}
       DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
       
       # Email configuration (optional)
       EMAIL_ADAPTER: ${EMAIL_ADAPTER:-test}
