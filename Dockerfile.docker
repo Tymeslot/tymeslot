@@ -62,7 +62,7 @@ RUN mix release tymeslot && \
     cp config/runtime.exs _build/prod/rel/tymeslot/apps/tymeslot/config/
 
 # Production stage — debian only, no Elixir SDK. The release bundles its own ERTS.
-FROM debian:bookworm-slim AS release
+FROM debian:trixie-slim AS release
 
 # Install only what the ERTS and PostgreSQL need at runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \

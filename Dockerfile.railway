@@ -42,7 +42,7 @@ RUN mix compile && \
     cp config/runtime.exs _build/prod/rel/tymeslot/apps/tymeslot/config/
 
 # --- Runtime ---
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl3 \
