@@ -2,12 +2,14 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
   use TymeslotWeb.BrowserCase
 
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Profiles
+  alias Wallaby.Element
 
   @moduletag :e2e
 
   feature "visitor books a meeting through the public page", %{session: session} do
     user = create_onboarded_user()
-    profile = Tymeslot.Profiles.get_profile(user.id)
+    profile = Profiles.get_profile(user.id)
 
     # A calendar integration is required for the public booking page to be active
     insert(:calendar_integration, user_id: user.id, user: user)
@@ -34,7 +36,7 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
     session
     |> find(css("[data-testid='calendar-day']:not([disabled])", count: :any))
     |> List.first()
-    |> Wallaby.Element.click()
+    |> Element.click()
 
     # Select a time slot (pick the first available).
     # Multiple slots may be visible — wait for at least one then click the first.
@@ -43,7 +45,7 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
     session
     |> find(css("[data-testid='time-slot']", count: :any))
     |> List.first()
-    |> Wallaby.Element.click()
+    |> Element.click()
 
     # Click next to go to booking form
     session =
