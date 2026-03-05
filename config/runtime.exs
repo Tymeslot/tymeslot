@@ -484,6 +484,11 @@ if config_env() in [:dev, :test] do
   config :tymeslot, :trial_period_days, parse_int.("TRIAL_PERIOD_DAYS", 7)
 end
 
+# Telegram integration feature flags (Core defaults)
+config :tymeslot,
+  telegram_notifications_allowed: System.get_env("TELEGRAM_ENABLED") == "true",
+  telegram_shared_bot: false
+
 config :tymeslot, registration_enabled: System.get_env("REGISTRATION_ENABLED", "true") == "true"
 config :tymeslot, password_auth_enabled: System.get_env("PASSWORD_AUTH_ENABLED", "true") == "true"
 

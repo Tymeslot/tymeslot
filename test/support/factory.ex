@@ -16,11 +16,14 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.DatabaseSchemas.UserSessionSchema
+  alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
+  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.DatabaseSchemas.WebhookDeliverySchema
   alias Tymeslot.DatabaseSchemas.WebhookSchema
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
   alias Tymeslot.Profiles
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
 
@@ -223,6 +226,31 @@ defmodule Tymeslot.Factory do
       is_active: true,
       webhook_token_encrypted: <<1, 2, 3>>,
       user: build(:user)
+    }
+  end
+
+  @spec telegram_integration_factory() :: TelegramIntegrationSchema.t()
+  def telegram_integration_factory do
+    %TelegramIntegrationSchema{
+      name: sequence(:telegram_name, &"Telegram #{&1}"),
+      bot_mode: "own",
+      bot_token_encrypted: Encryption.encrypt("1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789"),
+      chat_id: sequence(:telegram_chat_id, &"#{&1 + 100_000}"),
+      events: ["meeting.created", "meeting.cancelled"],
+      is_active: true,
+      user: build(:user)
+    }
+  end
+
+  @spec telegram_delivery_factory() :: TelegramDeliverySchema.t()
+  def telegram_delivery_factory do
+    %TelegramDeliverySchema{
+      integration: build(:telegram_integration),
+      event_type: "meeting.created",
+      message_text: "Test message",
+      response_status: 200,
+      attempt_count: 1,
+      inserted_at: DateTime.utc_now()
     }
   end
 

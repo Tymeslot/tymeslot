@@ -89,6 +89,8 @@ config :tymeslot, :oban_queues,
   emails: 10,
   # Webhook delivery to external services
   webhooks: 5,
+  # Telegram message delivery
+  telegram_messages: 10,
   # Payment processing (used by SaaS)
   payments: 5,
   # Video room creation and management

@@ -50,7 +50,8 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :themes,
       :utils,
       :workers,
-      :seo
+      :seo,
+      :telegram
     ],
     web_layer: [
       :components,
