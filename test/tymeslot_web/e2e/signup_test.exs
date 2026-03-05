@@ -19,8 +19,10 @@ defmodule TymeslotWeb.E2E.SignupTest do
       |> fill_in(css("#password-input"), with: default_password())
       |> click(css("button[type='submit']"))
 
-    # Should land on verify-email page
-    session = assert_has(session, css("a[href='/auth/login']"))
+    # Should land on verify-email page — wait for the "Back to Login" button
+    # (unique to the verify-email page; the signup page also has a login button but
+    # with text "Log in", not "Back to Login")
+    session = assert_has(session, css("button", text: "Back to Login"))
 
     # Verify programmatically (simulating clicking the email link)
     user = Repo.get_by!(UserSchema, email: email)

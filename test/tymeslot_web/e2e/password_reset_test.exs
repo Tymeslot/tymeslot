@@ -51,8 +51,8 @@ defmodule TymeslotWeb.E2E.PasswordResetTest do
       |> fill_in(css("#confirm-password-input"), with: new_password)
       |> click(css("button[type='submit']"))
 
-    # Should redirect to success or login page
-    assert_has(session, css("a[href='/auth/login']"))
+    # Should show success page with a "Log In" button
+    assert_has(session, css("button", text: "Log In"))
 
     # Log in with the new password
     session

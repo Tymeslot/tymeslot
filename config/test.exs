@@ -6,6 +6,9 @@ config :tymeslot, environment: :test, test_mode: true
 # Disable legal acceptance gate in tests
 config :tymeslot, enforce_legal_acceptance_gate: false
 
+# Override SaaS config: Core tests must not enforce legal agreements
+config :tymeslot, enforce_legal_agreements: false
+
 # Force Core to use Tymeslot.PubSub in tests
 config :tymeslot, :force_app_pubsub_in_test, true
 config :tymeslot, :pubsub_name, Tymeslot.PubSub
@@ -154,3 +157,18 @@ config :tymeslot, :skip_webhook_verification, true
 config :tymeslot, Tymeslot.Integrations.HealthCheck,
   yield_timeout: 100,
   stream_timeout: 200
+
+# Wallaby E2E browser test configuration
+# otp_app + ecto_repos let Wallaby.Feature auto-checkout the sandbox and pass
+# the token in request headers so Phoenix.Ecto.SQL.Sandbox can allow the browser
+# request process to share the test's DB connection.
+# base_url is set dynamically in test_helper.exs via TymeslotWeb.Endpoint.url/0
+# so it respects the TEST_PORT env var.
+config :wallaby,
+  otp_app: :tymeslot,
+  ecto_repos: [Tymeslot.Repo],
+  driver: Wallaby.Chrome,
+  chromedriver: [
+    headless: true,
+    binary: "/snap/chromium/current/usr/lib/chromium-browser/chrome"
+  ]

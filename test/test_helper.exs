@@ -13,6 +13,13 @@ Mix.Task.run("ecto.migrate", ["--quiet"])
 {:ok, _result} =
   Phoenix.PubSub.Supervisor.start_link(name: Tymeslot.TestPubSub, adapter: Phoenix.PubSub.PG2)
 
+# E2E tests require the HTTP server to be running so the browser can connect.
+# Enable it before starting the app so the endpoint boots with server: true.
+if System.get_env("E2E") == "true" do
+  existing_endpoint_config = Application.get_env(:tymeslot, TymeslotWeb.Endpoint, [])
+  Application.put_env(:tymeslot, TymeslotWeb.Endpoint, Keyword.put(existing_endpoint_config, :server, true))
+end
+
 # Start Ecto sandbox - ensure Repo is ready first
 {:ok, _result} = Application.ensure_all_started(:tymeslot)
 Ecto.Adapters.SQL.Sandbox.mode(Tymeslot.Repo, :manual)
@@ -130,5 +137,6 @@ ExUnit.configure(exunit_config)
 
 # Start Wallaby for E2E browser tests
 if System.get_env("E2E") == "true" do
+  Application.put_env(:wallaby, :base_url, TymeslotWeb.Endpoint.url())
   {:ok, _apps} = Application.ensure_all_started(:wallaby)
 end

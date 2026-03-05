@@ -6,6 +6,7 @@ defmodule TymeslotWeb.E2EHelpers do
   import Wallaby.Browser
   import Wallaby.Query
 
+  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.Factory
   alias Tymeslot.Profiles
@@ -78,7 +79,14 @@ defmodule TymeslotWeb.E2EHelpers do
         )
       )
 
-    {:ok, _profile} = Profiles.get_or_create_profile(user.id)
+    {:ok, profile} = Profiles.get_or_create_profile(user.id)
+
+    # Ensure the profile has a username so tests that build URLs like
+    # /:username/... don't generate nil-based paths.
+    unless profile.username do
+      username = Profiles.generate_default_username(user.id)
+      {:ok, _} = ProfileQueries.update_username(profile, username)
+    end
 
     user
   end

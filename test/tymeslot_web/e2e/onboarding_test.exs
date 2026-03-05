@@ -40,7 +40,13 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
       |> fill_in(css("#username"), with: "e2e-user-#{System.unique_integer([:positive])}")
       |> click(css("button[phx-click='next_step']"))
 
-    # Step 3: Scheduling Preferences — use defaults, click complete
+    # Step 3: Scheduling Preferences — use defaults, advance to complete step
+    session =
+      session
+      |> assert_has(css("button[phx-click='next_step']"))
+      |> click(css("button[phx-click='next_step']"))
+
+    # Step 4: Complete — click "Get Started" to finish onboarding and go to dashboard
     session
     |> assert_has(css("button[phx-click='next_step']"))
     |> click(css("button[phx-click='next_step']"))

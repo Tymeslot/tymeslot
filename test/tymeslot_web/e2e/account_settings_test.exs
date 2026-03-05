@@ -24,7 +24,7 @@ defmodule TymeslotWeb.E2E.AccountSettingsTest do
       )
       |> click(css("form[phx-submit='update_password'] button[type='submit']"))
 
-    # Should see success indication
-    assert_has(session, css("div", text: "Password updated"))
+    # Should see success flash (role=alert from flash component)
+    assert_has(session, css("[role='alert']", text: "Password updated"))
   end
 end

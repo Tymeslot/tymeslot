@@ -60,8 +60,7 @@ defmodule Tymeslot.Auth.Registration do
   end
 
   defp validate_terms(params, validated_params) do
-    if Application.get_env(:tymeslot, :enforce_legal_agreements, false) ||
-         Application.get_env(:tymeslot, :environment) == :test do
+    if Application.get_env(:tymeslot, :enforce_legal_agreements, false) do
       case Map.get(params, "terms_accepted") do
         value when value in ["true", "on", true] ->
           {:ok, validated_params}

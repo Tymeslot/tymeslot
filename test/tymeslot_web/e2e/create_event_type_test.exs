@@ -15,7 +15,7 @@ defmodule TymeslotWeb.E2E.CreateEventTypeTest do
       |> fill_in(css("input[name='meeting_type[duration]']"), with: "30")
       |> click(css("button[type='submit']", text: "Create Meeting Type"))
 
-    # Should see success flash and the new type in the list
-    assert_has(session, css("div", text: "Quick Chat"))
+    # Should see the new type in the list (name is in an h3)
+    assert_has(session, css("h3", text: "Quick Chat"))
   end
 end

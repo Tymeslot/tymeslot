@@ -134,6 +134,10 @@ if System.get_env("PHX_SERVER") do
   config :tymeslot, TymeslotWeb.Endpoint, server: true
 end
 
+if System.get_env("E2E") == "true" do
+  config :tymeslot, TymeslotWeb.Endpoint, server: true
+end
+
 if config_env() == :prod do
   # Set environment for runtime detection
   config :tymeslot, :environment, :prod
