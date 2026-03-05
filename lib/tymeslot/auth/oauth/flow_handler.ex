@@ -8,7 +8,15 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
 
   require Logger
 
-  alias Tymeslot.Auth.OAuth.{Client, HelperBehaviour, State, URLs, UserProcessor, UserRegistration}
+  alias Tymeslot.Auth.OAuth.{
+    Client,
+    HelperBehaviour,
+    State,
+    URLs,
+    UserProcessor,
+    UserRegistration
+  }
+
   alias Tymeslot.Auth.Session
   alias Tymeslot.Infrastructure.Config
 

@@ -136,7 +136,11 @@ defmodule TymeslotWeb.OAuthControllerTest do
   describe "GET /auth/:provider/callback" do
     test "successful login: puts success flash and redirects", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:ok, conn, :github}
       end)
 
@@ -147,7 +151,8 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert String.starts_with?(redirected_to(conn), "/")
     end
 
-    test "registration required: stores data in session and redirects to /auth/complete-registration", %{conn: conn} do
+    test "registration required: stores data in session and redirects to /auth/complete-registration",
+         %{conn: conn} do
       registration_data = %{
         provider: "github",
         email: "user@example.com",
@@ -160,7 +165,11 @@ defmodule TymeslotWeb.OAuthControllerTest do
       }
 
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:registration_required, conn, :github, registration_data}
       end)
 
@@ -173,9 +182,14 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert session_data.github_user_id == 123
     end
 
-    test "registration_path query param is ignored; always redirects to /auth/complete-registration", %{conn: conn} do
+    test "registration_path query param is ignored; always redirects to /auth/complete-registration",
+         %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:registration_required, conn, :github, %{provider: "github", email: "u@e.com"}}
       end)
 
@@ -191,19 +205,29 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "invalid state: puts security error flash and redirects to login", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:error, :invalid_state, conn}
       end)
 
       conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
 
       assert redirected_to(conn) == "/?auth=login"
-      assert Flash.get(conn.assigns.flash, :error) == "Security validation failed. Please try again."
+
+      assert Flash.get(conn.assigns.flash, :error) ==
+               "Security validation failed. Please try again."
     end
 
     test "OAuth error: puts provider error flash and redirects to login", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :google} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :google
+                                                           } ->
         {:error, :oauth_error, :google, conn}
       end)
 
@@ -215,19 +239,29 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "general error: puts provider error flash and redirects to login", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:error, :general_error, :github, conn}
       end)
 
       conn = get(conn, ~p"/auth/github/callback", %{"code" => "code", "state" => "state"})
 
       assert redirected_to(conn) == "/?auth=login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "An error occurred during GitHub authentication."
+
+      assert Flash.get(conn.assigns.flash, :error) =~
+               "An error occurred during GitHub authentication."
     end
 
     test "session failed: puts session failure flash and redirects to login", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:error, :session_failed, :github, conn}
       end)
 
@@ -269,9 +303,15 @@ defmodule TymeslotWeb.OAuthControllerTest do
       assert Flash.get(conn.assigns.flash, :error) =~ "Too many authentication attempts"
     end
 
-    test "redirects to login with info flash when registration is disabled for new user", %{conn: conn} do
+    test "redirects to login with info flash when registration is disabled for new user", %{
+      conn: conn
+    } do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:error, :registration_disabled, :github, conn}
       end)
 
@@ -283,7 +323,11 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "successful generic oauth callback redirects to dashboard", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :oauth} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :oauth
+                                                           } ->
         {:ok, conn, :oauth}
       end)
 
@@ -295,7 +339,11 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "respects valid internal success_path", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:ok, conn, :github}
       end)
 
@@ -311,7 +359,11 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "rejects URL-encoded open redirect via success_path", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:ok, conn, :github}
       end)
 
@@ -328,7 +380,11 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "rejects open redirect via success_path parameter", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:ok, conn, :github}
       end)
 
@@ -347,7 +403,11 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "rejects protocol-relative redirect via success_path", %{conn: conn} do
       :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{code: "code", state: "state", provider: :github} ->
+                                                           %{
+                                                             code: "code",
+                                                             state: "state",
+                                                             provider: :github
+                                                           } ->
         {:ok, conn, :github}
       end)
 
@@ -472,7 +532,10 @@ defmodule TymeslotWeb.OAuthControllerTest do
       conn =
         conn
         |> Test.init_test_session(%{pending_oauth_registration: session_data})
-        |> post(~p"/auth/complete", %{"auth" => %{"email" => "unverified@example.com"}, "terms_accepted" => "on"})
+        |> post(~p"/auth/complete", %{
+          "auth" => %{"email" => "unverified@example.com"},
+          "terms_accepted" => "on"
+        })
 
       assert redirected_to(conn) == "/dashboard"
       assert Flash.get(conn.assigns.flash, :info) =~ "Please check your email to verify"

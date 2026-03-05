@@ -117,5 +117,4 @@ defmodule Tymeslot.Auth.OAuth.Helper do
   def handle_oauth_callback(conn, params) when is_map(params) do
     FlowHandler.handle_oauth_callback(conn, params)
   end
-
 end

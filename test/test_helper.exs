@@ -17,7 +17,12 @@ Mix.Task.run("ecto.migrate", ["--quiet"])
 # Enable it before starting the app so the endpoint boots with server: true.
 if System.get_env("E2E") == "true" do
   existing_endpoint_config = Application.get_env(:tymeslot, TymeslotWeb.Endpoint, [])
-  Application.put_env(:tymeslot, TymeslotWeb.Endpoint, Keyword.put(existing_endpoint_config, :server, true))
+
+  Application.put_env(
+    :tymeslot,
+    TymeslotWeb.Endpoint,
+    Keyword.put(existing_endpoint_config, :server, true)
+  )
 end
 
 # Start Ecto sandbox - ensure Repo is ready first

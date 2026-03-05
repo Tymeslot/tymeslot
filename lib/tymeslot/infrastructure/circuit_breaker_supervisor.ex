@@ -10,7 +10,6 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
   alias Tymeslot.Integrations.Calendar.ProviderConfig, as: CalendarProviderConfig
   alias Tymeslot.Integrations.Video.ProviderConfig, as: VideoProviderConfig
 
-
   @spec start_link(any()) :: Supervisor.on_start()
   def start_link(init_arg) do
     Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
@@ -82,7 +81,10 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
     |> Enum.map(fn provider ->
       name = :"calendar_breaker_#{provider}"
       config = CalendarCircuitBreaker.get_config(provider)
-      Supervisor.child_spec({Tymeslot.Infrastructure.CircuitBreaker, name: name, config: config}, id: name)
+
+      Supervisor.child_spec({Tymeslot.Infrastructure.CircuitBreaker, name: name, config: config},
+        id: name
+      )
     end)
   end
 
@@ -92,7 +94,10 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
     |> Enum.map(fn provider ->
       name = :"video_breaker_#{provider}"
       config = VideoCircuitBreaker.get_config(provider)
-      Supervisor.child_spec({Tymeslot.Infrastructure.CircuitBreaker, name: name, config: config}, id: name)
+
+      Supervisor.child_spec({Tymeslot.Infrastructure.CircuitBreaker, name: name, config: config},
+        id: name
+      )
     end)
   end
 end

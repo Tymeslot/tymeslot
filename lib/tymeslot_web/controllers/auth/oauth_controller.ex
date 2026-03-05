@@ -64,7 +64,10 @@ defmodule TymeslotWeb.OAuthController do
     case RateLimiter.check_oauth_initiation_rate_limit(ClientIP.get(conn)) do
       :ok ->
         redirect_uri = URLs.callback_url(conn, URLs.callback_path(provider))
-        {updated_conn, authorize_url} = provider_module(provider).authorize_url(conn, redirect_uri)
+
+        {updated_conn, authorize_url} =
+          provider_module(provider).authorize_url(conn, redirect_uri)
+
         redirect(updated_conn, external: authorize_url)
 
       {:error, :rate_limited, _message} ->

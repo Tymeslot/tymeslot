@@ -272,8 +272,7 @@ defmodule TymeslotWeb.ThemeMeetingTestCases do
     %{
       meeting_cancelled: "Termin abgesagt",
       successfully_cancelled: "Ihr Termin wurde erfolgreich abgesagt.",
-      cancellation_emails_sent:
-        "Die Absage-E-Mails wurden an alle Teilnehmer versendet."
+      cancellation_emails_sent: "Die Absage-E-Mails wurden an alle Teilnehmer versendet."
     }
   end
 

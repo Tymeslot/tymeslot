@@ -45,7 +45,10 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
                      calendar_list: calendars
                    }) do
                 {:ok, _integration} ->
-                  send(parent, {:calendar_list_refreshed, component_id, integration_id, calendars})
+                  send(
+                    parent,
+                    {:calendar_list_refreshed, component_id, integration_id, calendars}
+                  )
 
                 {:error, reason} ->
                   Logger.error("Failed to persist calendar list",

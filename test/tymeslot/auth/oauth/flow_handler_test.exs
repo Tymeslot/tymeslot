@@ -44,7 +44,14 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
   # need to reference or override individual steps.
   defp setup_existing_user_flow_mocks do
     user_info = %{"id" => 123}
-    processed_user = %{email: "user@example.com", github_user_id: 123, name: "Test", is_verified: true}
+
+    processed_user = %{
+      email: "user@example.com",
+      github_user_id: 123,
+      name: "Test",
+      is_verified: true
+    }
+
     enhanced_user = Map.put(processed_user, :email_from_provider, true)
     existing_user = %{id: 987}
 
@@ -55,6 +62,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
     end)
 
     :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
+
     :meck.expect(UserProcessor, :process_user, fn :github, ^user_info -> {:ok, processed_user} end)
 
     :meck.expect(UserProcessor, :enhance_user_data, fn :github, ^processed_user, :authed_client ->
@@ -118,6 +126,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
     end)
 
     :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
+
     :meck.expect(UserProcessor, :process_user, fn :github, ^user_info -> {:ok, processed_user} end)
 
     :meck.expect(UserProcessor, :enhance_user_data, fn :github, ^processed_user, :authed_client ->
@@ -144,7 +153,14 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
 
   test "returns {:registration_required, conn, provider, params} with empty missing_fields when data is complete" do
     user_info = %{"id" => 456}
-    processed_user = %{email: "complete@example.com", github_user_id: 456, name: "Full User", is_verified: true}
+
+    processed_user = %{
+      email: "complete@example.com",
+      github_user_id: 456,
+      name: "Full User",
+      is_verified: true
+    }
+
     enhanced_user = Map.put(processed_user, :email_from_provider, true)
 
     setup_pre_exchange_mocks()
@@ -154,6 +170,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
     end)
 
     :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
+
     :meck.expect(UserProcessor, :process_user, fn :github, ^user_info -> {:ok, processed_user} end)
 
     :meck.expect(UserProcessor, :enhance_user_data, fn :github, ^processed_user, :authed_client ->
@@ -228,7 +245,14 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
   describe "registration disabled" do
     test "returns {:error, :registration_disabled, provider, conn} when registration is off" do
       user_info = %{"id" => 999}
-      processed_user = %{email: "new@example.com", github_user_id: 999, name: "New", is_verified: true}
+
+      processed_user = %{
+        email: "new@example.com",
+        github_user_id: 999,
+        name: "New",
+        is_verified: true
+      }
+
       enhanced_user = Map.put(processed_user, :email_from_provider, true)
 
       setup_pre_exchange_mocks()
@@ -238,9 +262,14 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
       end)
 
       :meck.expect(Client, :get_user_info, fn :authed_client, :github -> {:ok, user_info} end)
-      :meck.expect(UserProcessor, :process_user, fn :github, ^user_info -> {:ok, processed_user} end)
 
-      :meck.expect(UserProcessor, :enhance_user_data, fn :github, ^processed_user, :authed_client ->
+      :meck.expect(UserProcessor, :process_user, fn :github, ^user_info ->
+        {:ok, processed_user}
+      end)
+
+      :meck.expect(UserProcessor, :enhance_user_data, fn :github,
+                                                         ^processed_user,
+                                                         :authed_client ->
         enhanced_user
       end)
 
@@ -278,7 +307,14 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
 
     test "returns {:ok, conn, :oauth} on successful login for existing generic OAuth user" do
       user_info = %{"sub" => "user-123", "email" => "sso@example.com"}
-      processed_user = %{email: "sso@example.com", provider_uid: "user-123", name: "SSO User", is_verified: true}
+
+      processed_user = %{
+        email: "sso@example.com",
+        provider_uid: "user-123",
+        name: "SSO User",
+        is_verified: true
+      }
+
       enhanced_user = Map.put(processed_user, :email_from_provider, true)
       existing_user = %{id: 456}
 
@@ -289,9 +325,14 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
       end)
 
       :meck.expect(Client, :get_user_info, fn :authed_client, :oauth -> {:ok, user_info} end)
-      :meck.expect(UserProcessor, :process_user, fn :oauth, ^user_info -> {:ok, processed_user} end)
 
-      :meck.expect(UserProcessor, :enhance_user_data, fn :oauth, ^processed_user, :authed_client ->
+      :meck.expect(UserProcessor, :process_user, fn :oauth, ^user_info ->
+        {:ok, processed_user}
+      end)
+
+      :meck.expect(UserProcessor, :enhance_user_data, fn :oauth,
+                                                         ^processed_user,
+                                                         :authed_client ->
         enhanced_user
       end)
 
@@ -311,7 +352,14 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
 
     test "returns {:registration_required, ...} with provider_uid param for new generic OAuth user" do
       user_info = %{"sub" => "new-user-789", "email" => "new-sso@example.com"}
-      processed_user = %{email: "new-sso@example.com", provider_uid: "new-user-789", name: "New SSO", is_verified: true}
+
+      processed_user = %{
+        email: "new-sso@example.com",
+        provider_uid: "new-user-789",
+        name: "New SSO",
+        is_verified: true
+      }
+
       enhanced_user = Map.put(processed_user, :email_from_provider, true)
 
       setup_oauth_pre_exchange_mocks()
@@ -321,9 +369,14 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
       end)
 
       :meck.expect(Client, :get_user_info, fn :authed_client, :oauth -> {:ok, user_info} end)
-      :meck.expect(UserProcessor, :process_user, fn :oauth, ^user_info -> {:ok, processed_user} end)
 
-      :meck.expect(UserProcessor, :enhance_user_data, fn :oauth, ^processed_user, :authed_client ->
+      :meck.expect(UserProcessor, :process_user, fn :oauth, ^user_info ->
+        {:ok, processed_user}
+      end)
+
+      :meck.expect(UserProcessor, :enhance_user_data, fn :oauth,
+                                                         ^processed_user,
+                                                         :authed_client ->
         enhanced_user
       end)
 

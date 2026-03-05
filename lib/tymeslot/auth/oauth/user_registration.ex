@@ -73,7 +73,9 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
            opts
          ) do
       {:ok, %{user: user, created: true}} ->
-        {:ok, updated_user} = handle_user_verification_status(user, email_verified, oauth_user.email)
+        {:ok, updated_user} =
+          handle_user_verification_status(user, email_verified, oauth_user.email)
+
         PubSub.broadcast_user_registered(updated_user, metadata)
         {:ok, updated_user}
 

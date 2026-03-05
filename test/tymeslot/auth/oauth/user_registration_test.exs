@@ -56,7 +56,12 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
 
   describe "check_oauth_account_linking/3 via create_oauth_user" do
     test ":oauth links account when provider_uid matches existing user" do
-      existing = Factory.insert(:user, email: "sso@example.com", provider: "oauth", provider_uid: "uid-match")
+      existing =
+        Factory.insert(:user,
+          email: "sso@example.com",
+          provider: "oauth",
+          provider_uid: "uid-match"
+        )
 
       oauth_user = %{
         email: "sso@example.com",
@@ -71,7 +76,12 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
     end
 
     test ":oauth links account by email when provider_uid differs but email is verified" do
-      existing = Factory.insert(:user, email: "sso@example.com", provider: "oauth", provider_uid: "uid-old")
+      existing =
+        Factory.insert(:user,
+          email: "sso@example.com",
+          provider: "oauth",
+          provider_uid: "uid-old"
+        )
 
       oauth_user = %{
         email: "sso@example.com",
@@ -88,7 +98,12 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
     end
 
     test ":oauth does NOT link account by email when email is unverified" do
-      _existing = Factory.insert(:user, email: "sso@example.com", provider: "oauth", provider_uid: "uid-old")
+      _existing =
+        Factory.insert(:user,
+          email: "sso@example.com",
+          provider: "oauth",
+          provider_uid: "uid-old"
+        )
 
       oauth_user = %{
         email: "sso@example.com",

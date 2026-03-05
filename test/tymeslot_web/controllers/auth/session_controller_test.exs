@@ -153,7 +153,10 @@ defmodule TymeslotWeb.SessionControllerTest do
         })
 
       assert redirected_to(conn) == "/auth/login"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Password authentication is currently disabled"
+
+      assert Flash.get(conn.assigns.flash, :error) =~
+               "Password authentication is currently disabled"
+
       refute get_session(conn, :user_token)
     end
   end

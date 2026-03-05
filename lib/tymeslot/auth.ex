@@ -8,7 +8,16 @@ defmodule Tymeslot.Auth do
   """
 
   alias Ecto.Changeset
-  alias Tymeslot.Auth.{AuthActions, Authentication, PasswordReset, Registration, Session, Verification}
+
+  alias Tymeslot.Auth.{
+    AuthActions,
+    Authentication,
+    PasswordReset,
+    Registration,
+    Session,
+    Verification
+  }
+
   alias Tymeslot.DatabaseQueries.{UserQueries, UserSessionQueries}
   alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Security.FieldValidators.EmailValidator

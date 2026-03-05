@@ -77,5 +77,4 @@ defmodule TymeslotWeb.Registration.CompleteRegistrationComponent do
     <% end %>
     """
   end
-
 end
