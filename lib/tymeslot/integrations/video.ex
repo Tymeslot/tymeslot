@@ -236,7 +236,7 @@ defmodule Tymeslot.Integrations.Video do
 
   defp google_oauth_authorization_url(user_id) do
     redirect_uri = "#{Endpoint.url()}/auth/google/video/callback"
-    url = google_oauth_helper().authorization_url(user_id, redirect_uri, [:calendar])
+    url = google_oauth_helper().authorization_url(user_id, redirect_uri, [:calendar, :meet])
     {:ok, url}
   rescue
     error -> {:error, format_google_oauth_error(error)}
