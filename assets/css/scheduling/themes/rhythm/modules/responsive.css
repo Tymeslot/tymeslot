@@ -419,7 +419,6 @@
   .confirmation-container {
     padding: var(--space-md) var(--space-sm);
     gap: var(--space-md);
-    justify-content: flex-start;
   }
 
   .confirmation-header-section {

@@ -1,13 +1,34 @@
 /* Confirmation Components */
+
+/* On the confirmation step the scheduling box must grow to fit its content
+   instead of being capped at the viewport.  The parent .content-area already
+   has overflow-y:auto + align-items:safe center, so it scrolls when the box
+   exceeds the available space (e.g. with the branding footer on short screens).
+
+   Three overrides work together:
+   1. max-height:none  – removes the 100% cap from the base .scheduling-box
+   2. flex-basis:auto on .slide-content – the base rule uses flex:1 (basis 0%),
+      which resolves to 0px in an auto-height flex parent and clips content
+   3. No min-height / justify-content on .confirmation-container – vertical
+      centering is handled by the content-area; inner centering would push
+      content out of the clipped area on short viewports */
+
+.scheduling-box:has(.confirmation-slide) {
+  width: 600px;
+  max-height: none;
+}
+
+.slide-content.confirmation-slide {
+  flex-basis: auto;
+}
+
 .confirmation-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-xl);
-  padding: var(--space-2xl) var(--space-xl);
+  gap: var(--space-lg);
+  padding: var(--space-xl) var(--space-lg);
   width: 100%;
-  height: 100%;
-  justify-content: center;
 }
 
 .confirmation-header-section {
