@@ -85,7 +85,7 @@ defmodule TymeslotWeb.E2EHelpers do
     # /:username/... don't generate nil-based paths.
     unless profile.username do
       username = Profiles.generate_default_username(user.id)
-      {:ok, _} = ProfileQueries.update_username(profile, username)
+      {:ok, _profile} = ProfileQueries.update_username(profile, username)
     end
 
     user
