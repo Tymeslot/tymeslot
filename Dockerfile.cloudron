@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # --- Builder Stage ---
-FROM elixir:1.19.5-otp-28-slim AS builder
+FROM hexpm/elixir:1.19.5-erlang-28.3.3-debian-bookworm-20260223-slim AS builder
 
 # Build arguments and environment
 ARG MIX_ENV=prod
