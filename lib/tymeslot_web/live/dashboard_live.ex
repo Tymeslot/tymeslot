@@ -336,6 +336,28 @@ defmodule TymeslotWeb.DashboardLive do
     {:noreply, socket}
   end
 
+  @spec handle_info({:telegram_linked, integer(), String.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:telegram_linked, integration_id, _chat_id}, socket) do
+    send_update(AutomationSettingsComponent,
+      id: "automation",
+      telegram_linked_integration_id: integration_id
+    )
+
+    {:noreply, socket}
+  end
+
+  @spec handle_info({:telegram_link_expired, integer()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:telegram_link_expired, integration_id}, socket) do
+    send_update(AutomationSettingsComponent,
+      id: "automation",
+      telegram_link_expired_id: integration_id
+    )
+
+    {:noreply, socket}
+  end
+
   @spec handle_info(any(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info(_msg, socket) do

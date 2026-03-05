@@ -72,11 +72,24 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
      |> assign(:show_telegram_form, false)
      |> assign(:telegram_form_mode, :create)
      |> assign(:telegram_form_data, nil)
-     |> assign(:telegram_form_timestamp, nil)}
+     |> assign(:telegram_form_timestamp, nil)
+     |> assign(:telegram_wizard_step, 1)
+     |> assign(:telegram_link_expired, false)
+     |> assign(:telegram_link_timer, nil)
+     |> assign(:telegram_deep_link, nil)
+     |> assign(:telegram_form_is_stub, false)}
   end
 
   @impl Phoenix.LiveComponent
   @spec update(map(), Phoenix.LiveView.Socket.t()) :: {:ok, Phoenix.LiveView.Socket.t()}
+  def update(%{telegram_linked_integration_id: integration_id}, socket) do
+    {:ok, handle_telegram_linked(socket, integration_id)}
+  end
+
+  def update(%{telegram_link_expired_id: integration_id}, socket) do
+    {:ok, handle_telegram_link_expired(socket, integration_id)}
+  end
+
   def update(assigns, socket) do
     socket =
       socket
@@ -383,26 +396,93 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   # ============================================================================
 
   def handle_event("show_telegram_form", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:show_telegram_form, true)
-     |> assign(:telegram_form_mode, :create)
-     |> assign(:telegram_form_data, nil)
-     |> assign(:telegram_form_timestamp, System.system_time())
-     |> assign(:telegram_form_errors, %{})
-     |> assign(:telegram_form_values, %{
-       "name" => "",
-       "events" => []
-     })}
+    if Telegram.shared_bot_mode?() do
+      user_id = socket.assigns.current_user.id
+
+      case Telegram.create_integration(user_id, %{name: "My Telegram", events: ["meeting.created"]}) do
+        {:ok, integration} ->
+          token = Telegram.generate_link_token(user_id, integration.id)
+          deep_link = Telegram.build_deep_link(token)
+          timer_ref = Process.send_after(self(), {:telegram_link_expired, integration.id}, :timer.minutes(10))
+
+          {:noreply,
+           socket
+           |> assign(:show_telegram_form, true)
+           |> assign(:telegram_form_mode, :create)
+           |> assign(:telegram_form_data, integration)
+           |> assign(:telegram_form_timestamp, System.system_time())
+           |> assign(:telegram_form_errors, %{})
+           |> assign(:telegram_form_values, %{"name" => "", "events" => []})
+           |> assign(:telegram_wizard_step, 1)
+           |> assign(:telegram_link_expired, false)
+           |> assign(:telegram_deep_link, deep_link)
+           |> assign(:telegram_link_timer, timer_ref)
+           |> assign(:telegram_form_is_stub, true)}
+
+        {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+          {:noreply, handle_feature_access_error(socket, reason)}
+
+        {:error, _} ->
+          Flash.error("Failed to initialize integration. Please try again.")
+          {:noreply, socket}
+      end
+    else
+      {:noreply,
+       socket
+       |> assign(:show_telegram_form, true)
+       |> assign(:telegram_form_mode, :create)
+       |> assign(:telegram_form_data, nil)
+       |> assign(:telegram_form_timestamp, System.system_time())
+       |> assign(:telegram_form_errors, %{})
+       |> assign(:telegram_form_values, %{"name" => "", "events" => []})
+       |> assign(:telegram_wizard_step, 1)
+       |> assign(:telegram_link_expired, false)
+       |> assign(:telegram_deep_link, nil)}
+    end
   end
 
   def handle_event("close_telegram_form", _params, socket) do
+    if socket.assigns.telegram_link_timer do
+      Process.cancel_timer(socket.assigns.telegram_link_timer)
+    end
+
+    # Only delete stub integrations (pending_link with no chat_id) when the wizard is abandoned
+    if socket.assigns.telegram_form_is_stub and socket.assigns.telegram_form_mode == :create do
+      case socket.assigns.telegram_form_data do
+        %{chat_id: nil} = integration -> Telegram.delete_integration(integration)
+        _ -> :ok
+      end
+    end
+
     {:noreply,
      socket
      |> assign(:show_telegram_form, false)
      |> assign(:telegram_form_data, nil)
      |> assign(:telegram_form_errors, %{})
-     |> assign(:telegram_form_values, %{})}
+     |> assign(:telegram_form_values, %{})
+     |> assign(:telegram_link_timer, nil)
+     |> assign(:telegram_deep_link, nil)
+     |> assign(:telegram_link_expired, false)
+     |> assign(:telegram_form_is_stub, false)
+     |> maybe_load_telegram()}
+  end
+
+  def handle_event("refresh_telegram_link", _params, socket) do
+    if socket.assigns.telegram_link_timer do
+      Process.cancel_timer(socket.assigns.telegram_link_timer)
+    end
+
+    integration = socket.assigns.telegram_form_data
+    user_id = socket.assigns.current_user.id
+    token = Telegram.generate_link_token(user_id, integration.id)
+    deep_link = Telegram.build_deep_link(token)
+    timer_ref = Process.send_after(self(), {:telegram_link_expired, integration.id}, :timer.minutes(10))
+
+    {:noreply,
+     socket
+     |> assign(:telegram_deep_link, deep_link)
+     |> assign(:telegram_link_expired, false)
+     |> assign(:telegram_link_timer, timer_ref)}
   end
 
   def handle_event("validate_telegram_field", %{"field" => field, "value" => value}, socket) do
@@ -415,7 +495,10 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         atom_field = FormValidationHelpers.atomize_field(field, fields)
         FormValidationHelpers.delete_field_error(socket.assigns.telegram_form_errors, atom_field)
       else
-        case TelegramInputValidation.validate_form(form_values, bot_mode: bot_mode) do
+        case TelegramInputValidation.validate_form(form_values,
+               bot_mode: bot_mode,
+               mode: socket.assigns.telegram_form_mode
+             ) do
           {:ok, _validated} -> %{}
           {:error, errs} -> errs
         end
@@ -444,11 +527,11 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     with_rate_limit(RateLimiter.check_webhook_write_rate_limit(user_id), socket, fn ->
       case TelegramInputValidation.validate_form(params, bot_mode: bot_mode) do
         {:ok, sanitized} ->
-          # For own-bot mode, test before saving
           if bot_mode == "own" do
             test_and_save_telegram(user_id, sanitized, socket)
           else
-            save_telegram(user_id, sanitized, socket)
+            # Shared bot mode: integration already exists, update it with configured name/events
+            test_and_update_telegram(sanitized, socket)
           end
 
         {:error, errors} ->
@@ -467,7 +550,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         bot_mode = if Telegram.shared_bot_mode?(), do: "shared", else: "own"
 
         with_rate_limit(RateLimiter.check_webhook_write_rate_limit(user_id), socket, fn ->
-          case TelegramInputValidation.validate_form(params, bot_mode: bot_mode) do
+          case TelegramInputValidation.validate_form(params, bot_mode: bot_mode, mode: :edit) do
             {:ok, sanitized} ->
               case Telegram.update_integration(integration, sanitized) do
                 {:ok, _updated} ->
@@ -510,7 +593,8 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
          |> assign(:telegram_form_errors, %{})
          |> assign(:telegram_form_values, %{
            "name" => integration.name,
-           "events" => integration.events
+           "events" => integration.events,
+           "chat_id" => if(integration.bot_mode == "own", do: integration.chat_id || "", else: "")
          })}
 
       {:error, _reason} ->
@@ -612,6 +696,46 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         end
 
       {:error, _reason} ->
+        Flash.error("Integration not found")
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("reconnect_telegram", %{"id" => id}, socket) do
+    case get_telegram_for_user(socket, id) do
+      {:ok, integration} ->
+        if socket.assigns.telegram_link_timer do
+          Process.cancel_timer(socket.assigns.telegram_link_timer)
+        end
+
+        case Telegram.reconnect_integration(integration) do
+          {:ok, updated, deep_link} ->
+            timer_ref = Process.send_after(self(), {:telegram_link_expired, updated.id}, :timer.minutes(10))
+
+            {:noreply,
+             socket
+             |> assign(:show_telegram_form, true)
+             |> assign(:telegram_form_mode, :create)
+             |> assign(:telegram_form_data, updated)
+             |> assign(:telegram_form_timestamp, System.system_time())
+             |> assign(:telegram_form_errors, %{})
+             |> assign(:telegram_form_values, %{
+               "name" => integration.name,
+               "events" => integration.events
+             })
+             |> assign(:telegram_wizard_step, 1)
+             |> assign(:telegram_link_expired, false)
+             |> assign(:telegram_deep_link, deep_link)
+             |> assign(:telegram_link_timer, timer_ref)
+             |> assign(:telegram_form_is_stub, false)
+             |> maybe_load_telegram()}
+
+          {:error, :own_bot_mode} ->
+            Flash.error("Cannot reconnect in own-bot mode")
+            {:noreply, socket}
+        end
+
+      {:error, _} ->
         Flash.error("Integration not found")
         {:noreply, socket}
     end
@@ -765,6 +889,9 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
             saving={@telegram_saving}
             current_user={@current_user}
             parent_component={@myself}
+            wizard_step={@telegram_wizard_step}
+            link_expired={@telegram_link_expired}
+            deep_link={@telegram_deep_link}
           />
         </div>
         <% true -> %>
@@ -880,6 +1007,11 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
               on_view_deliveries={JS.push("show_telegram_deliveries", value: %{"id" => integration.id}, target: @myself)}
               on_reenable={JS.push("reenable_telegram", value: %{"id" => integration.id}, target: @myself)}
               on_disconnect={JS.push("disconnect_telegram", value: %{"id" => integration.id}, target: @myself)}
+              on_reconnect={
+                if integration.bot_mode == "shared" do
+                  JS.push("reconnect_telegram", value: %{"id" => integration.id}, target: @myself)
+                end
+              }
             />
           <% end %>
         </div>
@@ -1062,6 +1194,44 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     end
   end
 
+  defp test_and_update_telegram(sanitized, socket) do
+    case socket.assigns.telegram_form_data do
+      nil ->
+        Flash.error("Integration not found. Please try again.")
+        {:noreply, socket}
+
+      integration ->
+        case Telegram.update_integration(integration, sanitized) do
+          {:ok, _updated} ->
+            if socket.assigns.telegram_link_timer do
+              Process.cancel_timer(socket.assigns.telegram_link_timer)
+            end
+
+            Flash.info("Telegram integration created")
+
+            {:noreply,
+             socket
+             |> assign(:show_telegram_form, false)
+             |> assign(:telegram_form_data, nil)
+             |> assign(:telegram_form_errors, %{})
+             |> assign(:telegram_form_values, %{})
+             |> assign(:telegram_link_timer, nil)
+             |> assign(:telegram_deep_link, nil)
+             |> assign(:telegram_link_expired, false)
+             |> assign(:telegram_form_is_stub, false)
+             |> maybe_load_telegram()}
+
+          {:error, %Ecto.Changeset{} = changeset} ->
+            errors = AutomationHelpers.format_changeset_errors(changeset)
+            Flash.error("Failed to create integration")
+            {:noreply, assign(socket, :telegram_form_errors, errors)}
+
+          {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+            {:noreply, handle_feature_access_error(socket, reason)}
+        end
+    end
+  end
+
   defp do_regenerate_token(socket) do
     case socket.assigns.selected_webhook do
       nil ->
@@ -1142,5 +1312,45 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   defp handle_feature_access_error(socket, :feature_access_checker_failed) do
     Flash.error("Unable to verify subscription status. Please try again.")
     socket
+  end
+
+  defp handle_telegram_linked(socket, integration_id) do
+    if socket.assigns.telegram_link_timer do
+      Process.cancel_timer(socket.assigns.telegram_link_timer)
+    end
+
+    socket = assign(socket, :telegram_link_timer, nil)
+
+    if socket.assigns.show_telegram_form &&
+         socket.assigns.telegram_form_data &&
+         socket.assigns.telegram_form_data.id == integration_id do
+      user_id = socket.assigns.current_user.id
+
+      case Telegram.get_integration(integration_id, user_id) do
+        {:ok, updated_integration} ->
+          socket
+          |> assign(:telegram_form_data, updated_integration)
+          |> assign(:telegram_wizard_step, 2)
+          |> maybe_load_telegram()
+
+        {:error, _} ->
+          maybe_load_telegram(socket)
+      end
+    else
+      maybe_load_telegram(socket)
+    end
+  end
+
+  defp handle_telegram_link_expired(socket, integration_id) do
+    socket = assign(socket, :telegram_link_timer, nil)
+
+    if socket.assigns.show_telegram_form &&
+         socket.assigns.telegram_form_data &&
+         socket.assigns.telegram_form_data.id == integration_id &&
+         socket.assigns.telegram_wizard_step == 1 do
+      assign(socket, :telegram_link_expired, true)
+    else
+      socket
+    end
   end
 end

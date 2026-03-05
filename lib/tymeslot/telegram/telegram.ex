@@ -127,23 +127,21 @@ defmodule Tymeslot.Telegram do
 
   @spec trigger_integrations_for_event(integer(), String.t(), map()) :: :ok
   def trigger_integrations_for_event(user_id, event_type, meeting) do
-    unless telegram_enabled?() do
+    if telegram_enabled?() do
+      case Features.check_access(user_id, :automations_allowed) do
+        :ok ->
+          user_id
+          |> TelegramQueries.list_active_integrations_for_event(event_type)
+          |> Enum.each(&trigger_integration(&1, event_type, meeting))
+
+        {:error, _reason} ->
+          :ok
+      end
+    else
       Logger.debug("Telegram notifications disabled, skipping",
         user_id: user_id,
         event_type: event_type
       )
-
-      return_ok()
-    end
-
-    case Features.check_access(user_id, :automations_allowed) do
-      :ok ->
-        user_id
-        |> TelegramQueries.list_active_integrations_for_event(event_type)
-        |> Enum.each(&trigger_integration(&1, event_type, meeting))
-
-      {:error, _reason} ->
-        :ok
     end
 
     :ok
@@ -308,8 +306,6 @@ defmodule Tymeslot.Telegram do
         {:error, "Connection failed: #{inspect(reason)}"}
     end
   end
-
-  defp return_ok, do: :ok
 
   defp truncate(text, max) when is_binary(text) and byte_size(text) > max,
     do: String.slice(text, 0, max) <> "..."

@@ -52,16 +52,6 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
       |> assign(:form_values, form_values)
       |> assign(:form_errors, assigns[:form_errors] || %{})
 
-    # For shared bot create mode, set up deep link if needed
-    socket =
-      if socket.assigns.shared_bot_mode && mode == :create && is_nil(socket.assigns.deep_link) &&
-           integration && is_nil(integration.chat_id) do
-        token = Telegram.generate_link_token(assigns.current_user.id, integration.id)
-        assign(socket, :deep_link, Telegram.build_deep_link(token))
-      else
-        socket
-      end
-
     {:ok, socket}
   end
 

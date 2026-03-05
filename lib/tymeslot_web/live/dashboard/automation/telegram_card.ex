@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
   attr :on_view_deliveries, :any, required: true
   attr :on_reenable, :any, default: nil
   attr :on_disconnect, :any, default: nil
+  attr :on_reconnect, :any, default: nil
 
   @spec telegram_card(map()) :: Phoenix.LiveView.Rendered.t()
   def telegram_card(assigns) do
@@ -139,6 +140,16 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
                 </svg>
                 Test
               <% end %>
+            </button>
+          <% end %>
+
+          <!-- Connect Button (pending_link + shared bot only) -->
+          <%= if @integration.status == :pending_link && @integration.bot_mode == "shared" && @on_reconnect do %>
+            <button
+              phx-click={@on_reconnect}
+              class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-turquoise-200 text-turquoise-700 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
+            >
+              Connect
             </button>
           <% end %>
 

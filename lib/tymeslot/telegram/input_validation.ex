@@ -13,6 +13,7 @@ defmodule Tymeslot.Telegram.InputValidation do
   @spec validate_form(map(), keyword()) :: {:ok, map()} | {:error, map()}
   def validate_form(params, opts \\ []) do
     bot_mode = Keyword.get(opts, :bot_mode, "own")
+    mode = Keyword.get(opts, :mode, :create)
     errors = %{}
 
     {name, errors} = validate_name(params["name"], errors)
@@ -20,7 +21,8 @@ defmodule Tymeslot.Telegram.InputValidation do
 
     {bot_token, chat_id, errors} =
       if bot_mode == "own" do
-        {token, errors} = validate_bot_token(params["bot_token"], errors)
+        validate_fn = if mode == :edit, do: &validate_bot_token_optional/2, else: &validate_bot_token/2
+        {token, errors} = validate_fn.(params["bot_token"], errors)
         {cid, errors} = validate_chat_id(params["chat_id"], errors)
         {token, cid, errors}
       else
@@ -38,6 +40,11 @@ defmodule Tymeslot.Telegram.InputValidation do
       {:error, errors}
     end
   end
+
+  @spec validate_bot_token_optional(String.t() | nil, map()) :: {String.t() | nil, map()}
+  def validate_bot_token_optional(nil, errors), do: {nil, errors}
+  def validate_bot_token_optional("", errors), do: {nil, errors}
+  def validate_bot_token_optional(token, errors), do: validate_bot_token(token, errors)
 
   @spec validate_bot_token(String.t() | nil, map()) :: {String.t() | nil, map()}
   def validate_bot_token(nil, errors), do: {nil, Map.put(errors, :bot_token, "is required")}

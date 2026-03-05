@@ -91,20 +91,23 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
   @spec record_failure(TelegramIntegrationSchema.t(), String.t()) ::
           {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def record_failure(%TelegramIntegrationSchema{id: id}, reason) do
-    {1, [updated]} =
-      TelegramIntegrationSchema
-      |> where([i], i.id == ^id)
-      |> select([i], i)
-      |> Repo.update_all(inc: [failure_count: 1])
+    case TelegramIntegrationSchema
+         |> where([i], i.id == ^id)
+         |> select([i], i)
+         |> Repo.update_all(inc: [failure_count: 1]) do
+      {0, _} ->
+        {:error, :not_found}
 
-    if updated.failure_count >= 10 do
-      update_integration(updated, %{
-        is_active: false,
-        disabled_at: DateTime.utc_now(),
-        disabled_reason: "Too many consecutive failures: #{reason}"
-      })
-    else
-      {:ok, TelegramIntegrationSchema.derive_status(updated)}
+      {_count, [updated]} ->
+        if updated.failure_count >= 10 do
+          update_integration(updated, %{
+            is_active: false,
+            disabled_at: DateTime.utc_now(),
+            disabled_reason: "Too many consecutive failures: #{reason}"
+          })
+        else
+          {:ok, TelegramIntegrationSchema.derive_status(updated)}
+        end
     end
   end
 
