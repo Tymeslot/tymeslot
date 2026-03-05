@@ -4,17 +4,27 @@ defmodule TymeslotWeb.TelegramWebhookController do
   require Logger
 
   alias Plug.Crypto
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Telegram
+  alias TymeslotWeb.Helpers.ClientIP
 
   @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def webhook(conn, params) do
     if Telegram.telegram_enabled?() and Telegram.shared_bot_mode?() do
-      case verify_secret(conn) do
-        :ok ->
-          handle_update(conn, params)
+      client_ip = ClientIP.get(conn)
 
-        {:error, :invalid_secret} ->
-          conn |> put_status(403) |> json(%{error: "forbidden"}) |> halt()
+      case RateLimiter.check_webhook_rate_limit(client_ip) do
+        :ok ->
+          case verify_secret(conn) do
+            :ok ->
+              handle_update(conn, params)
+
+            {:error, :invalid_secret} ->
+              conn |> put_status(403) |> json(%{error: "forbidden"}) |> halt()
+          end
+
+        {:error, :rate_limited} ->
+          conn |> put_status(429) |> json(%{error: "too many requests"}) |> halt()
       end
     else
       conn |> put_status(404) |> json(%{error: "not found"}) |> halt()

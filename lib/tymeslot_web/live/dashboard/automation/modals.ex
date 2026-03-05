@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
   """
   use TymeslotWeb, :html
   alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   attr :show, :boolean, default: false
@@ -214,6 +215,59 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
   end
 
   attr :show, :boolean, default: false
+  attr :on_cancel, :any, required: true
+  attr :on_confirm, :any, required: true
+
+  @spec delete_telegram_modal(map()) :: Phoenix.LiveView.Rendered.t()
+  def delete_telegram_modal(assigns) do
+    ~H"""
+    <CoreComponents.modal
+      id="delete-telegram-modal"
+      show={@show}
+      on_cancel={@on_cancel}
+      size={:small}
+    >
+      <:header>
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          Delete Telegram Integration?
+        </div>
+      </:header>
+
+      <div class="text-center sm:text-left">
+        <p class="text-tymeslot-600 font-medium">
+          This action cannot be undone. All delivery logs for this integration will also be deleted.
+        </p>
+      </div>
+
+      <:footer>
+        <div class="flex justify-end gap-3">
+          <CoreComponents.action_button
+            variant={:secondary}
+            phx-click={@on_cancel}
+          >
+            Cancel
+          </CoreComponents.action_button>
+          <CoreComponents.action_button
+            variant={:danger}
+            phx-click={@on_confirm}
+          >
+            Delete Integration
+          </CoreComponents.action_button>
+        </div>
+      </:footer>
+    </CoreComponents.modal>
+    """
+  end
+
+  attr :show, :boolean, default: false
   attr :webhook, :map, required: true
   attr :deliveries, :list, required: true
   attr :stats, :map, required: true
@@ -300,7 +354,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
                       </div>
                       <div class="text-token-sm text-tymeslot-600 font-medium flex items-center gap-1.5">
                         <CoreComponents.icon name="hero-clock" class="w-4 h-4" />
-                        <%= format_datetime(delivery.inserted_at) %>
+                        <%= AutomationHelpers.format_datetime(delivery.inserted_at) %>
                       </div>
                       <%= if delivery.error_message do %>
                         <div class="text-token-sm text-red-600 font-medium mt-2 p-2 bg-red-50 rounded-token-lg border border-red-100">
@@ -393,7 +447,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
                       </div>
                       <div class="text-token-sm text-tymeslot-600 font-medium flex items-center gap-1.5">
                         <CoreComponents.icon name="hero-clock" class="w-4 h-4" />
-                        <%= format_datetime(delivery.inserted_at) %>
+                        <%= AutomationHelpers.format_datetime(delivery.inserted_at) %>
                       </div>
                       <%= if delivery.error_message do %>
                         <div class="text-token-sm text-red-600 font-medium mt-2 p-2 bg-red-50 rounded-token-lg border border-red-100">
@@ -420,9 +474,4 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     """
   end
 
-  defp format_datetime(nil), do: "Never"
-
-  defp format_datetime(%DateTime{} = dt) do
-    Calendar.strftime(dt, "%B %d, %Y at %I:%M %p")
-  end
 end

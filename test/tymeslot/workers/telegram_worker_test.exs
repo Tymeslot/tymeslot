@@ -271,14 +271,12 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       integration = insert(:telegram_integration, user: user)
       meeting = insert(:meeting, organizer_user_id: user.id)
 
-      args = %{
-        "integration_id" => integration.id,
-        "event_type" => "meeting.created",
-        "meeting_id" => meeting.id
-      }
+      assert :ok = TelegramWorker.schedule_delivery(integration.id, "meeting.created", meeting.id)
 
-      refute Map.has_key?(args, "bot_token")
-      refute Map.has_key?(args, "token")
+      [job] = all_enqueued(worker: TelegramWorker)
+      refute Map.has_key?(job.args, "bot_token")
+      refute Map.has_key?(job.args, "token")
+      refute Map.has_key?(job.args, "encrypted_token")
     end
 
     test "discards job when feature access is revoked" do

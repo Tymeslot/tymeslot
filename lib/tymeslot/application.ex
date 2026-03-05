@@ -105,7 +105,6 @@ defmodule Tymeslot.Application do
         []
       end
 
-    # Always end with the endpoint
     children = base_children ++ production_children ++ [TymeslotWeb.Endpoint] ++ telegram_children
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -63,12 +63,10 @@ defmodule Tymeslot.Telegram.MessageBuilder do
 
   defp meeting_title(meeting) do
     cond do
-      Map.has_key?(meeting, :event_type) and not is_nil(meeting.event_type) ->
-        if is_struct(meeting.event_type) do
-          Map.get(meeting.event_type, :name, "Meeting")
-        else
-          "Meeting"
-        end
+      Map.has_key?(meeting, :event_type) and
+          is_struct(meeting.event_type) and
+          not is_struct(meeting.event_type, Ecto.Association.NotLoaded) ->
+        Map.get(meeting.event_type, :name, "Meeting")
 
       Map.has_key?(meeting, :event_type_name) ->
         meeting.event_type_name || "Meeting"
@@ -103,12 +101,18 @@ defmodule Tymeslot.Telegram.MessageBuilder do
   defp video_line(meeting) do
     video_url = Map.get(meeting, :video_room_url) || Map.get(meeting, :video_link)
 
-    if video_url do
+    if video_url && safe_url?(video_url) do
       "\n#{emoji(:video)} <a href=\"#{esc(video_url)}\">Join video call</a>"
     else
       ""
     end
   end
+
+  defp safe_url?(url) when is_binary(url) do
+    String.starts_with?(url, "https://") or String.starts_with?(url, "http://")
+  end
+
+  defp safe_url?(_url), do: false
 
   defp cancellation_reason(meeting) do
     reason = Map.get(meeting, :cancellation_reason)

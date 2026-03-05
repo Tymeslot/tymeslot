@@ -225,8 +225,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       />
 
       <!-- Telegram Delete Modal -->
-      <Modals.delete_webhook_modal
-        id="delete-telegram-modal"
+      <Modals.delete_telegram_modal
         show={@show_telegram_delete_modal}
         on_cancel={JS.push("hide_telegram_delete_modal", target: @myself)}
         on_confirm={JS.push("delete_telegram", target: @myself)}
@@ -445,6 +444,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     |> assign(:telegram_link_timer, nil)
     |> assign(:telegram_deep_link, nil)
     |> assign(:telegram_form_is_stub, false)
+    |> assign(:telegram_subscribed, false)
   end
 
   defp tab_class(true) do
@@ -455,12 +455,15 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     "flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-transparent text-tymeslot-400 hover:text-tymeslot-600 hover:bg-white/50 cursor-pointer"
   end
 
+  defp maybe_subscribe_telegram(%{assigns: %{telegram_subscribed: true}} = socket), do: socket
+
   defp maybe_subscribe_telegram(socket) do
     if socket.assigns.telegram_enabled and connected?(socket) do
       user_id = socket.assigns.current_user.id
       Phoenix.PubSub.subscribe(Tymeslot.PubSub, "telegram_link:#{user_id}")
+      assign(socket, :telegram_subscribed, true)
+    else
+      socket
     end
-
-    socket
   end
 end

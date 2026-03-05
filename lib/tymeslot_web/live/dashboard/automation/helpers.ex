@@ -133,6 +133,16 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   end
 
   @doc """
+  Formats a DateTime for display in the automation UI, or "Never" for nil.
+  """
+  @spec format_datetime(DateTime.t() | nil) :: String.t()
+  def format_datetime(nil), do: "Never"
+
+  def format_datetime(%DateTime{} = dt) do
+    Calendar.strftime(dt, "%B %d, %Y at %I:%M %p")
+  end
+
+  @doc """
   Looks up a webhook by ID, scoped to the current user.
   """
   @spec get_webhook_for_user(Phoenix.LiveView.Socket.t(), integer() | String.t()) ::

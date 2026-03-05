@@ -13,9 +13,10 @@ defmodule Tymeslot.Workers.TelegramWorker do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.{MeetingQueries, TelegramQueries}
+  alias Tymeslot.DatabaseQueries.TelegramQueries
   alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Features
+  alias Tymeslot.Meetings
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.{API, MessageBuilder}
 
@@ -36,7 +37,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
          :ok = Logger.metadata(user_id: integration.user_id),
          :ok <- check_feature_access(integration.user_id),
          :ok <- check_active(integration),
-         {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
+         {:ok, meeting} <- Meetings.get_meeting(meeting_id),
          {:ok, token} <- Telegram.resolve_bot_token(integration) do
       message = MessageBuilder.build_message(event_type, meeting)
       result = send_message(token, integration.chat_id, message)

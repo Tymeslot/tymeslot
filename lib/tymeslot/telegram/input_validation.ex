@@ -6,7 +6,7 @@ defmodule Tymeslot.Telegram.InputValidation do
   alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Security.UniversalSanitizer
 
-  @bot_token_regex ~r/^\d{8,10}:[A-Za-z0-9_-]{35}$/
+  @bot_token_regex ~r/^\d{8,10}:[A-Za-z0-9_-]{35,50}$/
   @chat_id_numeric_regex ~r/^-?\d+$/
   @chat_id_username_regex ~r/^@[a-zA-Z][a-zA-Z0-9_]{4,31}$/
 

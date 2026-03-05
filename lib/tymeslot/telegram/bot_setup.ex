@@ -21,6 +21,27 @@ defmodule Tymeslot.Telegram.BotSetup do
     bot_token = Application.get_env(:tymeslot, :telegram_bot_token)
     webhook_secret = Application.get_env(:tymeslot, :telegram_webhook_secret)
 
+    cond do
+      is_nil(bot_token) ->
+        Logger.error(
+          "Telegram bot webhook registration skipped — TELEGRAM_BOT_TOKEN not configured"
+        )
+
+        {:error, :missing_config}
+
+      is_nil(webhook_secret) ->
+        Logger.error(
+          "Telegram bot webhook registration skipped — TELEGRAM_WEBHOOK_SECRET not configured"
+        )
+
+        {:error, :missing_config}
+
+      true ->
+        do_register_with_config(bot_token, webhook_secret, attempt)
+    end
+  end
+
+  defp do_register_with_config(bot_token, webhook_secret, attempt) do
     endpoint_config = Application.get_env(:tymeslot, TymeslotWeb.Endpoint)
     host = get_in(endpoint_config, [:url, :host])
     scheme = get_in(endpoint_config, [:url, :scheme]) || "https"

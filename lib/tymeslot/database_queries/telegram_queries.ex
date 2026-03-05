@@ -164,21 +164,18 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
     days_ago = Keyword.get(opts, :days, 7)
     since = DateTime.add(DateTime.utc_now(), -days_ago, :day)
 
-    query =
-      from d in TelegramDeliverySchema,
-        where: d.integration_id == ^integration_id and d.inserted_at >= ^since
-
-    total = Repo.aggregate(query, :count, :id)
-
-    successful =
-      query
-      |> where([d], d.response_status >= 200 and d.response_status < 300)
-      |> Repo.aggregate(:count, :id)
-
-    failed =
-      query
-      |> where([d], d.response_status >= 400 or not is_nil(d.error_message))
-      |> Repo.aggregate(:count, :id)
+    %{total: total, successful: successful, failed: failed} =
+      Repo.one(
+        from d in TelegramDeliverySchema,
+          where: d.integration_id == ^integration_id and d.inserted_at >= ^since,
+          select: %{
+            total: count(d.id),
+            successful:
+              filter(count(d.id), d.response_status >= 200 and d.response_status < 300),
+            failed:
+              filter(count(d.id), d.response_status >= 400 or not is_nil(d.error_message))
+          }
+      )
 
     %{
       total: total,
