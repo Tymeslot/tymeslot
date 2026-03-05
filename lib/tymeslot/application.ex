@@ -95,8 +95,17 @@ defmodule Tymeslot.Application do
         ]
       end
 
+    # Telegram bot setup task (shared bot mode only, non-test)
+    telegram_children =
+      if Application.get_env(:tymeslot, :telegram_shared_bot, false) and
+           Application.get_env(:tymeslot, :environment) != :test do
+        [{Task, fn -> Tymeslot.Telegram.BotSetup.register_webhook() end}]
+      else
+        []
+      end
+
     # Always end with the endpoint
-    children = base_children ++ production_children ++ [TymeslotWeb.Endpoint]
+    children = base_children ++ production_children ++ [TymeslotWeb.Endpoint] ++ telegram_children
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

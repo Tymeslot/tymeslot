@@ -23,6 +23,13 @@ defmodule TymeslotWeb.Router do
     post "/stripe", StripeWebhookController, :webhook
   end
 
+  # Telegram bot webhook (unauthenticated, outside :browser pipeline)
+  scope "/api/telegram", TymeslotWeb do
+    pipe_through :api
+
+    post "/webhook", TelegramWebhookController, :webhook
+  end
+
   # =============================================================================
   # Core Root Route
   # =============================================================================

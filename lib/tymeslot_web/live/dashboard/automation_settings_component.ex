@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   @moduledoc """
   LiveComponent for managing automation in the dashboard.
-  Currently supports webhooks, with plans for Slack and other integrations.
+  Supports webhooks and Telegram integrations.
   """
   use TymeslotWeb, :live_component
 
@@ -9,11 +9,16 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Telegram
+  alias Tymeslot.Telegram.InputValidation, as: TelegramInputValidation
   alias Tymeslot.Webhooks
   alias Tymeslot.Webhooks.InputValidation, as: WebhookInputValidation
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Dashboard.Automation.Modals
+  alias TymeslotWeb.Dashboard.Automation.TelegramCard
+  alias TymeslotWeb.Dashboard.Automation.TelegramEmptyState
+  alias TymeslotWeb.Dashboard.Automation.TelegramFormComponent
   alias TymeslotWeb.Dashboard.Automation.WebhookCard
   alias TymeslotWeb.Dashboard.Automation.WebhookDocumentation
   alias TymeslotWeb.Dashboard.Automation.WebhookEmptyState
@@ -26,12 +31,20 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     modal_configs = [
       {:delete, false},
       {:deliveries, false},
-      {:regenerate_token, false}
+      {:regenerate_token, false},
+      {:telegram_delete, false},
+      {:telegram_deliveries, false}
     ]
+
+    telegram_enabled = Telegram.telegram_enabled?()
 
     {:ok,
      socket
      |> ModalHook.mount_modal(modal_configs)
+     # Tab state
+     |> assign(:active_tab, :webhooks)
+     |> assign(:telegram_enabled, telegram_enabled)
+     # Webhook state
      |> assign(:webhooks, [])
      |> assign(:form_errors, %{})
      |> assign(:form_values, %{})
@@ -45,7 +58,21 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
      |> assign(:show_webhook_form, false)
      |> assign(:webhook_form_mode, :create)
      |> assign(:webhook_form_data, nil)
-     |> assign(:webhook_form_timestamp, nil)}
+     |> assign(:webhook_form_timestamp, nil)
+     # Telegram state
+     |> assign(:telegram_integrations, [])
+     |> assign(:telegram_form_errors, %{})
+     |> assign(:telegram_form_values, %{})
+     |> assign(:telegram_saving, false)
+     |> assign(:telegram_testing, nil)
+     |> assign(:telegram_to_delete, nil)
+     |> assign(:selected_telegram, nil)
+     |> assign(:telegram_deliveries, [])
+     |> assign(:telegram_delivery_stats, nil)
+     |> assign(:show_telegram_form, false)
+     |> assign(:telegram_form_mode, :create)
+     |> assign(:telegram_form_data, nil)
+     |> assign(:telegram_form_timestamp, nil)}
   end
 
   @impl Phoenix.LiveComponent
@@ -55,13 +82,27 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       socket
       |> assign(assigns)
       |> load_webhooks()
+      |> maybe_load_telegram()
+      |> maybe_subscribe_telegram()
 
     {:ok, socket}
   end
 
+  # ============================================================================
+  # Tab Switching
+  # ============================================================================
+
   @impl Phoenix.LiveComponent
   @spec handle_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_event("switch_tab", %{"tab" => tab}, socket) do
+    {:noreply, assign(socket, :active_tab, String.to_existing_atom(tab))}
+  end
+
+  # ============================================================================
+  # Webhook Events (unchanged)
+  # ============================================================================
+
   def handle_event("show_webhook_form", _params, socket) do
     {:noreply,
      socket
@@ -117,8 +158,6 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
 
   def handle_event("toggle_event", %{"event" => event}, socket) do
     form_values = AutomationHelpers.toggle_event(socket.assigns.form_values, event)
-
-    # Trigger validation for the events field
     metadata = AutomationHelpers.get_security_metadata(socket)
 
     updated_errors =
@@ -339,12 +378,327 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
      |> assign(:delivery_stats, nil)}
   end
 
+  # ============================================================================
+  # Telegram Events
+  # ============================================================================
+
+  def handle_event("show_telegram_form", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_telegram_form, true)
+     |> assign(:telegram_form_mode, :create)
+     |> assign(:telegram_form_data, nil)
+     |> assign(:telegram_form_timestamp, System.system_time())
+     |> assign(:telegram_form_errors, %{})
+     |> assign(:telegram_form_values, %{
+       "name" => "",
+       "events" => []
+     })}
+  end
+
+  def handle_event("close_telegram_form", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_telegram_form, false)
+     |> assign(:telegram_form_data, nil)
+     |> assign(:telegram_form_errors, %{})
+     |> assign(:telegram_form_values, %{})}
+  end
+
+  def handle_event("validate_telegram_field", %{"field" => field, "value" => value}, socket) do
+    form_values = Map.put(socket.assigns.telegram_form_values, field, value)
+    bot_mode = if Telegram.shared_bot_mode?(), do: "shared", else: "own"
+
+    errors =
+      if is_binary(value) and String.trim(value) == "" do
+        fields = ~w(name bot_token chat_id events)
+        atom_field = FormValidationHelpers.atomize_field(field, fields)
+        FormValidationHelpers.delete_field_error(socket.assigns.telegram_form_errors, atom_field)
+      else
+        case TelegramInputValidation.validate_form(form_values, bot_mode: bot_mode) do
+          {:ok, _validated} -> %{}
+          {:error, errs} -> errs
+        end
+      end
+
+    {:noreply,
+     socket
+     |> assign(:telegram_form_values, form_values)
+     |> assign(:telegram_form_errors, errors)}
+  end
+
+  def handle_event("validate_telegram_field", %{"field" => field} = params, socket) do
+    value = params["value"] || Map.get(socket.assigns.telegram_form_values, field, "")
+    handle_event("validate_telegram_field", %{"field" => field, "value" => value}, socket)
+  end
+
+  def handle_event("toggle_telegram_event", %{"event" => event}, socket) do
+    form_values = AutomationHelpers.toggle_event(socket.assigns.telegram_form_values, event)
+    {:noreply, assign(socket, :telegram_form_values, form_values)}
+  end
+
+  def handle_event("create_telegram", %{"telegram" => params}, socket) do
+    user_id = socket.assigns.current_user.id
+    bot_mode = if Telegram.shared_bot_mode?(), do: "shared", else: "own"
+
+    with_rate_limit(RateLimiter.check_webhook_write_rate_limit(user_id), socket, fn ->
+      case TelegramInputValidation.validate_form(params, bot_mode: bot_mode) do
+        {:ok, sanitized} ->
+          # For own-bot mode, test before saving
+          if bot_mode == "own" do
+            test_and_save_telegram(user_id, sanitized, socket)
+          else
+            save_telegram(user_id, sanitized, socket)
+          end
+
+        {:error, errors} ->
+          {:noreply, assign(socket, :telegram_form_errors, errors)}
+      end
+    end)
+  end
+
+  def handle_event("update_telegram", %{"telegram" => params}, socket) do
+    case socket.assigns.telegram_form_data do
+      nil ->
+        {:noreply, socket}
+
+      integration ->
+        user_id = socket.assigns.current_user.id
+        bot_mode = if Telegram.shared_bot_mode?(), do: "shared", else: "own"
+
+        with_rate_limit(RateLimiter.check_webhook_write_rate_limit(user_id), socket, fn ->
+          case TelegramInputValidation.validate_form(params, bot_mode: bot_mode) do
+            {:ok, sanitized} ->
+              case Telegram.update_integration(integration, sanitized) do
+                {:ok, _updated} ->
+                  Flash.info("Integration updated successfully")
+
+                  {:noreply,
+                   socket
+                   |> assign(:show_telegram_form, false)
+                   |> assign(:telegram_form_data, nil)
+                   |> assign(:telegram_form_errors, %{})
+                   |> assign(:telegram_form_values, %{})
+                   |> maybe_load_telegram()}
+
+                {:error, %Ecto.Changeset{} = changeset} ->
+                  errors = AutomationHelpers.format_changeset_errors(changeset)
+                  Flash.error("Failed to update integration")
+                  {:noreply, assign(socket, :telegram_form_errors, errors)}
+
+                {:error, reason}
+                when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+                  {:noreply, handle_feature_access_error(socket, reason)}
+              end
+
+            {:error, errors} ->
+              {:noreply, assign(socket, :telegram_form_errors, errors)}
+          end
+        end)
+    end
+  end
+
+  def handle_event("show_edit_telegram_form", %{"id" => id}, socket) do
+    case get_telegram_for_user(socket, id) do
+      {:ok, integration} ->
+        {:noreply,
+         socket
+         |> assign(:show_telegram_form, true)
+         |> assign(:telegram_form_mode, :edit)
+         |> assign(:telegram_form_data, integration)
+         |> assign(:telegram_form_timestamp, System.system_time())
+         |> assign(:telegram_form_errors, %{})
+         |> assign(:telegram_form_values, %{
+           "name" => integration.name,
+           "events" => integration.events
+         })}
+
+      {:error, _reason} ->
+        Flash.error("Integration not found")
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("toggle_telegram", %{"id" => id}, socket) do
+    case get_telegram_for_user(socket, id) do
+      {:ok, integration} ->
+        case Telegram.toggle_integration(integration) do
+          {:ok, _updated} ->
+            Flash.info("Integration status updated")
+            {:noreply, maybe_load_telegram(socket)}
+
+          {:error, :invalid_state} ->
+            Flash.error("Cannot toggle in current state")
+            {:noreply, socket}
+
+          {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+            {:noreply, handle_feature_access_error(socket, reason)}
+
+          {:error, _reason} ->
+            Flash.error("Failed to update status")
+            {:noreply, socket}
+        end
+
+      {:error, _reason} ->
+        Flash.error("Integration not found")
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("test_telegram", %{"id" => id}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    case RateLimiter.check_webhook_test_rate_limit(user_id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
+      :ok ->
+        integration_id = AutomationHelpers.parse_id(id)
+        socket = assign(socket, :telegram_testing, integration_id)
+
+        case get_telegram_for_user(socket, id) do
+          {:ok, integration} ->
+            case Telegram.test_integration(integration) do
+              :ok ->
+                Flash.info("Test message sent! Check Telegram.")
+                {:noreply, assign(socket, :telegram_testing, nil)}
+
+              {:error, reason} ->
+                Flash.error("Test failed: #{reason}")
+                {:noreply, assign(socket, :telegram_testing, nil)}
+            end
+
+          {:error, _reason} ->
+            Flash.error("Integration not found")
+            {:noreply, assign(socket, :telegram_testing, nil)}
+        end
+    end
+  end
+
+  def handle_event("reenable_telegram", %{"id" => id}, socket) do
+    case get_telegram_for_user(socket, id) do
+      {:ok, integration} ->
+        case Telegram.reenable_integration(integration) do
+          {:ok, _updated} ->
+            Flash.info("Integration re-enabled")
+            {:noreply, maybe_load_telegram(socket)}
+
+          {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+            {:noreply, handle_feature_access_error(socket, reason)}
+
+          {:error, _reason} ->
+            Flash.error("Failed to re-enable")
+            {:noreply, socket}
+        end
+
+      {:error, _reason} ->
+        Flash.error("Integration not found")
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("disconnect_telegram", %{"id" => id}, socket) do
+    case get_telegram_for_user(socket, id) do
+      {:ok, integration} ->
+        case Telegram.disconnect_integration(integration) do
+          {:ok, _updated} ->
+            Flash.info("Telegram disconnected")
+            {:noreply, maybe_load_telegram(socket)}
+
+          {:error, :own_bot_mode} ->
+            Flash.error("Cannot disconnect in own-bot mode")
+            {:noreply, socket}
+        end
+
+      {:error, _reason} ->
+        Flash.error("Integration not found")
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("show_telegram_delete_modal", %{"id" => id}, socket) do
+    {:noreply,
+     socket
+     |> ModalHook.show_modal(:telegram_delete)
+     |> assign(:telegram_to_delete, AutomationHelpers.parse_id(id))}
+  end
+
+  def handle_event("hide_telegram_delete_modal", _params, socket) do
+    {:noreply,
+     socket
+     |> ModalHook.hide_modal(:telegram_delete)
+     |> assign(:telegram_to_delete, nil)}
+  end
+
+  def handle_event("delete_telegram", _params, socket) do
+    case socket.assigns.telegram_to_delete do
+      nil ->
+        {:noreply, socket}
+
+      id ->
+        case get_telegram_for_user(socket, id) do
+          {:ok, integration} ->
+            case Telegram.delete_integration(integration) do
+              {:ok, _deleted} ->
+                Flash.info("Integration deleted")
+
+                {:noreply,
+                 socket
+                 |> ModalHook.hide_modal(:telegram_delete)
+                 |> assign(:telegram_to_delete, nil)
+                 |> maybe_load_telegram()}
+
+              {:error, _reason} ->
+                Flash.error("Failed to delete")
+                {:noreply, socket}
+            end
+
+          {:error, _reason} ->
+            Flash.error("Integration not found")
+            {:noreply, socket}
+        end
+    end
+  end
+
+  def handle_event("show_telegram_deliveries", %{"id" => id}, socket) do
+    case get_telegram_for_user(socket, id) do
+      {:ok, integration} ->
+        deliveries = Telegram.list_deliveries(integration.id, limit: 50)
+        stats = Telegram.get_delivery_stats(integration.id, days: 7)
+
+        {:noreply,
+         socket
+         |> ModalHook.show_modal(:telegram_deliveries)
+         |> assign(:selected_telegram, integration)
+         |> assign(:telegram_deliveries, deliveries)
+         |> assign(:telegram_delivery_stats, stats)}
+
+      {:error, _reason} ->
+        Flash.error("Integration not found")
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("hide_telegram_deliveries", _params, socket) do
+    {:noreply,
+     socket
+     |> ModalHook.hide_modal(:telegram_deliveries)
+     |> assign(:selected_telegram, nil)
+     |> assign(:telegram_deliveries, [])
+     |> assign(:telegram_delivery_stats, nil)}
+  end
+
+  # ============================================================================
+  # Render
+  # ============================================================================
+
   @impl Phoenix.LiveComponent
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
-      <!-- Modals (Always rendered so they can be triggered from anywhere) -->
+      <!-- Webhook Modals -->
       <Modals.delete_webhook_modal
         show={@show_delete_modal}
         on_cancel={JS.push("hide_delete_modal", target: @myself)}
@@ -367,7 +721,26 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         on_confirm={JS.push("regenerate_token", target: @myself)}
       />
 
-      <%= if @show_webhook_form do %>
+      <!-- Telegram Delete Modal -->
+      <Modals.delete_webhook_modal
+        show={@show_telegram_delete_modal}
+        on_cancel={JS.push("hide_telegram_delete_modal", target: @myself)}
+        on_confirm={JS.push("delete_telegram", target: @myself)}
+      />
+
+      <!-- Telegram Deliveries Modal -->
+      <%= if @show_telegram_deliveries_modal && @selected_telegram do %>
+        <.telegram_deliveries_modal
+          show={@show_telegram_deliveries_modal}
+          integration={@selected_telegram}
+          deliveries={@telegram_deliveries}
+          stats={@telegram_delivery_stats}
+          on_close={JS.push("hide_telegram_deliveries", target: @myself)}
+        />
+      <% end %>
+
+      <%= cond do %>
+        <% @show_webhook_form -> %>
         <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <.live_component
             module={WebhookFormComponent}
@@ -380,79 +753,234 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
             parent_component={@myself}
           />
         </div>
-      <% else %>
+        <% @show_telegram_form -> %>
+        <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <.live_component
+            module={TelegramFormComponent}
+            id={"telegram-form-#{@telegram_form_mode}-#{@telegram_form_timestamp}"}
+            mode={@telegram_form_mode}
+            integration={@telegram_form_data}
+            form_values={@telegram_form_values}
+            form_errors={@telegram_form_errors}
+            saving={@telegram_saving}
+            current_user={@current_user}
+            parent_component={@myself}
+          />
+        </div>
+        <% true -> %>
         <.section_header icon={:webhook} title="Automation" />
 
         <!-- Tabs Navigation -->
         <div class="flex flex-wrap gap-4 bg-tymeslot-50/50 p-2 rounded-[2rem] border-2 border-tymeslot-50 mb-10">
-          <div
-            class="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-white border-white text-turquoise-600 shadow-xl shadow-tymeslot-200/50 scale-[1.02] cursor-default"
+          <button
+            phx-click={JS.push("switch_tab", value: %{"tab" => "webhooks"}, target: @myself)}
+            class={tab_class(@active_tab == :webhooks)}
           >
             <IconComponents.icon name={:webhook} class="w-5 h-5" />
             <span>Webhooks</span>
-          </div>
+          </button>
 
-          <div
-            class="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-transparent text-tymeslot-400 opacity-60 cursor-not-allowed"
-          >
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M6 12.5C6 11.1193 7.11929 10 8.5 10C9.88071 10 11 11.1193 11 12.5C11 13.8807 9.88071 15 8.5 15C7.11929 15 6 13.8807 6 12.5Z" />
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4Z" />
-            </svg>
-            <span>Slack</span>
-            <span class="ml-2 text-[10px] bg-tymeslot-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">Coming Soon</span>
-          </div>
+          <%= if @telegram_enabled do %>
+            <button
+              phx-click={JS.push("switch_tab", value: %{"tab" => "telegram"}, target: @myself)}
+              class={tab_class(@active_tab == :telegram)}
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+              </svg>
+              <span>Telegram</span>
+            </button>
+          <% else %>
+            <div class="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-transparent text-tymeslot-400 opacity-60 cursor-not-allowed">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+              </svg>
+              <span>Telegram</span>
+              <span class="ml-2 text-[10px] bg-tymeslot-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">Disabled</span>
+            </div>
+          <% end %>
         </div>
 
         <!-- Tab Content -->
         <div class="space-y-12">
-          <!-- Connected Webhooks Section -->
-          <%= if @webhooks != [] do %>
-            <div class="space-y-6">
-              <div class="flex items-center justify-between">
-                <.section_header
-                  level={2}
-                  title="Your Webhooks"
-                  count={length(@webhooks)}
-                />
-                <button
-                  phx-click="show_webhook_form"
-                  phx-target={@myself}
-                  class="btn-primary"
-                >
-                  Create Webhook
-                </button>
-              </div>
-
-              <div class="grid grid-cols-1 gap-6">
-                <%= for webhook <- @webhooks do %>
-                  <WebhookCard.webhook_card
-                    webhook={webhook}
-                    testing={@testing_connection == webhook.id}
-                    target={@myself}
-                    on_edit={JS.push("show_edit_webhook_form", value: %{"id" => webhook.id}, target: @myself)}
-                    on_delete={JS.push("show_delete_modal", value: %{"id" => webhook.id}, target: @myself)}
-                    on_toggle="toggle_webhook"
-                    on_test={JS.push("test_connection", value: %{"id" => webhook.id}, target: @myself)}
-                    on_view_deliveries={JS.push("show_deliveries", value: %{"id" => webhook.id}, target: @myself)}
-                  />
-                <% end %>
-              </div>
-            </div>
+          <%= if @active_tab == :webhooks do %>
+            <.webhook_tab_content
+              webhooks={@webhooks}
+              testing_connection={@testing_connection}
+              myself={@myself}
+            />
           <% else %>
-            <!-- Empty State -->
-            <WebhookEmptyState.webhook_empty_state on_create={JS.push("show_webhook_form", target: @myself)} />
+            <.telegram_tab_content
+              integrations={@telegram_integrations}
+              telegram_testing={@telegram_testing}
+              myself={@myself}
+            />
           <% end %>
-
-          <!-- Documentation Section -->
-          <WebhookDocumentation.webhook_documentation />
         </div>
       <% end %>
     </div>
     """
   end
 
-  # Private functions
+  defp webhook_tab_content(assigns) do
+    ~H"""
+    <%= if @webhooks != [] do %>
+      <div class="space-y-6">
+        <div class="flex items-center justify-between">
+          <.section_header level={2} title="Your Webhooks" count={length(@webhooks)} />
+          <button phx-click="show_webhook_form" phx-target={@myself} class="btn-primary">
+            Create Webhook
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6">
+          <%= for webhook <- @webhooks do %>
+            <WebhookCard.webhook_card
+              webhook={webhook}
+              testing={@testing_connection == webhook.id}
+              target={@myself}
+              on_edit={JS.push("show_edit_webhook_form", value: %{"id" => webhook.id}, target: @myself)}
+              on_delete={JS.push("show_delete_modal", value: %{"id" => webhook.id}, target: @myself)}
+              on_toggle="toggle_webhook"
+              on_test={JS.push("test_connection", value: %{"id" => webhook.id}, target: @myself)}
+              on_view_deliveries={JS.push("show_deliveries", value: %{"id" => webhook.id}, target: @myself)}
+            />
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <WebhookEmptyState.webhook_empty_state on_create={JS.push("show_webhook_form", target: @myself)} />
+    <% end %>
+
+    <WebhookDocumentation.webhook_documentation />
+    """
+  end
+
+  defp telegram_tab_content(assigns) do
+    ~H"""
+    <%= if @integrations != [] do %>
+      <div class="space-y-6">
+        <div class="flex items-center justify-between">
+          <.section_header level={2} title="Your Telegram Integrations" count={length(@integrations)} />
+          <button phx-click="show_telegram_form" phx-target={@myself} class="btn-primary">
+            Add Telegram Account
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6">
+          <%= for integration <- @integrations do %>
+            <TelegramCard.telegram_card
+              integration={integration}
+              testing={@telegram_testing == integration.id}
+              target={@myself}
+              on_edit={JS.push("show_edit_telegram_form", value: %{"id" => integration.id}, target: @myself)}
+              on_delete={JS.push("show_telegram_delete_modal", value: %{"id" => integration.id}, target: @myself)}
+              on_toggle="toggle_telegram"
+              on_test={JS.push("test_telegram", value: %{"id" => integration.id}, target: @myself)}
+              on_view_deliveries={JS.push("show_telegram_deliveries", value: %{"id" => integration.id}, target: @myself)}
+              on_reenable={JS.push("reenable_telegram", value: %{"id" => integration.id}, target: @myself)}
+              on_disconnect={JS.push("disconnect_telegram", value: %{"id" => integration.id}, target: @myself)}
+            />
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <TelegramEmptyState.telegram_empty_state on_create={JS.push("show_telegram_form", target: @myself)} />
+    <% end %>
+    """
+  end
+
+  defp telegram_deliveries_modal(assigns) do
+    ~H"""
+    <div
+      :if={@show}
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      phx-click={@on_close}
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden"
+        phx-click-away={@on_close}
+      >
+        <div class="p-6 border-b border-slate-100">
+          <div class="flex items-center justify-between">
+            <h3 class="text-token-xl font-black text-tymeslot-900">
+              Delivery History — <%= @integration.name %>
+            </h3>
+            <button phx-click={@on_close} class="text-slate-400 hover:text-slate-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <%= if @stats do %>
+            <div class="flex gap-6 mt-4 text-token-sm">
+              <div>
+                <span class="text-slate-500">Last 7 days:</span>
+                <span class="font-bold text-slate-900"><%= @stats.total %> deliveries</span>
+              </div>
+              <div>
+                <span class="text-green-600 font-bold"><%= @stats.successful %> sent</span>
+              </div>
+              <div>
+                <span class="text-red-600 font-bold"><%= @stats.failed %> failed</span>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="overflow-y-auto max-h-[60vh] p-6">
+          <%= if @deliveries == [] do %>
+            <p class="text-center text-slate-400 py-8">No delivery history yet.</p>
+          <% else %>
+            <div class="space-y-3">
+              <%= for delivery <- @deliveries do %>
+                <div class="p-3 rounded-token-xl border border-slate-100 text-token-sm">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="font-bold text-slate-700"><%= delivery.event_type %></span>
+                    <span class={[
+                      "font-bold",
+                      if(delivery.response_status && delivery.response_status >= 200 && delivery.response_status < 300,
+                        do: "text-green-600",
+                        else: "text-red-600"
+                      )
+                    ]}>
+                      <%= if delivery.response_status do %>
+                        HTTP <%= delivery.response_status %>
+                      <% else %>
+                        Error
+                      <% end %>
+                    </span>
+                  </div>
+                  <div class="text-slate-400">
+                    <%= if delivery.inserted_at do %>
+                      <%= Calendar.strftime(delivery.inserted_at, "%B %d, %Y at %I:%M %p") %>
+                    <% end %>
+                  </div>
+                  <%= if delivery.error_message do %>
+                    <div class="mt-1 text-red-500 text-xs"><%= delivery.error_message %></div>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  # ============================================================================
+  # Private Helpers
+  # ============================================================================
+
+  defp tab_class(true) do
+    "flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-white border-white text-turquoise-600 shadow-xl shadow-tymeslot-200/50 scale-[1.02] cursor-default"
+  end
+
+  defp tab_class(false) do
+    "flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-transparent text-tymeslot-400 hover:text-tymeslot-600 hover:bg-white/50 cursor-pointer"
+  end
 
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
     Flash.error(message)
@@ -493,6 +1021,47 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     end
   end
 
+  defp test_and_save_telegram(user_id, sanitized, socket) do
+    # Build a temporary integration struct for testing
+    test_integration = %Tymeslot.DatabaseSchemas.TelegramIntegrationSchema{
+      bot_mode: "own",
+      bot_token: sanitized[:bot_token],
+      chat_id: sanitized[:chat_id]
+    }
+
+    case Telegram.test_integration(test_integration) do
+      :ok ->
+        save_telegram(user_id, sanitized, socket)
+
+      {:error, reason} ->
+        Flash.error("Test failed: #{reason}")
+        {:noreply, socket}
+    end
+  end
+
+  defp save_telegram(user_id, sanitized, socket) do
+    case Telegram.create_integration(user_id, sanitized) do
+      {:ok, _integration} ->
+        Flash.info("Telegram integration created")
+
+        {:noreply,
+         socket
+         |> assign(:show_telegram_form, false)
+         |> assign(:telegram_form_data, nil)
+         |> assign(:telegram_form_errors, %{})
+         |> assign(:telegram_form_values, %{})
+         |> maybe_load_telegram()}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        errors = AutomationHelpers.format_changeset_errors(changeset)
+        Flash.error("Failed to create integration")
+        {:noreply, assign(socket, :telegram_form_errors, errors)}
+
+      {:error, reason} when reason in [:insufficient_plan, :feature_access_checker_failed] ->
+        {:noreply, handle_feature_access_error(socket, reason)}
+    end
+  end
+
   defp do_regenerate_token(socket) do
     case socket.assigns.selected_webhook do
       nil ->
@@ -503,9 +1072,9 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
           {:ok, updated_webhook} ->
             Flash.info("Security token regenerated")
 
-            # Update form data if we are editing this webhook
             socket =
               if socket.assigns.webhook_form_mode == :edit and
+                   socket.assigns.webhook_form_data &&
                    socket.assigns.webhook_form_data.id == updated_webhook.id do
                 assign(socket, :webhook_form_data, updated_webhook)
               else
@@ -534,10 +1103,35 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     assign(socket, :webhooks, webhooks)
   end
 
+  defp maybe_load_telegram(socket) do
+    if socket.assigns.telegram_enabled do
+      user_id = socket.assigns.current_user.id
+      integrations = Telegram.list_integrations(user_id)
+      assign(socket, :telegram_integrations, integrations)
+    else
+      socket
+    end
+  end
+
+  defp maybe_subscribe_telegram(socket) do
+    if socket.assigns.telegram_enabled and connected?(socket) do
+      user_id = socket.assigns.current_user.id
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "telegram_link:#{user_id}")
+    end
+
+    socket
+  end
+
   defp get_webhook_for_user(socket, id) do
     user_id = socket.assigns.current_user.id
     webhook_id = AutomationHelpers.parse_id(id)
     Webhooks.get_webhook(webhook_id, user_id)
+  end
+
+  defp get_telegram_for_user(socket, id) do
+    user_id = socket.assigns.current_user.id
+    integration_id = AutomationHelpers.parse_id(id)
+    Telegram.get_integration(integration_id, user_id)
   end
 
   defp handle_feature_access_error(socket, :insufficient_plan) do

@@ -5,6 +5,7 @@ defmodule Tymeslot.Notifications.Events do
   """
 
   alias Tymeslot.Notifications.Orchestrator
+  alias Tymeslot.Telegram.Dispatcher, as: TelegramDispatcher
   alias Tymeslot.Webhooks.Dispatcher
 
   @doc """
@@ -17,6 +18,9 @@ defmodule Tymeslot.Notifications.Events do
 
     # Dispatch webhooks (don't fail if webhooks fail)
     Dispatcher.dispatch(:meeting_created, meeting)
+
+    # Dispatch Telegram notifications (don't fail if Telegram fails)
+    TelegramDispatcher.dispatch(:meeting_created, meeting)
 
     result
   end
@@ -32,6 +36,9 @@ defmodule Tymeslot.Notifications.Events do
     # Dispatch webhooks (don't fail if webhooks fail)
     Dispatcher.dispatch(:meeting_cancelled, meeting)
 
+    # Dispatch Telegram notifications (don't fail if Telegram fails)
+    TelegramDispatcher.dispatch(:meeting_cancelled, meeting)
+
     result
   end
 
@@ -45,6 +52,9 @@ defmodule Tymeslot.Notifications.Events do
 
     # Dispatch webhooks (don't fail if webhooks fail)
     Dispatcher.dispatch(:meeting_rescheduled, updated_meeting)
+
+    # Dispatch Telegram notifications (don't fail if Telegram fails)
+    TelegramDispatcher.dispatch(:meeting_rescheduled, updated_meeting)
 
     result
   end
