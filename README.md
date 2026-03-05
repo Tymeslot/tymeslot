@@ -216,6 +216,9 @@ Embed booking widgets in your documentation.
 ### 📦 Cloudron
 [Guide →](README-Cloudron.md) — One-click install · Managed platform
 
+### 🚂 Railway
+[Deploy →](https://railway.com/deploy/tymeslot) — One-click cloud deploy · No server management
+
 ## 🐳 Quick Start (Docker Image)
 
 If you already have Docker installed, you can pull and run the image in one step:
