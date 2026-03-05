@@ -205,6 +205,23 @@ defmodule TymeslotWeb.Components.SiteComponents do
           </p>
           <div class="flex gap-6 justify-center">
             <%= if Config.show_marketing_links?() do %>
+              <%= if changelog_url = Application.get_env(:tymeslot, :changelog_url) do %>
+                <%= if external_url?(changelog_url) do %>
+                  <.link
+                    href={changelog_url}
+                    class="text-gray-400 hover:text-turquoise-400 transition-colors"
+                  >
+                    Changelog
+                  </.link>
+                <% else %>
+                  <.link
+                    navigate={changelog_url}
+                    class="text-gray-400 hover:text-turquoise-400 transition-colors"
+                  >
+                    Changelog
+                  </.link>
+                <% end %>
+              <% end %>
               <%= if docs_url = Application.get_env(:tymeslot, :docs_url) do %>
                 <%= if external_url?(docs_url) do %>
                   <.link
