@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.E2E.OnboardingTest do
-  use TymeslotWeb.BrowserCase
+  use TymeslotWeb.BrowserCase, async: false
 
   alias Tymeslot.Auth.Verification
 
@@ -28,9 +28,7 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
     session = assert_has(session, css("button[phx-click='next_step']"))
 
     # Step 1: Welcome — click Next
-    session =
-      session
-      |> click(css("button[phx-click='next_step']"))
+    session = click(session, css("button[phx-click='next_step']"))
 
     # Step 2: Basic Settings — fill name and username
     session =

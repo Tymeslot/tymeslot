@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.E2E.PublicBookingTest do
-  use TymeslotWeb.BrowserCase
+  use TymeslotWeb.BrowserCase, async: false
 
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
@@ -48,9 +48,7 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
     |> Element.click()
 
     # Click next to go to booking form
-    session =
-      session
-      |> click(css("[data-testid='next-step']"))
+    session = click(session, css("[data-testid='next-step']"))
 
     # Fill in the booking form.
     # The submit button starts disabled (empty form). With phx-debounce="blur" on
@@ -67,9 +65,7 @@ defmodule TymeslotWeb.E2E.PublicBookingTest do
     # Wait for button to become enabled (server has validated the complete form)
     session = assert_has(session, css("[data-testid='submit-booking']:not([disabled])"))
 
-    session =
-      session
-      |> click(css("[data-testid='submit-booking']"))
+    session = click(session, css("[data-testid='submit-booking']"))
 
     # Should see confirmation
     assert_has(session, css("[data-testid='confirmation-heading']"))

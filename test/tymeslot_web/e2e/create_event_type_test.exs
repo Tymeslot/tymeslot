@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.E2E.CreateEventTypeTest do
-  use TymeslotWeb.BrowserCase
+  use TymeslotWeb.BrowserCase, async: false
 
   @moduletag :e2e
 

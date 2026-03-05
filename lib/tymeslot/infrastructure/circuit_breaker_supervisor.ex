@@ -79,6 +79,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
     CalendarProviderConfig.all_providers()
     |> Enum.filter(&CalendarProviderConfig.circuit_breaker_enabled?/1)
     |> Enum.map(fn provider ->
+      # credo:disable-for-next-line Credo.Check.Warning.UnsafeToAtom
       name = :"calendar_breaker_#{provider}"
       config = CalendarCircuitBreaker.get_config(provider)
 
@@ -92,6 +93,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
     VideoProviderConfig.all_providers()
     |> Enum.filter(&VideoProviderConfig.circuit_breaker_enabled?/1)
     |> Enum.map(fn provider ->
+      # credo:disable-for-next-line Credo.Check.Warning.UnsafeToAtom
       name = :"video_breaker_#{provider}"
       config = VideoCircuitBreaker.get_config(provider)
 
