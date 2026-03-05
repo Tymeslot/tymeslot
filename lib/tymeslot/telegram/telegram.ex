@@ -8,7 +8,7 @@ defmodule Tymeslot.Telegram do
   alias Tymeslot.DatabaseQueries.TelegramQueries
   alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Features
-  alias Tymeslot.Telegram.{LinkToken, MessageBuilder}
+  alias Tymeslot.Telegram.{API, LinkToken, MessageBuilder}
   alias Tymeslot.Workers.TelegramWorker
 
   # ============================================================================
@@ -28,13 +28,21 @@ defmodule Tymeslot.Telegram do
 
   @spec create_integration(integer(), map()) ::
           {:ok, TelegramIntegrationSchema.t()}
-          | {:error, Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed}
+          | {:error,
+             Ecto.Changeset.t()
+             | :insufficient_plan
+             | :feature_access_checker_failed
+             | :feature_disabled}
   def create_integration(user_id, attrs) do
-    with :ok <- Features.check_access(user_id, :automations_allowed) do
-      attrs
-      |> Map.put(:user_id, user_id)
-      |> Map.put(:bot_mode, if(shared_bot_mode?(), do: "shared", else: "own"))
-      |> TelegramQueries.create_integration()
+    if telegram_enabled?() do
+      with :ok <- Features.check_access(user_id, :automations_allowed) do
+        attrs
+        |> Map.put(:user_id, user_id)
+        |> Map.put(:bot_mode, if(shared_bot_mode?(), do: "shared", else: "own"))
+        |> TelegramQueries.create_integration()
+      end
+    else
+      {:error, :feature_disabled}
     end
   end
 
@@ -55,7 +63,8 @@ defmodule Tymeslot.Telegram do
 
   @spec toggle_integration(TelegramIntegrationSchema.t()) ::
           {:ok, TelegramIntegrationSchema.t()}
-          | {:error, Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed | :invalid_state}
+          | {:error,
+             Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed | :invalid_state}
   def toggle_integration(%TelegramIntegrationSchema{} = integration) do
     status = TelegramIntegrationSchema.derive_status(integration).status
 
@@ -202,7 +211,7 @@ defmodule Tymeslot.Telegram do
     case LinkToken.verify(token) do
       {:ok, {user_id, integration_id}} ->
         case TelegramQueries.get_integration(integration_id, user_id) do
-          {:ok, integration} ->
+          {:ok, %TelegramIntegrationSchema{bot_mode: "shared"} = integration} ->
             case TelegramQueries.update_integration(integration, %{chat_id: chat_id_str}) do
               {:ok, updated} ->
                 Phoenix.PubSub.broadcast(
@@ -216,6 +225,9 @@ defmodule Tymeslot.Telegram do
               error ->
                 error
             end
+
+          {:ok, _integration} ->
+            {:error, :wrong_bot_mode}
 
           error ->
             error
@@ -280,39 +292,23 @@ defmodule Tymeslot.Telegram do
   # ============================================================================
 
   defp send_telegram_message(bot_token, chat_id, text) do
-    url = "https://api.telegram.org/bot#{bot_token}/sendMessage"
-
-    body =
-      Jason.encode!(%{
-        chat_id: chat_id,
-        text: text,
-        parse_mode: "HTML",
-        disable_web_page_preview: true
-      })
-
-    headers = [{"content-type", "application/json"}]
-
-    case http_client().post(url, body, headers, receive_timeout: 10_000) do
-      {:ok, %{status: status}} when status >= 200 and status < 300 ->
+    case API.send_message(bot_token, chat_id, text) do
+      {:ok, status, _body} when status >= 200 and status < 300 ->
         :ok
 
-      {:ok, %{status: status, body: body}} ->
+      {:ok, status, body} ->
         {:error, "Telegram API returned #{status}: #{truncate(body, 200)}"}
 
-      {:error, %{reason: reason}} ->
-        {:error, "Connection failed: #{inspect(reason)}"}
-
       {:error, reason} ->
-        {:error, "Connection failed: #{inspect(reason)}"}
+        {:error, "Connection failed: #{reason}"}
     end
   end
 
-  defp truncate(text, max) when is_binary(text) and byte_size(text) > max,
-    do: String.slice(text, 0, max) <> "..."
-
-  defp truncate(text, _max), do: text
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
+  defp truncate(text, max) when is_binary(text) do
+    if String.length(text) > max do
+      String.slice(text, 0, max) <> "..."
+    else
+      text
+    end
   end
 end

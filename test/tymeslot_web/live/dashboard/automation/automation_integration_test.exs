@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
       assert render(view) =~ "Delete Webhook?"
 
       view
-      |> element("button", "Delete Webhook")
+      |> element("#delete-webhook-modal button", "Delete Webhook")
       |> render_click()
 
       assert render(view) =~ "Webhook deleted successfully"

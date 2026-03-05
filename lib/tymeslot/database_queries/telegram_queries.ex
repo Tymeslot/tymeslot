@@ -12,13 +12,27 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
   # Integration Queries
   # ============================================================================
 
+  @stub_ttl_minutes 30
+
   @spec list_integrations(integer()) :: [TelegramIntegrationSchema.t()]
   def list_integrations(user_id) do
+    cleanup_orphaned_stubs(user_id)
+
     TelegramIntegrationSchema
     |> where([i], i.user_id == ^user_id)
     |> order_by([i], desc: i.inserted_at)
     |> Repo.all()
     |> Enum.map(&TelegramIntegrationSchema.derive_status/1)
+  end
+
+  defp cleanup_orphaned_stubs(user_id) do
+    cutoff = DateTime.add(DateTime.utc_now(), -@stub_ttl_minutes * 60, :second)
+
+    TelegramIntegrationSchema
+    |> where([i], i.user_id == ^user_id)
+    |> where([i], is_nil(i.chat_id))
+    |> where([i], i.inserted_at < ^cutoff)
+    |> Repo.delete_all()
   end
 
   @spec list_active_integrations_for_event(integer(), String.t()) :: [TelegramIntegrationSchema.t()]
@@ -95,11 +109,11 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
          |> where([i], i.id == ^id)
          |> select([i], i)
          |> Repo.update_all(inc: [failure_count: 1]) do
-      {0, _} ->
+      {0, _rows} ->
         {:error, :not_found}
 
       {_count, [updated]} ->
-        if updated.failure_count >= 10 do
+        if updated.failure_count >= TelegramIntegrationSchema.max_failure_count() do
           update_integration(updated, %{
             is_active: false,
             disabled_at: DateTime.utc_now(),

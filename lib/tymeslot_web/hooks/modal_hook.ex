@@ -66,6 +66,12 @@ defmodule TymeslotWeb.Hooks.ModalHook do
   defp resolve_keys(:regenerate_token),
     do: {:show_regenerate_token_modal, :regenerate_token_modal_data}
 
+  defp resolve_keys(:telegram_delete),
+    do: {:show_telegram_delete_modal, :telegram_delete_modal_data}
+
+  defp resolve_keys(:telegram_deliveries),
+    do: {:show_telegram_deliveries_modal, :telegram_deliveries_modal_data}
+
   defp resolve_keys("delete_break"), do: {:show_delete_break_modal, :delete_break_modal_data}
   defp resolve_keys("clear_day"), do: {:show_clear_day_modal, :clear_day_modal_data}
 

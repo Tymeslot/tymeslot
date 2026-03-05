@@ -11,6 +11,7 @@ defmodule Tymeslot.Application do
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
   alias Tymeslot.Integrations.Shared.Lock
+  alias Tymeslot.Telegram.BotSetup
   alias TymeslotWeb.Endpoint
 
   @impl Application
@@ -99,7 +100,7 @@ defmodule Tymeslot.Application do
     telegram_children =
       if Application.get_env(:tymeslot, :telegram_shared_bot, false) and
            Application.get_env(:tymeslot, :environment) != :test do
-        [{Task, fn -> Tymeslot.Telegram.BotSetup.register_webhook() end}]
+        [{Task, fn -> BotSetup.register_webhook() end}]
       else
         []
       end

@@ -115,10 +115,14 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
   end
 
   describe "perform/1 - error handling" do
-    test "records failure on 5xx error" do
+    setup do
       user = insert(:user)
-      integration = insert(:telegram_integration, user: user)
       meeting = insert(:meeting, organizer_user_id: user.id)
+      %{user: user, meeting: meeting}
+    end
+
+    test "records failure on 5xx error", %{user: user, meeting: meeting} do
+      integration = insert(:telegram_integration, user: user)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %{status: 500, body: "Internal Server Error"}}
@@ -135,10 +139,8 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       assert updated.failure_count == 1
     end
 
-    test "auto-disables on 401 unauthorized" do
-      user = insert(:user)
+    test "auto-disables on 401 unauthorized", %{user: user, meeting: meeting} do
       integration = insert(:telegram_integration, user: user)
-      meeting = insert(:meeting, organizer_user_id: user.id)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %{status: 401, body: ~s({"ok":false,"description":"Unauthorized"})}}
@@ -157,10 +159,8 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       assert updated.disabled_reason =~ "Unauthorized"
     end
 
-    test "auto-disables when bot is blocked by user" do
-      user = insert(:user)
+    test "auto-disables when bot is blocked by user", %{user: user, meeting: meeting} do
       integration = insert(:telegram_integration, user: user)
-      meeting = insert(:meeting, organizer_user_id: user.id)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
@@ -183,10 +183,8 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       assert updated.disabled_reason =~ "blocked"
     end
 
-    test "snoozes on 429 rate limit with retry_after" do
-      user = insert(:user)
+    test "snoozes on 429 rate limit with retry_after", %{user: user, meeting: meeting} do
       integration = insert(:telegram_integration, user: user)
-      meeting = insert(:meeting, organizer_user_id: user.id)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok,
@@ -205,10 +203,8 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
                })
     end
 
-    test "auto-disables after 10 consecutive failures" do
-      user = insert(:user)
+    test "auto-disables after 10 consecutive failures", %{user: user, meeting: meeting} do
       integration = insert(:telegram_integration, user: user, failure_count: 9)
-      meeting = insert(:meeting, organizer_user_id: user.id)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:ok, %{status: 500, body: "Error"}}
@@ -228,10 +224,27 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
       assert updated.disabled_reason =~ "Too many consecutive failures"
     end
 
-    test "handles connection timeout" do
-      user = insert(:user)
+    test "records failure on retry attempts (not just attempt 1)", %{user: user, meeting: meeting} do
+      integration = insert(:telegram_integration, user: user, failure_count: 2)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 500, body: "Internal Server Error"}}
+      end)
+
+      # Simulate this being attempt 3 of 5
+      assert {:error, {:http_error, 500}} =
+               perform_job(TelegramWorker, %{
+                 "integration_id" => integration.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      updated = Repo.get(TelegramIntegrationSchema, integration.id)
+      assert updated.failure_count == 3
+    end
+
+    test "handles connection timeout", %{user: user, meeting: meeting} do
       integration = insert(:telegram_integration, user: user)
-      meeting = insert(:meeting, organizer_user_id: user.id)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
         {:error, %{reason: :timeout}}

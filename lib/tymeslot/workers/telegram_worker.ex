@@ -17,9 +17,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Features
   alias Tymeslot.Telegram
-  alias Tymeslot.Telegram.MessageBuilder
-
-  @delivery_timeout_ms 10_000
+  alias Tymeslot.Telegram.{API, MessageBuilder}
 
   @impl Oban.Worker
   def perform(
@@ -61,9 +59,6 @@ defmodule Tymeslot.Workers.TelegramWorker do
 
       {:error, :no_token} ->
         {:discard, "Bot token missing"}
-
-      {:error, reason} ->
-        {:error, reason}
     end
   end
 
@@ -121,28 +116,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   end
 
   defp send_message(bot_token, chat_id, text) do
-    url = "https://api.telegram.org/bot#{bot_token}/sendMessage"
-
-    body =
-      Jason.encode!(%{
-        chat_id: chat_id,
-        text: text,
-        parse_mode: "HTML",
-        disable_web_page_preview: true
-      })
-
-    headers = [{"content-type", "application/json"}]
-
-    case http_client().post(url, body, headers, receive_timeout: @delivery_timeout_ms) do
-      {:ok, %{status: status, body: response_body}} ->
-        {:ok, status, response_body}
-
-      {:error, %{reason: reason}} ->
-        {:error, inspect(reason)}
-
-      {:error, reason} ->
-        {:error, inspect(reason)}
-    end
+    API.send_message(bot_token, chat_id, text)
   end
 
   defp handle_result(integration, event_type, meeting_id, message, attempt, result) do
@@ -239,21 +213,11 @@ defmodule Tymeslot.Workers.TelegramWorker do
     end
   end
 
-  defp extract_error_description(body), do: inspect(body)
-
-  defp truncate(nil, _max), do: nil
-
   defp truncate(text, max) when is_binary(text) do
     if String.length(text) > max do
       String.slice(text, 0, max)
     else
       text
     end
-  end
-
-  defp truncate(other, max), do: truncate(inspect(other), max)
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 end

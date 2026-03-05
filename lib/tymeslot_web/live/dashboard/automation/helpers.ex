@@ -4,9 +4,15 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   Contains business logic, state management, and utility functions.
   """
 
+  import Phoenix.Component, only: [assign: 3]
+
+  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Telegram
   alias Tymeslot.Utils.FormHelpers
+  alias Tymeslot.Webhooks
   alias Tymeslot.Webhooks.InputValidation, as: WebhookInputValidation
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
+  alias TymeslotWeb.Live.Shared.Flash
 
   @doc """
   Toggles an event in the list of selected events.
@@ -84,5 +90,143 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   @spec get_security_metadata(Phoenix.LiveView.Socket.t()) :: map()
   def get_security_metadata(socket) do
     DashboardHelpers.get_security_metadata(socket)
+  end
+
+  @doc """
+  Returns true if the named field has a non-empty trimmed string value.
+  """
+  @spec field_present?(map(), String.t()) :: boolean()
+  def field_present?(values, key) do
+    String.trim(Map.get(values, key, "")) != ""
+  end
+
+  @doc """
+  Returns true if at least one event is selected.
+  """
+  @spec any_events_selected?(map()) :: boolean()
+  def any_events_selected?(values) do
+    Enum.any?(Map.get(values, "events", []))
+  end
+
+  @doc """
+  Loads the current user's webhooks into the socket.
+  """
+  @spec load_webhooks(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def load_webhooks(socket) do
+    user_id = socket.assigns.current_user.id
+    webhooks = Webhooks.list_webhooks(user_id)
+    assign(socket, :webhooks, webhooks)
+  end
+
+  @doc """
+  Loads Telegram integrations into the socket if Telegram is enabled.
+  """
+  @spec maybe_load_telegram(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def maybe_load_telegram(socket) do
+    if socket.assigns.telegram_enabled do
+      user_id = socket.assigns.current_user.id
+      integrations = Telegram.list_integrations(user_id)
+      assign(socket, :telegram_integrations, integrations)
+    else
+      socket
+    end
+  end
+
+  @doc """
+  Looks up a webhook by ID, scoped to the current user.
+  """
+  @spec get_webhook_for_user(Phoenix.LiveView.Socket.t(), integer() | String.t()) ::
+          {:ok, term()} | {:error, term()}
+  def get_webhook_for_user(socket, id) do
+    user_id = socket.assigns.current_user.id
+    webhook_id = parse_id(id)
+    Webhooks.get_webhook(webhook_id, user_id)
+  end
+
+  @doc """
+  Looks up a Telegram integration by ID, scoped to the current user.
+  """
+  @spec get_telegram_for_user(Phoenix.LiveView.Socket.t(), integer() | String.t()) ::
+          {:ok, term()} | {:error, term()}
+  def get_telegram_for_user(socket, id) do
+    user_id = socket.assigns.current_user.id
+    integration_id = parse_id(id)
+    Telegram.get_integration(integration_id, user_id)
+  end
+
+  @doc """
+  Sends the appropriate flash message for a feature access error and returns the socket unchanged.
+  """
+  @spec handle_feature_access_error(Phoenix.LiveView.Socket.t(), atom()) ::
+          Phoenix.LiveView.Socket.t()
+  def handle_feature_access_error(socket, :insufficient_plan) do
+    Flash.error("Automation is available on Pro plans.")
+    socket
+  end
+
+  def handle_feature_access_error(socket, :feature_access_checker_failed) do
+    Flash.error("Unable to verify subscription status. Please try again.")
+    socket
+  end
+
+  @doc """
+  Executes `action` if the rate limit check passes; otherwise sends an error flash
+  and returns `{:noreply, socket}`.
+  """
+  @spec with_rate_limit(
+          :ok | {:error, :rate_limited, String.t()},
+          Phoenix.LiveView.Socket.t(),
+          (-> {:noreply, Phoenix.LiveView.Socket.t()})
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def with_rate_limit({:error, :rate_limited, message}, socket, _action) do
+    Flash.error(message)
+    {:noreply, socket}
+  end
+
+  def with_rate_limit(:ok, _socket, action), do: action.()
+
+  @doc """
+  Runs a rate-limited test action: checks the rate limit, sets a loading key,
+  fetches the entity, calls test_fn, and clears the loading key on completion.
+  `get_fn` receives the socket and returns `{:ok, entity} | {:error, reason}`.
+  `test_fn` receives the entity and returns `:ok | {:error, reason}`.
+  """
+  @spec do_rate_limited_test(
+          Phoenix.LiveView.Socket.t(),
+          integer() | String.t(),
+          atom(),
+          (Phoenix.LiveView.Socket.t() -> {:ok, term()} | {:error, term()}),
+          (term() -> :ok | {:error, term()}),
+          {String.t(), String.t()}
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def do_rate_limited_test(socket, id, testing_key, get_fn, test_fn, {success_msg, not_found_msg}) do
+    user_id = socket.assigns.current_user.id
+
+    case RateLimiter.check_webhook_test_rate_limit(user_id) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
+
+      :ok ->
+        entity_id = parse_id(id)
+        socket = assign(socket, testing_key, entity_id)
+
+        case get_fn.(socket) do
+          {:ok, entity} ->
+            case test_fn.(entity) do
+              :ok ->
+                Flash.info(success_msg)
+                {:noreply, assign(socket, testing_key, nil)}
+
+              {:error, reason} ->
+                Flash.error("Test failed: #{reason}")
+                {:noreply, assign(socket, testing_key, nil)}
+            end
+
+          {:error, _reason} ->
+            Flash.error(not_found_msg)
+            {:noreply, assign(socket, testing_key, nil)}
+        end
+    end
   end
 end

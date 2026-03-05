@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Webhooks
   alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
@@ -245,12 +246,10 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
     values = assigns.form_values
     errors = assigns.form_errors
 
-    has_name = String.trim(Map.get(values, "name", "")) != ""
-    has_url = String.trim(Map.get(values, "url", "")) != ""
-    has_events = Enum.any?(Map.get(values, "events", []))
-    no_errors = Enum.empty?(errors)
-
-    has_name && has_url && has_events && no_errors
+    AutomationHelpers.field_present?(values, "name") &&
+      AutomationHelpers.field_present?(values, "url") &&
+      AutomationHelpers.any_events_selected?(values) &&
+      Enum.empty?(errors)
   end
 
   defp get_disabled_reason(assigns) do

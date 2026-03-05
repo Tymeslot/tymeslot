@@ -35,6 +35,7 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
   ]
 
   @valid_bot_modes ["shared", "own"]
+  @max_failure_count 10
 
   schema "telegram_integrations" do
     field(:name, :string)
@@ -110,8 +111,13 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
   def should_be_active?(%__MODULE__{is_active: false}), do: false
   def should_be_active?(%__MODULE__{chat_id: nil}), do: false
   def should_be_active?(%__MODULE__{disabled_at: %DateTime{}}), do: false
-  def should_be_active?(%__MODULE__{failure_count: count}) when count >= 10, do: false
+  def should_be_active?(%__MODULE__{failure_count: count}) when count >= @max_failure_count,
+    do: false
+
   def should_be_active?(_other), do: true
+
+  @spec max_failure_count() :: integer()
+  def max_failure_count, do: @max_failure_count
 
   defp validate_events(changeset) do
     case get_change(changeset, :events) do

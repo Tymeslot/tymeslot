@@ -13,11 +13,11 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
   alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
+  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.DatabaseSchemas.UserSessionSchema
-  alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
-  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.DatabaseSchemas.WebhookDeliverySchema
   alias Tymeslot.DatabaseSchemas.WebhookSchema

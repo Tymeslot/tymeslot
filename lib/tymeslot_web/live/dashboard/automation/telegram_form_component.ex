@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
   alias Phoenix.LiveView.JS
   alias Tymeslot.Telegram
   alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
@@ -289,16 +290,17 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
     values = assigns.form_values
     errors = assigns.form_errors
 
-    has_name = String.trim(Map.get(values, "name", "")) != ""
-    has_events = Enum.any?(Map.get(values, "events", []))
-    no_errors = Enum.empty?(errors)
+    base =
+      AutomationHelpers.field_present?(values, "name") &&
+        AutomationHelpers.any_events_selected?(values) &&
+        Enum.empty?(errors)
 
     if assigns.shared_bot_mode do
-      has_name && has_events && no_errors
+      base
     else
-      has_bot_token = String.trim(Map.get(values, "bot_token", "")) != ""
-      has_chat_id = String.trim(Map.get(values, "chat_id", "")) != ""
-      has_name && has_bot_token && has_chat_id && has_events && no_errors
+      base &&
+        AutomationHelpers.field_present?(values, "bot_token") &&
+        AutomationHelpers.field_present?(values, "chat_id")
     end
   end
 

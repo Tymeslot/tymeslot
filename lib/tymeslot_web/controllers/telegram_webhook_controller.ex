@@ -36,9 +36,11 @@ defmodule TymeslotWeb.TelegramWebhookController do
     case parse_start_command(text) do
       {:ok, token} ->
         case Telegram.handle_start_payload(token, chat_id) do
-          {:ok, _integration} ->
+          {:ok, integration} ->
             Logger.info("Telegram account linked via deep link",
-              chat_id: chat_id
+              chat_id: chat_id,
+              integration_id: integration.id,
+              user_id: integration.user_id
             )
 
             json(conn, %{ok: true})

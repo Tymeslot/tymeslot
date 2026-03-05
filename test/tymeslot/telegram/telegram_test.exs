@@ -179,10 +179,77 @@ defmodule Tymeslot.TelegramTest do
       assert_receive {:telegram_linked, ^expected_id, "999888777"}
     end
 
+    test "handle_start_payload/2 rejects own-bot integrations" do
+      integration = insert(:telegram_integration, chat_id: nil, bot_mode: "own")
+
+      token = Telegram.generate_link_token(integration.user_id, integration.id)
+      assert {:error, :wrong_bot_mode} = Telegram.handle_start_payload(token, "999888777")
+
+      # chat_id must remain nil — no update occurred
+      reloaded = Repo.get(Tymeslot.DatabaseSchemas.TelegramIntegrationSchema, integration.id)
+      assert is_nil(reloaded.chat_id)
+    end
+
+    test "handle_start_payload/2 rejects expired tokens" do
+      integration = insert(:telegram_integration, chat_id: nil, bot_mode: "shared")
+
+      assert {:error, _reason} = Telegram.handle_start_payload("bad_token", "999888777")
+
+      reloaded = Repo.get(Tymeslot.DatabaseSchemas.TelegramIntegrationSchema, integration.id)
+      assert is_nil(reloaded.chat_id)
+    end
+
     test "build_deep_link/1 returns Telegram URL" do
       url = Telegram.build_deep_link("test_token")
       assert url =~ "https://t.me/"
       assert url =~ "test_token"
+    end
+  end
+
+  describe "disconnect_integration/1 and reconnect_integration/1" do
+    test "disconnect_integration/1 clears chat_id on shared-bot integrations" do
+      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: "123456")
+
+      assert {:ok, updated} = Telegram.disconnect_integration(integration)
+      assert is_nil(updated.chat_id)
+    end
+
+    test "disconnect_integration/1 returns error for own-bot integrations" do
+      integration = insert(:telegram_integration, bot_mode: "own")
+      assert {:error, :own_bot_mode} = Telegram.disconnect_integration(integration)
+    end
+
+    test "reconnect_integration/1 clears chat_id and returns deep link for shared-bot" do
+      setup_config(:tymeslot,
+        telegram_bot_token: "shared_token",
+        telegram_bot_username: "TestBot"
+      )
+
+      integration = insert(:telegram_integration, bot_mode: "shared", chat_id: "123456")
+
+      assert {:ok, updated, deep_link} = Telegram.reconnect_integration(integration)
+      assert is_nil(updated.chat_id)
+      assert deep_link =~ "https://t.me/TestBot"
+    end
+
+    test "reconnect_integration/1 returns error for own-bot integrations" do
+      integration = insert(:telegram_integration, bot_mode: "own")
+      assert {:error, :own_bot_mode} = Telegram.reconnect_integration(integration)
+    end
+  end
+
+  describe "create_integration/2 - feature flag enforcement" do
+    test "returns error when telegram feature is disabled" do
+      setup_config(:tymeslot, telegram_notifications_allowed: false)
+      user = insert(:user)
+
+      assert {:error, :feature_disabled} =
+               Telegram.create_integration(user.id, %{
+                 name: "Test Bot",
+                 bot_token: "1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789",
+                 chat_id: "123456789",
+                 events: ["meeting.created"]
+               })
     end
   end
 
