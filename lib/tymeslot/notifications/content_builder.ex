@@ -26,6 +26,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       # Attendee information
       attendee_name: meeting.attendee_name,
       attendee_email: meeting.attendee_email,
+      attendee_locale: meeting.attendee_locale || "en",
       attendee_message: meeting.attendee_message || "",
       attendee_timezone: attendee_timezone,
 
@@ -89,6 +90,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       # Participant information
       attendee_name: meeting.attendee_name,
       attendee_email: meeting.attendee_email,
+      attendee_locale: meeting.attendee_locale || "en",
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
       organizer_title: meeting.organizer_title,

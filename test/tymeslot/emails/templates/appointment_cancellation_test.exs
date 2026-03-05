@@ -3,7 +3,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
   @moduletag :emails
 
   alias Tymeslot.Emails.Templates.AppointmentCancellation
+  alias Tymeslot.Notifications.ContentBuilder
   import Tymeslot.EmailTestHelpers
+  import Tymeslot.Factory
 
   describe "cancellation_email_organizer/2" do
     test "creates email with correct subject line" do
@@ -309,6 +311,36 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       assert email.subject =~ "Зустріч скасовано"
       refute email.subject =~ "Meeting Cancelled"
       assert email.text_body =~ "Зустріч скасовано"
+    end
+  end
+
+  describe "locale via ContentBuilder - attendee cancellation emails" do
+    test "German locale is honoured end-to-end through ContentBuilder" do
+      meeting = build(:meeting, attendee_locale: "de")
+      details = ContentBuilder.build_cancellation_details(meeting)
+      email = AppointmentCancellation.cancellation_email_attendee(meeting.attendee_email, details)
+
+      assert email.subject =~ "Termin abgesagt"
+      refute email.subject =~ "Meeting Cancelled"
+      assert email.text_body =~ "Termin abgesagt"
+    end
+
+    test "French locale is honoured end-to-end through ContentBuilder" do
+      meeting = build(:meeting, attendee_locale: "fr")
+      details = ContentBuilder.build_cancellation_details(meeting)
+      email = AppointmentCancellation.cancellation_email_attendee(meeting.attendee_email, details)
+
+      assert email.subject =~ "Réunion annulée"
+      refute email.subject =~ "Meeting Cancelled"
+    end
+
+    test "Ukrainian locale is honoured end-to-end through ContentBuilder" do
+      meeting = build(:meeting, attendee_locale: "uk")
+      details = ContentBuilder.build_cancellation_details(meeting)
+      email = AppointmentCancellation.cancellation_email_attendee(meeting.attendee_email, details)
+
+      assert email.subject =~ "Зустріч скасовано"
+      refute email.subject =~ "Meeting Cancelled"
     end
   end
 
