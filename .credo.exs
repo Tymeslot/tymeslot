@@ -26,6 +26,7 @@
         "dev_support/credo_checks/require_dashboard_section_header.ex",
         "dev_support/credo_checks/thin_wrapper_functions.ex",
         "dev_support/credo_checks/use_core_inputs.ex",
+        "dev_support/credo_checks/use_core_modal.ex",
         "dev_support/credo_checks/use_p_sigil.ex",
         "dev_support/credo_checks/test_module_tag_required.ex"
       ],
@@ -107,6 +108,7 @@
           {CredoChecks.LargeModules, [priority: :low]},
           {CredoChecks.Phoenix.UsePSigil, [priority: :low, mode: :moderate, ignore_tests?: true]},
           {CredoChecks.UseCoreInputs, []},
+          {CredoChecks.UseCoreModal, []},
           {CredoChecks.RequireDashboardSectionHeader, [priority: :low]},
           {CredoChecks.TestModuleTagRequired, [priority: :high]},
           # Logger hygiene: violations are :low while being cleared; raise to :high after Phase 3-4
