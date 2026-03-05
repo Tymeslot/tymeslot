@@ -175,6 +175,9 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
       when is_integer(integration_id) ->
         get_client_by_integration_id(integration_id, user_id)
 
+      %MeetingSchema{organizer_user_id: user_id} when is_integer(user_id) ->
+        client(user_id)
+
       {integration_id, user_id} when is_integer(integration_id) and is_integer(user_id) ->
         get_client_by_integration_id(integration_id, user_id)
 

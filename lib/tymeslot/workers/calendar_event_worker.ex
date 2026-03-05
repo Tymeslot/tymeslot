@@ -400,6 +400,15 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
   defp handle_calendar_deletion(meeting_id, _attempt) do
     case MeetingQueries.get_meeting(meeting_id) do
+      {:ok, %{calendar_integration_id: nil} = meeting} ->
+        Logger.metadata(user_id: meeting.organizer_user_id)
+
+        Logger.info("No calendar integration linked, skipping calendar deletion",
+          meeting_id: meeting_id
+        )
+
+        :ok
+
       {:ok, meeting} ->
         Logger.metadata(user_id: meeting.organizer_user_id)
         Logger.info("Deleting calendar event", meeting_id: meeting_id, uid: meeting.uid)
