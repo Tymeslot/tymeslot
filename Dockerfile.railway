@@ -4,7 +4,7 @@
 # over the build process.
 
 # --- Builder ---
-FROM hexpm/elixir:1.19.3-erlang-28.3.2-debian-bookworm-20260202-slim AS builder
+FROM hexpm/elixir:1.19.5-erlang-28.3.3-debian-bookworm-20260223-slim AS builder
 
 ARG MIX_ENV=prod
 ENV MIX_ENV=${MIX_ENV} \

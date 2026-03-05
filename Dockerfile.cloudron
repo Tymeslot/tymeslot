@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # --- Builder Stage ---
-FROM elixir:1.19.3-otp-28-slim AS builder
+FROM elixir:1.19.5-otp-28-slim AS builder
 
 # Build arguments and environment
 ARG MIX_ENV=prod
