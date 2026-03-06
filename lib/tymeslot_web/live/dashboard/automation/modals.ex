@@ -430,5 +430,4 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     <% end %>
     """
   end
-
 end

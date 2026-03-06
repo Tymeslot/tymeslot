@@ -8,7 +8,9 @@ defmodule Tymeslot.Telegram.InputValidationTest do
 
   describe "validate_bot_token/2" do
     test "accepts valid bot token" do
-      {token, errors} = InputValidation.validate_bot_token("1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789", %{})
+      {token, errors} =
+        InputValidation.validate_bot_token("1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789", %{})
+
       assert token == "1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789"
       assert errors == %{}
     end

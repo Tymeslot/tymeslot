@@ -95,9 +95,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
   def handle_create(%{"webhook" => params}, socket) do
     user_id = socket.assigns.current_user.id
 
-    AutomationHelpers.with_rate_limit(RateLimiter.check_webhook_write_rate_limit(user_id), socket, fn ->
-      do_webhook_write(params, socket, &Webhooks.create_webhook(user_id, &1), "created")
-    end)
+    AutomationHelpers.with_rate_limit(
+      RateLimiter.check_webhook_write_rate_limit(user_id),
+      socket,
+      fn ->
+        do_webhook_write(params, socket, &Webhooks.create_webhook(user_id, &1), "created")
+      end
+    )
   end
 
   @spec handle_show_edit_form(map(), Phoenix.LiveView.Socket.t()) ::
@@ -134,9 +138,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
       webhook ->
         user_id = socket.assigns.current_user.id
 
-        AutomationHelpers.with_rate_limit(RateLimiter.check_webhook_write_rate_limit(user_id), socket, fn ->
-          do_webhook_write(params, socket, &Webhooks.update_webhook(webhook, &1), "updated")
-        end)
+        AutomationHelpers.with_rate_limit(
+          RateLimiter.check_webhook_write_rate_limit(user_id),
+          socket,
+          fn ->
+            do_webhook_write(params, socket, &Webhooks.update_webhook(webhook, &1), "updated")
+          end
+        )
     end
   end
 
@@ -218,7 +226,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_test_connection(%{"id" => id}, socket) do
     AutomationHelpers.do_rate_limited_test(
-      socket, id, :testing_connection,
+      socket,
+      id,
+      :testing_connection,
       &AutomationHelpers.get_webhook_for_user(&1, id),
       &Webhooks.test_webhook_connection(&1.url, &1.webhook_token),
       {"Webhook test successful! Check your endpoint.", "Webhook not found"}
@@ -344,8 +354,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookEventHandlers do
             Flash.info("Security token regenerated")
 
             socket =
-              if socket.assigns.webhook_form_mode == :edit and
-                   socket.assigns.webhook_form_data &&
+              if (socket.assigns.webhook_form_mode == :edit and
+                    socket.assigns.webhook_form_data) &&
                    socket.assigns.webhook_form_data.id == updated_webhook.id do
                 assign(socket, :webhook_form_data, updated_webhook)
               else

@@ -52,7 +52,11 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
     field(:disabled_reason, :string)
 
     field(:bot_token, :string, virtual: true)
-    field(:status, Ecto.Enum, values: [:pending_link, :active, :paused, :auto_disabled], virtual: true)
+
+    field(:status, Ecto.Enum,
+      values: [:pending_link, :active, :paused, :auto_disabled],
+      virtual: true
+    )
 
     belongs_to(:user, Tymeslot.DatabaseSchemas.UserSchema)
 
@@ -114,6 +118,7 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
   def should_be_active?(%__MODULE__{is_active: false}), do: false
   def should_be_active?(%__MODULE__{chat_id: nil}), do: false
   def should_be_active?(%__MODULE__{disabled_at: %DateTime{}}), do: false
+
   def should_be_active?(%__MODULE__{failure_count: count}) when count >= @max_failure_count,
     do: false
 

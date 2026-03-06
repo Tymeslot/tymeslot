@@ -166,7 +166,9 @@ defmodule Tymeslot.TelegramTest do
   describe "account linking" do
     test "generate_link_token/0 and handle_start_payload/2 link account" do
       token = Telegram.generate_link_token()
-      integration = insert(:telegram_integration, chat_id: nil, bot_mode: "shared", link_token: token)
+
+      integration =
+        insert(:telegram_integration, chat_id: nil, bot_mode: "shared", link_token: token)
 
       # Subscribe to PubSub for link notification
       Phoenix.PubSub.subscribe(Tymeslot.PubSub, "telegram_link:#{integration.user_id}")
@@ -181,7 +183,9 @@ defmodule Tymeslot.TelegramTest do
 
     test "handle_start_payload/2 rejects own-bot integrations" do
       token = Telegram.generate_link_token()
-      integration = insert(:telegram_integration, chat_id: nil, bot_mode: "own", link_token: token)
+
+      integration =
+        insert(:telegram_integration, chat_id: nil, bot_mode: "own", link_token: token)
 
       assert {:error, :wrong_bot_mode} = Telegram.handle_start_payload(token, "999888777")
 
@@ -193,7 +197,8 @@ defmodule Tymeslot.TelegramTest do
     test "handle_start_payload/2 rejects unknown tokens" do
       _integration = insert(:telegram_integration, chat_id: nil, bot_mode: "shared")
 
-      assert {:error, :not_found} = Telegram.handle_start_payload("nonexistent_token", "999888777")
+      assert {:error, :not_found} =
+               Telegram.handle_start_payload("nonexistent_token", "999888777")
     end
 
     test "build_deep_link/1 returns Telegram URL" do

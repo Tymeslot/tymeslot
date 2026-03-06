@@ -166,8 +166,7 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
         {:ok,
          %{
            status: 400,
-           body:
-             ~s({"ok":false,"description":"Forbidden: bot was blocked by the user"})
+           body: ~s({"ok":false,"description":"Forbidden: bot was blocked by the user"})
          }}
       end)
 

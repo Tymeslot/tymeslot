@@ -21,7 +21,9 @@ defmodule Tymeslot.Telegram.InputValidation do
 
     {bot_token, chat_id, errors} =
       if bot_mode == "own" do
-        validate_fn = if mode == :edit, do: &validate_bot_token_optional/2, else: &validate_bot_token/2
+        validate_fn =
+          if mode == :edit, do: &validate_bot_token_optional/2, else: &validate_bot_token/2
+
         {token, errors} = validate_fn.(params["bot_token"], errors)
         {cid, errors} = validate_chat_id(params["chat_id"], errors)
         {token, cid, errors}
@@ -94,8 +96,11 @@ defmodule Tymeslot.Telegram.InputValidation do
   end
 
   @spec validate_events([String.t()] | nil, map()) :: {[String.t()] | nil, map()}
-  def validate_events(nil, errors), do: {nil, Map.put(errors, :events, "select at least one event")}
-  def validate_events([], errors), do: {nil, Map.put(errors, :events, "select at least one event")}
+  def validate_events(nil, errors),
+    do: {nil, Map.put(errors, :events, "select at least one event")}
+
+  def validate_events([], errors),
+    do: {nil, Map.put(errors, :events, "select at least one event")}
 
   def validate_events(events, errors) when is_list(events) do
     valid = TelegramIntegrationSchema.valid_events()

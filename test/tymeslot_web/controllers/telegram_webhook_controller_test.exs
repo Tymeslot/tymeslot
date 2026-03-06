@@ -27,7 +27,9 @@ defmodule TymeslotWeb.TelegramWebhookControllerTest do
   describe "POST /api/telegram/webhook" do
     test "links account with valid start payload", %{conn: conn} do
       token = Telegram.generate_link_token()
-      integration = insert(:telegram_integration, chat_id: nil, bot_mode: "shared", link_token: token)
+
+      integration =
+        insert(:telegram_integration, chat_id: nil, bot_mode: "shared", link_token: token)
 
       conn =
         conn

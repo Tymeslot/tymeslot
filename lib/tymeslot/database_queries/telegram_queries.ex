@@ -43,7 +43,9 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
     |> Repo.delete_all()
   end
 
-  @spec list_active_integrations_for_event(integer(), String.t()) :: [TelegramIntegrationSchema.t()]
+  @spec list_active_integrations_for_event(integer(), String.t()) :: [
+          TelegramIntegrationSchema.t()
+        ]
   def list_active_integrations_for_event(user_id, event_type) do
     TelegramIntegrationSchema
     |> where([i], i.user_id == ^user_id)
@@ -192,10 +194,8 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
           where: d.integration_id == ^integration_id and d.inserted_at >= ^since,
           select: %{
             total: count(d.id),
-            successful:
-              filter(count(d.id), d.response_status >= 200 and d.response_status < 300),
-            failed:
-              filter(count(d.id), d.response_status >= 400 or not is_nil(d.error_message))
+            successful: filter(count(d.id), d.response_status >= 200 and d.response_status < 300),
+            failed: filter(count(d.id), d.response_status >= 400 or not is_nil(d.error_message))
           }
       )
 

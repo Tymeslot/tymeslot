@@ -282,5 +282,4 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
       chat_id
     end
   end
-
 end

@@ -31,7 +31,13 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlers do
            }) do
         {:ok, integration} ->
           deep_link = Telegram.build_deep_link(token)
-          timer_ref = Process.send_after(self(), {:telegram_link_expired, integration.id}, :timer.minutes(10))
+
+          timer_ref =
+            Process.send_after(
+              self(),
+              {:telegram_link_expired, integration.id},
+              :timer.minutes(10)
+            )
 
           {:noreply,
            socket
@@ -108,7 +114,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlers do
     case Telegram.refresh_link_token(integration) do
       {:ok, token} ->
         deep_link = Telegram.build_deep_link(token)
-        timer_ref = Process.send_after(self(), {:telegram_link_expired, integration.id}, :timer.minutes(10))
+
+        timer_ref =
+          Process.send_after(self(), {:telegram_link_expired, integration.id}, :timer.minutes(10))
 
         {:noreply,
          socket
@@ -139,13 +147,19 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlers do
                mode: socket.assigns.telegram_form_mode
              ) do
           {:ok, _validated} ->
-            FormValidationHelpers.delete_field_error(socket.assigns.telegram_form_errors, field_atom)
+            FormValidationHelpers.delete_field_error(
+              socket.assigns.telegram_form_errors,
+              field_atom
+            )
 
           {:error, errs} ->
             if field_error = Map.get(errs, field_atom) do
               Map.put(socket.assigns.telegram_form_errors, field_atom, field_error)
             else
-              FormValidationHelpers.delete_field_error(socket.assigns.telegram_form_errors, field_atom)
+              FormValidationHelpers.delete_field_error(
+                socket.assigns.telegram_form_errors,
+                field_atom
+              )
             end
         end
       end
@@ -270,7 +284,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_test(%{"id" => id}, socket) do
     AutomationHelpers.do_rate_limited_test(
-      socket, id, :telegram_testing,
+      socket,
+      id,
+      :telegram_testing,
       &AutomationHelpers.get_telegram_for_user(&1, id),
       &Telegram.test_integration/1,
       {"Test message sent! Check Telegram.", "Integration not found"}
@@ -333,7 +349,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlers do
 
         case Telegram.reconnect_integration(integration) do
           {:ok, updated, deep_link} ->
-            timer_ref = Process.send_after(self(), {:telegram_link_expired, updated.id}, :timer.minutes(10))
+            timer_ref =
+              Process.send_after(self(), {:telegram_link_expired, updated.id}, :timer.minutes(10))
 
             {:noreply,
              socket
@@ -504,12 +521,16 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlers do
     user_id = socket.assigns.current_user.id
     bot_mode = if Telegram.shared_bot_mode?(), do: "shared", else: "own"
 
-    AutomationHelpers.with_rate_limit(RateLimiter.check_webhook_write_rate_limit(user_id), socket, fn ->
-      case TelegramInputValidation.validate_form(params, bot_mode: bot_mode, mode: mode) do
-        {:ok, sanitized} -> action.(bot_mode, sanitized)
-        {:error, errors} -> {:noreply, assign(socket, :telegram_form_errors, errors)}
+    AutomationHelpers.with_rate_limit(
+      RateLimiter.check_webhook_write_rate_limit(user_id),
+      socket,
+      fn ->
+        case TelegramInputValidation.validate_form(params, bot_mode: bot_mode, mode: mode) do
+          {:ok, sanitized} -> action.(bot_mode, sanitized)
+          {:error, errors} -> {:noreply, assign(socket, :telegram_form_errors, errors)}
+        end
       end
-    end)
+    )
   end
 
   defp test_and_save_telegram(user_id, sanitized, socket) do

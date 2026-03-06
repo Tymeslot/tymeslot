@@ -64,7 +64,10 @@ defmodule Tymeslot.Telegram do
   @spec toggle_integration(TelegramIntegrationSchema.t()) ::
           {:ok, TelegramIntegrationSchema.t()}
           | {:error,
-             Ecto.Changeset.t() | :insufficient_plan | :feature_access_checker_failed | :invalid_state}
+             Ecto.Changeset.t()
+             | :insufficient_plan
+             | :feature_access_checker_failed
+             | :invalid_state}
   def toggle_integration(%TelegramIntegrationSchema{} = integration) do
     status = TelegramIntegrationSchema.derive_status(integration).status
 
