@@ -139,7 +139,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
           })
 
         {:error, error_msg} ->
-          Map.put(delivery_attrs, :error_message, truncate(error_msg, 2000))
+          Map.put(delivery_attrs, :error_message, truncate(error_msg, 255))
       end
 
     TelegramQueries.create_delivery(delivery_attrs)

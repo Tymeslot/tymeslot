@@ -42,6 +42,18 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     """)
   end
 
+  def build_message(event_type, meeting) do
+    String.trim("""
+    #{emoji(:calendar)} <b>Meeting Update</b>
+
+    <b>#{esc(attendee_name(meeting))}</b> — <i>#{esc(meeting_title(meeting))}</i>
+    #{emoji(:clock)} #{format_time(meeting)}
+    #{emoji(:email)} #{esc(meeting.attendee_email)}
+    Event: #{esc(event_type)}\
+    #{link_line(meeting)}\
+    """)
+  end
+
   @spec build_test_message() :: String.t()
   def build_test_message do
     "#{emoji(:check)} <b>Tymeslot Test</b>\n\nThis is a test message from your Tymeslot integration. If you see this, notifications are working correctly!"

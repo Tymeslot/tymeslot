@@ -290,28 +290,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
       </:header>
 
       <div class="space-y-8">
-        <!-- Stats -->
-        <%= if @stats do %>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-tymeslot-50 rounded-token-2xl p-4 border border-tymeslot-100">
-              <div class="text-token-xs font-black text-tymeslot-600 uppercase tracking-wider">Total</div>
-              <div class="text-token-3xl font-black text-tymeslot-900 mt-1"><%= @stats.total %></div>
-              <div class="text-token-xs text-tymeslot-500 font-medium mt-1">Last <%= @stats.period_days %> days</div>
-            </div>
-            <div class="bg-green-50 rounded-token-2xl p-4 border border-green-100">
-              <div class="text-token-xs font-black text-green-600 uppercase tracking-wider">Success</div>
-              <div class="text-token-3xl font-black text-green-700 mt-1"><%= @stats.successful %></div>
-              <div class="text-token-xs text-green-600 font-medium mt-1"><%= @stats.success_rate %>% success rate</div>
-            </div>
-            <div class="bg-red-50 rounded-token-2xl p-4 border border-red-100">
-              <div class="text-token-xs font-black text-red-600 uppercase tracking-wider">Failed</div>
-              <div class="text-token-3xl font-black text-red-700 mt-1"><%= @stats.failed %></div>
-              <div class="text-token-xs text-red-600 font-medium mt-1">Deliveries failed</div>
-            </div>
-          </div>
-        <% end %>
+        <.delivery_stats_grid stats={@stats} />
 
-        <!-- Deliveries List -->
         <div>
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-black text-tymeslot-900 flex items-center gap-2">
@@ -323,50 +303,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
               Test calls are not logged
             </div>
           </div>
-          <%= if @deliveries == [] do %>
-            <div class="text-center py-12 bg-tymeslot-50 rounded-token-2xl border-2 border-dashed border-tymeslot-200">
-              <p class="text-tymeslot-600 font-medium">No deliveries yet</p>
-            </div>
-          <% else %>
-            <div class="space-y-3">
-              <%= for delivery <- @deliveries do %>
-                <div class="border-2 border-tymeslot-100 rounded-token-2xl p-4 hover:border-turquoise-100 hover:bg-turquoise-50/10 transition-colors">
-                  <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                      <div class="flex flex-wrap items-center gap-3 mb-2">
-                        <span class="bg-turquoise-50 text-turquoise-700 text-token-xs font-black px-2 py-1 rounded-token-lg border border-turquoise-100">
-                          <%= delivery.event_type %>
-                        </span>
-                        <%= if delivery.response_status do %>
-                          <span class={[
-                            "text-token-xs font-black px-2 py-1 rounded-token-lg border",
-                            if(delivery.response_status >= 200 and delivery.response_status < 300,
-                              do: "bg-green-50 text-green-700 border-green-100",
-                              else: "bg-red-50 text-red-700 border-red-100"
-                            )
-                          ]}>
-                            <%= delivery.response_status %>
-                          </span>
-                        <% end %>
-                        <span class="text-token-xs text-tymeslot-500 font-medium">
-                          Attempt <%= delivery.attempt_count %>
-                        </span>
-                      </div>
-                      <div class="text-token-sm text-tymeslot-600 font-medium flex items-center gap-1.5">
-                        <CoreComponents.icon name="hero-clock" class="w-4 h-4" />
-                        <%= AutomationHelpers.format_datetime(delivery.inserted_at) %>
-                      </div>
-                      <%= if delivery.error_message do %>
-                        <div class="text-token-sm text-red-600 font-medium mt-2 p-2 bg-red-50 rounded-token-lg border border-red-100">
-                          Error: <%= delivery.error_message %>
-                        </div>
-                      <% end %>
-                    </div>
-                  </div>
-                </div>
-              <% end %>
-            </div>
-          <% end %>
+          <.delivery_list deliveries={@deliveries} />
         </div>
       </div>
 
@@ -397,70 +334,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
       </:header>
 
       <div class="space-y-8">
-        <%= if @stats do %>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-tymeslot-50 rounded-token-2xl p-4 border border-tymeslot-100">
-              <div class="text-token-xs font-black text-tymeslot-600 uppercase tracking-wider">Total</div>
-              <div class="text-token-3xl font-black text-tymeslot-900 mt-1"><%= @stats.total %></div>
-              <div class="text-token-xs text-tymeslot-500 font-medium mt-1">Last 7 days</div>
-            </div>
-            <div class="bg-green-50 rounded-token-2xl p-4 border border-green-100">
-              <div class="text-token-xs font-black text-green-600 uppercase tracking-wider">Success</div>
-              <div class="text-token-3xl font-black text-green-700 mt-1"><%= @stats.successful %></div>
-            </div>
-            <div class="bg-red-50 rounded-token-2xl p-4 border border-red-100">
-              <div class="text-token-xs font-black text-red-600 uppercase tracking-wider">Failed</div>
-              <div class="text-token-3xl font-black text-red-700 mt-1"><%= @stats.failed %></div>
-            </div>
-          </div>
-        <% end %>
-
-        <div>
-          <%= if @deliveries == [] do %>
-            <div class="text-center py-12 bg-tymeslot-50 rounded-token-2xl border-2 border-dashed border-tymeslot-200">
-              <p class="text-tymeslot-600 font-medium">No deliveries yet</p>
-            </div>
-          <% else %>
-            <div class="space-y-3">
-              <%= for delivery <- @deliveries do %>
-                <div class="border-2 border-tymeslot-100 rounded-token-2xl p-4 hover:border-turquoise-100 hover:bg-turquoise-50/10 transition-colors">
-                  <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                      <div class="flex flex-wrap items-center gap-3 mb-2">
-                        <span class="bg-turquoise-50 text-turquoise-700 text-token-xs font-black px-2 py-1 rounded-token-lg border border-turquoise-100">
-                          <%= delivery.event_type %>
-                        </span>
-                        <%= if delivery.response_status do %>
-                          <span class={[
-                            "text-token-xs font-black px-2 py-1 rounded-token-lg border",
-                            if(delivery.response_status >= 200 and delivery.response_status < 300,
-                              do: "bg-green-50 text-green-700 border-green-100",
-                              else: "bg-red-50 text-red-700 border-red-100"
-                            )
-                          ]}>
-                            <%= delivery.response_status %>
-                          </span>
-                        <% end %>
-                        <span class="text-token-xs text-tymeslot-500 font-medium">
-                          Attempt <%= delivery.attempt_count %>
-                        </span>
-                      </div>
-                      <div class="text-token-sm text-tymeslot-600 font-medium flex items-center gap-1.5">
-                        <CoreComponents.icon name="hero-clock" class="w-4 h-4" />
-                        <%= AutomationHelpers.format_datetime(delivery.inserted_at) %>
-                      </div>
-                      <%= if delivery.error_message do %>
-                        <div class="text-token-sm text-red-600 font-medium mt-2 p-2 bg-red-50 rounded-token-lg border border-red-100">
-                          Error: <%= delivery.error_message %>
-                        </div>
-                      <% end %>
-                    </div>
-                  </div>
-                </div>
-              <% end %>
-            </div>
-          <% end %>
-        </div>
+        <.delivery_stats_grid stats={@stats} />
+        <.delivery_list deliveries={@deliveries} />
       </div>
 
       <:footer>
@@ -471,6 +346,88 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
         </div>
       </:footer>
     </CoreComponents.modal>
+    """
+  end
+
+  # ============================================================================
+  # Shared Delivery Components
+  # ============================================================================
+
+  attr :stats, :map, default: nil
+
+  defp delivery_stats_grid(assigns) do
+    ~H"""
+    <%= if @stats do %>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-tymeslot-50 rounded-token-2xl p-4 border border-tymeslot-100">
+          <div class="text-token-xs font-black text-tymeslot-600 uppercase tracking-wider">Total</div>
+          <div class="text-token-3xl font-black text-tymeslot-900 mt-1"><%= @stats.total %></div>
+          <div class="text-token-xs text-tymeslot-500 font-medium mt-1">Last <%= Map.get(@stats, :period_days, 7) %> days</div>
+        </div>
+        <div class="bg-green-50 rounded-token-2xl p-4 border border-green-100">
+          <div class="text-token-xs font-black text-green-600 uppercase tracking-wider">Success</div>
+          <div class="text-token-3xl font-black text-green-700 mt-1"><%= @stats.successful %></div>
+          <%= if Map.get(@stats, :success_rate) do %>
+            <div class="text-token-xs text-green-600 font-medium mt-1"><%= @stats.success_rate %>% success rate</div>
+          <% end %>
+        </div>
+        <div class="bg-red-50 rounded-token-2xl p-4 border border-red-100">
+          <div class="text-token-xs font-black text-red-600 uppercase tracking-wider">Failed</div>
+          <div class="text-token-3xl font-black text-red-700 mt-1"><%= @stats.failed %></div>
+        </div>
+      </div>
+    <% end %>
+    """
+  end
+
+  attr :deliveries, :list, required: true
+
+  defp delivery_list(assigns) do
+    ~H"""
+    <%= if @deliveries == [] do %>
+      <div class="text-center py-12 bg-tymeslot-50 rounded-token-2xl border-2 border-dashed border-tymeslot-200">
+        <p class="text-tymeslot-600 font-medium">No deliveries yet</p>
+      </div>
+    <% else %>
+      <div class="space-y-3">
+        <%= for delivery <- @deliveries do %>
+          <div class="border-2 border-tymeslot-100 rounded-token-2xl p-4 hover:border-turquoise-100 hover:bg-turquoise-50/10 transition-colors">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <div class="flex flex-wrap items-center gap-3 mb-2">
+                  <span class="bg-turquoise-50 text-turquoise-700 text-token-xs font-black px-2 py-1 rounded-token-lg border border-turquoise-100">
+                    <%= delivery.event_type %>
+                  </span>
+                  <%= if delivery.response_status do %>
+                    <span class={[
+                      "text-token-xs font-black px-2 py-1 rounded-token-lg border",
+                      if(delivery.response_status >= 200 and delivery.response_status < 300,
+                        do: "bg-green-50 text-green-700 border-green-100",
+                        else: "bg-red-50 text-red-700 border-red-100"
+                      )
+                    ]}>
+                      <%= delivery.response_status %>
+                    </span>
+                  <% end %>
+                  <span class="text-token-xs text-tymeslot-500 font-medium">
+                    Attempt <%= delivery.attempt_count %>
+                  </span>
+                </div>
+                <div class="text-token-sm text-tymeslot-600 font-medium flex items-center gap-1.5">
+                  <CoreComponents.icon name="hero-clock" class="w-4 h-4" />
+                  <%= AutomationHelpers.format_datetime(delivery.inserted_at) %>
+                </div>
+                <%= if delivery.error_message do %>
+                  <div class="text-token-sm text-red-600 font-medium mt-2 p-2 bg-red-50 rounded-token-lg border border-red-100">
+                    Error: <%= delivery.error_message %>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
     """
   end
 
