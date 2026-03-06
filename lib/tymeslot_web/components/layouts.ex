@@ -14,6 +14,25 @@ defmodule TymeslotWeb.Layouts do
   embed_templates "layouts/*"
 
   @doc """
+  Gets the current URL for use in canonical and meta tags.
+  """
+  @spec current_url(map()) :: String.t()
+  def current_url(assigns) do
+    cond do
+      assigns[:conn] ->
+        Phoenix.Controller.current_url(assigns[:conn])
+
+      assigns[:uri] ->
+        uri = assigns[:uri]
+        "#{uri.scheme}://#{uri.host}#{if uri.port not in [80, 443], do: ":#{uri.port}", else: ""}#{uri.path}"
+
+      true ->
+        path = assigns[:request_path] || "/"
+        TymeslotWeb.Endpoint.url() <> path
+    end
+  end
+
+  @doc """
   Renders the appropriate theme CSS link tag based on theme ID.
   """
   @spec render_theme_css(String.t()) :: Phoenix.LiveView.Rendered.t()

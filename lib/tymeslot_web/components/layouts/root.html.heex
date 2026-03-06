@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
+    <link rel="canonical" href={TymeslotWeb.Layouts.current_url(assigns)} />
     <%= if assigns[:meta_description] do %>
       <meta name="description" content={@meta_description} />
     <% end %>
