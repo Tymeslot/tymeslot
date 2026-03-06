@@ -485,9 +485,23 @@ if config_env() in [:dev, :test] do
 end
 
 # Telegram integration feature flags (Core defaults)
-config :tymeslot,
-  telegram_notifications_allowed: System.get_env("TELEGRAM_ENABLED") == "true",
-  telegram_shared_bot: false
+# Shared bot mode: set TELEGRAM_BOT_TOKEN + TELEGRAM_BOT_USERNAME + TELEGRAM_WEBHOOK_SECRET.
+# Presence of TELEGRAM_BOT_TOKEN enables shared bot mode automatically (TELEGRAM_ENABLED not needed).
+# Own-bot mode: set only TELEGRAM_ENABLED=true; each user supplies their own bot token and chat ID.
+telegram_bot_token = System.get_env("TELEGRAM_BOT_TOKEN")
+
+if telegram_bot_token do
+  config :tymeslot,
+    telegram_notifications_allowed: true,
+    telegram_shared_bot: true,
+    telegram_bot_token: telegram_bot_token,
+    telegram_bot_username: System.fetch_env!("TELEGRAM_BOT_USERNAME"),
+    telegram_webhook_secret: System.fetch_env!("TELEGRAM_WEBHOOK_SECRET")
+else
+  config :tymeslot,
+    telegram_notifications_allowed: System.get_env("TELEGRAM_ENABLED") == "true",
+    telegram_shared_bot: false
+end
 
 config :tymeslot, registration_enabled: System.get_env("REGISTRATION_ENABLED", "true") == "true"
 config :tymeslot, password_auth_enabled: System.get_env("PASSWORD_AUTH_ENABLED", "true") == "true"

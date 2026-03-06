@@ -140,8 +140,9 @@ defmodule Tymeslot.Telegram.MessageBuilder do
     uid = Map.get(meeting, :uid)
 
     if uid do
-      host = Application.get_env(:tymeslot, TymeslotWeb.Endpoint)[:url][:host] || "localhost"
-      scheme = Application.get_env(:tymeslot, TymeslotWeb.Endpoint)[:url][:scheme] || "https"
+      endpoint_config = Application.get_env(:tymeslot, TymeslotWeb.Endpoint)
+      host = System.get_env("PHX_HOST") || get_in(endpoint_config, [:url, :host]) || "localhost"
+      scheme = System.get_env("PHX_SCHEME") || get_in(endpoint_config, [:url, :scheme]) || "https"
       "\n\n<a href=\"#{scheme}://#{host}/dashboard/meetings\">View in dashboard</a>"
     else
       ""

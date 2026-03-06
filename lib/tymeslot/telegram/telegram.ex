@@ -8,7 +8,7 @@ defmodule Tymeslot.Telegram do
   alias Tymeslot.DatabaseQueries.TelegramQueries
   alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Features
-  alias Tymeslot.Telegram.{API, LinkToken, MessageBuilder}
+  alias Tymeslot.Telegram.{API, MessageBuilder}
   alias Tymeslot.Workers.TelegramWorker
 
   # ============================================================================
@@ -101,9 +101,10 @@ defmodule Tymeslot.Telegram do
     do: {:error, :own_bot_mode}
 
   def reconnect_integration(%TelegramIntegrationSchema{} = integration) do
-    case TelegramQueries.update_integration(integration, %{chat_id: nil}) do
+    token = generate_link_token()
+
+    case TelegramQueries.update_integration(integration, %{chat_id: nil, link_token: token}) do
       {:ok, updated} ->
-        token = generate_link_token(integration.user_id, integration.id)
         {:ok, updated, build_deep_link(token)}
 
       error ->
@@ -192,9 +193,26 @@ defmodule Tymeslot.Telegram do
   # Account Linking (Shared Bot Mode)
   # ============================================================================
 
-  @spec generate_link_token(integer(), integer()) :: String.t()
-  def generate_link_token(user_id, integration_id) do
-    LinkToken.sign(user_id, integration_id)
+  @spec delete_pending_stubs(integer()) :: :ok
+  def delete_pending_stubs(user_id) do
+    TelegramQueries.delete_pending_stubs(user_id)
+    :ok
+  end
+
+  @spec generate_link_token() :: String.t()
+  def generate_link_token do
+    :crypto.strong_rand_bytes(24) |> Base.url_encode64(padding: false)
+  end
+
+  @spec refresh_link_token(TelegramIntegrationSchema.t()) ::
+          {:ok, String.t()} | {:error, term()}
+  def refresh_link_token(%TelegramIntegrationSchema{} = integration) do
+    token = generate_link_token()
+
+    case TelegramQueries.update_integration(integration, %{link_token: token}) do
+      {:ok, _updated} -> {:ok, token}
+      error -> error
+    end
   end
 
   @spec build_deep_link(String.t()) :: String.t()
@@ -208,33 +226,30 @@ defmodule Tymeslot.Telegram do
   def handle_start_payload(token, chat_id) do
     chat_id_str = to_string(chat_id)
 
-    case LinkToken.verify(token) do
-      {:ok, {user_id, integration_id}} ->
-        case TelegramQueries.get_integration(integration_id, user_id) do
-          {:ok, %TelegramIntegrationSchema{bot_mode: "shared"} = integration} ->
-            case TelegramQueries.update_integration(integration, %{chat_id: chat_id_str}) do
-              {:ok, updated} ->
-                Phoenix.PubSub.broadcast(
-                  Tymeslot.PubSub,
-                  "telegram_link:#{user_id}",
-                  {:telegram_linked, integration_id, chat_id_str}
-                )
+    case TelegramQueries.find_by_link_token(token) do
+      {:ok, %TelegramIntegrationSchema{bot_mode: "shared"} = integration} ->
+        case TelegramQueries.update_integration(integration, %{
+               chat_id: chat_id_str,
+               link_token: nil
+             }) do
+          {:ok, updated} ->
+            Phoenix.PubSub.broadcast(
+              Tymeslot.PubSub,
+              "telegram_link:#{updated.user_id}",
+              {:telegram_linked, integration.id, chat_id_str}
+            )
 
-                {:ok, updated}
-
-              error ->
-                error
-            end
-
-          {:ok, _integration} ->
-            {:error, :wrong_bot_mode}
+            {:ok, updated}
 
           error ->
             error
         end
 
-      {:error, reason} ->
-        {:error, reason}
+      {:ok, _integration} ->
+        {:error, :wrong_bot_mode}
+
+      {:error, :not_found} ->
+        {:error, :not_found}
     end
   end
 

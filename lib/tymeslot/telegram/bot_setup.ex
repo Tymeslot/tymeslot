@@ -43,8 +43,8 @@ defmodule Tymeslot.Telegram.BotSetup do
 
   defp do_register_with_config(bot_token, webhook_secret, attempt) do
     endpoint_config = Application.get_env(:tymeslot, TymeslotWeb.Endpoint)
-    host = get_in(endpoint_config, [:url, :host])
-    scheme = get_in(endpoint_config, [:url, :scheme]) || "https"
+    host = System.get_env("PHX_HOST") || get_in(endpoint_config, [:url, :host])
+    scheme = System.get_env("PHX_SCHEME") || get_in(endpoint_config, [:url, :scheme]) || "https"
     webhook_url = "#{scheme}://#{host}/api/telegram/webhook"
 
     case API.set_webhook(bot_token, webhook_url, webhook_secret) do

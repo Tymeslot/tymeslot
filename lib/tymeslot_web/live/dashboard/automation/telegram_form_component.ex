@@ -276,6 +276,18 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
             </svg>
             <span>Waiting for Telegram connection... (link expires in 10 minutes)</span>
           </div>
+
+          <div class="mt-6 p-4 rounded-token-xl bg-tymeslot-50 border border-tymeslot-100 text-left max-w-md mx-auto">
+            <p class="text-token-xs font-black text-tymeslot-700 mb-2 uppercase tracking-wide">
+              Button didn't work? Already started the bot before?
+            </p>
+            <p class="text-token-xs text-tymeslot-600 mb-3">
+              Send this command directly in the Telegram bot chat:
+            </p>
+            <code class="block text-token-xs font-mono bg-white border border-tymeslot-200 rounded-lg px-3 py-2 break-all select-all text-tymeslot-800">
+              /start <%= String.split(@deep_link, "start=") |> List.last() |> String.trim_trailing("#") %>
+            </code>
+          </div>
         <% else %>
           <div class="text-tymeslot-500 font-medium">
             Setting up connection...

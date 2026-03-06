@@ -17,6 +17,7 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
           bot_token_encrypted: binary() | nil,
           bot_token: String.t() | nil,
           chat_id: String.t() | nil,
+          link_token: String.t() | nil,
           events: [String.t()],
           is_active: boolean(),
           last_triggered_at: DateTime.t() | nil,
@@ -42,6 +43,7 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
     field(:bot_mode, :string, default: "own")
     field(:bot_token_encrypted, :binary)
     field(:chat_id, :string)
+    field(:link_token, :string)
     field(:events, {:array, :string}, default: [])
     field(:is_active, :boolean, default: true)
     field(:last_triggered_at, :utc_datetime)
@@ -61,6 +63,7 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
   @optional_fields [
     :bot_token,
     :chat_id,
+    :link_token,
     :events,
     :is_active,
     :last_triggered_at,

@@ -21,10 +21,15 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlers do
   def handle_show_form(_params, socket) do
     if Telegram.shared_bot_mode?() do
       user_id = socket.assigns.current_user.id
+      Telegram.delete_pending_stubs(user_id)
+      token = Telegram.generate_link_token()
 
-      case Telegram.create_integration(user_id, %{name: "My Telegram", events: ["meeting.created"]}) do
+      case Telegram.create_integration(user_id, %{
+             name: "My Telegram",
+             events: ["meeting.created"],
+             link_token: token
+           }) do
         {:ok, integration} ->
-          token = Telegram.generate_link_token(user_id, integration.id)
           deep_link = Telegram.build_deep_link(token)
           timer_ref = Process.send_after(self(), {:telegram_link_expired, integration.id}, :timer.minutes(10))
 
@@ -99,16 +104,22 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlers do
     end
 
     integration = socket.assigns.telegram_form_data
-    user_id = socket.assigns.current_user.id
-    token = Telegram.generate_link_token(user_id, integration.id)
-    deep_link = Telegram.build_deep_link(token)
-    timer_ref = Process.send_after(self(), {:telegram_link_expired, integration.id}, :timer.minutes(10))
 
-    {:noreply,
-     socket
-     |> assign(:telegram_deep_link, deep_link)
-     |> assign(:telegram_link_expired, false)
-     |> assign(:telegram_link_timer, timer_ref)}
+    case Telegram.refresh_link_token(integration) do
+      {:ok, token} ->
+        deep_link = Telegram.build_deep_link(token)
+        timer_ref = Process.send_after(self(), {:telegram_link_expired, integration.id}, :timer.minutes(10))
+
+        {:noreply,
+         socket
+         |> assign(:telegram_deep_link, deep_link)
+         |> assign(:telegram_link_expired, false)
+         |> assign(:telegram_link_timer, timer_ref)}
+
+      {:error, _reason} ->
+        Flash.error("Failed to generate link. Please try again.")
+        {:noreply, socket}
+    end
   end
 
   @spec handle_validate_field(map(), Phoenix.LiveView.Socket.t()) ::

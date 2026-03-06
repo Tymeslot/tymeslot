@@ -164,13 +164,13 @@ defmodule Tymeslot.TelegramTest do
   end
 
   describe "account linking" do
-    test "generate_link_token/2 and handle_start_payload/2 link account" do
-      integration = insert(:telegram_integration, chat_id: nil, bot_mode: "shared")
+    test "generate_link_token/0 and handle_start_payload/2 link account" do
+      token = Telegram.generate_link_token()
+      integration = insert(:telegram_integration, chat_id: nil, bot_mode: "shared", link_token: token)
 
       # Subscribe to PubSub for link notification
       Phoenix.PubSub.subscribe(Tymeslot.PubSub, "telegram_link:#{integration.user_id}")
 
-      token = Telegram.generate_link_token(integration.user_id, integration.id)
       assert {:ok, updated} = Telegram.handle_start_payload(token, "999888777")
       assert updated.chat_id == "999888777"
 
@@ -180,9 +180,9 @@ defmodule Tymeslot.TelegramTest do
     end
 
     test "handle_start_payload/2 rejects own-bot integrations" do
-      integration = insert(:telegram_integration, chat_id: nil, bot_mode: "own")
+      token = Telegram.generate_link_token()
+      integration = insert(:telegram_integration, chat_id: nil, bot_mode: "own", link_token: token)
 
-      token = Telegram.generate_link_token(integration.user_id, integration.id)
       assert {:error, :wrong_bot_mode} = Telegram.handle_start_payload(token, "999888777")
 
       # chat_id must remain nil — no update occurred
@@ -190,13 +190,10 @@ defmodule Tymeslot.TelegramTest do
       assert is_nil(reloaded.chat_id)
     end
 
-    test "handle_start_payload/2 rejects expired tokens" do
-      integration = insert(:telegram_integration, chat_id: nil, bot_mode: "shared")
+    test "handle_start_payload/2 rejects unknown tokens" do
+      _integration = insert(:telegram_integration, chat_id: nil, bot_mode: "shared")
 
-      assert {:error, _reason} = Telegram.handle_start_payload("bad_token", "999888777")
-
-      reloaded = Repo.get(Tymeslot.DatabaseSchemas.TelegramIntegrationSchema, integration.id)
-      assert is_nil(reloaded.chat_id)
+      assert {:error, :not_found} = Telegram.handle_start_payload("nonexistent_token", "999888777")
     end
 
     test "build_deep_link/1 returns Telegram URL" do

@@ -25,6 +25,14 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
     |> Enum.map(&TelegramIntegrationSchema.derive_status/1)
   end
 
+  @spec delete_pending_stubs(integer()) :: {non_neg_integer(), nil | [term()]}
+  def delete_pending_stubs(user_id) do
+    TelegramIntegrationSchema
+    |> where([i], i.user_id == ^user_id)
+    |> where([i], is_nil(i.chat_id))
+    |> Repo.delete_all()
+  end
+
   defp cleanup_orphaned_stubs(user_id) do
     cutoff = DateTime.add(DateTime.utc_now(), -@stub_ttl_minutes * 60, :second)
 
@@ -44,6 +52,20 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
     |> where([i], not is_nil(i.chat_id))
     |> where([i], fragment("? = ANY(?)", ^event_type, i.events))
     |> Repo.all()
+  end
+
+  @spec find_by_link_token(String.t()) ::
+          {:ok, TelegramIntegrationSchema.t()} | {:error, :not_found}
+  def find_by_link_token(token) do
+    result =
+      TelegramIntegrationSchema
+      |> where([i], i.link_token == ^token and is_nil(i.chat_id))
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      integration -> {:ok, TelegramIntegrationSchema.derive_status(integration)}
+    end
   end
 
   @spec get_integration(integer(), integer()) ::
