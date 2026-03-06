@@ -204,7 +204,7 @@ defmodule Tymeslot.Telegram do
 
   @spec generate_link_token() :: String.t()
   def generate_link_token do
-    :crypto.strong_rand_bytes(24) |> Base.url_encode64(padding: false)
+    Base.url_encode64(:crypto.strong_rand_bytes(24), padding: false)
   end
 
   @spec refresh_link_token(TelegramIntegrationSchema.t()) ::
