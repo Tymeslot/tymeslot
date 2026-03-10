@@ -174,7 +174,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
   end
 
   describe "security headers with embedding enabled (permissive)" do
-    test "blocks all embeds when no domains are configured (default deny)", %{conn: conn} do
+    test "allows localhost embedding when no domains are configured (dev/test env)", %{conn: conn} do
       user = insert(:user)
       profile = insert(:profile, user: user, username: "openuser", allowed_embed_domains: [])
 
@@ -183,13 +183,16 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
         |> Map.put(:request_path, "/#{profile.username}")
         |> SecurityHeadersPlug.call(allow_embedding: true)
 
-      assert get_resp_header(conn, "x-frame-options") == ["DENY"]
+      # X-Frame-Options is omitted — CSP frame-ancestors is the authority
+      assert get_resp_header(conn, "x-frame-options") == []
 
       assert [csp] = get_resp_header(conn, "content-security-policy")
-      assert csp =~ "frame-ancestors 'none'"
+      assert csp =~ "frame-ancestors 'self' http://localhost:* http://127.0.0.1:*"
     end
 
-    test "handles nil allowed_embed_domains (default deny)", %{conn: conn} do
+    test "allows localhost embedding when allowed_embed_domains is nil (dev/test env)", %{
+      conn: conn
+    } do
       user = insert(:user)
       profile = insert(:profile, user: user, username: "niluser", allowed_embed_domains: nil)
 
@@ -199,9 +202,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
         |> SecurityHeadersPlug.call(allow_embedding: true)
 
       assert [csp] = get_resp_header(conn, "content-security-policy")
-      assert csp =~ "frame-ancestors 'none'"
+      assert csp =~ "frame-ancestors 'self' http://localhost:* http://127.0.0.1:*"
 
-      assert get_resp_header(conn, "x-frame-options") == ["DENY"]
+      assert get_resp_header(conn, "x-frame-options") == []
     end
 
     test "blocks all embeds when no username is in path", %{conn: conn} do

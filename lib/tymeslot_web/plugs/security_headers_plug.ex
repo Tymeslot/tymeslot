@@ -129,13 +129,13 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     {"'self'", "SAMEORIGIN"}
   end
 
-  defp build_security_headers([], _is_preview), do: {"'none'", "DENY"}
-  defp build_security_headers(nil, _is_preview), do: {"'none'", "DENY"}
-  defp build_security_headers(["none"], _is_preview), do: {"'none'", "DENY"}
+  defp build_security_headers([], _is_preview), do: dev_local_or_deny()
+  defp build_security_headers(nil, _is_preview), do: dev_local_or_deny()
+  defp build_security_headers(["none"], _is_preview), do: dev_local_or_deny()
 
   defp build_security_headers(allowed_domains, _is_preview) when is_list(allowed_domains) do
     if "none" in allowed_domains do
-      {"'none'", "DENY"}
+      dev_local_or_deny()
     else
       # Build CSP frame-ancestors with appropriate protocols.
       # Modern browsers prioritize this over X-Frame-Options.
@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
           end
         end)
 
-      frame_ancestors = "'self' #{domains}"
+      frame_ancestors = "'self' #{domains}#{dev_localhost_suffix(allowed_domains)}"
 
       # X-Frame-Options ALLOW-FROM is deprecated and only supports a single domain.
       # It is provided only for defense-in-depth for legacy browsers (IE, old Firefox).
@@ -176,6 +176,28 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
         end
 
       {frame_ancestors, x_frame_options}
+    end
+  end
+
+  # In dev/test, allow localhost embedding without requiring it in allowed_embed_domains.
+  # In production this always returns {"'none'", "DENY"}.
+  defp dev_local_or_deny do
+    if Application.get_env(:tymeslot, :environment) in [:dev, :test] do
+      {"'self' http://localhost:* http://127.0.0.1:*", nil}
+    else
+      {"'none'", "DENY"}
+    end
+  end
+
+  # Appends localhost origins in dev/test when not already in the allowed list.
+  defp dev_localhost_suffix(allowed_domains) do
+    local_hosts = ["localhost", "127.0.0.1", "::1"]
+
+    if Application.get_env(:tymeslot, :environment) in [:dev, :test] and
+         not Enum.any?(allowed_domains, &(&1 in local_hosts)) do
+      " http://localhost:* http://127.0.0.1:*"
+    else
+      ""
     end
   end
 
