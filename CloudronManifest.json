@@ -10,7 +10,8 @@
   "postInstallMessage": "Thank you for installing Tymeslot!",
   "addons": {
     "localstorage": {},
-    "postgresql": {}
+    "postgresql": {},
+    "sendmail": {}
   },
   "manifestVersion": 2,
   "tags": ["calendar", "scheduling", "meetings", "caldav"],
