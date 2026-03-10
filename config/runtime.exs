@@ -1,4 +1,5 @@
 import Config
+require Logger
 
 # Helper to safely parse integers from environment variables with validation
 parse_int = fn var, default ->
@@ -511,31 +512,73 @@ config :tymeslot, password_auth_enabled: System.get_env("PASSWORD_AUTH_ENABLED",
 
 # Social Authentication Configuration
 # These environment variables control whether social login is enabled
+#
+# On Cloudron: auto-enable OAuth from OIDC addon unless explicitly disabled
+cloudron_oidc_available? =
+  System.get_env("DEPLOYMENT_TYPE") == "cloudron" and
+    System.get_env("CLOUDRON_OIDC_CLIENT_ID") != nil
+
+# Determine OAuth enabled state:
+# 1. Explicit ENABLE_OAUTH_AUTH env var always wins
+# 2. Cloudron OIDC addon auto-enables if present
+# 3. Default: false
+oauth_enabled =
+  case System.get_env("ENABLE_OAUTH_AUTH") do
+    "true" -> true
+    "false" -> false
+    nil -> cloudron_oidc_available?
+  end
+
 config :tymeslot, :social_auth,
   google_enabled: System.get_env("ENABLE_GOOGLE_AUTH", "false") == "true",
   github_enabled: System.get_env("ENABLE_GITHUB_AUTH", "false") == "true",
-  oauth_enabled: System.get_env("ENABLE_OAUTH_AUTH", "false") == "true"
+  oauth_enabled: oauth_enabled
 
 # Generic OAuth / OIDC Provider Configuration
 # For SSO authentication with any OAuth2/OIDC-compliant identity provider
+#
+# On Cloudron: fall back to CLOUDRON_OIDC_* env vars when OAUTH_* vars are not set
 config :tymeslot, :oauth_provider,
-  client_id: System.get_env("OAUTH_CLIENT_ID"),
-  client_secret: System.get_env("OAUTH_CLIENT_SECRET"),
-  site: System.get_env("OAUTH_PROVIDER_URL"),
-  authorize_url: System.get_env("OAUTH_AUTHORIZE_URL"),
-  token_url: System.get_env("OAUTH_TOKEN_URL"),
-  userinfo_url: System.get_env("OAUTH_USERINFO_URL"),
+  client_id: System.get_env("OAUTH_CLIENT_ID") || System.get_env("CLOUDRON_OIDC_CLIENT_ID"),
+  client_secret:
+    System.get_env("OAUTH_CLIENT_SECRET") || System.get_env("CLOUDRON_OIDC_CLIENT_SECRET"),
+  site: System.get_env("OAUTH_PROVIDER_URL") || System.get_env("CLOUDRON_OIDC_ISSUER"),
+  authorize_url:
+    System.get_env("OAUTH_AUTHORIZE_URL") || System.get_env("CLOUDRON_OIDC_AUTH_ENDPOINT"),
+  token_url:
+    System.get_env("OAUTH_TOKEN_URL") || System.get_env("CLOUDRON_OIDC_TOKEN_ENDPOINT"),
+  userinfo_url:
+    System.get_env("OAUTH_USERINFO_URL") || System.get_env("CLOUDRON_OIDC_PROFILE_ENDPOINT"),
   scope: System.get_env("OAUTH_SCOPE", "openid email profile"),
   allow_id_fallback: System.get_env("OAUTH_ALLOW_ID_FALLBACK", "false") == "true"
 
-if System.get_env("ENABLE_OAUTH_AUTH") == "true" do
+if oauth_enabled do
+  # Resolve final values for validation (same precedence as config above)
+  oauth_client_id =
+    System.get_env("OAUTH_CLIENT_ID") || System.get_env("CLOUDRON_OIDC_CLIENT_ID")
+
+  oauth_client_secret =
+    System.get_env("OAUTH_CLIENT_SECRET") || System.get_env("CLOUDRON_OIDC_CLIENT_SECRET")
+
+  oauth_provider_url =
+    System.get_env("OAUTH_PROVIDER_URL") || System.get_env("CLOUDRON_OIDC_ISSUER")
+
+  oauth_authorize_url =
+    System.get_env("OAUTH_AUTHORIZE_URL") || System.get_env("CLOUDRON_OIDC_AUTH_ENDPOINT")
+
+  oauth_token_url =
+    System.get_env("OAUTH_TOKEN_URL") || System.get_env("CLOUDRON_OIDC_TOKEN_ENDPOINT")
+
+  oauth_userinfo_url =
+    System.get_env("OAUTH_USERINFO_URL") || System.get_env("CLOUDRON_OIDC_PROFILE_ENDPOINT")
+
   required_oauth_vars = %{
-    "OAUTH_CLIENT_ID" => System.get_env("OAUTH_CLIENT_ID"),
-    "OAUTH_CLIENT_SECRET" => System.get_env("OAUTH_CLIENT_SECRET"),
-    "OAUTH_PROVIDER_URL" => System.get_env("OAUTH_PROVIDER_URL"),
-    "OAUTH_AUTHORIZE_URL" => System.get_env("OAUTH_AUTHORIZE_URL"),
-    "OAUTH_TOKEN_URL" => System.get_env("OAUTH_TOKEN_URL"),
-    "OAUTH_USERINFO_URL" => System.get_env("OAUTH_USERINFO_URL")
+    "OAUTH_CLIENT_ID / CLOUDRON_OIDC_CLIENT_ID" => oauth_client_id,
+    "OAUTH_CLIENT_SECRET / CLOUDRON_OIDC_CLIENT_SECRET" => oauth_client_secret,
+    "OAUTH_PROVIDER_URL / CLOUDRON_OIDC_ISSUER" => oauth_provider_url,
+    "OAUTH_AUTHORIZE_URL / CLOUDRON_OIDC_AUTH_ENDPOINT" => oauth_authorize_url,
+    "OAUTH_TOKEN_URL / CLOUDRON_OIDC_TOKEN_ENDPOINT" => oauth_token_url,
+    "OAUTH_USERINFO_URL / CLOUDRON_OIDC_PROFILE_ENDPOINT" => oauth_userinfo_url
   }
 
   missing =
@@ -546,7 +589,7 @@ if System.get_env("ENABLE_OAUTH_AUTH") == "true" do
 
   if missing != [] do
     raise """
-    ENABLE_OAUTH_AUTH is true but required environment variables are missing or empty:
+    OAuth/OIDC is enabled but required environment variables are missing or empty:
 
       #{Enum.join(missing, "\n  ")}
 
@@ -556,30 +599,38 @@ if System.get_env("ENABLE_OAUTH_AUTH") == "true" do
   end
 
   # Enforce HTTPS for OAuth URLs that carry secret material or security tokens.
-  # The authorize URL carries the state parameter and returns the authorization code;
-  # the token and userinfo endpoints receive the client_secret and access tokens.
-  # Sending any of these over plaintext HTTP would expose credentials to network observers.
+  # Relative paths (no scheme) are allowed — they're resolved against the site URL.
   https_required_vars = %{
-    "OAUTH_AUTHORIZE_URL" => System.get_env("OAUTH_AUTHORIZE_URL"),
-    "OAUTH_TOKEN_URL" => System.get_env("OAUTH_TOKEN_URL"),
-    "OAUTH_USERINFO_URL" => System.get_env("OAUTH_USERINFO_URL")
+    "OAUTH_AUTHORIZE_URL / CLOUDRON_OIDC_AUTH_ENDPOINT" => oauth_authorize_url,
+    "OAUTH_TOKEN_URL / CLOUDRON_OIDC_TOKEN_ENDPOINT" => oauth_token_url,
+    "OAUTH_USERINFO_URL / CLOUDRON_OIDC_PROFILE_ENDPOINT" => oauth_userinfo_url
   }
 
   non_https =
     https_required_vars
-    |> Enum.reject(fn {_key, val} -> is_nil(val) or String.starts_with?(val, "https://") end)
+    |> Enum.reject(fn {_key, val} ->
+      is_nil(val) or String.starts_with?(val, "https://") or
+        not String.starts_with?(val, "http://")
+    end)
     |> Enum.map(&elem(&1, 0))
     |> Enum.sort()
 
   if non_https != [] do
     raise """
-    ENABLE_OAUTH_AUTH is true but the following URLs must use HTTPS:
+    OAuth/OIDC is enabled but the following URLs must use HTTPS (or be relative paths):
 
       #{Enum.join(non_https, "\n  ")}
 
     OAuth token and userinfo endpoints carry secret material (client credentials,
     access tokens) and must not be served over plaintext HTTP.
     """
+  end
+
+  if cloudron_oidc_available? and System.get_env("ENABLE_OAUTH_AUTH") == nil do
+    Logger.info("Cloudron OIDC addon auto-enabled",
+      issuer: oauth_provider_url,
+      client_id: oauth_client_id
+    )
   end
 end
 
