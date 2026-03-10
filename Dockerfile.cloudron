@@ -25,7 +25,6 @@ RUN mix local.hex --force && \
 
 # Install dependencies (cached if mix.exs/mix.lock haven't changed)
 COPY mix.exs mix.lock ./
-COPY apps/tymeslot/mix.exs apps/tymeslot/mix.exs
 
 RUN mix deps.get --only $MIX_ENV
 # Compile dependencies (cached if mix.exs/mix.lock unchanged)
@@ -34,17 +33,17 @@ RUN mix deps.compile
 # Copy source and build assets. Wipe any locally-built assets first so the
 # image build is hermetic — assets are always produced by mix assets.deploy below.
 COPY . .
-RUN rm -rf apps/tymeslot/priv/static/assets/
+RUN rm -rf priv/static/assets/
 RUN mix assets.setup
 RUN mix assets.deploy
 
-# Compile and create the release, then copy core runtime config into it.
-# mix release does not include per-app runtime.exs for umbrella projects;
-# root runtime.exs loads it at startup to configure the database, endpoint, etc.
+# Compile and create the release, then copy runtime config into it.
+# mix release does not automatically include config/runtime.exs in all setups;
+# copying it explicitly ensures it is available at startup.
 RUN mix compile && \
     mix release tymeslot --overwrite --path /opt/release && \
-    mkdir -p /opt/release/apps/tymeslot/config && \
-    cp apps/tymeslot/config/runtime.exs /opt/release/apps/tymeslot/config/
+    mkdir -p /opt/release/config && \
+    cp config/runtime.exs /opt/release/config/
 
 # --- Runtime Stage ---
 FROM cloudron/base:5.0.0 AS runtime
@@ -68,7 +67,7 @@ RUN mkdir -p /data/logs /app/data/uploads && \
     chmod -R 700 /data /app/data
 
 # Copy your start script and ensure it's executable
-COPY apps/tymeslot/start.sh ./
+COPY start.sh ./
 RUN chmod +x start.sh
 
 EXPOSE 4000

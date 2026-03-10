@@ -28,7 +28,7 @@ Tymeslot is designed to work seamlessly with Cloudron's managed infrastructure. 
 
 ## Installation
 
-Clone the repository, build the Docker image, then install via the Cloudron CLI.
+Clone the repository, build the image on the Cloudron server via `cloudron build`, then install.
 Required environment variables are passed directly to `cloudron install` via `--env`.
 
 ```bash
@@ -36,9 +36,9 @@ git clone https://github.com/tymeslot/tymeslot.git
 cd tymeslot
 
 cloudron login  # if not already authenticated
-docker build -t tymeslot:cloudron .
-cloudron install --image tymeslot:cloudron --location tymeslot.yourdomain.com \
-  --env SECRET_KEY_BASE="$(openssl rand -base64 64)" PHX_HOST="tymeslot.yourdomain.com" PORT="4000"
+cloudron build
+SECRET=$(openssl rand -base64 64 | tr -d '\n')
+cloudron install --location tymeslot.yourdomain.com --env SECRET_KEY_BASE=$SECRET --env PHX_HOST=tymeslot.yourdomain.com --env PORT=4000
 ```
 
 ### Accessing Your Installation
@@ -65,7 +65,7 @@ To add or change variables after the app is running, use `cloudron env set`.
 Multiple variables can be passed in a single command — the app restarts automatically.
 
 ```bash
-cloudron env set --app tymeslot.yourdomain.com KEY="value" KEY2="value2"
+cloudron env set --app tymeslot.yourdomain.com KEY=value KEY2=value2
 ```
 
 To inspect current values:
@@ -80,27 +80,19 @@ cloudron env list --app tymeslot.yourdomain.com
 
 **GitHub OAuth:**
 ```bash
-cloudron env set --app tymeslot.yourdomain.com \
-  ENABLE_GITHUB_AUTH="true" \
-  GITHUB_CLIENT_ID="your_github_client_id" \
-  GITHUB_CLIENT_SECRET="your_github_client_secret"
+cloudron env set --app tymeslot.yourdomain.com ENABLE_GITHUB_AUTH=true GITHUB_CLIENT_ID=your_github_client_id GITHUB_CLIENT_SECRET=your_github_client_secret
 ```
 
 **Google OAuth:**
 ```bash
-cloudron env set --app tymeslot.yourdomain.com \
-  ENABLE_GOOGLE_AUTH="true" \
-  GOOGLE_CLIENT_ID="your_google_client_id" \
-  GOOGLE_CLIENT_SECRET="your_google_client_secret" \
-  GOOGLE_STATE_SECRET="$(openssl rand -base64 32)"
+GOOGLE_STATE=$(openssl rand -base64 32 | tr -d '\n')
+cloudron env set --app tymeslot.yourdomain.com ENABLE_GOOGLE_AUTH=true GOOGLE_CLIENT_ID=your_google_client_id GOOGLE_CLIENT_SECRET=your_google_client_secret GOOGLE_STATE_SECRET=$GOOGLE_STATE
 ```
 
 **Microsoft OAuth:**
 ```bash
-cloudron env set --app tymeslot.yourdomain.com \
-  OUTLOOK_CLIENT_ID="your_outlook_client_id" \
-  OUTLOOK_CLIENT_SECRET="your_outlook_client_secret" \
-  OUTLOOK_STATE_SECRET="$(openssl rand -base64 32)"
+OUTLOOK_STATE=$(openssl rand -base64 32 | tr -d '\n')
+cloudron env set --app tymeslot.yourdomain.com OUTLOOK_CLIENT_ID=your_outlook_client_id OUTLOOK_CLIENT_SECRET=your_outlook_client_secret OUTLOOK_STATE_SECRET=$OUTLOOK_STATE
 ```
 
 #### Cloudron Addon Integration
@@ -120,23 +112,12 @@ If you're happy with Cloudron's built-in email and SSO, you can skip sections 3 
 
 **Option A: Postmark (Recommended)**
 ```bash
-cloudron env set --app tymeslot.yourdomain.com \
-  EMAIL_ADAPTER="postmark" \
-  EMAIL_FROM_NAME="Tymeslot" \
-  EMAIL_FROM_ADDRESS="noreply@yourdomain.com" \
-  POSTMARK_API_KEY="your_postmark_api_key"
+cloudron env set --app tymeslot.yourdomain.com EMAIL_ADAPTER=postmark EMAIL_FROM_NAME=Tymeslot EMAIL_FROM_ADDRESS=noreply@yourdomain.com POSTMARK_API_KEY=your_postmark_api_key
 ```
 
 **Option B: SMTP**
 ```bash
-cloudron env set --app tymeslot.yourdomain.com \
-  EMAIL_ADAPTER="smtp" \
-  EMAIL_FROM_NAME="Tymeslot" \
-  EMAIL_FROM_ADDRESS="noreply@yourdomain.com" \
-  SMTP_HOST="your_smtp_host" \
-  SMTP_PORT="587" \
-  SMTP_USERNAME="your_smtp_username" \
-  SMTP_PASSWORD="your_smtp_password"
+cloudron env set --app tymeslot.yourdomain.com EMAIL_ADAPTER=smtp EMAIL_FROM_NAME=Tymeslot EMAIL_FROM_ADDRESS=noreply@yourdomain.com SMTP_HOST=your_smtp_host SMTP_PORT=587 SMTP_USERNAME=your_smtp_username SMTP_PASSWORD=your_smtp_password
 ```
 
 
@@ -147,15 +128,13 @@ cloudron env set --app tymeslot.yourdomain.com \
 Use the Cloudron CLI to set variables. Multiple variables can be passed in a single command and the app restarts automatically:
 
 ```bash
-cloudron env set --app tymeslot.yourdomain.com \
-  VAR_ONE="value" \
-  VAR_TWO="value"
+cloudron env set --app tymeslot.yourdomain.com VAR_ONE=value VAR_TWO=value
 ```
 
 To inspect current values:
 
 ```bash
-cloudron env get --app tymeslot.yourdomain.com
+cloudron env list --app tymeslot.yourdomain.com
 ```
 
 
@@ -306,8 +285,8 @@ cloudron update --app tymeslot.yourdomain.com
 
 ```bash
 git pull origin main
-docker build -t tymeslot:cloudron .
-cloudron install --image tymeslot:cloudron --app tymeslot.yourdomain.com
+cloudron build
+cloudron install --location tymeslot.yourdomain.com --app tymeslot.yourdomain.com
 ```
 
 ---
