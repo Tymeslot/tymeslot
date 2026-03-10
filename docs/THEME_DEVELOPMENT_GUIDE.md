@@ -47,12 +47,13 @@ assets/css/scheduling/themes/[theme_name]/
     ├── layouts.css
     ├── components.css
     ├── schedule/               # Complex step needs subfolder
-    │   ├── calendar.css
+    │   ├── calendar.css        # Monthly grid + weekly strip styles
     │   ├── time-slots.css
     │   └── timezone-selector.css
     ├── booking.css
     ├── confirmation.css
     ├── language-switcher.css
+    ├── embedded.css            # iframe-embedded layout overrides
     ├── video.css               # If video backgrounds
     └── responsive.css
 ```
@@ -78,9 +79,11 @@ assets/css/scheduling/themes/[theme_name]/
 | `LiveHelpers` | Mount and param handling |
 | `EventHandlers` | Common UI events (locale, navigation) |
 | `InfoHandlers` | Async tasks (availability fetching) |
-| `SchedulingInit` | Base state initialization |
+| `SchedulingInit` | Socket state initialization — `assign_theme_state/2` for full scheduling state (prefer this), `assign_base_state/1` for core-only assigns |
 | `BookingFlow` | Form validation and submission |
-| `LocalizationHelpers` | Date/time formatting |
+| `LocalizationHelpers` | Date/time/duration formatting; also `day_name_short/1` (localized weekday abbreviations) and `get_week_display/1` (formatted week range string) |
+| `Scheduling.Helpers` | Calendar/week day generation (`get_week_days/3`), week navigation (`handle_week_navigation/2`), availability fetching, slot parsing |
+| `Scheduling.CalendarNavigation` | Navigation boundary checks: `prev/next_month_disabled?/3`, `prev/next_week_disabled?/2` — wire these to nav button `disabled` attributes |
 | `PathHandlers` | Navigation with locale preservation |
 | `Customization.Helpers` | Theme customization CSS generation |
 | `Customization.Video` | Video background rendering |
@@ -118,7 +121,11 @@ apps/tymeslot/assets/css/scheduling/themes/aurora/
 │   ├── layouts.css
 │   ├── overview.css (optional, theme-specific)
 │   ├── responsive.css
-│   ├── schedule.css
+│   ├── schedule/
+│   │   ├── calendar.css        # Monthly grid + weekly strip styles
+│   │   ├── time-slots.css
+│   │   └── timezone-selector.css
+│   ├── embedded.css            # iframe-embedded layout overrides (required)
 │   ├── typography.css
 │   ├── variables.css
 │   └── video.css (if video backgrounds supported)
@@ -299,12 +306,13 @@ apps/tymeslot/assets/css/scheduling/themes/
 │   │   ├── booking.css           # Booking form styles
 │   │   ├── components.css        # Reusable UI components
 │   │   ├── confirmation.css      # Confirmation page
+│   │   ├── embedded.css          # iframe-embedded layout overrides
 │   │   ├── glass-components.css  # Glassmorphism effects
 │   │   ├── language-switcher.css # Language dropdown
 │   │   ├── layouts.css           # Layout utilities
 │   │   ├── responsive.css        # Mobile/tablet breakpoints
 │   │   ├── schedule/             # Schedule step (complex, needs subfolder)
-│   │   │   ├── calendar.css
+│   │   │   ├── calendar.css      # Monthly grid + weekly strip styles
 │   │   │   ├── schedule-header.css
 │   │   │   ├── schedule.css
 │   │   │   ├── time-slots.css
@@ -319,12 +327,13 @@ apps/tymeslot/assets/css/scheduling/themes/
     │   ├── booking.css
     │   ├── components.css
     │   ├── confirmation.css
+    │   ├── embedded.css          # iframe-embedded layout overrides
     │   ├── language-switcher.css
     │   ├── layouts.css
     │   ├── overview.css          # Rhythm-specific overview styles
     │   ├── responsive.css
     │   ├── schedule/
-    │   │   ├── calendar.css
+    │   │   ├── calendar.css      # Monthly grid + weekly strip styles
     │   │   ├── schedule-header.css
     │   │   ├── time-slots.css
     │   │   └── timezone-selector.css
@@ -381,8 +390,10 @@ Each theme's main CSS file (`theme.css`) follows this pattern:
 - StateMachine module for state transitions
 - Wrapper component for theme layout
 - CSS file in `apps/tymeslot/assets/css/scheduling/themes/your-theme/theme.css`
+- `modules/embedded.css` with `[data-embedded]`-scoped overrides for iframe mode
 - All 4 booking flow states: **overview**, **schedule**, **booking**, **confirmation**
 - All 4 step components as LiveComponents
+- Schedule component must include both the weekly strip (mobile) and monthly grid (desktop) with nav buttons wired to `CalendarNavigation` boundary checks
 - Meeting action components (reschedule, cancel, cancel_confirmed)
 
 ### Nice to Have
@@ -570,29 +581,38 @@ end
 
 ### SchedulingInit
 
-`TymeslotWeb.Themes.Shared.SchedulingInit` provides base state initialization:
+`TymeslotWeb.Themes.Shared.SchedulingInit` provides two initialization helpers:
+
+**`assign_theme_state/2`** — preferred for theme LiveViews. Initializes all scheduling state in one call:
 
 ```elixir
 defp assign_initial_state(socket) do
-  today = Date.utc_today()
-
   socket
-  |> SchedulingInit.assign_base_state()  # Assigns locale, theme_key, etc.
-  |> assign(:theme_id, "3")
-  |> assign(:duration, nil)
-  |> assign(:meeting_type, nil)
-  |> assign(:current_year, today.year)
-  |> assign(:current_month, today.month)
-  # ... theme-specific state
+  |> SchedulingInit.assign_theme_state("3")
+  # ... any theme-specific extras beyond what assign_theme_state covers
 end
 ```
 
+**`assign_base_state/1`** — lower-level; sets only the core socket fields shared across all flows. Use when you need fine-grained control or are not in a full scheduling context.
+
+**Assigns from `assign_theme_state/2`** (superset of `assign_base_state/1`):
+- `:theme_id` - Active theme ID
+- `:duration`, `:meeting_type` - nil until selected
+- `:current_year`, `:current_month` - today's values (UTC)
+- `:current_week_start` - start of the current week (Monday-anchored, UTC)
+- `:month_availability_map`, `:availability_status`, `:availability_task`, `:availability_task_ref`
+- `:form`, `:touched_fields`, `:validation_errors`, `:saving` - booking form state
+- `:client_ip`, `:submission_token`, `:meeting_types`
+- Plus all assigns from `assign_base_state/1` below
+
 **Assigns from `assign_base_state/1`**:
-- `:locale` - User's selected locale
-- `:language_dropdown_open` - Language dropdown state
 - `:current_state` - Current step in the flow
-- `:scheduling_theme_id` - Active theme ID
-- `:theme_key` - Active theme key atom
+- `:username_context`, `:organizer_profile`, `:organizer_user_id`
+- `:selected_duration`, `:selected_date`, `:selected_time`
+- `:available_slots`, `:loading_slots`, `:calendar_error`
+- `:timezone_dropdown_open`, `:timezone_search`
+- `:reschedule_meeting_uid`, `:is_rescheduling`, `:meeting_uid`
+- `:name`, `:email`, `:submitting`, `:submission_processed`
 
 ### BookingFlow
 
@@ -1150,10 +1170,13 @@ Before considering your theme complete:
 - [ ] StateMachine module handles state transitions
 - [ ] Wrapper component provides theme layout
 - [ ] All 4 step components implemented (overview, schedule, booking, confirmation)
+- [ ] Schedule component has weekly strip (mobile) + monthly grid (desktop) with `CalendarNavigation` boundary checks on all nav buttons
 - [ ] All 3 meeting action components implemented
 - [ ] CSS theme.css imports all required modules
+- [ ] `modules/embedded.css` created with `[data-embedded]`-scoped iframe overrides
 - [ ] Production checklist tests pass
 - [ ] Mobile responsive design works
 - [ ] Localization works for all supported languages
 - [ ] Video/image backgrounds work (if supported)
 - [ ] Theme customization renders correctly
+- [ ] Embedded mode tested at constrained and unconstrained heights
