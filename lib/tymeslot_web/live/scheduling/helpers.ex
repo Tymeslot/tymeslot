@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.{ContextUtils, DateTimeUtils}
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   require Logger
 
@@ -537,6 +538,8 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   @spec get_week_days(Date.t(), map(), map() | atom() | nil) :: [map()]
   def get_week_days(week_start, organizer_profile, availability_map \\ nil) do
     if organizer_profile do
+      today = Date.utc_today()
+
       Enum.map(0..6, fn day_offset ->
         date = Date.add(week_start, day_offset)
         date_string = Date.to_string(date)
@@ -555,27 +558,15 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
 
         %{
           date: date_string,
-          day_name: day_name_short(Date.day_of_week(date)),
+          day_name: LocalizationHelpers.day_name_short(Date.day_of_week(date)),
           day_number: date.day,
           available: is_available,
           loading: is_loading,
-          today: date == Date.utc_today()
+          today: date == today
         }
       end)
     else
       []
-    end
-  end
-
-  defp day_name_short(day_of_week) do
-    case day_of_week do
-      1 -> "MON"
-      2 -> "TUE"
-      3 -> "WED"
-      4 -> "THU"
-      5 -> "FRI"
-      6 -> "SAT"
-      7 -> "SUN"
     end
   end
 
@@ -627,6 +618,35 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   end
 
   @doc """
+  Handles week navigation (prev/next).
+
+  Advances `current_week_start` by ±7 days. When the week crosses a month
+  boundary, also updates month/year assigns and refetches availability.
+  """
+  @spec handle_week_navigation(Phoenix.LiveView.Socket.t(), :prev | :next) ::
+          Phoenix.LiveView.Socket.t()
+  def handle_week_navigation(socket, direction) do
+    offset = if direction == :next, do: 7, else: -7
+    new_week_start = Date.add(socket.assigns.current_week_start, offset)
+
+    # Use the middle of the week as a reference for which month's availability to fetch
+    reference_date = Date.add(new_week_start, 3)
+
+    if socket.assigns.current_month != reference_date.month or
+         socket.assigns.current_year != reference_date.year do
+      socket
+      |> assign(:current_week_start, new_week_start)
+      |> assign(:current_month, reference_date.month)
+      |> assign(:current_year, reference_date.year)
+      |> assign(:month_availability_map, nil)
+      |> assign(:availability_status, :not_loaded)
+      |> fetch_month_availability_async()
+    else
+      assign(socket, :current_week_start, new_week_start)
+    end
+  end
+
+  @doc """
   Handles timezone change.
   """
   @spec handle_timezone_change(Phoenix.LiveView.Socket.t(), String.t()) ::
@@ -660,46 +680,6 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
       {:error, _reason} ->
         DateTime.utc_now()
     end
-  end
-
-  @doc """
-  Checks if previous month navigation should be disabled.
-  """
-  @spec prev_month_disabled?(integer(), integer(), String.t()) :: boolean()
-  def prev_month_disabled?(current_year, current_month, user_timezone) do
-    today =
-      case DateTime.now(user_timezone) do
-        {:ok, dt} -> DateTime.to_date(dt)
-        _other -> Date.utc_today()
-      end
-
-    current_year < today.year || (current_year == today.year && current_month <= today.month)
-  end
-
-  @doc """
-  Checks if next month navigation should be disabled.
-  """
-  @spec next_month_disabled?(integer(), integer(), String.t()) :: boolean()
-  def next_month_disabled?(current_year, current_month, user_timezone) do
-    today =
-      case DateTime.now(user_timezone) do
-        {:ok, dt} -> DateTime.to_date(dt)
-        _other -> Date.utc_today()
-      end
-
-    max_advance_booking_days =
-      Application.get_env(:tymeslot, :scheduling)[:max_advance_booking_days] || 90
-
-    max_booking_date = Date.add(today, max_advance_booking_days)
-
-    next_month_first_day =
-      if current_month == 12 do
-        Date.new!(current_year + 1, 1, 1)
-      else
-        Date.new!(current_year, current_month + 1, 1)
-      end
-
-    Date.compare(next_month_first_day, max_booking_date) == :gt
   end
 
   defp update_calendar_data(socket) do

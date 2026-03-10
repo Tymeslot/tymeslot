@@ -183,10 +183,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
   defp handle_week_navigation_events(socket, event) do
     case event do
       :prev_week ->
-        {:noreply, handle_week_navigation(socket, :prev)}
+        {:noreply, Helpers.handle_week_navigation(socket, :prev)}
 
       :next_week ->
-        {:noreply, handle_week_navigation(socket, :next)}
+        {:noreply, Helpers.handle_week_navigation(socket, :next)}
     end
   end
 
@@ -237,25 +237,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
   # State machine implementation
 
   defp assign_initial_state(socket) do
-    today = Date.utc_today()
-    week_start = Date.beginning_of_week(today, :monday)
-
-    socket
-    |> SchedulingInit.assign_base_state()
-    |> assign(:theme_id, "2")
-    |> assign(:duration, nil)
-    |> assign(:meeting_type, nil)
-    |> assign(:current_year, today.year)
-    |> assign(:current_month, today.month)
-    |> assign(:current_week_start, week_start)
-    |> assign(:month_availability_map, nil)
-    |> assign(:availability_status, :not_loaded)
-    |> assign(:availability_task, nil)
-    |> assign(:availability_task_ref, nil)
-    |> Helpers.setup_form_state(%{}, as: :booking)
-    |> assign(:client_ip, nil)
-    |> assign(:submission_token, nil)
-    |> assign(:meeting_types, [])
+    SchedulingInit.assign_theme_state(socket, "2")
   end
 
   defp handle_param_updates(socket, params) do
@@ -309,28 +291,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Live do
     end
 
     {:noreply, socket}
-  end
-
-  defp handle_week_navigation(socket, direction) do
-    offset = if direction == :next, do: 7, else: -7
-    new_week_start = Date.add(socket.assigns.current_week_start, offset)
-
-    # Use the middle of the week as a reference for which month's availability to fetch
-    # This ensures we usually have availability for most days shown
-    reference_date = Date.add(new_week_start, 3)
-
-    if socket.assigns.current_month != reference_date.month or
-         socket.assigns.current_year != reference_date.year do
-      socket
-      |> assign(:current_week_start, new_week_start)
-      |> assign(:current_month, reference_date.month)
-      |> assign(:current_year, reference_date.year)
-      |> assign(:month_availability_map, nil)
-      |> assign(:availability_status, :not_loaded)
-      |> Helpers.fetch_month_availability_async()
-    else
-      assign(socket, :current_week_start, new_week_start)
-    end
   end
 
   # Template rendering - delegates to theme-specific step components

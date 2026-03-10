@@ -1,33 +1,12 @@
 /* Responsive - All breakpoints and mobile adaptations */
-/* Organized by breakpoint with semantic selectors replacing fragile Tailwind class-string matchers */
 
 /* ============================================================================
    MOBILE (max-width: 640px)
    ============================================================================ */
 @media (max-width: 640px) {
-  /* Revert desktop scroll lock — mobile should scroll naturally */
-  html.quill-theme {
-    height: auto;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-
-  body.quill-theme {
-    height: auto;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-
-  body.quill-theme > .scheduling-main,
-  body.quill-theme > .scheduling-main > [data-phx-main] {
-    height: auto;
-  }
-
-  .quill-theme-wrapper {
-    height: auto;
-    min-height: 100dvh;
-    overflow: visible;
-    overflow-x: hidden;
+  /* Hide step navigation on small screens */
+  .step-navigation-card {
+    display: none;
   }
 
   /* Container */
@@ -69,7 +48,7 @@
     min-height: var(--time-slot-min-height-sm);
   }
 
-  /* Time slots - no scrollbars on mobile, let page scroll naturally */
+  /* Time slots - let page scroll naturally */
   .slots-box {
     overflow-y: visible;
     height: auto;
@@ -97,18 +76,10 @@
     min-height: var(--min-touch-target);
   }
 
-  /* Layout and spacing */
+  /* Prevent horizontal overflow */
   body {
     overflow-x: hidden;
     position: relative;
-  }
-
-  .min-h-screen {
-    min-height: 100vh;
-    min-height: 100dvh; /* Dynamic viewport height */
-    min-height: 100svh; /* Small viewport height for mobile */
-    display: flex;
-    flex-direction: column;
   }
 
   /* Glass cards - let content determine height */
@@ -124,6 +95,38 @@
   /* Timezone selector compact on mobile */
   .timezone-selector-wrapper {
     max-width: calc(100vw - 2rem);
+  }
+}
+
+/* ============================================================================
+   NARROW (max-width: 480px)
+   ============================================================================ */
+@media (max-width: 480px) {
+  /* Hide step labels — circles are enough.
+     Specificity boosted with html.quill-theme to beat the display: block
+     rule in booking.css (.quill-theme-wrapper [class*=...] > span:last-child). */
+  html.quill-theme .step-item-wrapper .step-label {
+    display: none;
+  }
+
+  /* Tighter calendar padding */
+  .calendar-section {
+    padding: var(--space-xs);
+  }
+
+  /* Compact glass card padding */
+  .glass-morphism-card > div {
+    padding: var(--space-sm);
+  }
+}
+
+/* ============================================================================
+   VERY NARROW (max-width: 360px)
+   ============================================================================ */
+@media (max-width: 360px) {
+  /* Hide step connectors entirely */
+  .step-connector {
+    display: none;
   }
 }
 
@@ -338,81 +341,114 @@
    SHORT VIEWPORTS
    ============================================================================ */
 
-/* Medium short screens */
+/* Medium short screens — reduce vertical padding */
 @media (max-height: 700px) and (min-height: 601px) {
-  /* Reduce vertical spacing */
-  .py-8 {
+  .glass-morphism-card > div {
+    padding: var(--space-lg);
+  }
+
+  .container {
     padding-top: var(--space-xs);
     padding-bottom: var(--space-xs);
   }
 
-  .py-12 {
-    padding-top: var(--space-lg);
-    padding-bottom: var(--space-lg);
-  }
-
-  .p-8 {
-    padding: var(--space-lg);
-  }
-
-  .p-12 {
-    padding: var(--space-xl);
-  }
-
-  .mb-4 {
+  .section-header {
     margin-bottom: var(--space-md);
-  }
-
-  .mb-6 {
-    margin-bottom: var(--space-lg);
-  }
-
-  .mb-8 {
-    margin-bottom: var(--space-xl);
-  }
-
-  .space-y-4 > * + * {
-    margin-top: var(--space-md);
-  }
-
-  .space-y-6 > * + * {
-    margin-top: var(--space-lg);
   }
 }
 
-/* Very short screens */
+/* Short screens — compact spacing */
 @media (max-height: 600px) {
-  .py-4 {
-    padding-top: var(--space-3xs);
-    padding-bottom: var(--space-3xs);
+  .section-header {
+    font-size: var(--theme-font-size-md);
+    margin-bottom: var(--space-xs);
   }
 
-  .p-4 {
+  .glass-morphism-card > div {
     padding: var(--space-md);
   }
 
-  .mb-3 {
-    margin-bottom: var(--space-xs);
-  }
-
-  .mb-4 {
-    margin-bottom: var(--space-xs);
-  }
-
-  .space-y-4 > * + * {
-    margin-top: var(--space-xs);
-  }
-
-  .booking-container {
-    max-height: calc(100vh - 6rem);
+  .content-area {
+    gap: var(--space-xs);
   }
 }
 
-/* Constrain height on taller screens (standalone page, not iframe) */
-@media (min-height: 600px) {
-  .main-gradient.theme-grid {
-    max-height: 100vh;
-    max-height: 100dvh;
+/* Very short screens — aggressive compaction */
+@media (max-height: 500px) {
+  .glass-morphism-card > div {
+    padding: var(--space-sm);
+  }
+
+  html.quill-theme .step-item-wrapper .step-label {
+    display: none;
+  }
+
+  .slots-box {
+    max-height: 150px;
+    overflow-y: auto;
+  }
+
+  .action-button--primary,
+  .action-button--secondary {
+    padding: var(--space-xs) var(--space-sm);
+  }
+}
+
+/* Extremely short screens — minimal chrome */
+@media (max-height: 400px) {
+  .step-navigation-card {
+    display: none;
+  }
+
+  .glass-morphism-card > div {
+    padding: var(--space-xs);
+  }
+
+  .slots-box {
+    max-height: 120px;
+  }
+
+  .section-header {
+    font-size: var(--theme-font-size-sm);
+  }
+
+  .container {
+    padding-left: var(--space-xs);
+    padding-right: var(--space-xs);
+  }
+}
+
+/* Short screens — compact booking form */
+@media (max-height: 700px) {
+  /* Constrain textarea height (rows attribute sets intrinsic size,
+     min-height from variables.css must also be overridden) */
+  .booking-form-card textarea.input {
+    min-height: 0;
+    max-height: 5rem;
+  }
+
+  /* Tighter button cluster margin */
+  .glass-morphism-card form[phx-change="validate"] .cluster.mt-3 {
+    margin-top: var(--space-md);
+  }
+
+  /* Compact booking header */
+  .booking-form-card .section-header {
+    font-size: var(--theme-font-size-lg);
+    margin-bottom: var(--space-xs);
+  }
+}
+
+@media (max-height: 500px) {
+  /* Minimal textarea */
+  .booking-form-card textarea.input {
+    min-height: 0;
+    max-height: 3rem;
+  }
+
+  /* Minimal button cluster margin */
+  .glass-morphism-card form[phx-change="validate"] .cluster.mt-3 {
+    margin-top: var(--space-xs);
   }
 }
 

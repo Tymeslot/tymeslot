@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
+  alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -71,6 +72,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("prev_week", _params, socket) do
+    send(self(), {:step_event, :schedule, :prev_week, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("next_week", _params, socket) do
+    send(self(), {:step_event, :schedule, :next_week, nil})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_event("back_step", _params, socket) do
     send(self(), {:step_event, :schedule, :back_step, nil})
     {:noreply, socket}
@@ -128,8 +141,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
             <div class="w-full max-w-5xl min-h-0">
               <.glass_morphism_card class="calendar-card">
                 <div class="p-2 md:p-3 lg:p-4 min-h-0">
-                  <div class="flex flex-col md:flex-row md:items-start md:justify-between mb-3">
-                    <div class="flex-1">
+                  <%!-- Header: title + compact timezone trigger --%>
+                  <div class="schedule-card-header">
+                    <div class="flex-1 min-w-0">
                       <.section_header
                         level={2}
                         class="mb-1"
@@ -139,16 +153,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       </.section_header>
 
                       <%= if @organizer_profile do %>
-                        <p class="text-sm md:text-base mb-2 text-glass-primary">
+                        <p class="hidden md:block text-sm md:text-base mb-2 text-glass-primary">
                           {gettext("Bookings available up to %{advance}", advance: format_advance_booking_days(
                             @organizer_profile.advance_booking_days
                           ))}
                         </p>
                       <% end %>
 
-                      <p
-                        class="text-base md:text-lg font-medium text-glass-primary"
-                      >
+                      <p class="hidden md:block text-base md:text-lg font-medium text-glass-primary">
                         <%= if @meeting_type do %>
                           {gettext("Duration: %{duration}", duration: LocalizationHelpers.format_duration(@meeting_type.duration_minutes))}
                         <% else %>
@@ -157,7 +169,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       </p>
                     </div>
 
-                    <div class="mt-3 md:mt-0 md:ml-4">
+                    <div class="schedule-timezone-area">
                       <.timezone_selector
                         user_timezone={@user_timezone}
                         timezone_search={@timezone_search}
@@ -170,100 +182,128 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
                   <div class="flex flex-col lg:flex-row lg:gap-4 xl:gap-6 calendar-slots-container">
                     <div class="flex-1 calendar-section">
-                      <div class="cluster cluster-between mb-1 md:mb-2">
-                        <h2 class="text-sm md:text-base lg:text-lg font-bold cluster cluster-xs text-glass-primary">
-                          {gettext("Select a Date")}
-                          <%= if @availability_status == :loading do %>
-                            <svg
-                              class="animate-spin h-4 w-4 text-white opacity-60"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                class="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                stroke-width="4"
-                              >
-                              </circle>
-                              <path
-                                class="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                              >
-                              </path>
-                            </svg>
-                          <% end %>
-                        </h2>
-                        <div class="cluster cluster-3xs md:cluster-2xs">
-                          <%= if @availability_status in [:error, :timeout] do %>
-                            <div class="text-xs text-amber-300 bg-amber-900/40 px-2 py-1 rounded border border-amber-700/50 flex items-center gap-1">
-                              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                              </svg>
-                              {gettext("Calendar is loading slowly")}
-                            </div>
-                          <% end %>
+                      <%!-- Weekly view: shown on small screens --%>
+                      <div class="calendar-weekly">
+                        <div class="cluster cluster-between mb-1">
                           <button
-                            phx-click="prev_month"
+                            phx-click="prev_week"
                             phx-target={@myself}
                             phx-disable-with="..."
-                            disabled={
-                                Helpers.prev_month_disabled?(
-                                  @current_year,
-                                  @current_month,
-                                  @user_timezone
-                                )
-                            }
-                            class="calendar-nav-button p-1 md:p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                            disabled={CalendarNavigation.prev_week_disabled?(@current_week_start, @user_timezone)}
+                            class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                           >
                             ←
                           </button>
-                          <div class="text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3 text-white">
-                            {LocalizationHelpers.get_month_year_display(@current_year, @current_month)}
+                          <div class="cluster cluster-xs">
+                            <div class="text-xs font-semibold text-white">
+                              {LocalizationHelpers.get_week_display(@current_week_start)}
+                            </div>
+                            <.loading_spinner show={@availability_status == :loading} />
                           </div>
                           <button
-                            phx-click="next_month"
+                            phx-click="next_week"
                             phx-target={@myself}
                             phx-disable-with="..."
-                            disabled={
-                                Helpers.next_month_disabled?(
-                                  @current_year,
-                                  @current_month,
-                                  @user_timezone
-                                )
-                            }
-                            class="calendar-nav-button p-1 md:p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                            disabled={CalendarNavigation.next_week_disabled?(@current_week_start, @user_timezone)}
+                            class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                           >
                             →
                           </button>
                         </div>
+                        <div class="week-day-strip">
+                          <%= for day <- Helpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map) do %>
+                            <button
+                              class={[
+                                "week-day-cell",
+                                @selected_date == day.date && "selected",
+                                day.loading && "loading"
+                              ]}
+                              phx-click="select_date"
+                              phx-value-date={day.date}
+                              phx-target={@myself}
+                              disabled={not day.available || day.loading}
+                            >
+                              <span class="week-day-name">{day.day_name}</span>
+                              <span class="week-day-number">{day.day_number}</span>
+                            </button>
+                          <% end %>
+                        </div>
                       </div>
-                      <div class="calendar-grid-container flex-1">
-                        <div class="grid grid-cols-7 gap-0.5 text-center mb-1">
-                          <div
-                            :for={day <- [gettext("Sun"), gettext("Mon"), gettext("Tue"), gettext("Wed"), gettext("Thu"), gettext("Fri"), gettext("Sat")]}
-                            class="calendar-weekday text-xs font-medium"
-                          >
-                            {String.slice(day, 0, 3)}
+
+                      <%!-- Monthly view: shown on larger screens --%>
+                      <div class="calendar-monthly">
+                        <div class="cluster cluster-between mb-1 md:mb-2">
+                          <h2 class="text-sm md:text-base lg:text-lg font-bold cluster cluster-xs text-glass-primary">
+                            {gettext("Select a Date")}
+                            <.loading_spinner show={@availability_status == :loading} />
+                          </h2>
+                          <div class="cluster cluster-3xs md:cluster-2xs">
+                            <%= if @availability_status in [:error, :timeout] do %>
+                              <div class="text-xs text-amber-300 bg-amber-900/40 px-2 py-1 rounded border border-amber-700/50 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                {gettext("Calendar is loading slowly")}
+                              </div>
+                            <% end %>
+                            <button
+                              phx-click="prev_month"
+                              phx-target={@myself}
+                              phx-disable-with="..."
+                              disabled={
+                                  CalendarNavigation.prev_month_disabled?(
+                                    @current_year,
+                                    @current_month,
+                                    @user_timezone
+                                  )
+                              }
+                              class="calendar-nav-button p-1 md:p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                            >
+                              ←
+                            </button>
+                            <div class="text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3 text-white">
+                              {LocalizationHelpers.get_month_year_display(@current_year, @current_month)}
+                            </div>
+                            <button
+                              phx-click="next_month"
+                              phx-target={@myself}
+                              phx-disable-with="..."
+                              disabled={
+                                  CalendarNavigation.next_month_disabled?(
+                                    @current_year,
+                                    @current_month,
+                                    @user_timezone
+                                  )
+                              }
+                              class="calendar-nav-button p-1 md:p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                            >
+                              →
+                            </button>
                           </div>
                         </div>
-                        <div class="grid grid-cols-7 gap-0.5">
-                          <%= for day <- Helpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map) do %>
-                            <.calendar_day
-                              phx-click="select_date"
-                              phx-target={@myself}
-                              phx-value-date={day[:date]}
-                              day={Map.put(day, :is_today, day[:today])}
-                              selected={@selected_date == day[:date]}
-                              available={day[:available] && !day[:past]}
-                              current_month={day[:current_month]}
-                              loading={Map.get(day, :loading, false)}
-                            />
-                          <% end %>
+                        <div class="calendar-grid-container flex-1">
+                          <div class="grid grid-cols-7 gap-0.5 text-center mb-1">
+                            <div
+                              :for={day <- [gettext("Sun"), gettext("Mon"), gettext("Tue"), gettext("Wed"), gettext("Thu"), gettext("Fri"), gettext("Sat")]}
+                              class="calendar-weekday text-xs font-medium"
+                            >
+                              {String.slice(day, 0, 3)}
+                            </div>
+                          </div>
+                          <div class="grid grid-cols-7 gap-0.5">
+                            <%= for day <- Helpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map) do %>
+                              <.calendar_day
+                                phx-click="select_date"
+                                phx-target={@myself}
+                                phx-value-date={day[:date]}
+                                day={Map.put(day, :is_today, day[:today])}
+                                selected={@selected_date == day[:date]}
+                                available={day[:available] && !day[:past]}
+                                current_month={day[:current_month]}
+                                loading={Map.get(day, :loading, false)}
+                              />
+                            <% end %>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -337,11 +377,34 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
     end
   end
 
+  attr :show, :boolean, required: true
+
+  defp loading_spinner(assigns) do
+    ~H"""
+    <%= if @show do %>
+      <svg
+        class="animate-spin h-4 w-4 text-white opacity-60"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        />
+      </svg>
+    <% end %>
+    """
+  end
+
   # Sub-components for better organization
   defp timezone_selector(assigns) do
     ~H"""
-    <div class="relative w-full md:w-auto md:max-w-xs lg:max-w-sm" data-locale={@locale}>
-      <label class="timezone-label text-sm font-medium block mb-2">
+    <div class="relative" data-locale={@locale}>
+      <%!-- Label: hidden on small screens --%>
+      <label class="timezone-label text-sm font-medium mb-2 hidden md:block">
         <div class="cluster cluster-xs">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -349,20 +412,18 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
               stroke-linejoin="round"
               stroke-width="2"
               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            >
-            </path>
+            />
           </svg>
           {gettext("Your timezone")}
         </div>
       </label>
 
-    <!-- Current timezone display with modern card design -->
       <div
         class="group relative cursor-pointer"
         phx-click="toggle_timezone_dropdown"
         phx-target={@target}
       >
-        <div class="timezone-trigger px-4 py-3 rounded-xl transition-all duration-200 ease-out hover:scale-[1.01] hover:shadow-lg">
+        <div class="timezone-trigger rounded-xl transition-all duration-200 ease-out hover:shadow-lg px-2 py-1.5 md:px-4 md:py-3 md:hover:scale-[1.01]">
           <div class="cluster cluster-between">
             <div class="cluster cluster-sm flex-1 min-w-0">
               <.timezone_flag
@@ -371,20 +432,20 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                 fallback_icon="🌐"
               />
               <div class="flex-1 min-w-0">
-                <div class="text-sm font-medium text-white truncate">
+                <div class="text-xs md:text-sm font-medium text-white truncate">
                   {Timezones.format(@user_timezone)}
                 </div>
-                <div class="timezone-time-display text-xs mt-1">
+                <div class="timezone-time-display text-xs mt-1 hidden md:block">
                   {get_current_time_display(@user_timezone)}
                 </div>
               </div>
             </div>
-            <div class="cluster cluster-xs ml-3">
-              <div class="timezone-offset-badge text-sm px-3 py-1.5 rounded-full font-medium">
+            <div class="cluster cluster-xs ml-2 md:ml-3">
+              <div class="timezone-offset-badge text-xs md:text-sm px-2 py-1 md:px-3 md:py-1.5 rounded-full font-medium hidden md:block">
                 {get_timezone_offset(@user_timezone)}
               </div>
               <svg
-                class={"timezone-chevron w-4 h-4 transition-transform duration-200 #{if @timezone_dropdown_open, do: "rotate-180", else: "rotate-0"}"}
+                class={"timezone-chevron w-3 h-3 md:w-4 md:h-4 transition-transform duration-200 #{if @timezone_dropdown_open, do: "rotate-180", else: "rotate-0"}"}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -394,8 +455,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                   stroke-linejoin="round"
                   stroke-width="2"
                   d="M19 9l-7 7-7-7"
-                >
-                </path>
+                />
               </svg>
             </div>
           </div>
@@ -490,7 +550,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
               </.info_box>
             <% end %>
             <%= if !@calendar_error && length(normalized_slots) > 0 do %>
-              <div class="space-y-3 pr-2">
+              <div class="space-y-3 pr-2" data-slots-loaded>
                 <%= for {period, slots} <- LocalizationHelpers.group_slots_by_period(normalized_slots) do %>
                   <%= if length(slots) > 0 do %>
                     <div>

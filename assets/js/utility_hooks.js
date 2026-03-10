@@ -143,12 +143,15 @@ export const ConnectionStatus = {
 export const AutoScrollToSlots = {
   mounted() {
     this.handleSlotsUpdate = () => {
+      // Skip auto-scroll when embedded in an iframe (modal handles its own viewport)
+      if (document.documentElement.hasAttribute('data-embedded')) return;
+
       // Scroll on mobile and tablet viewports (when layout is stacked)
       if (window.innerWidth < 1024) {
         // Check if slots have been loaded (not empty state)
-        const hasSlots = this.el.querySelector('.space-y-3') || 
-                        this.el.querySelector('.animate-spin') ||
-                        this.el.querySelector('.text-yellow-200');
+        const hasSlots = this.el.querySelector('[data-slots-loaded]') ||
+                        this.el.querySelector('.space-y-3') ||
+                        this.el.querySelector('.animate-spin');
         
         if (hasSlots) {
           // Small delay to ensure DOM is fully updated

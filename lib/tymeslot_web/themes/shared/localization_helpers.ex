@@ -197,6 +197,41 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     gettext("%{month} %{year}", month: month_name, year: year)
   end
 
+  @doc """
+  Gets a display string for a week starting on `week_start`.
+
+  Returns "March 2026" when the week falls within a single month,
+  "March - April 2026" when it spans two months in the same year,
+  or "December 2025 - January 2026" when it spans a year boundary.
+  """
+  @spec get_week_display(Date.t()) :: String.t()
+  def get_week_display(week_start) do
+    week_end = Date.add(week_start, 6)
+
+    cond do
+      week_start.month == week_end.month ->
+        gettext("%{month} %{year}",
+          month: get_month_name(week_start.month),
+          year: week_start.year
+        )
+
+      week_start.year == week_end.year ->
+        gettext("%{start_month} - %{end_month} %{year}",
+          start_month: get_month_name(week_start.month),
+          end_month: get_month_name(week_end.month),
+          year: week_start.year
+        )
+
+      true ->
+        gettext("%{start_month} %{start_year} - %{end_month} %{end_year}",
+          start_month: get_month_name(week_start.month),
+          start_year: week_start.year,
+          end_month: get_month_name(week_end.month),
+          end_year: week_end.year
+        )
+    end
+  end
+
   # Internal helpers
 
   defp format_minutes(1), do: gettext("1 minute")

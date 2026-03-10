@@ -11,6 +11,9 @@ defmodule TymeslotWeb.Layouts do
   use TymeslotWeb, :html
   import TymeslotWeb.Components.CoreComponents
 
+  alias Phoenix.Controller
+  alias TymeslotWeb.Endpoint
+
   embed_templates "layouts/*"
 
   @doc """
@@ -20,15 +23,16 @@ defmodule TymeslotWeb.Layouts do
   def current_url(assigns) do
     cond do
       assigns[:conn] ->
-        Phoenix.Controller.current_url(assigns[:conn])
+        Controller.current_url(assigns[:conn])
 
       assigns[:uri] ->
         uri = assigns[:uri]
-        "#{uri.scheme}://#{uri.host}#{if uri.port not in [80, 443], do: ":#{uri.port}", else: ""}#{uri.path}"
+
+        "#{uri.scheme}://#{uri.host}#{if uri.port in [80, 443], do: "", else: ":#{uri.port}"}#{uri.path}"
 
       true ->
         path = assigns[:request_path] || "/"
-        TymeslotWeb.Endpoint.url() <> path
+        Endpoint.url() <> path
     end
   end
 

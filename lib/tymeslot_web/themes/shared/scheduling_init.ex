@@ -4,7 +4,32 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
   """
 
   import Phoenix.Component, only: [assign: 3]
+
   alias Phoenix.LiveView
+  alias TymeslotWeb.Live.Scheduling.Helpers
+
+  @spec assign_theme_state(LiveView.Socket.t(), String.t()) :: LiveView.Socket.t()
+  def assign_theme_state(socket, theme_id) do
+    today = Date.utc_today()
+    week_start = Date.beginning_of_week(today, :monday)
+
+    socket
+    |> assign_base_state()
+    |> assign(:theme_id, theme_id)
+    |> assign(:duration, nil)
+    |> assign(:meeting_type, nil)
+    |> assign(:current_year, today.year)
+    |> assign(:current_month, today.month)
+    |> assign(:current_week_start, week_start)
+    |> assign(:month_availability_map, nil)
+    |> assign(:availability_status, :not_loaded)
+    |> assign(:availability_task, nil)
+    |> assign(:availability_task_ref, nil)
+    |> Helpers.setup_form_state(%{}, as: :booking)
+    |> assign(:client_ip, nil)
+    |> assign(:submission_token, nil)
+    |> assign(:meeting_types, [])
+  end
 
   @spec assign_base_state(LiveView.Socket.t()) :: LiveView.Socket.t()
   def assign_base_state(socket) do

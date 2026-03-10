@@ -1,20 +1,19 @@
 /* Import Inter font - Modern, clean, and free for commercial use */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* Global resets for Rhythm theme */
+/* Global resets for Rhythm theme — natural document flow, no viewport locking.
+   Content scrolls the page; background fills via min-height. */
 html.rhythm-theme {
-  height: 100%;
+  min-height: 100%;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
   position: relative;
 }
 
 body.rhythm-theme {
-  height: 100%;
+  min-height: 100%;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
   margin: 0;
   padding: 0;
   font-family: var(--theme-font-family);
@@ -23,28 +22,12 @@ body.rhythm-theme {
   position: relative;
 }
 
-/* Propagate definite height through unstyled intermediate DOM elements.
-   Phoenix LiveView inserts a wrapper div[data-phx-main] between <main> and
-   the theme wrapper, so we need to explicitly chain height through all of them.
-   Without this chain, height: 100% on the wrapper resolves to auto (no definite
-   parent height), and the CSS Grid 1fr row cannot be computed. */
-body.rhythm-theme > .scheduling-main,
-body.rhythm-theme > .scheduling-main > [data-phx-main] {
-  height: 100%;
-}
-
-/* Theme wrapper: completes the height chain */
-.rhythm-theme-wrapper {
-  height: 100%;
-}
-
 /* Main theme container */
 .video-background-theme {
   position: relative;
   width: 100%;
   max-width: 100%;
   min-height: 100vh;
-  min-height: -webkit-fill-available;
   min-height: 100dvh;
   display: flex;
   align-items: center;
@@ -61,18 +44,8 @@ body.rhythm-theme > .scheduling-main > [data-phx-main] {
   grid-template-rows: 1fr auto;
   align-items: stretch;
   justify-content: stretch;
-  height: 100%;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow: hidden;
-}
-
-/* Safety net: cap grid height to viewport on standalone pages */
-@media (min-height: 600px) {
-  .video-background-theme.theme-grid {
-    max-height: 100vh;
-    max-height: 100dvh;
-  }
 }
 
 .video-background-theme.theme-grid .content-area {
@@ -83,7 +56,6 @@ body.rhythm-theme > .scheduling-main > [data-phx-main] {
   padding: var(--space-lg);
   min-height: 0;
   position: relative;
-  overflow-y: auto;
 }
 
 /* Scheduling Box */
@@ -97,10 +69,9 @@ body.rhythm-theme > .scheduling-main > [data-phx-main] {
   -webkit-backdrop-filter: blur(var(--box-blur)) saturate(150%);
   border-radius: var(--radius-2xl);
   box-shadow: var(--box-shadow);
-  width: 520px;
+  width: min(520px, 100%);
   max-width: 96vw;
   height: auto;
-  max-height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -128,7 +99,8 @@ body.rhythm-theme > .scheduling-main > [data-phx-main] {
   opacity: 0;
   transform: translateX(100%);
   transition: var(--slide-transition);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
 }
 

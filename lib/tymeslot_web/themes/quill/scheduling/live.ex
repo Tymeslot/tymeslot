@@ -173,6 +173,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
       event in [:prev_month, :next_month] ->
         handle_month_navigation_events(socket, event)
 
+      event in [:prev_week, :next_week] ->
+        handle_week_navigation_events(socket, event)
+
       event in [:back_step, :next_step] ->
         handle_schedule_navigation_events(socket, event)
 
@@ -208,6 +211,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
 
       :next_month ->
         {:noreply, handle_month_navigation(socket, :next)}
+    end
+  end
+
+  defp handle_week_navigation_events(socket, event) do
+    case event do
+      :prev_week ->
+        {:noreply, Helpers.handle_week_navigation(socket, :prev)}
+
+      :next_week ->
+        {:noreply, Helpers.handle_week_navigation(socket, :next)}
     end
   end
 
@@ -258,23 +271,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
   # State machine implementation
 
   defp assign_initial_state(socket) do
-    today = Date.utc_today()
-
-    socket
-    |> SchedulingInit.assign_base_state()
-    |> assign(:theme_id, "1")
-    |> assign(:duration, nil)
-    |> assign(:meeting_type, nil)
-    |> assign(:current_year, today.year)
-    |> assign(:current_month, today.month)
-    |> assign(:month_availability_map, nil)
-    |> assign(:availability_status, :not_loaded)
-    |> assign(:availability_task, nil)
-    |> assign(:availability_task_ref, nil)
-    |> Helpers.setup_form_state(%{}, as: :booking)
-    |> assign(:client_ip, nil)
-    |> assign(:submission_token, nil)
-    |> assign(:meeting_types, [])
+    SchedulingInit.assign_theme_state(socket, "1")
   end
 
   defp handle_param_updates(socket, params) do

@@ -1,14 +1,13 @@
 /* Base - Theme setup, containers, and core structure */
 
-/* Base Theme Styles */
+/* Base Theme Styles — natural document flow, no viewport locking.
+   Content scrolls the page; background fills via min-height. */
 html.quill-theme {
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
 }
 
 body.quill-theme {
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
   font-family: var(--theme-font-family);
   font-size: var(--theme-font-size-base);
   -webkit-font-smoothing: antialiased;
@@ -16,19 +15,9 @@ body.quill-theme {
   background-color: var(--theme-background-color);
 }
 
-/* Propagate definite height through unstyled intermediate DOM elements.
-   Phoenix LiveView inserts a wrapper div[data-phx-main] between <main> and
-   the theme wrapper, so we need to explicitly chain height through all of them.
-   Without this chain, height: 100% on the wrapper resolves to auto (no definite
-   parent height), and the CSS Grid 1fr row cannot be computed. */
-body.quill-theme > .scheduling-main,
-body.quill-theme > .scheduling-main > [data-phx-main] {
-  height: 100%;
-}
-
+/* Theme wrapper: no forced height — the grid child sizes itself with
+   viewport units, so the wrapper just flows naturally. */
 .quill-theme-wrapper {
-  height: 100%;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -52,20 +41,24 @@ body.quill-theme > .scheduling-main > [data-phx-main] {
 .main-gradient.theme-grid {
   display: grid;
   grid-template-rows: 1fr auto;
-  height: 100%;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow: hidden;
 }
-
-/* Height constraints moved to responsive.css */
 
 .main-gradient.theme-grid .content-area {
   display: flex;
   flex-direction: column;
   min-height: 0;
   position: relative;
-  overflow-y: auto;
+}
+
+/* Center the glass card vertically while keeping the step nav at the top.
+   The .container has Tailwind's flex-1 which stretches it to fill all
+   space — override so it sizes to content, then auto margins center it. */
+.main-gradient.theme-grid .content-area .container {
+  flex: initial;
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 /* Override glass gradient colors with theme colors */

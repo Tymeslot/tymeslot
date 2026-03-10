@@ -155,7 +155,8 @@ defmodule Tymeslot.MixProject do
         "tailwind rhythm",
         "esbuild tymeslot",
         "esbuild bundles",
-        "esbuild embed"
+        "esbuild embed",
+        "esbuild iframe_embed"
       ],
       "assets.deploy": [
         "tailwind tymeslot --minify",
@@ -164,6 +165,7 @@ defmodule Tymeslot.MixProject do
         "esbuild tymeslot --minify",
         "esbuild bundles --minify",
         "esbuild embed --minify",
+        "esbuild iframe_embed --minify",
         "phx.digest"
       ]
     ]

@@ -157,3 +157,110 @@
 .calendar-weekday {
   color: var(--text-opacity-medium-low);
 }
+
+/* ============================================================================
+   Schedule Card Header
+   ============================================================================ */
+.schedule-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.schedule-timezone-area {
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   Weekly / Monthly Calendar Toggle
+   Default: show weekly (mobile-first), show monthly on md+
+   ============================================================================ */
+.calendar-weekly {
+  display: block;
+}
+
+.calendar-monthly {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .calendar-weekly {
+    display: none;
+  }
+
+  .calendar-monthly {
+    display: block;
+  }
+
+  .schedule-card-header {
+    margin-bottom: var(--space-lg);
+  }
+}
+
+/* ============================================================================
+   Week Day Strip
+   Horizontal row of 7 day cells for the weekly view.
+   ============================================================================ */
+.week-day-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-xs);
+}
+
+.week-day-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-xs) var(--space-2xs);
+  background: var(--surface-light);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-md);
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  min-height: var(--min-touch-target, 44px);
+}
+
+.week-day-cell:hover:not(:disabled) {
+  background: var(--surface-medium);
+  border-color: var(--theme-primary);
+  transform: translateY(-1px);
+}
+
+.week-day-cell.selected {
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+}
+
+.week-day-cell:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--surface-transparent);
+}
+
+.week-day-cell.loading {
+  cursor: wait;
+  opacity: 0.6;
+  animation: quill-pulse 2s ease-in-out infinite;
+}
+
+.week-day-name {
+  font-size: var(--theme-font-size-3xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-opacity-medium-low);
+}
+
+.week-day-cell.selected .week-day-name {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.week-day-number {
+  font-size: var(--theme-font-size-base);
+  font-weight: var(--font-weight-semibold);
+}

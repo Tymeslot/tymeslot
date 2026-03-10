@@ -63,13 +63,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                 <div class="p-4 md:p-6 lg:p-8">
                   <.section_header
                     level={2}
-                    class="mb-4"
-                    title_class="section-header text-2xl md:text-3xl lg:text-4xl"
+                    class="mb-2 md:mb-4"
+                    title_class="section-header text-xl md:text-3xl lg:text-4xl"
                   >
                     {gettext("Enter Your Details")}
                   </.section_header>
 
-                  <p class="text-quill-primary text-base md:text-lg lg:text-xl mb-4">
+                  <p class="text-quill-primary text-sm md:text-lg lg:text-xl mb-2 md:mb-4">
                     <%= if @organizer_profile do %>
                       {gettext("You're booking a %{duration} meeting with %{name}",
                         duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: DateTimeUtils.format_duration(@duration)),
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     <% end %>
                   </p>
 
-                  <p class="text-quill-secondary text-xs md:text-sm mb-6">
+                  <p class="text-quill-secondary text-xs md:text-sm mb-2 md:mb-6">
                     {LocalizationHelpers.format_booking_datetime(@selected_date, @selected_time, @user_timezone)}
                   </p>
 
@@ -98,28 +98,30 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                   >
                     <SecurityFields.honeypot_field id_prefix="booking" param_root="booking" />
 
-                    <.input
-                      field={f[:name]}
-                      label={gettext("Your Name")}
-                      placeholder={gettext("John Doe")}
-                      required
-                      phx-debounce="blur"
-                      phx-blur="field_blur"
-                      phx-value-field="name"
-                      phx-target={@myself}
-                    />
+                    <div class="booking-inline-fields">
+                      <.input
+                        field={f[:name]}
+                        label={gettext("Your Name")}
+                        placeholder={gettext("John Doe")}
+                        required
+                        phx-debounce="blur"
+                        phx-blur="field_blur"
+                        phx-value-field="name"
+                        phx-target={@myself}
+                      />
 
-                    <.input
-                      field={f[:email]}
-                      label={gettext("Email Address")}
-                      type="email"
-                      placeholder={gettext("john@example.com")}
-                      required
-                      phx-debounce="blur"
-                      phx-blur="field_blur"
-                      phx-value-field="email"
-                      phx-target={@myself}
-                    />
+                      <.input
+                        field={f[:email]}
+                        label={gettext("Email Address")}
+                        type="email"
+                        placeholder={gettext("john@example.com")}
+                        required
+                        phx-debounce="blur"
+                        phx-blur="field_blur"
+                        phx-value-field="email"
+                        phx-target={@myself}
+                      />
+                    </div>
 
                     <.input
                       field={f[:message]}

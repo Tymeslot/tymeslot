@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
 
   alias Tymeslot.Timezones
   alias TymeslotWeb.Components.MeetingComponents
+  alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -196,11 +197,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                     phx-click="prev_week"
                     phx-target={@myself}
                     phx-disable-with="..."
-                    disabled={false}
+                    disabled={CalendarNavigation.prev_week_disabled?(@current_week_start, @user_timezone)}
                   >
                     ←
                   </button>
-                  <h3 class="calendar-month-year">{get_week_display(@current_week_start)}</h3>
+                  <h3 class="calendar-month-year">{LocalizationHelpers.get_week_display(@current_week_start)}</h3>
                   <div class="cluster cluster-xs">
                     <%= if @availability_status in [:error, :timeout] do %>
                       <div class="calendar-error-inline">
@@ -215,7 +216,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       phx-click="next_week"
                       phx-target={@myself}
                       phx-disable-with="..."
-                      disabled={false}
+                      disabled={CalendarNavigation.next_week_disabled?(@current_week_start, @user_timezone)}
                     >
                       →
                     </button>
@@ -237,7 +238,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       phx-target={@myself}
                       disabled={not day.available || day.loading}
                     >
-                      <div class="day-name">{get_localized_day_name(day.day_name)}</div>
+                      <div class="day-name">{day.day_name}</div>
                       <div class="day-number">{day.day_number}</div>
                     </button>
                   <% end %>
@@ -330,50 +331,5 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
       </div>
     </div>
     """
-  end
-
-  defp get_localized_day_name(day_name) do
-    case day_name do
-      "MON" -> gettext("MON")
-      "TUE" -> gettext("TUE")
-      "WED" -> gettext("WED")
-      "THU" -> gettext("THU")
-      "FRI" -> gettext("FRI")
-      "SAT" -> gettext("SAT")
-      "SUN" -> gettext("SUN")
-      _other -> day_name
-    end
-  end
-
-  # Helpers
-  defp get_week_display(week_start) do
-    week_end = Date.add(week_start, 6)
-
-    if week_start.month == week_end.month do
-      gettext("%{month} %{year}", month: month_name(week_start.month), year: week_start.year)
-    else
-      gettext("%{start_month} - %{end_month} %{year}",
-        start_month: month_name(week_start.month),
-        end_month: month_name(week_end.month),
-        year: week_start.year
-      )
-    end
-  end
-
-  defp month_name(month_num) when is_integer(month_num) do
-    case month_num do
-      1 -> gettext("January")
-      2 -> gettext("February")
-      3 -> gettext("March")
-      4 -> gettext("April")
-      5 -> gettext("May")
-      6 -> gettext("June")
-      7 -> gettext("July")
-      8 -> gettext("August")
-      9 -> gettext("September")
-      10 -> gettext("October")
-      11 -> gettext("November")
-      12 -> gettext("December")
-    end
   end
 end

@@ -26,6 +26,7 @@ beforeEach(() => {
   document.body.innerHTML = ''
   document.body.style.overflow = ''
   document.body.style.removeProperty('overflow')
+  document.documentElement.removeAttribute('data-embedded')
 })
 
 afterEach(() => {
@@ -188,6 +189,8 @@ describe('postMessage resize handler', () => {
     const iframe = document.querySelector('iframe[title="Booking Widget"]')
     expect(iframe).not.toBeNull()
 
+    const wrapper = iframe.parentNode
+
     window.dispatchEvent(
       new MessageEvent('message', {
         origin: window.location.origin,
@@ -196,7 +199,73 @@ describe('postMessage resize handler', () => {
       })
     )
 
-    expect(iframe.style.height).toBe('500px')
+    expect(wrapper.style.height).toBe('500px')
+  })
+
+  test('caps height in constrained mode', () => {
+    const container = document.createElement('div')
+    container.id = 'booking-container'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#booking-container', 'alice')
+
+    const iframe = document.querySelector('iframe[title="Booking Widget"]')
+    expect(iframe).not.toBeNull()
+
+    const wrapper = iframe.parentNode
+    wrapper.dataset.constrained = 'true'
+    wrapper.dataset.constraintHeight = '400'
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 600 }
+      })
+    )
+
+    expect(wrapper.style.height).toBe('400px')
+  })
+
+  test('ignores non-finite height values', () => {
+    const container = document.createElement('div')
+    container.id = 'booking-container'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#booking-container', 'alice')
+
+    const iframe = document.querySelector('iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    // Set a known starting height
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: 300 }
+      })
+    )
+    expect(wrapper.style.height).toBe('300px')
+
+    // NaN should be ignored
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: NaN }
+      })
+    )
+    expect(wrapper.style.height).toBe('300px')
+
+    // Negative should be ignored
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data: { type: 'tymeslot-resize', height: -100 }
+      })
+    )
+    expect(wrapper.style.height).toBe('300px')
   })
 
   test('ignores resize messages that originate from a different domain', () => {
@@ -209,6 +278,8 @@ describe('postMessage resize handler', () => {
     const iframe = document.querySelector('iframe[title="Booking Widget"]')
     expect(iframe).not.toBeNull()
 
+    const wrapper = iframe.parentNode
+
     // First establish a known height via a legitimate message so the evil-origin
     // assertion has a meaningful value to compare against, rather than the empty
     // initial state (which would pass trivially even if no handler existed).
@@ -219,7 +290,7 @@ describe('postMessage resize handler', () => {
         data: { type: 'tymeslot-resize', height: 500 }
       })
     )
-    expect(iframe.style.height).toBe('500px')
+    expect(wrapper.style.height).toBe('500px')
 
     // A message from an attacker-controlled domain must not change the height
     window.dispatchEvent(
@@ -228,6 +299,6 @@ describe('postMessage resize handler', () => {
         data: { type: 'tymeslot-resize', height: 9999 }
       })
     )
-    expect(iframe.style.height).toBe('500px')
+    expect(wrapper.style.height).toBe('500px')
   })
 })

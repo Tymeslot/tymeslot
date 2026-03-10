@@ -172,6 +172,12 @@ config :esbuild,
     args: ~w(js/embed.js --bundle --target=es2017 --outfile=../priv/static/embed.js),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ],
+  iframe_embed: [
+    args:
+      ~w(js/iframe_embed.js --bundle --target=es2017 --outfile=../priv/static/assets/iframe_embed.js),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
 
 # Configure tailwind

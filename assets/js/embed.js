@@ -57,18 +57,38 @@
 
   const BASE_URL = CONFIG.getBaseUrl();
 
+  function viewportMaxHeight() {
+    return Math.floor(Math.min(window.innerHeight * 0.9, window.innerHeight - 40));
+  }
+
   /**
-   * Global message listener for iframe resizing
+   * Global message listener for iframe resizing.
+   *
+   * When the embedded page reports its content height, resize the iframe
+   * to fit — but only up to the container's own constraints. If the
+   * container has a max-height, the iframe stays within it and the
+   * embedded page scrolls internally (handled by iframe_embed.js CSS).
    */
   window.addEventListener('message', function(e) {
     if (e.origin !== BASE_URL) return;
-    if (e.data.type === 'tymeslot-resize' && e.data.height) {
-      const iframes = document.querySelectorAll('iframe[title="Booking Widget"]');
-      iframes.forEach(iframe => {
+    if (e.data.type === 'tymeslot-resize') {
+      var h = Number(e.data.height);
+      if (!Number.isFinite(h) || h <= 0) return;
+
+      var iframes = document.querySelectorAll('iframe[title="Booking Widget"]');
+      iframes.forEach(function(iframe) {
         if (iframe.contentWindow === e.source) {
-          iframe.style.height = e.data.height + 'px';
-          if (iframe.parentNode) {
-            iframe.parentNode.style.minHeight = e.data.height + 'px';
+          var wrapper = iframe.parentNode;
+          if (!wrapper) return;
+
+          if (wrapper.dataset.constrained) {
+            // Constrained: shrink to content but never exceed the constraint
+            var cap = parseInt(wrapper.dataset.constraintHeight, 10);
+            if (!cap || cap <= 0) return;
+            wrapper.style.height = Math.min(h, cap) + 'px';
+          } else {
+            wrapper.style.height = h + 'px';
+            wrapper.style.minHeight = '0';
           }
         }
       });
@@ -85,7 +105,7 @@
     
     // Build URL with customization params - STRICT ALLOWLIST
     const ALLOWED_PARAMS = ['theme', 'primaryColor', 'locale'];
-    
+
     ALLOWED_PARAMS.forEach(key => {
       const val = options[key];
       if (!val) return;
@@ -102,8 +122,8 @@
     iframe.src = url.toString();
     iframe.style.cssText = `
       width: 100%;
+      height: 100%;
       border: none;
-      min-height: 700px;
       background: transparent;
       transition: opacity 0.3s ease;
       opacity: 0;
@@ -112,11 +132,13 @@
     iframe.setAttribute('allow', 'payment');
     iframe.setAttribute('title', 'Booking Widget');
 
-    // Create wrapper for loading state
+    // Create wrapper for loading state.
+    // Uses min-height as default for unconstrained containers;
+    // constrained containers clip the wrapper and the iframe scrolls internally.
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
     wrapper.style.width = '100%';
-    wrapper.style.minHeight = '700px';
+    wrapper.style.minHeight = '600px';
 
     const loader = document.createElement('div');
     loader.className = 'tymeslot-loader';
@@ -229,13 +251,14 @@
     `;
     
     const container = document.createElement('div');
+    container.setAttribute('data-tymeslot-container', '');
+    var maxH = viewportMaxHeight();
     container.style.cssText = `
       position: relative;
       width: 100%;
-      max-width: 1000px;
-      height: 90vh;
-      max-height: 900px;
-      background: white;
+      max-width: min(1000px, calc(100vw - 32px));
+      max-height: ${maxH}px;
+      background: transparent;
       border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
@@ -252,8 +275,8 @@
       width: 40px;
       height: 40px;
       border: none;
-      background: rgba(0, 0, 0, 0.1);
-      color: #333;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
       font-size: 32px;
       line-height: 1;
       border-radius: 50%;
@@ -265,13 +288,13 @@
       justify-content: center;
     `;
     closeButton.setAttribute('aria-label', 'Close booking widget');
-    
+
     closeButton.onmouseover = function() {
-      this.style.background = 'rgba(0, 0, 0, 0.2)';
+      this.style.background = 'rgba(0, 0, 0, 0.7)';
       this.style.transform = 'scale(1.1)';
     };
     closeButton.onmouseout = function() {
-      this.style.background = 'rgba(0, 0, 0, 0.1)';
+      this.style.background = 'rgba(0, 0, 0, 0.5)';
       this.style.transform = 'scale(1)';
     };
     
@@ -304,9 +327,12 @@
     const button = document.createElement('button');
     button.id = 'tymeslot-floating-button';
     button.setAttribute('aria-label', 'Book a meeting');
-    
-    const buttonColor = options.buttonColor || '#14B8A6'; // turquoise-600
-    
+    button.setAttribute('title', 'Book a meeting');
+
+    const buttonColor = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(options.buttonColor)
+      ? options.buttonColor
+      : '#14B8A6'; // turquoise-600
+
     button.style.cssText = `
       position: fixed;
       bottom: 24px;
@@ -370,10 +396,40 @@
         locale: container.getAttribute('data-locale')
       };
       
-      const iframe = createBookingIframe(username, options);
+      const wrapper = createBookingIframe(username, options);
       container.innerHTML = '';
-      container.appendChild(iframe);
+      container.appendChild(wrapper);
+      ensureScrollable(container, wrapper);
     });
+  }
+
+  /**
+   * When the container has a constrained height, make the wrapper and
+   * iframe fill it exactly. The iframe's scrolling="auto" attribute
+   * provides a scrollbar for the booking page content inside.
+   *
+   * Constraint detection: checks for an explicit max-height or an inline
+   * height style on the container element. Computed height is intentionally
+   * not used — getComputedStyle always returns a pixel value, so checking it
+   * would incorrectly flag any unconstrained element sized by its content.
+   */
+  function ensureScrollable(container, wrapper) {
+    var style = window.getComputedStyle(container);
+    var maxHeight = style.maxHeight;
+    var hasMaxHeight = maxHeight !== 'none' && maxHeight !== '' && parseInt(maxHeight, 10) > 0;
+    var hasInlineHeight = container.style.height !== '' && container.style.height !== 'auto';
+
+    if (hasMaxHeight || hasInlineHeight) {
+      requestAnimationFrame(function() {
+        var actualHeight = container.clientHeight;
+        if (wrapper) {
+          wrapper.style.height = actualHeight + 'px';
+          wrapper.style.minHeight = '0';
+          wrapper.dataset.constrained = 'true';
+          wrapper.dataset.constraintHeight = String(actualHeight);
+        }
+      });
+    }
   }
 
   /**
@@ -399,25 +455,41 @@
     open: function(username, options = {}) {
       // Remove existing modal if any
       this.close();
-      
+
       const { modal, container } = createModal();
       const wrapper = createBookingIframe(username, options);
       const iframe = wrapper.querySelector('iframe');
-      
+
       if (iframe) {
         iframe.style.width = '100%';
         iframe.style.height = '100%';
         iframe.style.minHeight = '0';
-        
-        wrapper.style.height = '100%';
+
+        // Cap at viewport height so the iframe scrolls if content exceeds it.
+        // Don't pre-set the wrapper height — let it shrink-wrap to actual
+        // content once the iframe reports its size via postMessage.
+        var maxH = viewportMaxHeight();
         wrapper.style.minHeight = '0';
-        
+        wrapper.dataset.constrained = 'true';
+        wrapper.dataset.constraintHeight = String(maxH);
+
         container.appendChild(wrapper);
       }
       
       document.body.appendChild(modal);
       modal.previousBodyOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
+
+      // Update constraint on window resize / orientation change
+      const resizeHandler = () => {
+        var newMax = viewportMaxHeight();
+        container.style.maxHeight = newMax + 'px';
+        if (wrapper.dataset.constrained) {
+          wrapper.dataset.constraintHeight = String(newMax);
+        }
+      };
+      window.addEventListener('resize', resizeHandler);
+      modal.resizeHandler = resizeHandler;
       
       // Handle escape key
       const escapeHandler = (e) => {
@@ -435,7 +507,7 @@
     close: function() {
       const modal = document.getElementById('tymeslot-modal');
       if (modal) {
-        const container = modal.querySelector('div');
+        const container = modal.querySelector('[data-tymeslot-container]');
         modal.style.opacity = '0';
         if (container) {
           container.style.transform = 'scale(0.95)';
@@ -444,6 +516,9 @@
         setTimeout(() => {
           if (modal.escapeHandler) {
             document.removeEventListener('keydown', modal.escapeHandler);
+          }
+          if (modal.resizeHandler) {
+            window.removeEventListener('resize', modal.resizeHandler);
           }
           modal.remove();
           document.body.style.overflow = modal.previousBodyOverflow || '';
@@ -473,9 +548,10 @@
         return;
       }
       
-      const iframe = createBookingIframe(username, options);
+      const wrapper = createBookingIframe(username, options);
       container.innerHTML = '';
-      container.appendChild(iframe);
+      container.appendChild(wrapper);
+      ensureScrollable(container, wrapper);
     }
   };
 

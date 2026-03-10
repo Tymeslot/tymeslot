@@ -219,21 +219,10 @@
     padding: 0;
     background: rgba(0, 0, 0, 0.4);
     align-items: flex-start;
-    min-height: 100vh;
-    min-height: 100dvh;
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
   }
 
   .video-background-theme.theme-grid .content-area {
     padding: 0;
-  }
-
-  .video-background-container {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
   }
 
   .scheduling-box {
@@ -471,56 +460,19 @@
     min-height: var(--min-touch-target);
   }
 
-  /* Revert desktop scroll lock — mobile should scroll naturally */
-  html.rhythm-theme {
-    height: auto;
-    overflow-x: hidden;
-    overflow-y: auto;
-    width: 100%;
-    max-width: 100%;
-  }
-
-  body.rhythm-theme {
-    height: auto;
-    overflow-x: hidden;
-    overflow-y: auto;
-    width: 100%;
-    max-width: 100%;
-  }
-
-  body.rhythm-theme > .scheduling-main,
-  body.rhythm-theme > .scheduling-main > [data-phx-main] {
-    height: auto;
-  }
-
+  /* Prevent horizontal overflow — single rule covers the wrapper and
+     all descendants via max-width: 100% + box-sizing on the wrapper. */
   .rhythm-theme-wrapper {
-    height: auto;
-    width: 100%;
-    max-width: 100%;
+    max-width: 100vw;
     overflow-x: hidden;
-  }
-
-  .video-background-theme.theme-grid {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  .content-area {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  /* Ensure all child elements respect container width */
-  .slide > *,
-  .slide-content > * {
-    max-width: 100%;
-    box-sizing: border-box;
   }
 }
 
-/* Short Viewports - Compact Mode */
+/* ============================================================================
+   SHORT VIEWPORTS
+   ============================================================================ */
+
+/* Short screens — compact mode */
 @media (max-height: 600px) {
   /* Avatar sizing */
   .avatar-image {
@@ -546,7 +498,125 @@
   .duration-description {
     display: none;
   }
+
+  .slide-title {
+    font-size: var(--theme-font-size-lg);
+    margin-bottom: var(--space-xs);
+  }
+
+  .slide-actions {
+    padding-top: var(--space-xs);
+  }
+
+  .time-slots-grid {
+    max-height: 180px;
+  }
+
+  .success-badge {
+    width: 40px;
+    height: 40px;
+  }
 }
+
+/* Very short screens — aggressive compaction */
+@media (max-height: 500px) {
+  .organizer-profile {
+    margin-bottom: 0;
+  }
+
+  .organizer-greeting {
+    font-size: var(--theme-font-size-xs);
+  }
+
+  .duration-button {
+    padding: var(--space-xs);
+  }
+
+  .duration-card {
+    border-radius: var(--radius-md);
+  }
+
+  .time-slots-grid {
+    max-height: 160px;
+  }
+
+  /* Force single-column booking form */
+  .booking-form {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .action-button-primary,
+  .submit-button,
+  .next-button,
+  .back-button {
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--theme-font-size-sm);
+  }
+}
+
+/* Extremely short screens — minimal chrome */
+@media (max-height: 400px) {
+  .organizer-profile {
+    display: none;
+  }
+
+  .slide {
+    padding: var(--space-xs);
+  }
+
+  .slide-title {
+    font-size: var(--theme-font-size-md);
+    margin-bottom: var(--space-xs);
+  }
+
+  .duration-grid {
+    gap: 3px;
+  }
+
+  .time-slots-grid {
+    max-height: 120px;
+  }
+
+  .meeting-summary {
+    padding: var(--space-xs);
+    gap: 2px;
+  }
+
+  .confirmation-container {
+    padding: var(--space-xs);
+    gap: var(--space-xs);
+  }
+
+  .success-badge {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Bare minimum for extremely constrained viewports */
+@media (max-height: 350px) {
+  .slide-title {
+    font-size: var(--theme-font-size-sm);
+    margin-bottom: 2px;
+  }
+
+  .slide-actions {
+    padding-top: 2px;
+  }
+
+  .schedule-header {
+    display: none;
+  }
+
+  .time-slots-grid {
+    max-height: 100px;
+  }
+}
+
+/* ============================================================================
+   ACCESSIBILITY & PERFORMANCE
+   ============================================================================ */
 
 /* Low Memory Devices */
 @media (max-device-memory: 4) {
@@ -565,7 +635,7 @@
   .video-background-video {
     display: none;
   }
-  
+
   .slide {
     transition: none;
   }

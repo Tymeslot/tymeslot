@@ -300,7 +300,14 @@
 
 /* Comfortable spacing before the action buttons cluster */
 .glass-morphism-card form[phx-change="validate"] .cluster.mt-3 {
-  margin-top: var(--space-2xl);
+  margin-top: var(--space-xl);
+}
+
+/* Side-by-side Name + Email — auto-stacks when too narrow */
+.booking-inline-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--space-sm);
 }
 
 /* Recaptcha notice sits tight below the message field, never beside it */
