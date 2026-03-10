@@ -266,22 +266,22 @@ defmodule Tymeslot.Integrations.Calendar.InputValidation do
   defp validate_password(nil, _metadata), do: {:error, %{password: "Password is required"}}
   defp validate_password("", _metadata), do: {:error, %{password: "Password is required"}}
 
-  defp validate_password(password, metadata) when is_binary(password) do
-    case UniversalSanitizer.sanitize_and_validate(password, allow_html: false, metadata: metadata) do
-      {:ok, sanitized_password} ->
-        cond do
-          String.length(sanitized_password) > 500 ->
-            {:error, %{password: "Password must be 500 characters or less"}}
+  defp validate_password(password, _metadata) when is_binary(password) do
+    cond do
+      not String.valid?(password) ->
+        {:error, %{password: "Password contains invalid characters"}}
 
-          String.length(String.trim(sanitized_password)) < 1 ->
-            {:error, %{password: "Password is required"}}
+      String.contains?(password, "\x00") ->
+        {:error, %{password: "Password contains invalid characters"}}
 
-          true ->
-            {:ok, sanitized_password}
-        end
+      String.length(password) > 500 ->
+        {:error, %{password: "Password must be 500 characters or less"}}
 
-      {:error, error} ->
-        {:error, %{password: error}}
+      String.length(String.trim(password)) < 1 ->
+        {:error, %{password: "Password is required"}}
+
+      true ->
+        {:ok, password}
     end
   end
 
