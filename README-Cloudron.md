@@ -22,35 +22,23 @@ Tymeslot is designed to work seamlessly with Cloudron's managed infrastructure. 
 - **Admin access** to your Cloudron dashboard
 - **Domain name** configured in Cloudron
 - **Cloudron CLI** installed locally and logged in (`cloudron login`)
-- **Docker** — only required if your Cloudron version is older than 9.1.3
+- **Docker** installed locally to build the app image
 
 ---
 
 ## Installation
 
-### Method A: Server-side build (Cloudron 9.1.3+, recommended)
-
-Cloudron 9.1.3 introduced direct Git-based installs. Clone the repository, then run
-`cloudron install` — the CLI uploads the source and builds the Docker image on the server.
-The source is bundled into backups, making restores reliable.
+Clone the repository, build the Docker image, then install via the Cloudron CLI.
+Required environment variables are passed directly to `cloudron install` via `--env`.
 
 ```bash
 git clone https://github.com/tymeslot/tymeslot.git
 cd tymeslot
 
-# Log in if not already authenticated
-cloudron login
-
-cloudron install --location tymeslot.yourdomain.com
-```
-
-### Method B: Local Docker build (all versions)
-
-```bash
-git clone https://github.com/tymeslot/tymeslot.git
-cd tymeslot
+cloudron login  # if not already authenticated
 docker build -t tymeslot:cloudron .
-cloudron install --image tymeslot:cloudron --location tymeslot.yourdomain.com
+cloudron install --image tymeslot:cloudron --location tymeslot.yourdomain.com \
+  --env SECRET_KEY_BASE="$(openssl rand -base64 64)" PHX_HOST="tymeslot.yourdomain.com" PORT="4000"
 ```
 
 ### Accessing Your Installation
@@ -66,40 +54,53 @@ Once deployed, Tymeslot will be available at:
 ### Environment Variables
 
 Cloudron automatically provides these variables:
-- `CLOUDRON_POSTGRESQL_*` - Database connection details
-- `DEPLOYMENT_TYPE=cloudron` - Set automatically
+- `CLOUDRON_POSTGRESQL_*` — Database connection details
+- `CLOUDRON_MAIL_*` — Sendmail addon (email relay, auto-detected)
+- `CLOUDRON_OIDC_*` — OIDC addon (SSO, auto-detected)
+- `DEPLOYMENT_TYPE=cloudron` — Set automatically
 
-### Required Configuration
+### Adding Variables After Installation
 
-You need to configure these via Cloudron's environment variable interface:
+To add or change variables after the app is running, use `cloudron env set`.
+Multiple variables can be passed in a single command — the app restarts automatically.
 
-#### 1. Application Settings
 ```bash
-SECRET_KEY_BASE=your_secret_key_here  # Generate with: openssl rand -base64 64
-PHX_HOST=tymeslot.yourdomain.com      # Your Cloudron domain
-PORT=4000                             # Default port (managed by Cloudron)
+cloudron env set --app tymeslot.yourdomain.com KEY="value" KEY2="value2"
 ```
 
-#### 2. OAuth Providers (Optional)
+To inspect current values:
+
+```bash
+cloudron env list --app tymeslot.yourdomain.com
+```
+
+### Optional Configuration
+
+#### OAuth Providers
 
 **GitHub OAuth:**
 ```bash
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
+cloudron env set --app tymeslot.yourdomain.com \
+  ENABLE_GITHUB_AUTH="true" \
+  GITHUB_CLIENT_ID="your_github_client_id" \
+  GITHUB_CLIENT_SECRET="your_github_client_secret"
 ```
 
 **Google OAuth:**
 ```bash
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_STATE_SECRET=random_secret_string  # Self-generated (openssl rand -base64 32)
+cloudron env set --app tymeslot.yourdomain.com \
+  ENABLE_GOOGLE_AUTH="true" \
+  GOOGLE_CLIENT_ID="your_google_client_id" \
+  GOOGLE_CLIENT_SECRET="your_google_client_secret" \
+  GOOGLE_STATE_SECRET="$(openssl rand -base64 32)"
 ```
 
 **Microsoft OAuth:**
 ```bash
-OUTLOOK_CLIENT_ID=your_outlook_client_id
-OUTLOOK_CLIENT_SECRET=your_outlook_client_secret
-OUTLOOK_STATE_SECRET=random_secret_string  # Self-generated (openssl rand -base64 32)
+cloudron env set --app tymeslot.yourdomain.com \
+  OUTLOOK_CLIENT_ID="your_outlook_client_id" \
+  OUTLOOK_CLIENT_SECRET="your_outlook_client_secret" \
+  OUTLOOK_STATE_SECRET="$(openssl rand -base64 32)"
 ```
 
 #### Cloudron Addon Integration
@@ -119,40 +120,44 @@ If you're happy with Cloudron's built-in email and SSO, you can skip sections 3 
 
 **Option A: Postmark (Recommended)**
 ```bash
-EMAIL_ADAPTER=postmark
-EMAIL_FROM_NAME=Tymeslot
-EMAIL_FROM_ADDRESS=noreply@yourdomain.com
-POSTMARK_API_KEY=your_postmark_api_key
+cloudron env set --app tymeslot.yourdomain.com \
+  EMAIL_ADAPTER="postmark" \
+  EMAIL_FROM_NAME="Tymeslot" \
+  EMAIL_FROM_ADDRESS="noreply@yourdomain.com" \
+  POSTMARK_API_KEY="your_postmark_api_key"
 ```
 
 **Option B: SMTP**
 ```bash
-EMAIL_ADAPTER=smtp
-EMAIL_FROM_NAME=Tymeslot
-EMAIL_FROM_ADDRESS=noreply@yourdomain.com
-SMTP_HOST=your_smtp_host
-SMTP_PORT=587
-SMTP_USERNAME=your_smtp_username
-SMTP_PASSWORD=your_smtp_password
+cloudron env set --app tymeslot.yourdomain.com \
+  EMAIL_ADAPTER="smtp" \
+  EMAIL_FROM_NAME="Tymeslot" \
+  EMAIL_FROM_ADDRESS="noreply@yourdomain.com" \
+  SMTP_HOST="your_smtp_host" \
+  SMTP_PORT="587" \
+  SMTP_USERNAME="your_smtp_username" \
+  SMTP_PASSWORD="your_smtp_password"
 ```
 
 
 ---
 
-## Setting Environment Variables in Cloudron
+## Setting Environment Variables
 
-1. **Access App Settings**
-   - Go to your Cloudron dashboard
-   - Navigate to **Apps** → **Tymeslot**
-   - Click **Configure**
+Use the Cloudron CLI to set variables. Multiple variables can be passed in a single command and the app restarts automatically:
 
-2. **Environment Variables**
-   - Go to **Environment** tab
-   - Add each variable using the format: `VARIABLE_NAME=value`
-   - Click **Save**
+```bash
+cloudron env set --app tymeslot.yourdomain.com \
+  VAR_ONE="value" \
+  VAR_TWO="value"
+```
 
-3. **Restart App**
-   - Click **Restart** to apply changes
+To inspect current values:
+
+```bash
+cloudron env get --app tymeslot.yourdomain.com
+```
+
 
 ---
 
@@ -294,22 +299,11 @@ cloudron logs --app tymeslot.yourdomain.com --follow
 
 ### Automatic Updates
 ```bash
-# Update via Cloudron CLI
 cloudron update --app tymeslot.yourdomain.com
-
-# Or use Cloudron dashboard
-# Apps → Tymeslot → Update
 ```
 
 ### Manual Updates
 
-**Cloudron 9.1.3+ (server-side build):**
-```bash
-git pull origin main
-cloudron install --location tymeslot.yourdomain.com
-```
-
-**Older versions (local Docker build):**
 ```bash
 git pull origin main
 docker build -t tymeslot:cloudron .
