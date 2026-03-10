@@ -435,10 +435,11 @@ from_email =
       do: raise("environment variable EMAIL_FROM_ADDRESS is missing"),
       else: "hello@tymeslot.app"
 
-# Cloudron provides no display name env var — use app name when sendmail addon is active
+# Cloudron's CLOUDRON_MAIL_FROM_DISPLAY_NAME requires supportsDisplayName in the manifest
+# (not currently set) — fall back to app name when sendmail addon is active
 from_name =
   System.get_env("EMAIL_FROM_NAME") ||
-    System.get_env("CLOUDRON_MAIL_FROM") && "Tymeslot" ||
+    (System.get_env("CLOUDRON_MAIL_FROM") && "Tymeslot") ||
     if config_env() == :prod,
       do: raise("environment variable EMAIL_FROM_NAME is missing"),
       else: "Tymeslot"
@@ -528,6 +529,7 @@ oauth_enabled =
     "true" -> true
     "false" -> false
     nil -> cloudron_oidc_available?
+    other -> raise ~s(ENABLE_OAUTH_AUTH must be "true" or "false", got: #{inspect(other)})
   end
 
 config :tymeslot, :social_auth,
@@ -539,40 +541,35 @@ config :tymeslot, :social_auth,
 # For SSO authentication with any OAuth2/OIDC-compliant identity provider
 #
 # On Cloudron: fall back to CLOUDRON_OIDC_* env vars when OAUTH_* vars are not set
+oauth_client_id =
+  System.get_env("OAUTH_CLIENT_ID") || System.get_env("CLOUDRON_OIDC_CLIENT_ID")
+
+oauth_client_secret =
+  System.get_env("OAUTH_CLIENT_SECRET") || System.get_env("CLOUDRON_OIDC_CLIENT_SECRET")
+
+oauth_provider_url =
+  System.get_env("OAUTH_PROVIDER_URL") || System.get_env("CLOUDRON_OIDC_ISSUER")
+
+oauth_authorize_url =
+  System.get_env("OAUTH_AUTHORIZE_URL") || System.get_env("CLOUDRON_OIDC_AUTH_ENDPOINT")
+
+oauth_token_url =
+  System.get_env("OAUTH_TOKEN_URL") || System.get_env("CLOUDRON_OIDC_TOKEN_ENDPOINT")
+
+oauth_userinfo_url =
+  System.get_env("OAUTH_USERINFO_URL") || System.get_env("CLOUDRON_OIDC_PROFILE_ENDPOINT")
+
 config :tymeslot, :oauth_provider,
-  client_id: System.get_env("OAUTH_CLIENT_ID") || System.get_env("CLOUDRON_OIDC_CLIENT_ID"),
-  client_secret:
-    System.get_env("OAUTH_CLIENT_SECRET") || System.get_env("CLOUDRON_OIDC_CLIENT_SECRET"),
-  site: System.get_env("OAUTH_PROVIDER_URL") || System.get_env("CLOUDRON_OIDC_ISSUER"),
-  authorize_url:
-    System.get_env("OAUTH_AUTHORIZE_URL") || System.get_env("CLOUDRON_OIDC_AUTH_ENDPOINT"),
-  token_url:
-    System.get_env("OAUTH_TOKEN_URL") || System.get_env("CLOUDRON_OIDC_TOKEN_ENDPOINT"),
-  userinfo_url:
-    System.get_env("OAUTH_USERINFO_URL") || System.get_env("CLOUDRON_OIDC_PROFILE_ENDPOINT"),
+  client_id: oauth_client_id,
+  client_secret: oauth_client_secret,
+  site: oauth_provider_url,
+  authorize_url: oauth_authorize_url,
+  token_url: oauth_token_url,
+  userinfo_url: oauth_userinfo_url,
   scope: System.get_env("OAUTH_SCOPE", "openid email profile"),
   allow_id_fallback: System.get_env("OAUTH_ALLOW_ID_FALLBACK", "false") == "true"
 
 if oauth_enabled do
-  # Resolve final values for validation (same precedence as config above)
-  oauth_client_id =
-    System.get_env("OAUTH_CLIENT_ID") || System.get_env("CLOUDRON_OIDC_CLIENT_ID")
-
-  oauth_client_secret =
-    System.get_env("OAUTH_CLIENT_SECRET") || System.get_env("CLOUDRON_OIDC_CLIENT_SECRET")
-
-  oauth_provider_url =
-    System.get_env("OAUTH_PROVIDER_URL") || System.get_env("CLOUDRON_OIDC_ISSUER")
-
-  oauth_authorize_url =
-    System.get_env("OAUTH_AUTHORIZE_URL") || System.get_env("CLOUDRON_OIDC_AUTH_ENDPOINT")
-
-  oauth_token_url =
-    System.get_env("OAUTH_TOKEN_URL") || System.get_env("CLOUDRON_OIDC_TOKEN_ENDPOINT")
-
-  oauth_userinfo_url =
-    System.get_env("OAUTH_USERINFO_URL") || System.get_env("CLOUDRON_OIDC_PROFILE_ENDPOINT")
-
   required_oauth_vars = %{
     "OAUTH_CLIENT_ID / CLOUDRON_OIDC_CLIENT_ID" => oauth_client_id,
     "OAUTH_CLIENT_SECRET / CLOUDRON_OIDC_CLIENT_SECRET" => oauth_client_secret,

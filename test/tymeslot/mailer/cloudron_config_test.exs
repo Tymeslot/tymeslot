@@ -92,5 +92,16 @@ defmodule Tymeslot.Mailer.CloudronConfigTest do
         )
       end
     end
+
+    test "raises when port is not a valid integer" do
+      assert_raise ArgumentError, ~r/CLOUDRON_MAIL_SMTP_PORT/, fn ->
+        CloudronConfig.build(
+          server: "mail",
+          port: "abc",
+          username: "app",
+          password: "secret"
+        )
+      end
+    end
   end
 end
