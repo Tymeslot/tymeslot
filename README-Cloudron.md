@@ -96,7 +96,20 @@ OUTLOOK_CLIENT_SECRET=your_outlook_client_secret
 OUTLOOK_STATE_SECRET=random_secret_string  # Self-generated (openssl rand -base64 32)
 ```
 
-#### 3. Email Configuration
+#### Cloudron Addon Integration
+
+Tymeslot automatically detects and uses Cloudron's built-in addons:
+
+- **Email (Sendmail Addon):** Cloudron's mail relay is used by default — no `SMTP_*` or `EMAIL_ADAPTER` configuration needed. The sender address and name are auto-configured.
+- **Single Sign-On (OIDC Addon):** Cloudron's identity provider is enabled automatically — users see an "SSO" button on the login page. No `OAUTH_*` configuration needed.
+
+To override the defaults:
+- **Email:** Set `EMAIL_ADAPTER` explicitly (e.g., `EMAIL_ADAPTER=postmark`) to use an external provider instead of Cloudron's relay.
+- **SSO:** Set `ENABLE_OAUTH_AUTH=false` to disable SSO, or set `ENABLE_OAUTH_AUTH=true` with your own `OAUTH_*` variables to use a different IdP.
+
+If you're happy with Cloudron's built-in email and SSO, you can skip sections 3 (Email Configuration) and the Generic OAuth/OIDC setup below.
+
+#### 3. Email Configuration (Optional Override)
 
 **Option A: Postmark (Recommended)**
 ```bash
