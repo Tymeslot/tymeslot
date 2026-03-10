@@ -435,9 +435,10 @@ from_email =
       do: raise("environment variable EMAIL_FROM_ADDRESS is missing"),
       else: "hello@tymeslot.app"
 
+# Cloudron provides no display name env var — use app name when sendmail addon is active
 from_name =
   System.get_env("EMAIL_FROM_NAME") ||
-    if(System.get_env("CLOUDRON_MAIL_FROM") != nil, do: "Tymeslot") ||
+    System.get_env("CLOUDRON_MAIL_FROM") && "Tymeslot" ||
     if config_env() == :prod,
       do: raise("environment variable EMAIL_FROM_NAME is missing"),
       else: "Tymeslot"
