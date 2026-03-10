@@ -584,7 +584,7 @@ if oauth_enabled do
 
   missing =
     required_oauth_vars
-    |> Enum.filter(fn {_key, val} -> is_nil(val) or String.trim(val) == "" end)
+    |> Enum.filter(fn {_, val} -> is_nil(val) or String.trim(val) == "" end)
     |> Enum.map(&elem(&1, 0))
     |> Enum.sort()
 
@@ -609,9 +609,10 @@ if oauth_enabled do
 
   non_https =
     https_required_vars
-    |> Enum.reject(fn {_key, val} ->
-      is_nil(val) or String.starts_with?(val, "https://") or
-        not String.starts_with?(val, "http://")
+    |> Enum.filter(fn {_, val} ->
+      not is_nil(val) and
+        not String.starts_with?(val, "https://") and
+        String.starts_with?(val, "http://")
     end)
     |> Enum.map(&elem(&1, 0))
     |> Enum.sort()
