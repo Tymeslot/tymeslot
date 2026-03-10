@@ -21,33 +21,39 @@ Tymeslot is designed to work seamlessly with Cloudron's managed infrastructure. 
 - **Cloudron Server** (version 5.3.0 or higher)
 - **Admin access** to your Cloudron dashboard
 - **Domain name** configured in Cloudron
+- **Cloudron CLI** installed locally and logged in (`cloudron login`)
+- **Docker** — only required if your Cloudron version is older than 9.1.3
 
 ---
 
 ## Installation
 
-### 1. Install via Cloudron App Store
+### Method A: Server-side build (Cloudron 9.1.3+, recommended)
+
+Cloudron 9.1.3 introduced direct Git-based installs. Clone the repository, then run
+`cloudron install` — the CLI uploads the source and builds the Docker image on the server.
+The source is bundled into backups, making restores reliable.
 
 ```bash
-# Option 1: Install from Cloudron App Store (if published)
-# Search for "Tymeslot" in your Cloudron dashboard
-
-# Option 2: Install from source
 git clone https://github.com/tymeslot/tymeslot.git
 cd tymeslot
+
+# Log in if not already authenticated
+cloudron login
+
+cloudron install --location tymeslot.yourdomain.com
 ```
 
-### 2. Build and Install
+### Method B: Local Docker build (all versions)
 
 ```bash
-# Build the Cloudron package
+git clone https://github.com/tymeslot/tymeslot.git
+cd tymeslot
 docker build -t tymeslot:cloudron .
-
-# Install via Cloudron CLI
 cloudron install --image tymeslot:cloudron --location tymeslot.yourdomain.com
 ```
 
-### 3. Access Your Installation
+### Accessing Your Installation
 
 Once deployed, Tymeslot will be available at:
 - **URL**: `https://tymeslot.yourdomain.com` (or your configured subdomain)
@@ -296,14 +302,17 @@ cloudron update --app tymeslot.yourdomain.com
 ```
 
 ### Manual Updates
+
+**Cloudron 9.1.3+ (server-side build):**
 ```bash
-# Pull latest code
 git pull origin main
+cloudron install --location tymeslot.yourdomain.com
+```
 
-# Rebuild image
+**Older versions (local Docker build):**
+```bash
+git pull origin main
 docker build -t tymeslot:cloudron .
-
-# Update installation
 cloudron install --image tymeslot:cloudron --app tymeslot.yourdomain.com
 ```
 
