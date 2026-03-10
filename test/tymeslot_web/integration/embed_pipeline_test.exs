@@ -13,17 +13,16 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
   import Tymeslot.Factory
 
   describe "CSP headers on public scheduling pages" do
-    test "a scheduling page blocks embedding when the profile has no allowed domains", %{
-      conn: conn
-    } do
+    test "a scheduling page allows localhost embedding when the profile has no allowed domains (dev/test env)",
+         %{conn: conn} do
       user = insert(:user)
       insert(:profile, user: user, username: "scheduser", allowed_embed_domains: [])
 
       conn = get(conn, "/scheduser")
 
       csp = conn |> get_resp_header("content-security-policy") |> List.first()
-      assert csp =~ "frame-ancestors 'none'"
-      assert get_resp_header(conn, "x-frame-options") == ["DENY"]
+      assert csp =~ "frame-ancestors 'self' http://localhost:* http://127.0.0.1:*"
+      assert get_resp_header(conn, "x-frame-options") == []
     end
 
     test "a scheduling page allows embedding from configured domains", %{conn: conn} do
