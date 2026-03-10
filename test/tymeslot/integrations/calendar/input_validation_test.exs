@@ -93,7 +93,8 @@ defmodule Tymeslot.Integrations.Calendar.InputValidationTest do
 
   describe "validate_single_field/2 - password" do
     test "preserves special characters" do
-      assert {:ok, "p@ss>w0rd<&"} = InputValidation.validate_single_field(:password, "p@ss>w0rd<&")
+      assert {:ok, "p@ss>w0rd<&"} =
+               InputValidation.validate_single_field(:password, "p@ss>w0rd<&")
     end
 
     test "rejects empty password" do
