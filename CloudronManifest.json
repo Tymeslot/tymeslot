@@ -10,6 +10,9 @@
   "postInstallMessage": "Thank you for installing Tymeslot!",
   "addons": {
     "localstorage": {},
+    "oidc": {
+      "loginRedirectUri": "/auth/oauth/callback"
+    },
     "postgresql": {},
     "sendmail": {}
   },
