@@ -10,25 +10,16 @@
 # Required .env variables:
 #   - SECRET_KEY_BASE (64+ chars)
 #   - PHX_HOST
-#   - POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+#   - POSTGRES_PASSWORD
 #
-# NOTE: This script should be run from the project root (umbrella level)
-# It will automatically detect if run from apps/tymeslot/ and adjust paths
+# Run this script from apps/tymeslot/ or from anywhere — it always operates
+# relative to its own directory.
 
 set -e  # Exit on any error
 
-# Detect script location and adjust paths
+# Always run from the apps/tymeslot/ directory (where this script lives)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ "$SCRIPT_DIR" == *"/apps/tymeslot" ]]; then
-    # Running from apps/tymeslot/, need to go to root
-    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-    cd "$PROJECT_ROOT"
-else
-    # Already at root
-    PROJECT_ROOT="$SCRIPT_DIR"
-fi
-
-DOCKERFILE_PATH="apps/tymeslot/Dockerfile.docker"
+cd "$SCRIPT_DIR"
 
 echo "========================================"
 echo "Building Tymeslot Docker container"
@@ -94,16 +85,6 @@ if [ -z "$PHX_HOST" ]; then
     MISSING_VARS+=("PHX_HOST")
 fi
 
-# Check POSTGRES_DB: required database name for PostgreSQL
-if [ -z "$POSTGRES_DB" ]; then
-    MISSING_VARS+=("POSTGRES_DB")
-fi
-
-# Check POSTGRES_USER: required database user for PostgreSQL
-if [ -z "$POSTGRES_USER" ]; then
-    MISSING_VARS+=("POSTGRES_USER")
-fi
-
 # Check POSTGRES_PASSWORD: required database password for PostgreSQL
 if [ -z "$POSTGRES_PASSWORD" ]; then
     MISSING_VARS+=("POSTGRES_PASSWORD")
@@ -141,8 +122,8 @@ echo "========================================"
 echo ""
 
 # Build the Docker image from Dockerfile.docker and tag it as 'tymeslot'
-# Build context is apps/tymeslot (standalone core) for self-hosted deployment
-docker build -f Dockerfile.docker -t tymeslot apps/tymeslot
+# Build context is the current directory (apps/tymeslot/)
+docker build -f Dockerfile.docker -t tymeslot .
 
 echo ""
 echo "========================================"
