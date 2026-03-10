@@ -142,6 +142,9 @@ if config_env() == :prod do
   # Set environment for runtime detection
   config :tymeslot, :environment, :prod
 
+  # Do not print debug messages in production
+  config :logger, level: :info
+
   # Database configuration based on deployment type (define early as it's used for URL scheme)
   # Defaults to "docker" if DEPLOYMENT_TYPE is not set or unknown
   deployment_type =

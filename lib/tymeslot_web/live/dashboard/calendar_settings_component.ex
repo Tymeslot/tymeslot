@@ -66,7 +66,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     {:noreply, reset_integration_form_state(socket)}
   end
 
-  def handle_event("validate_field", %{"field" => field, "value" => value}, socket) do
+  def handle_event("validate_field", %{"field" => field} = params, socket) do
+    value = Map.get(params, "value", Map.get(socket.assigns.form_values, field, ""))
     form_values = Map.put(socket.assigns.form_values, field, value)
     socket = assign(socket, :form_values, form_values)
 

@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
 
   use Phoenix.Component
 
+  alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -40,9 +41,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           id="integration_name"
           name="integration[name]"
           value={@value}
-          phx-blur="validate_field"
-          phx-value-field="name"
-          phx-target={@target}
+          phx-blur={JS.push("validate_field", value: %{"field" => "name"}, target: @target)}
           required
           class={[
             "input input-with-icon w-full",
@@ -94,9 +93,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           id={@id}
           name={@name}
           value={@value}
-          phx-blur="validate_field"
-          phx-value-field={Atom.to_string(@error_key)}
-          phx-target={@target}
+          phx-blur={JS.push("validate_field", value: %{"field" => Atom.to_string(@error_key)}, target: @target)}
           required
           class={[
             "input input-with-icon w-full",
@@ -154,9 +151,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
           id={@id}
           name={@name}
           value={@value}
-          phx-blur="validate_field"
-          phx-value-field={Atom.to_string(@error_key)}
-          phx-target={@target}
+          phx-blur={JS.push("validate_field", value: %{"field" => Atom.to_string(@error_key)}, target: @target)}
           required
           class={[
             "input input-with-icon w-full",

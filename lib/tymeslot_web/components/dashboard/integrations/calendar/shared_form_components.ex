@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
 
   use Phoenix.Component
 
+  alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import TymeslotWeb.Components.CoreComponents
@@ -39,7 +40,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
             form_errors={@form_errors}
             suggested_name={Map.get(@form_values, "name", @suggested_name)}
             placeholder={@name_placeholder}
-            blur_event="validate_field"
             target={@target}
           />
 
@@ -83,7 +83,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
               suggested_name={Map.get(@form_values, "name", @suggested_name)}
               placeholder={@name_placeholder}
               field_name="integration[name]"
-              blur_event="validate_field"
               target={@target}
             />
 
@@ -144,7 +143,6 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   attr :suggested_name, :string, required: true
   attr :placeholder, :string, required: true
   attr :field_name, :string, default: "integration[name]"
-  attr :blur_event, :string, default: nil
   attr :target, :any, default: nil
 
   @spec integration_name_field(map()) :: Phoenix.LiveView.Rendered.t()
@@ -157,9 +155,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
       label="Integration Name"
       value={@suggested_name}
       required
-      phx-blur={@blur_event}
-      phx-value-field="name"
-      phx-target={@target}
+      phx-blur={JS.push("validate_field", value: %{"field" => "name"}, target: @target)}
       placeholder={@placeholder}
       errors={FormValidationHelpers.field_errors(@form_errors, :name)}
       icon="hero-tag"
@@ -226,9 +222,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
       label={@label}
       value={@value}
       required
-      phx-blur="validate_field"
-      phx-value-field={@field}
-      phx-target={@target}
+      phx-blur={JS.push("validate_field", value: %{"field" => @field}, target: @target)}
       placeholder={@placeholder}
       errors={if @error, do: [@error], else: @errors}
     />
@@ -254,9 +248,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
       label={@label}
       value={@value}
       required
-      phx-blur="validate_field"
-      phx-value-field={@field}
-      phx-target={@target}
+      phx-blur={JS.push("validate_field", value: %{"field" => @field}, target: @target)}
       placeholder={@placeholder}
       errors={if @error, do: [@error], else: @errors}
       icon="hero-lock-closed"

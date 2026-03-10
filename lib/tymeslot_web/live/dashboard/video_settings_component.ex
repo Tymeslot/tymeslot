@@ -88,7 +88,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
      |> assign(:form_errors, %{})}
   end
 
-  def handle_event("validate_field", %{"field" => field, "value" => value}, socket) do
+  def handle_event("validate_field", %{"field" => field} = params, socket) do
+    value = Map.get(params, "value", Map.get(socket.assigns.form_values || %{}, field, ""))
+
     form_values =
       (socket.assigns.form_values || %{})
       |> Map.put(field, value)
