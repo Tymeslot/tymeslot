@@ -304,62 +304,59 @@ if config_env() == :prod do
 
   # Configure mailer based on EMAIL_ADAPTER setting
   # Default to smtp for self-hosted deployments
-  # Can be overridden with EMAIL_ADAPTER environment variable
-  email_adapter_default = Application.get_env(:tymeslot, :email_adapter_default, "smtp")
-  email_adapter = System.get_env("EMAIL_ADAPTER", email_adapter_default)
+  # On Cloudron: auto-detect sendmail addon when EMAIL_ADAPTER is not explicitly set
+  email_adapter_explicit = System.get_env("EMAIL_ADAPTER")
+
+  # Helper: build standard SMTP config from SMTP_* env vars
+  build_smtp_config = fn ->
+    smtp_host = System.get_env("SMTP_HOST")
+    smtp_username = System.get_env("SMTP_USERNAME")
+    smtp_password = System.get_env("SMTP_PASSWORD")
+
+    if smtp_host != nil and String.trim(smtp_host) == "" do
+      raise "SMTP_HOST cannot be empty or whitespace-only"
+    end
+
+    if smtp_username != nil and String.trim(smtp_username) == "" do
+      raise "SMTP_USERNAME cannot be empty or whitespace-only"
+    end
+
+    if smtp_password != nil and String.trim(smtp_password) == "" do
+      raise "SMTP_PASSWORD cannot be empty or whitespace-only"
+    end
+
+    Tymeslot.Mailer.SMTPConfig.build(
+      host: smtp_host,
+      port: parse_int.("SMTP_PORT", 587),
+      username: smtp_username,
+      password: smtp_password
+    )
+  end
 
   mailer_config =
-    case email_adapter do
-      "smtp" ->
-        # Validate SMTP environment variables before passing to config builder
-        smtp_host = System.get_env("SMTP_HOST")
-        smtp_username = System.get_env("SMTP_USERNAME")
-        smtp_password = System.get_env("SMTP_PASSWORD")
-
-        # Check for empty strings (System.get_env returns nil if unset, but user might set to "")
-        if smtp_host != nil and String.trim(smtp_host) == "" do
-          raise "SMTP_HOST cannot be empty or whitespace-only"
+    cond do
+      # Explicit adapter always wins — user knows what they want
+      email_adapter_explicit != nil ->
+        case email_adapter_explicit do
+          "smtp" -> build_smtp_config.()
+          "postmark" -> [adapter: Swoosh.Adapters.Postmark, api_key: System.get_env("POSTMARK_API_KEY")]
+          "test" -> [adapter: Swoosh.Adapters.Test]
+          "local" -> [adapter: Swoosh.Adapters.Test]
+          _ -> [adapter: Swoosh.Adapters.Test]
         end
 
-        if smtp_username != nil and String.trim(smtp_username) == "" do
-          raise "SMTP_USERNAME cannot be empty or whitespace-only"
-        end
-
-        if smtp_password != nil and String.trim(smtp_password) == "" do
-          raise "SMTP_PASSWORD cannot be empty or whitespace-only"
-        end
-
-        # Use shared SMTP configuration module
-        # This validates all required fields and handles SSL/TLS/STARTTLS setup
-        # It also trims whitespace from host and validates all input types
-        Tymeslot.Mailer.SMTPConfig.build(
-          host: smtp_host,
-          port: parse_int.("SMTP_PORT", 587),
-          username: smtp_username,
-          password: smtp_password
+      # Cloudron sendmail addon auto-detection (no explicit EMAIL_ADAPTER set)
+      deployment_type == "cloudron" and System.get_env("CLOUDRON_MAIL_SMTP_SERVER") != nil ->
+        Tymeslot.Mailer.CloudronConfig.build(
+          server: System.get_env("CLOUDRON_MAIL_SMTP_SERVER"),
+          port: System.get_env("CLOUDRON_MAIL_SMTP_PORT"),
+          username: System.get_env("CLOUDRON_MAIL_SMTP_USERNAME"),
+          password: System.get_env("CLOUDRON_MAIL_SMTP_PASSWORD")
         )
 
-      "postmark" ->
-        [
-          adapter: Swoosh.Adapters.Postmark,
-          api_key: System.get_env("POSTMARK_API_KEY")
-        ]
-
-      "test" ->
-        [
-          adapter: Swoosh.Adapters.Test
-        ]
-
-      "local" ->
-        # Local adapter only works in dev, fallback to test in production
-        [
-          adapter: Swoosh.Adapters.Test
-        ]
-
-      _ ->
-        [
-          adapter: Swoosh.Adapters.Test
-        ]
+      # Default: standard SMTP from SMTP_* env vars
+      true ->
+        build_smtp_config.()
     end
 
   config :tymeslot, Tymeslot.Mailer, mailer_config
@@ -429,14 +426,17 @@ if config_env() != :prod do
 end
 
 # Configure email settings
+# On Cloudron, fall back to sendmail addon values if user hasn't set EMAIL_FROM_ADDRESS
 from_email =
   System.get_env("EMAIL_FROM_ADDRESS") ||
+    System.get_env("CLOUDRON_MAIL_FROM") ||
     if config_env() == :prod,
       do: raise("environment variable EMAIL_FROM_ADDRESS is missing"),
       else: "hello@tymeslot.app"
 
 from_name =
   System.get_env("EMAIL_FROM_NAME") ||
+    if(System.get_env("CLOUDRON_MAIL_FROM") != nil, do: "Tymeslot") ||
     if config_env() == :prod,
       do: raise("environment variable EMAIL_FROM_NAME is missing"),
       else: "Tymeslot"
