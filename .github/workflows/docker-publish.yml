@@ -2,8 +2,6 @@ name: Build and Push to Docker Hub
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
