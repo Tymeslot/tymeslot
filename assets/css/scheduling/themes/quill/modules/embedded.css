@@ -198,3 +198,26 @@ html.quill-theme[data-embedded] .confirmation-badge-dot svg {
   height: 10px;
 }
 
+/* ---------------------------------------------------------------------------
+   7. Timezone Dropdown
+   The dropdown must appear above the statically-positioned action buttons.
+   The schedule-card-header is made a stacking context (z-index: 10) so the
+   dropdown's z-index:9999 inside it beats the buttons, which have no explicit
+   z-index and paint at step 3 of the glass card's stacking context.
+
+   The mobile-default left-0/right-0/w-full Tailwind classes make the dropdown
+   span the full trigger width on narrow screens, which looks full-screen inside
+   the iframe. Override to right-aligned with a sensible max-width.
+   --------------------------------------------------------------------------- */
+
+html.quill-theme[data-embedded] .schedule-card-header {
+  position: relative;
+  z-index: 10;
+}
+
+html.quill-theme[data-embedded] .timezone-dropdown {
+  left: auto;
+  right: 0;
+  max-width: 16rem;
+}
+

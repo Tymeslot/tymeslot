@@ -42,6 +42,10 @@ html.rhythm-theme[data-embedded] .slide-container {
 
 html.rhythm-theme[data-embedded] .slide-content {
   flex: initial;
+  /* Allow absolutely-positioned children (e.g. timezone dropdown) to overflow
+     without being clipped here; .slide-container's overflow:hidden is the outer
+     boundary and correctly clips all slide content during transitions. */
+  overflow: visible;
 }
 
 html.rhythm-theme[data-embedded] .schedule-grid {
@@ -91,9 +95,13 @@ html.rhythm-theme[data-embedded] .language-switcher-container {
    row only shows the organizer info — saves a full row of space.
    --------------------------------------------------------------------------- */
 
-/* Make header a positioning anchor */
+/* Make header a positioning anchor with a stacking context that sits above the
+   navigation buttons (.slide-actions has position:relative, z-index:auto, so
+   it paints before any positive-z-index stacking context). Without this the
+   dropdown's z-index:9999 can end up behind the buttons in some browsers. */
 html.rhythm-theme[data-embedded] .schedule-header {
   position: relative;
+  z-index: 10;
   margin-bottom: var(--space-xs);
   padding-bottom: var(--space-xs);
 }
@@ -109,6 +117,19 @@ html.rhythm-theme[data-embedded] .timezone-selector-container {
 /* Hide the label */
 html.rhythm-theme[data-embedded] .timezone-label {
   display: none;
+}
+
+/* Force absolute positioning for the dropdown in iframes.
+   responsive.css sets position:fixed at max-width:767px for the standalone
+   mobile experience, but inside an iframe "fixed" is relative to the iframe
+   viewport, which pushes the dropdown below the navigation buttons instead
+   of overlapping the calendar. */
+html.rhythm-theme[data-embedded] .timezone-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: auto;
+  max-width: min(20rem, calc(100vw - var(--space-md) * 2));
 }
 
 /* Shrink the trigger button */
