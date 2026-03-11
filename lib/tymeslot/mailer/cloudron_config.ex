@@ -66,7 +66,7 @@ defmodule Tymeslot.Mailer.CloudronConfig do
     raise ArgumentError, "#{var_name} is required but empty"
   end
 
-  defp validate_required!(value, _) when is_binary(value), do: value
+  defp validate_required!(value, _var_name) when is_binary(value), do: value
 
   defp parse_port(nil), do: 25
   defp parse_port(port) when is_integer(port), do: port
@@ -74,7 +74,7 @@ defmodule Tymeslot.Mailer.CloudronConfig do
   defp parse_port(port) when is_binary(port) do
     case Integer.parse(port) do
       {value, ""} -> value
-      _ -> raise ArgumentError, "CLOUDRON_MAIL_SMTP_PORT must be a valid integer, got: #{inspect(port)}"
+      _parse_error -> raise ArgumentError, "CLOUDRON_MAIL_SMTP_PORT must be a valid integer, got: #{inspect(port)}"
     end
   end
 end
