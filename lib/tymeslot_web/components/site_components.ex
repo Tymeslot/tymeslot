@@ -310,6 +310,9 @@ defmodule TymeslotWeb.Components.SiteComponents do
             <% end %>
           </div>
           <div class="mt-6 pt-4 border-t border-gray-700">
+            <p class="text-gray-500 text-xs mb-4">
+              v{to_string(Application.spec(:tymeslot, :vsn))}
+            </p>
             <p class="text-gray-400 text-sm mb-2">Created with passion by</p>
             <a
               href="https://lukabreitig.com"
