@@ -44,6 +44,23 @@ defmodule TymeslotWeb.Components.SiteComponents do
     <!-- Desktop Navigation -->
         <div class="hidden md:flex items-center gap-6">
           <%= if Config.show_marketing_links?() do %>
+            <%= if features_url = Application.get_env(:tymeslot, :features_url) do %>
+              <%= if external_url?(features_url) do %>
+                <.link
+                  href={features_url}
+                  class="px-6 py-2 font-black text-slate-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                >
+                  Features
+                </.link>
+              <% else %>
+                <.link
+                  navigate={features_url}
+                  class="px-6 py-2 font-black text-slate-700 hover:text-turquoise-600 hover:bg-turquoise-50 transition-all rounded-2xl"
+                >
+                  Features
+                </.link>
+              <% end %>
+            <% end %>
             <%= if docs_url = Application.get_env(:tymeslot, :docs_url) do %>
               <%= if external_url?(docs_url) do %>
                 <.link
@@ -119,6 +136,23 @@ defmodule TymeslotWeb.Components.SiteComponents do
         >
           <div class="container mx-auto px-4 py-4 space-y-3">
             <%= if Config.show_marketing_links?() do %>
+              <%= if features_url = Application.get_env(:tymeslot, :features_url) do %>
+                <%= if external_url?(features_url) do %>
+                  <.link
+                    href={features_url}
+                    class="mobile-nav-link block px-4 py-3 text-gray-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+                  >
+                    Features
+                  </.link>
+                <% else %>
+                  <.link
+                    navigate={features_url}
+                    class="mobile-nav-link block px-4 py-3 text-gray-800 hover:bg-turquoise-50 hover:text-turquoise-600 rounded-lg transition-colors"
+                  >
+                    Features
+                  </.link>
+                <% end %>
+              <% end %>
               <%= if docs_url = Application.get_env(:tymeslot, :docs_url) do %>
                 <%= if external_url?(docs_url) do %>
                   <.link
@@ -205,6 +239,23 @@ defmodule TymeslotWeb.Components.SiteComponents do
           </p>
           <div class="flex gap-6 justify-center">
             <%= if Config.show_marketing_links?() do %>
+              <%= if features_url = Application.get_env(:tymeslot, :features_url) do %>
+                <%= if external_url?(features_url) do %>
+                  <.link
+                    href={features_url}
+                    class="text-gray-400 hover:text-turquoise-400 transition-colors"
+                  >
+                    Features
+                  </.link>
+                <% else %>
+                  <.link
+                    navigate={features_url}
+                    class="text-gray-400 hover:text-turquoise-400 transition-colors"
+                  >
+                    Features
+                  </.link>
+                <% end %>
+              <% end %>
               <%= if changelog_url = Application.get_env(:tymeslot, :changelog_url) do %>
                 <%= if external_url?(changelog_url) do %>
                   <.link

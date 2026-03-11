@@ -14,6 +14,10 @@ module.exports = {
     "../lib/tymeslot_web/components/auth/**/*.ex"
   ],
   safelist: [
+    // Design token typography classes — used by SaaS pages via app.css
+    "display-xl",
+    "display-lg",
+    "display-md",
     // Ensure all meeting type icons are included in the CSS build
     "hero-bolt",
     "hero-chat-bubble-left-right",

@@ -25,6 +25,7 @@ config :tymeslot,
   site_home_path: "/dashboard",
   repo: Tymeslot.Repo,
   contact_url: nil,
+  features_url: nil,
   privacy_policy_url: nil,
   terms_and_conditions_url: nil,
 
