@@ -138,7 +138,7 @@
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
     wrapper.style.width = '100%';
-    wrapper.style.minHeight = '600px';
+    wrapper.style.height = '600px';
 
     const loader = document.createElement('div');
     loader.className = 'tymeslot-loader';
