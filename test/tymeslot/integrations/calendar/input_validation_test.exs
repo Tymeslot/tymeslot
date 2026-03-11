@@ -48,22 +48,30 @@ defmodule Tymeslot.Integrations.Calendar.InputValidationTest do
   describe "validate_calendar_integration_form/1 - password validation" do
     test "rejects nil password" do
       params = Map.put(@valid_params, "password", nil)
-      assert {:error, %{password: _errors}} = InputValidation.validate_calendar_integration_form(params)
+
+      assert {:error, %{password: _errors}} =
+               InputValidation.validate_calendar_integration_form(params)
     end
 
     test "rejects empty password" do
       params = Map.put(@valid_params, "password", "")
-      assert {:error, %{password: _errors}} = InputValidation.validate_calendar_integration_form(params)
+
+      assert {:error, %{password: _errors}} =
+               InputValidation.validate_calendar_integration_form(params)
     end
 
     test "rejects whitespace-only password" do
       params = Map.put(@valid_params, "password", "   ")
-      assert {:error, %{password: _errors}} = InputValidation.validate_calendar_integration_form(params)
+
+      assert {:error, %{password: _errors}} =
+               InputValidation.validate_calendar_integration_form(params)
     end
 
     test "rejects password over 500 characters" do
       params = Map.put(@valid_params, "password", String.duplicate("a", 501))
-      assert {:error, %{password: _errors}} = InputValidation.validate_calendar_integration_form(params)
+
+      assert {:error, %{password: _errors}} =
+               InputValidation.validate_calendar_integration_form(params)
     end
 
     test "accepts password of exactly 500 characters" do
@@ -76,12 +84,16 @@ defmodule Tymeslot.Integrations.Calendar.InputValidationTest do
   describe "validate_calendar_integration_form/1 - password edge cases" do
     test "rejects password with invalid UTF-8 encoding" do
       params = Map.put(@valid_params, "password", <<0xFF, 0xFE, 0x00>>)
-      assert {:error, %{password: _errors}} = InputValidation.validate_calendar_integration_form(params)
+
+      assert {:error, %{password: _errors}} =
+               InputValidation.validate_calendar_integration_form(params)
     end
 
     test "rejects password containing null bytes" do
       params = Map.put(@valid_params, "password", "pass\x00word")
-      assert {:error, %{password: _errors}} = InputValidation.validate_calendar_integration_form(params)
+
+      assert {:error, %{password: _errors}} =
+               InputValidation.validate_calendar_integration_form(params)
     end
 
     test "preserves leading and trailing whitespace in password" do

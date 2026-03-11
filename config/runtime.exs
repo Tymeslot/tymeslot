@@ -339,11 +339,20 @@ if config_env() == :prod do
       # Explicit adapter always wins — user knows what they want
       email_adapter_explicit != nil ->
         case email_adapter_explicit do
-          "smtp" -> build_smtp_config.()
-          "postmark" -> [adapter: Swoosh.Adapters.Postmark, api_key: System.get_env("POSTMARK_API_KEY")]
-          "test" -> [adapter: Swoosh.Adapters.Test]
-          "local" -> [adapter: Swoosh.Adapters.Test]
-          _ -> [adapter: Swoosh.Adapters.Test]
+          "smtp" ->
+            build_smtp_config.()
+
+          "postmark" ->
+            [adapter: Swoosh.Adapters.Postmark, api_key: System.get_env("POSTMARK_API_KEY")]
+
+          "test" ->
+            [adapter: Swoosh.Adapters.Test]
+
+          "local" ->
+            [adapter: Swoosh.Adapters.Test]
+
+          _ ->
+            [adapter: Swoosh.Adapters.Test]
         end
 
       # Cloudron sendmail addon auto-detection (no explicit EMAIL_ADAPTER set)

@@ -73,8 +73,12 @@ defmodule Tymeslot.Mailer.CloudronConfig do
 
   defp parse_port(port) when is_binary(port) do
     case Integer.parse(port) do
-      {value, ""} -> value
-      _parse_error -> raise ArgumentError, "CLOUDRON_MAIL_SMTP_PORT must be a valid integer, got: #{inspect(port)}"
+      {value, ""} ->
+        value
+
+      _parse_error ->
+        raise ArgumentError,
+              "CLOUDRON_MAIL_SMTP_PORT must be a valid integer, got: #{inspect(port)}"
     end
   end
 end
