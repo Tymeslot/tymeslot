@@ -217,7 +217,7 @@ defmodule Tymeslot.Timezones.Data do
 
   @spec valid?(term()) :: boolean()
   def valid?(timezone_id) when is_binary(timezone_id) do
-    TzExtra.time_zone_id_exists?(timezone_id)
+    MapSet.member?(@valid_ids, timezone_id)
   end
 
   def valid?(_other), do: false

@@ -96,10 +96,16 @@ defmodule Tymeslot.TimezonesTest do
   end
 
   describe "valid?/1" do
-    test "returns true for valid IANA timezone" do
+    test "returns true for country-based timezones" do
       assert Timezones.valid?("Europe/Brussels")
       assert Timezones.valid?("America/New_York")
-      assert Timezones.valid?("UTC")
+    end
+
+    test "returns false for non-country IANA timezones" do
+      # UTC and Etc/* zones are valid IANA but not country-based;
+      # they have no display label and fall back to the default.
+      refute Timezones.valid?("UTC")
+      refute Timezones.valid?("Etc/UTC")
     end
 
     test "returns false for invalid timezone" do
