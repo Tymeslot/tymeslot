@@ -1,0 +1,41 @@
+[changelog]
+header = "# Changelog\n\nAll notable changes to Tymeslot are documented here. Versions follow [semantic versioning](https://semver.org).\n"
+body = """
+{% if version %}\
+## [{{ version | trim_start_matches(pat="v") }}] — {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## [Unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group }}
+{% for commit in commits %}\
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message | upper_first }}
+{% endfor %}\
+{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+tag_pattern = "v[0-9].*"
+filter_commits = true
+topo_order = false
+sort_commits = "newest"
+
+commit_parsers = [
+  # Skip commits explicitly marked as changelog-internal
+  { footer = "^Changelog: skip", skip = true },
+  # Skip test, refactor, style, chore, docs commits
+  { message = "^test", skip = true },
+  { message = "^refactor", skip = true },
+  { message = "^style", skip = true },
+  { message = "^chore", skip = true },
+  { message = "^docs", skip = true },
+  # Include features and bug fixes
+  { message = "^feat", group = "Features" },
+  { message = "^fix", group = "Bug Fixes" },
+  # Skip everything else
+  { message = ".*", skip = true },
+]

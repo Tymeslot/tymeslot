@@ -1,0 +1,45 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.server_url == 'https://github.com'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install git-cliff
+        run: |
+          CLIFF_VERSION="2.12.0"
+          curl -sSfLo /tmp/git-cliff.tar.gz \
+            "https://github.com/orhun/git-cliff/releases/download/v${CLIFF_VERSION}/git-cliff-${CLIFF_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          tar -xzf /tmp/git-cliff.tar.gz -C /tmp
+          sudo install -m 755 "/tmp/git-cliff-${CLIFF_VERSION}-x86_64-unknown-linux-musl/git-cliff" /usr/local/bin/git-cliff
+
+      - name: Generate release notes
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          git cliff --latest --strip all > /tmp/release-notes.md
+          if [ -z "$(cat /tmp/release-notes.md | tr -d '[:space:]')" ]; then
+            echo "_No user-facing changes in this release._" > /tmp/release-notes.md
+          fi
+
+      - name: Create release
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file /tmp/release-notes.md \
+            --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
