@@ -87,6 +87,7 @@ defmodule TymeslotWeb.Endpoint do
 
   plug Plug.MethodOverride
   plug Plug.Head
+  plug TymeslotWeb.Plugs.EmbedCookiePlug
   plug Plug.Session, @session_options
 
   defp dynamic_router(conn, _opts) do

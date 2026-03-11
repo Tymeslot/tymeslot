@@ -25,8 +25,14 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
         {"'none'", "DENY"}
       end
 
+    # Signal to EmbedCookiePlug that the session cookie needs SameSite=None
+    # for cross-site iframe contexts ('self'-only is same-origin, no change needed)
+    cross_site_embeddable =
+      allow_embedding and frame_ancestors not in ["'none'", "'self'"]
+
     conn =
       conn
+      |> put_private(:embed_cookie_samesite_none, cross_site_embeddable)
       |> put_resp_header("content-security-policy", csp_header(frame_ancestors))
       |> put_resp_header("x-content-type-options", "nosniff")
       |> put_resp_header("referrer-policy", "strict-origin-when-cross-origin")
@@ -237,11 +243,19 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
         " "
       )
 
+    extra_connect_suffix =
+      case extra_script_origins do
+        [] -> ""
+        origins -> " " <> Enum.join(origins, " ")
+      end
+
     connect_src =
       if Application.get_env(:tymeslot, :environment) == :dev do
-        "'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* ws: wss: https://www.google.com https://accounts.google.com https://api.stripe.com"
+        "'self' ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* ws: wss: https://www.google.com https://accounts.google.com https://api.stripe.com" <>
+          extra_connect_suffix
       else
-        "'self' wss: https://www.google.com https://accounts.google.com https://api.stripe.com"
+        "'self' wss: https://www.google.com https://accounts.google.com https://api.stripe.com" <>
+          extra_connect_suffix
       end
 
     Enum.join(
