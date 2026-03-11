@@ -1,5 +1,28 @@
 defmodule TymeslotWeb.Dev.EmbedTestController do
-  @moduledoc false
+  @moduledoc """
+  Dev-only controller that serves an interactive embed test page at `/embed-test`.
+
+  The page renders four embed scenarios side-by-side (unconstrained, constrained,
+  small fixed height, popup) and lets you switch usernames and themes on the fly.
+  It loads `/embed.js` from the running dev server, so `mix phx.server` must be
+  running.
+
+  ## Testing with an external HTML file
+
+  If you want to test embedding from a standalone HTML file (e.g.
+  `/tmp/tymeslot-demo.html`), you must **serve it over HTTP** rather than opening
+  it directly as a `file://` URL. Opening as `file://` gives the page a `null`
+  origin, which is not covered by the dev CSP `frame-ancestors` allowlist
+  (`http://localhost:* http://127.0.0.1:*`), so the iframe is blocked.
+
+  Serve the file from a local HTTP server instead:
+
+      python3 -m http.server 8080 -d /tmp
+
+  Then open `http://localhost:8080/tymeslot-demo.html` in your browser. The page
+  origin is now `http://localhost:8080`, which matches `http://localhost:*` in the
+  CSP and the embed works as expected.
+  """
   use TymeslotWeb, :controller
 
   alias Phoenix.HTML
