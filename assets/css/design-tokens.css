@@ -6,11 +6,6 @@
    =================================== */
 
 @layer components {
-  /* Hero section consistent pattern */
-  .hero-section {
-    @apply relative min-h-[95vh] flex items-center overflow-hidden bg-gradient-to-br from-turquoise-600 via-cyan-600 to-blue-600;
-  }
-
   /* Animated gradient overlays */
   .hero-overlay-tl {
     @apply absolute inset-0;
@@ -46,16 +41,6 @@
     @apply border-white/30 shadow-glass-xl;
   }
 
-  /* Primary CTA Button */
-  .btn-cta-primary {
-    @apply group relative inline-flex items-center justify-center gap-2 px-10 py-5 text-token-xl font-bold text-turquoise-700 bg-white rounded-token-2xl shadow-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-white/30;
-  }
-
-  /* Trust/Value Badge */
-  .badge-value {
-    @apply flex items-center gap-2 text-white bg-white/10 backdrop-blur-glass-light px-4 py-2 rounded-full border border-white/20 font-semibold;
-  }
-
   /* Semantic Tag Components */
   .tag-semantic {
     @apply inline-flex items-center gap-2 px-3 py-1 rounded-token-xl border-2 font-semibold text-token-sm transition-all duration-300;
@@ -63,10 +48,6 @@
 
   .tag-semantic-teal {
     @apply bg-teal-50 border-teal-200 text-teal-700;
-  }
-
-  .tag-semantic-turquoise {
-    @apply bg-turquoise-50 border-turquoise-200 text-turquoise-700;
   }
 
   /* Tag Selector Buttons (Quick selection patterns) */
@@ -83,28 +64,7 @@
     @apply bg-teal-50 text-teal-700 border-teal-200 shadow-sm;
   }
 
-  .btn-tag-selector-turquoise {
-    @apply hover:border-turquoise-100 hover:text-turquoise-600 hover:bg-tymeslot-50;
-  }
-  .btn-tag-selector-turquoise--active {
-    @apply bg-turquoise-50 text-turquoise-700 border-turquoise-200 shadow-sm;
-  }
-
-  .btn-tag-selector-cyan {
-    @apply hover:border-cyan-100 hover:text-cyan-600 hover:bg-tymeslot-50;
-  }
-  .btn-tag-selector-cyan--active {
-    @apply bg-cyan-50 text-cyan-700 border-cyan-200 shadow-sm;
-  }
-
-  .btn-tag-selector-blue {
-    @apply hover:border-blue-100 hover:text-blue-600 hover:bg-tymeslot-50;
-  }
-  .btn-tag-selector-blue--active {
-    @apply bg-blue-50 text-blue-700 border-blue-200 shadow-sm;
-  }
-
-  /* Semantic Variants - Use these in preference to color-specific names
+  /* Semantic Variants
    * Mapping:
    * - primary -> turquoise (brand primary actions, main interactive elements)
    * - secondary -> cyan (secondary/alternative actions)
