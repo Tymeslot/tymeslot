@@ -78,8 +78,15 @@ html.rhythm-theme[data-embedded] .footer-gradient {
   display: none;
 }
 
-/* Hide video background — reduces load time in iframes */
+/* Keep background container visible (it carries var(--theme-background)),
+   but switch from position:fixed to absolute so it fills the content area
+   instead of the iframe viewport. Hide only the <video> elements to save
+   bandwidth — the gradient/color/image background on the container remains. */
 html.rhythm-theme[data-embedded] .video-background-container {
+  position: absolute;
+}
+
+html.rhythm-theme[data-embedded] .video-background-video {
   display: none;
 }
 
