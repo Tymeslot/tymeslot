@@ -21,24 +21,34 @@ Tymeslot is designed to work seamlessly with Cloudron's managed infrastructure. 
 - **Cloudron Server** (version 5.3.0 or higher)
 - **Admin access** to your Cloudron dashboard
 - **Domain name** configured in Cloudron
-- **Cloudron CLI** installed locally and logged in (`cloudron login`)
-- **Docker** installed locally to build the app image
 
 ---
 
 ## Installation
 
-Clone the repository, build the image on the Cloudron server via `cloudron build`, then install.
-Required environment variables are passed directly to `cloudron install` via `--env`.
+Tymeslot is distributed as a community app. Install it directly from the Cloudron dashboard — no Docker or local build tools required.
+
+### Via Dashboard (Recommended)
+
+1. Open your Cloudron dashboard and go to **App Store**
+2. Click **Install via URL**
+3. Paste the following URL:
+   ```
+   https://raw.githubusercontent.com/Tymeslot/tymeslot/main/apps/tymeslot/CloudronVersions.json
+   ```
+4. Choose a location (e.g. `tymeslot.yourdomain.com`) and click **Install**
+5. Once running, set the required environment variables (see below)
+
+### Required Environment Variables
+
+After installation, set these via the dashboard **Environment** tab or CLI:
 
 ```bash
-git clone https://github.com/tymeslot/tymeslot.git
-cd tymeslot
-
-cloudron login  # if not already authenticated
-cloudron build
 SECRET=$(openssl rand -base64 64 | tr -d '\n')
-cloudron install --location tymeslot.yourdomain.com --env SECRET_KEY_BASE=$SECRET --env PHX_HOST=tymeslot.yourdomain.com --env PORT=4000
+cloudron env set --app tymeslot.yourdomain.com \
+  SECRET_KEY_BASE=$SECRET \
+  PHX_HOST=tymeslot.yourdomain.com \
+  PORT=4000
 ```
 
 ### Accessing Your Installation
@@ -276,17 +286,10 @@ cloudron logs --app tymeslot.yourdomain.com --follow
 
 ## Updates
 
-### Automatic Updates
+Cloudron checks for new versions automatically. When a new release is published, you will see an update prompt in the dashboard. Apply it with one click or via CLI:
+
 ```bash
 cloudron update --app tymeslot.yourdomain.com
-```
-
-### Manual Updates
-
-```bash
-git pull origin main
-cloudron build
-cloudron install --location tymeslot.yourdomain.com --app tymeslot.yourdomain.com
 ```
 
 ---
@@ -396,7 +399,3 @@ cloudron exec --app tymeslot.yourdomain.com -- bin/tymeslot remote
 3. **Set up your profile** and availability preferences
 4. **Create meeting types** for different appointment durations
 5. **Share your booking link**: `https://tymeslot.yourdomain.com/your-username`
-
----
-
-**Congratulations!** 🎉 Tymeslot is now running on Cloudron with enterprise-grade reliability and security.
