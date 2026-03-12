@@ -33,26 +33,29 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
     end
   end
 
+  defp expect_token_response(access_token, refresh_token) do
+    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+      {:ok,
+       %{
+         status: 200,
+         body:
+           Jason.encode!(%{
+             "access_token" => access_token,
+             "refresh_token" => refresh_token,
+             "expires_in" => 3600,
+             "scope" => "calendar"
+           })
+       }}
+    end)
+  end
+
   describe "handle_callback/3" do
     test "creates new integration and performs discovery" do
       user = insert(:user)
       insert(:profile, user: user)
       state = GoogleOAuthHelper.generate_state(user.id)
 
-      # Mock HTTP for GoogleOAuthHelper.exchange_code_for_tokens
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
-        {:ok,
-         %{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "access_token" => "at-123",
-               "refresh_token" => "rt-123",
-               "expires_in" => 3600,
-               "scope" => "calendar"
-             })
-         }}
-      end)
+      expect_token_response("at-123", "rt-123")
 
       # Mock GoogleCalendarAPIMock.list_calendars/1
       expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
@@ -78,19 +81,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
 
       state = GoogleOAuthHelper.generate_state(user.id)
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
-        {:ok,
-         %{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "access_token" => "new-at",
-               "refresh_token" => "new-rt",
-               "expires_in" => 3600,
-               "scope" => "calendar"
-             })
-         }}
-      end)
+      expect_token_response("new-at", "new-rt")
 
       # Expect discovery if calendar_list is empty
       expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
@@ -110,19 +101,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
       insert(:profile, user: user)
       state = GoogleOAuthHelper.generate_state(user.id)
 
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
-        {:ok,
-         %{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "access_token" => "at-ok",
-               "refresh_token" => "rt-ok",
-               "expires_in" => 3600,
-               "scope" => "calendar"
-             })
-         }}
-      end)
+      expect_token_response("at-ok", "rt-ok")
 
       # Discovery returns a 3-tuple error (as real providers do on 401/403)
       expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
