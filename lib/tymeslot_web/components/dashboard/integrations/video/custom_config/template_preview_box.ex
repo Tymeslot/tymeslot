@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
 
   defp status_icon(%{status: :empty} = assigns) do
     ~H"""
-    <svg class="w-5 h-5 text-neutral-400" fill="currentColor" viewBox="0 0 20 20">
+    <svg class="w-5 h-5 text-tymeslot-400" fill="currentColor" viewBox="0 0 20 20">
       <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
     </svg>
     """
@@ -104,19 +104,19 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
 
   defp preview_container_class(:warning), do: "rounded-lg border border-amber-200 bg-amber-50"
   defp preview_container_class(:static), do: "rounded-lg border border-slate-200 bg-slate-50"
-  defp preview_container_class(:empty), do: "rounded-lg border border-neutral-200 bg-neutral-50"
+  defp preview_container_class(:empty), do: "rounded-lg border border-tymeslot-200 bg-tymeslot-50"
 
   # Title styling based on status
   defp status_title_class(:valid), do: "font-semibold text-turquoise-800"
   defp status_title_class(:warning), do: "font-semibold text-amber-800"
   defp status_title_class(:static), do: "font-medium text-slate-700"
-  defp status_title_class(:empty), do: "text-neutral-500 italic"
+  defp status_title_class(:empty), do: "text-tymeslot-500 italic"
 
   # Message styling based on status
   defp message_class(:valid), do: "text-xs text-turquoise-700 leading-relaxed"
   defp message_class(:warning), do: "text-xs text-amber-700 leading-relaxed"
   defp message_class(:static), do: "text-xs text-slate-600 leading-relaxed"
-  defp message_class(:empty), do: "text-xs text-neutral-500 leading-relaxed italic"
+  defp message_class(:empty), do: "text-xs text-tymeslot-500 leading-relaxed italic"
 
   # Preview code styling based on status
   defp preview_code_class(:valid),

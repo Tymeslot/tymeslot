@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
     ~H"""
     <div class={["meeting-details-card", @class]}>
       <%= if @title do %>
-        <h3 class="text-xl font-black mb-4 text-slate-900 tracking-tight">{@title}</h3>
+        <h3 class="text-xl font-black mb-4 text-tymeslot-900 tracking-tight">{@title}</h3>
       <% end %>
       {render_slot(@inner_block)}
     </div>
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
       end
 
     computed_title_class =
-      assigns.title_class || "#{size_class} font-black text-slate-900 tracking-tight"
+      assigns.title_class || "#{size_class} font-black text-tymeslot-900 tracking-tight"
 
     assigns =
       assigns
@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
 
     ~H"""
     <div :if={@icon} class={["flex items-center mb-4", @class]}>
-      <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mr-5 shadow-sm border border-slate-100 flex-shrink-0">
+      <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mr-5 shadow-sm border border-tymeslot-100 flex-shrink-0">
         <TymeslotWeb.Components.Icons.IconComponents.icon name={@icon} class="w-8 h-8 text-turquoise-600" />
       </div>
 
@@ -172,7 +172,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
         :warning -> "bg-amber-50 border-amber-200 text-amber-800"
         :error -> "bg-red-50 border-red-200 text-red-800"
         :info -> "bg-sky-50 border-sky-200 text-sky-800"
-        _other -> "bg-slate-50 border-slate-200 text-slate-800"
+        _other -> "bg-tymeslot-50 border-tymeslot-200 text-tymeslot-800"
       end
 
     assigns = assign(assigns, :classes, classes)
