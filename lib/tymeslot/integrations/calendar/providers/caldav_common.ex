@@ -6,8 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   used by CalDAV-compatible providers (e.g., generic CalDAV, Radicale).
   """
 
-  # Aliases at top (project style)
-  alias Tymeslot.Integrations.Calendar.CalDAV.Base
+  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events}
 
   @spec normalize_url(String.t()) :: String.t()
   def normalize_url(url) when is_binary(url) do
@@ -36,23 +35,23 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
-  Test a connection using Base.test_connection/2.
-  Returns {:ok, message} or {:error, reason} (reason is passed through).
+  Tests a connection using `Discovery.test_connection/2`.
+  Returns `{:ok, message}` or `{:error, reason}` (reason is passed through).
   """
   @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(client, opts \\ []) do
-    case Base.test_connection(client, opts) do
+    case Discovery.test_connection(client, opts) do
       {:ok, _result} -> {:ok, success_message(client.provider)}
       {:error, reason} -> {:error, reason}
     end
   end
 
   @doc """
-  Discover calendars; delegates to Base.discover_calendars/2.
+  Discovers available calendars via `Discovery.discover_calendars/2`.
   """
   @spec discover_calendars(map(), keyword()) :: {:ok, list(map())} | {:error, term()}
   def discover_calendars(client, opts \\ []) do
-    Base.discover_calendars(client, opts)
+    Discovery.discover_calendars(client, opts)
   end
 
   @doc """
@@ -83,7 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   defp do_fetch_events(client, paths, start_time, end_time) do
     tasks =
       Enum.map(paths, fn path ->
-        Task.async(fn -> Base.fetch_events(client, path, start_time, end_time) end)
+        Task.async(fn -> Events.fetch_events(client, path, start_time, end_time) end)
       end)
 
     results = Task.await_many(tasks, Base.task_await_timeout_ms())
@@ -104,7 +103,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   def create_event(client, event_data) do
     case primary_calendar_path(client) do
       nil -> {:error, "No calendar configured for creating events"}
-      path -> Base.create_calendar_event(client, path, event_data)
+      path -> Events.create_calendar_event(client, path, event_data)
     end
   end
 
@@ -115,7 +114,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   def update_event(client, uid, event_data) do
     case primary_calendar_path(client) do
       nil -> {:error, "Event not found"}
-      path -> Base.update_calendar_event(client, path, uid, event_data)
+      path -> Events.update_calendar_event(client, path, uid, event_data)
     end
   end
 
@@ -126,7 +125,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   def delete_event(client, uid) do
     case primary_calendar_path(client) do
       nil -> :ok
-      path -> Base.delete_calendar_event(client, path, uid)
+      path -> Events.delete_calendar_event(client, path, uid)
     end
   end
 

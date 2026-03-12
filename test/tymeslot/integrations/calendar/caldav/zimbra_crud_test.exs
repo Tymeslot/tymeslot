@@ -2,6 +2,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
   use Tymeslot.CalDAVCase, async: false
   @moduletag :integrations
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.{Discovery, Events}
+
   # ---------------------------------------------------------------------------
   # Zimbra-specific CRUD tests
   # Verifies that update and delete build the correct server-root-relative URL
@@ -40,6 +42,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
         username: "user@example.com",
         password: "pass",
         calendar_paths: ["/dav/user%40example.com/Calendar/"],
+        verify_ssl: true,
         provider: :zimbra
       }
 
@@ -50,7 +53,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
       }
 
       assert :ok =
-               Base.update_calendar_event(
+               Events.update_calendar_event(
                  client,
                  "/dav/user%40example.com/Calendar/",
                  "some-uid",
@@ -80,11 +83,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
         username: "user@example.com",
         password: "pass",
         calendar_paths: ["/dav/user%40example.com/Calendar/"],
+        verify_ssl: true,
         provider: :zimbra
       }
 
       assert :ok =
-               Base.update_calendar_event(
+               Events.update_calendar_event(
                  client,
                  "/dav/user%40example.com/Calendar/",
                  "some-uid",
@@ -113,11 +117,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
         username: "user@example.com",
         password: "pass",
         calendar_paths: ["/dav/user%40example.com/Calendar/"],
+        verify_ssl: true,
         provider: :zimbra
       }
 
       assert :ok =
-               Base.delete_calendar_event(
+               Events.delete_calendar_event(
                  client,
                  "/dav/user%40example.com/Calendar/",
                  "some-uid",
@@ -136,11 +141,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
         username: "user@example.com",
         password: "pass",
         calendar_paths: ["/dav/user%40example.com/Calendar/"],
+        verify_ssl: true,
         provider: :zimbra
       }
 
       assert :ok =
-               Base.delete_calendar_event(
+               Events.delete_calendar_event(
                  client,
                  "/dav/user%40example.com/Calendar/",
                  "gone-uid",
@@ -226,10 +232,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ZimbraCrudTest do
         username: "user",
         password: "pass",
         calendar_paths: [],
+        verify_ssl: true,
         provider: :zimbra
       }
 
-      assert {:ok, [calendar]} = Base.discover_calendars(client, skip_breaker: true)
+      assert {:ok, [calendar]} = Discovery.discover_calendars(client, skip_breaker: true)
       assert calendar.href == "/dav/user%40example.com/Calendar/"
       assert calendar.name == "Calendar"
     end

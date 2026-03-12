@@ -50,6 +50,10 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
         {:error, :invalid_event_data} = error ->
           error
 
+        {:error, type, reason} ->
+          Logger.error("Failed to create calendar event", error_type: type, reason: inspect(reason))
+          {:error, reason}
+
         {:error, reason} = error ->
           Logger.error("Failed to create calendar event", reason: inspect(reason))
           error
@@ -75,6 +79,15 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
         nil ->
           Logger.error("No calendar integration found for update", context: log_context(context))
           {:error, :no_calendar_integration}
+
+        {:error, type, reason} ->
+          Logger.error("Failed to update calendar event",
+            error_type: type,
+            uid: uid,
+            reason: inspect(reason)
+          )
+
+          {:error, reason}
 
         {:error, reason} = error ->
           Logger.error("Failed to update calendar event", uid: uid, reason: inspect(reason))
@@ -105,6 +118,15 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
           )
 
           {:error, :no_calendar_integration}
+
+        {:error, type, reason} ->
+          Logger.error("Failed to delete calendar event",
+            error_type: type,
+            uid: uid,
+            reason: inspect(reason)
+          )
+
+          {:error, reason}
 
         {:error, reason} = error ->
           Logger.error("Failed to delete calendar event",
