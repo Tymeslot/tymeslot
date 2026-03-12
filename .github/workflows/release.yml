@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   release:
@@ -26,20 +27,36 @@ jobs:
           sudo tar -xzf /tmp/git-cliff.tar.gz -C /usr/local/bin --strip-components=1 "git-cliff-${CLIFF_VERSION}/git-cliff"
           git-cliff --version
 
-      - name: Generate release notes
+      - name: Create releases
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          git cliff --latest --strip all > /tmp/release-notes.md
-          if [ -z "$(cat /tmp/release-notes.md | tr -d '[:space:]')" ]; then
-            echo "_No user-facing changes in this release._" > /tmp/release-notes.md
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAGS="${GITHUB_REF#refs/tags/}"
+          else
+            TAGS=$(git tag -l 'v*' | sort -V)
           fi
 
-      - name: Create release
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --notes-file /tmp/release-notes.md \
-            --verify-tag
+          for TAG in $TAGS; do
+            if gh api "repos/${{ github.repository }}/releases/tags/$TAG" &>/dev/null 2>&1; then
+              echo "Release $TAG already exists, skipping"
+              continue
+            fi
+
+            PREV=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
+            if [ -n "$PREV" ]; then
+              git cliff "${PREV}..${TAG}" --tag "$TAG" --strip all > /tmp/release-notes.md
+            else
+              git cliff --tag "$TAG" --strip all > /tmp/release-notes.md
+            fi
+
+            if [ -z "$(cat /tmp/release-notes.md | tr -d '[:space:]')" ]; then
+              echo "_No user-facing changes in this release._" > /tmp/release-notes.md
+            fi
+
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes-file /tmp/release-notes.md \
+              --verify-tag
+            echo "Created release for $TAG"
+          done
         env:
           GH_TOKEN: ${{ github.token }}
