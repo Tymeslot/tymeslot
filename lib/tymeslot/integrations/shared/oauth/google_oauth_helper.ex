@@ -15,7 +15,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   require Logger
 
   @default_scopes %{
-    calendar: "https://www.googleapis.com/auth/calendar.events",
+    calendar: "https://www.googleapis.com/auth/calendar",
     meet: "https://www.googleapis.com/auth/meetings.space.created"
   }
 

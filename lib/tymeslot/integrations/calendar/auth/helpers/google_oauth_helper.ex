@@ -116,6 +116,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
         # If discovery fails, still return the integration
         # User can manually configure calendars later
         {:ok, integration}
+
+      {:error, _type, _reason} ->
+        {:ok, integration}
     end
   end
 end
