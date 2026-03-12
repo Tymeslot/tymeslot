@@ -34,10 +34,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       report_body = XmlHandler.build_calendar_query(start_time, end_time)
 
       retry_opts = Keyword.get(opts, :retry_opts, Base.default_retry_opts())
-      report_opts = Keyword.put(opts, :timeout, Keyword.get(opts, :timeout, Base.report_timeout_ms()))
+
+      report_opts =
+        Keyword.put(opts, :timeout, Keyword.get(opts, :timeout, Base.report_timeout_ms()))
 
       case RetryLogic.with_retry(
-             fn -> Http.report(url, client.username, client.password, report_body, report_opts) end,
+             fn ->
+               Http.report(url, client.username, client.password, report_body, report_opts)
+             end,
              retry_opts
            ) do
         {:ok, %Req.Response{status: 207, body: body}} ->

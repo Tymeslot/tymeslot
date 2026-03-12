@@ -34,7 +34,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
 
   Rate-limited per IP to prevent connection-testing abuse.
   """
-  @spec test_connection(Base.client(), keyword()) :: {:ok, String.t()} | {:error, Base.error_reason()}
+  @spec test_connection(Base.client(), keyword()) ::
+          {:ok, String.t()} | {:error, Base.error_reason()}
   def test_connection(client, opts \\ []) do
     ip_address = Keyword.get(opts, :ip_address, "127.0.0.1")
 

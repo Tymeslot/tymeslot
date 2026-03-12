@@ -150,7 +150,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @doc """
   Updates an existing event in the calendar.
   """
-  @spec update_event(map(), String.t(), map()) :: :ok | {:error, atom(), term()} | {:error, term()}
+  @spec update_event(map(), String.t(), map()) ::
+          :ok | {:error, atom(), term()} | {:error, term()}
   def update_event(adapter_client, uid, event_data) do
     Metrics.time_operation(
       :calendar_update_event,

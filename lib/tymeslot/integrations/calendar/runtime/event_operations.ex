@@ -51,7 +51,11 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
           error
 
         {:error, type, reason} ->
-          Logger.error("Failed to create calendar event", error_type: type, reason: inspect(reason))
+          Logger.error("Failed to create calendar event",
+            error_type: type,
+            reason: inspect(reason)
+          )
+
           {:error, reason}
 
         {:error, reason} = error ->
