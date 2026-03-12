@@ -103,10 +103,6 @@ module.exports = {
           900: '#18181b',
           950: '#09090b',
         },
-        // Alias neutral → tymeslot so both names produce identical output.
-        // This prevents drift between the two while the codebase is migrated
-        // to use tymeslot-* exclusively.
-        neutral: ({ theme }) => theme('colors.tymeslot'),
       },
       // Add custom design token utilities without overriding defaults
       boxShadow: {
