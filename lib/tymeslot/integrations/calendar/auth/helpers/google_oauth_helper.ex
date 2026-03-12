@@ -13,6 +13,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
 
+  require Logger
+
   @doc """
   Generates the OAuth authorization URL for Google Calendar.
 
@@ -112,9 +114,17 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
         # Auto-select primary/default calendar based on provider rules
         CalendarPrimary.auto_select_primary_calendar(integration, calendars)
 
+      {:error, type, reason} ->
+        Logger.warning("Calendar discovery failed after OAuth callback",
+          provider: integration.provider,
+          error_type: type,
+          reason: reason
+        )
+
+        {:ok, integration}
+
       {:error, _reason} ->
-        # If discovery fails, still return the integration
-        # User can manually configure calendars later
+        # Discovery failure is non-fatal — user can configure calendars manually later
         {:ok, integration}
     end
   end

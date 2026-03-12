@@ -104,6 +104,35 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
       updated = CalendarIntegrationSchema.decrypt_credentials(updated)
       assert updated.access_token == "new-at"
     end
+
+    test "handles 3-tuple error from discovery without crashing" do
+      user = insert(:user)
+      insert(:profile, user: user)
+      state = GoogleOAuthHelper.generate_state(user.id)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+        {:ok,
+         %{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "access_token" => "at-ok",
+               "refresh_token" => "rt-ok",
+               "expires_in" => 3600,
+               "scope" => "calendar"
+             })
+         }}
+      end)
+
+      # Discovery returns a 3-tuple error (as real providers do on 401/403)
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
+        {:error, :unauthorized, "Token expired or invalid"}
+      end)
+
+      # Should still succeed — discovery failure is non-fatal
+      assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
+      assert integration.provider == "google"
+    end
   end
 
   describe "token operations" do

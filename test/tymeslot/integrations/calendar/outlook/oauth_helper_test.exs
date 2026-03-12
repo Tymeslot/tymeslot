@@ -69,6 +69,35 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
 
       assert integration.access_token == "at-123"
     end
+
+    test "handles 3-tuple error from discovery without crashing" do
+      user = insert(:user)
+      insert(:profile, user: user)
+      state = State.generate(user.id, "outlook-state")
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+        {:ok,
+         %{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "access_token" => "at-ok",
+               "refresh_token" => "rt-ok",
+               "expires_in" => 3600,
+               "scope" => "Calendars.ReadWrite"
+             })
+         }}
+      end)
+
+      # Discovery returns a 3-tuple error (as real providers do on 401/403)
+      expect(OutlookCalendarAPIMock, :list_calendars, fn _client ->
+        {:error, :unauthorized, "Token expired or invalid"}
+      end)
+
+      # Should still succeed — discovery failure is non-fatal
+      assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
+      assert integration.provider == "outlook"
+    end
   end
 
   describe "token operations" do

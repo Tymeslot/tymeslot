@@ -14,6 +14,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
 
+  require Logger
+
   @calendar_scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile"
   @oauth_base_url "https://login.microsoftonline.com/common/oauth2/v2.0"
   @token_url "#{@oauth_base_url}/token"
@@ -130,9 +132,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
         # Auto-select primary/default calendar based on provider rules
         CalendarPrimary.auto_select_primary_calendar(integration, calendars)
 
+      {:error, type, reason} ->
+        Logger.warning("Calendar discovery failed after OAuth callback",
+          provider: integration.provider,
+          error_type: type,
+          reason: reason
+        )
+
+        {:ok, integration}
+
       {:error, _reason} ->
-        # If discovery fails, still return the integration
-        # User can manually configure calendars later
+        # Discovery failure is non-fatal — user can configure calendars manually later
         {:ok, integration}
     end
   end
