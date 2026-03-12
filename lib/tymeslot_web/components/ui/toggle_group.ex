@@ -28,7 +28,7 @@ defmodule TymeslotWeb.Components.UI.ToggleGroup do
     <div class={["flex items-center", spacing_class(@size), @class]}>
       <%= if @label do %>
         <span class={[
-          "font-medium text-gray-700",
+          "font-medium text-tymeslot-700",
           label_class(@size)
         ]}>
           {@label}:
@@ -112,5 +112,5 @@ defmodule TymeslotWeb.Components.UI.ToggleGroup do
   defp text_class(:large), do: "text-base"
 
   defp button_state_class(true), do: "btn-primary"
-  defp button_state_class(false), do: "btn-ghost text-gray-600 hover:text-gray-800"
+  defp button_state_class(false), do: "btn-ghost text-tymeslot-600 hover:text-tymeslot-800"
 end

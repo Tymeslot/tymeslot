@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
           <div class="min-w-0">
             <!-- Title -->
             <div class="flex items-center gap-2 mb-1">
-              <h4 class="text-base font-bold text-slate-900 truncate">
+              <h4 class="text-base font-bold text-tymeslot-900 truncate">
                 <%= if @integration.name == @provider_display_name do %>
                   {@provider_display_name}
                 <% else %>
@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
             </div>
 
             <!-- Provider Type -->
-            <div class="text-xs text-gray-600 mb-2">
+            <div class="text-xs text-tymeslot-600 mb-2">
               <%= case @integration.provider do %>
                 <% "google_meet" -> %>
                   <span class="font-semibold text-turquoise-700">OAuth Provider</span>
@@ -60,12 +60,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
                 <% "custom" -> %>
                   <span class="font-semibold text-purple-700">Custom URL</span>
                 <% _ -> %>
-                  <span class="font-semibold text-gray-600">Video Provider</span>
+                  <span class="font-semibold text-tymeslot-600">Video Provider</span>
               <% end %>
             </div>
 
             <!-- Details -->
-            <div class="text-sm text-gray-600 break-all">
+            <div class="text-sm text-tymeslot-600 break-all">
               <%= if @integration.is_active do %>
                 <%= if @integration.provider in ["google_meet", "teams"] do %>
                   <span>Authenticated via OAuth</span>
@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
                   <span><%= @integration.custom_meeting_url %></span>
                 <% end %>
               <% else %>
-                <span class="text-gray-500 italic">Integration is currently disabled</span>
+                <span class="text-tymeslot-500 italic">Integration is currently disabled</span>
               <% end %>
             </div>
           </div>
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
             phx-click="show"
             phx-value-id={@integration.id}
             phx-target="#edit-video-modal"
-            class="text-gray-500 hover:text-turquoise-600 transition-colors p-2"
+            class="text-tymeslot-500 hover:text-turquoise-600 transition-colors p-2"
             title="Edit Integration"
           >
             <.icon name="hero-pencil-square" class="w-5 h-5" />
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
             phx-click="show"
             phx-value-id={@integration.id}
             phx-target="#delete-video-modal"
-            class="text-gray-500 hover:text-red-600 transition-colors p-2"
+            class="text-tymeslot-500 hover:text-red-600 transition-colors p-2"
             title="Delete Integration"
           >
             <.icon name="hero-trash" class="w-5 h-5" />
@@ -172,7 +172,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#edit-video-modal"
-          class="text-gray-500 hover:text-turquoise-600 transition-colors p-2"
+          class="text-tymeslot-500 hover:text-turquoise-600 transition-colors p-2"
           title="Edit Integration"
         >
           <.icon name="hero-pencil-square" class="w-5 h-5" />
@@ -182,7 +182,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
           phx-click="show"
           phx-value-id={@integration.id}
           phx-target="#delete-video-modal"
-          class="text-gray-500 hover:text-red-600 transition-colors p-2"
+          class="text-tymeslot-500 hover:text-red-600 transition-colors p-2"
           title="Delete Integration"
         >
           <.icon name="hero-trash" class="w-5 h-5" />

@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Components.UI.Toggle do
     ~H"""
     <div class={["flex items-center space-x-3", @class]}>
       <%= if @label do %>
-        <span class={["text-sm font-medium text-gray-700", get_label_classes(@size)]}>{@label}</span>
+        <span class={["text-sm font-medium text-tymeslot-700", get_label_classes(@size)]}>{@label}</span>
       <% end %>
       <div class={[
         "flex bg-white/5 backdrop-blur-sm border border-purple-200/30 rounded-lg",
@@ -102,8 +102,10 @@ defmodule TymeslotWeb.Components.UI.Toggle do
   defp get_button_classes(:large), do: "px-6 py-3 text-base"
 
   defp get_button_state_classes(true, _disabled), do: "btn-primary"
-  defp get_button_state_classes(false, true), do: "btn-ghost text-gray-400 cursor-not-allowed"
-  defp get_button_state_classes(false, false), do: "btn-ghost text-gray-600 hover:text-gray-800"
+  defp get_button_state_classes(false, true), do: "btn-ghost text-tymeslot-400 cursor-not-allowed"
+
+  defp get_button_state_classes(false, false),
+    do: "btn-ghost text-tymeslot-600 hover:text-tymeslot-800"
 
   # Icon rendering function
   defp render_icon(assigns) do
@@ -211,7 +213,7 @@ defmodule TymeslotWeb.Components.UI.Toggle do
         </svg>
       <% _ -> %>
         <!-- Default icon or custom icon can be added here -->
-        <div class={[@icon_class, "bg-gray-400 rounded"]}></div>
+        <div class={[@icon_class, "bg-tymeslot-400 rounded"]}></div>
     <% end %>
     """
   end

@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Shared.Auth.IconComponents do
   def email_icon(assigns) do
     ~H"""
     <svg
-      class="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors duration-300"
+      class="h-5 w-5 text-tymeslot-400 group-hover:text-purple-600 transition-colors duration-300"
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 20 20"
       fill="currentColor"

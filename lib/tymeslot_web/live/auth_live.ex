@@ -584,8 +584,8 @@ defmodule TymeslotWeb.AuthLive do
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h2 class="text-xl font-bold text-slate-900 tracking-tight mb-3">Password Reset Successfully</h2>
-                <p class="text-base text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
+                <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">Password Reset Successfully</h2>
+                <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
                   Your password has been reset. You can now log in with your new credentials.
                 </p>
               </div>
@@ -611,8 +611,8 @@ defmodule TymeslotWeb.AuthLive do
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h2 class="text-xl font-bold text-slate-900 tracking-tight mb-3">Link Expired or Invalid</h2>
-                <p class="text-base text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
+                <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">Link Expired or Invalid</h2>
+                <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
                   The security link you followed is no longer valid. Please request a new one to continue.
                 </p>
               </div>

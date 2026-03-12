@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
   def timezone_dropdown(assigns) do
     ~H"""
     <div class={["relative", @class]}>
-      <label class="label text-gray-700 mb-3 block">
+      <label class="label text-tymeslot-700 mb-3 block">
         <div class="flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -63,20 +63,20 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                   />
                 <% end %>
                 <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-gray-800 truncate">
+                  <div class="text-sm font-medium text-tymeslot-800 truncate">
                     {Timezones.format((@profile && @profile.timezone) || "UTC")}
                   </div>
-                  <div class="text-xs mt-1 text-gray-600">
+                  <div class="text-xs mt-1 text-tymeslot-600">
                     {get_current_time_display((@profile && @profile.timezone) || "UTC")}
                   </div>
                 </div>
               </div>
               <div class="flex items-center gap-2 ml-3">
-                <div class="text-sm px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 font-medium">
+                <div class="text-sm px-3 py-1.5 rounded-full bg-tymeslot-100 text-tymeslot-700 font-medium">
                   {get_timezone_offset((@profile && @profile.timezone) || "UTC")}
                 </div>
                 <svg
-                  class={"w-4 h-4 transition-transform duration-200 text-gray-500 #{if @timezone_dropdown_open, do: "rotate-180", else: "rotate-0"}"}
+                  class={"w-4 h-4 transition-transform duration-200 text-tymeslot-500 #{if @timezone_dropdown_open, do: "rotate-180", else: "rotate-0"}"}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -111,13 +111,13 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                   name="value"
                   value={@timezone_search || ""}
                   placeholder="Search cities, countries, or timezones..."
-                  class="w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-none focus:ring-2 focus:ring-teal-400/30 bg-white/90 text-gray-800"
+                  class="w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-none focus:ring-2 focus:ring-teal-400/30 bg-white/90 text-tymeslot-800"
                   autocomplete="off"
                   phx-hook="AutoFocus"
                 />
                 <div class="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
                   <svg
-                    class="w-4 h-4 text-gray-500"
+                    class="w-4 h-4 text-tymeslot-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -154,8 +154,8 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                           />
                         <% end %>
                         <div class="flex-1 min-w-0">
-                          <div class="font-medium truncate text-gray-800">{label}</div>
-                          <div class="text-xs mt-0.5 text-gray-600">
+                          <div class="font-medium truncate text-tymeslot-800">{label}</div>
+                          <div class="text-xs mt-0.5 text-tymeslot-600">
                             {get_timezone_local_time(value)} local time • {offset}
                           </div>
                         </div>
@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         <% end %>
       </div>
 
-      <p class="mt-2 text-sm text-gray-600">
+      <p class="mt-2 text-sm text-tymeslot-600">
         This timezone will be used for your availability and scheduling.
       </p>
     </div>

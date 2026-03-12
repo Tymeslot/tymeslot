@@ -38,8 +38,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
       <div class="flex items-center gap-4 mb-2">
         <ProviderIcon.provider_icon provider="custom" type="video" size="large" />
         <div>
-          <h3 class="text-xl font-black text-slate-900 tracking-tight">Custom Video Link</h3>
-          <p class="text-sm text-slate-500 font-medium">Connect any video platform</p>
+          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">Custom Video Link</h3>
+          <p class="text-sm text-tymeslot-500 font-medium">Connect any video platform</p>
         </div>
       </div>
 
@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig do
           </div>
         </div>
 
-        <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+        <div class="flex justify-between items-center pt-4 border-t border-tymeslot-100">
           <button type="button" phx-click="back_to_providers" phx-target={@target} class="btn-secondary">
             Cancel
           </button>

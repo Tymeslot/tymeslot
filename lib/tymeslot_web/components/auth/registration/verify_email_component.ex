@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
     ~H"""
     <.auth_card_layout title="Verify Your Email">
       <:heading>
-        <h2 class="text-xl font-bold text-slate-900 mb-6 font-heading tracking-tight text-center">
+        <h2 class="text-xl font-bold text-tymeslot-900 mb-6 font-heading tracking-tight text-center">
           Almost There!
         </h2>
       </:heading>
@@ -28,10 +28,10 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
           <.resend_verification_button loading={assigns[:loading] || false} />
           <div class="relative py-2">
             <div class="absolute inset-0 flex items-center" aria-hidden="true">
-              <div class="w-full border-t border-slate-100"></div>
+              <div class="w-full border-t border-tymeslot-100"></div>
             </div>
             <div class="relative flex justify-center text-[10px] font-black uppercase tracking-[0.2em]">
-              <span class="bg-transparent px-4 text-slate-400">or</span>
+              <span class="bg-transparent px-4 text-tymeslot-400">or</span>
             </div>
           </div>
           <button
@@ -51,13 +51,13 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
   defp email_verification_message(assigns) do
     ~H"""
     <div class="text-center mb-8">
-      <p class="text-base text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
+      <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
         We've just sent you a verification email! Please click the link in the email to confirm your address and finish setting up your account.
       </p>
       <%= if email = get_in(assigns, [:form_data, :email]) || get_in(assigns, [:unverified_user, :email]) do %>
-        <div class="mt-6 p-4 bg-slate-50/50 border-2 border-slate-100/50 rounded-2xl inline-block">
-          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Sent to</p>
-          <p class="text-slate-900 font-bold text-base">{email}</p>
+        <div class="mt-6 p-4 bg-tymeslot-50/50 border-2 border-tymeslot-100/50 rounded-2xl inline-block">
+          <p class="text-[10px] font-black text-tymeslot-400 uppercase tracking-widest mb-1">Sent to</p>
+          <p class="text-tymeslot-900 font-bold text-base">{email}</p>
         </div>
       <% end %>
     </div>

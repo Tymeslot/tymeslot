@@ -31,8 +31,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.RadicaleConfig 
       <div class="flex items-center gap-4 mb-2">
         <ProviderIcon.provider_icon provider="radicale" type="calendar" size="large" />
         <div>
-          <h3 class="text-xl font-black text-slate-900 tracking-tight">Radicale</h3>
-          <p class="text-sm text-slate-500 font-medium">Lightweight CalDAV server integration</p>
+          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">Radicale</h3>
+          <p class="text-sm text-tymeslot-500 font-medium">Lightweight CalDAV server integration</p>
         </div>
       </div>
 

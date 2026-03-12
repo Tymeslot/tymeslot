@@ -20,10 +20,10 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
           </svg>
         </div>
         <div class="flex-1">
-          <h3 class="text-token-2xl font-black text-slate-900 tracking-tight">
+          <h3 class="text-token-2xl font-black text-tymeslot-900 tracking-tight">
             Webhook Integration Guide
           </h3>
-          <p class="text-token-sm text-slate-600 font-medium mt-1">
+          <p class="text-token-sm text-tymeslot-600 font-medium mt-1">
             Connect Tymeslot to n8n, Zapier, Make, or your custom automation workflows
           </p>
         </div>
@@ -34,9 +34,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div class="p-5 bg-gradient-to-br from-turquoise-50 to-cyan-50 rounded-token-2xl border-2 border-turquoise-100">
           <div class="flex items-start gap-3 mb-3">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-lg font-black text-slate-900">What are webhooks?</h4>
+            <h4 class="text-token-lg font-black text-tymeslot-900">What are webhooks?</h4>
           </div>
-          <p class="text-slate-700 font-medium ml-5">
+          <p class="text-tymeslot-700 font-medium ml-5">
             Webhooks send real-time HTTP POST notifications to your automation tools whenever booking events occur.
             Perfect for triggering automated workflows, sending custom emails, syncing data, or building integrations.
           </p>
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-lg font-black text-slate-900">Quick Setup with n8n</h4>
+            <h4 class="text-token-lg font-black text-tymeslot-900">Quick Setup with n8n</h4>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 ml-5">
             <%= for {step, step_index} <- Enum.with_index([
@@ -57,13 +57,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
               {"Test connection", "Verify the webhook is working correctly"},
               {"Build automation", "Add actions to process the webhook data"}
             ], 1) do %>
-              <div class="flex items-start gap-3 p-3 bg-white rounded-token-xl border-2 border-slate-100 hover:border-turquoise-200 transition-all">
+              <div class="flex items-start gap-3 p-3 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 transition-all">
                 <div class="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-turquoise-500 to-cyan-500 text-white flex items-center justify-center text-xs font-black">
                   <%= step_index %>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="font-black text-slate-900 text-token-sm"><%= elem(step, 0) %></div>
-                  <div class="text-slate-600 text-token-xs font-medium"><%= elem(step, 1) %></div>
+                  <div class="font-black text-tymeslot-900 text-token-sm"><%= elem(step, 0) %></div>
+                  <div class="text-tymeslot-600 text-token-xs font-medium"><%= elem(step, 1) %></div>
                 </div>
               </div>
             <% end %>
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-lg font-black text-slate-900">Available Events</h4>
+            <h4 class="text-token-lg font-black text-tymeslot-900">Available Events</h4>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 ml-5">
             <%= for {event, icon_path} <- [
@@ -82,16 +82,16 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
               {"meeting.cancelled", "M6 18L18 6M6 6l12 12"},
               {"meeting.rescheduled", "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"}
             ] do %>
-              <div class="p-4 bg-white rounded-token-xl border-2 border-slate-100 hover:border-turquoise-200 hover:shadow-md transition-all">
+              <div class="p-4 bg-white rounded-token-xl border-2 border-tymeslot-100 hover:border-turquoise-200 hover:shadow-md transition-all">
                 <div class="flex items-center gap-2 mb-2">
                   <div class="p-1.5 bg-turquoise-50 rounded-lg">
                     <svg class="w-4 h-4 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={icon_path} />
                     </svg>
                   </div>
-                  <code class="text-token-sm font-black text-slate-900"><%= event %></code>
+                  <code class="text-token-sm font-black text-tymeslot-900"><%= event %></code>
                 </div>
-                <p class="text-token-xs text-slate-600 font-medium">
+                <p class="text-token-xs text-tymeslot-600 font-medium">
                   <%= case event do %>
                     <% "meeting.created" -> %>
                       Triggers when a new booking is successfully created
@@ -110,10 +110,10 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
-            <h4 class="text-token-lg font-black text-slate-900">Security & Authentication</h4>
+            <h4 class="text-token-lg font-black text-tymeslot-900">Security & Authentication</h4>
           </div>
           <div class="ml-5 space-y-3">
-            <div class="p-4 bg-slate-50 rounded-token-xl border-2 border-slate-100">
+            <div class="p-4 bg-tymeslot-50 rounded-token-xl border-2 border-tymeslot-100">
               <div class="flex items-start gap-3">
                 <div class="p-2 bg-white rounded-lg flex-shrink-0">
                   <svg class="w-5 h-5 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
                   </svg>
                 </div>
                 <div class="flex-1">
-                  <p class="text-slate-700 font-medium mb-2">
+                  <p class="text-tymeslot-700 font-medium mb-2">
                     All webhook requests include a unique security token in the HTTP headers for verification:
                   </p>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -134,16 +134,16 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
                       <code class="text-token-xs font-black text-turquoise-700 bg-turquoise-50 px-2 py-1 rounded">
                         X-Tymeslot-Token
                       </code>
-                      <span class="text-token-xs text-slate-600 font-medium">Security token</span>
+                      <span class="text-token-xs text-tymeslot-600 font-medium">Security token</span>
                     </div>
                     <div class="flex items-center gap-2 p-2 bg-white rounded-lg">
                       <code class="text-token-xs font-black text-turquoise-700 bg-turquoise-50 px-2 py-1 rounded">
                         X-Tymeslot-Timestamp
                       </code>
-                      <span class="text-token-xs text-slate-600 font-medium">Request timestamp</span>
+                      <span class="text-token-xs text-tymeslot-600 font-medium">Request timestamp</span>
                     </div>
                   </div>
-                  <p class="text-slate-600 text-token-xs font-medium mt-2">
+                  <p class="text-tymeslot-600 text-token-xs font-medium mt-2">
                     Verify the token in your automation tool to ensure requests are from Tymeslot.
                   </p>
                 </div>

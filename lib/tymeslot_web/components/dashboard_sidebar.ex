@@ -40,14 +40,14 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
         <div class="lg:hidden flex items-center justify-between mb-6">
           <TymeslotWeb.Components.CoreComponents.logo mode={:full} img_class="h-12" />
           <button
-            class="dashboard-sidebar-close p-3 rounded-xl bg-slate-50 border-2 border-slate-100 hover:bg-red-50 hover:border-red-100 transition-all"
+            class="dashboard-sidebar-close p-3 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-red-50 hover:border-red-100 transition-all"
             phx-click={
               JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
               |> JS.add_class("hidden", to: "#dashboard-sidebar-overlay")
             }
             aria-label="Close sidebar"
           >
-            <svg class="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-6 h-6 text-tymeslot-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           </.link>
           <div
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
-            class="flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-2xl bg-slate-100 text-slate-400 cursor-not-allowed opacity-60 border-2 border-slate-200"
+            class="flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             data-copy-text={"#{TymeslotWeb.Endpoint.url()}#{LinkAccessPolicy.scheduling_path(@profile)}"}
             data-copy-feedback="Scheduling link copied to clipboard!"
             data-feedback-id="copy-feedback"
-            class="dashboard-nav-link px-4 py-4 rounded-2xl transition-all duration-300 bg-white border-2 border-slate-100 text-slate-700 hover:border-turquoise-400 hover:text-turquoise-700 hover:translate-x-0 shadow-sm hover:shadow-md group relative"
+            class="dashboard-nav-link px-4 py-4 rounded-2xl transition-all duration-300 bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 hover:translate-x-0 shadow-sm hover:shadow-md group relative"
             title="Copy link to clipboard"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             </svg>
             <span
               id="copy-feedback"
-              class="hidden absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-white text-xs rounded shadow-lg whitespace-nowrap"
+              class="hidden absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-tymeslot-800 text-white text-xs rounded shadow-lg whitespace-nowrap"
             >
               Copied!
             </span>
@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             :if={!LinkAccessPolicy.can_link?(@profile, @integration_status)}
             type="button"
             disabled
-            class="px-3 py-3 rounded-lg bg-gray-200 text-gray-500 cursor-not-allowed opacity-60 relative"
+            class="px-3 py-3 rounded-lg bg-tymeslot-200 text-tymeslot-500 cursor-not-allowed opacity-60 relative"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

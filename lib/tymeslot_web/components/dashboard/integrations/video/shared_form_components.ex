@@ -211,7 +211,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.SharedFormComponen
         <div class="text-turquoise-600 mr-3">
           <%= Phoenix.HTML.raw(@icon) %>
         </div>
-        <h3 class="text-lg font-semibold text-gray-800">{@title}</h3>
+        <h3 class="text-lg font-semibold text-tymeslot-800">{@title}</h3>
       </div>
       <UIComponents.close_button target={@target} />
     </div>

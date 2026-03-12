@@ -16,7 +16,7 @@ defmodule TymeslotWeb.AccountLive.Components do
   def security_header(assigns) do
     ~H"""
     <div class="flex items-center mb-8">
-      <div class="text-gray-600 mr-3">
+      <div class="text-tymeslot-600 mr-3">
         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
@@ -26,7 +26,7 @@ defmodule TymeslotWeb.AccountLive.Components do
           />
         </svg>
       </div>
-      <h1 class="text-3xl font-bold text-gray-800">Account Security</h1>
+      <h1 class="text-3xl font-bold text-tymeslot-800">Account Security</h1>
     </div>
     """
   end
@@ -131,10 +131,10 @@ defmodule TymeslotWeb.AccountLive.Components do
     ~H"""
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h3 class="text-lg font-medium text-gray-800">{@title}</h3>
+        <h3 class="text-lg font-medium text-tymeslot-800">{@title}</h3>
         <%= if @current_value do %>
-          <p class="text-sm text-gray-600 mt-1">
-            Current email: <span class="font-medium text-gray-800">{@current_value}</span>
+          <p class="text-sm text-tymeslot-600 mt-1">
+            Current email: <span class="font-medium text-tymeslot-800">{@current_value}</span>
           </p>
         <% end %>
         <%= if @pending_email do %>
@@ -143,10 +143,10 @@ defmodule TymeslotWeb.AccountLive.Components do
           </p>
         <% end %>
         <%= if @subtitle do %>
-          <p class="text-sm text-gray-600 mt-1">{@subtitle}</p>
+          <p class="text-sm text-tymeslot-600 mt-1">{@subtitle}</p>
         <% end %>
         <%= if @is_social && @description do %>
-          <p class="text-sm text-gray-500 mt-2">{@description}</p>
+          <p class="text-sm text-tymeslot-500 mt-2">{@description}</p>
         <% end %>
       </div>
       <.action_button
@@ -190,9 +190,9 @@ defmodule TymeslotWeb.AccountLive.Components do
   def social_tooltip(assigns) do
     ~H"""
     <div class="absolute bottom-full right-0 mb-2 hidden group-hover:block z-10">
-      <div class="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap">
+      <div class="bg-tymeslot-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap">
         Managed by {String.capitalize(@provider)}
-        <div class="absolute top-full right-4 w-0 h-0 border-l-[6px] border-l-transparent border-t-[6px] border-t-gray-900 border-r-[6px] border-r-transparent">
+        <div class="absolute top-full right-4 w-0 h-0 border-l-[6px] border-l-transparent border-t-[6px] border-t-tymeslot-900 border-r-[6px] border-r-transparent">
         </div>
       </div>
     </div>

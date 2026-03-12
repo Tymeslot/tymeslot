@@ -25,8 +25,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.ProviderCard do
       <div class="flex items-start gap-4 mb-4 flex-1">
         <ProviderIcon.provider_icon provider={@provider} size={@icon_size} />
         <div class="flex-1">
-          <h3 class="text-lg font-semibold text-gray-800 mb-1">{@title}</h3>
-          <p class="text-sm text-gray-600">{@description}</p>
+          <h3 class="text-lg font-semibold text-tymeslot-800 mb-1">{@title}</h3>
+          <p class="text-sm text-tymeslot-600">{@description}</p>
         </div>
       </div>
       <button

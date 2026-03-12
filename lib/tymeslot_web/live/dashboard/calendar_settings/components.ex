@@ -155,11 +155,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <div :if={@active_integrations != []} class="space-y-6">
         <div class="flex items-center justify-between gap-4 flex-col md:flex-row">
           <div>
-            <h3 class="text-xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <h3 class="text-xl font-black text-tymeslot-900 tracking-tight flex items-center gap-3">
               <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse"></div>
               Active for Conflict Checking
             </h3>
-            <p class="text-slate-500 font-medium mt-1 ml-5">
+            <p class="text-tymeslot-500 font-medium mt-1 ml-5">
               We'll check these calendars to prevent double bookings automatically.
             </p>
           </div>
@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             phx-target={@myself}
             class={[
               "flex items-center gap-2 px-5 py-2.5 rounded-token-xl font-bold transition-all border-2 shrink-0 shadow-sm",
-              @is_refreshing && "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed",
+              @is_refreshing && "bg-tymeslot-50 text-tymeslot-400 border-tymeslot-100 cursor-not-allowed",
               !@is_refreshing &&
                 "bg-white text-turquoise-600 border-turquoise-50 hover:bg-turquoise-50 hover:border-turquoise-100 hover:shadow-turquoise-500/10"
             ]}
@@ -207,11 +207,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <!-- Inactive Calendars Section -->
       <div :if={@inactive_integrations != []} class="space-y-6">
         <div>
-          <h3 class="text-xl font-black text-slate-400 tracking-tight flex items-center gap-3">
-            <div class="w-2 h-2 rounded-full bg-slate-300"></div>
+          <h3 class="text-xl font-black text-tymeslot-400 tracking-tight flex items-center gap-3">
+            <div class="w-2 h-2 rounded-full bg-tymeslot-300"></div>
             Paused Calendars
           </h3>
-          <p class="text-slate-400 font-medium mt-1 ml-5">
+          <p class="text-tymeslot-400 font-medium mt-1 ml-5">
             These calendars are currently ignored during conflict checking.
           </p>
         </div>
@@ -264,16 +264,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <div class="flex items-start justify-between gap-4">
         <!-- Info -->
         <div class="flex items-start gap-4 min-w-0">
-          <div class="p-3 bg-slate-50 rounded-2xl group-hover:bg-white group-hover:shadow-md transition-all border border-slate-100 group-hover:border-turquoise-100 flex-shrink-0">
+          <div class="p-3 bg-tymeslot-50 rounded-2xl group-hover:bg-white group-hover:shadow-md transition-all border border-tymeslot-100 group-hover:border-turquoise-100 flex-shrink-0">
             <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} />
           </div>
 
           <div class="min-w-0 pt-1">
             <div class="flex items-center gap-3 mb-2 flex-wrap">
-              <h4 class="text-lg font-black text-slate-900 truncate tracking-tight">
+              <h4 class="text-lg font-black text-tymeslot-900 truncate tracking-tight">
                 {@display_name}
               </h4>
-              <span :if={!@integration.is_active} class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+              <span :if={!@integration.is_active} class="px-2 py-0.5 rounded-full bg-tymeslot-100 text-tymeslot-500 text-[10px] font-black uppercase tracking-widest">
                 Paused
               </span>
               <UIComponents.health_warning_badge
@@ -281,7 +281,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               />
             </div>
 
-            <p :if={!@integration.is_active} class="text-sm text-slate-400 font-medium italic">
+            <p :if={!@integration.is_active} class="text-sm text-tymeslot-400 font-medium italic">
               This integration is currently disabled. Toggle the switch to enable conflict checking.
             </p>
           </div>
@@ -306,7 +306,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             phx-click="show"
             phx-value-id={@integration.id}
             phx-target="#delete-calendar-modal"
-            class="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+            class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
             title="Remove Connection"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -320,7 +320,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             target={@myself}
             phx_value_id={to_string(@integration.id)}
             size={:large}
-            class="ring-4 ring-slate-50 group-hover:ring-turquoise-50 transition-all"
+            class="ring-4 ring-tymeslot-50 group-hover:ring-turquoise-50 transition-all"
           />
         </div>
       </div>
@@ -328,10 +328,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <!-- Calendar Selection Grid (full width, active only) -->
       <div :if={@integration.is_active} class="mt-6">
         <div class="flex items-center gap-2 mb-3">
-          <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <span class="text-[10px] font-black uppercase tracking-widest text-tymeslot-400">
             Syncing {(@integration.calendar_list || []) |> Enum.count(&(&1["selected"] || &1[:selected]))} Calendars
           </span>
-          <div class="h-px bg-slate-100 flex-1"></div>
+          <div class="h-px bg-tymeslot-100 flex-1"></div>
         </div>
 
         <div class="flex flex-wrap gap-2.5">
@@ -349,7 +349,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               class={[
                 "inline-flex items-center gap-2.5 px-3.5 py-2 rounded-token-xl border-2 transition-all text-xs font-bold",
                 is_selected && "bg-turquoise-50 border-turquoise-400 text-turquoise-900 shadow-sm shadow-turquoise-500/5",
-                !is_selected && "bg-white border-slate-50 text-slate-400 hover:border-slate-200 hover:bg-slate-50"
+                !is_selected && "bg-white border-tymeslot-50 text-tymeslot-400 hover:border-tymeslot-200 hover:bg-tymeslot-50"
               ]}
             >
               <div
@@ -358,7 +358,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
                 style={"background-color: #{color}"}
               />
               <span>{calendar_name}</span>
-              <span :if={calendar["primary"] || calendar[:primary]} class="text-[9px] font-black bg-slate-200 px-1.5 py-0.5 rounded text-slate-600 uppercase tracking-tighter">
+              <span :if={calendar["primary"] || calendar[:primary]} class="text-[9px] font-black bg-tymeslot-200 px-1.5 py-0.5 rounded text-tymeslot-600 uppercase tracking-tighter">
                 Primary
               </span>
               <svg :if={is_selected} class="w-3.5 h-3.5 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,7 +367,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             </button>
           <% end %>
 
-          <div :if={!@integration.calendar_list || @integration.calendar_list == []} class="flex items-center gap-2 text-slate-400 py-2">
+          <div :if={!@integration.calendar_list || @integration.calendar_list == []} class="flex items-center gap-2 text-tymeslot-400 py-2">
             <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -389,10 +389,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   @spec available_providers_section(map()) :: Phoenix.LiveView.Rendered.t()
   def available_providers_section(assigns) do
     ~H"""
-    <div class="space-y-8 mt-16 pt-12 border-t border-slate-50">
+    <div class="space-y-8 mt-16 pt-12 border-t border-tymeslot-50">
       <div class="max-w-2xl">
-        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Available Providers</h2>
-        <p class="text-slate-500 font-medium text-lg mt-2">
+        <h2 class="text-2xl font-black text-tymeslot-900 tracking-tight">Available Providers</h2>
+        <p class="text-tymeslot-500 font-medium text-lg mt-2">
           Connect your favorite calendar service to sync availability and automate your scheduling workflow.
         </p>
       </div>

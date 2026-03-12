@@ -71,18 +71,18 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
       <div class="modal-container p-6">
         <div
           id={"#{@id}-content"}
-          class={["modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-slate-50 relative overflow-hidden", modal_size_class(@size)]}
+          class={["modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-tymeslot-50 relative overflow-hidden", modal_size_class(@size)]}
           phx-click-away={if @show, do: @on_cancel}
         >
           <!-- Header -->
           <%= if @header != [] do %>
-            <div class="modal-header px-8 py-6 border-b-2 border-slate-50 flex items-center justify-between">
-              <h3 class="modal-title text-2xl font-black text-slate-900 tracking-tight">
+            <div class="modal-header px-8 py-6 border-b-2 border-tymeslot-50 flex items-center justify-between">
+              <h3 class="modal-title text-2xl font-black text-tymeslot-900 tracking-tight">
                 {render_slot(@header)}
               </h3>
               <button
                 type="button"
-                class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
+                class="w-10 h-10 rounded-xl bg-tymeslot-50 text-tymeslot-400 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
                 aria-label="Close modal"
                 phx-click={@on_cancel}
               >
@@ -105,7 +105,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
           
     <!-- Footer -->
           <%= if @footer != [] do %>
-            <div class="modal-footer px-8 py-6 bg-slate-50/50 border-t-2 border-slate-50">
+            <div class="modal-footer px-8 py-6 bg-tymeslot-50/50 border-t-2 border-tymeslot-50">
               {render_slot(@footer)}
             </div>
           <% end %>

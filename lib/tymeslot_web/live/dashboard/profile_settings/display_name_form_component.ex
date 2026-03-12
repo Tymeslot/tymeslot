@@ -75,7 +75,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
           errors={FormValidationHelpers.field_errors(@form_errors, :full_name)}
           phx-debounce="500"
         />
-        <p class="mt-2 text-sm text-slate-500 font-bold">
+        <p class="mt-2 text-sm text-tymeslot-500 font-bold">
           This name will appear to visitors when they book meetings with you. Changes are saved automatically.
         </p>
       </.form_wrapper>

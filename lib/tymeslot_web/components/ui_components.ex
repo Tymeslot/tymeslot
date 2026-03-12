@@ -32,7 +32,7 @@ defmodule TymeslotWeb.Components.UIComponents do
     ~H"""
     <div class="meeting-details-card">
       <%= if @title && @title != "" do %>
-        <h3 class="text-xl font-black text-slate-900 tracking-tight mb-4">{@title}</h3>
+        <h3 class="text-xl font-black text-tymeslot-900 tracking-tight mb-4">{@title}</h3>
       <% end %>
       {render_slot(@inner_block)}
     </div>

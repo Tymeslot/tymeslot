@@ -60,7 +60,7 @@ defmodule TymeslotWeb.Shared.Auth.FormComponents do
         value="true"
         required
       />
-      <label for="terms" class="text-sm text-slate-500 font-medium leading-relaxed">
+      <label for="terms" class="text-sm text-tymeslot-500 font-medium leading-relaxed">
         I accept the
         <a
           href={@terms_url}

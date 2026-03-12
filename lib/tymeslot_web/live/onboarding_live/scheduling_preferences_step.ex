@@ -51,7 +51,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
             Buffer Between Meetings
           </label>
 
-          <p class="text-sm mb-3 font-bold text-slate-400 uppercase tracking-widest">
+          <p class="text-sm mb-3 font-bold text-tymeslot-400 uppercase tracking-widest">
             Time to block after every appointment
           </p>
 
@@ -90,12 +90,12 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
         </div>
 
     <!-- Advance Booking Window -->
-        <div class="onboarding-form-group pt-6 border-t-2 border-slate-50">
+        <div class="onboarding-form-group pt-6 border-t-2 border-tymeslot-50">
           <label class="label">
             Booking Window
           </label>
 
-          <p class="text-sm mb-3 font-bold text-slate-400 uppercase tracking-widest">
+          <p class="text-sm mb-3 font-bold text-tymeslot-400 uppercase tracking-widest">
             How far in advance clients can schedule
           </p>
 
@@ -134,12 +134,12 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
         </div>
 
     <!-- Minimum Advance Notice -->
-        <div class="onboarding-form-group pt-6 border-t-2 border-slate-50">
+        <div class="onboarding-form-group pt-6 border-t-2 border-tymeslot-50">
           <label class="label">
             Minimum Notice
           </label>
 
-          <p class="text-sm mb-3 font-bold text-slate-400 uppercase tracking-widest">
+          <p class="text-sm mb-3 font-bold text-tymeslot-400 uppercase tracking-widest">
             Prevents last-minute surprise bookings
           </p>
 

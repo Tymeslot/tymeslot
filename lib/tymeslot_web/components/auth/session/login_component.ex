@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
     <%= if @password_auth_enabled do %>
       <.auth_card_layout title="Welcome Back!">
         <:heading>
-          <h2 class="text-xl font-bold text-slate-900 mb-6 font-heading tracking-tight text-center">
+          <h2 class="text-xl font-bold text-tymeslot-900 mb-6 font-heading tracking-tight text-center">
             Log in to Tymeslot
           </h2>
         </:heading>
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
     <% else %>
       <.auth_card_layout title="Welcome Back!">
         <:heading>
-          <h2 class="text-xl font-bold text-slate-900 mb-6 font-heading tracking-tight text-center">
+          <h2 class="text-xl font-bold text-tymeslot-900 mb-6 font-heading tracking-tight text-center">
             Log in to Tymeslot
           </h2>
         </:heading>

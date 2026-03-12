@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Components.DashboardComponents do
         {@rest}
       />
       <%= if @help do %>
-        <p class="mt-2 text-sm text-slate-500 font-bold">{@help}</p>
+        <p class="mt-2 text-sm text-tymeslot-500 font-bold">{@help}</p>
       <% end %>
     </div>
     """
@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Components.DashboardComponents do
         </select>
       </div>
       <%= if @help do %>
-        <p class="mt-2 text-sm text-slate-500 font-bold">{@help}</p>
+        <p class="mt-2 text-sm text-tymeslot-500 font-bold">{@help}</p>
       <% end %>
     </div>
     """
@@ -94,15 +94,15 @@ defmodule TymeslotWeb.Components.DashboardComponents do
   @spec integration_card(map()) :: Phoenix.LiveView.Rendered.t()
   def integration_card(assigns) do
     ~H"""
-    <div class="bg-white border-2 border-slate-50 rounded-2xl p-5 shadow-sm hover:border-turquoise-100 hover:shadow-md transition-all group">
+    <div class="bg-white border-2 border-tymeslot-50 rounded-2xl p-5 shadow-sm hover:border-turquoise-100 hover:shadow-md transition-all group">
       <div class="flex items-start justify-between gap-4">
         <div class="flex-1">
-          <h3 class="font-black text-slate-900 tracking-tight group-hover:text-turquoise-700 transition-colors">{@title}</h3>
-          <p class="text-sm text-slate-500 font-bold mt-1">{@subtitle}</p>
+          <h3 class="font-black text-tymeslot-900 tracking-tight group-hover:text-turquoise-700 transition-colors">{@title}</h3>
+          <p class="text-sm text-tymeslot-500 font-bold mt-1">{@subtitle}</p>
           <%= if @details != [] do %>
             <div class="mt-3 space-y-1">
               <%= for detail <- @details do %>
-                <p class="text-xs text-slate-400 font-medium">{detail}</p>
+                <p class="text-xs text-tymeslot-400 font-medium">{detail}</p>
               <% end %>
             </div>
           <% end %>
@@ -128,10 +128,10 @@ defmodule TymeslotWeb.Components.DashboardComponents do
     assigns = assign(assigns, :action, assigns |> Map.get(:action) |> List.wrap())
 
     ~H"""
-    <div class="text-center py-20 bg-slate-50/50 rounded-[2.5rem] border-2 border-dashed border-slate-100">
-      <div class="w-24 h-24 bg-white rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm border border-slate-50">
+    <div class="text-center py-20 bg-tymeslot-50/50 rounded-[2.5rem] border-2 border-dashed border-tymeslot-100">
+      <div class="w-24 h-24 bg-white rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-sm border border-tymeslot-50">
         <svg
-          class="w-12 h-12 text-slate-300"
+          class="w-12 h-12 text-tymeslot-300"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -145,7 +145,7 @@ defmodule TymeslotWeb.Components.DashboardComponents do
           {render_slot(@icon)}
         </svg>
       </div>
-      <p class="text-xl text-slate-900 font-black tracking-tight mb-2">{@message}</p>
+      <p class="text-xl text-tymeslot-900 font-black tracking-tight mb-2">{@message}</p>
       <%= if @action != [] do %>
         <div class="mt-8">
           {render_slot(@action)}
@@ -182,11 +182,11 @@ defmodule TymeslotWeb.Components.DashboardComponents do
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <span class="text-2xl font-black text-slate-900 tracking-tight">{@title}</span>
+          <span class="text-2xl font-black text-tymeslot-900 tracking-tight">{@title}</span>
         </div>
       </:header>
 
-      <p class="text-slate-600 font-medium text-lg leading-relaxed">{@message}</p>
+      <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">{@message}</p>
 
       <:footer>
         <div class="flex gap-4">
@@ -253,9 +253,9 @@ defmodule TymeslotWeb.Components.DashboardComponents do
             </div>
           </div>
           <div class="flex-1">
-            <div class="text-3xl font-black text-slate-900 tracking-tight mb-1">{@value}</div>
-            <div class="text-sm font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-turquoise-600 transition-colors">{@title}</div>
-            <div class="text-sm text-slate-500 font-medium">{@description}</div>
+            <div class="text-3xl font-black text-tymeslot-900 tracking-tight mb-1">{@value}</div>
+            <div class="text-sm font-black text-tymeslot-400 uppercase tracking-widest mb-1 group-hover:text-turquoise-600 transition-colors">{@title}</div>
+            <div class="text-sm text-tymeslot-500 font-medium">{@description}</div>
           </div>
         </div>
       </div>

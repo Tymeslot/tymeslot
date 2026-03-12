@@ -325,7 +325,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
             <%= if inactive_integrations != [] do %>
               <div class="space-y-3">
                 <%= if show_section_headers do %>
-                  <h3 class="text-lg font-semibold text-slate-600">Inactive Video Integrations</h3>
+                  <h3 class="text-lg font-semibold text-tymeslot-600">Inactive Video Integrations</h3>
                 <% end %>
 
                 <%= for integration <- inactive_integrations do %>

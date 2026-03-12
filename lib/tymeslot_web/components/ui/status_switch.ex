@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
 
   # Size-based styling functions
   defp size_class(:small) do
-    "h-5 w-9 border border-gray-300"
+    "h-5 w-9 border border-tymeslot-300"
   end
 
   defp size_class(:medium) do

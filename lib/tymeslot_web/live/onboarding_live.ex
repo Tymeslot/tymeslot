@@ -192,8 +192,8 @@ defmodule TymeslotWeb.OnboardingLive do
                 </div>
 
       <!-- Navigation buttons -->
-                <div class="flex flex-col sm:flex-row items-center justify-between mt-6 pt-6 border-t-2 border-slate-50 gap-4">
-                  <button type="button" phx-click="show_skip_modal" class="text-slate-400 hover:text-slate-600 font-black uppercase tracking-widest text-xs transition-colors">
+                <div class="flex flex-col sm:flex-row items-center justify-between mt-6 pt-6 border-t-2 border-tymeslot-50 gap-4">
+                  <button type="button" phx-click="show_skip_modal" class="text-tymeslot-400 hover:text-tymeslot-600 font-black uppercase tracking-widest text-xs transition-colors">
                     Skip for now
                   </button>
 

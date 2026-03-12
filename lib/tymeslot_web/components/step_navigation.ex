@@ -103,7 +103,7 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp step_class(_step, _current) do
-    "w-8 h-8 rounded-full bg-gray-700/90 text-white flex items-center justify-center border border-gray-500/40 backdrop-blur-sm transition-all duration-300"
+    "w-8 h-8 rounded-full bg-tymeslot-700/90 text-white flex items-center justify-center border border-tymeslot-500/40 backdrop-blur-sm transition-all duration-300"
   end
 
   defp connector_class(step, current) when step < current do
@@ -111,7 +111,7 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp connector_class(_step, _current) do
-    "w-4 sm:w-8 md:w-12 h-0.5 sm:h-1 bg-gray-600/70 rounded transition-all duration-500"
+    "w-4 sm:w-8 md:w-12 h-0.5 sm:h-1 bg-tymeslot-600/70 rounded transition-all duration-500"
   end
 
   defp step_label_class(step, current) when step == current do
@@ -119,7 +119,7 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp step_label_class(step, current) when step < current do
-    "text-gray-100 drop-shadow-md"
+    "text-tymeslot-100 drop-shadow-md"
   end
 
   defp step_label_class(_step, _current) do

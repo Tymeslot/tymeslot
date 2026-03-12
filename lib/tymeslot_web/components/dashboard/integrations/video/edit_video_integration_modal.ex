@@ -246,7 +246,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
               <% end %>
             <% end %>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <div class="flex justify-end gap-3 pt-4 border-t border-tymeslot-100">
               <button
                 type="button"
                 phx-click={JS.push("hide", target: @myself)}

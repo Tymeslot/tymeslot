@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
             <div class="flex items-center space-x-4 -ml-2 sm:-ml-4 flex-1 min-w-0">
               <!-- Mobile Menu Button -->
               <button
-                class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-slate-50 border-2 border-slate-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all flex-shrink-0"
+                class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all flex-shrink-0"
                 phx-click={
                   JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
                   |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")
@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
                 aria-label="Toggle sidebar"
               >
                 <svg
-                  class="w-6 h-6 text-slate-700"
+                  class="w-6 h-6 text-tymeslot-700"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

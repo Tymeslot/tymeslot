@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
     }
 
     ~H"""
-    <label class="block text-sm font-medium text-gray-700 mb-1">{label_for(@field, @spec)}</label>
+    <label class="block text-sm font-medium text-tymeslot-700 mb-1">{label_for(@field, @spec)}</label>
     <input
       type="text"
       name={@form[Atom.to_string(@field)].name}
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
     assigns = %{form: form, field: field, spec: spec}
 
     ~H"""
-    <label class="block text-sm font-medium text-gray-700 mb-1">{label_for(@field, @spec)}</label>
+    <label class="block text-sm font-medium text-tymeslot-700 mb-1">{label_for(@field, @spec)}</label>
     <input
       type="datetime-local"
       name={@form[Atom.to_string(@field)].name}
@@ -84,9 +84,9 @@ defmodule TymeslotWeb.Integrations.Providers.GenericProviderFormComponent do
         name={@form[Atom.to_string(@field)].name}
         checked={@form[Atom.to_string(@field)].value}
         value="true"
-        class="h-4 w-4 text-teal-600 rounded focus:ring-teal-500 border-gray-300"
+        class="h-4 w-4 text-teal-600 rounded focus:ring-teal-500 border-tymeslot-300"
       />
-      <label for={@form[Atom.to_string(@field)].id} class="ml-2 block text-sm text-gray-700">
+      <label for={@form[Atom.to_string(@field)].id} class="ml-2 block text-sm text-tymeslot-700">
         {label_for(@field, @spec)}
       </label>
     </div>

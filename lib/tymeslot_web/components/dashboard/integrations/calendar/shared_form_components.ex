@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
 
           <input type="hidden" name="integration[provider]" value={@provider} />
 
-          <p class="text-sm text-slate-500">
+          <p class="text-sm text-tymeslot-500">
             Select the calendars you want to sync for availability checks.
           </p>
 
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
         >
           <input type="hidden" name="integration[provider]" value={@provider} />
 
-          <p class="text-sm text-slate-500">
+          <p class="text-sm text-tymeslot-500">
             Enter your server URL and credentials to discover calendars.
           </p>
 
@@ -171,7 +171,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
       <h4 class="label">Select calendars to sync:</h4>
       <div class="brand-card p-4">
         <%= if @discovered_calendars == [] do %>
-          <p class="text-sm text-slate-500">
+          <p class="text-sm text-tymeslot-500">
             No calendars were discovered. Double-check your credentials or try again.
           </p>
         <% else %>
@@ -189,10 +189,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
                 for={"calendar-#{calendar_path |> String.replace("/", "-")}"}
                 class="flex-1 cursor-pointer"
               >
-                <div class="font-semibold text-gray-800">
+                <div class="font-semibold text-tymeslot-800">
                   {calendar.name || "Unnamed Calendar"}
                 </div>
-                <div class="text-sm text-gray-600">{calendar_path}</div>
+                <div class="text-sm text-tymeslot-600">{calendar_path}</div>
               </label>
             </div>
           <% end %>

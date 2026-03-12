@@ -19,11 +19,11 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
         <TymeslotWeb.Components.CoreComponents.Brand.logo mode={:full} img_class="h-10" />
       </div>
       <div class="text-center">
-        <h1 class="text-2xl font-black text-slate-900 tracking-tight">
+        <h1 class="text-2xl font-black text-tymeslot-900 tracking-tight">
           {@title}
         </h1>
         <%= if @subtitle do %>
-          <p class="mt-1.5 text-slate-500 font-medium max-w-sm mx-auto text-sm">
+          <p class="mt-1.5 text-tymeslot-500 font-medium max-w-sm mx-auto text-sm">
             {@subtitle}
           </p>
         <% end %>
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
   @spec auth_container(map()) :: Phoenix.LiveView.Rendered.t()
   def auth_container(assigns) do
     ~H"""
-    <div class="min-h-screen bg-gray-50 flex flex-col">
+    <div class="min-h-screen bg-tymeslot-50 flex flex-col">
       <div class="relative z-1 flex flex-col h-screen overflow-hidden">
         <.auth_back_link />
         <div class="w-full flex flex-col items-center justify-center flex-grow py-6 sm:py-8 px-3 sm:px-6 md:px-8 overflow-y-auto min-h-screen max-w-full">
@@ -135,10 +135,10 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
             <%= if assigns[:social] do %>
               <div class="relative py-2">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div class="w-full border-t border-slate-100"></div>
+                  <div class="w-full border-t border-tymeslot-100"></div>
                 </div>
                 <div class="relative flex justify-center text-[10px] font-black uppercase tracking-[0.2em]">
-                  <span class="bg-white px-4 text-slate-400">Or continue with</span>
+                  <span class="bg-white px-4 text-tymeslot-400">Or continue with</span>
                 </div>
               </div>
               {render_slot(@social)}
@@ -146,7 +146,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
           </div>
           
           <%= if assigns[:footer] do %>
-            <div class="mt-8 pt-6 border-t-2 border-slate-50">
+            <div class="mt-8 pt-6 border-t-2 border-tymeslot-50">
               {render_slot(@footer)}
             </div>
           <% end %>
@@ -166,7 +166,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
 
     ~H"""
     <div class="text-center">
-      <span class="text-sm text-slate-500 font-bold">{@prompt}</span>
+      <span class="text-sm text-tymeslot-500 font-bold">{@prompt}</span>
       <%= if assigns[:"phx-click"] do %>
         <button
           type="button"

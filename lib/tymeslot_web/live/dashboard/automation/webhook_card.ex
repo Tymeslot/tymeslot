@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
       "card-glass p-4 sm:p-6 transition-all duration-300 group",
       if(@webhook.is_active,
         do: "hover:shadow-xl",
-        else: "opacity-75 grayscale-[0.3] bg-slate-100/50"
+        else: "opacity-75 grayscale-[0.3] bg-tymeslot-100/50"
       )
     ]}>
       <div class="flex flex-col gap-4">
@@ -33,8 +33,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
           <div class={[
             "p-3 rounded-2xl transition-colors duration-300 flex-shrink-0",
             if(@webhook.is_active,
-              do: "bg-slate-50 group-hover:bg-white",
-              else: "bg-slate-200"
+              do: "bg-tymeslot-50 group-hover:bg-white",
+              else: "bg-tymeslot-200"
             )
           ]}>
             <IconComponents.icon
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               class={
                 if(@webhook.is_active,
                   do: "w-6 h-6 text-turquoise-600",
-                  else: "w-6 h-6 text-slate-400"
+                  else: "w-6 h-6 text-tymeslot-400"
                 )
               }
             />
@@ -53,12 +53,12 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             <div class="flex items-center gap-3 mb-2">
               <h3 class={[
                 "text-token-xl font-black tracking-tight",
-                if(@webhook.is_active, do: "text-slate-900", else: "text-slate-500")
+                if(@webhook.is_active, do: "text-tymeslot-900", else: "text-tymeslot-500")
               ]}>
                 <%= @webhook.name %>
               </h3>
               <%= if !@webhook.is_active do %>
-                <span class="inline-flex items-center gap-1 bg-slate-200 text-slate-600 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
+                <span class="inline-flex items-center gap-1 bg-tymeslot-200 text-tymeslot-600 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       stroke-linecap="round"
@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               <% end %>
             </div>
 
-            <div class="text-token-sm text-slate-600 font-mono mb-3 truncate">
+            <div class="text-token-sm text-tymeslot-600 font-mono mb-3 truncate">
               <%= @webhook.url %>
             </div>
 
@@ -83,12 +83,12 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                   "inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-token-lg border",
                   if(@webhook.is_active,
                     do: "bg-turquoise-50 text-turquoise-700 border-turquoise-200",
-                    else: "bg-slate-100 text-slate-500 border-slate-200"
+                    else: "bg-tymeslot-100 text-tymeslot-500 border-tymeslot-200"
                   )
                 ]}>
                   <div class={[
                     "w-1.5 h-1.5 rounded-full",
-                    if(@webhook.is_active, do: "bg-turquoise-500", else: "bg-slate-400")
+                    if(@webhook.is_active, do: "bg-turquoise-500", else: "bg-tymeslot-400")
                   ]}>
                   </div>
                   <%= event %>
@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
 
             <!-- Last Triggered Info -->
             <%= if @webhook.last_triggered_at do %>
-              <div class="flex items-center gap-2 text-token-sm text-slate-500">
+              <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
                 </span>
               </div>
             <% else %>
-              <div class="flex items-center gap-2 text-token-sm text-slate-400 italic">
+              <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
@@ -140,13 +140,13 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               target={@target}
               phx_value_id={"#{@webhook.id}"}
               size={:medium}
-              class="ring-4 ring-slate-50 group-hover:ring-turquoise-50 transition-all duration-300"
+              class="ring-4 ring-tymeslot-50 group-hover:ring-turquoise-50 transition-all duration-300"
             />
           </div>
         </div>
 
         <!-- Bottom: Actions -->
-        <div class="flex items-center gap-2 flex-shrink-0 border-t border-slate-100 pt-3">
+        <div class="flex items-center gap-2 flex-shrink-0 border-t border-tymeslot-100 pt-3">
           <!-- Test Button -->
           <button
             phx-click={@on_test}
@@ -154,8 +154,8 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             class={[
               "inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 font-bold transition-all text-token-sm",
               if(@webhook.is_active && !@testing,
-                do: "bg-white border-slate-100 text-slate-700 hover:border-turquoise-200 hover:bg-turquoise-50",
-                else: "bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed opacity-50"
+                do: "bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50",
+                else: "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-50"
               )
             ]}
             title={
@@ -192,7 +192,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
           <!-- View Logs Button -->
           <button
             phx-click={@on_view_deliveries}
-            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-slate-100 text-slate-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
             title="View Delivery Logs"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             <!-- Edit Button -->
             <button
               phx-click={@on_edit}
-              class="p-2.5 text-slate-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
+              class="p-2.5 text-tymeslot-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
               title="Edit Webhook"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,7 +226,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             <!-- Delete Button -->
             <button
               phx-click={@on_delete}
-              class="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"
+              class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"
               title="Delete Webhook"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -80,7 +80,7 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsStep do
             <% # Calculate dynamic padding based on URL length (approximate: 0.6rem per character) %>
             <% padding_rem = (String.length(display_url) + 1) * 0.55 %>
             <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <span class="text-slate-400 font-bold text-sm tracking-tight">{display_url}/</span>
+              <span class="text-tymeslot-400 font-bold text-sm tracking-tight">{display_url}/</span>
             </div>
             <input
               type="text"
@@ -99,13 +99,13 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsStep do
           <%= for message <- FormValidationHelpers.field_errors(@form_errors, :username) do %>
             <p class="mt-2 text-sm text-red-600 font-bold">{message}</p>
           <% end %>
-          <p class="text-sm mt-3 font-bold text-slate-400 uppercase tracking-widest">
+          <p class="text-sm mt-3 font-bold text-tymeslot-400 uppercase tracking-widest">
             This will be your unique scheduling link.
           </p>
         </div>
 
     <!-- Timezone component inside form -->
-        <div class="onboarding-form-group pt-3 border-t-2 border-slate-50">
+        <div class="onboarding-form-group pt-3 border-t-2 border-tymeslot-50">
           <label class="label mb-3">Your Timezone</label>
           <TimezoneDropdown.timezone_dropdown
             profile={@profile}

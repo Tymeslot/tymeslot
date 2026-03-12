@@ -12,13 +12,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.IntegrationForm do
     ~H"""
     <div class="card-glass">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-medium text-gray-800">
+        <h3 class="text-lg font-medium text-tymeslot-800">
           {@title}
         </h3>
         <button
           phx-click={@cancel_event}
           phx-target={@target}
-          class="text-gray-500 hover:text-gray-700"
+          class="text-tymeslot-500 hover:text-tymeslot-700"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path

@@ -97,7 +97,9 @@ defmodule TymeslotWeb.Components.LanguageSwitcher do
   end
 
   defp dropdown_item_class(theme, active) do
-    base = "flex items-center w-full px-4 py-3 text-left text-gray-700 text-sm transition-colors"
+    base =
+      "flex items-center w-full px-4 py-3 text-left text-tymeslot-700 text-sm transition-colors"
+
     theme_class = "language-dropdown-item-#{theme}"
     active_class = if active, do: "active", else: ""
     "#{base} #{theme_class} #{active_class}"

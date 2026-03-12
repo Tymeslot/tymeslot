@@ -31,8 +31,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavConfig do
       <div class="flex items-center gap-4 mb-2">
         <ProviderIcon.provider_icon provider="caldav" type="calendar" size="large" />
         <div>
-          <h3 class="text-xl font-black text-slate-900 tracking-tight">CalDAV</h3>
-          <p class="text-sm text-slate-500 font-medium">Connect any CalDAV-compatible server</p>
+          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">CalDAV</h3>
+          <p class="text-sm text-tymeslot-500 font-medium">Connect any CalDAV-compatible server</p>
         </div>
       </div>
 

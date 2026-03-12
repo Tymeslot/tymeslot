@@ -86,7 +86,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
 
       <div class="relative group">
         <%= if @icon || render_slot(@leading_icon) do %>
-          <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-turquoise-600 transition-colors duration-300 pointer-events-none">
+          <div class="absolute left-4 top-1/2 -translate-y-1/2 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors duration-300 pointer-events-none">
             <%= if @icon do %>
               <TymeslotWeb.Components.CoreComponents.Icons.icon name={@icon} class="w-5 h-5" />
             <% else %>
@@ -115,7 +115,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
         />
 
         <%= if render_slot(@trailing_icon) do %>
-          <div class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-turquoise-600 transition-colors duration-300 pointer-events-none">
+          <div class="absolute right-4 top-1/2 -translate-y-1/2 text-tymeslot-400 group-hover:text-turquoise-600 transition-colors duration-300 pointer-events-none">
             {render_slot(@trailing_icon)}
           </div>
         <% end %>
@@ -198,7 +198,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             Phoenix.HTML.Form.normalize_value("checkbox", @checked_value)
         end
       }
-      class="checkbox w-5 h-5 rounded border-slate-300 text-turquoise-600 focus:ring-turquoise-500"
+      class="checkbox w-5 h-5 rounded border-tymeslot-300 text-turquoise-600 focus:ring-turquoise-500"
       {@rest}
     />
     """
@@ -287,10 +287,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   def password_requirements(assigns) do
     ~H"""
     <div id="password-requirements" class="mt-2 text-xs sm:text-sm space-y-1.5 password-requirements">
-      <p class="text-slate-500 font-bold uppercase tracking-wider text-[10px]">Password must contain:</p>
+      <p class="text-tymeslot-500 font-bold uppercase tracking-wider text-[10px]">Password must contain:</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-x-4">
         <ul class="space-y-1">
-          <li id="req-length" class="flex items-center text-slate-600 font-medium">
+          <li id="req-length" class="flex items-center text-tymeslot-600 font-medium">
             <svg
               class="w-3.5 h-3.5 mr-1.5 flex-shrink-0"
               fill="none"
@@ -301,7 +301,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             </svg>
             <span class="text-xs">At least 8 characters</span>
           </li>
-          <li id="req-lowercase" class="flex items-center text-slate-600 font-medium">
+          <li id="req-lowercase" class="flex items-center text-tymeslot-600 font-medium">
             <svg
               class="w-3.5 h-3.5 mr-1.5 flex-shrink-0"
               fill="none"
@@ -314,7 +314,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
           </li>
         </ul>
         <ul class="space-y-1">
-          <li id="req-uppercase" class="flex items-center text-slate-600 font-medium">
+          <li id="req-uppercase" class="flex items-center text-tymeslot-600 font-medium">
             <svg
               class="w-3.5 h-3.5 mr-1.5 flex-shrink-0"
               fill="none"
@@ -325,7 +325,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             </svg>
             <span class="text-xs">One uppercase letter</span>
           </li>
-          <li id="req-number" class="flex items-center text-slate-600 font-medium">
+          <li id="req-number" class="flex items-center text-tymeslot-600 font-medium">
             <svg
               class="w-3.5 h-3.5 mr-1.5 flex-shrink-0"
               fill="none"

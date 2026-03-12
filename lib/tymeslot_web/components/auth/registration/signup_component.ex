@@ -102,7 +102,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
               id="signup-g-recaptcha-response"
               value=""
             />
-            <div class="text-xs text-gray-500 text-center mt-3">
+            <div class="text-xs text-tymeslot-500 text-center mt-3">
               This site is protected by reCAPTCHA and the Google
               <a
                 href="https://policies.google.com/privacy"

@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             <div class="flex items-center gap-3 mb-2">
               <h3 class={[
                 "text-token-xl font-black tracking-tight",
-                if(@integration.status == :active, do: "text-slate-900", else: "text-slate-500")
+                if(@integration.status == :active, do: "text-tymeslot-900", else: "text-tymeslot-500")
               ]}>
                 <%= @integration.name %>
               </h3>
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             </div>
 
             <%= if @integration.chat_id do %>
-              <div class="text-token-sm text-slate-600 font-mono mb-3 truncate">
+              <div class="text-token-sm text-tymeslot-600 font-mono mb-3 truncate">
                 Chat: <%= truncate_chat_id(@integration.chat_id) %>
               </div>
             <% end %>
@@ -76,14 +76,14 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             <% else %>
               <!-- Last Triggered Info -->
               <%= if @integration.last_triggered_at do %>
-                <div class="flex items-center gap-2 text-token-sm text-slate-500">
+                <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
                   <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>Last triggered: <%= AutomationHelpers.format_datetime(@integration.last_triggered_at) %></span>
                 </div>
               <% else %>
-                <div class="flex items-center gap-2 text-token-sm text-slate-400 italic">
+                <div class="flex items-center gap-2 text-token-sm text-tymeslot-400 italic">
                   <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -109,14 +109,14 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
                 target={@target}
                 phx_value_id={"#{@integration.id}"}
                 size={:medium}
-                class="ring-4 ring-slate-50 group-hover:ring-turquoise-50 transition-all duration-300"
+                class="ring-4 ring-tymeslot-50 group-hover:ring-turquoise-50 transition-all duration-300"
               />
             <% end %>
           </div>
         </div>
 
         <!-- Bottom: Actions -->
-        <div class="flex items-center gap-2 flex-shrink-0 border-t border-slate-100 pt-3">
+        <div class="flex items-center gap-2 flex-shrink-0 border-t border-tymeslot-100 pt-3">
           <!-- Test Button -->
           <%= if @integration.status in [:active, :paused] do %>
             <button
@@ -125,8 +125,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               class={[
                 "inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 font-bold transition-all text-token-sm",
                 if(@integration.status == :active && !@testing,
-                  do: "bg-white border-slate-100 text-slate-700 hover:border-turquoise-200 hover:bg-turquoise-50",
-                  else: "bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed opacity-50"
+                  do: "bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50",
+                  else: "bg-tymeslot-50 border-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-50"
                 )
               ]}
             >
@@ -167,7 +167,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
           <!-- Logs Button -->
           <button
             phx-click={@on_view_deliveries}
-            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-slate-100 text-slate-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -180,7 +180,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             <%= if @integration.status != :pending_link do %>
               <button
                 phx-click={@on_edit}
-                class="p-2.5 text-slate-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
+                class="p-2.5 text-tymeslot-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
                 title="Edit"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,7 +193,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             <%= if @on_disconnect && @integration.bot_mode == "shared" && @integration.chat_id do %>
               <button
                 phx-click={@on_disconnect}
-                class="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-token-xl transition-all"
+                class="p-2.5 text-tymeslot-400 hover:text-amber-600 hover:bg-amber-50 rounded-token-xl transition-all"
                 title="Disconnect Telegram"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,7 +205,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             <!-- Delete Button -->
             <button
               phx-click={@on_delete}
-              class="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"
+              class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"
               title="Delete"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,8 +239,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
 
   defp status_badge(%{status: :paused} = assigns) do
     ~H"""
-    <span class="inline-flex items-center gap-1 bg-slate-200 text-slate-600 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
-      <div class="w-1.5 h-1.5 rounded-full bg-slate-400" />
+    <span class="inline-flex items-center gap-1 bg-tymeslot-200 text-tymeslot-600 text-xs font-black px-2.5 py-1 rounded-full uppercase tracking-wide">
+      <div class="w-1.5 h-1.5 rounded-full bg-tymeslot-400" />
       Paused
     </span>
     """
@@ -256,24 +256,24 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
   end
 
   defp card_style(:active), do: "hover:shadow-xl"
-  defp card_style(:paused), do: "opacity-75 grayscale-[0.3] bg-slate-100/50"
+  defp card_style(:paused), do: "opacity-75 grayscale-[0.3] bg-tymeslot-100/50"
   defp card_style(:auto_disabled), do: "opacity-75 border-red-200 bg-red-50/30"
   defp card_style(:pending_link), do: "border-amber-200 bg-amber-50/30"
 
-  defp icon_bg(:active), do: "bg-slate-50 group-hover:bg-white"
+  defp icon_bg(:active), do: "bg-tymeslot-50 group-hover:bg-white"
   defp icon_bg(:pending_link), do: "bg-amber-50"
-  defp icon_bg(_status), do: "bg-slate-200"
+  defp icon_bg(_status), do: "bg-tymeslot-200"
 
   defp icon_color(:active), do: "text-turquoise-600"
   defp icon_color(:pending_link), do: "text-amber-600"
   defp icon_color(:auto_disabled), do: "text-red-400"
-  defp icon_color(_status), do: "text-slate-400"
+  defp icon_color(_status), do: "text-tymeslot-400"
 
   defp event_tag_style(:active), do: "bg-turquoise-50 text-turquoise-700 border-turquoise-200"
-  defp event_tag_style(_status), do: "bg-slate-100 text-slate-500 border-slate-200"
+  defp event_tag_style(_status), do: "bg-tymeslot-100 text-tymeslot-500 border-tymeslot-200"
 
   defp event_dot_style(:active), do: "bg-turquoise-500"
-  defp event_dot_style(_status), do: "bg-slate-400"
+  defp event_dot_style(_status), do: "bg-tymeslot-400"
 
   defp truncate_chat_id(chat_id) when is_binary(chat_id) do
     if String.length(chat_id) > 12 do

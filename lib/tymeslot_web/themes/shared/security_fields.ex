@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
         id={"#{@id_prefix}-g-recaptcha-response"}
         value=""
       />
-      <div class="recaptcha-notice text-xs text-gray-500 text-center">
+      <div class="recaptcha-notice text-xs text-tymeslot-500 text-center">
         This site is protected by reCAPTCHA and the Google
         <a
           href="https://policies.google.com/privacy"

@@ -122,7 +122,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <p class="text-base text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
+          <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
             We've sent password reset instructions to your email address. Please check your inbox and follow the link to reset your password.
           </p>
         </div>
@@ -232,10 +232,10 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 class="text-xl font-bold text-slate-900 tracking-tight mb-3">
+          <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">
             Password Changed
           </h2>
-          <p class="text-base text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
+          <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
             Your password has been successfully updated. You can now log in with your new credentials.
           </p>
         </div>

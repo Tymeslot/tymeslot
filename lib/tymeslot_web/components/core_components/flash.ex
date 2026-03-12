@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
 
   # Helper function for flash styling variants
   defp flash_variant(:info) do
-    "bg-white border-turquoise-100 text-slate-900 shadow-turquoise-500/10"
+    "bg-white border-turquoise-100 text-tymeslot-900 shadow-turquoise-500/10"
   end
 
   defp flash_variant(:error) do

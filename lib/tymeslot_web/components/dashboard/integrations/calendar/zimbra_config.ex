@@ -31,8 +31,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ZimbraConfig do
       <div class="flex items-center gap-4 mb-2">
         <ProviderIcon.provider_icon provider="zimbra" type="calendar" size="large" />
         <div>
-          <h3 class="text-xl font-black text-slate-900 tracking-tight">Zimbra</h3>
-          <p class="text-sm text-slate-500 font-medium">Sync calendars from your Zimbra server</p>
+          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">Zimbra</h3>
+          <p class="text-sm text-tymeslot-500 font-medium">Sync calendars from your Zimbra server</p>
         </div>
       </div>
 

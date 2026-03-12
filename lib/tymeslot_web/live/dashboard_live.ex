@@ -427,7 +427,7 @@ defmodule TymeslotWeb.DashboardLive do
       />
     <% else %>
       <!-- Core fallback: just show a simple message -->
-      <div class="p-8 text-center text-gray-500">
+      <div class="p-8 text-center text-tymeslot-500">
         <p>This feature (<%= @feature_name %>) is not available on your current plan.</p>
       </div>
     <% end %>
