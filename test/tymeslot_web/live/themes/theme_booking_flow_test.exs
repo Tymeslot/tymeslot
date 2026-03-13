@@ -197,32 +197,55 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
     @tag :capture_log
     test "handles DST transition correctly for slot generation", %{conn: conn} do
-      # DST Start: March 8, 2026. 2:00 AM becomes 3:00 AM.
-      # We want to see if a slot at 2:00 AM is skipped or handled.
+      # US DST spring-forward: 2nd Sunday of March, 2:00 AM → 3:00 AM.
+      # We want to see if slots during the DST gap (2:00-3:00 AM) are skipped.
 
-      user = insert(:user)
       timezone = "America/New_York"
 
+      # Find the next 2nd-Sunday-of-March (DST spring-forward) that's in the future
+      dst_date = next_dst_spring_forward(Date.utc_today())
+      dst_day_of_week = Date.day_of_week(dst_date)
+
+      user = insert(:user)
+
       profile =
-        insert(:profile, user: user, booking_theme: "1", timezone: timezone, username: "dst-test")
+        insert(:profile,
+          user: user,
+          booking_theme: "1",
+          timezone: timezone,
+          username: "dst-test",
+          advance_booking_days: 400,
+          min_advance_hours: 0,
+          buffer_minutes: 0
+        )
 
       _integration = insert(:calendar_integration, user: user, is_active: true)
 
-      # Mock availability for that day
-      # Sunday March 8, 2026
+      _meeting_type =
+        insert(:meeting_type,
+          user: user,
+          duration_minutes: 30,
+          name: "30 Minutes",
+          is_active: true
+        )
+
+      # Set availability for the DST day (always a Sunday, day_of_week 7)
       insert(:weekly_availability,
         profile: profile,
-        day_of_week: 7,
+        day_of_week: dst_day_of_week,
         is_available: true,
         start_time: ~T[01:00:00],
         end_time: ~T[05:00:00]
       )
 
-      dst_date = "2026-03-08"
+      dst_date_str = Date.to_string(dst_date)
 
       # We use schedule route to see generated slots
       {:ok, view, _html} =
-        live(conn, ~p"/#{profile.username}/30-minutes?date=#{dst_date}&timezone=#{timezone}")
+        live(
+          conn,
+          ~p"/#{profile.username}/30-minutes?date=#{dst_date_str}&timezone=#{timezone}"
+        )
 
       # Wait for slots to load
       wait_until(fn -> has_element?(view, "button[data-testid='time-slot']") end)
@@ -520,6 +543,23 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
       dow = Date.day_of_week(date)
       if dow in 1..5, do: date, else: nil
     end) || Date.add(start_date, 1)
+  end
+
+  # Returns the next 2nd-Sunday-of-March (US DST spring-forward) after `today`.
+  defp next_dst_spring_forward(%Date{} = today) do
+    Enum.find_value(today.year..(today.year + 2), fn year ->
+      date = second_sunday_of_march(year)
+      if Date.compare(date, today) == :gt, do: date
+    end)
+  end
+
+  defp second_sunday_of_march(year) do
+    march_1 = Date.new!(year, 3, 1)
+    days_to_sunday = rem(7 - Date.day_of_week(march_1), 7)
+    first_sunday = Date.add(march_1, days_to_sunday)
+    # If March 1 is a Sunday, first_sunday is March 1
+    first_sunday = if days_to_sunday == 0, do: march_1, else: first_sunday
+    Date.add(first_sunday, 7)
   end
 
   defp ensure_rate_limiter_started do
