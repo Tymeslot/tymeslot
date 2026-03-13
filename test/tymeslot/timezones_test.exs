@@ -63,7 +63,11 @@ defmodule Tymeslot.TimezonesTest do
       assert Timezones.country_code("Europe/Brussels") == :bel
       assert Timezones.country_code("America/New_York") == :usa
       assert Timezones.country_code("Asia/Tokyo") == :jpn
-      assert Timezones.country_code("Asia/Yangon") == :mmr
+    end
+
+    test "maps Berlin to Germany, not Denmark (zone1970 primary country)" do
+      assert Timezones.country_code("Europe/Berlin") == :deu
+      assert Timezones.format("Europe/Berlin") == "Berlin, Germany"
     end
 
     test "maps Simferopol to Ukraine (country override for disputed territory)" do

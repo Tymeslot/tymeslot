@@ -27,15 +27,42 @@ defmodule Tymeslot.Timezones.Data do
     "wellington" => "Pacific/Auckland"
   }
 
+  # zone1970.tab gives the IANA-authoritative primary country for each timezone_id.
+  # The first country code in each line is the one the timezone is named for.
+  # TzExtra sorts countries alphabetically, but zone1970.tab has the right order.
+  @zone1970_primary_countries (
+                                priv = to_string(:code.priv_dir(:tz))
+
+                                tzdata_dir =
+                                  File.ls!(priv) |> Enum.find(&String.starts_with?(&1, "tzdata"))
+
+                                path = Path.join([priv, tzdata_dir, "zone1970.tab"])
+
+                                File.read!(path)
+                                |> String.split("\n")
+                                |> Enum.reject(
+                                  &(String.starts_with?(&1, "#") or String.trim(&1) == "")
+                                )
+                                |> Enum.flat_map(fn line ->
+                                  case String.split(line, "\t") do
+                                    [codes, _coords, tz_id | _rest] ->
+                                      [{tz_id, codes |> String.split(",") |> List.first()}]
+
+                                    _ ->
+                                      []
+                                  end
+                                end)
+                                |> Map.new()
+                              )
+
   # Country overrides: timezone_id => ISO alpha-2 country code.
-  # Used when TzExtra's ordering doesn't reflect the internationally recognised
-  # country assignment (e.g. disputed territories).
+  # Used only for genuinely disputed territories where the IANA assignment
+  # doesn't reflect the internationally recognised country.
+  # Note: most "wrong primary country" issues are fixed by @zone1970_primary_countries above.
   @country_overrides %{
     # Simferopol is the capital of Crimea, internationally recognised as Ukraine
-    # despite Russian occupation since 2014. TzExtra lists Russia first.
-    "Europe/Simferopol" => "UA",
-    # Asia/Yangon is Myanmar's timezone; TzExtra lists Cocos Islands (CCK) first.
-    "Asia/Yangon" => "MM"
+    # despite Russian occupation since 2014. zone1970.tab lists Russia first.
+    "Europe/Simferopol" => "UA"
   }
 
   # Label overrides for entries where the default derivation isn't ideal
@@ -96,38 +123,42 @@ defmodule Tymeslot.Timezones.Data do
                  |> Enum.sort_by(& &1.label)
                )
 
-  # Primary entry per timezone_id: first entry wins (TzExtra returns the
-  # "home" country first — e.g. Belgium for Europe/Brussels), with
-  # @country_overrides applied afterwards for disputed territories.
+  # Primary entry per timezone_id: selected using the IANA-authoritative zone1970.tab
+  # primary country, with @country_overrides applied on top for disputed territories.
+  # Falls back to the first (alphabetical) TzExtra entry for any timezone not in zone1970.tab.
   @primary_entries (
                      enrich = @enrich_entry
                      label_overrides = @label_overrides
                      country_overrides = @country_overrides
+                     zone1970 = @zone1970_primary_countries
 
                      all_tz_entries = TzExtra.countries_time_zones()
 
-                     # Index all entries by {timezone_id, country_code} for override lookup
+                     # Index all entries by {timezone_id, country_code} for O(1) lookup
                      by_tz_and_country =
                        Map.new(all_tz_entries, fn entry ->
                          {{entry.time_zone_id, entry.country.code}, entry}
                        end)
 
-                     all_tz_entries
-                     |> Enum.reduce(%{}, fn entry, acc ->
-                       Map.put_new(acc, entry.time_zone_id, entry)
-                     end)
-                     |> Enum.map(fn {tz_id, entry} ->
-                       # Apply country override if one exists for this timezone
-                       case Map.get(country_overrides, tz_id) do
-                         nil ->
-                           enrich.(entry, label_overrides)
+                     # First alphabetical entry per timezone_id (fallback only)
+                     first_by_tz_id =
+                       Enum.reduce(all_tz_entries, %{}, fn entry, acc ->
+                         Map.put_new(acc, entry.time_zone_id, entry)
+                       end)
 
-                         override_code ->
-                           override_entry =
-                             Map.get(by_tz_and_country, {tz_id, override_code}, entry)
+                     Enum.map(first_by_tz_id, fn {tz_id, first_entry} ->
+                       # Priority: country_overrides > zone1970 primary > first alphabetical
+                       preferred_code =
+                         Map.get(country_overrides, tz_id) ||
+                           Map.get(zone1970, tz_id)
 
-                           enrich.(override_entry, label_overrides)
-                       end
+                       entry =
+                         case preferred_code do
+                           nil -> first_entry
+                           code -> Map.get(by_tz_and_country, {tz_id, code}, first_entry)
+                         end
+
+                       enrich.(entry, label_overrides)
                      end)
                      |> Enum.sort_by(& &1.label)
                    )
