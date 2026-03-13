@@ -104,8 +104,8 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
     end
 
     test "greys out today if business hours have passed", %{conn: conn} do
-      # 14 hours ahead of UTC
-      timezone = "Etc/GMT-14"
+      # Use a valid IANA timezone that's far ahead of UTC (UTC+14)
+      timezone = "Pacific/Kiritimati"
       user = insert(:user)
       username = "today-grey-test-#{System.unique_integer([:positive])}"
 
@@ -146,11 +146,9 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
       {:ok, view, _html} =
         live(conn, ~p"/#{profile.username}/30-minutes?timezone=#{timezone}")
 
-      # Since business hours are 00:00-01:00 and we are in GMT-14,
-      # today should be disabled as long as it's past 01:00 in that timezone.
-      # However, with min_advance_hours (default 3), today should ALWAYS be disabled
-      # in this specific setup, even at 00:00.
-
+      # Business hours are 00:00-01:00 and min_advance_hours defaults to 3,
+      # so the earliest bookable time is now+3h which always exceeds the 01:00
+      # business end. Today should ALWAYS be disabled in this setup.
       wait_until(fn ->
         has_element?(
           view,
