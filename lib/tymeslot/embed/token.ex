@@ -7,6 +7,7 @@ defmodule Tymeslot.Embed.Token do
   """
 
   alias Phoenix.Token
+  alias Tymeslot.SignedToken
 
   @salt "embed_session"
   @max_age_seconds 21_600
@@ -19,11 +20,9 @@ defmodule Tymeslot.Embed.Token do
   @spec verify(String.t(), keyword()) :: {:ok, String.t()} | {:error, atom()}
   def verify(token, opts \\ []) do
     max_age = Keyword.get(opts, :max_age, @max_age_seconds)
-
-    case Token.verify(TymeslotWeb.Endpoint, @salt, token, max_age: max_age) do
-      {:ok, username} when is_binary(username) -> {:ok, username}
-      {:ok, _invalid} -> {:error, :invalid}
-      {:error, reason} -> {:error, reason}
-    end
+    SignedToken.verify(token, @salt, max_age, &validate/1)
   end
+
+  defp validate(username) when is_binary(username), do: {:ok, username}
+  defp validate(_), do: {:error, :invalid}
 end
