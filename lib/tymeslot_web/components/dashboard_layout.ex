@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           phx-hook="ScrollReset"
           data-action={@current_action}
         >
-          <div class="max-w-6xl mx-auto px-4 lg:px-8 pb-8">
+          <div class="max-w-7xl mx-auto px-4 lg:px-8 pb-8">
             <main>
               {render_slot(@inner_block)}
             </main>
