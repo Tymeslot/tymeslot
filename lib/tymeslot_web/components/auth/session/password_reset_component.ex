@@ -127,8 +127,8 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             We've sent password reset instructions to your email address. Please check your inbox and follow the link to reset your password.
           </p>
         </div>
-        <div class="mt-8">
-          <.auth_link_button href={~p"/auth/login"}>
+        <div class="mt-8 text-center">
+          <.auth_link_button href={~p"/auth/login"} class="inline-block">
             Back to Login
           </.auth_link_button>
         </div>
