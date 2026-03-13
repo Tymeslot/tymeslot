@@ -30,18 +30,18 @@ RUN mix deps.get --only $MIX_ENV
 # Compile dependencies (cached if mix.exs/mix.lock unchanged)
 RUN mix deps.compile
 
-# Copy source and build assets. Wipe any locally-built assets first so the
+# Copy source and compile. Wipe any locally-built assets first so the
 # image build is hermetic — assets are always produced by mix assets.deploy below.
 COPY . .
 RUN rm -rf priv/static/assets/
+RUN mix compile
 RUN mix assets.setup
 RUN mix assets.deploy
 
-# Compile and create the release, then copy runtime config into it.
+# Create the release, then copy runtime config into it.
 # mix release does not automatically include config/runtime.exs in all setups;
 # copying it explicitly ensures it is available at startup.
-RUN mix compile && \
-    mix release tymeslot --overwrite --path /opt/release && \
+RUN mix release tymeslot --overwrite --path /opt/release && \
     mkdir -p /opt/release/config && \
     cp config/runtime.exs /opt/release/config/
 

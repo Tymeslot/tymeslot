@@ -33,11 +33,11 @@ RUN mix deps.compile
 # assets are always produced by mix assets.deploy below.
 COPY . .
 RUN rm -rf priv/static/assets/
+RUN mix compile
 RUN mix assets.setup
 RUN mix assets.deploy
 
-RUN mix compile && \
-    mix release tymeslot && \
+RUN mix release tymeslot && \
     mkdir -p _build/prod/rel/tymeslot/apps/tymeslot/config && \
     cp config/runtime.exs _build/prod/rel/tymeslot/apps/tymeslot/config/
 
