@@ -13,6 +13,7 @@
           "sendmail": {}
         },
         "author": "Luka Karsten Breitig",
+        "packagerName": "Luka Karsten Breitig",
         "changelog": "file://CHANGELOG",
         "contactEmail": "hello@tymeslot.app",
         "description": "A meeting scheduler application with CalDAV integration",

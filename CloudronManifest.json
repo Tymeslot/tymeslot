@@ -2,6 +2,7 @@
   "id": "app.tymeslot",
   "title": "Tymeslot",
   "author": "Luka Karsten Breitig",
+  "packagerName": "Luka Karsten Breitig",
   "description": "A meeting scheduler application with CalDAV integration",
   "tagline": "Smart meeting scheduling with CalDAV",
   "version": "0.99.27",
