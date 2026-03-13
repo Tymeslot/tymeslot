@@ -38,6 +38,27 @@ defmodule TymeslotWeb.Endpoint do
       ]
     ]
 
+  # Embed socket — no session cookie verification so cross-site iframes
+  # work on mobile browsers that block third-party SameSite=Lax cookies.
+  # Auth is handled by signed embed tokens in the LiveView session instead.
+  socket "/embed-live", Phoenix.LiveView.Socket,
+    websocket: [
+      connect_info: [
+        :peer_data,
+        {:x_headers, ["x-forwarded-for", "x-real-ip", "origin"]},
+        :user_agent
+      ],
+      timeout: 60_000,
+      transport_log: false
+    ],
+    longpoll: [
+      connect_info: [
+        :peer_data,
+        {:x_headers, ["x-forwarded-for", "x-real-ip", "origin"]},
+        :user_agent
+      ]
+    ]
+
   # Allow Wallaby browser tests to share the Ecto sandbox connection
   if Application.compile_env(:tymeslot, :environment) == :test do
     plug Phoenix.Ecto.SQL.Sandbox

@@ -42,9 +42,13 @@ const CoreHooks = {
   ClipboardCopy
 }
 
+// Use /embed-live in cross-site iframes to avoid session cookie dependency
+// (mobile browsers block SameSite=Lax cookies in third-party iframe context)
+const socketPath = (window.self !== window.top) ? "/embed-live" : "/live"
+
 // Initialize LiveSocket with core hooks
 // Route-specific bundles will extend this with additional hooks before connecting
-let liveSocket = new LiveSocket("/live", Socket, {
+let liveSocket = new LiveSocket(socketPath, Socket, {
   params: {
     _csrf_token: csrfToken,
     timezone: getUserTimezone()
