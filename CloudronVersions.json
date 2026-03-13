@@ -14,6 +14,7 @@
         },
         "author": "Luka Karsten Breitig",
         "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
         "changelog": "file://CHANGELOG",
         "contactEmail": "hello@tymeslot.app",
         "description": "A meeting scheduler application with CalDAV integration",
@@ -29,7 +30,7 @@
           "https://tymeslot.app/images/cloudron-screenshots/availability.png",
           "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
         ],
-        "minBoxVersion": "5.3.0",
+        "minBoxVersion": "9.1.0",
         "postInstallMessage": "Thank you for installing Tymeslot!",
         "tagline": "Smart meeting scheduling with CalDAV",
         "tags": [
