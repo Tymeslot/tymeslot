@@ -132,17 +132,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
         # Auto-select primary/default calendar based on provider rules
         CalendarPrimary.auto_select_primary_calendar(integration, calendars)
 
-      {:error, type, reason} ->
+      {:error, reason} ->
         Logger.warning("Calendar discovery failed after OAuth callback",
           provider: integration.provider,
-          error_type: type,
           reason: reason
         )
 
-        {:ok, integration}
-
-      {:error, _reason} ->
-        # Discovery failure is non-fatal — user can configure calendars manually later
         {:ok, integration}
     end
   end
