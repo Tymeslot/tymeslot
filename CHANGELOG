@@ -1,4 +1,11 @@
 
+[0.99.27]
+* core: Use valid IANA timezone in availability refinement test
+* core: Make DST slot generation test use dynamic future date
+* core: Relax flaky concurrent rate limiting test assertions
+* core: Align Google OAuth test assertions with widened calendar scope
+* core: Replace cookie rewriting with signed token auth for embeds
+* core: Add Tymeslot.Embed.Token for signed embed tokens
 [0.99.26]
 * core: Show booking validation errors per-field based on touched state
 * core: Debounce email validation on auth forms to fire on blur
