@@ -590,11 +590,6 @@ defmodule TymeslotWeb.AuthLive do
           >
             <:form>
               <div class="text-center mb-8">
-                <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-emerald-50 border-2 border-emerald-100 shadow-xl shadow-emerald-500/10 mb-6 transform hover:scale-105 transition-all duration-300">
-                  <svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
                 <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">Password Reset Successfully</h2>
                 <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
                   Your password has been reset. You can now log in with your new credentials.
