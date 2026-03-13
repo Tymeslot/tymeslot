@@ -57,7 +57,10 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlowTest do
 
     # User then blurs email — now both fields show errors
     after_name_and_email =
-      %{after_name | assigns: Map.put(after_name.assigns, :touched_fields, MapSet.new(["name", "email"]))}
+      %{
+        after_name
+        | assigns: Map.put(after_name.assigns, :touched_fields, MapSet.new(["name", "email"]))
+      }
 
     {:noreply, after_both} = BookingFlow.handle_form_validation(after_name_and_email, params)
 

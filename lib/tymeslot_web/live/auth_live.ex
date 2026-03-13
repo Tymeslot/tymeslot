@@ -104,7 +104,8 @@ defmodule TymeslotWeb.AuthLive do
         {:noreply, socket |> assign(:errors, %{}) |> assign(:form_data, form_data)}
 
       {:error, errors} ->
-        {:noreply, socket |> assign(:errors, Map.take(errors, [:email])) |> assign(:form_data, form_data)}
+        {:noreply,
+         socket |> assign(:errors, Map.take(errors, [:email])) |> assign(:form_data, form_data)}
     end
   end
 
