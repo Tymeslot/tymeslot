@@ -18,14 +18,24 @@ defmodule TymeslotWeb.Endpoint do
 
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [
-      connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options],
+      connect_info: [
+        :peer_data,
+        {:x_headers, ["x-forwarded-for", "x-real-ip", "origin"]},
+        :user_agent,
+        session: @session_options
+      ],
       # 60 seconds keepalive timeout
       timeout: 60_000,
       # Reduce noise from disconnection logs
       transport_log: false
     ],
     longpoll: [
-      connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]
+      connect_info: [
+        :peer_data,
+        {:x_headers, ["x-forwarded-for", "x-real-ip", "origin"]},
+        :user_agent,
+        session: @session_options
+      ]
     ]
 
   # Allow Wallaby browser tests to share the Ecto sandbox connection
@@ -87,7 +97,6 @@ defmodule TymeslotWeb.Endpoint do
 
   plug Plug.MethodOverride
   plug Plug.Head
-  plug TymeslotWeb.Plugs.EmbedCookiePlug
   plug Plug.Session, @session_options
 
   defp dynamic_router(conn, _opts) do

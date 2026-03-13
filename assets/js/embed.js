@@ -118,7 +118,10 @@
         url.searchParams.append('locale', val);
       }
     });
-    
+
+    // Signal embedded context to the server for token generation
+    url.searchParams.append('embed', '1');
+
     iframe.src = url.toString();
     iframe.style.cssText = `
       width: 100%;

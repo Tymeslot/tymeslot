@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Router do
 
   require Logger
 
+  alias Plug.Conn
+
   # =============================================================================
   # Healthcheck (early to avoid wildcard username routes)
   # =============================================================================
@@ -221,7 +223,9 @@ defmodule TymeslotWeb.Router do
     pipe_through :theme_browser
 
     live_session :username_scheduling,
+      session: {__MODULE__, :scheduling_session, []},
       on_mount: [
+        TymeslotWeb.Hooks.EmbedAuthHook,
         TymeslotWeb.Hooks.LocaleHook,
         TymeslotWeb.Hooks.ThemeHook,
         TymeslotWeb.Hooks.ClientInfoHook
@@ -244,5 +248,14 @@ defmodule TymeslotWeb.Router do
     pipe_through :browser
 
     get "/*path", FallbackController, :index
+  end
+
+  @doc false
+  @spec scheduling_session(Plug.Conn.t()) :: map()
+  def scheduling_session(conn) do
+    %{
+      "locale" => Conn.get_session(conn, "locale"),
+      "embed_token" => conn.assigns[:embed_token]
+    }
   end
 end

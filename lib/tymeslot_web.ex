@@ -55,6 +55,7 @@ defmodule TymeslotWeb do
         plug :protect_from_forgery
         plug :put_secure_browser_headers
         plug TymeslotWeb.Plugs.SecurityHeadersPlug, allow_embedding: true
+        plug TymeslotWeb.Plugs.EmbedTokenPlug
         plug TymeslotWeb.Plugs.FetchCurrentUser
         plug TymeslotWeb.Plugs.SetLoggerMetadata
         plug TymeslotWeb.Plugs.LocalePlug

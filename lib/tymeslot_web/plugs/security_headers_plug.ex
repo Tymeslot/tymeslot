@@ -7,7 +7,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   import Plug.Conn
 
   require Logger
+
   alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias TymeslotWeb.Helpers.PathUtils
 
   @spec init(keyword()) :: keyword()
   def init(opts), do: opts
@@ -25,14 +27,8 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
         {"'none'", "DENY"}
       end
 
-    # Signal to EmbedCookiePlug that the session cookie needs SameSite=None
-    # for cross-site iframe contexts ('self'-only is same-origin, no change needed)
-    cross_site_embeddable =
-      allow_embedding and frame_ancestors not in ["'none'", "'self'"]
-
     conn =
       conn
-      |> put_private(:embed_cookie_samesite_none, cross_site_embeddable)
       |> put_resp_header("content-security-policy", csp_header(frame_ancestors))
       |> put_resp_header("x-content-type-options", "nosniff")
       |> put_resp_header("referrer-policy", "strict-origin-when-cross-origin")
@@ -55,7 +51,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   defp get_embed_security_headers(conn) do
     conn = fetch_query_params(conn)
     is_preview = conn.query_params["preview"] in ["true", "1"]
-    username = extract_username_from_path(conn.request_path)
+    username = PathUtils.extract_username_from_path(conn.request_path)
 
     case username do
       nil ->
@@ -93,34 +89,6 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
             {"'none'", "DENY"}
         end
-    end
-  end
-
-  # Extracts username from scheduling paths like /:username or /:username/...
-  defp extract_username_from_path(path) do
-    # List of reserved paths that can't be usernames
-    reserved_paths = [
-      "",
-      "auth",
-      "dashboard",
-      "api",
-      "dev",
-      "assets",
-      "docs",
-      "admin",
-      "healthcheck",
-      "robots.txt",
-      "sitemap.xml",
-      "favicon.ico",
-      "embed.js"
-    ]
-
-    case String.split(path, "/", parts: 3) do
-      ["", username | _rest] ->
-        if username in reserved_paths, do: nil, else: username
-
-      _invalid_path ->
-        nil
     end
   end
 

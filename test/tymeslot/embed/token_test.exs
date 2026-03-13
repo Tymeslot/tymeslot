@@ -17,7 +17,7 @@ defmodule Tymeslot.Embed.TokenTest do
     end
   end
 
-  describe "verify/1" do
+  describe "verify/2" do
     test "verifies a valid token and returns the username" do
       token = Token.sign("sarah")
       assert {:ok, "sarah"} = Token.verify(token)
@@ -34,7 +34,7 @@ defmodule Tymeslot.Embed.TokenTest do
 
     test "rejects a token with non-string payload" do
       # Sign a non-string value directly to test the guard
-      token = Phoenix.Token.sign(TymeslotWeb.Endpoint, "embed_session", 12345)
+      token = Phoenix.Token.sign(TymeslotWeb.Endpoint, "embed_session", 12_345)
       assert {:error, :invalid} = Token.verify(token)
     end
   end
