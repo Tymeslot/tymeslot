@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
   alias Tymeslot.Timezones
   alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
@@ -109,6 +110,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 field={f[:name]}
                 label={gettext("name")}
                 placeholder={gettext("enter_full_name")}
+                errors={FormValidationHelpers.field_errors(@validation_errors, :name)}
                 phx-blur="field_blur"
                 phx-value-field="name"
                 phx-target={@myself}
@@ -119,6 +121,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 label={gettext("email")}
                 type="email"
                 placeholder={gettext("enter_email")}
+                errors={FormValidationHelpers.field_errors(@validation_errors, :email)}
                 phx-blur="field_blur"
                 phx-value-field="email"
                 phx-target={@myself}
@@ -129,6 +132,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 type="textarea"
                 label={gettext("message_optional")}
                 placeholder={gettext("add_details")}
+                errors={FormValidationHelpers.field_errors(@validation_errors, :message)}
                 rows={4}
                 phx-blur="field_blur"
                 phx-value-field="message"

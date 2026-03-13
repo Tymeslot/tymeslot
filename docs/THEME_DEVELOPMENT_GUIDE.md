@@ -641,6 +641,18 @@ end
 - `submit_booking/3` - Submit booking and transition to confirmation
 - Both functions handle spam prevention, rate limiting, and error handling automatically
 
+**Per-field inline errors**: Errors are shown per-field using `FormValidationHelpers.field_errors/2`, matching the pattern used by auth and contact forms. Each `.input` in the booking component must pass errors explicitly:
+
+```heex
+<.input
+  field={f[:name]}
+  errors={FormValidationHelpers.field_errors(@validation_errors, :name)}
+  ...
+/>
+```
+
+Errors only appear for fields the user has blurred (`touched_fields` MapSet), and clear automatically when the user corrects the input (validation returns `{:ok, ...}` → `validation_errors` becomes `%{}`).
+
 ### LocalizationHelpers
 
 Always use `TymeslotWeb.Themes.Shared.LocalizationHelpers` for formatting dates, times, and durations to ensure they respect the user's locale:

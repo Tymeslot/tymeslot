@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
@@ -103,6 +104,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                         field={f[:name]}
                         label={gettext("Your Name")}
                         placeholder={gettext("John Doe")}
+                        errors={FormValidationHelpers.field_errors(@validation_errors, :name)}
                         required
                         phx-debounce="blur"
                         phx-blur="field_blur"
@@ -115,6 +117,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                         label={gettext("Email Address")}
                         type="email"
                         placeholder={gettext("john@example.com")}
+                        errors={FormValidationHelpers.field_errors(@validation_errors, :email)}
                         required
                         phx-debounce="blur"
                         phx-blur="field_blur"
@@ -128,6 +131,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                       type="textarea"
                       label={gettext("Additional Message (Optional)")}
                       placeholder={gettext("Let me know what you'd like to discuss...")}
+                      errors={FormValidationHelpers.field_errors(@validation_errors, :message)}
                       rows={3}
                       phx-debounce="blur"
                       phx-blur="field_blur"
