@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
                 label="Email Address"
                 value={Map.get(@form_data, :email, "")}
                 errors={FormValidationHelpers.field_errors(@errors, :email)}
-                phx-change="validate_login"
+                phx-blur="validate_login_email"
                 icon="hero-envelope"
                 required
               />

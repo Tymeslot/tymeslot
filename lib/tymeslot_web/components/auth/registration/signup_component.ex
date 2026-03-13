@@ -69,6 +69,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
               errors={FormValidationHelpers.field_errors(@errors, :email)}
               value={Map.get(@form_data, :email, "")}
               phx-change="validate_signup"
+              phx-debounce="blur"
               icon="hero-envelope"
               required
             />

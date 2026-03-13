@@ -95,17 +95,28 @@ defmodule TymeslotWeb.AuthLive do
   end
 
   # Login Events
+  def handle_event("validate_login_email", %{"value" => email}, socket) do
+    form_data = Map.put(socket.assigns[:form_data] || %{}, :email, email)
+    params = %{"email" => email, "password" => ""}
+
+    case validate_login_params(params) do
+      {:ok, _validated} ->
+        {:noreply, socket |> assign(:errors, %{}) |> assign(:form_data, form_data)}
+
+      {:error, errors} ->
+        {:noreply, socket |> assign(:errors, Map.take(errors, [:email])) |> assign(:form_data, form_data)}
+    end
+  end
+
   def handle_event("validate_login", %{"email" => email, "password" => password}, socket) do
     params = %{"email" => email, "password" => password}
 
     case validate_login_params(params) do
       {:ok, _validated} ->
-        updated_socket = assign(socket, :form_errors, %{})
-        {:noreply, updated_socket}
+        {:noreply, assign(socket, :errors, %{})}
 
       {:error, errors} ->
-        updated_socket = assign(socket, :form_errors, errors)
-        {:noreply, updated_socket}
+        {:noreply, assign(socket, :errors, errors)}
     end
   end
 
@@ -119,19 +130,19 @@ defmodule TymeslotWeb.AuthLive do
   def handle_event("validate_signup", params, socket) do
     user_params = params["user"] || %{}
     metadata = SecurityHelper.extract_client_metadata(socket)
+    form_data = Map.merge(socket.assigns[:form_data] || %{}, %{email: user_params["email"] || ""})
 
     case InputProcessor.validate_form(
            user_params,
-           [{"email", :email}, {"password", :password}, {"full_name", :full_name}],
+           [{"email", :email}],
            metadata: metadata
          ) do
       {:ok, _sanitized_params} ->
-        updated_socket = assign(socket, :form_errors, %{})
-        {:noreply, updated_socket}
+        {:noreply, socket |> assign(:errors, %{}) |> assign(:form_data, form_data)}
 
       {:error, errors} ->
-        updated_socket = assign(socket, :form_errors, errors)
-        {:noreply, updated_socket}
+        email_errors = Map.take(errors, [:email])
+        {:noreply, socket |> assign(:errors, email_errors) |> assign(:form_data, form_data)}
     end
   end
 

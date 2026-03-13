@@ -50,6 +50,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             errors={FormValidationHelpers.field_errors(@errors, :email)}
             value={Map.get(@form_data, :email, "")}
             phx-change="validate_reset_request"
+            phx-debounce="blur"
             icon="hero-envelope"
             required
           />
