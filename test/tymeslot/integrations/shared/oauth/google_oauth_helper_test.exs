@@ -43,7 +43,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
         ])
 
       assert url =~
-               "scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fmeetings.space.created+custom"
+               "scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fmeetings.space.created+custom"
     end
 
     test "overrides options" do
@@ -124,7 +124,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
       resp_body =
         Jason.encode!(%{
           "scope" =>
-            "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email"
+            "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email"
         })
 
       expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, headers, _opts ->
