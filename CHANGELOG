@@ -1,4 +1,7 @@
 
+[0.99.26]
+* core: Show booking validation errors per-field based on touched state
+* core: Debounce email validation on auth forms to fire on blur
 [0.99.25]
 * core: Fix Google Calendar OAuth scope and discovery crash on 3-tuple error
 * core: Handle SaaS-tagged versions in sync_tags

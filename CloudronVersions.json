@@ -67,6 +67,40 @@
       },
       "publishState": "published",
       "ts": "Thu, 12 Mar 2026 19:19:05 GMT"
+    },
+    "0.99.26": {
+      "creationDate": "Fri, 13 Mar 2026 11:55:51 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "file://CHANGELOG",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:0.99.26",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "minBoxVersion": "5.3.0",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "0.99.26"
+      },
+      "publishState": "published",
+      "ts": "Fri, 13 Mar 2026 11:55:51 GMT"
     }
   }
 }
