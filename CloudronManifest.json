@@ -22,7 +22,7 @@
   "tags": ["calendar", "scheduling", "meetings", "caldav"],
   "minBoxVersion": "9.1.0",
   "changelog": "file://CHANGELOG",
-  "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/apps/tymeslot/priv/static/images/brand/icon.png",
+  "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
   "website": "https://tymeslot.app",
   "contactEmail": "hello@tymeslot.app",
   "documentationUrl": "https://tymeslot.app/docs",

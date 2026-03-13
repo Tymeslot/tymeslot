@@ -22,7 +22,7 @@
         "documentationUrl": "https://tymeslot.app/docs",
         "healthCheckPath": "/healthcheck",
         "httpPort": 4000,
-        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/apps/tymeslot/priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
         "id": "app.tymeslot",
         "manifestVersion": 2,
         "mediaLinks": [
