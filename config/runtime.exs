@@ -455,6 +455,7 @@ from_name =
 
 phx_host =
   System.get_env("PHX_HOST") ||
+    System.get_env("CLOUDRON_APP_DOMAIN") ||
     if config_env() == :prod,
       do: raise("environment variable PHX_HOST is missing"),
       else: "tymeslot.app"
