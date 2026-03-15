@@ -98,7 +98,9 @@ defmodule Tymeslot.CalendarGridTest do
       assert result == []
     end
 
-    test "excludes events ending exactly at range start (strict boundary)", %{integration: integration} do
+    test "excludes events ending exactly at range start (strict boundary)", %{
+      integration: integration
+    } do
       insert(:calendar_event_cache,
         calendar_integration: integration,
         start_at: ~U[2026-03-14 23:00:00Z],
