@@ -258,6 +258,30 @@ defmodule Tymeslot.Security.Security do
   end
 
   @doc """
+  Validates a list of domain names, filtering empty entries first.
+  Returns `{:ok, validated_domains}` if all non-empty entries are valid,
+  or `{:error, error_message}` with aggregated error reasons otherwise.
+  """
+  @spec validate_domains([String.t()]) :: {:ok, [String.t()]} | {:error, String.t()}
+  def validate_domains(domains) when is_list(domains) do
+    filtered = Enum.reject(domains, &(&1 == "" or is_nil(&1)))
+    results = Enum.map(filtered, &validate_domain/1)
+    {oks, errors} = Enum.split_with(results, &match?({:ok, _}, &1))
+
+    if errors == [] do
+      {:ok, Enum.map(oks, fn {:ok, d} -> d end)}
+    else
+      error_msg =
+        errors
+        |> Enum.map(fn {:error, reason} -> reason end)
+        |> Enum.uniq()
+        |> Enum.join(", ")
+
+      {:error, error_msg}
+    end
+  end
+
+  @doc """
   Validates a domain name to ensure it's a valid host without protocol or path.
   Accepts standard domains and localhost for development.
   """

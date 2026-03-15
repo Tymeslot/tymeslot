@@ -152,23 +152,9 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
             "cannot have more than #{max_domains} domains (currently #{length(domains)})"
           )
         else
-          # Pre-filter empty strings
-          domains = Enum.reject(domains, &(&1 == "" or is_nil(&1)))
-
-          # Use centralized security validation
-          validation_results = Enum.map(domains, &Security.validate_domain/1)
-          errors = Enum.filter(validation_results, &match?({:error, _reason}, &1))
-
-          if errors != [] do
-            invalid_domains_str =
-              errors
-              |> Enum.map(fn {:error, reason} -> reason end)
-              |> Enum.uniq()
-              |> Enum.join(", ")
-
-            add_error(changeset, :allowed_embed_domains, invalid_domains_str)
-          else
-            changeset
+          case Security.validate_domains(domains) do
+            {:ok, validated} -> put_change(changeset, :allowed_embed_domains, validated)
+            {:error, error_msg} -> add_error(changeset, :allowed_embed_domains, error_msg)
           end
         end
 

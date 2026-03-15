@@ -381,34 +381,18 @@ defmodule Tymeslot.Profiles do
     if domains == ["none"] do
       update_profile(profile, %{allowed_embed_domains: ["none"]})
     else
-      # Pre-filter empty strings to match historical behavior and avoid validation errors
-      domains = Enum.reject(domains, &(&1 == "" or is_nil(&1)))
+      case Security.validate_domains(domains) do
+        {:ok, validated} ->
+          normalized = validated |> Enum.reject(&(&1 == "none")) |> Enum.uniq()
+          update_profile(profile, %{allowed_embed_domains: normalized})
 
-      # Validate domains using centralized security validation
-      validation_results = Enum.map(domains, &Security.validate_domain/1)
-      errors = Enum.filter(validation_results, &match?({:error, _reason}, &1))
+        {:error, error_msg} ->
+          changeset =
+            profile
+            |> Changeset.change()
+            |> Changeset.add_error(:allowed_embed_domains, error_msg)
 
-      if errors != [] do
-        invalid_domains_str =
-          errors
-          |> Enum.map(fn {:error, reason} -> reason end)
-          |> Enum.uniq()
-          |> Enum.join(", ")
-
-        changeset =
-          profile
-          |> Changeset.change()
-          |> Changeset.add_error(:allowed_embed_domains, invalid_domains_str)
-
-        {:error, changeset}
-      else
-        normalized_domains =
-          validation_results
-          |> Enum.map(fn {:ok, d} -> d end)
-          |> Enum.reject(&(&1 == "" or &1 == "none"))
-          |> Enum.uniq()
-
-        update_profile(profile, %{allowed_embed_domains: normalized_domains})
+          {:error, changeset}
       end
     end
   end
