@@ -64,6 +64,10 @@ defmodule TymeslotWeb.Endpoint do
     plug Phoenix.Ecto.SQL.Sandbox
   end
 
+  if code_reloading? do
+    plug Tidewave
+  end
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phx.digest
