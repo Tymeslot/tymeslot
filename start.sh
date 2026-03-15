@@ -6,6 +6,20 @@ echo "==> Starting Tymeslot"
 
 # Environment variables are set externally in production
 
+# Generate SECRET_KEY_BASE on first run if not already set via env
+SECRET_FILE="/app/data/secret_key_base"
+if [ -z "${SECRET_KEY_BASE:-}" ]; then
+  if [ ! -f "$SECRET_FILE" ]; then
+    openssl rand -base64 64 | tr -d '\n' > "$SECRET_FILE"
+    chmod 600 "$SECRET_FILE"
+    echo "==> Generated SECRET_KEY_BASE (first run)"
+  fi
+  export SECRET_KEY_BASE=$(cat "$SECRET_FILE")
+  echo "==> SECRET_KEY_BASE loaded from $SECRET_FILE"
+else
+  echo "==> SECRET_KEY_BASE set via environment"
+fi
+
 # Create necessary directories for runtime
 mkdir -p /app/data/tzdata /app/data/uploads
 chown -R cloudron:cloudron /app/data
