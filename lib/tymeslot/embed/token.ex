@@ -24,5 +24,5 @@ defmodule Tymeslot.Embed.Token do
   end
 
   defp validate(username) when is_binary(username), do: {:ok, username}
-  defp validate(_), do: {:error, :invalid}
+  defp validate(_token), do: {:error, :invalid}
 end

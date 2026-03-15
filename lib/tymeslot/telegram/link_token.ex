@@ -25,5 +25,5 @@ defmodule Tymeslot.Telegram.LinkToken do
        when is_integer(user_id) and is_integer(integration_id),
        do: {:ok, {user_id, integration_id}}
 
-  defp validate(_), do: {:error, :invalid}
+  defp validate(_token), do: {:error, :invalid}
 end

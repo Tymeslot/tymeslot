@@ -34,7 +34,7 @@ defmodule Tymeslot.Timezones.Data do
                                 priv = to_string(:code.priv_dir(:tz))
 
                                 tzdata_dir =
-                                  File.ls!(priv) |> Enum.find(&String.starts_with?(&1, "tzdata"))
+                                  Enum.find(File.ls!(priv), &String.starts_with?(&1, "tzdata"))
 
                                 path = Path.join([priv, tzdata_dir, "zone1970.tab"])
 
@@ -48,7 +48,7 @@ defmodule Tymeslot.Timezones.Data do
                                     [codes, _coords, tz_id | _rest] ->
                                       [{tz_id, codes |> String.split(",") |> List.first()}]
 
-                                    _ ->
+                                    _line ->
                                       []
                                   end
                                 end)
@@ -146,21 +146,23 @@ defmodule Tymeslot.Timezones.Data do
                          Map.put_new(acc, entry.time_zone_id, entry)
                        end)
 
-                     Enum.map(first_by_tz_id, fn {tz_id, first_entry} ->
-                       # Priority: country_overrides > zone1970 primary > first alphabetical
-                       preferred_code =
-                         Map.get(country_overrides, tz_id) ||
-                           Map.get(zone1970, tz_id)
+                     entries =
+                       Enum.map(first_by_tz_id, fn {tz_id, first_entry} ->
+                         # Priority: country_overrides > zone1970 primary > first alphabetical
+                         preferred_code =
+                           Map.get(country_overrides, tz_id) ||
+                             Map.get(zone1970, tz_id)
 
-                       entry =
-                         case preferred_code do
-                           nil -> first_entry
-                           code -> Map.get(by_tz_and_country, {tz_id, code}, first_entry)
-                         end
+                         entry =
+                           case preferred_code do
+                             nil -> first_entry
+                             code -> Map.get(by_tz_and_country, {tz_id, code}, first_entry)
+                           end
 
-                       enrich.(entry, label_overrides)
-                     end)
-                     |> Enum.sort_by(& &1.label)
+                         enrich.(entry, label_overrides)
+                       end)
+
+                     Enum.sort_by(entries, & &1.label)
                    )
 
   # Options list uses deduplicated primary entries (one per timezone_id)
