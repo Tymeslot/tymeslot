@@ -6,6 +6,12 @@ echo "==> Starting Tymeslot"
 
 # Environment variables are set externally in production
 
+# Derive PHX_HOST from Cloudron's app domain if not explicitly set
+if [ -z "${PHX_HOST:-}" ] && [ -n "${CLOUDRON_APP_DOMAIN:-}" ]; then
+  export PHX_HOST="$CLOUDRON_APP_DOMAIN"
+  echo "==> PHX_HOST derived from CLOUDRON_APP_DOMAIN: $PHX_HOST"
+fi
+
 # Generate SECRET_KEY_BASE on first run if not already set via env
 SECRET_FILE="/app/data/secret_key_base"
 if [ -z "${SECRET_KEY_BASE:-}" ]; then
