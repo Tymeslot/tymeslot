@@ -1,4 +1,13 @@
 
+[0.99.28]
+* core: Use IANA zone1970.tab for primary timezone country assignment
+* core: Correct iconUrl path in Cloudron manifests
+* core: Compile app before asset setup in Dockerfiles
+* core: Add packagerUrl and bump minBoxVersion in Cloudron manifests
+* core: Add packagerName to Cloudron manifests
+* core: Remove unreachable 3-tuple error pattern in OAuth helpers
+* core: Auto-generate SECRET_KEY_BASE on first Cloudron install
+* core: Add session-free WebSocket for cross-origin embed iframes
 [0.99.27]
 * core: Use valid IANA timezone in availability refinement test
 * core: Make DST slot generation test use dynamic future date
