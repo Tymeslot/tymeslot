@@ -89,9 +89,16 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       assert changeset.errors[:allowed_embed_domains] != nil
     end
 
-    test "rejects wildcard domains", %{profile: profile} do
-      assert {:error, changeset} =
+    test "accepts wildcard subdomain patterns", %{profile: profile} do
+      assert {:ok, updated_profile} =
                Profiles.update_allowed_embed_domains(profile, ["*.example.com"])
+
+      assert "*.example.com" in updated_profile.allowed_embed_domains
+    end
+
+    test "rejects invalid wildcard patterns", %{profile: profile} do
+      assert {:error, changeset} =
+               Profiles.update_allowed_embed_domains(profile, ["*.com"])
 
       assert changeset.errors[:allowed_embed_domains] != nil
     end

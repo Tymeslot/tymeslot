@@ -7,14 +7,18 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlug do
   connections that work without session cookies.
   """
 
+  @behaviour Plug
+
   import Plug.Conn
 
   alias Tymeslot.Embed.Token
   alias TymeslotWeb.Helpers.PathUtils
 
+  @impl Plug
   @spec init(keyword()) :: keyword()
   def init(opts), do: opts
 
+  @impl Plug
   @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
   def call(conn, _opts) do
     conn = fetch_query_params(conn)

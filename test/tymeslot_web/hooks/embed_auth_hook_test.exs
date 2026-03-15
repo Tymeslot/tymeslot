@@ -160,5 +160,28 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert EmbedAuthHook.origin_allowed?("https://sub.other.com", domains)
       refute EmbedAuthHook.origin_allowed?("https://evil.com", domains)
     end
+
+    test "auto-matches www variant when bare domain is whitelisted" do
+      assert EmbedAuthHook.origin_allowed?("https://www.example.com", ["example.com"])
+    end
+
+    test "auto-matches bare domain when www variant is whitelisted" do
+      assert EmbedAuthHook.origin_allowed?("https://example.com", ["www.example.com"])
+    end
+
+    test "www auto-matching does not affect unrelated domains" do
+      refute EmbedAuthHook.origin_allowed?("https://www.evil.com", ["example.com"])
+    end
+
+    test "www-variant matching works for domains starting with w" do
+      # Regression: String.trim_leading("www.widget.com", "www.") strips character-by-character,
+      # producing "idget.com" instead of "widget.com"
+      assert EmbedAuthHook.origin_allowed?("https://widget.com", ["www.widget.com"])
+      assert EmbedAuthHook.origin_allowed?("https://www.widget.com", ["widget.com"])
+    end
+
+    test "wildcard does not match dot-prefixed host" do
+      refute EmbedAuthHook.origin_allowed?("https://.example.com", ["*.example.com"])
+    end
   end
 end

@@ -16,8 +16,8 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Embed.Token
+  alias Tymeslot.Profiles
 
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()} | {:halt, Phoenix.LiveView.Socket.t()}
@@ -54,15 +54,15 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
         :ok
 
       origin_url ->
-        case ProfileQueries.get_by_username(username) do
-          {:ok, profile} ->
-            if origin_allowed?(origin_url, profile.allowed_embed_domains) do
+        case Profiles.get_profile_by_username(username) do
+          %{allowed_embed_domains: domains} ->
+            if origin_allowed?(origin_url, domains) do
               :ok
             else
               {:error, :origin_not_allowed}
             end
 
-          {:error, :not_found} ->
+          nil ->
             {:error, :profile_not_found}
         end
     end
@@ -88,14 +88,32 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
   def origin_allowed?(origin_url, allowed_domains) do
     case URI.parse(origin_url) do
       %URI{host: host} when is_binary(host) ->
-        Enum.any?(allowed_domains, fn domain ->
-          domain == host or
-            (String.starts_with?(domain, "*.") and
-               String.ends_with?(host, String.trim_leading(domain, "*")))
-        end)
+        Enum.any?(allowed_domains, &domain_matches_host?(&1, host))
 
       _other ->
         false
+    end
+  end
+
+  # Checks whether a whitelisted domain matches the request host.
+  # Automatically treats `example.com` and `www.example.com` as equivalent
+  # so users don't need to whitelist both variants.
+  defp domain_matches_host?(domain, host) do
+    case domain do
+      ^host ->
+        true
+
+      "*." <> suffix ->
+        # *.example.com matches sub.example.com but not example.com itself
+        String.ends_with?(host, "." <> suffix) and host != "." <> suffix
+
+      "www." <> bare ->
+        # www.example.com also matches example.com
+        bare == host
+
+      _bare_domain ->
+        # example.com also matches www.example.com
+        "www." <> domain == host
     end
   end
 end

@@ -1,6 +1,7 @@
 defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
   use TymeslotWeb.ConnCase, async: true
-  @moduletag :utils
+  @moduletag :live
+  @moduletag :security
 
   import Phoenix.LiveViewTest
   import Tymeslot.Factory

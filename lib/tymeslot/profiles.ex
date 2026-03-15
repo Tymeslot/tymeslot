@@ -16,6 +16,7 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Profiles.Timezone
   alias Tymeslot.Profiles.Usernames
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.Security
   alias Tymeslot.Themes.Theme
 
   @type user_id :: pos_integer()
@@ -376,8 +377,6 @@ defmodule Tymeslot.Profiles do
   end
 
   def update_allowed_embed_domains(%ProfileSchema{} = profile, domains) when is_list(domains) do
-    alias Tymeslot.Security.Security
-
     # If the only domain is "none", we skip normalization to preserve the keyword.
     if domains == ["none"] do
       update_profile(profile, %{allowed_embed_domains: ["none"]})

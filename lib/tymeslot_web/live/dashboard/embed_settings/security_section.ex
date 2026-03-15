@@ -48,7 +48,13 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
               <ul class="list-disc list-inside text-blue-800 space-y-1 mt-2">
                 <li><strong>Add domains</strong> to enable and restrict embedding to only those sites</li>
                 <li><strong>Use Disable Embedding</strong> to block all embedding (default)</li>
-                <li>Example: <code class="bg-blue-100 px-2 py-0.5 rounded">example.com, myportfolio.net</code></li>
+                <li>
+                  Adding <code class="bg-blue-100 px-2 py-0.5 rounded">example.com</code>
+                  automatically allows <code class="bg-blue-100 px-2 py-0.5 rounded">www.example.com</code> too (and vice versa)
+                </li>
+                <li>
+                  Use <code class="bg-blue-100 px-2 py-0.5 rounded">*.example.com</code> to allow all subdomains
+                </li>
               </ul>
             </div>
           </div>

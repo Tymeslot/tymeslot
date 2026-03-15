@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
   use TymeslotWeb.ConnCase, async: true
 
-  @moduletag :utils
+  @moduletag :plugs
+  @moduletag :security
 
   alias TymeslotWeb.Plugs.SecurityHeadersPlug
   import Tymeslot.Factory
@@ -49,7 +50,10 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       {:ok, profile: profile}
     end
 
-    test "sets frame-ancestors with allowed domains", %{conn: conn, profile: profile} do
+    test "sets frame-ancestors with allowed domains and their www variants", %{
+      conn: conn,
+      profile: profile
+    } do
       conn =
         conn
         |> Map.put(:request_path, "/#{profile.username}")
@@ -59,9 +63,12 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert [x_frame_options] = get_resp_header(conn, "x-frame-options")
       assert x_frame_options =~ "ALLOW-FROM https://example.com"
 
-      # CSP frame-ancestors should list allowed domains
+      # CSP frame-ancestors should list allowed domains plus www variants
       assert [csp] = get_resp_header(conn, "content-security-policy")
-      assert csp =~ "frame-ancestors 'self' https://example.com https://my-site.net"
+      assert csp =~ "https://example.com"
+      assert csp =~ "https://www.example.com"
+      assert csp =~ "https://my-site.net"
+      assert csp =~ "https://www.my-site.net"
     end
 
     test "builds HTTPS URLs for allowed domains", %{conn: conn, profile: profile} do
@@ -96,6 +103,45 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
 
       assert [x_frame_options] = get_resp_header(conn, "x-frame-options")
       assert x_frame_options == "ALLOW-FROM http://localhost"
+    end
+
+    test "does not expand www for wildcard domains", %{conn: conn} do
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "wildcardwww",
+        allowed_embed_domains: ["*.example.com"]
+      )
+
+      conn =
+        conn
+        |> Map.put(:request_path, "/wildcardwww")
+        |> SecurityHeadersPlug.call(allow_embedding: true)
+
+      assert [csp] = get_resp_header(conn, "content-security-policy")
+      assert csp =~ "https://*.example.com"
+      # Wildcard already covers www, so no www.*.example.com should appear
+      refute csp =~ "www.*.example.com"
+    end
+
+    test "expands www.example.com to include bare domain in CSP", %{conn: conn} do
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "wwwuser",
+        allowed_embed_domains: ["www.mysite.com"]
+      )
+
+      conn =
+        conn
+        |> Map.put(:request_path, "/wwwuser")
+        |> SecurityHeadersPlug.call(allow_embedding: true)
+
+      assert [csp] = get_resp_header(conn, "content-security-policy")
+      assert csp =~ "https://www.mysite.com"
+      assert csp =~ "https://mysite.com"
     end
 
     test "handles wildcard domains in CSP", %{conn: conn} do

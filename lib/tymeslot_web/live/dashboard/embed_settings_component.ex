@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Security.Security
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.LivePreview
@@ -119,6 +118,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     {:noreply, assign(socket, :active_tab, tab)}
   end
 
+  @impl Phoenix.LiveComponent
   def handle_event("copy_code", %{"type" => type}, socket) do
     code = Helpers.embed_code(type, socket.assigns)
 
@@ -128,10 +128,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     {:noreply, socket}
   end
 
+  @impl Phoenix.LiveComponent
   def handle_event("select_embed_type", %{"type" => type}, socket) do
     {:noreply, assign(socket, :selected_embed_type, type)}
   end
 
+  @impl Phoenix.LiveComponent
   def handle_event("save_embed_domains", %{"allowed_domains" => domains_str}, socket) do
     # Split and clean input
     input_domains =
@@ -144,40 +146,34 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     if input_domains == [] do
       {:noreply, socket}
     else
-      # Validate each domain using centralized security validation
-      validation_results = Enum.map(input_domains, &Security.validate_domain/1)
-      errors = Enum.filter(validation_results, &match?({:error, _reason}, &1))
+      existing_domains =
+        case socket.assigns.allowed_domains do
+          ["none"] -> []
+          list -> list
+        end
 
-      if errors != [] do
-        {:error, reason} = List.first(errors)
-        Flash.error(reason)
+      # Check for duplicates against existing (case-insensitive)
+      lowered_existing = Enum.map(existing_domains, &String.downcase/1)
+
+      duplicates =
+        Enum.filter(input_domains, fn domain ->
+          String.downcase(domain) in lowered_existing
+        end)
+
+      if duplicates != [] do
+        Flash.error("Already whitelisted: #{Enum.join(duplicates, ", ")}")
         {:noreply, socket}
       else
-        valid_domains = Enum.map(validation_results, fn {:ok, d} -> d end)
+        updated_domains = existing_domains ++ input_domains
 
-        existing_domains =
-          case socket.assigns.allowed_domains do
-            ["none"] -> []
-            list -> list
-          end
+        socket = push_event(socket, "reset-form", %{id: "embed-domains-form"})
 
-        # Check for duplicates against existing
-        duplicates = Enum.filter(valid_domains, fn domain -> domain in existing_domains end)
-
-        if duplicates != [] do
-          Flash.error("Already whitelisted: #{Enum.join(duplicates, ", ")}")
-          {:noreply, socket}
-        else
-          updated_domains = existing_domains ++ valid_domains
-
-          socket = push_event(socket, "reset-form", %{id: "embed-domains-form"})
-
-          perform_domain_update(socket, updated_domains, "Security settings saved successfully!")
-        end
+        perform_domain_update(socket, updated_domains, "Security settings saved successfully!")
       end
     end
   end
 
+  @impl Phoenix.LiveComponent
   def handle_event("remove_domain", %{"domain" => domain}, socket) do
     updated_domains = Enum.reject(socket.assigns.allowed_domains, &(&1 == domain))
     updated_domains = if updated_domains == [], do: ["none"], else: updated_domains
@@ -185,6 +181,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     perform_domain_update(socket, updated_domains, "Domain removed successfully")
   end
 
+  @impl Phoenix.LiveComponent
   def handle_event("clear_embed_domains", _params, socket) do
     perform_domain_update(socket, ["none"], "Embedding is now disabled")
   end

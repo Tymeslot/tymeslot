@@ -7,6 +7,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
 
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Profiles
+  alias Tymeslot.Security.Security
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Core.Registry
 
@@ -155,7 +156,6 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
           domains = Enum.reject(domains, &(&1 == "" or is_nil(&1)))
 
           # Use centralized security validation
-          alias Tymeslot.Security.Security
           validation_results = Enum.map(domains, &Security.validate_domain/1)
           errors = Enum.filter(validation_results, &match?({:error, _reason}, &1))
 

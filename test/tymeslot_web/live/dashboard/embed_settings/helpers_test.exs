@@ -1,7 +1,8 @@
 defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.HelpersTest do
   use Tymeslot.DataCase, async: true
 
-  @moduletag :utils
+  @moduletag :unit
+  @moduletag :security
 
   alias TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers
 

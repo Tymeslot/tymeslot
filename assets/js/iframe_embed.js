@@ -24,9 +24,15 @@
   // Derive the allowed parent origin from document.referrer.
   // When the referrer is unavailable (privacy settings, noreferrer, etc.)
   // we refuse to post rather than broadcasting to "*".
-  const targetOrigin = document.referrer
-    ? new URL(document.referrer).origin
-    : null;
+  let targetOrigin = null;
+  try {
+    if (document.referrer) {
+      const parsed = new URL(document.referrer);
+      if (parsed.origin !== "null") targetOrigin = parsed.origin;
+    }
+  } catch (_) {
+    // Malformed referrer — fall through to the null check below
+  }
 
   if (!targetOrigin) return;
 

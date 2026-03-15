@@ -4,16 +4,20 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   Supports domain whitelisting for embedding via the profile's allowed_embed_domains field.
   """
 
+  @behaviour Plug
+
   import Plug.Conn
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias Tymeslot.Profiles
   alias TymeslotWeb.Helpers.PathUtils
 
+  @impl Plug
   @spec init(keyword()) :: keyword()
   def init(opts), do: opts
 
+  @impl Plug
   @spec call(Plug.Conn.t(), any()) :: Plug.Conn.t()
   def call(conn, opts) do
     allow_embedding = Keyword.get(opts, :allow_embedding, false)
@@ -61,8 +65,8 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
         {"'none'", "DENY"}
 
       username ->
-        case ProfileQueries.get_by_username(username) do
-          {:ok, profile} ->
+        case Profiles.get_profile_by_username(username) do
+          %{} = profile ->
             {frame_ancestors, x_frame_options} =
               build_security_headers(profile.allowed_embed_domains, is_preview)
 
@@ -73,14 +77,14 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
               Logger.info("Embed security restrictions applied",
                 username: username,
                 profile_id: profile.id,
-                allowed_domains: inspect(profile.allowed_embed_domains),
+                allowed_domains: profile.allowed_embed_domains,
                 referer: referer
               )
             end
 
             {frame_ancestors, x_frame_options}
 
-          {:error, :not_found} ->
+          nil ->
             # Profile not found; default to blocking embedding.
             Logger.warning("Profile not found for username, blocking embedding",
               username: username,
@@ -113,8 +117,12 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     else
       # Build CSP frame-ancestors with appropriate protocols.
       # Modern browsers prioritize this over X-Frame-Options.
+      # Expand each domain to include its www variant so users don't
+      # need to whitelist both example.com and www.example.com.
+      expanded_domains = Enum.flat_map(allowed_domains, &expand_www_variant/1)
+
       domains =
-        Enum.map_join(allowed_domains, " ", fn domain ->
+        Enum.map_join(expanded_domains, " ", fn domain ->
           is_local = domain in ["localhost", "127.0.0.1", "::1"]
           is_dev = Application.get_env(:tymeslot, :environment) in [:dev, :test]
 
@@ -244,6 +252,22 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
       ],
       "; "
     )
+  end
+
+  # Returns both the domain and its www counterpart so CSP frame-ancestors
+  # covers both variants. Wildcards and localhost are returned as-is.
+  defp expand_www_variant("www." <> bare = domain) do
+    [domain, bare]
+  end
+
+  defp expand_www_variant("*." <> _rest = domain), do: [domain]
+
+  defp expand_www_variant(domain) when domain in ["localhost", "127.0.0.1", "::1"] do
+    [domain]
+  end
+
+  defp expand_www_variant(domain) do
+    [domain, "www." <> domain]
   end
 
   defp permissions_policy do

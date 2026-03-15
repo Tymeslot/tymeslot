@@ -275,6 +275,19 @@ defmodule Tymeslot.Security.Security do
       String.length(domain) > 255 ->
         {:error, "Some domains exceed maximum length (max 255 characters)"}
 
+      # Wildcard subdomain pattern: *.example.com
+      String.starts_with?(domain, "*.") ->
+        bare = String.slice(domain, 2, String.length(domain) - 2)
+
+        if Regex.match?(
+             ~r/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i,
+             bare
+           ) do
+          {:ok, "*." <> String.downcase(bare)}
+        else
+          {:error, "Invalid domain format (e.g. *.example.com)"}
+        end
+
       # Domain pattern: alphanumeric, dots, and hyphens. Must not start/end with hyphen/dot.
       # No protocol (http://), no path (/path), no port (:8080).
       Regex.match?(
