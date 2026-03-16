@@ -439,13 +439,11 @@ defmodule TymeslotWeb.AuthLive do
 
         {:noreply, push_patch(socket, to: ~p"/auth/verify-email")}
 
-      {:error, error_message} ->
-        socket =
-          socket
-          |> assign(:loading, false)
-          |> put_flash(:error, error_message)
+      {:error, :field_errors, errors} ->
+        {:noreply, SecurityHelper.set_errors(socket, errors)}
 
-        {:noreply, socket}
+      {:error, error_message} ->
+        {:noreply, SecurityHelper.set_errors(socket, %{general: error_message})}
     end
   end
 

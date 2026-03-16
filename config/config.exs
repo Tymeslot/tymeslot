@@ -73,6 +73,14 @@ config :tymeslot,
 # SaaS can override these via on_mount hooks based on subscription status
 config :tymeslot, :feature_assigns, automations_allowed: true
 
+# Dashboard Feature Gates - Maps live_action atoms to feature flag assign keys.
+# When an action is listed here, the corresponding assign must be true for the
+# section to render; otherwise a placeholder is shown. SaaS can extend this map
+# without modifying Core by setting :dashboard_feature_gates in its own config.
+config :tymeslot, :dashboard_feature_gates, %{
+  automation: :automations_allowed
+}
+
 # Feature Access Checker - Default to allowing all features
 # SaaS can provide a custom implementation that checks subscription status
 config :tymeslot, :feature_access_checker, Tymeslot.Features.DefaultAccessChecker

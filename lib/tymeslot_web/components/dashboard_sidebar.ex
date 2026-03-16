@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   attr :integration_status, :map, default: %{}
   attr :profile, :any, default: nil
   attr :automations_allowed, :boolean, default: true
+  attr :sidebar_extensions, :list, default: []
 
   @spec sidebar(map()) :: Phoenix.LiveView.Rendered.t()
   def sidebar(assigns) do
@@ -24,10 +25,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     <div
       id="dashboard-sidebar-overlay"
       class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30 dashboard-sidebar-overlay hidden"
-      phx-click={
-        JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
-        |> JS.add_class("hidden", to: "#dashboard-sidebar-overlay")
-      }
+      phx-click={close_sidebar_js()}
     >
     </div>
 
@@ -41,21 +39,10 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           <TymeslotWeb.Components.CoreComponents.logo mode={:full} img_class="h-12" />
           <button
             class="dashboard-sidebar-close p-3 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-red-50 hover:border-red-100 transition-all"
-            phx-click={
-              JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
-              |> JS.add_class("hidden", to: "#dashboard-sidebar-overlay")
-            }
+            phx-click={close_sidebar_js()}
             aria-label="Close sidebar"
           >
-            <svg class="w-6 h-6 text-tymeslot-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M6 18L18 6M6 6l12 12"
-              >
-              </path>
-            </svg>
+            <IconComponents.icon name={:x_mark} class="w-6 h-6 text-tymeslot-700" />
           </button>
         </div>
 
@@ -67,15 +54,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             target="_blank"
             class="dashboard-nav-link flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-black rounded-2xl transition-all duration-300 bg-gradient-to-br from-turquoise-600 to-cyan-600 text-white hover:text-white hover:translate-x-0 shadow-lg shadow-turquoise-500/30 hover:shadow-xl hover:shadow-turquoise-500/40 hover:from-turquoise-700 hover:to-cyan-700 group"
           >
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-              >
-              </path>
-            </svg>
+            <IconComponents.icon name={:external_link} class="w-5 h-5 text-white" />
             <span class="text-white">View Page</span>
           </.link>
           <div
@@ -83,15 +62,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             class="flex-1 flex items-center space-x-3 px-4 py-4 text-sm font-bold rounded-2xl bg-tymeslot-100 text-tymeslot-400 cursor-not-allowed opacity-60 border-2 border-tymeslot-200"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-              >
-              </path>
-            </svg>
+            <IconComponents.icon name={:external_link} class="w-5 h-5" />
             <span>View Page</span>
           </div>
 
@@ -106,15 +77,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             class="dashboard-nav-link px-4 py-4 rounded-2xl transition-all duration-300 bg-white border-2 border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-400 hover:text-turquoise-700 hover:translate-x-0 shadow-sm hover:shadow-md group relative"
             title="Copy link to clipboard"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-              >
-              </path>
-            </svg>
+            <IconComponents.icon name={:clipboard} class="w-5 h-5" />
             <span
               id="copy-feedback"
               class="hidden absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-tymeslot-800 text-white text-xs rounded shadow-lg whitespace-nowrap"
@@ -129,15 +92,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             class="px-3 py-3 rounded-lg bg-tymeslot-200 text-tymeslot-500 cursor-not-allowed opacity-60 relative"
             title={LinkAccessPolicy.disabled_tooltip(@profile, @integration_status)}
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-              >
-              </path>
-            </svg>
+            <IconComponents.icon name={:clipboard} class="w-5 h-5" />
           </button>
         </div>
 
@@ -223,15 +178,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             <div class="dashboard-nav-section-title">Distribution</div>
             <div class="space-y-0">
               <.nav_link patch={~p"/dashboard/embed"} current={@current_action} action={:embed}>
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                  >
-                  </path>
-                </svg>
+                <IconComponents.icon name={:code} class="w-5 h-5" />
                 <span>Embed & Share</span>
               </.nav_link>
             </div>
@@ -255,12 +202,15 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 <.pro_badge :if={!@automations_allowed} data-testid="automation-pro-badge" />
               </.nav_link>
 
-              <%= for ext <- Application.get_env(:tymeslot, :dashboard_sidebar_extensions, []) do %>
-                <.nav_link navigate={ext.path} current={@current_action} action={ext.action}>
-                  <IconComponents.icon name={ext.icon} class="w-5 h-5" />
-                  <span>{ext.label}</span>
-                </.nav_link>
-              <% end %>
+              <.nav_link
+                :for={ext <- @sidebar_extensions}
+                navigate={ext.path}
+                current={@current_action}
+                action={ext.action}
+              >
+                <IconComponents.icon name={ext.icon} class="w-5 h-5" />
+                <span>{ext.label}</span>
+              </.nav_link>
             </div>
           </div>
         </nav>
@@ -269,7 +219,8 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
     """
   end
 
-  defp close_sidebar_js do
+  @spec close_sidebar_js() :: Phoenix.LiveView.JS.t()
+  def close_sidebar_js do
     %JS{}
     |> JS.remove_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
     |> JS.add_class("hidden", to: "#dashboard-sidebar-overlay")

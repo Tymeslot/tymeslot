@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   attr :current_action, :atom, required: true
   attr :integration_status, :map, default: %{}
   attr :automations_allowed, :boolean, default: true
+  attr :sidebar_extensions, :list, default: []
   slot :inner_block, required: true
 
   @spec dashboard_layout(map()) :: Phoenix.LiveView.Rendered.t()
@@ -36,6 +37,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           integration_status={@integration_status}
           profile={@profile}
           automations_allowed={@automations_allowed}
+          sidebar_extensions={@sidebar_extensions}
         />
 
         <!-- Main Content Area - Full width on mobile/tablet -->

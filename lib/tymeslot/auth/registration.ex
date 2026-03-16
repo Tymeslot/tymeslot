@@ -28,7 +28,7 @@ defmodule Tymeslot.Auth.Registration do
     - {:error, reason, message} on failure with appropriate flash message
   """
   @spec register_user(map(), Phoenix.LiveView.Socket.t() | Plug.Conn.t(), Keyword.t()) ::
-          {:ok, term(), String.t()} | {:error, atom(), String.t()}
+          {:ok, term(), String.t()} | {:error, atom(), String.t()} | {:error, :input, map()}
   def register_user(params, socket_or_conn, opts \\ []) do
     with {:ok, validated_params} <- validate_input(params),
          :ok <- check_rate_limit(params["email"], socket_or_conn),
@@ -53,8 +53,7 @@ defmodule Tymeslot.Auth.Registration do
 
       {:error, errors} ->
         AccountLogging.log_validation_failure("signup", params["email"], errors)
-        formatted_errors = ErrorFormatter.format_validation_errors(errors)
-        {:error, :input, "Please correct the following errors: #{formatted_errors}"}
+        {:error, :input, errors}
     end
   end
 

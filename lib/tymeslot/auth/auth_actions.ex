@@ -34,7 +34,7 @@ defmodule Tymeslot.Auth.AuthActions do
   Handles user registration with email verification.
   """
   @spec register_user(map(), Phoenix.LiveView.Socket.t()) ::
-          {:ok, atom(), String.t()} | {:error, String.t()}
+          {:ok, atom(), String.t()} | {:error, String.t()} | {:error, :field_errors, map()}
   def register_user(user_params, socket) do
     cond do
       not Config.password_auth_enabled?() -> {:error, @password_auth_disabled_message}
@@ -62,6 +62,9 @@ defmodule Tymeslot.Auth.AuthActions do
       {:ok, _user, message} ->
         {:ok, :verify_email, message}
 
+      {:error, :input, errors} when is_map(errors) ->
+        {:error, :field_errors, errors}
+
       {:error, _reason, message} ->
         {:error, message}
     end
@@ -88,6 +91,9 @@ defmodule Tymeslot.Auth.AuthActions do
     case PasswordReset.initiate_reset(email, socket_or_conn: socket, ip: ip) do
       {:ok, :reset_initiated, message} ->
         {:ok, :reset_password_sent, message}
+
+      {:error, :invalid_input, message} ->
+        {:error, message}
 
       {:error, reason, _message} ->
         {:error, normalize_auth_error(reason)}

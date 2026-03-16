@@ -29,11 +29,24 @@ defmodule Tymeslot.Dashboard.DashboardContext do
     case DashboardCache.get_or_compute(
            DashboardCache.integration_status_key(user_id),
            fn ->
-             # Check integration status
-             # Use only active integrations for status
-             calendar_integrations = CalendarManagement.list_active_calendar_integrations(user_id)
-             video_integrations = VideoIntegrationQueries.list_active_for_user(user_id)
-             meeting_types = MeetingTypeQueries.list_active_meeting_types(user_id)
+             # Run all three independent queries concurrently
+             calendar_task =
+               Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+                 CalendarManagement.list_active_calendar_integrations(user_id)
+               end)
+
+             video_task =
+               Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+                 VideoIntegrationQueries.list_active_for_user(user_id)
+               end)
+
+             meeting_types_task =
+               Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+                 MeetingTypeQueries.list_active_meeting_types(user_id)
+               end)
+
+             [calendar_integrations, video_integrations, meeting_types] =
+               Task.await_many([calendar_task, video_task, meeting_types_task])
 
              %{
                has_calendar: calendar_integrations != [],
