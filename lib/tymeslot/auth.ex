@@ -20,7 +20,7 @@ defmodule Tymeslot.Auth do
   }
 
   alias Tymeslot.DatabaseQueries.{UserQueries, UserSessionQueries}
-  alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Security.{Password, Token}
   alias Tymeslot.Utils.{ChangesetUtils, UrlBuilder}
