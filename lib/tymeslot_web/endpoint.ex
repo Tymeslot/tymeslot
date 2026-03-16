@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Endpoint do
     plug Phoenix.Ecto.SQL.Sandbox
   end
 
-  if code_reloading? do
+  if code_reloading? and Code.ensure_loaded?(Tidewave) do
     plug Tidewave
   end
 
