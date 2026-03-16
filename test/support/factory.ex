@@ -146,11 +146,13 @@ defmodule Tymeslot.Factory do
 
   @spec calendar_integration_factory() :: Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()
   def calendar_integration_factory do
+    username = sequence(:calendar_username, &"user#{&1}")
+
     %CalendarIntegrationSchema{
       name: sequence(:calendar_name, &"Calendar #{&1}"),
       base_url: "https://calendar.example.com",
-      username: sequence(:calendar_username, &"user#{&1}"),
-      password: "password123",
+      username_encrypted: Encryption.encrypt(username),
+      password_encrypted: Encryption.encrypt("password123"),
       provider: "caldav",
       is_active: true,
       user: build(:user)
@@ -159,17 +161,19 @@ defmodule Tymeslot.Factory do
 
   @spec video_integration_factory() :: Tymeslot.DatabaseSchemas.VideoIntegrationSchema.t()
   def video_integration_factory do
+    api_key = sequence(:api_key, &"api_key_#{&1}")
+
     %VideoIntegrationSchema{
       name: sequence(:video_name, &"Video #{&1}"),
       provider: "mirotalk",
       base_url: "https://video.example.com",
-      api_key: sequence(:api_key, &"api_key_#{&1}"),
-      tenant_id: "test-tenant-id",
-      client_id: "test-client-id",
-      client_secret: "test-client-secret",
-      teams_user_id: "test-teams-user-id",
-      access_token: "test-access-token",
-      refresh_token: "test-refresh-token",
+      api_key_encrypted: Encryption.encrypt(api_key),
+      tenant_id_encrypted: Encryption.encrypt("test-tenant-id"),
+      client_id_encrypted: Encryption.encrypt("test-client-id"),
+      client_secret_encrypted: Encryption.encrypt("test-client-secret"),
+      teams_user_id_encrypted: Encryption.encrypt("test-teams-user-id"),
+      access_token_encrypted: Encryption.encrypt("test-access-token"),
+      refresh_token_encrypted: Encryption.encrypt("test-refresh-token"),
       is_active: true,
       settings: %{},
       user: build(:user)

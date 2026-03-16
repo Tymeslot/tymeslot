@@ -5,6 +5,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
   use Oban.Testing, repo: Tymeslot.Repo
   import Tymeslot.Factory
   import Ecto.Query
+  import ExUnit.CaptureLog
   import Mox
 
   alias Ecto.Changeset
@@ -422,8 +423,6 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
     end
 
     test "handles circuit breaker status check exceptions gracefully" do
-      import ExUnit.CaptureLog
-
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
 
@@ -436,6 +435,37 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
         end)
 
       # Should not crash - verify job was enqueued
+      job_count =
+        Repo.one(
+          from j in Job,
+            where: j.queue == "calendar_integrations",
+            where: fragment("?->>'integration_id' = ?", j.args, ^to_string(integration.id)),
+            select: count(j.id)
+        )
+
+      assert job_count == 1
+    end
+
+    test "custom video integration enqueues without unknown circuit breaker warning" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          is_active: true,
+          provider: "custom",
+          custom_meeting_url: "https://example.com"
+        )
+
+      log =
+        capture_log(fn ->
+          HealthCheck.check_all_integrations()
+          sync_with_server()
+        end)
+
+      # :custom has no circuit breaker — scheduler should proceed silently
+      refute log =~ "Unknown circuit breaker status"
+
       job_count =
         Repo.one(
           from j in Job,

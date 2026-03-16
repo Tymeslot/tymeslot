@@ -9,7 +9,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
 
   require Logger
 
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
+  alias Tymeslot.DatabaseSchemas.{CalendarIntegrationSchema, VideoIntegrationSchema}
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
 
@@ -36,7 +36,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
   """
   @spec test_integration(integration_type(), map()) :: check_result()
   def test_integration(:calendar, integration) do
-    Calendar.test_connection(integration)
+    decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
+    Calendar.test_connection(decrypted)
   rescue
     _e in [UndefinedFunctionError] -> {:error, :module_unavailable}
     e -> {:error, {:exception, Exception.message(e)}}
@@ -88,6 +89,10 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
       integration_id: integration.id,
       user_id: integration.user_id
     }
+  end
+
+  defp build_video_config(:custom, integration, _decrypted) do
+    %{custom_meeting_url: integration.custom_meeting_url}
   end
 
   defp build_video_config(_other, _integration, _decrypted), do: %{}

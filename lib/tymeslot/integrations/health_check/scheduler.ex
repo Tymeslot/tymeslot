@@ -217,6 +217,10 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
 
         false
 
+      {:error, {:invalid_provider, _provider}} ->
+        # Provider has no circuit breaker (e.g. custom URL integrations) — always proceed
+        false
+
       unknown ->
         Logger.warning("Unknown circuit breaker status, proceeding with health check",
           type: type,
