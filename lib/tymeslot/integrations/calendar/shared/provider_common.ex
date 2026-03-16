@@ -52,7 +52,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   def discover_calendars(integration, list_fun, mapper) do
     case list_fun.(integration) do
       {:ok, calendars} -> {:ok, Enum.map(calendars, mapper)}
-      error -> error
+      {:error, reason, _detail} -> {:error, reason}
+      {:error, _reason} = error -> error
     end
   end
 
