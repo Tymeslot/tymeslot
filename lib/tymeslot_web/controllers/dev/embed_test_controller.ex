@@ -86,6 +86,10 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
           <input type="number" id="custom-height" value="500" min="200" max="2000" step="50" />
         </div>
         <div class="control-group">
+          <label>Min Height (px)</label>
+          <input type="number" id="min-height" value="" min="200" max="2000" step="50" placeholder="320 (default)" />
+        </div>
+        <div class="control-group">
           <label>&nbsp;</label>
           <button onclick="reload()" style="padding: 8px 20px; background: #14b8a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Reload All</button>
         </div>
@@ -155,6 +159,7 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
           const user = getUsername();
           const opts = getOptions();
           const customHeight = document.getElementById('custom-height').value;
+          const minHeightVal = document.getElementById('min-height').value;
 
           // Update constrained container
           const constrained = document.getElementById('embed-constrained');
@@ -164,6 +169,15 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
 
           // Reset small container overflow too
           document.getElementById('embed-small').style.overflow = 'hidden';
+
+          // Set min-height on unconstrained container if specified
+          const fullContainer = document.getElementById('embed-full');
+          if (minHeightVal) {
+            fullContainer.setAttribute('data-min-height', minHeightVal);
+            opts.minHeight = minHeightVal;
+          } else {
+            fullContainer.removeAttribute('data-min-height');
+          }
 
           // Clear and re-embed all containers
           ['embed-full', 'embed-constrained', 'embed-small'].forEach(id => {
