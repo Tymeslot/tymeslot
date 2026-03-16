@@ -37,7 +37,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
       />
 
       <.form_errors errors={Map.get(@errors, :base)} />
-      <.submit_button text="Update Email" saving={@saving} />
+      <.submit_button text="Update Email" loading_text="Updating Email" saving={@saving} />
     </form>
     """
   end
@@ -85,7 +85,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
       />
 
       <.form_errors errors={Map.get(@errors, :base)} />
-      <.submit_button text="Update Password" saving={@saving} />
+      <.submit_button text="Update Password" loading_text="Updating Password" saving={@saving} />
     </form>
     """
   end
@@ -109,6 +109,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
   """
   attr :text, :string, required: true
   attr :saving, :boolean, required: true
+  attr :loading_text, :string, required: true
 
   @spec submit_button(map()) :: Phoenix.LiveView.Rendered.t()
   def submit_button(assigns) do
@@ -118,7 +119,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
         <%= if @saving do %>
           <span class="flex items-center">
             <.spinner />
-            {@text |> String.replace("Update", "Updating")}...
+            {@loading_text}...
           </span>
         <% else %>
           {@text}

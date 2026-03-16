@@ -12,7 +12,6 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.AccountLive.{ErrorFormatter, Helpers}
   alias TymeslotWeb.Helpers.ClientIP
-  alias TymeslotWeb.Live.Shared.Flash
 
   # Provider constants
   @social_provider_default "social"
@@ -68,13 +67,13 @@ defmodule TymeslotWeb.AccountLive.Handlers do
 
     case Auth.cancel_email_change(user) do
       {:ok, updated_user, message} ->
-        send(self(), {:user_updated, updated_user})
-        Flash.info(message)
-        {:noreply, assign(socket, :current_user, updated_user)}
+        {:noreply,
+         socket
+         |> LiveView.put_flash(:info, message)
+         |> assign(:current_user, updated_user)}
 
       {:error, reason} ->
-        Flash.error(reason)
-        {:noreply, socket}
+        {:noreply, LiveView.put_flash(socket, :error, reason)}
     end
   end
 
@@ -103,15 +102,13 @@ defmodule TymeslotWeb.AccountLive.Handlers do
              sanitized_params["new_email"],
              sanitized_params["current_password"]
            ) do
-      send(self(), {:user_updated, updated_user})
-
-      Flash.info(message)
-
-      {:noreply, Helpers.reset_form_state(socket, :email, updated_user)}
+      {:noreply,
+       socket
+       |> LiveView.put_flash(:info, message)
+       |> Helpers.reset_form_state(:email, updated_user)}
     else
       {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, assign(socket, :saving_email, false)}
+        {:noreply, socket |> LiveView.put_flash(:error, message) |> assign(:saving_email, false)}
 
       {:error, errors} ->
         handle_update_error(socket, errors, :email)
@@ -133,14 +130,14 @@ defmodule TymeslotWeb.AccountLive.Handlers do
              sanitized_params["new_password"],
              sanitized_params["new_password_confirmation"]
            ) do
-      send(self(), {:user_updated, updated_user})
-      Flash.info("Password updated successfully.")
-
-      {:noreply, Helpers.reset_form_state(socket, :password, updated_user)}
+      {:noreply,
+       socket
+       |> LiveView.put_flash(:info, "Password updated successfully.")
+       |> Helpers.reset_form_state(:password, updated_user)}
     else
       {:error, :rate_limited, message} ->
-        Flash.error(message)
-        {:noreply, assign(socket, :saving_password, false)}
+        {:noreply,
+         socket |> LiveView.put_flash(:error, message) |> assign(:saving_password, false)}
 
       {:error, errors} ->
         handle_update_error(socket, errors, :password)
@@ -150,16 +147,10 @@ defmodule TymeslotWeb.AccountLive.Handlers do
   defp handle_update_error(socket, errors, form_type) do
     formatted_errors = ErrorFormatter.format(errors)
 
-    error_key =
+    {error_key, saving_key} =
       case form_type do
-        :email -> :email_form_errors
-        :password -> :password_form_errors
-      end
-
-    saving_key =
-      case form_type do
-        :email -> :saving_email
-        :password -> :saving_password
+        :email -> {:email_form_errors, :saving_email}
+        :password -> {:password_form_errors, :saving_password}
       end
 
     {:noreply,
@@ -176,14 +167,13 @@ defmodule TymeslotWeb.AccountLive.Handlers do
     }
   end
 
-  defp social_user_message(socket, :email) do
+  defp social_user_message(socket, field) do
     provider = String.capitalize(socket.assigns.current_user.provider || @social_provider_default)
-    "Email changes are managed through your #{provider} account"
-  end
 
-  defp social_user_message(socket, :password) do
-    provider = String.capitalize(socket.assigns.current_user.provider || @social_provider_default)
-    "Password authentication is not available for #{provider} login"
+    case field do
+      :email -> "Email changes are managed through your #{provider} account"
+      :password -> "Password authentication is not available for #{provider} login"
+    end
   end
 
   defp validate_password_change_input(params, metadata) do

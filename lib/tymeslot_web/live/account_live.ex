@@ -78,10 +78,6 @@ defmodule TymeslotWeb.AccountLive do
 
   # Handle events from child components
   @impl Phoenix.LiveView
-  def handle_info({:user_updated, user}, socket) do
-    {:noreply, assign(socket, :current_user, user)}
-  end
-
   def handle_info({:flash, {type, message}}, socket) do
     {:noreply, put_flash(socket, type, message)}
   end

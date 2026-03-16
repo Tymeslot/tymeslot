@@ -145,7 +145,7 @@ defmodule TymeslotWeb.AccountLive.Components do
         <%= if @subtitle do %>
           <p class="text-sm text-tymeslot-600 mt-1">{@subtitle}</p>
         <% end %>
-        <%= if @is_social && @description do %>
+        <%= if @description do %>
           <p class="text-sm text-tymeslot-500 mt-2">{@description}</p>
         <% end %>
       </div>
@@ -249,16 +249,18 @@ defmodule TymeslotWeb.AccountLive.Components do
 
   # Private helper functions
   defp format_relative_time(datetime) do
-    now = DateTime.utc_now()
-    diff_seconds = DateTime.diff(now, datetime)
+    diff = DateTime.diff(DateTime.utc_now(), datetime)
 
     cond do
-      diff_seconds < 60 -> "just now"
-      diff_seconds < 3600 -> "#{div(diff_seconds, 60)} minutes ago"
-      diff_seconds < 86_400 -> "#{div(diff_seconds, 3600)} hours ago"
-      true -> "#{div(diff_seconds, 86_400)} days ago"
+      diff < 60 -> "just now"
+      diff < 3600 -> unit_ago(div(diff, 60), "minute")
+      diff < 86_400 -> unit_ago(div(diff, 3600), "hour")
+      true -> unit_ago(div(diff, 86_400), "day")
     end
   end
+
+  defp unit_ago(1, unit), do: "1 #{unit} ago"
+  defp unit_ago(n, unit), do: "#{n} #{unit}s ago"
 
   defp card_classes(is_social) do
     if is_social do

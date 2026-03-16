@@ -269,12 +269,6 @@ defmodule TymeslotWeb.DashboardLive do
     {:noreply, put_flash(socket, type, message)}
   end
 
-  @spec handle_info({:user_updated, map()}, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info({:user_updated, user}, socket) do
-    {:noreply, assign(socket, :current_user, user)}
-  end
-
   @impl Phoenix.LiveView
   def handle_info(:hide_saving, socket) do
     {:noreply, assign(socket, saving: false)}
