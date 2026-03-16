@@ -434,6 +434,19 @@ describe('auto-init from data attributes (DOMContentLoaded)', () => {
     expect(iframe.src).toContain('embed=1')
   })
 
+  test('iframe URL includes parent-origin param with current page origin', () => {
+    const container = document.createElement('div')
+    container.id = 'origin-param-test'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#origin-param-test', 'alice')
+
+    const iframe = container.querySelector('iframe')
+    const url = new URL(iframe.src)
+
+    expect(url.searchParams.get('parent-origin')).toBe(window.location.origin)
+  })
+
   test('reads data-theme, data-primary-color, and data-locale from container', () => {
     const container = document.createElement('div')
     container.id = 'param-test'

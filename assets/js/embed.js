@@ -128,6 +128,10 @@
     // Signal embedded context to the server for token generation
     url.searchParams.append('embed', '1');
 
+    // Pass parent origin so iframe_embed.js can post resize messages
+    // even when the embedding page strips the Referrer header.
+    url.searchParams.append('parent-origin', window.location.origin);
+
     iframe.src = url.toString();
     iframe.style.cssText = `
       width: 100%;
