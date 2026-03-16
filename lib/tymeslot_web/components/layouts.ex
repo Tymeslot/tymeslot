@@ -11,29 +11,34 @@ defmodule TymeslotWeb.Layouts do
   use TymeslotWeb, :html
   import TymeslotWeb.Components.CoreComponents
 
-  alias Phoenix.Controller
   alias TymeslotWeb.Endpoint
 
   embed_templates "layouts/*"
 
   @doc """
-  Gets the current URL for use in canonical and meta tags.
+  Gets the canonical URL for use in canonical and meta tags.
+
+  Always uses the configured endpoint base URL (consistent scheme and host) combined
+  with the request path only — query parameters are intentionally excluded to avoid
+  creating distinct canonical URLs for filtered/parameterised variants of the same page.
+  Trailing slashes are normalised away (except for the root path) so that `/docs` and
+  `/docs/` both produce the same canonical.
   """
   @spec current_url(map()) :: String.t()
   def current_url(assigns) do
-    cond do
-      assigns[:conn] ->
-        Controller.current_url(assigns[:conn])
+    path =
+      cond do
+        assigns[:conn] -> assigns[:conn].request_path
+        assigns[:uri] -> assigns[:uri].path
+        true -> assigns[:request_path] || "/"
+      end
 
-      assigns[:uri] ->
-        uri = assigns[:uri]
+    normalized_path =
+      if path != "/" and String.ends_with?(path, "/"),
+        do: String.trim_trailing(path, "/"),
+        else: path
 
-        "#{uri.scheme}://#{uri.host}#{if uri.port in [80, 443], do: "", else: ":#{uri.port}"}#{uri.path}"
-
-      true ->
-        path = assigns[:request_path] || "/"
-        Endpoint.url() <> path
-    end
+    Endpoint.url() <> normalized_path
   end
 
   @doc """
