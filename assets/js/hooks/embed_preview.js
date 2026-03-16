@@ -1,10 +1,28 @@
 export const EmbedPreview = {
   mounted() {
+    this._cachedDataset = {};
     this.ensureEmbedScript();
     this.initEmbed();
   },
   updated() {
+    const { username, baseUrl, embedType, isReady } = this.el.dataset;
+    const prev = this._cachedDataset;
+
+    if (
+      username === prev.username &&
+      baseUrl === prev.baseUrl &&
+      embedType === prev.embedType &&
+      isReady === prev.isReady
+    ) {
+      return;
+    }
+
     this.initEmbed();
+  },
+  destroyed() {
+    if (this._modalRetryInterval) {
+      clearInterval(this._modalRetryInterval);
+    }
   },
   ensureEmbedScript() {
     if (!window.TymeslotBooking) {
@@ -20,9 +38,10 @@ export const EmbedPreview = {
   },
   initEmbed() {
     const { username, baseUrl, embedType, isReady } = this.el.dataset;
+    this._cachedDataset = { username, baseUrl, embedType, isReady };
     const effectiveBaseUrl = baseUrl || window.location.origin;
     const ready = isReady === 'true';
-    
+
     // Clear container
     this.el.innerHTML = '';
     
@@ -117,13 +136,16 @@ export const EmbedPreview = {
     } else {
       // Retry for a moment if script is still loading
       let retries = 0;
-      const interval = setInterval(() => {
+      if (this._modalRetryInterval) clearInterval(this._modalRetryInterval);
+      this._modalRetryInterval = setInterval(() => {
         if (window.TymeslotBooking) {
           window.TymeslotBooking.open(username);
-          clearInterval(interval);
+          clearInterval(this._modalRetryInterval);
+          this._modalRetryInterval = null;
         } else if (retries > 10) {
           alert('Booking widget is still loading. Please try again in a second.');
-          clearInterval(interval);
+          clearInterval(this._modalRetryInterval);
+          this._modalRetryInterval = null;
         }
         retries++;
       }, 200);
@@ -133,10 +155,12 @@ export const EmbedPreview = {
   renderLinkPreview(username, baseUrl) {
     const wrapper = document.createElement('div');
     wrapper.className = 'text-center p-8 w-full';
-    
+
     const link = document.createElement('a');
-    link.href = `${baseUrl}/${username}`;
+    const linkUrl = new URL(`/${encodeURIComponent(username)}`, baseUrl);
+    link.href = linkUrl.toString();
     link.target = '_blank';
+    link.rel = 'noopener noreferrer';
     link.textContent = 'Schedule a meeting with me →';
     link.className = 'text-turquoise-600 underline font-medium hover:text-turquoise-700 transition-colors';
     
@@ -191,12 +215,14 @@ export const EmbedPreview = {
 
   createIframe(username, baseUrl) {
     const iframe = document.createElement('iframe');
-    let url = `${baseUrl}/${username}?preview=true`;
-    
-    // Add cache buster to force reload when settings change
-    url += `&v=${Date.now()}`;
-    
-    iframe.src = url;
+    const url = new URL(`/${encodeURIComponent(username)}`, baseUrl);
+    url.searchParams.set('preview', 'true');
+    // Cache buster to force reload when settings change
+    url.searchParams.set('v', String(Date.now()));
+
+    iframe.src = url.toString();
+    iframe.setAttribute('title', 'Booking Preview');
+    iframe.setAttribute('allow', 'payment');
     iframe.style.width = '100%';
     iframe.style.height = '100%';
     iframe.style.minHeight = '400px';

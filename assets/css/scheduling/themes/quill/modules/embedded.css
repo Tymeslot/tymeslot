@@ -60,8 +60,11 @@ html.quill-theme[data-embedded] .video-background {
   display: none;
 }
 
-/* Language switcher — tighter to the corner */
+/* Language switcher — override position:fixed from responsive.css ≤640px breakpoint
+   and pull tighter to the corner. position:absolute is relative to the nearest
+   positioned ancestor (.glass-morphism-card). */
 html.quill-theme[data-embedded] .language-switcher {
+  position: absolute;
   top: var(--space-xs);
   right: var(--space-xs);
 }

@@ -32,14 +32,33 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
   end
 
   defp handle_embedded(embed_token, socket) do
-    with {:ok, username} <- Token.verify(embed_token),
-         :ok <- verify_origin(socket, username) do
-      {:cont, assign(socket, :embedded, true)}
-    else
+    case Token.verify(embed_token) do
+      {:ok, username} ->
+        if connected?(socket) do
+          # On the connected (WebSocket) render, verify the Origin header
+          # against the profile's allowed domains.
+          case verify_origin(socket, username) do
+            :ok ->
+              {:cont, assign(socket, :embedded, true)}
+
+            {:error, reason} ->
+              Logger.warning("Embed auth rejected",
+                reason: reason,
+                origin: get_origin_header(socket)
+              )
+
+              {:halt, redirect(socket, to: "/")}
+          end
+        else
+          # Disconnected (static) render — connect_info is unavailable,
+          # so origin verification is deferred to the WebSocket phase.
+          {:cont, assign(socket, :embedded, true)}
+        end
+
       {:error, reason} ->
         Logger.warning("Embed auth rejected",
           reason: reason,
-          origin: get_origin_header(socket)
+          origin: if(connected?(socket), do: get_origin_header(socket))
         )
 
         {:halt, redirect(socket, to: "/")}
@@ -49,9 +68,10 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
   defp verify_origin(socket, username) do
     case get_origin_header(socket) do
       nil ->
-        # No Origin header (same-origin or privacy settings).
-        # CSP frame-ancestors already enforced on the initial HTTP request.
-        :ok
+        # Browsers always send Origin on cross-origin WebSocket upgrades.
+        # Absence of Origin is unexpected for an embedded context and likely
+        # indicates a non-browser client bypassing the domain whitelist.
+        {:error, :missing_origin}
 
       origin_url ->
         case Profiles.get_profile_by_username(username) do

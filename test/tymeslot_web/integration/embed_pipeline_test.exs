@@ -4,7 +4,8 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
   wired through the HTTP request pipeline — not just the plug in isolation.
 
   These tests catch regressions where the SecurityHeadersPlug is accidentally
-  removed from the :theme_browser pipeline or misconfigured.
+  removed from the :theme_browser pipeline or misconfigured, and verify that
+  the embed token flows correctly from HTTP request through to LiveView mount.
   """
 
   use TymeslotWeb.ConnCase, async: true
@@ -12,6 +13,9 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
   @moduletag :security
 
   import Tymeslot.Factory
+
+  alias Tymeslot.Embed.Token
+  alias TymeslotWeb.Router
 
   describe "CSP headers on public scheduling pages" do
     test "a scheduling page allows localhost embedding when the profile has no allowed domains (dev/test env)",
@@ -56,6 +60,76 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
     end
   end
 
+  describe "embed token flow through HTTP pipeline" do
+    test "?embed=1 generates a token that appears in the scheduling session", %{conn: conn} do
+      user = insert(:user)
+      insert(:profile, user: user, username: "tokenflow", allowed_embed_domains: ["example.com"])
+
+      # GET request through the full :theme_browser pipeline with ?embed=1
+      conn = get(conn, "/tokenflow?embed=1")
+
+      # The EmbedTokenPlug should have set the embed_token assign
+      assert conn.assigns[:embed_token]
+
+      # The token should be valid and contain the right username
+      assert {:ok, "tokenflow"} = Token.verify(conn.assigns.embed_token)
+    end
+
+    test "request without ?embed=1 does not generate an embed token", %{conn: conn} do
+      user = insert(:user)
+      insert(:profile, user: user, username: "notoken", allowed_embed_domains: [])
+
+      conn = get(conn, "/notoken")
+
+      refute conn.assigns[:embed_token]
+    end
+
+    test "?embed=1 and CSP headers are both set in the same response", %{conn: conn} do
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "bothflow",
+        allowed_embed_domains: ["trusted.com"]
+      )
+
+      conn = get(conn, "/bothflow?embed=1")
+
+      # Token was generated
+      assert conn.assigns[:embed_token]
+
+      # CSP allows the configured domain
+      csp = conn |> get_resp_header("content-security-policy") |> List.first()
+      assert csp =~ "frame-ancestors 'self' https://trusted.com"
+    end
+
+    test "scheduling_session/1 passes embed_token from conn.assigns to session map", %{
+      conn: conn
+    } do
+      user = insert(:user)
+      insert(:profile, user: user, username: "sessionflow", allowed_embed_domains: [])
+
+      conn = get(conn, "/sessionflow?embed=1")
+
+      # Simulate what the router does: call the session function with the conn
+      session = Router.scheduling_session(conn)
+
+      assert is_binary(session["embed_token"])
+      assert {:ok, "sessionflow"} = Token.verify(session["embed_token"])
+    end
+
+    test "scheduling_session/1 returns nil embed_token for non-embed requests", %{conn: conn} do
+      user = insert(:user)
+      insert(:profile, user: user, username: "nosession", allowed_embed_domains: [])
+
+      conn = get(conn, "/nosession")
+
+      session = Router.scheduling_session(conn)
+
+      assert session["embed_token"] == nil
+    end
+  end
+
   describe "embed.js static file serving" do
     test "digested embed.js URL is not mistaken for a username route", %{conn: conn} do
       # Regression test: digested embed filenames like embed-<hash>.js
@@ -69,6 +143,76 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
       # but never a 302 to the homepage.
       refute conn.status == 302,
              "Digested embed.js URL should not redirect — it was being treated as a username"
+    end
+  end
+
+  describe "full embed LiveView mount" do
+    test "?embed=1 request renders a successful scheduling page (static render)", %{conn: conn} do
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "embedmount",
+        allowed_embed_domains: ["example.com"],
+        booking_theme: "1"
+      )
+
+      insert(:meeting_type, user: user, is_active: true)
+
+      # The static render (disconnected) should succeed — EmbedAuthHook defers
+      # origin verification to the WebSocket phase on disconnected render.
+      conn = get(conn, "/embedmount?embed=1")
+
+      assert conn.status == 200
+
+      # The page should include the iframe_embed.js script for embedded context
+      assert conn.resp_body =~ "iframe_embed.js"
+    end
+
+    test "non-embed request to the same page also renders successfully", %{conn: conn} do
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "normalmount",
+        allowed_embed_domains: ["example.com"],
+        booking_theme: "1"
+      )
+
+      insert(:meeting_type, user: user, is_active: true)
+
+      conn = get(conn, "/normalmount")
+
+      assert conn.status == 200
+
+      # Non-embed requests also get iframe_embed.js (it no-ops when not in iframe)
+      assert conn.resp_body =~ "iframe_embed.js"
+    end
+
+    test "?embed=1 with disabled embedding (sentinel) still renders static page", %{conn: conn} do
+      # On static render, EmbedAuthHook does NOT check domains — it defers
+      # to the WebSocket phase. So even with ["none"], the static page renders.
+      user = insert(:user)
+
+      insert(:profile,
+        user: user,
+        username: "disabledmount",
+        allowed_embed_domains: ["none"],
+        booking_theme: "1"
+      )
+
+      insert(:meeting_type, user: user, is_active: true)
+
+      conn = get(conn, "/disabledmount?embed=1")
+
+      # Static render succeeds (origin check happens on WebSocket connect)
+      assert conn.status == 200
+
+      # But CSP headers should block the iframe from loading for non-localhost
+      csp = conn |> get_resp_header("content-security-policy") |> List.first()
+
+      # In test env, dev_local_or_deny allows localhost
+      assert csp =~ "frame-ancestors"
     end
   end
 end

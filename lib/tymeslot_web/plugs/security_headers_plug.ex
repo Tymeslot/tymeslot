@@ -115,6 +115,8 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
     if "none" in allowed_domains do
       dev_local_or_deny()
     else
+      is_dev_env = Application.get_env(:tymeslot, :environment) in [:dev, :test]
+
       # Build CSP frame-ancestors with appropriate protocols.
       # Modern browsers prioritize this over X-Frame-Options.
       # Expand each domain to include its www variant so users don't
@@ -123,17 +125,14 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
       domains =
         Enum.map_join(expanded_domains, " ", fn domain ->
-          is_local = domain in ["localhost", "127.0.0.1", "::1"]
-          is_dev = Application.get_env(:tymeslot, :environment) in [:dev, :test]
-
-          if is_local and is_dev do
+          if domain in ["localhost", "127.0.0.1", "::1"] and is_dev_env do
             "http://#{domain}:*"
           else
             "https://#{domain}"
           end
         end)
 
-      frame_ancestors = "'self' #{domains}#{dev_localhost_suffix(allowed_domains)}"
+      frame_ancestors = "'self' #{domains}#{dev_localhost_suffix(allowed_domains, is_dev_env)}"
 
       # X-Frame-Options ALLOW-FROM is deprecated and only supports a single domain.
       # It is provided only for defense-in-depth for legacy browsers (IE, old Firefox).
@@ -146,10 +145,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
             if String.starts_with?(first_domain, "*") do
               nil
             else
-              is_local = first_domain in ["localhost", "127.0.0.1", "::1"]
-              is_dev = Application.get_env(:tymeslot, :environment) in [:dev, :test]
-
-              if is_local and is_dev do
+              if first_domain in ["localhost", "127.0.0.1", "::1"] and is_dev_env do
                 "ALLOW-FROM http://#{first_domain}"
               else
                 "ALLOW-FROM https://#{first_domain}"
@@ -172,11 +168,10 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   end
 
   # Appends localhost origins in dev/test when not already in the allowed list.
-  defp dev_localhost_suffix(allowed_domains) do
+  defp dev_localhost_suffix(allowed_domains, is_dev_env) do
     local_hosts = ["localhost", "127.0.0.1", "::1"]
 
-    if Application.get_env(:tymeslot, :environment) in [:dev, :test] and
-         not Enum.any?(allowed_domains, &(&1 in local_hosts)) do
+    if is_dev_env and not Enum.any?(allowed_domains, &(&1 in local_hosts)) do
       " http://localhost:* http://127.0.0.1:*"
     else
       ""

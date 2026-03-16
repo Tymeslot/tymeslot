@@ -184,7 +184,8 @@
           const currentUrl = new URL(iframe.src);
           currentUrl.searchParams.set('_retry', retryCount);
           iframe.src = currentUrl.toString();
-          setTimeout(handleTimeout, TIMEOUT_MS);
+          // Reassign so iframe.onload can cancel this retry's timeout too
+          timeout = setTimeout(handleTimeout, TIMEOUT_MS);
         } else {
           showError(wrapper, loader);
           if (iframe.parentNode) iframe.remove();
@@ -192,7 +193,7 @@
       }
     };
 
-    const timeout = setTimeout(handleTimeout, TIMEOUT_MS);
+    let timeout = setTimeout(handleTimeout, TIMEOUT_MS);
 
     iframe.onload = () => {
       iframe.dataset.loaded = 'true';
@@ -237,6 +238,9 @@
   function createModal() {
     const modal = document.createElement('div');
     modal.id = 'tymeslot-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Booking Widget');
     modal.style.cssText = `
       position: fixed;
       top: 0;
@@ -313,14 +317,14 @@
     
     container.appendChild(closeButton);
     modal.appendChild(container);
-    
+
     // Animate in
     setTimeout(() => {
       modal.style.opacity = '1';
       container.style.transform = 'scale(1)';
     }, 10);
-    
-    return { modal, container };
+
+    return { modal, container, closeButton };
   }
 
   /**
@@ -459,7 +463,7 @@
       // Remove existing modal if any
       this.close();
 
-      const { modal, container } = createModal();
+      const { modal, container, closeButton } = createModal();
       const wrapper = createBookingIframe(username, options);
       const iframe = wrapper.querySelector('iframe');
 
@@ -478,10 +482,13 @@
 
         container.appendChild(wrapper);
       }
-      
+
+      modal._previousFocus = document.activeElement;
       document.body.appendChild(modal);
       modal.previousBodyOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
+      // Move focus into the dialog for keyboard/screen reader users
+      closeButton.focus();
 
       // Update constraint on window resize / orientation change
       const resizeHandler = () => {
@@ -523,8 +530,13 @@
           if (modal.resizeHandler) {
             window.removeEventListener('resize', modal.resizeHandler);
           }
+          const prevFocus = modal._previousFocus;
           modal.remove();
           document.body.style.overflow = modal.previousBodyOverflow || '';
+          // Restore focus to the element that was active before the modal opened
+          if (prevFocus && typeof prevFocus.focus === 'function') {
+            prevFocus.focus();
+          }
         }, 300);
       }
     },

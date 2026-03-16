@@ -34,7 +34,17 @@
     // Malformed referrer — fall through to the null check below
   }
 
-  if (!targetOrigin) return;
+  if (!targetOrigin) {
+    // Auto-resize is disabled when the embedding page strips the Referrer header
+    // (e.g. referrerpolicy="no-referrer"). The widget will still render correctly
+    // but the iframe height will not auto-adjust to content.
+    console.warn(
+      'Tymeslot: auto-resize disabled — parent origin could not be determined ' +
+      'from document.referrer. Check that the embedding page does not set ' +
+      'referrerpolicy="no-referrer".'
+    );
+    return;
+  }
 
   let lastPostedHeight = null;
   let rafPending = false;

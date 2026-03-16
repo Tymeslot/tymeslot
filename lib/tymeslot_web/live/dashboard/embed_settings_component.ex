@@ -139,11 +139,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     input_domains =
       domains_str
       |> String.split(",")
-      |> Enum.map(&String.trim/1)
+      |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
       |> Enum.reject(&(&1 == ""))
       |> Enum.uniq()
 
     if input_domains == [] do
+      Flash.error("Please enter at least one domain.")
       {:noreply, socket}
     else
       existing_domains =

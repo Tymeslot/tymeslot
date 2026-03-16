@@ -190,6 +190,25 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       assert Repo.reload(profile).allowed_embed_domains == ["existing.com"]
     end
 
+    test "deduplicates case-variant domains in a single submission", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+      view |> element("button#tab-security") |> render_click()
+
+      # Submit the same domain with different casing
+      view
+      |> form("form", %{allowed_domains: "Example.COM, example.com"})
+      |> render_submit()
+
+      assert render(view) =~ "Security settings saved successfully"
+
+      # Only one (lowercased) entry should be stored
+      updated_profile = Repo.reload(profile)
+      assert updated_profile.allowed_embed_domains == ["example.com"]
+    end
+
     test "adding a domain when embedding is currently disabled replaces the sentinel", %{
       conn: conn,
       profile: profile

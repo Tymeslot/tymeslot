@@ -266,7 +266,7 @@ defmodule Tymeslot.Security.Security do
   def validate_domains(domains) when is_list(domains) do
     filtered = Enum.reject(domains, &(&1 == "" or is_nil(&1)))
     results = Enum.map(filtered, &validate_domain/1)
-    {oks, errors} = Enum.split_with(results, &match?({:ok, _}, &1))
+    {oks, errors} = Enum.split_with(results, &match?({:ok, _domain}, &1))
 
     if errors == [] do
       {:ok, Enum.map(oks, fn {:ok, d} -> d end)}

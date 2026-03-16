@@ -10,10 +10,13 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
   alias Tymeslot.Embed.Token
   alias TymeslotWeb.Hooks.EmbedAuthHook
 
-  defp build_socket(assigns \\ %{}, connect_info \\ %{}) do
+  defp build_socket(assigns \\ %{}, connect_info \\ %{}, opts \\ []) do
+    connected = Keyword.get(opts, :connected, false)
+
     %Socket{
       assigns: Map.merge(%{__changed__: %{}, flash: %{}}, assigns),
       endpoint: TymeslotWeb.Endpoint,
+      transport_pid: if(connected, do: self(), else: nil),
       private: %{connect_info: connect_info}
     }
   end
@@ -39,8 +42,8 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
   end
 
   describe "on_mount/4 — with embed token" do
-    test "assigns embedded=true with valid token and no origin header" do
-      socket = build_socket(%{}, %{x_headers: []})
+    test "assigns embedded=true on disconnected render (origin check deferred)" do
+      socket = build_socket(%{}, %{})
       token = Token.sign("testuser")
 
       assert {:cont, updated_socket} =
@@ -49,13 +52,25 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       assert updated_socket.assigns.embedded == true
     end
 
+    test "halts with redirect when no origin header on connected render" do
+      socket = build_socket(%{}, %{x_headers: []}, connected: true)
+      token = Token.sign("testuser")
+
+      assert {:halt, updated_socket} =
+               EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
+
+      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+    end
+
     test "assigns embedded=true when origin matches allowed domain" do
       user = insert(:user)
 
       profile =
         insert(:profile, user: user, username: "sarah", allowed_embed_domains: ["example.com"])
 
-      socket = build_socket(%{}, %{x_headers: [{"origin", "https://example.com"}]})
+      socket =
+        build_socket(%{}, %{x_headers: [{"origin", "https://example.com"}]}, connected: true)
+
       token = Token.sign(profile.username)
 
       assert {:cont, updated_socket} =
@@ -70,7 +85,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
       profile =
         insert(:profile, user: user, username: "sarah", allowed_embed_domains: ["example.com"])
 
-      socket = build_socket(%{}, %{x_headers: [{"origin", "https://evil.com"}]})
+      socket =
+        build_socket(%{}, %{x_headers: [{"origin", "https://evil.com"}]}, connected: true)
+
       token = Token.sign(profile.username)
 
       assert {:halt, updated_socket} =
@@ -80,7 +97,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
     end
 
     test "halts with redirect for expired token" do
-      socket = build_socket(%{}, %{x_headers: []})
+      socket = build_socket(%{}, %{x_headers: []}, connected: true)
 
       expired_token =
         Phoenix.Token.sign(TymeslotWeb.Endpoint, "embed_session", "testuser",
@@ -94,7 +111,16 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
     end
 
     test "halts with redirect for tampered token" do
-      socket = build_socket(%{}, %{x_headers: []})
+      socket = build_socket(%{}, %{x_headers: []}, connected: true)
+
+      assert {:halt, updated_socket} =
+               EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => "tampered"}, socket)
+
+      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+    end
+
+    test "halts with redirect for tampered token on disconnected render" do
+      socket = build_socket(%{}, %{})
 
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => "tampered"}, socket)
@@ -103,7 +129,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
     end
 
     test "halts when profile not found for token username" do
-      socket = build_socket(%{}, %{x_headers: [{"origin", "https://example.com"}]})
+      socket =
+        build_socket(%{}, %{x_headers: [{"origin", "https://example.com"}]}, connected: true)
+
       token = Token.sign("nonexistent_user")
 
       assert {:halt, updated_socket} =
@@ -182,6 +210,98 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
 
     test "wildcard does not match dot-prefixed host" do
       refute EmbedAuthHook.origin_allowed?("https://.example.com", ["*.example.com"])
+    end
+
+    test "matches localhost origins on any port" do
+      assert EmbedAuthHook.origin_allowed?("http://localhost:4000", ["localhost"])
+    end
+
+    test "matches http scheme for localhost" do
+      assert EmbedAuthHook.origin_allowed?("http://localhost", ["localhost"])
+    end
+
+    test "rejects origin with path or query (URI.parse host extraction)" do
+      # URI.parse should extract just the host, ignoring path/query
+      assert EmbedAuthHook.origin_allowed?("https://example.com/some/path?q=1", ["example.com"])
+    end
+
+    test "does not match uppercase origin against lowercase domain (origins are case-sensitive)" do
+      # Browsers always send lowercase origins, so case-insensitive matching
+      # is not required. This test documents the current behavior.
+      refute EmbedAuthHook.origin_allowed?("https://EXAMPLE.COM", ["example.com"])
+    end
+  end
+
+  describe "on_mount/4 — edge cases" do
+    test "assigns embedded=true when origin matches with www auto-matching (connected)" do
+      user = insert(:user)
+
+      profile =
+        insert(:profile,
+          user: user,
+          username: "wwwtest",
+          allowed_embed_domains: ["example.com"]
+        )
+
+      socket =
+        build_socket(
+          %{},
+          %{x_headers: [{"origin", "https://www.example.com"}]},
+          connected: true
+        )
+
+      token = Token.sign(profile.username)
+
+      assert {:cont, updated_socket} =
+               EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
+
+      assert updated_socket.assigns.embedded == true
+    end
+
+    test "halts when profile has [\"none\"] sentinel and origin is provided" do
+      user = insert(:user)
+
+      profile =
+        insert(:profile,
+          user: user,
+          username: "nonetest",
+          allowed_embed_domains: ["none"]
+        )
+
+      socket =
+        build_socket(
+          %{},
+          %{x_headers: [{"origin", "https://example.com"}]},
+          connected: true
+        )
+
+      token = Token.sign(profile.username)
+
+      assert {:halt, updated_socket} =
+               EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
+
+      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+    end
+
+    test "halts when profile has empty allowed domains and origin is provided" do
+      user = insert(:user)
+
+      profile =
+        insert(:profile, user: user, username: "emptydomains", allowed_embed_domains: [])
+
+      socket =
+        build_socket(
+          %{},
+          %{x_headers: [{"origin", "https://example.com"}]},
+          connected: true
+        )
+
+      token = Token.sign(profile.username)
+
+      assert {:halt, updated_socket} =
+               EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
+
+      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
     end
   end
 end
