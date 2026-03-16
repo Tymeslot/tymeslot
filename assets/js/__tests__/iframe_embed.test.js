@@ -27,7 +27,7 @@ const iframeEmbedSource = readFileSync(
  * to set that up before evaluating the script. We also need to control
  * `document.referrer` and capture `postMessage` calls.
  */
-function runScript({ isEmbedded = true, referrer = 'https://embedder.com/page' } = {}) {
+function runScript({ isEmbedded = true, referrer = 'https://embedder.com/page', search = '' } = {}) {
   // Mock window.self !== window.top
   if (isEmbedded) {
     Object.defineProperty(window, 'top', {
@@ -50,6 +50,12 @@ function runScript({ isEmbedded = true, referrer = 'https://embedder.com/page' }
     configurable: true
   })
 
+  // Mock window.location.search for parent-origin param tests
+  if (search) {
+    delete window.location;
+    window.location = new URL('http://localhost' + search);
+  }
+
   // Mock window.parent.postMessage
   window.parent.postMessage = vi.fn()
 
@@ -60,11 +66,21 @@ function runScript({ isEmbedded = true, referrer = 'https://embedder.com/page' }
   eval(iframeEmbedSource)
 }
 
+// Capture the original window.location so we can restore it after tests
+// that replace it with a URL object for parent-origin param testing.
+const originalLocation = window.location
+
 beforeEach(() => {
   // Reset document state
   document.documentElement.removeAttribute('data-embedded')
   document.body.innerHTML = ''
   vi.restoreAllMocks()
+
+  // Restore window.location in case a previous test replaced it
+  if (window.location !== originalLocation) {
+    delete window.location;
+    window.location = originalLocation;
+  }
 })
 
 afterEach(() => {
@@ -148,6 +164,80 @@ describe('referrer-based origin derivation', () => {
 
     // A completely broken URL string
     runScript({ isEmbedded: true, referrer: ':::not-a-url' })
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('auto-resize disabled')
+    )
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+  })
+})
+
+describe('parent-origin URL param fallback', () => {
+  test('uses parent-origin param when referrer is empty', () => {
+    let resizeCallback
+    window.ResizeObserver = vi.fn((cb) => {
+      resizeCallback = cb
+      return { observe: vi.fn() }
+    })
+
+    Object.defineProperty(document.body, 'offsetHeight', { value: 350, configurable: true })
+
+    runScript({
+      isEmbedded: true,
+      referrer: '',
+      search: '?embed=1&parent-origin=https://mysite.com'
+    })
+
+    resizeCallback()
+
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      { type: 'tymeslot-resize', height: 350 },
+      'https://mysite.com'
+    )
+  })
+
+  test('prefers referrer over parent-origin param when both are available', () => {
+    let resizeCallback
+    window.ResizeObserver = vi.fn((cb) => {
+      resizeCallback = cb
+      return { observe: vi.fn() }
+    })
+
+    Object.defineProperty(document.body, 'offsetHeight', { value: 400, configurable: true })
+
+    runScript({
+      isEmbedded: true,
+      referrer: 'https://embedder.com/page',
+      search: '?embed=1&parent-origin=https://other.com'
+    })
+
+    resizeCallback()
+
+    expect(window.parent.postMessage).toHaveBeenCalledWith(
+      { type: 'tymeslot-resize', height: 400 },
+      'https://embedder.com'
+    )
+  })
+
+  test('warns and disables resize when neither referrer nor param is available', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    runScript({ isEmbedded: true, referrer: '', search: '' })
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('auto-resize disabled')
+    )
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+  })
+
+  test('rejects parent-origin param with invalid URL', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    runScript({
+      isEmbedded: true,
+      referrer: '',
+      search: '?parent-origin=not-a-url'
+    })
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('auto-resize disabled')

@@ -21,9 +21,11 @@
   // because scrollHeight = max(viewport, content) and never shrinks
   // below the iframe's initial viewport size.
   //
-  // Derive the allowed parent origin from document.referrer.
-  // When the referrer is unavailable (privacy settings, noreferrer, etc.)
-  // we refuse to post rather than broadcasting to "*".
+  // Derive the allowed parent origin. Prefer document.referrer (browser-
+  // provided, hard to spoof). Fall back to the parent-origin URL param
+  // that embed.js passes explicitly — this covers embedding pages that
+  // strip the Referrer header (e.g. referrerpolicy="no-referrer").
+  // We never broadcast to "*".
   let targetOrigin = null;
   try {
     if (document.referrer) {
@@ -31,17 +33,32 @@
       if (parsed.origin !== "null") targetOrigin = parsed.origin;
     }
   } catch (_) {
-    // Malformed referrer — fall through to the null check below
+    // Malformed referrer — fall through to param check
+  }
+
+  if (!targetOrigin) {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const paramOrigin = params.get('parent-origin');
+      if (paramOrigin) {
+        const parsed = new URL(paramOrigin);
+        if (parsed.origin !== "null" && /^https?:$/.test(parsed.protocol)) {
+          targetOrigin = parsed.origin;
+        }
+      }
+    } catch (_) {
+      // Malformed param — fall through to the warning below
+    }
   }
 
   if (!targetOrigin) {
     // Auto-resize is disabled when the embedding page strips the Referrer header
-    // (e.g. referrerpolicy="no-referrer"). The widget will still render correctly
-    // but the iframe height will not auto-adjust to content.
+    // and embed.js did not pass a parent-origin param. The widget will still
+    // render correctly but the iframe height will not auto-adjust to content.
     console.warn(
       'Tymeslot: auto-resize disabled — parent origin could not be determined ' +
-      'from document.referrer. Check that the embedding page does not set ' +
-      'referrerpolicy="no-referrer".'
+      'from document.referrer or parent-origin param. Check that the embedding ' +
+      'page does not set referrerpolicy="no-referrer".'
     );
     return;
   }
