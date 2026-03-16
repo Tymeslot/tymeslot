@@ -37,22 +37,7 @@ defmodule TymeslotWeb.SessionController do
            user_agent: user_agent
          ) do
       {:ok, user, message} ->
-        case Session.create_session(conn, user) do
-          {:ok, updated_conn, _token} ->
-            redirect_path =
-              sanitize_redirect_path(params["redirect_to"], get_success_redirect_path())
-
-            updated_conn
-            |> put_flash(:info, message)
-            |> redirect(to: redirect_path)
-
-          {:error, _reason, details} ->
-            Logger.error("Failed to create session", details: details)
-
-            conn
-            |> put_flash(:error, "Failed to create session. Please try again.")
-            |> redirect(to: ~p"/auth/login")
-        end
+        handle_authenticated_user(conn, user, message, params)
 
       {:error, :email_not_verified, message} ->
         conn
@@ -70,6 +55,25 @@ defmodule TymeslotWeb.SessionController do
       {:error, _reason, message} ->
         conn
         |> put_flash(:error, message)
+        |> redirect(to: ~p"/auth/login")
+    end
+  end
+
+  defp handle_authenticated_user(conn, user, message, params) do
+    case Session.create_session(conn, user) do
+      {:ok, updated_conn, _token} ->
+        redirect_path =
+          sanitize_redirect_path(params["redirect_to"], get_success_redirect_path())
+
+        updated_conn
+        |> put_flash(:info, message)
+        |> redirect(to: redirect_path)
+
+      {:error, _reason, details} ->
+        Logger.error("Failed to create session", details: details)
+
+        conn
+        |> put_flash(:error, "Failed to create session. Please try again.")
         |> redirect(to: ~p"/auth/login")
     end
   end
