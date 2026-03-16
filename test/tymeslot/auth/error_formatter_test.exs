@@ -96,6 +96,112 @@ defmodule Tymeslot.Auth.ErrorFormatterTest do
     end
   end
 
+  describe "format_changeset_errors/1" do
+    test "formats Ecto changeset errors" do
+      changeset = %Changeset{
+        data: %{},
+        errors: [email: {"has already been taken", [validation: :unsafe]}]
+      }
+
+      assert ErrorFormatter.format_changeset_errors(changeset) == "Email has already been taken"
+    end
+
+    test "interpolates options in error messages" do
+      changeset = %Changeset{
+        data: %{},
+        errors: [
+          password:
+            {"should be at least %{count} characters",
+             [count: 8, validation: :length, kind: :min]}
+        ]
+      }
+
+      assert ErrorFormatter.format_changeset_errors(changeset) ==
+               "Password should be at least 8 characters"
+    end
+  end
+
+  describe "format_user_friendly_error/2" do
+    test "formats email taken error for registration" do
+      assert ErrorFormatter.format_user_friendly_error(
+               "registration",
+               "email: has already been taken"
+             ) ==
+               "This email address is already registered. Please use a different email or try logging in."
+    end
+
+    test "formats email taken error for other operations" do
+      assert ErrorFormatter.format_user_friendly_error("update", "email: has already been taken") ==
+               "This email address is already in use. Please try with a different email."
+    end
+
+    test "formats general taken error" do
+      assert ErrorFormatter.format_user_friendly_error(
+               "registration",
+               "username: has already been taken"
+             ) ==
+               "This information is already in use. Please try with different details."
+    end
+
+    test "formats password too short error" do
+      assert ErrorFormatter.format_user_friendly_error("registration", "password is too short") ==
+               "Password must be at least 8 characters long."
+    end
+
+    test "formats invalid email error" do
+      assert ErrorFormatter.format_user_friendly_error("registration", "email is invalid") ==
+               "Please enter a valid email address."
+    end
+
+    test "formats unknown string reason" do
+      assert ErrorFormatter.format_user_friendly_error("registration", "something went wrong") ==
+               "Registration failed: something went wrong"
+    end
+
+    test "formats non-string reason" do
+      assert ErrorFormatter.format_user_friendly_error("registration", :unexpected_error) ==
+               "Registration failed: :unexpected_error"
+    end
+  end
+
+  describe "format_verification_error/1" do
+    test "formats verification error atoms" do
+      assert ErrorFormatter.format_verification_error(:invalid_token) ==
+               "Invalid verification token. Please request a new verification email."
+
+      assert ErrorFormatter.format_verification_error(:token_expired) ==
+               "Your verification token has expired. Please request a new verification email."
+
+      assert ErrorFormatter.format_verification_error(:rate_limited) ==
+               "Too many verification attempts. Please try again later."
+
+      assert ErrorFormatter.format_verification_error(:email_send_failed) ==
+               "Failed to send verification email. Please try again later."
+
+      assert ErrorFormatter.format_verification_error(:other) ==
+               "Verification failed. Please try again."
+    end
+  end
+
+  describe "format_password_reset_error/1" do
+    test "formats password reset error atoms" do
+      assert ErrorFormatter.format_password_reset_error(:user_not_found) ==
+               "If your email is registered, you will receive password reset instructions."
+
+      assert ErrorFormatter.format_password_reset_error(:oauth_user) ==
+               "You cannot reset your password because your account is managed by an external authentication provider."
+
+      assert ErrorFormatter.format_password_reset_error(:invalid_token) ==
+               "Invalid or expired password reset token."
+
+      assert ErrorFormatter.format_password_reset_error(:rate_limited) ==
+               "Too many password reset attempts. Please try again later."
+
+      assert ErrorFormatter.format_password_reset_error(:other) ==
+               "Password reset failed. Please try again."
+    end
+  end
+
   describe "format_rate_limit_error/2" do
     test "formats with retry_after" do
       assert ErrorFormatter.format_rate_limit_error("login", 120) =~ "try again in 2 minute(s)"
