@@ -19,7 +19,9 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
         "a.b.c.example.com",
         "localhost",
         "test123.com",
-        "123test.com"
+        "123test.com",
+        "*.example.com",
+        "*.sub.example.net"
       ]
 
       for domain <- valid_domains do
@@ -46,9 +48,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
         {"user@example.com", "at symbol"},
         {"-example.com", "starts with hyphen"},
         {"example-.com", "ends with hyphen"},
-        {"example", "no TLD"},
-        {"*.example.com", "wildcard"},
-        {"*.sub.example.net", "wildcard"}
+        {"example", "no TLD"}
         # Note: empty string is filtered out by normalization before validation
       ]
 

@@ -139,6 +139,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
         )
 
         {:ok, integration}
+
+      {:error, reason, detail} ->
+        Logger.warning("Calendar discovery failed after OAuth callback",
+          provider: integration.provider,
+          reason: reason,
+          detail: detail
+        )
+
+        {:ok, integration}
     end
   end
 
