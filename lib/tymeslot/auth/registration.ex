@@ -4,10 +4,9 @@ defmodule Tymeslot.Auth.Registration do
   """
 
   require Logger
-  alias Tymeslot.Auth.Helpers.{AccountLogging, ErrorFormatting}
+  alias Tymeslot.Auth.{ErrorFormatter, Helpers.AccountLogging}
   alias Tymeslot.DatabaseQueries.ProfileQueries
-  alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Infrastructure.PubSub
+  alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.Helpers.ClientIP
   # Use function instead of compile-time module attribute to allow test-time mocking
@@ -54,7 +53,7 @@ defmodule Tymeslot.Auth.Registration do
 
       {:error, errors} ->
         AccountLogging.log_validation_failure("signup", params["email"], errors)
-        formatted_errors = ErrorFormatting.format_validation_errors(errors)
+        formatted_errors = ErrorFormatter.format_validation_errors(errors)
         {:error, :input, "Please correct the following errors: #{formatted_errors}"}
     end
   end
@@ -68,7 +67,7 @@ defmodule Tymeslot.Auth.Registration do
         _other ->
           errors = %{terms_accepted: "Terms of service must be accepted"}
           AccountLogging.log_validation_failure("signup", params["email"], errors)
-          formatted = ErrorFormatting.format_validation_errors(errors)
+          formatted = ErrorFormatter.format_validation_errors(errors)
           {:error, :input, "Please correct the following errors: #{formatted}"}
       end
     else
@@ -78,14 +77,7 @@ defmodule Tymeslot.Auth.Registration do
 
   defp check_rate_limit(email, socket_or_conn) do
     ip = ClientIP.get(socket_or_conn)
-
-    case RateLimiter.check_signup_rate_limit(email, ip) do
-      :ok ->
-        :ok
-
-      {:error, :rate_limited, message} ->
-        {:error, :rate_limited, message}
-    end
+    RateLimiter.check_signup_rate_limit(email, ip)
   end
 
   defp create_and_verify_user(validated_params, socket_or_conn, opts) do
@@ -114,7 +106,7 @@ defmodule Tymeslot.Auth.Registration do
               reason
             )
 
-            {:error, :auth, ErrorFormatting.format_user_friendly_error("registration", reason)}
+            {:error, :auth, ErrorFormatter.format_user_friendly_error("registration", reason)}
         end
     end
   end
@@ -181,7 +173,7 @@ defmodule Tymeslot.Auth.Registration do
         # Log only the constraint errors without sensitive data
         constraint_errors = extract_constraint_errors(changeset)
         Logger.error("User creation failed with constraints", errors: inspect(constraint_errors))
-        {:error, :auth, ErrorFormatting.format_changeset_errors(changeset)}
+        {:error, :auth, ErrorFormatter.format_changeset_errors(changeset)}
     end
   end
 

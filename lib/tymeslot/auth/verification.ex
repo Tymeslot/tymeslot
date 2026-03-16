@@ -25,10 +25,6 @@ defmodule Tymeslot.Auth.Verification do
           {:ok, term()} | {:error, atom()}
   def store_verification_token(user_id, token, _expiry, ip_address \\ nil) do
     case Config.user_queries_module().get_user(user_id) do
-      nil ->
-        Logger.error("User not found when storing verification token", user_id: user_id)
-        {:error, :user_not_found}
-
       {:ok, user} ->
         case Config.user_queries_module().set_verification_token(user, token, ip_address) do
           {:ok, updated_user} ->
@@ -39,19 +35,9 @@ defmodule Tymeslot.Auth.Verification do
             {:error, :token_storage_failed}
         end
 
-      {:error, :not_found} ->
+      _other ->
         Logger.error("User not found when storing verification token", user_id: user_id)
         {:error, :user_not_found}
-
-      user when is_struct(user) ->
-        case Config.user_queries_module().set_verification_token(user, token, ip_address) do
-          {:ok, updated_user} ->
-            {:ok, updated_user}
-
-          {:error, _changeset} ->
-            Logger.error("Token storage failed", user_id: user_id)
-            {:error, :token_storage_failed}
-        end
     end
   end
 
@@ -186,14 +172,6 @@ defmodule Tymeslot.Auth.Verification do
   @spec mark_user_as_verified(integer()) :: {:ok, term()} | {:error, atom()}
   defp mark_user_as_verified(user_id) do
     case Config.user_queries_module().get_user(user_id) do
-      nil ->
-        Logger.error("User not found when marking as verified", user_id: user_id)
-        {:error, :user_not_found}
-
-      {:error, :not_found} ->
-        Logger.error("User not found when marking as verified", user_id: user_id)
-        {:error, :user_not_found}
-
       {:ok, user} ->
         case Config.user_queries_module().verify_user(user) do
           {:ok, updated_user} ->
@@ -205,16 +183,9 @@ defmodule Tymeslot.Auth.Verification do
             {:error, :verification_failed}
         end
 
-      user when is_struct(user) ->
-        case Config.user_queries_module().verify_user(user) do
-          {:ok, updated_user} ->
-            AccountLogging.log_user_verified(updated_user, "email")
-            {:ok, updated_user}
-
-          {:error, _changeset} ->
-            AccountLogging.log_operation_failure("verification", user_id, :verification_failed)
-            {:error, :verification_failed}
-        end
+      _other ->
+        Logger.error("User not found when marking as verified", user_id: user_id)
+        {:error, :user_not_found}
     end
   end
 
@@ -244,16 +215,7 @@ defmodule Tymeslot.Auth.Verification do
     end
   end
 
-  defp build_verification_url(%Phoenix.LiveView.Socket{}, verification_token) do
-    UrlBuilder.email_verification_url(verification_token)
-  end
-
-  defp build_verification_url(%Plug.Conn{} = _conn, verification_token) do
-    UrlBuilder.email_verification_url(verification_token)
-  end
-
   defp build_verification_url(_socket_or_conn, verification_token) do
-    # Fallback for tests or when neither socket nor conn is available
     UrlBuilder.email_verification_url(verification_token)
   end
 
@@ -275,11 +237,6 @@ defmodule Tymeslot.Auth.Verification do
   end
 
   defp extract_ip_address(socket_or_conn) do
-    # ClientIP.get/1 always returns a binary (string)
     ClientIP.get(socket_or_conn)
-  rescue
-    _other ->
-      # Be defensive: do not leak details, and keep return type consistent.
-      "unknown"
   end
 end

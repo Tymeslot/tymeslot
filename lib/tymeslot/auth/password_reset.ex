@@ -5,12 +5,11 @@ defmodule Tymeslot.Auth.PasswordReset do
 
   require Logger
 
-  alias Tymeslot.Auth.Helpers.{AccountLogging, ErrorFormatting}
+  alias Tymeslot.Auth.{ErrorFormatter, Helpers.AccountLogging, Validation}
   alias Tymeslot.DatabaseQueries.UserSessionQueries
   alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.FieldValidators.PasswordValidator
-  alias Tymeslot.Security.{InputProcessor, RateLimiter, Token}
+  alias Tymeslot.Security.{RateLimiter, Token}
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Helpers.ClientIP
@@ -39,11 +38,11 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
-  # Secure implementation that prevents timing attacks and email enumeration
+  # Secure implementation that prevents timing attacks and email enumeration.
+  # The timing randomisation lives inside handle_password_reset_attempt/2
+  # (Process.sleep for the not-found case), so no Task wrapping is needed here.
   defp process_password_reset_secure(email, user_queries) do
-    task = Task.async(fn -> handle_password_reset_attempt(email, user_queries) end)
-
-    case Task.await(task, 5000) do
+    case handle_password_reset_attempt(email, user_queries) do
       {:oauth_user_error, message} ->
         {:error, :oauth_user, message}
 
@@ -76,39 +75,25 @@ defmodule Tymeslot.Auth.PasswordReset do
       provider when provider in [nil, "email"] ->
         process_regular_user_reset(user, user_queries)
 
-      provider when provider in ["google", "github", "oauth"] ->
-        handle_oauth_user_reset(user, provider)
-
       provider ->
-        handle_unknown_provider_reset(user, provider)
+        handle_oauth_user_reset(user, provider)
     end
   end
 
   defp extract_ip_from_opts(opts) do
-    case Keyword.get(opts, :ip) do
-      nil ->
-        case Keyword.get(opts, :socket_or_conn) do
-          nil -> nil
-          socket_or_conn -> safe_client_ip(socket_or_conn)
-        end
-
-      ip ->
-        ip
-    end
-  end
-
-  defp safe_client_ip(socket_or_conn) do
-    ClientIP.get(socket_or_conn)
-  rescue
-    _error -> nil
+    opts[:ip] ||
+      case opts[:socket_or_conn] do
+        nil -> nil
+        soc -> ClientIP.get(soc)
+      end
   end
 
   defp process_regular_user_reset(user, user_queries) do
-    {token, expiry} = Token.generate_password_reset_token()
+    {token, _expiry} = Token.generate_password_reset_token()
 
-    case store_reset_token(user, token, expiry, user_queries) do
+    case user_queries.set_reset_token(user, token) do
       {:ok, updated_user} ->
-        reset_url = build_reset_url(token)
+        reset_url = UrlBuilder.password_reset_url(token)
         send_reset_email_and_log(updated_user, reset_url)
         AccountLogging.log_password_reset(updated_user, "initiated")
 
@@ -127,8 +112,8 @@ defmodule Tymeslot.Auth.PasswordReset do
   end
 
   defp send_reset_email_and_log(user, reset_url) do
-    case send_password_reset_email(user, reset_url) do
-      {:ok, _email_result} ->
+    case EmailWorker.schedule_password_reset(user.id, reset_url) do
+      :ok ->
         Logger.info("Password reset email sent",
           user_id: user.id,
           email: user.email,
@@ -151,16 +136,7 @@ defmodule Tymeslot.Auth.PasswordReset do
       provider: provider
     })
 
-    {:error, :oauth_user, ErrorFormatting.format_password_reset_error(:oauth_user)}
-  end
-
-  defp handle_unknown_provider_reset(user, provider) do
-    AccountLogging.log_operation_failure("password_reset", user.email, :oauth_user, %{
-      user_id: user.id,
-      provider: provider
-    })
-
-    {:error, :oauth_user, ErrorFormatting.format_password_reset_error(:oauth_user)}
+    {:error, :oauth_user, ErrorFormatter.format_password_reset_error(:oauth_user)}
   end
 
   @doc """
@@ -177,7 +153,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   @spec verify_token(String.t(), keyword()) ::
           {:ok, map(), String.t()}
           | {:error, atom(), String.t()}
-  def verify_token(token, _unused_opts \\ []) do
+  def verify_token(token, _opts \\ []) do
     case Config.user_queries_module().get_user_by_reset_token(token) do
       {:error, :not_found} ->
         Logger.warning("Invalid password reset token",
@@ -237,48 +213,25 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
-  @password_reset_field_spec [
-    {"password", :password},
-    {"password_confirmation", :password}
-  ]
-
   defp validate_password_input(new_password, password_confirmation, user) do
     params = %{"password" => new_password, "password_confirmation" => password_confirmation}
 
-    with {:ok, sanitized} <- InputProcessor.validate_form(params, @password_reset_field_spec),
-         :ok <-
-           PasswordValidator.validate_confirmation(
-             sanitized["password"],
-             sanitized["password_confirmation"]
-           ) do
-      {:ok, :validated}
-    else
-      {:error, errors} when is_map(errors) ->
+    case Validation.validate_new_password_input(params) do
+      {:ok, _sanitized} ->
+        {:ok, :validated}
+
+      {:error, errors} ->
         AccountLogging.log_validation_failure("password_reset", user.email, errors, %{
           user_id: user.id
         })
 
-        error_message = ErrorFormatting.format_validation_errors(errors)
-        {:error, :invalid_input, "Please fix the following errors: #{error_message}"}
-
-      {:error, confirmation_error} ->
-        errors = %{password_confirmation: confirmation_error}
-
-        AccountLogging.log_validation_failure("password_reset", user.email, errors, %{
-          user_id: user.id
-        })
-
-        error_message = ErrorFormatting.format_validation_errors(errors)
+        error_message = ErrorFormatter.format_validation_errors(errors)
         {:error, :invalid_input, "Please fix the following errors: #{error_message}"}
     end
   end
 
   defp perform_password_update(user, new_password) do
-    # Get password_confirmation from the user struct since we validated it earlier
-    # Both should be the same since validation passed
-    password_confirmation = new_password
-
-    case update_user_password(user, new_password, password_confirmation) do
+    case update_user_password(user, new_password) do
       {:ok, updated_user} ->
         {:ok, updated_user}
 
@@ -296,7 +249,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   end
 
   defp perform_token_clear(user) do
-    case clear_reset_token(user) do
+    case Config.user_queries_module().set_reset_token(user, nil) do
       {:ok, final_user} ->
         AccountLogging.log_password_reset(final_user, "completed")
         {:ok, final_user}
@@ -314,11 +267,7 @@ defmodule Tymeslot.Auth.PasswordReset do
 
   # Private functions
 
-  defp store_reset_token(user, token, _unused_expiry, user_queries) do
-    user_queries.set_reset_token(user, token)
-  end
-
-  defp update_user_password(user, new_password, password_confirmation) do
+  defp update_user_password(user, new_password) do
     actual_user =
       case user do
         %UserSchema{} ->
@@ -339,38 +288,11 @@ defmodule Tymeslot.Auth.PasswordReset do
         # Pass raw passwords to let the changeset handle validation and hashing
         Config.user_queries_module().reset_password(valid_user, %{
           password: new_password,
-          password_confirmation: password_confirmation
+          password_confirmation: new_password
         })
 
       _invalid ->
         {:error, :invalid_user}
-    end
-  end
-
-  defp clear_reset_token(user) do
-    Config.user_queries_module().set_reset_token(user, nil)
-  end
-
-  # Private helper to build the reset URL
-  defp build_reset_url(token) do
-    UrlBuilder.password_reset_url(token)
-  end
-
-  # Private helper to send password reset email
-  defp send_password_reset_email(user, reset_url) do
-    # Use the email worker to send the password reset email asynchronously
-    case EmailWorker.schedule_password_reset(user.id, reset_url) do
-      :ok ->
-        Logger.info("Password reset email job scheduled", user_id: user.id)
-        {:ok, :ok}
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule password reset email",
-          user_id: user.id,
-          reason: inspect(reason)
-        )
-
-        {:error, reason}
     end
   end
 

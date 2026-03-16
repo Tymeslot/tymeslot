@@ -7,10 +7,8 @@ defmodule Tymeslot.Auth.AuthActions do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.Auth.{PasswordReset, Registration}
+  alias Tymeslot.Auth.{PasswordReset, Registration, Validation}
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.FieldValidators.PasswordValidator
-  alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Helpers.ClientIP
 
   require Logger
@@ -85,7 +83,7 @@ defmodule Tymeslot.Auth.AuthActions do
   end
 
   defp do_request_password_reset(email, socket) do
-    ip = safe_client_ip(socket)
+    ip = ClientIP.get(socket)
 
     case PasswordReset.initiate_reset(email, socket_or_conn: socket, ip: ip) do
       {:ok, :reset_initiated, message} ->
@@ -125,11 +123,9 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Validates signup form input.
   """
-  @signup_field_spec [{"email", :email}, {"password", :password}, {"full_name", :full_name}]
-
   @spec validate_signup_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_signup_input(params) do
-    InputProcessor.validate_form(params, @signup_field_spec)
+    Validation.validate_signup_input(params)
   end
 
   @doc """
@@ -137,24 +133,7 @@ defmodule Tymeslot.Auth.AuthActions do
   """
   @spec validate_login_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_login_input(params) do
-    {email_errors, sanitized_email} =
-      case InputProcessor.validate_field(params["email"], :email) do
-        {:ok, sanitized} -> {%{}, sanitized}
-        {:error, msg} -> {%{email: msg}, params["email"]}
-      end
-
-    errors =
-      if is_nil(params["password"]) or params["password"] == "" do
-        Map.put(email_errors, :password, "can't be blank")
-      else
-        email_errors
-      end
-
-    if map_size(errors) == 0 do
-      {:ok, Map.put(params, "email", sanitized_email)}
-    else
-      {:error, errors}
-    end
+    Validation.validate_login_input(params)
   end
 
   @doc """
@@ -162,27 +141,13 @@ defmodule Tymeslot.Auth.AuthActions do
   """
   @spec validate_password_reset_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_password_reset_input(%{"email" => _email} = params) do
-    InputProcessor.validate_form(params, [{"email", :email}])
+    Validation.validate_password_reset_input(params)
   end
 
   def validate_password_reset_input(
         %{"password" => _password, "password_confirmation" => _confirmation} = params
       ) do
-    with {:ok, sanitized} <-
-           InputProcessor.validate_form(params, [
-             {"password", :password},
-             {"password_confirmation", :password}
-           ]),
-         :ok <-
-           PasswordValidator.validate_confirmation(
-             sanitized["password"],
-             sanitized["password_confirmation"]
-           ) do
-      {:ok, sanitized}
-    else
-      {:error, errors} when is_map(errors) -> {:error, errors}
-      {:error, msg} -> {:error, %{password_confirmation: msg}}
-    end
+    Validation.validate_new_password_input(params)
   end
 
   def validate_password_reset_input(_params), do: {:error, %{base: ["Invalid input format"]}}
@@ -250,12 +215,6 @@ defmodule Tymeslot.Auth.AuthActions do
       :invalid_token -> get_token_error_message(:invalid_token)
       :token_expired -> get_token_error_message(:token_expired)
     end
-  end
-
-  defp safe_client_ip(socket_or_conn) do
-    ClientIP.get(socket_or_conn)
-  rescue
-    _other -> nil
   end
 
   defp get_token_error_message(:invalid_token), do: "Invalid or expired token"

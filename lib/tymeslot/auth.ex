@@ -20,7 +20,7 @@ defmodule Tymeslot.Auth do
   }
 
   alias Tymeslot.DatabaseQueries.{UserQueries, UserSessionQueries}
-  alias Tymeslot.Infrastructure.{Config, PubSub}
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Security.{Password, Token}
   alias Tymeslot.Utils.{ChangesetUtils, UrlBuilder}
@@ -339,15 +339,7 @@ defmodule Tymeslot.Auth do
           {:ok, term(), String.t()} | {:error, term(), String.t()}
   def register_user(params, socket_or_conn, opts \\ []) do
     if Config.registration_enabled?() do
-      with {:ok, user, message} <- Registration.register_user(params, socket_or_conn, opts) do
-        # Broadcast registration event
-        Task.start(fn ->
-          metadata = Keyword.get(opts, :metadata, %{})
-          PubSub.broadcast_user_registered(user, metadata)
-        end)
-
-        {:ok, user, message}
-      end
+      Registration.register_user(params, socket_or_conn, opts)
     else
       {:error, :registration_disabled, AuthActions.registration_disabled_message()}
     end

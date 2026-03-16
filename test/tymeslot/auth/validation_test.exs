@@ -6,31 +6,45 @@ defmodule Tymeslot.Auth.ValidationTest do
   alias Tymeslot.Auth.Validation
 
   describe "validate_login_input/1" do
-    test "returns :ok when email and password are present" do
+    test "returns ok with sanitized params when email and password are valid" do
       params = %{"email" => "test@example.com", "password" => "password123"}
-      assert {:ok, ^params} = Validation.validate_login_input(params)
+      assert {:ok, result} = Validation.validate_login_input(params)
+      assert result["password"] == "password123"
     end
 
-    test "returns :error when email is missing or blank" do
-      assert {:error, %{email: ["can't be blank"]}} =
+    test "returns error when email is missing or blank" do
+      assert {:error, %{email: _email_error}} =
                Validation.validate_login_input(%{"password" => "password123"})
 
-      assert {:error, %{email: ["can't be blank"]}} =
+      assert {:error, %{email: _email_error}} =
                Validation.validate_login_input(%{"email" => "", "password" => "password123"})
     end
 
-    test "returns :error when password is missing or blank" do
-      assert {:error, %{password: ["can't be blank"]}} =
+    test "returns error when password is missing or blank" do
+      assert {:error, %{password: "can't be blank"}} =
                Validation.validate_login_input(%{"email" => "test@example.com"})
 
-      assert {:error, %{password: ["can't be blank"]}} =
-               Validation.validate_login_input(%{"email" => "test@example.com", "password" => ""})
+      assert {:error, %{password: "can't be blank"}} =
+               Validation.validate_login_input(%{
+                 "email" => "test@example.com",
+                 "password" => ""
+               })
     end
 
-    test "returns :error with multiple errors when both are missing" do
+    test "returns error when password exceeds 1024 bytes" do
+      long_password = String.duplicate("a", 1025)
+
+      assert {:error, %{password: "Password is too long"}} =
+               Validation.validate_login_input(%{
+                 "email" => "test@example.com",
+                 "password" => long_password
+               })
+    end
+
+    test "returns errors for both fields when both are missing" do
       {:error, errors} = Validation.validate_login_input(%{})
-      assert errors.email == ["can't be blank"]
-      assert errors.password == ["can't be blank"]
+      assert Map.has_key?(errors, :email)
+      assert Map.has_key?(errors, :password)
     end
   end
 

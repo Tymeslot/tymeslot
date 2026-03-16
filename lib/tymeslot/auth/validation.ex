@@ -7,38 +7,41 @@ defmodule Tymeslot.Auth.Validation do
   """
 
   alias Tymeslot.Auth.ErrorFormatter
+  alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.InputProcessor
 
   @doc """
-  Validates user login input.
+  Validates user login input, sanitizing the email via InputProcessor.
 
   ## Parameters
   - params: Map containing "email" and "password" fields
 
   ## Returns
-  - {:ok, params} if validation passes
+  - {:ok, sanitized_params} if validation passes
   - {:error, errors} if validation fails
   """
   @spec validate_login_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_login_input(params) do
-    errors = %{}
-
-    errors =
-      if is_nil(params["email"]) or params["email"] == "" do
-        Map.put(errors, :email, ["can't be blank"])
-      else
-        errors
+    {email_errors, sanitized_email} =
+      case InputProcessor.validate_field(params["email"], :email) do
+        {:ok, sanitized} -> {%{}, sanitized}
+        {:error, msg} -> {%{email: msg}, params["email"]}
       end
 
     errors =
-      if is_nil(params["password"]) or params["password"] == "" do
-        Map.put(errors, :password, ["can't be blank"])
-      else
-        errors
+      cond do
+        is_nil(params["password"]) or params["password"] == "" ->
+          Map.put(email_errors, :password, "can't be blank")
+
+        byte_size(params["password"]) > 1024 ->
+          Map.put(email_errors, :password, "Password is too long")
+
+        true ->
+          email_errors
       end
 
     if map_size(errors) == 0 do
-      {:ok, params}
+      {:ok, Map.put(params, "email", sanitized_email)}
     else
       {:error, errors}
     end
@@ -79,21 +82,32 @@ defmodule Tymeslot.Auth.Validation do
   end
 
   @doc """
-  Validates new password input for password reset.
+  Validates new password input for password reset, including confirmation match.
 
   ## Parameters
   - params: Map containing "password" and "password_confirmation" fields
 
   ## Returns
-  - {:ok, params} if validation passes
+  - {:ok, sanitized_params} if validation passes
   - {:error, errors} if validation fails
   """
   @spec validate_new_password_input(map()) :: {:ok, map()} | {:error, map()}
   def validate_new_password_input(params) do
-    InputProcessor.validate_form(params, [
-      {"password", :password},
-      {"password_confirmation", :password}
-    ])
+    with {:ok, sanitized} <-
+           InputProcessor.validate_form(params, [
+             {"password", :password},
+             {"password_confirmation", :password}
+           ]),
+         :ok <-
+           PasswordValidator.validate_confirmation(
+             sanitized["password"],
+             sanitized["password_confirmation"]
+           ) do
+      {:ok, sanitized}
+    else
+      {:error, errors} when is_map(errors) -> {:error, errors}
+      {:error, msg} -> {:error, %{password_confirmation: msg}}
+    end
   end
 
   @doc """
