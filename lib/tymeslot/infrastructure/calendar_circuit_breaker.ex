@@ -154,7 +154,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
 
   Returns :closed, :open, or :half_open.
   """
-  @spec status(atom()) :: map() | {:error, atom()}
+  @spec status(atom()) :: map() | {:error, atom()} | {:error, {:invalid_provider, atom()}}
   def status(provider) when provider in @calendar_providers do
     breaker_name = breaker_name(provider)
 

@@ -286,6 +286,8 @@ if config_env() == :prod do
   # This allows SaaS to extend Core queues via :oban_additional_queues config
   config :tymeslot, Oban,
     repo: Tymeslot.Repo,
+    # Allow in-flight jobs 15 seconds to finish on shutdown before being rescheduled
+    shutdown_grace_period: :timer.seconds(15),
     plugins: [
       {Oban.Plugins.Pruner, max_age: 604_800},
       {Oban.Plugins.Cron,

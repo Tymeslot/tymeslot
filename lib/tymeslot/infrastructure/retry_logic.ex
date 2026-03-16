@@ -2,8 +2,10 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
   @moduledoc """
   Provides retry logic with exponential backoff for handling transient failures.
 
-  This module implements a configurable retry mechanism that can be used
-  across the application for operations that may fail temporarily.
+  **Deprecated:** Prefer `Tymeslot.Infrastructure.Retry` for new code.
+  This module remains for CalDAV compatibility but new callers should use
+  `Retry.with_backoff/2` which has richer error classification (Mint/Req/Finch
+  exception handling) and a simpler API.
 
   ## Features
   - Exponential backoff with jitter
@@ -101,9 +103,13 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
 
     # Add jitter to prevent thundering herd
     jitter_range = round(capped_delay * jitter_factor)
-    jitter = :rand.uniform(jitter_range * 2) - jitter_range
 
-    max(0, capped_delay + jitter)
+    if jitter_range > 0 do
+      jitter = :rand.uniform(jitter_range * 2) - jitter_range
+      max(0, capped_delay + jitter)
+    else
+      capped_delay
+    end
   end
 
   @doc """

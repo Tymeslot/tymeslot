@@ -35,7 +35,10 @@ defmodule Tymeslot.Application do
     # Initialize shared email asset cache (ETS)
     # Note: This table is primarily for static assets like logo data URIs.
     # If used for dynamic data, consider adding a cleanup mechanism or using CacheStore.
-    :ets.new(:tymeslot_email_assets, [:set, :public, :named_table, read_concurrency: true])
+    # Guard against application restart within the same BEAM (named table already exists)
+    if :ets.whereis(:tymeslot_email_assets) == :undefined do
+      :ets.new(:tymeslot_email_assets, [:set, :public, :named_table, read_concurrency: true])
+    end
 
     # Base children that are always started
     base_children = [
@@ -96,16 +99,7 @@ defmodule Tymeslot.Application do
         ]
       end
 
-    # Telegram bot setup task (shared bot mode only, non-test)
-    telegram_children =
-      if Application.get_env(:tymeslot, :telegram_shared_bot, false) and
-           Application.get_env(:tymeslot, :environment) != :test do
-        [{Task, fn -> BotSetup.register_webhook() end}]
-      else
-        []
-      end
-
-    children = base_children ++ production_children ++ [TymeslotWeb.Endpoint] ++ telegram_children
+    children = base_children ++ production_children ++ [TymeslotWeb.Endpoint]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -396,18 +390,33 @@ defmodule Tymeslot.Application do
     :ok
   end
 
-  # Schedule periodic jobs
+  # Schedule periodic jobs using TaskSupervisor for proper error handling
   @spec schedule_periodic_jobs() :: :ok
   defp schedule_periodic_jobs do
-    # Schedule Google Calendar token refresh job to run every hour
-    Task.start(fn ->
+    schedule_supervised("Google Calendar token refresh", fn ->
       TokenRefreshJob.schedule_periodic_refresh()
     end)
 
-    Logger.info("Scheduled periodic Google Calendar token refresh job")
+    # Register Telegram webhook if shared bot mode is enabled
+    if Application.get_env(:tymeslot, :telegram_shared_bot, false) do
+      schedule_supervised("Telegram webhook registration", fn ->
+        BotSetup.register_webhook()
+      end)
+    end
 
-    # Note: Oban maintenance and queue monitoring workers are now scheduled via
-    # Oban.Plugins.Cron (see config files). Manual scheduling is no longer needed.
     :ok
+  end
+
+  defp schedule_supervised(name, fun) do
+    case Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fun) do
+      {:ok, _pid} ->
+        Logger.info("Scheduled post-startup task", task: name)
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule post-startup task",
+          task: name,
+          reason: inspect(reason)
+        )
+    end
   end
 end

@@ -10,7 +10,7 @@ defmodule TymeslotWeb.HealthcheckControllerTest do
   end
 
   describe "GET /healthcheck" do
-    test "returns status ok", %{conn: conn} do
+    test "returns status ok with healthy checks", %{conn: conn} do
       conn = get(conn, ~p"/healthcheck")
       body = json_response(conn, 200)
 
@@ -19,6 +19,10 @@ defmodule TymeslotWeb.HealthcheckControllerTest do
 
       # Ensure timestamp is ISO8601 parseable
       assert {:ok, _datetime, _offset} = DateTime.from_iso8601(body["timestamp"])
+
+      # Verify checks are included
+      assert body["checks"]["database"] == "ok"
+      assert body["checks"]["oban"] == "ok"
     end
 
     test "is rate limited", %{conn: conn} do
