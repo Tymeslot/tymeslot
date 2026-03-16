@@ -87,8 +87,14 @@
             if (!cap || cap <= 0) return;
             wrapper.style.height = Math.min(h, cap) + 'px';
           } else {
-            wrapper.style.height = h + 'px';
-            wrapper.style.minHeight = '0';
+            var floor = parseInt(wrapper.dataset.minHeight || '0', 10);
+            if (floor > 0) {
+              wrapper.style.height = Math.max(h, floor) + 'px';
+              wrapper.style.minHeight = floor + 'px';
+            } else {
+              wrapper.style.height = h + 'px';
+              wrapper.style.minHeight = '0';
+            }
           }
         }
       });
@@ -138,10 +144,13 @@
     // Create wrapper for loading state.
     // Uses min-height as default for unconstrained containers;
     // constrained containers clip the wrapper and the iframe scrolls internally.
+    const minHeight = Math.max(parseInt(options.minHeight, 10) || 320, 200);
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
     wrapper.style.width = '100%';
-    wrapper.style.height = '600px';
+    wrapper.style.height = minHeight + 'px';
+    wrapper.style.minHeight = minHeight + 'px';
+    wrapper.dataset.minHeight = String(minHeight);
 
     const loader = document.createElement('div');
     loader.className = 'tymeslot-loader';
@@ -400,7 +409,8 @@
       const options = {
         theme: container.getAttribute('data-theme'),
         primaryColor: container.getAttribute('data-primary-color'),
-        locale: container.getAttribute('data-locale')
+        locale: container.getAttribute('data-locale'),
+        minHeight: container.getAttribute('data-min-height')
       };
       
       const wrapper = createBookingIframe(username, options);
@@ -430,8 +440,9 @@
       requestAnimationFrame(function() {
         var actualHeight = container.clientHeight;
         if (wrapper) {
+          var floor = parseInt(wrapper.dataset.minHeight || '0', 10);
           wrapper.style.height = actualHeight + 'px';
-          wrapper.style.minHeight = '0';
+          wrapper.style.minHeight = floor > 0 ? floor + 'px' : '0';
           wrapper.dataset.constrained = 'true';
           wrapper.dataset.constraintHeight = String(actualHeight);
         }
@@ -562,7 +573,12 @@
         console.error('Tymeslot: Container not found:', selector);
         return;
       }
-      
+
+      // Inherit min-height from container data attribute if not set in options
+      if (!options.minHeight && container.getAttribute('data-min-height')) {
+        options.minHeight = container.getAttribute('data-min-height');
+      }
+
       const wrapper = createBookingIframe(username, options);
       container.innerHTML = '';
       container.appendChild(wrapper);
