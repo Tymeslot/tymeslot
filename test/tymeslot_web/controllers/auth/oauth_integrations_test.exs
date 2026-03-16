@@ -11,8 +11,10 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
+  alias Tymeslot.Security.RateLimiter
 
   setup do
+    RateLimiter.clear_all()
     modules = [
       GoogleCalendarOAuthHelper,
       OutlookCalendarOAuthHelper,
