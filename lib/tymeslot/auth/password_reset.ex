@@ -9,7 +9,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   alias Tymeslot.DatabaseQueries.UserSessionQueries
   alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.{RateLimiter, Token}
+  alias Tymeslot.Security.{InputProcessor, RateLimiter, Token}
   alias Tymeslot.Utils.UrlBuilder
   alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Helpers.ClientIP
@@ -32,9 +32,11 @@ defmodule Tymeslot.Auth.PasswordReset do
     user_queries = Keyword.get(opts, :user_queries_module, Config.user_queries_module())
     ip = extract_ip_from_opts(opts)
 
-    case RateLimiter.check_password_reset_rate_limit(email, ip) do
-      {:error, :rate_limited, message} -> {:error, :rate_limited, message}
-      :ok -> process_password_reset_secure(email, user_queries)
+    with {:ok, validated_email} <- validate_email_format(email),
+         :ok <- RateLimiter.check_password_reset_rate_limit(validated_email, ip) do
+      process_password_reset_secure(validated_email, user_queries)
+    else
+      {:error, reason, message} -> {:error, reason, message}
     end
   end
 
@@ -77,6 +79,13 @@ defmodule Tymeslot.Auth.PasswordReset do
 
       provider ->
         handle_oauth_user_reset(user, provider)
+    end
+  end
+
+  defp validate_email_format(email) do
+    case InputProcessor.validate_field(email, :email) do
+      {:ok, validated} -> {:ok, validated}
+      {:error, msg} -> {:error, :invalid_input, msg}
     end
   end
 

@@ -244,6 +244,17 @@ defmodule TymeslotWeb.AuthLiveTest do
       assert render(view) =~ "Check Your Email"
     end
 
+    test "empty email shows an error rather than the success confirmation", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+
+      view
+      |> form("#reset-password-form", %{"email" => ""})
+      |> render_submit()
+
+      refute render(view) =~ "Check Your Email"
+      assert has_element?(view, "#reset-password-form")
+    end
+
     test "navigation between states", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/auth/login")
 

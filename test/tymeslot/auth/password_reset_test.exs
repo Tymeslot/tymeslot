@@ -12,6 +12,14 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   import Tymeslot.Factory
 
   describe "password reset security" do
+    test "rejects empty email with an error rather than the anti-enumeration success" do
+      assert {:error, :invalid_input, _message} = PasswordReset.initiate_reset("")
+    end
+
+    test "rejects malformed email with an error rather than the anti-enumeration success" do
+      assert {:error, :invalid_input, _message} = PasswordReset.initiate_reset("not-an-email")
+    end
+
     test "password reset returns consistent messages to prevent email enumeration" do
       # Existing user
       insert(:user, email: "exists@example.com")
