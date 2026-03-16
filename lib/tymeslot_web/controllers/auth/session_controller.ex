@@ -62,6 +62,11 @@ defmodule TymeslotWeb.SessionController do
         |> put_flash(:error, message)
         |> redirect(to: ~p"/auth/verify-email")
 
+      {:error, :invalid_input, _errors} ->
+        conn
+        |> put_flash(:error, "Please enter your email and password.")
+        |> redirect(to: ~p"/auth/login")
+
       {:error, _reason, message} ->
         conn
         |> put_flash(:error, message)

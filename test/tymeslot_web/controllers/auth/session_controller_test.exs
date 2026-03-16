@@ -91,6 +91,19 @@ defmodule TymeslotWeb.SessionControllerTest do
       assert redirected_to(conn) == Config.success_redirect_path()
     end
 
+    test "fails with empty email and password", %{conn: conn} do
+      conn =
+        post(conn, ~p"/auth/session", %{
+          "email" => "",
+          "password" => ""
+        })
+
+      assert redirected_to(conn) == "/auth/login"
+      error = Flash.get(conn.assigns.flash, :error)
+      assert is_binary(error), "expected a string flash, got: #{inspect(error)}"
+      refute get_session(conn, :user_token)
+    end
+
     test "fails with invalid credentials", %{conn: conn, user: user} do
       conn =
         post(conn, ~p"/auth/session", %{
