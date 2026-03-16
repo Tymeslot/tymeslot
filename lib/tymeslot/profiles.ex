@@ -360,6 +360,50 @@ defmodule Tymeslot.Profiles do
   end
 
   @doc """
+  Parses a comma-separated domain string, deduplicates against the profile's
+  existing whitelist, and returns the merged list ready for persistence.
+  """
+  @spec add_embed_domains(profile, String.t()) ::
+          {:ok, [String.t()]} | {:error, :empty_input | {:duplicates, [String.t()]}}
+  def add_embed_domains(%ProfileSchema{} = profile, domains_str) when is_binary(domains_str) do
+    input_domains = parse_domain_input(domains_str)
+
+    with :ok <- validate_non_empty_input(input_domains),
+         :ok <- check_no_duplicates(input_domains, profile.allowed_embed_domains) do
+      existing = normalize_existing_domains(profile.allowed_embed_domains)
+      {:ok, existing ++ input_domains}
+    end
+  end
+
+  defp parse_domain_input(str) do
+    str
+    |> String.split(",")
+    |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  defp validate_non_empty_input([]), do: {:error, :empty_input}
+  defp validate_non_empty_input(_domains), do: :ok
+
+  defp check_no_duplicates(input_domains, existing_domains) do
+    lowered_existing =
+      existing_domains
+      |> normalize_existing_domains()
+      |> MapSet.new(&String.downcase/1)
+
+    duplicates = Enum.filter(input_domains, &(String.downcase(&1) in lowered_existing))
+
+    if duplicates == [],
+      do: :ok,
+      else: {:error, {:duplicates, duplicates}}
+  end
+
+  defp normalize_existing_domains(["none"]), do: []
+  defp normalize_existing_domains(nil), do: []
+  defp normalize_existing_domains(domains), do: domains
+
+  @doc """
   Updates the allowed embed domains for a profile.
   """
   @spec update_allowed_embed_domains(profile, String.t() | [String.t()]) :: result(profile)

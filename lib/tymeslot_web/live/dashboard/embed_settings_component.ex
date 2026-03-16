@@ -135,42 +135,18 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("save_embed_domains", %{"allowed_domains" => domains_str}, socket) do
-    # Split and clean input
-    input_domains =
-      domains_str
-      |> String.split(",")
-      |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
-      |> Enum.reject(&(&1 == ""))
-      |> Enum.uniq()
+    case Profiles.add_embed_domains(socket.assigns.profile, domains_str) do
+      {:ok, merged_domains} ->
+        socket = push_event(socket, "reset-form", %{id: "embed-domains-form"})
+        perform_domain_update(socket, merged_domains, "Security settings saved successfully!")
 
-    if input_domains == [] do
-      Flash.error("Please enter at least one domain.")
-      {:noreply, socket}
-    else
-      existing_domains =
-        case socket.assigns.allowed_domains do
-          ["none"] -> []
-          list -> list
-        end
+      {:error, :empty_input} ->
+        Flash.error("Please enter at least one domain.")
+        {:noreply, socket}
 
-      # Check for duplicates against existing (case-insensitive)
-      lowered_existing = Enum.map(existing_domains, &String.downcase/1)
-
-      duplicates =
-        Enum.filter(input_domains, fn domain ->
-          String.downcase(domain) in lowered_existing
-        end)
-
-      if duplicates != [] do
+      {:error, {:duplicates, duplicates}} ->
         Flash.error("Already whitelisted: #{Enum.join(duplicates, ", ")}")
         {:noreply, socket}
-      else
-        updated_domains = existing_domains ++ input_domains
-
-        socket = push_event(socket, "reset-form", %{id: "embed-domains-form"})
-
-        perform_domain_update(socket, updated_domains, "Security settings saved successfully!")
-      end
     end
   end
 

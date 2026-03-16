@@ -206,4 +206,48 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       assert "example.com" in updated_profile.allowed_embed_domains
     end
   end
+
+  describe "add_embed_domains/2" do
+    setup do
+      user = insert(:user)
+      profile = insert(:profile, user: user, allowed_embed_domains: ["existing.com"])
+      {:ok, profile: profile}
+    end
+
+    test "parses comma-separated input and merges with existing", %{profile: profile} do
+      assert {:ok, ["existing.com", "new.com", "other.org"]} =
+               Profiles.add_embed_domains(profile, "new.com, other.org")
+    end
+
+    test "returns :empty_input for blank string", %{profile: profile} do
+      assert {:error, :empty_input} = Profiles.add_embed_domains(profile, "  , , ")
+    end
+
+    test "returns :duplicates when input overlaps existing domains", %{profile: profile} do
+      assert {:error, {:duplicates, ["existing.com"]}} =
+               Profiles.add_embed_domains(profile, "existing.com, new.com")
+    end
+
+    test "duplicate check is case-insensitive", %{profile: profile} do
+      assert {:error, {:duplicates, ["existing.com"]}} =
+               Profiles.add_embed_domains(profile, "EXISTING.COM")
+    end
+
+    test "treats [\"none\"] as empty existing list", %{profile: profile} do
+      profile = %{profile | allowed_embed_domains: ["none"]}
+
+      assert {:ok, ["new.com"]} = Profiles.add_embed_domains(profile, "new.com")
+    end
+
+    test "deduplicates within the input itself", %{profile: profile} do
+      assert {:ok, ["existing.com", "new.com"]} =
+               Profiles.add_embed_domains(profile, "new.com, NEW.COM, new.com")
+    end
+
+    test "handles nil existing domains", %{profile: profile} do
+      profile = %{profile | allowed_embed_domains: nil}
+
+      assert {:ok, ["new.com"]} = Profiles.add_embed_domains(profile, "new.com")
+    end
+  end
 end
