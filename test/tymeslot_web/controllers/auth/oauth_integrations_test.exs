@@ -15,6 +15,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
   setup do
     RateLimiter.clear_all()
+
     modules = [
       GoogleCalendarOAuthHelper,
       OutlookCalendarOAuthHelper,
