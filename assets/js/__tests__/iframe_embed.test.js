@@ -244,6 +244,51 @@ describe('parent-origin URL param fallback', () => {
     )
     expect(window.parent.postMessage).not.toHaveBeenCalled()
   })
+
+  test('rejects parent-origin with javascript: scheme', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    runScript({
+      isEmbedded: true,
+      referrer: '',
+      search: '?parent-origin=javascript://evil.com'
+    })
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('auto-resize disabled')
+    )
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+  })
+
+  test('rejects parent-origin with data: scheme', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    runScript({
+      isEmbedded: true,
+      referrer: '',
+      search: '?parent-origin=data:text/html,<script>alert(1)</script>'
+    })
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('auto-resize disabled')
+    )
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+  })
+
+  test('rejects parent-origin with file: scheme', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    runScript({
+      isEmbedded: true,
+      referrer: '',
+      search: '?parent-origin=file:///etc/passwd'
+    })
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('auto-resize disabled')
+    )
+    expect(window.parent.postMessage).not.toHaveBeenCalled()
+  })
 })
 
 describe('height reporting via postMessage', () => {
