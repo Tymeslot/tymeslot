@@ -27,35 +27,10 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuth do
   end
 
   @doc """
-  Handles the OAuth callback.
-  """
-  @spec handle_callback(Plug.Conn.t(), String.t(), String.t(), String.t()) ::
-          Tymeslot.Auth.OAuth.HelperBehaviour.flow_result()
-  def handle_callback(conn, code, state, _redirect_uri) do
-    oauth_helper().handle_oauth_callback(conn, %{
-      code: code,
-      state: state,
-      provider: :oauth
-    })
-  end
-
-  @doc """
   Returns the generic OAuth callback URL.
   """
   @spec get_callback_url() :: String.t()
   def get_callback_url, do: oauth_helper().get_callback_url(:oauth)
-
-  @doc """
-  Processes the user info returned from the generic OAuth provider.
-  """
-  @spec process_user(map()) :: {:ok, map()} | {:error, any()}
-  def process_user(user_info), do: oauth_helper().process_user(:oauth, user_info)
-
-  @doc """
-  Checks if the registration is complete for a generic OAuth user.
-  """
-  @spec registration_complete?(map()) :: boolean()
-  def registration_complete?(user), do: oauth_helper().registration_complete?(:oauth, user)
 
   defp oauth_helper do
     Application.get_env(:tymeslot, :oauth_helper_module, Helper)

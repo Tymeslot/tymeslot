@@ -10,50 +10,6 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
   alias Tymeslot.Repo
   import Tymeslot.Factory
 
-  describe "create_oauth_user_transactionally/2" do
-    test "successfully creates a user and profile" do
-      auth_params = %{
-        "email" => "new_oauth_user@example.com",
-        "provider" => "github",
-        "github_user_id" => "12345",
-        "is_verified" => true,
-        "terms_accepted" => "true"
-      }
-
-      profile_params = %{full_name: "OAuth User"}
-
-      assert {:ok, %{user: user, profile: profile}} =
-               TransactionalUserCreation.create_oauth_user_transactionally(
-                 auth_params,
-                 profile_params
-               )
-
-      assert user.email == "new_oauth_user@example.com"
-      assert user.provider == "github"
-      assert user.github_user_id == "12345"
-      assert profile.user_id == user.id
-      assert profile.full_name == "OAuth User"
-    end
-
-    test "fails if user with email already exists" do
-      existing_user = insert(:user, email: "existing@example.com")
-
-      auth_params = %{
-        "email" => existing_user.email,
-        "provider" => "google",
-        "google_user_id" => "67890"
-      }
-
-      profile_params = %{full_name: "Another Name"}
-
-      assert {:error, :user_already_exists, _reason} =
-               TransactionalUserCreation.create_oauth_user_transactionally(
-                 auth_params,
-                 profile_params
-               )
-    end
-  end
-
   describe "find_or_create_oauth_user/3" do
     test "creates new user if not found by provider id or email" do
       auth_params = %{
@@ -108,9 +64,10 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
       check all(
               email <- StreamData.string(:alphanumeric, min_length: 5),
               provider_id <- StreamData.string(:alphanumeric, min_length: 5),
+              unique_prefix <- StreamData.positive_integer(),
               provider <- StreamData.member_of([:github, :google])
             ) do
-        email = "#{email}@test.com"
+        email = "#{unique_prefix}_#{email}@test.com"
 
         auth_params = %{
           "email" => email,

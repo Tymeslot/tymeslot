@@ -41,33 +41,9 @@ defmodule Tymeslot.Auth.OAuth.GitHubTest do
     assert url =~ "scope=user%3Aemail"
   end
 
-  test "handle_callback/4 validates state and exchanges code" do
-    conn = PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
-    code = "code123"
-    state = "state123"
-    redirect_uri = "http://callback"
+  test "get_callback_url/0 returns GitHub callback path" do
+    expect(HelperMock, :get_callback_url, fn :github -> "/auth/github/callback" end)
 
-    expect(HelperMock, :handle_oauth_callback, fn _conn,
-                                                  %{code: ^code, state: ^state, provider: :github} ->
-      {:ok, conn, %{"id" => 1}}
-    end)
-
-    assert {:ok, _updated_conn, %{"id" => 1}} =
-             GitHub.handle_callback(conn, code, state, redirect_uri)
-  end
-
-  test "handle_callback/4 returns error on invalid state" do
-    conn = PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
-    code = "code123"
-    state = "wrong_state"
-    redirect_uri = "http://callback"
-
-    expect(HelperMock, :handle_oauth_callback, fn _conn,
-                                                  %{code: ^code, state: ^state, provider: :github} ->
-      {:error, conn, :invalid_state}
-    end)
-
-    assert {:error, ^conn, :invalid_state} =
-             GitHub.handle_callback(conn, code, state, redirect_uri)
+    assert GitHub.get_callback_url() == "/auth/github/callback"
   end
 end

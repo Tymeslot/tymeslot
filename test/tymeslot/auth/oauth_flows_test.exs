@@ -11,6 +11,7 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
   alias Plug.Test, as: PlugTest
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
   alias Tymeslot.Auth.OAuth.State
+  alias Tymeslot.Auth.OAuth.UserProcessor
   alias Tymeslot.Auth.SocialAuthentication
 
   # =====================================
@@ -94,90 +95,21 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
   end
 
   # =====================================
-  # Provider Response Validation Behaviors
+  # Email Availability Behaviors
   # =====================================
 
-  describe "when validating OAuth provider response" do
-    test "accepts valid response with all required fields and verified email" do
-      response = %{
-        "email" => "user@example.com",
-        "provider" => "github",
-        "verified_email" => true
-      }
-
-      result = SocialAuthentication.validate_provider_response(response)
-
+  describe "when checking email availability" do
+    test "accepts unregistered email" do
+      result = SocialAuthentication.check_email_availability("available@example.com")
       assert result == :ok
     end
 
-    test "rejects response missing email" do
-      response = %{
-        "provider" => "github",
-        "verified_email" => true
-      }
+    test "rejects already registered email" do
+      insert(:user, email: "taken@example.com")
 
-      result = SocialAuthentication.validate_provider_response(response)
-
-      assert {:error, :missing_required_fields, _details} = result
-    end
-
-    test "rejects response missing provider" do
-      response = %{
-        "email" => "user@example.com",
-        "verified_email" => true
-      }
-
-      result = SocialAuthentication.validate_provider_response(response)
-
-      assert {:error, :missing_required_fields, _details} = result
-    end
-
-    test "rejects invalid provider name" do
-      response = %{
-        "email" => "user@example.com",
-        "provider" => "invalid_provider",
-        "verified_email" => true
-      }
-
-      result = SocialAuthentication.validate_provider_response(response)
-
-      assert {:error, :invalid_provider} = result
-    end
-
-    test "accepts github as valid provider with verified email" do
-      response = %{
-        "email" => "user@example.com",
-        "provider" => "github",
-        "verified_email" => true
-      }
-
-      result = SocialAuthentication.validate_provider_response(response)
-
-      assert result == :ok
-    end
-
-    test "accepts google as valid provider with verified email" do
-      response = %{
-        "email" => "user@example.com",
-        "provider" => "google",
-        "verified_email" => true
-      }
-
-      result = SocialAuthentication.validate_provider_response(response)
-
-      assert result == :ok
-    end
-
-    test "rejects response with unverified email" do
-      response = %{
-        "email" => "user@example.com",
-        "provider" => "github",
-        "verified_email" => false
-      }
-
-      result = SocialAuthentication.validate_provider_response(response)
-
-      assert {:error, :email_not_verified} = result
+      result = SocialAuthentication.check_email_availability("taken@example.com")
+      assert {:error, message} = result
+      assert message =~ "already registered"
     end
   end
 
@@ -193,7 +125,7 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
         "name" => "GitHub User"
       }
 
-      result = OAuthHelper.process_user(:github, github_response)
+      result = UserProcessor.process_user(:github, github_response)
 
       assert {:ok, user} = result
       assert user.email == "github_user@example.com"
@@ -210,7 +142,7 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
         "name" => "Private User"
       }
 
-      result = OAuthHelper.process_user(:github, github_response)
+      result = UserProcessor.process_user(:github, github_response)
 
       assert {:ok, user} = result
       assert user.email == nil
@@ -225,7 +157,7 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
         "name" => "Private User"
       }
 
-      result = OAuthHelper.process_user(:github, github_response)
+      result = UserProcessor.process_user(:github, github_response)
 
       assert {:ok, user} = result
       # Empty string email is normalized to nil
@@ -242,7 +174,7 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
         "name" => "Google User"
       }
 
-      result = OAuthHelper.process_user(:google, google_response)
+      result = UserProcessor.process_user(:google, google_response)
 
       assert {:ok, user} = result
       assert user.email == "google_user@gmail.com"
@@ -250,102 +182,6 @@ defmodule Tymeslot.Auth.OAuthFlowsTest do
       assert user.name == "Google User"
       assert user.is_verified == true
       assert user.email_from_provider == true
-    end
-  end
-
-  # =====================================
-  # OAuth State Expiry Behaviors
-  # =====================================
-
-  describe "when validating OAuth state with expiry" do
-    test "rejects missing state from session" do
-      conn = build_test_conn()
-      # Don't generate state - simulate missing/cleared state
-
-      result = SocialAuthentication.validate_oauth_state(conn, "some-state")
-
-      assert {:error, :missing_oauth_state} = result
-    end
-  end
-
-  # =====================================
-  # User Validation Behaviors
-  # =====================================
-
-  describe "when normalizing email from OAuth" do
-    test "normalizes email to lowercase" do
-      # OAuthHelper should handle email normalization internally
-      github_response = %{
-        "id" => 12_345,
-        "email" => "USER@EXAMPLE.COM",
-        "name" => "Test User"
-      }
-
-      {:ok, user} = OAuthHelper.process_user(:github, github_response)
-
-      # Email should be preserved as-is from provider
-      # Normalization happens at registration time
-      assert user.email == "USER@EXAMPLE.COM"
-    end
-  end
-
-  # =====================================
-  # Social Login Registration Behaviors
-  # =====================================
-
-  describe "when finalizing social login registration" do
-    test "rejects registration with missing email" do
-      auth_params = %{
-        "provider" => "github",
-        "name" => "Test User"
-        # Missing email
-      }
-
-      profile_params = %{
-        "timezone" => "America/New_York"
-      }
-
-      temp_user = %{
-        provider: "github",
-        email: nil,
-        verified_email: false
-      }
-
-      result =
-        SocialAuthentication.finalize_social_login_registration(
-          auth_params,
-          profile_params,
-          temp_user
-        )
-
-      assert {:error, :missing_required_fields, _details} = result
-    end
-
-    test "rejects registration with invalid provider" do
-      auth_params = %{
-        "email" => "user@example.com",
-        "provider" => "invalid",
-        "verified_email" => true
-      }
-
-      profile_params = %{
-        "timezone" => "America/New_York"
-      }
-
-      temp_user = %{
-        provider: "invalid",
-        email: "user@example.com",
-        verified_email: true
-      }
-
-      result =
-        SocialAuthentication.finalize_social_login_registration(
-          auth_params,
-          profile_params,
-          temp_user
-        )
-
-      assert {:error, :invalid_provider} = result
     end
   end
 

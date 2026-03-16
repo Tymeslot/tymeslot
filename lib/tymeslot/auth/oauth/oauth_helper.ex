@@ -7,8 +7,6 @@ defmodule Tymeslot.Auth.OAuth.Helper do
   - Tymeslot.Auth.OAuth.State: State generation and validation
   - Tymeslot.Auth.OAuth.URLs: URL generation
   - Tymeslot.Auth.OAuth.Client: OAuth2 client management
-  - Tymeslot.Auth.OAuth.UserProcessor: User info processing and enhancement
-  - Tymeslot.Auth.OAuth.UserRegistration: User finding and creation
   - Tymeslot.Auth.OAuth.FlowHandler: Controller flow orchestration
   """
   @behaviour Tymeslot.Auth.OAuth.HelperBehaviour
@@ -18,9 +16,7 @@ defmodule Tymeslot.Auth.OAuth.Helper do
     Client,
     FlowHandler,
     State,
-    URLs,
-    UserProcessor,
-    UserRegistration
+    URLs
   }
 
   @type provider :: :github | :google | :oauth
@@ -44,51 +40,11 @@ defmodule Tymeslot.Auth.OAuth.Helper do
     Client.exchange_code_for_token(client, code)
   end
 
-  @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def parse_access_token(json_string), do: Client.parse_access_token(json_string)
-
-  @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def update_client_headers(client, provider) do
-    Client.with_auth_header(client, provider)
-  end
-
-  # --- User Info & Processing ---
+  # --- User Info ---
 
   @impl Tymeslot.Auth.OAuth.HelperBehaviour
   def get_user_info(client, provider) do
     Client.get_user_info(client, provider)
-  end
-
-  @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def get_github_user_emails(client) do
-    UserProcessor.get_github_user_emails(client)
-  end
-
-  @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def process_user(provider, user_info) do
-    UserProcessor.process_user(provider, user_info)
-  end
-
-  # --- Registration & Requirements ---
-
-  @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def registration_complete?(provider, user) do
-    UserRegistration.registration_complete?(provider, user)
-  end
-
-  @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def check_oauth_requirements(provider, user) do
-    UserRegistration.check_oauth_requirements(provider, user)
-  end
-
-  @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def find_existing_user(provider, user) do
-    UserRegistration.find_existing_user(provider, user)
-  end
-
-  @impl Tymeslot.Auth.OAuth.HelperBehaviour
-  def create_oauth_user(provider, oauth_user, profile_params \\ %{}, opts \\ []) do
-    UserRegistration.create_oauth_user(provider, oauth_user, profile_params, opts)
   end
 
   # --- State Management ---

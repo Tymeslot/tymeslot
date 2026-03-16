@@ -5,13 +5,13 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
   alias Ecto.Changeset
   alias Phoenix.Flash
   alias Plug.Test
-  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
+  alias Tymeslot.Auth.OAuth.UserRegistration
   alias Tymeslot.Factory
   alias Tymeslot.Security.RateLimiter
 
   setup do
     try do
-      :meck.unload(OAuthHelper)
+      :meck.unload(UserRegistration)
     rescue
       _other -> :ok
     end
@@ -22,12 +22,12 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
       _other -> :ok
     end
 
-    :meck.new(OAuthHelper, [:passthrough])
+    :meck.new(UserRegistration, [:passthrough])
     :meck.new(RateLimiter, [:passthrough])
 
     on_exit(fn ->
       try do
-        :meck.unload(OAuthHelper)
+        :meck.unload(UserRegistration)
       rescue
         _other -> :ok
       end
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         google_user_id: nil
       }
 
-      :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
+      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
         user = Factory.insert(:user, email: "new@example.com", provider: "github")
         {:ok, user}
       end)
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         github_user_id: 12_345
       }
 
-      :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
+      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
         user =
           Factory.insert(:user,
             email: "unverified@example.com",
@@ -161,7 +161,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         github_user_id: 12_345
       }
 
-      :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
+      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
         changeset = Changeset.add_error(%Changeset{}, :email, "can't be blank")
         {:error, changeset}
       end)
@@ -184,7 +184,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         github_user_id: 12_345
       }
 
-      :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
+      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
         {:error, :user_creation_failed}
       end)
 
@@ -224,7 +224,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         provider_uid: "sub-12345"
       }
 
-      :meck.expect(OAuthHelper, :create_oauth_user, fn :oauth, _data, _profile, _opts ->
+      :meck.expect(UserRegistration, :create_oauth_user, fn :oauth, _data, _profile, _opts ->
         user =
           Factory.insert(:user,
             email: "sso@example.com",
@@ -256,7 +256,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         google_user_id: nil
       }
 
-      :meck.expect(OAuthHelper, :create_oauth_user, fn :github, _data, _profile, _opts ->
+      :meck.expect(UserRegistration, :create_oauth_user, fn :github, _data, _profile, _opts ->
         user = Factory.insert(:user, email: "cleanup@example.com", provider: "github")
         {:ok, user}
       end)
@@ -300,7 +300,10 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         google_user_id: nil
       }
 
-      :meck.expect(OAuthHelper, :create_oauth_user, fn :github, oauth_data, _profile, _opts ->
+      :meck.expect(UserRegistration, :create_oauth_user, fn :github,
+                                                            oauth_data,
+                                                            _profile,
+                                                            _opts ->
         # Verify the provider from session is used, not any form-submitted value
         assert oauth_data.provider == "github"
         assert oauth_data.email == "session@example.com"
@@ -332,7 +335,7 @@ defmodule TymeslotWeb.OAuthCompletionControllerTest do
         provider_uid: "sub-123"
       }
 
-      :meck.expect(OAuthHelper, :create_oauth_user, fn :oauth, oauth_data, _profile, _opts ->
+      :meck.expect(UserRegistration, :create_oauth_user, fn :oauth, oauth_data, _profile, _opts ->
         assert oauth_data.email == "user-provided@example.com"
         assert oauth_data.email_from_provider == false
         user = Factory.insert(:user, email: "user-provided@example.com", provider: "oauth")

@@ -14,7 +14,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   Finds an existing user in the database by OAuth provider information.
   """
   @spec find_existing_user(provider, map()) :: {:ok, map()} | {:error, :not_found}
-  def find_existing_user(:github, %{email: email, github_user_id: github_id}) do
+  def find_existing_user(:github, %{email: email, github_user_id: github_id} = user) do
     user_queries = Config.user_queries_module()
     github_id_int = normalize_github_id(github_id)
 
@@ -22,18 +22,20 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
       user_queries,
       &user_queries.get_user_by_github_id/1,
       github_id_int,
-      email
+      email,
+      is_verified: Map.get(user, :is_verified, false)
     )
   end
 
-  def find_existing_user(:google, %{email: email, google_user_id: google_id}) do
+  def find_existing_user(:google, %{email: email, google_user_id: google_id} = user) do
     user_queries = Config.user_queries_module()
 
     find_user_by_id_or_email(
       user_queries,
       &user_queries.get_user_by_google_id/1,
       google_id,
-      email
+      email,
+      is_verified: Map.get(user, :is_verified, false)
     )
   end
 
@@ -151,15 +153,25 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
     end
   end
 
-  defp find_user_by_id_or_email(user_queries, id_lookup_fn, user_id, email) do
+  defp find_user_by_id_or_email(user_queries, id_lookup_fn, user_id, email, opts) do
+    is_verified = Keyword.get(opts, :is_verified, false)
+
     if is_integer(user_id) or is_binary(user_id) do
       case id_lookup_fn.(user_id) do
-        {:error, :not_found} -> find_user_by_email(user_queries, email)
+        {:error, :not_found} -> find_user_by_verified_email(user_queries, email, is_verified)
         {:ok, user} -> {:ok, user}
       end
     else
-      find_user_by_email(user_queries, email)
+      find_user_by_verified_email(user_queries, email, is_verified)
     end
+  end
+
+  defp find_user_by_verified_email(user_queries, email, true = _is_verified) do
+    find_user_by_email(user_queries, email)
+  end
+
+  defp find_user_by_verified_email(_user_queries, _email, _is_verified) do
+    {:error, :not_found}
   end
 
   defp find_user_by_email(user_queries, email) do
@@ -183,11 +195,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
       "email" => oauth_user.email,
       "is_verified" => email_verified,
       "provider_uid" => Map.get(oauth_user, :provider_uid),
-      "terms_accepted" =>
-        if(Config.enforce_legal_agreements?(),
-          do: "true",
-          else: "false"
-        )
+      "terms_accepted" => to_string(Map.get(oauth_user, :terms_accepted, false))
     }
   end
 
@@ -198,11 +206,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
       "is_verified" => email_verified,
       "#{provider}_user_id" =>
         Map.get(oauth_user, String.to_existing_atom("#{provider}_user_id")),
-      "terms_accepted" =>
-        if(Config.enforce_legal_agreements?(),
-          do: "true",
-          else: "false"
-        )
+      "terms_accepted" => to_string(Map.get(oauth_user, :terms_accepted, false))
     }
   end
 

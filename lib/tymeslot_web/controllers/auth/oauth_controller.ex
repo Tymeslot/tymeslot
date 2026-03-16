@@ -7,11 +7,13 @@ defmodule TymeslotWeb.OAuthController do
   use TymeslotWeb, :controller
   require Logger
 
-  alias Tymeslot.Auth.{AuthActions, Session, SocialAuthentication, Verification}
+  alias Tymeslot.Auth
+  alias Tymeslot.Auth.{AuthActions, Session, Verification}
   alias Tymeslot.Auth.OAuth.{GenericOAuth, GitHub, Google}
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
-  alias Tymeslot.Auth.OAuth.URLs
+  alias Tymeslot.Auth.OAuth.{URLs, UserRegistration}
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AuthControllerHelpers
   alias TymeslotWeb.Helpers.ClientIP
@@ -204,7 +206,7 @@ defmodule TymeslotWeb.OAuthController do
 
         case validate_oauth_completion_data(oauth_data) do
           :ok ->
-            case OAuthHelper.create_oauth_user(provider, oauth_data, profile_params,
+            case UserRegistration.create_oauth_user(provider, oauth_data, profile_params,
                    metadata: metadata
                  ) do
               {:ok, user} ->
@@ -331,7 +333,7 @@ defmodule TymeslotWeb.OAuthController do
       is_nil(email) or String.trim(email) == "" ->
         {:error, :email_required}
 
-      not valid_email_format?(email) ->
+      EmailValidator.validate(email) != :ok ->
         {:error, :invalid_email}
 
       Config.enforce_legal_agreements?() and not oauth_data.terms_accepted ->
@@ -339,18 +341,11 @@ defmodule TymeslotWeb.OAuthController do
 
       true ->
         # Check if email already exists in database
-        case SocialAuthentication.check_email_availability(email) do
+        case Auth.check_email_availability(email) do
           :ok -> :ok
           {:error, message} -> {:error, message}
         end
     end
-  end
-
-  @spec valid_email_format?(String.t()) :: boolean()
-  defp valid_email_format?(email) when is_binary(email) do
-    # Basic email validation regex
-    email_regex = ~r/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-    Regex.match?(email_regex, email)
   end
 
   @spec redirect_to_registration_with_error(Plug.Conn.t(), any(), map()) :: Plug.Conn.t()
@@ -390,7 +385,11 @@ defmodule TymeslotWeb.OAuthController do
   defp format_error_for_params(:terms_not_accepted), do: "terms_not_accepted"
 
   defp format_error_for_params(error_message) when is_binary(error_message) do
-    "unknown_error"
+    cond do
+      error_message =~ "already registered" -> "email_taken"
+      error_message =~ "Invalid email" -> "invalid_email"
+      true -> "unknown_error"
+    end
   end
 
   @spec handle_rate_limited_error(Plug.Conn.t()) :: Plug.Conn.t()

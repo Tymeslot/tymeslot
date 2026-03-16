@@ -64,34 +64,6 @@ defmodule Tymeslot.Auth.AuthActionsTest do
     end
   end
 
-  describe "convert_profile_params/1" do
-    test "converts string keys to atom keys" do
-      params = %{
-        "full_name" => "Test User",
-        "timezone" => "America/New_York"
-      }
-
-      assert {:ok, result} = AuthActions.convert_profile_params(params)
-      assert result.full_name == "Test User"
-      assert result.timezone == "America/New_York"
-    end
-
-    test "handles empty map" do
-      assert {:ok, result} = AuthActions.convert_profile_params(%{})
-      assert result == %{}
-    end
-
-    test "handles nested values" do
-      params = %{
-        "full_name" => "Test User",
-        "settings" => %{"theme" => "dark"}
-      }
-
-      assert {:ok, result} = AuthActions.convert_profile_params(params)
-      assert result.full_name == "Test User"
-    end
-  end
-
   describe "validate_signup_input/1" do
     test "returns sanitized data for valid signup input" do
       params = %{
@@ -262,53 +234,6 @@ defmodule Tymeslot.Auth.AuthActionsTest do
     end
   end
 
-  describe "validate_complete_registration/2" do
-    test "accepts valid complete registration" do
-      auth_params = %{
-        "email" => "test@example.com",
-        "terms_accepted" => "true"
-      }
-
-      profile_params = %{
-        "full_name" => "Test User"
-      }
-
-      assert {:ok, valid} =
-               AuthActions.validate_complete_registration(auth_params, profile_params)
-
-      assert valid["email"] == "test@example.com"
-      assert valid["full_name"] == "Test User"
-    end
-
-    test "returns error for invalid email" do
-      auth_params = %{
-        "email" => "not-an-email",
-        "terms_accepted" => "true"
-      }
-
-      profile_params = %{
-        "full_name" => "Test User"
-      }
-
-      assert {:error, %{email: _msg}} =
-               AuthActions.validate_complete_registration(auth_params, profile_params)
-    end
-
-    test "allows missing full_name" do
-      auth_params = %{
-        "email" => "test@example.com",
-        "terms_accepted" => "true"
-      }
-
-      profile_params = %{"full_name" => ""}
-
-      assert {:ok, valid} =
-               AuthActions.validate_complete_registration(auth_params, profile_params)
-
-      assert valid["full_name"] in [nil, ""]
-    end
-  end
-
   describe "register_user/2 — registration disabled" do
     test "returns error when registration is disabled" do
       original = Application.get_env(:tymeslot, :registration_enabled)
@@ -385,108 +310,6 @@ defmodule Tymeslot.Auth.AuthActionsTest do
 
       assert {:error, "Password authentication is currently disabled."} =
                AuthActions.reset_password("some-token", "NewPass123!", "NewPass123!", socket)
-    end
-  end
-
-  describe "complete_oauth_registration/2" do
-    test "returns error when registration is disabled" do
-      original = Application.get_env(:tymeslot, :registration_enabled)
-      Application.put_env(:tymeslot, :registration_enabled, false)
-      on_exit(fn -> Application.put_env(:tymeslot, :registration_enabled, original) end)
-
-      params = %{
-        "auth" => %{
-          "provider" => "github",
-          "email" => "test@example.com",
-          "terms_accepted" => "true"
-        },
-        "profile" => %{}
-      }
-
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
-      }
-
-      assert {:error, "Registration is currently disabled."} =
-               AuthActions.complete_oauth_registration(params, socket)
-    end
-
-    test "requires terms acceptance when enforced" do
-      original = Application.get_env(:tymeslot, :enforce_legal_agreements)
-      Application.put_env(:tymeslot, :enforce_legal_agreements, true)
-      on_exit(fn -> Application.put_env(:tymeslot, :enforce_legal_agreements, original) end)
-
-      params = %{
-        "auth" => %{
-          "provider" => "github",
-          "email" => "test@example.com",
-          "terms_accepted" => "false"
-        },
-        "profile" => %{}
-      }
-
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
-      }
-
-      assert {:error, "You must accept the terms to continue."} =
-               AuthActions.complete_oauth_registration(params, socket)
-    end
-
-    test "returns missing required fields for absent provider" do
-      params = %{
-        "auth" => %{
-          "email" => "test@example.com",
-          "verified_email" => true,
-          "terms_accepted" => "true"
-        },
-        "profile" => %{}
-      }
-
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
-      }
-
-      assert {:error, "Missing required fields: provider"} =
-               AuthActions.complete_oauth_registration(params, socket)
-    end
-
-    test "returns error for unsupported provider" do
-      params = %{
-        "auth" => %{
-          "provider" => "invalid_provider",
-          "email" => "test@example.com",
-          "verified_email" => true,
-          "terms_accepted" => "true"
-        },
-        "profile" => %{}
-      }
-
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
-      }
-
-      assert {:error, "Unsupported authentication provider"} =
-               AuthActions.complete_oauth_registration(params, socket)
-    end
-
-    test "returns error when email is not verified by provider" do
-      params = %{
-        "auth" => %{
-          "provider" => "google",
-          "email" => "test@example.com",
-          "verified_email" => false,
-          "terms_accepted" => "true"
-        },
-        "profile" => %{}
-      }
-
-      socket = %Phoenix.LiveView.Socket{
-        assigns: %{client_ip: "127.0.0.1", user_agent: "AuthActionsTest/1.0"}
-      }
-
-      assert {:error, "Email not verified by provider"} =
-               AuthActions.complete_oauth_registration(params, socket)
     end
   end
 end

@@ -2,14 +2,10 @@ defmodule Tymeslot.Auth.OAuth.GoogleTest do
   use Tymeslot.DataCase, async: false
   @moduletag :auth
 
-  alias Phoenix.Controller
-  alias Phoenix.Flash
-  alias Plug.Conn, as: PlugConn
   alias Plug.Test, as: PlugTest
   alias Tymeslot.Auth.OAuth.Google
   alias Tymeslot.Auth.OAuth.HelperMock
   import Mox
-  import Phoenix.ConnTest, only: [redirected_to: 1]
 
   setup :verify_on_exit!
 
@@ -46,40 +42,9 @@ defmodule Tymeslot.Auth.OAuth.GoogleTest do
     assert url =~ "scope=email+profile"
   end
 
-  test "handle_callback/4 validates state and exchanges code" do
-    conn = PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
-    code = "code456"
-    state = "state456"
-    redirect_uri = "http://callback"
+  test "get_callback_url/0 returns Google callback path" do
+    expect(HelperMock, :get_callback_url, fn :google -> "/auth/google/callback" end)
 
-    expect(HelperMock, :handle_oauth_callback, fn _conn,
-                                                  %{code: ^code, state: ^state, provider: :google} ->
-      PlugConn.put_private(conn, :oauth_callback_result, {:ok, %{"id" => 2}})
-    end)
-
-    updated_conn = Google.handle_callback(conn, code, state, redirect_uri)
-    assert updated_conn.private[:oauth_callback_result] == {:ok, %{"id" => 2}}
-  end
-
-  test "handle_callback/4 returns error on invalid state" do
-    conn = PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
-    code = "code456"
-    state = "wrong_state"
-    redirect_uri = "http://callback"
-
-    expect(HelperMock, :handle_oauth_callback, fn conn,
-                                                  %{code: ^code, state: ^state, provider: :google} ->
-      # Mock the error response from FlowHandler
-      conn
-      |> Controller.fetch_flash([])
-      |> PlugConn.put_status(302)
-      |> Controller.put_flash(:error, "invalid state")
-      |> Controller.redirect(to: "/?auth=login")
-    end)
-
-    updated_conn = Google.handle_callback(conn, code, state, redirect_uri)
-    assert updated_conn.status == 302
-    assert redirected_to(updated_conn) == "/?auth=login"
-    assert Flash.get(updated_conn.assigns.flash, :error) == "invalid state"
+    assert Google.get_callback_url() == "/auth/google/callback"
   end
 end

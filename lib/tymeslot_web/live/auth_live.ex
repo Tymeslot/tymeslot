@@ -7,7 +7,7 @@ defmodule TymeslotWeb.AuthLive do
   """
 
   use TymeslotWeb, :live_view
-  import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3, redirect: 2]
+  import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Phoenix.Controller
   alias Tymeslot.Auth.{AuthActions, Session, Verification}
@@ -300,78 +300,6 @@ defmodule TymeslotWeb.AuthLive do
     end
   end
 
-  # Complete Registration Events
-  def handle_event("validate_complete_registration", params, socket) do
-    auth_params = params["auth"] || %{}
-    profile_params = params["profile"] || %{}
-
-    # Don't override OAuth errors with form validation errors
-    if Map.get(socket.assigns, :has_oauth_error) do
-      socket = assign(socket, :form_data, %{auth: auth_params, profile: profile_params})
-      {:noreply, socket}
-    else
-      validation_map = %{
-        "email" => auth_params["email"],
-        "full_name" => profile_params["full_name"],
-        "terms_accepted" => auth_params["terms_accepted"]
-      }
-
-      metadata = SecurityHelper.extract_client_metadata(socket)
-
-      case InputProcessor.validate_form(
-             validation_map,
-             [{"email", :email}, {"password", :password}, {"full_name", :full_name}],
-             metadata: metadata
-           ) do
-        {:ok, _sanitized_params} ->
-          socket =
-            socket
-            |> assign(:errors, %{})
-            |> assign(:form_data, %{auth: auth_params, profile: profile_params})
-
-          {:noreply, socket}
-
-        {:error, errors} ->
-          socket =
-            socket
-            |> assign(:errors, errors)
-            |> assign(:form_data, %{auth: auth_params, profile: profile_params})
-
-          {:noreply, socket}
-      end
-    end
-  end
-
-  def handle_event("submit_complete_registration", params, socket) do
-    client_ip = ClientIP.get(socket)
-
-    with :ok <- SecurityHelper.validate_csrf_token(socket, params),
-         :ok <- RateLimiter.check_oauth_registration_rate_limit(client_ip) do
-      case AuthActions.complete_oauth_registration(params, socket) do
-        {:ok, updated_socket, message} ->
-          socket =
-            updated_socket
-            |> assign(:loading, false)
-            |> put_flash(:info, message)
-            |> redirect(to: get_success_redirect_path())
-
-          {:noreply, socket}
-
-        {:error, error_message} ->
-          {:noreply, SecurityHelper.set_errors(socket, %{general: error_message})}
-      end
-    else
-      {:error, :invalid_csrf} ->
-        {:noreply,
-         SecurityHelper.set_errors(socket, %{
-           general: "Security validation failed. Please refresh the page."
-         })}
-
-      {:error, :rate_limited, message} ->
-        {:noreply, SecurityHelper.set_errors(socket, %{general: message})}
-    end
-  end
-
   def handle_event("resend_verification", _params, socket) do
     if socket.assigns[:honeypot_signup] do
       metadata = SecurityHelper.extract_client_metadata(socket)
@@ -646,11 +574,5 @@ defmodule TymeslotWeb.AuthLive do
       <% end %>
     </div>
     """
-  end
-
-  # Private Helper Functions
-
-  defp get_success_redirect_path do
-    Config.success_redirect_path()
   end
 end

@@ -8,8 +8,11 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
 
   alias Tymeslot.DatabaseQueries.{CalendarIntegrationQueries, ProfileQueries}
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar, as: CalendarContext
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.CalendarManagement
+
+  require Logger
 
   @type user_id :: integer()
   @type integration_id :: integer()
@@ -120,6 +123,36 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
       end
 
     CalendarManagement.update_calendar_integration(integration, attrs)
+  end
+
+  @doc """
+  Discovers calendars for an integration and auto-selects the primary.
+  Falls back to returning the integration unchanged if discovery fails.
+  """
+  @spec discover_and_configure_calendars(CalendarIntegrationSchema.t()) ::
+          {:ok, CalendarIntegrationSchema.t()}
+  def discover_and_configure_calendars(integration) do
+    case CalendarContext.discover_calendars_for_integration(integration) do
+      {:ok, calendars} ->
+        auto_select_primary_calendar(integration, calendars)
+
+      {:error, reason} ->
+        Logger.warning("Calendar discovery failed after OAuth callback",
+          provider: integration.provider,
+          reason: reason
+        )
+
+        {:ok, integration}
+
+      {:error, reason, detail} ->
+        Logger.warning("Calendar discovery failed after OAuth callback",
+          provider: integration.provider,
+          reason: reason,
+          detail: detail
+        )
+
+        {:ok, integration}
+    end
   end
 
   # Private helpers

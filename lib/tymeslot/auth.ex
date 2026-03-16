@@ -15,6 +15,7 @@ defmodule Tymeslot.Auth do
     PasswordReset,
     Registration,
     Session,
+    SocialAuthentication,
     Verification
   }
 
@@ -480,6 +481,15 @@ defmodule Tymeslot.Auth do
   @spec onboarding_completed?(Ecto.Schema.t()) :: boolean()
   def onboarding_completed?(user) do
     not is_nil(user.onboarding_completed_at)
+  end
+
+  @doc """
+  Checks if an email is available for registration.
+  Returns :ok if available, {:error, reason} otherwise.
+  """
+  @spec check_email_availability(String.t()) :: :ok | {:error, String.t()}
+  def check_email_availability(email) do
+    SocialAuthentication.check_email_availability(email)
   end
 
   @doc """

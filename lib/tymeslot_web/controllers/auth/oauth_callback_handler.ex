@@ -10,7 +10,6 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
   alias Phoenix.Controller
   alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Dashboard.DashboardContext
-  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AuthControllerHelpers
   alias TymeslotWeb.Helpers.ClientIP
@@ -71,27 +70,6 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
           redirect_path
         )
     end
-  end
-
-  @doc """
-  Handles OAuth callback for authentication flows (login/signup).
-
-  Similar to `handle_callback/3` but designed for authentication flows where
-  the user is logging in or signing up via OAuth.
-  """
-  @spec handle_auth_callback(Plug.Conn.t(), map(), callback_opts()) :: Plug.Conn.t()
-  def handle_auth_callback(conn, params, opts) do
-    # Add authentication-specific defaults
-    opts =
-      Keyword.merge(
-        [
-          rate_limit_key: "oauth_auth_callback",
-          redirect_path: Config.success_redirect_path()
-        ],
-        opts
-      )
-
-    handle_callback(conn, params, opts)
   end
 
   @doc """

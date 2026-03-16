@@ -59,46 +59,11 @@ defmodule Tymeslot.Auth.OAuth.GenericOAuthTest do
     end
   end
 
-  describe "process_user/1" do
-    test "delegates to helper with :oauth provider" do
-      user_info = %{"sub" => "user-123", "email" => "test@example.com", "name" => "Test"}
+  describe "get_callback_url/0" do
+    test "returns generic OAuth callback path" do
+      expect(HelperMock, :get_callback_url, fn :oauth -> "/auth/oauth/callback" end)
 
-      expect(HelperMock, :process_user, fn :oauth, ^user_info ->
-        {:ok, %{email: "test@example.com", provider_uid: "user-123", name: "Test"}}
-      end)
-
-      assert {:ok, user} = GenericOAuth.process_user(user_info)
-      assert user.provider_uid == "user-123"
-    end
-  end
-
-  describe "registration_complete?/1" do
-    test "delegates to helper with :oauth provider" do
-      user = %{email: "test@example.com", provider_uid: "user-123"}
-
-      expect(HelperMock, :registration_complete?, fn :oauth, ^user -> true end)
-
-      assert GenericOAuth.registration_complete?(user)
-    end
-  end
-
-  describe "handle_callback/4" do
-    test "delegates to helper with :oauth provider" do
-      conn = PlugTest.init_test_session(PlugTest.conn(:get, "/"), %{})
-      code = "code123"
-      state = "state123"
-
-      expect(HelperMock, :handle_oauth_callback, fn _conn,
-                                                    %{
-                                                      code: ^code,
-                                                      state: ^state,
-                                                      provider: :oauth
-                                                    } ->
-        {:ok, conn, %{"sub" => "user-123"}}
-      end)
-
-      assert {:ok, _updated_conn, %{"sub" => "user-123"}} =
-               GenericOAuth.handle_callback(conn, code, state, "http://callback")
+      assert GenericOAuth.get_callback_url() == "/auth/oauth/callback"
     end
   end
 end

@@ -15,59 +15,6 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   alias Tymeslot.Repo
 
   @doc """
-  Creates an OAuth user within a transaction to prevent race conditions.
-
-  This function:
-  1. Checks if a user with the email already exists
-  2. If not, creates the user
-  3. Creates the associated profile
-  4. Broadcasts the user registration event
-
-  All operations happen within a single database transaction.
-
-  ## Parameters
-  - auth_params: Map containing user authentication parameters
-  - profile_params: Map containing user profile parameters (currently unused but kept for future use)
-
-  ## Returns
-  - {:ok, %{user: user, profile: profile}} on success
-  - {:error, :user_already_exists, reason} when user already exists
-  - {:error, operation, reason} on other failures
-  """
-  @spec create_oauth_user_transactionally(map(), map(), keyword()) ::
-          {:ok, %{user: UserSchema.t(), profile: any()}}
-          | {:error, :user_already_exists, any()}
-          | {:error, atom(), any()}
-  def create_oauth_user_transactionally(auth_params, profile_params, _opts \\ []) do
-    result =
-      UserQueries.transaction(fn ->
-        with {:ok, :no_existing_user} <- check_for_existing_user(Repo, auth_params),
-             {:ok, user} <- create_user(Repo, auth_params),
-             {:ok, profile} <- create_profile(Repo, user, profile_params) do
-          %{user: user, profile: profile}
-        else
-          {:error, {:user_already_exists, reason}} ->
-            UserQueries.rollback({:user_already_exists, reason})
-
-          {:error, {operation, reason}} ->
-            UserQueries.rollback({operation, reason})
-        end
-      end)
-
-    case result do
-      {:ok, %{user: user, profile: profile}} ->
-        {:ok, %{user: user, profile: profile}}
-
-      {:error, {:user_already_exists, reason}} ->
-        {:error, :user_already_exists, reason}
-
-      {:error, {operation, reason}} ->
-        Logger.error("OAuth user creation failed", operation: operation, reason: inspect(reason))
-        {:error, operation, reason}
-    end
-  end
-
-  @doc """
   Finds or creates an OAuth user within a transaction.
 
   This is useful when you want to either get an existing user or create a new one
@@ -117,28 +64,6 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   end
 
   defp ensure_profile(_repo, _user, false, _profile_params), do: {:ok, :existing}
-
-  defp check_for_existing_user(repo, auth_params) do
-    email = auth_params["email"]
-
-    case UserQueries.get_user_by_email(email, repo) do
-      {:error, :not_found} ->
-        {:ok, :no_existing_user}
-
-      {:ok, _existing_user} ->
-        {:error, {:user_already_exists, "User with email #{email} already exists"}}
-    end
-  end
-
-  defp create_user(repo, auth_params) do
-    case UserQueries.create_social_user(auth_params, repo) do
-      {:ok, user} ->
-        {:ok, user}
-
-      {:error, changeset} ->
-        {:error, {:create_user, changeset}}
-    end
-  end
 
   defp create_profile(repo, user, profile_params) do
     # Use the repo passed in to ensure we're in the same transaction

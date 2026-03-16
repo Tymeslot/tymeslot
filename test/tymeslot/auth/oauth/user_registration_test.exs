@@ -120,6 +120,89 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
     end
   end
 
+  describe "account linking for GitHub/Google via create_oauth_user" do
+    test ":github links account by email and updates github_user_id" do
+      existing =
+        Factory.insert(:user,
+          email: "gh@example.com",
+          provider: "github",
+          github_user_id: "111"
+        )
+
+      oauth_user = %{
+        email: "gh@example.com",
+        github_user_id: "222",
+        name: "Other User",
+        is_verified: true,
+        email_from_provider: true
+      }
+
+      assert {:ok, user} = UserRegistration.create_oauth_user(:github, oauth_user)
+      assert user.id == existing.id
+      assert user.github_user_id == "222"
+    end
+
+    test ":google links account by email and updates google_user_id" do
+      existing =
+        Factory.insert(:user,
+          email: "goog@example.com",
+          provider: "google",
+          google_user_id: "aaa"
+        )
+
+      oauth_user = %{
+        email: "goog@example.com",
+        google_user_id: "bbb",
+        name: "Other User",
+        is_verified: true,
+        email_from_provider: true
+      }
+
+      assert {:ok, user} = UserRegistration.create_oauth_user(:google, oauth_user)
+      assert user.id == existing.id
+      assert user.google_user_id == "bbb"
+    end
+
+    test ":github links account when github_user_id matches" do
+      existing =
+        Factory.insert(:user,
+          email: "gh@example.com",
+          provider: "github",
+          github_user_id: "111"
+        )
+
+      oauth_user = %{
+        email: "gh@example.com",
+        github_user_id: "111",
+        name: "Same User",
+        is_verified: true,
+        email_from_provider: true
+      }
+
+      assert {:ok, user} = UserRegistration.create_oauth_user(:github, oauth_user)
+      assert user.id == existing.id
+    end
+
+    test ":github with unverified email and no matching provider_id fails on uniqueness" do
+      _existing =
+        Factory.insert(:user,
+          email: "gh@example.com",
+          provider: "github",
+          github_user_id: "111"
+        )
+
+      oauth_user = %{
+        email: "gh@example.com",
+        github_user_id: "222",
+        name: "Attacker",
+        is_verified: false,
+        email_from_provider: false
+      }
+
+      assert {:error, _reason} = UserRegistration.create_oauth_user(:github, oauth_user)
+    end
+  end
+
   describe "registration_complete?/2" do
     test ":github requires non-empty email and github_user_id" do
       assert UserRegistration.registration_complete?(:github, %{
