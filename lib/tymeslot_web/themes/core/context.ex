@@ -9,6 +9,8 @@ defmodule TymeslotWeb.Themes.Core.Context do
   alias Tymeslot.ThemeCustomizations
   alias TymeslotWeb.Themes.Core.Registry
 
+  require Logger
+
   @type t :: %__MODULE__{
           theme_id: String.t(),
           theme_key: atom(),
@@ -44,7 +46,13 @@ defmodule TymeslotWeb.Themes.Core.Context do
         preview_mode: Keyword.get(options, :preview, false)
       }
     else
-      _error -> nil
+      error ->
+        Logger.warning("Failed to load theme context",
+          theme_id: theme_id,
+          reason: inspect(error)
+        )
+
+        nil
     end
   end
 
