@@ -35,25 +35,26 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   end
 
   @doc """
-  Ensures the given directory exists, raising on unrecoverable errors.
+  Ensures the given directory exists.
+  Returns :ok on success, {:error, reason} on failure.
   """
-  @spec ensure_directory_exists(String.t()) :: :ok
+  @spec ensure_directory_exists(String.t()) :: :ok | {:error, atom()}
   def ensure_directory_exists(dir_path) do
     case File.mkdir_p(dir_path) do
       :ok ->
         :ok
 
-      {:error, :eacces} ->
+      {:error, :eacces} = error ->
         Logger.error("Permission denied creating directory", dir_path: dir_path)
-        raise "Failed to create upload directory due to permissions: #{dir_path}"
+        error
 
-      {:error, :enospc} ->
+      {:error, :enospc} = error ->
         Logger.error("No space left on device for directory", dir_path: dir_path)
-        raise "No space left on device to create directory: #{dir_path}"
+        error
 
-      {:error, reason} ->
+      {:error, reason} = error ->
         Logger.error("Failed to create directory", dir_path: dir_path, reason: reason)
-        raise "Failed to create upload directory: #{dir_path} (#{reason})"
+        error
     end
   end
 
@@ -65,20 +66,17 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   def store_background_image(profile_id, theme_id, %{path: temp_path, filename: filename}) do
     if MediaValidator.valid_image_file?(temp_path) do
       dest_dir = get_theme_upload_directory(profile_id, theme_id, "images")
-      ensure_directory_exists(dest_dir)
 
-      case UploadHandler.store_file_atomically(
-             temp_path,
-             dest_dir,
-             filename,
-             %{operation: :store_background_image, profile_id: profile_id, theme_id: theme_id}
-           ) do
-        {:ok, sanitized_filename} ->
-          {:ok,
-           Path.join(["themes", to_string(profile_id), theme_id, "images", sanitized_filename])}
-
-        {:error, reason} ->
-          {:error, reason}
+      with :ok <- ensure_directory_exists(dest_dir),
+           {:ok, sanitized_filename} <-
+             UploadHandler.store_file_atomically(
+               temp_path,
+               dest_dir,
+               filename,
+               %{operation: :store_background_image, profile_id: profile_id, theme_id: theme_id}
+             ) do
+        {:ok,
+         Path.join(["themes", to_string(profile_id), theme_id, "images", sanitized_filename])}
       end
     else
       {:error, :invalid_image_format}
@@ -93,20 +91,17 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   def store_background_video(profile_id, theme_id, %{path: temp_path, filename: filename}) do
     if MediaValidator.valid_video_file?(temp_path) do
       dest_dir = get_theme_upload_directory(profile_id, theme_id, "videos")
-      ensure_directory_exists(dest_dir)
 
-      case UploadHandler.store_file_atomically(
-             temp_path,
-             dest_dir,
-             filename,
-             %{operation: :store_background_video, profile_id: profile_id, theme_id: theme_id}
-           ) do
-        {:ok, sanitized_filename} ->
-          {:ok,
-           Path.join(["themes", to_string(profile_id), theme_id, "videos", sanitized_filename])}
-
-        {:error, reason} ->
-          {:error, reason}
+      with :ok <- ensure_directory_exists(dest_dir),
+           {:ok, sanitized_filename} <-
+             UploadHandler.store_file_atomically(
+               temp_path,
+               dest_dir,
+               filename,
+               %{operation: :store_background_video, profile_id: profile_id, theme_id: theme_id}
+             ) do
+        {:ok,
+         Path.join(["themes", to_string(profile_id), theme_id, "videos", sanitized_filename])}
       end
     else
       {:error, :invalid_video_format}

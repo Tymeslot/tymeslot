@@ -171,9 +171,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
     end)
   end
 
-  def handle_event("theme:set_browsing_type", %{"type" => type}, socket) do
+  @valid_browsing_types ~w[gradient color image video]
+
+  def handle_event("theme:set_browsing_type", %{"type" => type}, socket)
+      when type in @valid_browsing_types do
     # Only update the browsing type - this is just UI navigation, not a selection
     {:noreply, assign(socket, :browsing_type, type)}
+  end
+
+  def handle_event("theme:set_browsing_type", _params, socket) do
+    {:noreply, socket}
   end
 
   def handle_event("theme:select_background", params, socket) do
