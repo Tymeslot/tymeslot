@@ -198,6 +198,28 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
   end
 
   @doc """
+  Clears calendar references (`calendar_integration_id` and `target_calendar_id`)
+  on all meeting types pointing to the given calendar integration.
+
+  Called before deleting a calendar integration to prevent stale `target_calendar_id`
+  values (which is a plain string, not a FK, and would survive cascade).
+  """
+  @spec clear_calendar_references(integer()) :: {non_neg_integer(), nil}
+  def clear_calendar_references(calendar_integration_id)
+      when is_integer(calendar_integration_id) do
+    Repo.update_all(
+      from(mt in MeetingTypeSchema,
+        where: mt.calendar_integration_id == ^calendar_integration_id
+      ),
+      set: [
+        calendar_integration_id: nil,
+        target_calendar_id: nil,
+        updated_at: NaiveDateTime.utc_now(:second)
+      ]
+    )
+  end
+
+  @doc """
   Legacy function for individual meeting type creation.
   Consider using bulk operations for better performance when creating multiple types.
   Only creates types that don't already exist for the user.

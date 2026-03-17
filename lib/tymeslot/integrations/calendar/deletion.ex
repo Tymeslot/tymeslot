@@ -4,9 +4,11 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
   calendar invariant (promote another or clear primary).
   """
 
+  alias Tymeslot.DatabaseQueries.MeetingTypeQueries
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Repo
 
   @type user_id :: pos_integer()
 
@@ -28,7 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
     with {:ok, integration} <-
            CalendarManagement.get_calendar_integration(integration_id, user_id),
          promoted_result <- maybe_handle_primary(user_id, integration),
-         {:ok, _result} <- CalendarManagement.delete_calendar_integration(integration) do
+         {:ok, _result} <- clear_references_and_delete(integration) do
       case promoted_result do
         {:promoted, next_id} -> {:ok, {:deleted_promoted, next_id}}
         :cleared -> {:ok, {:deleted_cleared_primary}}
@@ -47,6 +49,17 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
     else
       _not_primary -> :unchanged
     end
+  end
+
+  defp clear_references_and_delete(integration) do
+    Repo.transaction(fn ->
+      MeetingTypeQueries.clear_calendar_references(integration.id)
+
+      case CalendarManagement.delete_calendar_integration(integration) do
+        {:ok, result} -> result
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   defp promote_next_or_clear(user_id, exclude_id) do

@@ -30,7 +30,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
   If an identical request is already in-flight, waits for its result.
   Otherwise, executes the fetch function and shares the result.
   """
-  @spec coalesce(integer(), Date.t(), Date.t(), function()) ::
+  @spec coalesce(integer(), Date.t() | DateTime.t(), Date.t() | DateTime.t(), function()) ::
           {:ok, list(map())} | {:error, term()}
   def coalesce(user_id, start_date, end_date, fetch_fn) when is_function(fetch_fn, 0) do
     key = {user_id, start_date, end_date}
