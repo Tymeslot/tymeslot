@@ -454,6 +454,14 @@
     }
   }
 
+  function requireUsername(methodName, username) {
+    if (!username) {
+      console.error('Tymeslot: No username provided to ' + methodName + '()');
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Public API
    */
@@ -475,10 +483,7 @@
      * Open booking in a modal
      */
     open: function(username, options = {}) {
-      if (!username) {
-        console.error('Tymeslot: No username provided to open()');
-        return;
-      }
+      if (!requireUsername('open', username)) return;
 
       // Remove existing modal if any
       this.close();
@@ -565,10 +570,7 @@
      * Initialize floating button
      */
     initFloating: function(username, options = {}) {
-      if (!username) {
-        console.error('Tymeslot: No username provided to initFloating()');
-        return;
-      }
+      if (!requireUsername('initFloating', username)) return;
 
       // Remove existing button if any
       const existing = document.getElementById('tymeslot-floating-button');
@@ -582,10 +584,7 @@
      * Programmatically embed inline
      */
     embed: function(selector, username, options = {}) {
-      if (!username) {
-        console.error('Tymeslot: No username provided to embed()');
-        return;
-      }
+      if (!requireUsername('embed', username)) return;
 
       const container = document.querySelector(selector);
       if (!container) {

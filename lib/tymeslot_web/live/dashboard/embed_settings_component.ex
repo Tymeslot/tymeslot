@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
   require Logger
 
-  @valid_embed_types ~w(inline popup link floating)
+  @valid_embed_types Helpers.valid_embed_types()
   @valid_tabs ~w(options security preview)
 
   @impl Phoenix.LiveComponent
@@ -121,9 +121,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     {:noreply, assign(socket, :active_tab, tab)}
   end
 
-  def handle_event("switch_tab", _params, socket), do: {:noreply, socket}
+  def handle_event("switch_tab", _params, socket) do
+    Logger.warning("switch_tab received invalid or missing tab value")
+    {:noreply, socket}
+  end
 
-  @impl Phoenix.LiveComponent
   def handle_event("copy_code", %{"type" => type}, socket) when type in @valid_embed_types do
     code = Helpers.embed_code(type, socket.assigns)
 
@@ -133,17 +135,21 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     {:noreply, socket}
   end
 
-  def handle_event("copy_code", _params, socket), do: {:noreply, socket}
+  def handle_event("copy_code", _params, socket) do
+    Logger.warning("copy_code received invalid or missing type value")
+    {:noreply, socket}
+  end
 
-  @impl Phoenix.LiveComponent
   def handle_event("select_embed_type", %{"type" => type}, socket)
       when type in @valid_embed_types do
     {:noreply, assign(socket, :selected_embed_type, type)}
   end
 
-  def handle_event("select_embed_type", _params, socket), do: {:noreply, socket}
+  def handle_event("select_embed_type", _params, socket) do
+    Logger.warning("select_embed_type received invalid or missing type value")
+    {:noreply, socket}
+  end
 
-  @impl Phoenix.LiveComponent
   def handle_event("save_embed_domains", %{"allowed_domains" => domains_str}, socket) do
     case Profiles.add_embed_domains(socket.assigns.profile, domains_str) do
       {:ok, merged_domains} ->
@@ -160,7 +166,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     end
   end
 
-  @impl Phoenix.LiveComponent
   def handle_event("remove_domain", %{"domain" => domain}, socket) do
     updated_domains = Enum.reject(socket.assigns.allowed_domains, &(&1 == domain))
     updated_domains = if updated_domains == [], do: ["none"], else: updated_domains
@@ -168,7 +173,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     perform_domain_update(socket, updated_domains, "Domain removed successfully")
   end
 
-  @impl Phoenix.LiveComponent
   def handle_event("clear_embed_domains", _params, socket) do
     perform_domain_update(socket, ["none"], "Embedding is now disabled")
   end
