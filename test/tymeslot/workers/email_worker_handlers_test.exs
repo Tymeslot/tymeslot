@@ -74,7 +74,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
     test "returns :meeting_not_found if meeting doesn't exist" do
       fake_id = UUID.generate()
 
-      assert {:error, :meeting_not_found} =
+      assert {:discard, "Meeting not found"} =
                EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => fake_id
                })
@@ -89,14 +89,35 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
                })
     end
 
-    test "handles partial failure" do
-      meeting = insert(:meeting)
+    test "marks email_sent flags in database after successful send" do
+      meeting = insert(:meeting, organizer_email_sent: false, attendee_email_sent: false)
 
-      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _meeting, _user ->
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
         {:ok, "sent"}
       end)
 
-      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _meeting, _user ->
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+                 "meeting_id" => meeting.id
+               })
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.organizer_email_sent == true
+      assert updated.attendee_email_sent == true
+    end
+
+    test "handles partial failure" do
+      meeting = insert(:meeting)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _email, _details ->
         {:error, "failed"}
       end)
 
@@ -104,6 +125,11 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
                EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
                  "meeting_id" => meeting.id
                })
+
+      # Organizer flag should be set since that send succeeded
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.organizer_email_sent == true
+      assert updated.attendee_email_sent == false
     end
   end
 
@@ -111,7 +137,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
     test "skips if meeting is cancelled" do
       meeting = insert(:meeting, status: "cancelled")
 
-      assert {:error, :meeting_cancelled} =
+      assert {:discard, "Meeting cancelled"} =
                EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
                  "meeting_id" => meeting.id
                })
