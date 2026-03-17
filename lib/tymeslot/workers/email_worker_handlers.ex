@@ -72,7 +72,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
           meeting_id: meeting_id
         )
 
-        {:error, :meeting_not_found}
+        {:discard, "Meeting not found"}
     end
   end
 
@@ -84,7 +84,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
             meeting_id: meeting_id
           )
 
-          {:error, :meeting_cancelled}
+          {:discard, "Meeting cancelled"}
         else
           reminder_value = Map.get(args, "reminder_value", 30)
           reminder_unit = Map.get(args, "reminder_unit", "minutes")
@@ -105,7 +105,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
           meeting_id: meeting_id
         )
 
-        {:error, :meeting_not_found}
+        {:discard, "Meeting not found"}
     end
   end
 
@@ -117,7 +117,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
             meeting_id: meeting_id
           )
 
-          {:error, :meeting_cancelled}
+          {:discard, "Meeting cancelled"}
         else
           send_reschedule_request_email(meeting)
         end
@@ -127,7 +127,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
           meeting_id: meeting_id
         )
 
-        {:error, :meeting_not_found}
+        {:discard, "Meeting not found"}
     end
   end
 
@@ -156,22 +156,48 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
         need_attendee: need_attendee?
       )
 
+      email_service = email_service_module()
+
       organizer_result =
         if need_organizer? do
-          email_service_module().send_appointment_confirmation_to_organizer(
-            appointment_details.organizer_email,
-            appointment_details
-          )
+          with {:ok, _result} <-
+                 email_service.send_appointment_confirmation_to_organizer(
+                   appointment_details.organizer_email,
+                   appointment_details
+                 ),
+               {:ok, _meeting} <- MeetingQueries.mark_email_sent(meeting, :organizer) do
+            {:ok, :sent}
+          else
+            {:error, reason} ->
+              Logger.error("Organizer confirmation step failed",
+                meeting_id: meeting.id,
+                error: inspect(reason)
+              )
+
+              {:error, reason}
+          end
         else
           {:ok, :skipped}
         end
 
       attendee_result =
         if need_attendee? do
-          email_service_module().send_appointment_confirmation_to_attendee(
-            appointment_details.attendee_email,
-            appointment_details
-          )
+          with {:ok, _result} <-
+                 email_service.send_appointment_confirmation_to_attendee(
+                   appointment_details.attendee_email,
+                   appointment_details
+                 ),
+               {:ok, _meeting} <- MeetingQueries.mark_email_sent(meeting, :attendee) do
+            {:ok, :sent}
+          else
+            {:error, reason} ->
+              Logger.error("Attendee confirmation step failed",
+                meeting_id: meeting.id,
+                error: inspect(reason)
+              )
+
+              {:error, reason}
+          end
         else
           {:ok, :skipped}
         end
@@ -222,13 +248,30 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     end
   end
 
+  # Confirmation flags are already updated inline in send_confirmation_emails/1
+  # immediately after each email succeeds, so no flag tracking step is needed.
+  defp process_email_results(meeting, organizer_result, attendee_result, :confirmation) do
+    organizer_success = match?({:ok, _result}, organizer_result)
+    attendee_success = match?({:ok, _result}, attendee_result)
+
+    case check_email_errors(organizer_result, attendee_result) do
+      nil ->
+        log_email_results(meeting, :confirmation, organizer_success, attendee_success)
+
+        if organizer_success && attendee_success,
+          do: :ok,
+          else: {:error, "Failed to send all emails"}
+
+      error ->
+        error
+    end
+  end
+
   defp process_email_results(meeting, organizer_result, attendee_result, email_type) do
     organizer_success = match?({:ok, _result}, organizer_result)
     attendee_success = match?({:ok, _result}, attendee_result)
 
-    error_result = check_email_errors(organizer_result, attendee_result)
-
-    case error_result do
+    case check_email_errors(organizer_result, attendee_result) do
       nil ->
         case update_email_sent_flags(meeting, email_type, organizer_success, attendee_success) do
           :ok ->
@@ -241,7 +284,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
             end
 
           {:error, _reason} = error ->
-            # Tracking failed - return error to trigger retry
             error
         end
 
@@ -269,18 +311,6 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
             nil
         end
     end
-  end
-
-  defp update_email_sent_flags(meeting, :confirmation, organizer_success, attendee_success) do
-    if organizer_success and not meeting.organizer_email_sent do
-      {:ok, _result} = MeetingQueries.mark_email_sent(meeting, :organizer)
-    end
-
-    if attendee_success and not meeting.attendee_email_sent do
-      {:ok, _result} = MeetingQueries.mark_email_sent(meeting, :attendee)
-    end
-
-    :ok
   end
 
   defp update_email_sent_flags(
