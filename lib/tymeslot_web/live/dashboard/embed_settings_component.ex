@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   require Logger
 
   @valid_embed_types Helpers.valid_embed_types()
-  @valid_tabs ~w(options security preview)
+  @valid_tabs Helpers.valid_tabs()
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -121,10 +121,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     {:noreply, assign(socket, :active_tab, tab)}
   end
 
-  def handle_event("switch_tab", _params, socket) do
-    Logger.warning("switch_tab received invalid or missing tab value")
-    {:noreply, socket}
-  end
+  def handle_event("switch_tab", _params, socket),
+    do: reject_invalid_event("switch_tab", socket)
 
   def handle_event("copy_code", %{"type" => type}, socket) when type in @valid_embed_types do
     code = Helpers.embed_code(type, socket.assigns)
@@ -135,20 +133,16 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     {:noreply, socket}
   end
 
-  def handle_event("copy_code", _params, socket) do
-    Logger.warning("copy_code received invalid or missing type value")
-    {:noreply, socket}
-  end
+  def handle_event("copy_code", _params, socket),
+    do: reject_invalid_event("copy_code", socket)
 
   def handle_event("select_embed_type", %{"type" => type}, socket)
       when type in @valid_embed_types do
     {:noreply, assign(socket, :selected_embed_type, type)}
   end
 
-  def handle_event("select_embed_type", _params, socket) do
-    Logger.warning("select_embed_type received invalid or missing type value")
-    {:noreply, socket}
-  end
+  def handle_event("select_embed_type", _params, socket),
+    do: reject_invalid_event("select_embed_type", socket)
 
   def handle_event("save_embed_domains", %{"allowed_domains" => domains_str}, socket) do
     case Profiles.add_embed_domains(socket.assigns.profile, domains_str) do
@@ -175,6 +169,11 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
   def handle_event("clear_embed_domains", _params, socket) do
     perform_domain_update(socket, ["none"], "Embedding is now disabled")
+  end
+
+  defp reject_invalid_event(event_name, socket) do
+    Logger.warning("handle_event received invalid or missing parameter", event: event_name)
+    {:noreply, socket}
   end
 
   defp perform_domain_update(socket, domains_payload, success_message) do

@@ -12,6 +12,10 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.Helpers do
   @spec valid_embed_types() :: [String.t()]
   def valid_embed_types, do: ~w(inline popup link floating)
 
+  @doc "Returns the list of valid embed settings tab identifiers."
+  @spec valid_tabs() :: [String.t()]
+  def valid_tabs, do: ~w(options security preview)
+
   @doc """
   Generates the embed code snippet for a given type.
   """

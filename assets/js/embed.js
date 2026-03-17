@@ -405,10 +405,7 @@
       const username = container.getAttribute('data-username') || 
                       container.getAttribute('data-tymeslot-inline');
       
-      if (!username) {
-        console.error('Tymeslot: No username provided for inline embed');
-        return;
-      }
+      if (!validateUsername('initInlineEmbeds', username)) return;
       
       const options = {
         theme: container.getAttribute('data-theme'),
@@ -454,7 +451,7 @@
     }
   }
 
-  function requireUsername(methodName, username) {
+  function validateUsername(methodName, username) {
     if (!username) {
       console.error('Tymeslot: No username provided to ' + methodName + '()');
       return false;
@@ -483,10 +480,9 @@
      * Open booking in a modal
      */
     open: function(username, options = {}) {
-      if (!requireUsername('open', username)) return;
-
       // Remove existing modal if any
       this.close();
+      if (!validateUsername('open', username)) return;
 
       const { modal, container, closeButton } = createModal();
       const wrapper = createBookingIframe(username, options);
@@ -570,7 +566,7 @@
      * Initialize floating button
      */
     initFloating: function(username, options = {}) {
-      if (!requireUsername('initFloating', username)) return;
+      if (!validateUsername('initFloating', username)) return;
 
       // Remove existing button if any
       const existing = document.getElementById('tymeslot-floating-button');
@@ -584,7 +580,7 @@
      * Programmatically embed inline
      */
     embed: function(selector, username, options = {}) {
-      if (!requireUsername('embed', username)) return;
+      if (!validateUsername('embed', username)) return;
 
       const container = document.querySelector(selector);
       if (!container) {
