@@ -71,6 +71,7 @@
    */
   window.addEventListener('message', function(e) {
     if (e.origin !== BASE_URL) return;
+    if (!e.data || typeof e.data !== 'object') return;
     if (e.data.type === 'tymeslot-resize') {
       var h = Number(e.data.height);
       if (!Number.isFinite(h) || h <= 0) return;

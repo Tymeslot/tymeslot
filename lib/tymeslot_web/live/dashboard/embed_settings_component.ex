@@ -147,7 +147,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   def handle_event("save_embed_domains", %{"allowed_domains" => domains_str}, socket) do
     case Profiles.add_embed_domains(socket.assigns.profile, domains_str) do
       {:ok, merged_domains} ->
-        socket = push_event(socket, "reset-form", %{id: "embed-domains-form"})
         perform_domain_update(socket, merged_domains, "Security settings saved successfully!")
 
       {:error, :empty_input} ->
@@ -160,12 +159,18 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     end
   end
 
+  def handle_event("save_embed_domains", _params, socket),
+    do: reject_invalid_event("save_embed_domains", socket)
+
   def handle_event("remove_domain", %{"domain" => domain}, socket) do
     updated_domains = Enum.reject(socket.assigns.allowed_domains, &(&1 == domain))
     updated_domains = if updated_domains == [], do: ["none"], else: updated_domains
 
     perform_domain_update(socket, updated_domains, "Domain removed successfully")
   end
+
+  def handle_event("remove_domain", _params, socket),
+    do: reject_invalid_event("remove_domain", socket)
 
   def handle_event("clear_embed_domains", _params, socket) do
     perform_domain_update(socket, ["none"], "Embedding is now disabled")
@@ -199,6 +204,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
             {:noreply,
              socket
+             |> push_event("reset-form", %{id: "embed-domains-form"})
              |> assign(:profile, updated_profile)
              |> assign(:allowed_domains, updated_profile.allowed_embed_domains || [])
              |> then(fn s ->

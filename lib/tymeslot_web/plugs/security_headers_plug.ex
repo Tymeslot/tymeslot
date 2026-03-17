@@ -70,8 +70,8 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
             {frame_ancestors, x_frame_options} =
               build_security_headers(profile.allowed_embed_domains, is_preview)
 
-            # Log when embedding is restricted
-            if profile.allowed_embed_domains != [] do
+            # Log when embedding is restricted (skip nil/[]/["none"] — those deny all)
+            if profile.allowed_embed_domains not in [nil, [], ["none"]] do
               referer = List.first(get_req_header(conn, "referer"))
 
               Logger.info("Embed security restrictions applied",
