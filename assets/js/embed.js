@@ -31,7 +31,7 @@
   };
 
   window.addEventListener('error', function(e) {
-    if (e.filename && e.filename.indexOf('embed.js') !== -1) {
+    if (e.filename && /\/embed[^/]*\.js/.test(e.filename)) {
       failSafe(e.message);
     }
   });

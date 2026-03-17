@@ -17,6 +17,11 @@ export const EmbedPreview = {
       return;
     }
 
+    if (this._modalRetryInterval) {
+      clearInterval(this._modalRetryInterval);
+      this._modalRetryInterval = null;
+    }
+
     this.initEmbed();
   },
   destroyed() {
