@@ -338,6 +338,16 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProviderTest do
       assert room_data.meeting_url == "https://mirotalk.example.com/join/room123"
     end
 
+    test "returns error when API response is malformed JSON" do
+      config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _http_opts ->
+        {:ok, %Req.Response{status: 200, body: "not valid json{{"}}
+      end)
+
+      assert {:error, :invalid_json} = MiroTalkProvider.create_meeting_room(config)
+    end
+
     test "handles API errors gracefully" do
       config = %{api_key: "test_key", base_url: "https://mirotalk.example.com"}
 

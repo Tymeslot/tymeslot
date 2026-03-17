@@ -147,28 +147,35 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           validated_params = Map.merge(params, sanitized_params)
           provider = validated_params["provider"] || socket.assigns.config_provider
 
-          case Video.create_integration(user_id, provider, map_keys_to_atoms(validated_params)) do
-            {:ok, _integration} ->
-              notify_parent({:flash, {:info, "Video integration added successfully"}})
-              notify_parent({:integration_added, :video})
+          if is_nil(provider) do
+            {:noreply,
+             socket
+             |> assign(:form_errors, %{base: "Please select a provider"})
+             |> assign(:saving, false)}
+          else
+            case Video.create_integration(user_id, provider, map_keys_to_atoms(validated_params)) do
+              {:ok, _integration} ->
+                notify_parent({:flash, {:info, "Video integration added successfully"}})
+                notify_parent({:integration_added, :video})
 
-              {:noreply,
-               socket
-               |> reset_form_state()
-               |> load_integrations()
-               |> assign(:form_values, %{})}
+                {:noreply,
+                 socket
+                 |> reset_form_state()
+                 |> load_integrations()
+                 |> assign(:form_values, %{})}
 
-            {:error, %Ecto.Changeset{} = changeset} ->
-              {:noreply,
-               socket
-               |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
-               |> assign(:saving, false)}
+              {:error, %Ecto.Changeset{} = changeset} ->
+                {:noreply,
+                 socket
+                 |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
+                 |> assign(:saving, false)}
 
-            {:error, reason} ->
-              {:noreply,
-               socket
-               |> assign(:saving, false)
-               |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
+              {:error, reason} ->
+                {:noreply,
+                 socket
+                 |> assign(:saving, false)
+                 |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
+            end
           end
 
         {:error, validation_errors} ->

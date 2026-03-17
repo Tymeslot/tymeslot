@@ -199,10 +199,7 @@ defmodule TymeslotWeb.VideoOAuthController do
   end
 
   defp create_google_meet_integration(tokens) do
-    attrs = %{
-      user_id: tokens.user_id,
-      name: "Google Meet",
-      provider: "google_meet",
+    token_attrs = %{
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       token_expires_at: tokens.expires_at,
@@ -210,24 +207,46 @@ defmodule TymeslotWeb.VideoOAuthController do
       is_active: true
     }
 
-    VideoIntegrationQueries.create(attrs)
+    case VideoIntegrationQueries.get_by_provider_for_user(tokens.user_id, "google_meet") do
+      {:ok, existing} ->
+        VideoIntegrationQueries.update(existing, token_attrs)
+
+      {:error, :not_found} ->
+        attrs =
+          Map.merge(token_attrs, %{
+            user_id: tokens.user_id,
+            name: "Google Meet",
+            provider: "google_meet"
+          })
+
+        VideoIntegrationQueries.create(attrs)
+    end
   end
 
   defp create_teams_integration(tokens) do
-    attrs = %{
-      user_id: tokens.user_id,
-      name: "Microsoft Teams",
-      provider: "teams",
+    token_attrs = %{
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       token_expires_at: tokens.expires_at,
       oauth_scope: tokens.scope,
       is_active: true,
-      # Required fields for teams provider in VideoIntegrationSchema
       tenant_id: tokens.tenant_id,
       teams_user_id: tokens.teams_user_id
     }
 
-    VideoIntegrationQueries.create(attrs)
+    case VideoIntegrationQueries.get_by_provider_for_user(tokens.user_id, "teams") do
+      {:ok, existing} ->
+        VideoIntegrationQueries.update(existing, token_attrs)
+
+      {:error, :not_found} ->
+        attrs =
+          Map.merge(token_attrs, %{
+            user_id: tokens.user_id,
+            name: "Microsoft Teams",
+            provider: "teams"
+          })
+
+        VideoIntegrationQueries.create(attrs)
+    end
   end
 end

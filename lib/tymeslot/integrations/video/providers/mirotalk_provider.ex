@@ -203,18 +203,17 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
            http_client().post(url, "", headers, [])
          end) do
       {:ok, %Req.Response{status: 200, body: body}} ->
-        try do
-          response = Jason.decode!(body)
-          # Return room data in standardized format
-          {:ok,
-           %{
-             room_id: response["room_id"] || response["meeting"],
-             meeting_url: response["meeting_url"] || response["meeting"],
-             provider_data: response,
-             provider_config: config
-           }}
-        rescue
-          Jason.DecodeError ->
+        case Jason.decode(body) do
+          {:ok, response} ->
+            {:ok,
+             %{
+               room_id: response["room_id"] || response["meeting"],
+               meeting_url: response["meeting_url"] || response["meeting"],
+               provider_data: response,
+               provider_config: config
+             }}
+
+          {:error, _decode_error} ->
             Logger.error("Invalid JSON response from MiroTalk API")
             {:error, :invalid_json}
         end
@@ -507,26 +506,25 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   defp handle_join_api_response(http_result, mode) do
     case http_result do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
-        try do
-          response = Jason.decode!(response_body)
+        case Jason.decode(response_body) do
+          {:ok, response} ->
+            case mode do
+              :with_validation ->
+                if response["join"] do
+                  {:ok, response["join"]}
+                else
+                  Logger.error("MiroTalk API response missing 'join' field",
+                    response: inspect(response)
+                  )
 
-          case mode do
-            :with_validation ->
-              if response["join"] do
+                  {:error, :missing_join_url}
+                end
+
+              :legacy ->
                 {:ok, response["join"]}
-              else
-                Logger.error("MiroTalk API response missing 'join' field",
-                  response: inspect(response)
-                )
+            end
 
-                {:error, :missing_join_url}
-              end
-
-            :legacy ->
-              {:ok, response["join"]}
-          end
-        rescue
-          Jason.DecodeError ->
+          {:error, _decode_error} ->
             error_msg =
               if mode == :with_validation,
                 do: "Invalid JSON response from MiroTalk API join endpoint",

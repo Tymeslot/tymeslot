@@ -137,6 +137,17 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert String.contains?(message, "Connection test failed")
     end
 
+    test "returns error when API returns malformed JSON in connection test" do
+      config = valid_token_config()
+
+      expect(HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: "not json"}}
+      end)
+
+      assert {:error, message} = GoogleMeetProvider.test_connection(config)
+      assert message =~ "Invalid JSON"
+    end
+
     test "refreshes token if expired during connection test" do
       expires_at = DateTime.add(DateTime.utc_now(), -3600, :second)
       new_expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
@@ -191,6 +202,17 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProviderTest do
       assert {:ok, room_data} = GoogleMeetProvider.create_meeting_room(config)
       assert room_data.room_id == "abc-defg-hij"
       assert room_data.meeting_url == "https://meet.google.com/abc-defg-hij"
+    end
+
+    test "returns error when API response is malformed JSON" do
+      config = valid_token_config()
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 200, body: "not valid json{{"}}
+      end)
+
+      assert {:error, message} = GoogleMeetProvider.create_meeting_room(config)
+      assert message =~ "Invalid JSON"
     end
 
     test "returns error when conference data is missing" do

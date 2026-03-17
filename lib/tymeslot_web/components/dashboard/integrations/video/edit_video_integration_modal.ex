@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
     as: SharedForm
 
   alias TymeslotWeb.Dashboard.VideoSettingsComponent
+  alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
@@ -85,7 +86,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
          FormValidationHelpers.delete_field_error(current_errors, field_atom)
        )}
     else
-      case VideoInputValidation.validate_single_field(field_atom, value, []) do
+      case VideoInputValidation.validate_single_field(field_atom, value,
+             metadata: DashboardHelpers.get_security_metadata(socket)
+           ) do
         {:ok, _sanitized} ->
           {:noreply,
            assign(
@@ -107,7 +110,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
 
     params_with_provider = Map.put(params, "provider", integration.provider)
 
-    case VideoInputValidation.validate_video_integration_form(params_with_provider, []) do
+    case VideoInputValidation.validate_video_integration_form(params_with_provider,
+           metadata: DashboardHelpers.get_security_metadata(socket)
+         ) do
       {:ok, sanitized} ->
         attrs = map_keys_to_atoms(Map.merge(params, sanitized))
 

@@ -377,8 +377,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     case http_client().request(:post, url, body, headers, []) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
-        event = Jason.decode!(response_body)
-        {:ok, event}
+        case Jason.decode(response_body) do
+          {:ok, event} -> {:ok, event}
+          {:error, _decode_error} -> {:error, "Invalid JSON response from Google Calendar API"}
+        end
 
       {:ok, %Req.Response{status: status, body: body}} ->
         Logger.error("Google Calendar API error in Google Meet provider",
@@ -405,8 +407,10 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     case http_client().request(:get, url, "", headers, []) do
       {:ok, %Req.Response{status: 200, body: response_body}} ->
-        list = Jason.decode!(response_body)
-        {:ok, list}
+        case Jason.decode(response_body) do
+          {:ok, list} -> {:ok, list}
+          {:error, _decode_error} -> {:error, "Invalid JSON response from Google Calendar API"}
+        end
 
       {:ok, %Req.Response{status: status, body: body}} ->
         Logger.error("Google Calendar API error fetching calendar list",

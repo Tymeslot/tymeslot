@@ -6,13 +6,78 @@ defmodule Tymeslot.DatabaseQueries.VideoIntegrationQueriesTest do
 
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
 
+  describe "get_by_provider_for_user/2" do
+    test "returns active integration for user+provider" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "google_meet",
+          is_active: true
+        )
+
+      assert {:ok, found} =
+               VideoIntegrationQueries.get_by_provider_for_user(user.id, "google_meet")
+
+      assert found.id == integration.id
+    end
+
+    test "returns :not_found when no integration exists" do
+      user = insert(:user)
+
+      assert {:error, :not_found} =
+               VideoIntegrationQueries.get_by_provider_for_user(user.id, "google_meet")
+    end
+
+    test "ignores inactive integrations" do
+      user = insert(:user)
+
+      insert(:video_integration,
+        user: user,
+        provider: "google_meet",
+        is_active: false
+      )
+
+      assert {:error, :not_found} =
+               VideoIntegrationQueries.get_by_provider_for_user(user.id, "google_meet")
+    end
+
+    test "does not return integrations from other users" do
+      user = insert(:user)
+      other_user = insert(:user)
+
+      insert(:video_integration,
+        user: other_user,
+        provider: "google_meet",
+        is_active: true
+      )
+
+      assert {:error, :not_found} =
+               VideoIntegrationQueries.get_by_provider_for_user(user.id, "google_meet")
+    end
+
+    test "does not return integrations for different provider" do
+      user = insert(:user)
+
+      insert(:video_integration,
+        user: user,
+        provider: "teams",
+        is_active: true
+      )
+
+      assert {:error, :not_found} =
+               VideoIntegrationQueries.get_by_provider_for_user(user.id, "google_meet")
+    end
+  end
+
   describe "video integration business rules" do
     test "active integrations are ordered by name for user" do
       user = insert(:user)
 
-      insert(:video_integration, user: user, name: "Z Video", is_active: true)
-      insert(:video_integration, user: user, name: "A Video", is_active: true)
-      insert(:video_integration, user: user, name: "B Video", is_active: true)
+      insert(:video_integration, user: user, name: "Z Video", provider: "mirotalk", is_active: true)
+      insert(:video_integration, user: user, name: "A Video", provider: "google_meet", is_active: true)
+      insert(:video_integration, user: user, name: "B Video", provider: "teams", is_active: true)
 
       result = VideoIntegrationQueries.list_active_for_user(user.id)
 
@@ -59,7 +124,7 @@ defmodule Tymeslot.DatabaseQueries.VideoIntegrationQueriesTest do
       active_integration =
         insert(:video_integration,
           user: user,
-          provider: "google_meet",
+          provider: "teams",
           access_token: "valid-token",
           token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
         )

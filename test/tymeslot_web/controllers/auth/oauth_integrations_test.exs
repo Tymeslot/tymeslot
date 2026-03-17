@@ -299,7 +299,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       :ok
     end
 
-    test "google_callback (Meet) handles success", %{conn: conn} do
+    test "google_callback (Meet) creates new integration when none exists", %{conn: conn} do
       user_id = 123
 
       :meck.expect(GoogleOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, "state" ->
@@ -313,7 +313,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
          }}
       end)
 
-      # Mock VideoIntegrationQueries to succeed
       integration = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
         id: 1,
         user_id: user_id,
@@ -321,7 +320,14 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         provider: "google_meet"
       }
 
-      :meck.expect(VideoIntegrationQueries, :create, fn _attrs ->
+      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id, "google_meet" ->
+        {:error, :not_found}
+      end)
+
+      :meck.expect(VideoIntegrationQueries, :create, fn attrs ->
+        assert attrs.user_id == user_id
+        assert attrs.provider == "google_meet"
+        assert attrs.name == "Google Meet"
         {:ok, integration}
       end)
 
@@ -333,7 +339,49 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       assert Flash.get(conn.assigns.flash, :info) =~ "Google Meet connected successfully"
     end
 
-    test "teams_callback handles success", %{conn: conn} do
+    test "google_callback (Meet) updates existing integration on re-authorization", %{conn: conn} do
+      user_id = 123
+      new_expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      :meck.expect(GoogleOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, "state" ->
+        {:ok,
+         %{
+           user_id: user_id,
+           access_token: "new_at",
+           refresh_token: "new_rt",
+           expires_at: new_expires_at,
+           scope: "new_scope"
+         }}
+      end)
+
+      existing = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+        id: 42,
+        user_id: user_id,
+        name: "Google Meet",
+        provider: "google_meet"
+      }
+
+      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id, "google_meet" ->
+        {:ok, existing}
+      end)
+
+      :meck.expect(VideoIntegrationQueries, :update, fn ^existing, attrs ->
+        assert attrs.access_token == "new_at"
+        assert attrs.refresh_token == "new_rt"
+        refute Map.has_key?(attrs, :user_id)
+        refute Map.has_key?(attrs, :provider)
+        {:ok, %{existing | access_token: attrs.access_token}}
+      end)
+
+      Factory.insert(:user, id: user_id)
+
+      conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/dashboard/video"
+      assert Flash.get(conn.assigns.flash, :info) =~ "Google Meet connected successfully"
+    end
+
+    test "teams_callback creates new integration when none exists", %{conn: conn} do
       user_id = 456
 
       :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, "state" ->
@@ -349,7 +397,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
          }}
       end)
 
-      # Mock VideoIntegrationQueries to succeed
       integration = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
         id: 1,
         user_id: user_id,
@@ -357,8 +404,61 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         provider: "teams"
       }
 
-      :meck.expect(VideoIntegrationQueries, :create, fn _attrs ->
+      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id, "teams" ->
+        {:error, :not_found}
+      end)
+
+      :meck.expect(VideoIntegrationQueries, :create, fn attrs ->
+        assert attrs.user_id == user_id
+        assert attrs.provider == "teams"
+        assert attrs.name == "Microsoft Teams"
+        assert attrs.tenant_id == "test-tenant-id"
         {:ok, integration}
+      end)
+
+      Factory.insert(:user, id: user_id)
+
+      conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/dashboard/video"
+      assert Flash.get(conn.assigns.flash, :info) =~ "Microsoft Teams connected successfully"
+    end
+
+    test "teams_callback updates existing integration on re-authorization", %{conn: conn} do
+      user_id = 456
+
+      :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, "state" ->
+        {:ok,
+         %{
+           user_id: user_id,
+           access_token: "new_at",
+           refresh_token: "new_rt",
+           expires_at: DateTime.utc_now(),
+           scope: "new_scope",
+           tenant_id: "new-tenant-id",
+           teams_user_id: "new-teams-user-id"
+         }}
+      end)
+
+      existing = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+        id: 99,
+        user_id: user_id,
+        name: "Microsoft Teams",
+        provider: "teams"
+      }
+
+      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id, "teams" ->
+        {:ok, existing}
+      end)
+
+      :meck.expect(VideoIntegrationQueries, :update, fn ^existing, attrs ->
+        assert attrs.access_token == "new_at"
+        assert attrs.refresh_token == "new_rt"
+        assert attrs.tenant_id == "new-tenant-id"
+        assert attrs.teams_user_id == "new-teams-user-id"
+        refute Map.has_key?(attrs, :user_id)
+        refute Map.has_key?(attrs, :provider)
+        {:ok, %{existing | access_token: attrs.access_token}}
       end)
 
       Factory.insert(:user, id: user_id)
@@ -428,6 +528,10 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
            tenant_id: "test-tenant-id",
            teams_user_id: "test-teams-user-id"
          }}
+      end)
+
+      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id, "teams" ->
+        {:error, :not_found}
       end)
 
       :meck.expect(VideoIntegrationQueries, :create, fn _client -> {:error, :db_error} end)
