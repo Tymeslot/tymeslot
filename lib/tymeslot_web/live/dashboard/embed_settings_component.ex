@@ -163,10 +163,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     do: reject_invalid_event("save_embed_domains", socket)
 
   def handle_event("remove_domain", %{"domain" => domain}, socket) do
-    updated_domains = Enum.reject(socket.assigns.allowed_domains, &(&1 == domain))
-    updated_domains = if updated_domains == [], do: ["none"], else: updated_domains
+    if domain not in socket.assigns.allowed_domains do
+      {:noreply, socket}
+    else
+      updated_domains = Enum.reject(socket.assigns.allowed_domains, &(&1 == domain))
+      updated_domains = if updated_domains == [], do: ["none"], else: updated_domains
 
-    perform_domain_update(socket, updated_domains, "Domain removed successfully")
+      perform_domain_update(socket, updated_domains, "Domain removed successfully")
+    end
   end
 
   def handle_event("remove_domain", _params, socket),

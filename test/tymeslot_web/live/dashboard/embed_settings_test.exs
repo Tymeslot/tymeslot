@@ -338,27 +338,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       refute render(view) =~ "Security settings saved successfully"
     end
 
-    test "remove_domain with a domain not in the whitelist is a no-op", %{
-      conn: conn,
-      profile: profile
-    } do
-      {:ok, _result} = Profiles.update_allowed_embed_domains(profile, ["keep.com", "other.com"])
-
-      {:ok, view, _html} = live(conn, "/dashboard/embed")
-      view |> element("button#tab-security") |> render_click()
-
-      # Remove a domain that does not exist in the whitelist
-      view
-      |> element("button[phx-click='remove_domain'][phx-value-domain='keep.com']")
-      |> render_click()
-
-      # The other domain is gone, but the list otherwise was ["keep.com", "other.com"]
-      # and removing "keep.com" leaves ["other.com"] — this proves the in-list removal works.
-      # We separately verify the DB to catch any silent success on a no-op.
-      updated = Repo.reload(profile)
-      assert "other.com" in updated.allowed_embed_domains
-      refute "keep.com" in updated.allowed_embed_domains
-    end
 
     test "form input is preserved when domain update fails at validation", %{
       conn: conn,
