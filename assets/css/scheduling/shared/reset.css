@@ -40,8 +40,8 @@ button {
   border: none;
 }
 
-/* Remove default focus styles - themes will provide their own */
-:focus {
+/* Remove default focus styles for mouse/pointer - keyboard focus ring is preserved via :focus-visible */
+:focus:not(:focus-visible) {
   outline: none;
 }
 
