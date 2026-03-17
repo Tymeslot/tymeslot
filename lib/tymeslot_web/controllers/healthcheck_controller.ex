@@ -62,11 +62,8 @@ defmodule TymeslotWeb.HealthcheckController do
   end
 
   defp check_oban do
-    case Oban.check_queue(queue: :default) do
-      %{paused: false} -> "ok"
-      %{paused: true} -> "paused"
-      _not_running -> "unavailable"
-    end
+    queues = Oban.check_all_queues()
+    if Enum.any?(queues, & &1.paused), do: "paused", else: "ok"
   rescue
     _oban_error -> "unavailable"
   end
