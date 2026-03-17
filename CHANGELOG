@@ -1,4 +1,57 @@
 
+[0.99.29]
+* core: Fix dashboard headline position on automation and profile pages
+* core: Use check_all_queues in healthcheck to handle test mode
+* core: Skip credential validation on update when already encrypted
+* core: Remove unused default arg in backoff_with_counter test helper
+* core: Tighten embed static path matching and guard stale remove_domain events
+* core: Fix stale modal retry interval and digested filename error handler
+* core: Harden embed edge cases found in audit
+* core: Validate event inputs in embed settings and guard JS public API
+* core: Wrap calendar deletion in transaction, extract testable boundary fn
+* core: Calendar integration edge cases — stale refs, timezone boundaries, error reporting
+* core: Harden video integration edge cases — upsert on OAuth, unique constraint, graceful JSON handling
+* core: Disable async in storage tests that mutate global Application config
+* core: Harden theme customisation — error tuples, browsing_type guard, image size limit
+* saas: Add plain-text bodies to all email templates and harden edge cases
+* core: Discard permanent meeting errors and log confirmation step failures
+* core: Patch theme edge-case review findings
+* core: Guard booking step against double-submission and direct URL access
+* core: Restore keyboard focus visibility and consolidate Inter font import
+* core: Add empty state to Rhythm overview and replace emoji icons in Quill meeting pages
+* core: Improve theme error logging and plug exception handling
+* core: Return error when all selected calendars fail in MultiCalendarFetch
+* saas: Harden payment subsystem — config, truncation, dunning resilience
+* core: Guard against non-pending transaction states in payment processing
+* saas: Harden payment edge cases across subscription lifecycle
+* core: Prevent duplicate processing of already-completed payments
+* core: Harden theme customization logic against edge cases
+* core: Harden auth security — email normalisation, token hashing, open redirect
+* core: Harden infrastructure resilience and healthcheck
+* saas: Guard HomepageLive against unknown send_to_component module
+* saas: Harden docs search and tag filtering
+* core: Normalize 3-tuple API errors to 2-tuples in ProviderCommon.discover_calendars
+* core: Decrypt CalDAV credentials and forward custom video URL in health check
+* core: Validate email format in PasswordReset.initiate_reset before anti-enumeration path
+* core: Handle invalid_input map from authenticate_user in session controller
+* core: Remove unreachable three-element error pattern in calendar primary
+* saas: Use TymeslotSaasWeb in ChangelogLive
+* core: Restore PubSub alias and canonical URL logic
+* core: Pass parent-origin to embedded iframe URL
+* core: Fall back to parent-origin param when referrer is stripped
+* core: Normalise canonical URLs to strip query params and trailing slashes
+* core: Add minimum height floor to inline embeds
+* core: Silence Tidewave compile warnings when dep is unavailable
+* saas: Eliminate flaky dispute test race condition
+* core: Handle three-tuple OAuth discovery error and move tidewave to saas
+* core: Harden embed security, accessibility, and reliability
+* core: Respect calendar event transparency (free/busy) across all providers
+* core: Wire availability overrides into business hours calculation
+* saas: Harden contact form against empty reCAPTCHA and over-limit messages
+* core: Config-driven dashboard extension system with parallel init and health check fixes
+* core: Harden iframe embed security with wildcard domains and www auto-matching
+* core: Derive PHX_HOST from CLOUDRON_APP_DOMAIN in runtime config
+* core: Derive PHX_HOST from CLOUDRON_APP_DOMAIN on Cloudron install
 [0.99.28]
 * core: Use IANA zone1970.tab for primary timezone country assignment
 * core: Correct iconUrl path in Cloudron manifests
