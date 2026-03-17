@@ -11,7 +11,15 @@ defmodule Tymeslot.ThemeCustomizations do
   alias TymeslotWeb.Helpers.UploadHandler
 
   # Functional submodules
-  alias __MODULE__.{Defaults, Presets, Backgrounds, DataTransform, Validation, Storage}
+  alias __MODULE__.{
+    Backgrounds,
+    Capability,
+    DataTransform,
+    Defaults,
+    Presets,
+    Storage,
+    Validation
+  }
 
   @type profile_id :: pos_integer()
   @type theme_id :: String.t()
@@ -126,7 +134,7 @@ defmodule Tymeslot.ThemeCustomizations do
     case ThemeCustomizationQueries.update(customization, attrs) do
       {:ok, updated} ->
         # Success: cleanup old files if they were replaced
-        if old_image_path && new_image_path && old_image_path != new_image_path do
+        if old_image_path && old_image_path != new_image_path do
           old_file_path = Storage.build_theme_file_path(old_image_path)
 
           UploadHandler.delete_file_safely(
@@ -135,7 +143,7 @@ defmodule Tymeslot.ThemeCustomizations do
           )
         end
 
-        if old_video_path && new_video_path && old_video_path != new_video_path do
+        if old_video_path && old_video_path != new_video_path do
           old_file_path = Storage.build_theme_file_path(old_video_path)
 
           UploadHandler.delete_file_safely(
@@ -236,7 +244,6 @@ defmodule Tymeslot.ThemeCustomizations do
   """
   @spec get_defaults(theme_id()) :: map()
   def get_defaults(theme_id) do
-    alias Tymeslot.ThemeCustomizations.Capability
     Capability.get_capability_defaults(theme_id)
   end
 
@@ -246,8 +253,6 @@ defmodule Tymeslot.ThemeCustomizations do
   """
   @spec generate_theme_css(theme_id(), customization_input()) :: String.t()
   def generate_theme_css(theme_id, customization) do
-    alias Tymeslot.ThemeCustomizations.Capability
-
     customization_map = to_map(customization)
 
     Capability.generate_css(theme_id, customization_map)
@@ -288,6 +293,7 @@ defmodule Tymeslot.ThemeCustomizations do
         ) :: {:ok, ThemeCustomizationSchema.t()} | {:error, term()}
   def apply_color_scheme_change(profile_id, theme_id, current_customization, scheme_id) do
     with :ok <- Validation.validate_color_scheme(scheme_id),
+         :ok <- validate_theme_capability(theme_id, %{"color_scheme" => scheme_id}),
          new_customization <-
            DataTransform.merge_customization_changes(current_customization, %{
              color_scheme: scheme_id
@@ -322,13 +328,13 @@ defmodule Tymeslot.ThemeCustomizations do
     presets = Presets.get_all_presets()
 
     with :ok <- Validation.validate_background_selection(type, value, presets),
+         :ok <- validate_theme_capability(theme_id, %{"background_type" => type}),
          new_customization <-
            Backgrounds.apply_background_selection(current_customization, type, value),
          cleanup_files <-
            Backgrounds.determine_cleanup_files(current_customization, new_customization),
          save_attrs <- DataTransform.extract_save_attributes(new_customization),
          {:ok, saved} <- upsert_theme_customization(profile_id, theme_id, save_attrs) do
-      # Handle file cleanup
       Enum.each(cleanup_files, &cleanup_old_backgrounds/1)
 
       {:ok, saved}
@@ -424,4 +430,11 @@ defmodule Tymeslot.ThemeCustomizations do
   end
 
   # Private functions
+
+  defp validate_theme_capability(theme_id, attrs) do
+    case Capability.validate_customization(theme_id, attrs) do
+      {:ok, _attrs} -> :ok
+      {:error, reasons} -> {:error, Enum.join(reasons, "; ")}
+    end
+  end
 end

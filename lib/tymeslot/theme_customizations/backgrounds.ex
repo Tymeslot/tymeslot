@@ -90,7 +90,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   end
 
   defp describe_gradient(customization, presets) do
-    gradient = Map.get(presets.gradients || %{}, customization.background_value)
+    gradient = Map.get(Map.get(presets, :gradients, %{}), customization.background_value)
     "Gradient: #{(gradient && gradient.name) || "Custom"}"
   end
 
@@ -131,12 +131,12 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   end
 
   defp get_preset_image_name(customization, presets) do
-    preset = Map.get(presets.images || %{}, customization.background_value)
+    preset = Map.get(Map.get(presets, :images, %{}), customization.background_value)
     "Preset: #{(preset && preset.name) || "Unknown"}"
   end
 
   defp get_preset_video_name(customization, presets) do
-    preset = Map.get(presets.videos || %{}, customization.background_value)
+    preset = Map.get(Map.get(presets, :videos, %{}), customization.background_value)
     "Preset: #{(preset && preset.name) || "Unknown"}"
   end
 
@@ -155,7 +155,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   end
 
   defp get_gradient_css(customization, presets) do
-    gradient = Map.get(presets.gradients || %{}, customization.background_value)
+    gradient = Map.get(Map.get(presets, :gradients, %{}), customization.background_value)
     gradient && gradient.value
   end
 
@@ -208,7 +208,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   end
 
   defp resolve_gradient(customization, presets) do
-    case Map.get(presets.gradients || %{}, customization.background_value) do
+    case Map.get(Map.get(presets, :gradients, %{}), customization.background_value) do
       nil -> {:none, %{}}
       gradient -> {:gradient, %{css: gradient.value}}
     end
@@ -227,7 +227,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
         {:image, %{url: "/uploads/#{path}", kind: :custom, name: nil}}
 
       preset_image?(customization) ->
-        case Map.get(presets.images || %{}, customization.background_value) do
+        case Map.get(Map.get(presets, :images, %{}), customization.background_value) do
           nil ->
             {:none, %{}}
 
@@ -255,7 +255,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
          }}
 
       preset_video?(customization) ->
-        case Map.get(presets.videos || %{}, customization.background_value) do
+        case Map.get(Map.get(presets, :videos, %{}), customization.background_value) do
           nil ->
             {:none, %{}}
 
@@ -275,12 +275,12 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   end
 
   defp get_preset_image_path(customization, presets) do
-    preset = Map.get(presets.images || %{}, customization.background_value)
+    preset = Map.get(Map.get(presets, :images, %{}), customization.background_value)
     preset && "/images/ui/backgrounds/#{preset.file}"
   end
 
   defp get_preset_video_path(customization, presets) do
-    preset = Map.get(presets.videos || %{}, customization.background_value)
+    preset = Map.get(Map.get(presets, :videos, %{}), customization.background_value)
     preset && "/videos/backgrounds/#{preset.file}"
   end
 
@@ -308,12 +308,12 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   end
 
   defp get_image_preset_file(customization, presets) do
-    preset = Map.get(presets.images || %{}, customization.background_value)
+    preset = Map.get(Map.get(presets, :images, %{}), customization.background_value)
     preset && preset.file
   end
 
   defp get_video_preset_file(customization, presets) do
-    preset = Map.get(presets.videos || %{}, customization.background_value)
+    preset = Map.get(Map.get(presets, :videos, %{}), customization.background_value)
     preset && preset.file
   end
 
