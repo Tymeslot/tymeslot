@@ -163,15 +163,11 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
           "background_image_path" -> :background_image_path
           "background_video_path" -> :background_video_path
           key when is_atom(key) -> key
-          key when is_binary(key) -> String.to_existing_atom(key)
-          _other -> key
+          key -> key
         end
 
       Map.put(acc, atom_key, value)
     end)
-  rescue
-    # Return original if atom conversion fails
-    ArgumentError -> map
   end
 
   @doc """

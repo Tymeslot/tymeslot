@@ -5,6 +5,7 @@ defmodule Tymeslot.ThemeCustomizations.Defaults do
   """
 
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
+  alias Tymeslot.Themes.Registry
 
   @doc """
   Gets the default configuration for a specific theme.
@@ -92,31 +93,33 @@ defmodule Tymeslot.ThemeCustomizations.Defaults do
 
     %{
       customization
-      | color_scheme: customization.color_scheme || theme_defaults.color_scheme,
-        background_type: customization.background_type || theme_defaults.background_type,
-        background_value: customization.background_value || theme_defaults.background_value
+      | color_scheme: non_empty(customization.color_scheme) || theme_defaults.color_scheme,
+        background_type:
+          non_empty(customization.background_type) || theme_defaults.background_type,
+        background_value:
+          non_empty(customization.background_value) || theme_defaults.background_value
     }
   end
+
+  defp non_empty(""), do: nil
+  defp non_empty(value), do: value
 
   @doc """
   Determines if a theme supports specific customization features.
   """
   @spec theme_supports_feature?(String.t(), atom()) :: boolean()
   def theme_supports_feature?(theme_id, feature) do
-    theme_one_supports?(theme_id, feature) || theme_two_supports?(theme_id, feature)
+    case Registry.get_theme_by_id(theme_id) do
+      {:ok, theme} -> Map.get(theme.features, registry_feature_key(feature), false)
+      _other -> false
+    end
   end
 
-  defp theme_one_supports?("1", feature) do
-    feature in [:video_backgrounds, :image_backgrounds, :gradient_backgrounds, :color_backgrounds]
-  end
-
-  defp theme_one_supports?(_other_theme, _feature), do: false
-
-  defp theme_two_supports?("2", feature) do
-    feature in [:video_backgrounds, :image_backgrounds, :gradient_backgrounds, :color_backgrounds]
-  end
-
-  defp theme_two_supports?(_other_theme, _feature), do: false
+  defp registry_feature_key(:video_backgrounds), do: :supports_video_background
+  defp registry_feature_key(:image_backgrounds), do: :supports_image_background
+  defp registry_feature_key(:gradient_backgrounds), do: :supports_gradient_background
+  defp registry_feature_key(:color_backgrounds), do: :supports_color_background
+  defp registry_feature_key(_unknown), do: nil
 
   @doc """
   Gets the recommended background type for a theme.

@@ -352,14 +352,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
 
   defp generate_background_css(_customizations), do: nil
 
-  defp valid_color?(value) when is_binary(value) do
-    # Support hex colors
-    # Support simple color names (common ones)
-    # Support rgb/rgba
-    Regex.match?(~r/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, value) or
-      value in ["transparent", "white", "black", "inherit", "initial"] or
-      Regex.match?(~r/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/, value)
+  defp valid_color?(value) do
+    Validation.validate_hex_color(value) == :ok
   end
-
-  defp valid_color?(_value), do: false
 end
