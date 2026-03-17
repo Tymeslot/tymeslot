@@ -382,11 +382,12 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
             is_active: true
           )
 
-        # Direct link to booking page must be resilient to refresh/deep-link.
-        {:ok, view, _html} =
-          live(conn, ~p"/#{profile.username}/quick-chat/book?timezone=#{timezone}")
+        # Direct link to booking page without a prior date/time selection must
+        # redirect to the schedule step rather than showing an unusable booking form.
+        assert {:error, {:redirect, %{to: to}}} =
+                 live(conn, ~p"/#{profile.username}/quick-chat/book?timezone=#{timezone}")
 
-        wait_until(fn -> has_element?(view, "form[data-testid='booking-form']") end)
+        assert to == ~p"/#{profile.username}/quick-chat"
       end
     end
   end

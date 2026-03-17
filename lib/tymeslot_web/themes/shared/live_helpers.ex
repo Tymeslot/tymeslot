@@ -249,9 +249,34 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
   @doc """
   Common logic for entering the booking state.
+  Redirects to the schedule step if no date/time has been selected,
+  unless this is a reschedule flow which doesn't require prior selection.
   """
   @spec handle_booking_entry(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
-  def handle_booking_entry(socket, _params) do
+  def handle_booking_entry(socket, params) do
+    has_selection =
+      (socket.assigns[:selected_date] != nil || is_binary(params["date"])) &&
+        (socket.assigns[:selected_time] != nil || is_binary(params["time"]))
+
+    is_reschedule =
+      socket.assigns[:reschedule_meeting_uid] != nil ||
+        is_binary(params["reschedule_meeting_uid"])
+
+    if has_selection || is_reschedule do
+      do_handle_booking_entry(socket, params)
+    else
+      username = socket.assigns[:username_context]
+      slug = socket.assigns[:selected_duration] || params["slug"]
+
+      if is_binary(username) && is_binary(slug) do
+        redirect(socket, to: ~p"/#{username}/#{slug}")
+      else
+        redirect(socket, to: ~p"/")
+      end
+    end
+  end
+
+  defp do_handle_booking_entry(socket, _params) do
     # Set up form and rate limiting
     client_ip = ClientIP.get(socket)
     submission_token = SubmissionToken.generate()
