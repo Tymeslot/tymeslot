@@ -27,14 +27,14 @@ defmodule Tymeslot.Auth.VerificationTest do
       assert {:error, :invalid_token} = Verification.verify_user(token)
     end
 
-    test "expired token (>2 hours) returns {:error, :token_expired}" do
+    test "expired token (>24 hours) returns {:error, :token_expired}" do
       user = insert(:unverified_user)
       {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
 
       {:ok, _result} = UserQueries.set_verification_token(user, token)
 
-      # Manually set verification_sent_at to 3 hours ago to simulate expiry
-      expired_time = DateTime.add(DateTime.utc_now(), -3 * 3600, :second)
+      # Manually set verification_sent_at to 25 hours ago to simulate expiry
+      expired_time = DateTime.add(DateTime.utc_now(), -25 * 3600, :second)
 
       Repo.update_all(
         from(u in UserSchema, where: u.id == ^user.id),

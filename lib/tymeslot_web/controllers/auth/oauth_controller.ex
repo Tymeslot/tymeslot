@@ -16,7 +16,7 @@ defmodule TymeslotWeb.OAuthController do
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AuthControllerHelpers
-  alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
 
   @doc """
   Generic OAuth request handler that dispatches to provider-specific functions.
@@ -463,32 +463,17 @@ defmodule TymeslotWeb.OAuthController do
   defp get_redirect_paths(conn) do
     configured_success_path = Application.get_env(:tymeslot, :auth)[:success_redirect_path]
 
-    success_path = sanitize_redirect_path(conn.params["success_path"], configured_success_path)
+    success_path =
+      RedirectSanitizer.sanitize(conn.params["success_path"], configured_success_path)
+
     login_path = ~p"/?auth=login"
 
     [success_path: success_path, login_path: login_path]
   end
 
-  defp sanitize_redirect_path(path, default) do
-    case path do
-      p when is_binary(p) ->
-        decoded = URI.decode(p)
-
-        if String.starts_with?(p, "/") and not String.contains?(decoded, "://") and
-             not String.starts_with?(decoded, "//") and is_nil(URI.parse(p).host) do
-          p
-        else
-          default
-        end
-
-      _invalid_path ->
-        default
-    end
-  end
-
   @spec get_login_path(Plug.Conn.t()) :: String.t()
   defp get_login_path(conn) do
-    sanitize_redirect_path(conn.params["login_path"], ~p"/auth/login")
+    RedirectSanitizer.sanitize(conn.params["login_path"], ~p"/auth/login")
   end
 
   @spec validate_oauth_provider(String.t() | nil) ::

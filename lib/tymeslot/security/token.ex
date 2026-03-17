@@ -44,8 +44,8 @@ defmodule Tymeslot.Security.Token do
   @spec generate_email_verification_token(integer()) :: {String.t(), DateTime.t(), String.t()}
   def generate_email_verification_token(_unused_user_id) do
     token = generate_strong_token()
-    # 2 hours expiry
-    expiry = DateTime.add(DateTime.utc_now(), 2 * 3600, :second)
+    # 24 hours expiry
+    expiry = DateTime.add(DateTime.utc_now(), 24 * 3600, :second)
     purpose = "email_verification"
     {token, expiry, purpose}
   end

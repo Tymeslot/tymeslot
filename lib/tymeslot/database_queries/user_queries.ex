@@ -27,7 +27,7 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
   """
   @spec get_user_by_email(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
   def get_user_by_email(email) when is_binary(email) do
-    case Repo.get_by(UserSchema, email: email) do
+    case Repo.get_by(UserSchema, email: String.downcase(email)) do
       nil -> {:error, :not_found}
       user -> {:ok, user}
     end
@@ -81,8 +81,13 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
   """
   @spec get_user_by_verification_token(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
   def get_user_by_verification_token(token) when is_binary(token) do
+    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
+
     case UserSchema
-         |> where([u], u.verification_token == ^token and is_nil(u.verification_token_used_at))
+         |> where(
+           [u],
+           u.verification_token == ^token_hash and is_nil(u.verification_token_used_at)
+         )
          |> Repo.one() do
       nil -> {:error, :not_found}
       user -> {:ok, user}
@@ -196,9 +201,10 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
   def set_verification_token(%UserSchema{} = user, token, ip_address \\ nil) do
     normalized_ip = normalize_ip_for_storage(ip_address)
+    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
 
     changes = %{
-      verification_token: token,
+      verification_token: token_hash,
       verification_sent_at: DateTime.utc_now(:second)
     }
 
@@ -366,7 +372,7 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
   @spec get_user_by_email(String.t(), Ecto.Repo.t()) ::
           {:ok, UserSchema.t()} | {:error, :not_found}
   def get_user_by_email(email, repo) when is_binary(email) do
-    case repo.get_by(UserSchema, email: email) do
+    case repo.get_by(UserSchema, email: String.downcase(email)) do
       nil -> {:error, :not_found}
       user -> {:ok, user}
     end
@@ -552,6 +558,8 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
   """
   @spec check_email_availability(String.t()) :: {:ok, :available} | {:error, :taken}
   def check_email_availability(email) when is_binary(email) do
+    email = String.downcase(email)
+
     # Use a transaction with row-level locking to prevent race conditions
     result =
       Repo.transaction(fn ->

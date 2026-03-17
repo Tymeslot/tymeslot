@@ -104,6 +104,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
       :provider_meta
     ])
     |> validate_required([:email])
+    |> update_change(:email, &String.downcase/1)
     |> validate_email()
     |> validate_password()
     |> unique_constraint(:email)
@@ -115,6 +116,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
     user
     |> cast(attrs, [:email, :password, :password_confirmation, :name])
     |> validate_required([:email, :password, :password_confirmation])
+    |> update_change(:email, &String.downcase/1)
     |> validate_email()
     |> validate_password()
     |> validate_confirmation(:password)
@@ -137,6 +139,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
       :verified_at
     ])
     |> validate_required([:email])
+    |> update_change(:email, &String.downcase/1)
     |> validate_email()
     |> unique_constraint(:email)
     |> unique_constraint([:provider, :provider_uid])
@@ -163,6 +166,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
     user
     |> cast(attrs, [:pending_email, :email_change_token_hash])
     |> validate_required([:pending_email, :email_change_token_hash])
+    |> update_change(:pending_email, &String.downcase/1)
     |> validate_length(:pending_email, max: 160)
     |> validate_pending_email_format()
     |> validate_different_email()

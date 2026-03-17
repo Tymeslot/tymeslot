@@ -67,7 +67,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
               unique_prefix <- StreamData.positive_integer(),
               provider <- StreamData.member_of([:github, :google])
             ) do
-        email = "#{unique_prefix}_#{email}@test.com"
+        email = String.downcase("#{unique_prefix}_#{email}@test.com")
 
         auth_params = %{
           "email" => email,

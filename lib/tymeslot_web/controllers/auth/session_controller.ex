@@ -8,7 +8,7 @@ defmodule TymeslotWeb.SessionController do
   alias Tymeslot.Auth
   alias Tymeslot.Auth.{AuthActions, Authentication, Session, Verification}
   alias Tymeslot.Infrastructure.Config
-  alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
 
   require Logger
 
@@ -63,7 +63,7 @@ defmodule TymeslotWeb.SessionController do
     case Session.create_session(conn, user) do
       {:ok, updated_conn, _token} ->
         redirect_path =
-          sanitize_redirect_path(params["redirect_to"], get_success_redirect_path())
+          RedirectSanitizer.sanitize(params["redirect_to"], get_success_redirect_path())
 
         updated_conn
         |> put_flash(:info, message)
@@ -133,21 +133,6 @@ defmodule TymeslotWeb.SessionController do
 
   defp get_success_redirect_path do
     Config.success_redirect_path()
-  end
-
-  defp sanitize_redirect_path(path, default) do
-    case path do
-      p when is_binary(p) ->
-        if String.starts_with?(p, "/") and not String.contains?(p, "://") and
-             not String.starts_with?(p, "//") and not String.contains?(p, "\\") do
-          p
-        else
-          default
-        end
-
-      _other ->
-        default
-    end
   end
 
   defp get_unverified_user_id(email) do

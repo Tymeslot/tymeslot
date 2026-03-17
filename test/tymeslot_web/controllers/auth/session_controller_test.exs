@@ -256,12 +256,14 @@ defmodule TymeslotWeb.SessionControllerTest do
     end
 
     defp insert_unverified_user(token, signup_ip) do
-      Factory.insert(:user,
-        verified_at: nil,
-        verification_token: token,
-        verification_sent_at: DateTime.utc_now(),
-        signup_ip: signup_ip
-      )
+      user =
+        Factory.insert(:user,
+          verified_at: nil,
+          signup_ip: signup_ip
+        )
+
+      {:ok, user} = UserQueries.set_verification_token(user, token, signup_ip)
+      user
     end
 
     test "verifies and logs in user when IP matches", %{conn: conn, token: token} do
@@ -298,15 +300,15 @@ defmodule TymeslotWeb.SessionControllerTest do
     end
 
     test "handles expired verification token", %{conn: conn} do
-      expired_time = DateTime.add(DateTime.utc_now(), -3 * 3600, :second)
+      expired_time = DateTime.add(DateTime.utc_now(), -25 * 3600, :second)
 
-      _user =
-        Factory.insert(:user,
-          verified_at: nil,
-          verification_token: "expired_verification_token",
-          verification_sent_at: expired_time,
-          signup_ip: "127.0.0.1"
-        )
+      user = Factory.insert(:user, verified_at: nil, signup_ip: "127.0.0.1")
+      {:ok, _} = UserQueries.set_verification_token(user, "expired_verification_token")
+
+      Tymeslot.Repo.query!(
+        "UPDATE users SET verification_sent_at = $1 WHERE id = $2",
+        [expired_time, user.id]
+      )
 
       conn = get(conn, ~p"/auth/verify-complete/expired_verification_token")
 
