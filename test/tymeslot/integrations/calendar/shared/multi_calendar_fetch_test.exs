@@ -221,7 +221,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       assert length(ids) == length(Enum.uniq(ids))
     end
 
-    test "handles API errors gracefully" do
+    test "returns error when all selected calendars fail" do
       integration = %{
         calendar_list: [
           %{"id" => "cal1", "selected" => true},
@@ -232,16 +232,16 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetchTest do
       start_time = DateTime.utc_now()
       end_time = DateTime.add(start_time, 3600, :second)
 
-      assert {:ok, events} =
+      # All calendars failing must surface as an error, not {:ok, []}. An empty list
+      # would make every slot appear available and risk double-booking against hidden
+      # external events.
+      assert {:error, :all_calendars_unavailable} =
                MultiCalendarFetch.list_events_with_selection(
                  integration,
                  start_time,
                  end_time,
                  FailingAPI
                )
-
-      # Should return empty list when all requests fail
-      assert events == []
     end
 
     test "includes successful results even when some fail" do

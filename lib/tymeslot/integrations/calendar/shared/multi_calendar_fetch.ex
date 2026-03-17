@@ -24,7 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
         api_module.list_primary_events(integration, start_time, end_time)
 
       selected ->
-        events =
+        {successes, failures} =
           selected
           |> Task.async_stream(
             fn calendar ->
@@ -34,13 +34,21 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
             max_concurrency: @max_concurrency,
             timeout: 30_000
           )
-          |> Enum.flat_map(fn
-            {:ok, {:ok, evs}} -> evs
-            _error -> []
+          |> Enum.split_with(fn
+            {:ok, {:ok, _events}} -> true
+            _other -> false
           end)
-          |> Enum.uniq_by(fn event -> event[:id] || event["id"] end)
 
-        {:ok, events}
+        if successes == [] and failures != [] do
+          {:error, :all_calendars_unavailable}
+        else
+          events =
+            successes
+            |> Enum.flat_map(fn {:ok, {:ok, evs}} -> evs end)
+            |> Enum.uniq_by(fn event -> event[:id] || event["id"] end)
+
+          {:ok, events}
+        end
     end
   end
 
