@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
             <h1 class="slide-title">
               {gettext("Schedule with %{name}", name: display_name(@organizer_profile))}
             </h1>
-            
+
     <!-- Organizer Profile -->
             <div class="organizer-profile">
               <div class="organizer-avatar">
@@ -77,39 +77,46 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
                 </p>
               </div>
             </div>
-            
+
             <!-- Duration Selection -->
-            <div class="duration-grid">
-              <%= for meeting_type <- @meeting_types do %>
-                <% slug = Tymeslot.MeetingTypes.to_slug(meeting_type) %>
-                <div class={"duration-card #{if @selected_duration == slug, do: "selected", else: ""}"}>
-                  <button
-                    phx-click="select_duration"
-                    phx-value-duration={slug}
-                    phx-target={@myself}
-                    class="duration-button"
-                    data-testid="duration-option"
-                    data-duration={slug}
-                  >
-                    <div class="duration-icon flex-shrink-0">
-                      {render_icon(meeting_type.icon || get_default_icon(meeting_type))}
-                    </div>
-                    <div class="duration-info">
-                      <div class="duration-name">
-                        {meeting_type.name}
+            <%= if @username_context && @meeting_types == [] do %>
+              <div class="overview-empty-state">
+                <p class="overview-empty-title">{gettext("No meeting types available")}</p>
+                <p class="overview-empty-subtitle">{gettext("Please contact the organizer")}</p>
+              </div>
+            <% else %>
+              <div class="duration-grid">
+                <%= for meeting_type <- @meeting_types do %>
+                  <% slug = Tymeslot.MeetingTypes.to_slug(meeting_type) %>
+                  <div class={"duration-card #{if @selected_duration == slug, do: "selected", else: ""}"}>
+                    <button
+                      phx-click="select_duration"
+                      phx-value-duration={slug}
+                      phx-target={@myself}
+                      class="duration-button"
+                      data-testid="duration-option"
+                      data-duration={slug}
+                    >
+                      <div class="duration-icon flex-shrink-0">
+                        {render_icon(meeting_type.icon || get_default_icon(meeting_type))}
                       </div>
-                      <div class="duration-time">
-                        {LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
+                      <div class="duration-info">
+                        <div class="duration-name">
+                          {meeting_type.name}
+                        </div>
+                        <div class="duration-time">
+                          {LocalizationHelpers.format_duration(meeting_type.duration_minutes)}
+                        </div>
+                        <div class="duration-description">
+                          {meeting_type.description}
+                        </div>
                       </div>
-                      <div class="duration-description">
-                        {meeting_type.description}
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              <% end %>
-            </div>
-            
+                    </button>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+
     <!-- Navigation -->
             <div class="slide-actions">
               <button

@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                   {gettext("Select a new time for your meeting")}
                 </p>
               </div>
-              
+
     <!-- Meeting Details Card -->
               <div
                 class="glass-morphism-card mb-8"
@@ -90,7 +90,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                         class="w-10 h-10 rounded-lg flex items-center justify-center"
                         style="background: rgba(255,255,255,0.1);"
                       >
-                        <span class="text-xl">📅</span>
+                        <.icon name="hero-calendar" class="w-5 h-5" />
                       </div>
                       <div class="flex-1">
                         <div class="font-medium" style="color: rgba(255,255,255,0.95);">
@@ -99,14 +99,14 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                         <div class="text-sm" style="color: rgba(255,255,255,0.6);">{gettext("Date")}</div>
                       </div>
                     </div>
-                    
+
     <!-- Time Row -->
                     <div class="flex items-center gap-4">
                       <div
                         class="w-10 h-10 rounded-lg flex items-center justify-center"
                         style="background: rgba(255,255,255,0.1);"
                       >
-                        <span class="text-xl">🕐</span>
+                        <.icon name="hero-clock" class="w-5 h-5" />
                       </div>
                       <div class="flex-1">
                         <div class="font-medium" style="color: rgba(255,255,255,0.95);">
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                         </div>
                       </div>
                     </div>
-                    
+
     <!-- Organizer Row -->
                     <div
                       class="flex items-center gap-4 pt-4"
@@ -127,7 +127,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                         class="w-10 h-10 rounded-lg flex items-center justify-center"
                         style="background: rgba(255,255,255,0.1);"
                       >
-                        <span class="text-xl">👤</span>
+                        <.icon name="hero-user" class="w-5 h-5" />
                       </div>
                       <div class="flex-1">
                         <div class="text-sm" style="color: rgba(255,255,255,0.6);">{gettext("Meeting with")}</div>
@@ -139,7 +139,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                   </div>
                 </div>
               </div>
-              
+
     <!-- Action Section -->
               <div class="text-center">
                 <p class="mb-6" style="color: rgba(255,255,255,0.85);">
