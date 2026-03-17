@@ -314,6 +314,59 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert %Date{} = event.start_time
     end
 
+    test "sets transparency to nil when TRANSP property is absent" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:no-transp@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Regular Event
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert is_nil(event.transparency)
+    end
+
+    test "parses TRANSP:TRANSPARENT for free events" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:free-event@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300116T000000Z
+      SUMMARY:Free Holiday
+      TRANSP:TRANSPARENT
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.transparency == "transparent"
+    end
+
+    test "parses TRANSP:OPAQUE for busy events" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:busy-event@example.com
+      DTSTART:20300115T140000Z
+      DTEND:20300115T150000Z
+      SUMMARY:Busy Meeting
+      TRANSP:OPAQUE
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.transparency == "opaque"
+    end
+
     test "handles timezone parameter in DTSTART" do
       ical_content = """
       BEGIN:VCALENDAR

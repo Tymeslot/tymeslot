@@ -286,7 +286,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
       assert is_nil(Enum.at(results, 1).summary)
     end
 
-    test "filters out non-busy events" do
+    test "filters out declined and cancelled events at the provider level" do
       outlook_events = [
         %{
           id: "busy-event",
@@ -333,8 +333,28 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
 
       results = Provider.convert_events(outlook_events)
 
-      assert length(results) == 1
-      assert Enum.at(results, 0).uid == "busy-event"
+      # declined and cancelled are filtered at the provider level
+      # free events pass through with transparency: "transparent" for the availability layer
+      assert [busy, free] = results
+      assert busy.uid == "busy-event"
+      assert free.uid == "free-event"
+    end
+
+    test "sets transparency: opaque for busy events and transparent for free events" do
+      events = [
+        %{id: "busy", show_as: "busy", start: %{"dateTime" => "2024-03-15T14:00:00Z"}, end: %{"dateTime" => "2024-03-15T15:00:00Z"}},
+        %{id: "tentative", show_as: "tentative", start: %{"dateTime" => "2024-03-15T14:00:00Z"}, end: %{"dateTime" => "2024-03-15T15:00:00Z"}},
+        %{id: "oom", show_as: "oom", start: %{"dateTime" => "2024-03-15T14:00:00Z"}, end: %{"dateTime" => "2024-03-15T15:00:00Z"}},
+        %{id: "free", show_as: "free", start: %{"dateTime" => "2024-03-15T14:00:00Z"}, end: %{"dateTime" => "2024-03-15T15:00:00Z"}}
+      ]
+
+      results = Provider.convert_events(events)
+
+      assert [busy, tentative, oom, free] = results
+      assert busy.transparency == "opaque"
+      assert tentative.transparency == "opaque"
+      assert oom.transparency == "opaque"
+      assert free.transparency == "transparent"
     end
   end
 

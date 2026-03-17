@@ -239,6 +239,46 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
       assert is_nil(result.start_time)
       assert is_nil(result.end_time)
     end
+
+    test "sets transparency to nil when field is absent (default is busy)" do
+      google_event = %{
+        "id" => "event-no-transparency",
+        "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+        "end" => %{"dateTime" => "2024-03-15T15:00:00Z"}
+      }
+
+      result = Provider.convert_event(google_event)
+
+      assert is_nil(result.transparency)
+    end
+
+    test "preserves transparency: transparent for free events" do
+      google_event = %{
+        "id" => "free-event",
+        "summary" => "Free Holiday",
+        "start" => %{"date" => "2024-03-15"},
+        "end" => %{"date" => "2024-03-16"},
+        "transparency" => "transparent"
+      }
+
+      result = Provider.convert_event(google_event)
+
+      assert result.transparency == "transparent"
+    end
+
+    test "preserves transparency: opaque for explicitly busy events" do
+      google_event = %{
+        "id" => "busy-event",
+        "summary" => "Busy Meeting",
+        "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+        "end" => %{"dateTime" => "2024-03-15T15:00:00Z"},
+        "transparency" => "opaque"
+      }
+
+      result = Provider.convert_event(google_event)
+
+      assert result.transparency == "opaque"
+    end
   end
 
   describe "convert_events/1" do

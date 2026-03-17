@@ -47,16 +47,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   end
 
   defp busy_event?(event) do
-    # Filter out cancelled events and events marked as "free"
+    # Filter out cancelled events and declined events — these are Outlook-specific
+    # concepts with no cross-provider equivalent. Free/busy is handled via the
+    # normalised :transparency field in the availability layer.
     # show_as can be: free, tentative, busy, oom, workingElsewhere, unknown
     # response_status can be: none, organizer, tentativelyAccepted, accepted, declined, notResponded
     status = Map.get(event, :status)
-    show_as = Map.get(event, :show_as)
     response_status = Map.get(event, :response_status)
 
-    status != "cancelled" and
-      show_as != "free" and
-      response_status != "declined"
+    status != "cancelled" and response_status != "declined"
   end
 
   @spec convert_event(map()) :: map()
@@ -73,7 +72,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
       end_time: end_time,
       status: outlook_event[:status],
       show_as: outlook_event[:show_as],
-      response_status: outlook_event[:response_status]
+      response_status: outlook_event[:response_status],
+      transparency: if(outlook_event[:show_as] == "free", do: "transparent", else: "opaque")
     }
   end
 

@@ -179,6 +179,65 @@ defmodule Tymeslot.Availability.ConflictsTest do
     end
   end
 
+  describe "filter_available_slots/6 - transparency (free/busy)" do
+    test "does not block slots for Google Calendar free events (transparency: transparent)" do
+      date = Date.add(Date.utc_today(), 7)
+      slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
+
+      events = [
+        %{
+          start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
+          end_time: DateTime.new!(date, ~T[10:30:00], "Etc/UTC"),
+          transparency: "transparent"
+        }
+      ]
+
+      result = filter_slots(slots, events, %{date: date})
+
+      assert "9:00 AM" in result
+      assert "10:00 AM" in result
+      assert "11:00 AM" in result
+    end
+
+    test "blocks slots for events with nil transparency (default busy)" do
+      date = Date.add(Date.utc_today(), 7)
+      slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
+
+      events = [
+        %{
+          start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
+          end_time: DateTime.new!(date, ~T[10:30:00], "Etc/UTC"),
+          transparency: nil
+        }
+      ]
+
+      result = filter_slots(slots, events, %{date: date})
+
+      refute "10:00 AM" in result
+      assert "9:00 AM" in result
+      assert "11:00 AM" in result
+    end
+
+    test "blocks slots for explicitly opaque (busy) events" do
+      date = Date.add(Date.utc_today(), 7)
+      slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
+
+      events = [
+        %{
+          start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
+          end_time: DateTime.new!(date, ~T[10:30:00], "Etc/UTC"),
+          transparency: "opaque"
+        }
+      ]
+
+      result = filter_slots(slots, events, %{date: date})
+
+      refute "10:00 AM" in result
+      assert "9:00 AM" in result
+      assert "11:00 AM" in result
+    end
+  end
+
   describe "filter_available_slots/6 - edge cases" do
     test "handles empty slots list" do
       events = []
@@ -315,6 +374,30 @@ defmodule Tymeslot.Availability.ConflictsTest do
           "Europe/London",
           [],
           %{}
+        )
+
+      assert result == true
+    end
+
+    test "ignores all-day free events when checking day availability" do
+      date = get_future_weekday()
+
+      # A full-day event that would normally block everything, but is marked Free
+      events = [
+        %{
+          start_time: DateTime.new!(date, ~T[00:00:00], "Etc/UTC"),
+          end_time: DateTime.new!(date, ~T[23:59:59], "Etc/UTC"),
+          transparency: "transparent"
+        }
+      ]
+
+      result =
+        Conflicts.date_has_slots_with_events?(
+          date,
+          "Etc/UTC",
+          "Etc/UTC",
+          events,
+          %{buffer_minutes: 0}
         )
 
       assert result == true

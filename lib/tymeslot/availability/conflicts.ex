@@ -20,6 +20,8 @@ defmodule Tymeslot.Availability.Conflicts do
     # Get current time in the same timezone as the slots
     current_time = get_current_time(timezone)
 
+    busy = busy_events(events)
+
     Enum.filter(all_slots, fn slot ->
       # Parse the slot time and create datetime
       slot_time = TimeSlots.parse_time_slot(slot)
@@ -33,7 +35,7 @@ defmodule Tymeslot.Availability.Conflicts do
         min_advance_hours,
         max_advance_booking_days
       ) and
-        no_event_conflict?(slot_start, slot_end, events, buffer_minutes)
+        no_event_conflict?(slot_start, slot_end, busy, buffer_minutes)
     end)
   end
 
@@ -67,7 +69,7 @@ defmodule Tymeslot.Availability.Conflicts do
     current_time = get_current_time(user_timezone)
 
     minimum_booking_time = DateTime.add(current_time, min_advance_hours * 60, :minute)
-    relevant_events = filter_events_for_date_window(events_in_user_tz, date)
+    relevant_events = events_in_user_tz |> busy_events() |> filter_events_for_date_window(date)
 
     params = %{
       target_date: date,
@@ -229,6 +231,15 @@ defmodule Tymeslot.Availability.Conflicts do
           {:cont, {new_end, false}}
         end
       end
+    end)
+  end
+
+  # All providers normalise free events to transparency: "transparent".
+  # Google sets it directly; iCal normalises TRANSP:TRANSPARENT at parse time;
+  # Outlook maps showAs: "free" during conversion. None of these should block.
+  defp busy_events(events) do
+    Enum.reject(events, fn event ->
+      Map.get(event, :transparency) == "transparent"
     end)
   end
 

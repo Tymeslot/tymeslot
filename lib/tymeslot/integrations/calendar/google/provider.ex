@@ -65,7 +65,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       location: google_event["location"],
       start_time: parse_datetime(google_event["start"]),
       end_time: parse_datetime(google_event["end"]),
-      status: google_event["status"]
+      status: google_event["status"],
+      transparency: google_event["transparency"]
     }
   end
 

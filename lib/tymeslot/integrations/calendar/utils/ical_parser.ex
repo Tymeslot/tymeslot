@@ -150,7 +150,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         description: description,
         location: location,
         start_time: start_time,
-        end_time: end_time
+        end_time: end_time,
+        transparency: normalize_transp(extract_property(lines, "TRANSP"))
       }
     else
       Logger.debug("Skipping event with missing required fields",
@@ -179,6 +180,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     end)
     |> Enum.reverse()
   end
+
+  defp normalize_transp("TRANSPARENT"), do: "transparent"
+  defp normalize_transp("OPAQUE"), do: "opaque"
+  defp normalize_transp(other), do: other
 
   defp extract_property(lines, property_name) do
     case Enum.find(lines, &String.starts_with?(&1, property_name <> ":")) do
