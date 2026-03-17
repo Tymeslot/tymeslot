@@ -1,6 +1,9 @@
 /* Shared Variables for Scheduling Themes */
 /* Default border radius scale — themes override these with their own values */
 
+/* Inter font — loaded once here so all themes get it automatically */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
   /* Border radius scale */
   --radius-none: 0;

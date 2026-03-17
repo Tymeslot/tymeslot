@@ -244,6 +244,10 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
         [msg, assign(socket, :theme_id, theme_id)]
 
       _unknown_format ->
+        Logger.warning("ensure_theme_id_in_socket: unknown args format",
+          args_length: length(args)
+        )
+
         args
     end
   end
@@ -338,7 +342,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   end
 
   defp mount_meeting_management(profile, params, socket, action) do
-    theme_id = profile.booking_theme || socket.assigns[:theme_id] || "1"
+    theme_id = profile.booking_theme || socket.assigns[:theme_id] || Registry.default_theme_id()
     meeting_uid = params["meeting_uid"]
 
     case validate_and_load_meeting(meeting_uid, action) do

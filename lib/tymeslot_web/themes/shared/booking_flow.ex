@@ -28,13 +28,18 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   @spec submit_booking(Phoenix.LiveView.Socket.t(), map(), transition_fun()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def submit_booking(socket, booking_params, transition_fun) do
-    case BookingSubmissionHandlerComponent.submit_booking(socket, booking_params) do
-      {:ok, socket} ->
-        # On success, transition to confirmation
-        {:noreply, transition_fun.(socket, :confirmation, %{})}
+    if socket.assigns[:submitting] do
+      {:noreply, socket}
+    else
+      socket = assign(socket, :submitting, true)
 
-      {:error, socket} ->
-        {:noreply, socket}
+      case BookingSubmissionHandlerComponent.submit_booking(socket, booking_params) do
+        {:ok, socket} ->
+          {:noreply, transition_fun.(socket, :confirmation, %{})}
+
+        {:error, socket} ->
+          {:noreply, assign(socket, :submitting, false)}
+      end
     end
   end
 

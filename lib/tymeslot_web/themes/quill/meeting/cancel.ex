@@ -66,7 +66,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     {gettext("Great! Your meeting is still scheduled as planned.")}
                   </p>
                 </div>
-                
+
     <!-- Meeting Details Card -->
                 <div
                   class="glass-morphism-card mb-8"
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                           class="w-10 h-10 rounded-lg flex items-center justify-center"
                           style="background: rgba(255,255,255,0.1);"
                         >
-                          <span class="text-xl">📅</span>
+                          <.icon name="hero-calendar" class="w-5 h-5" />
                         </div>
                         <div class="flex-1">
                           <div class="font-medium" style="color: rgba(255,255,255,0.95);">
@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                           class="w-10 h-10 rounded-lg flex items-center justify-center"
                           style="background: rgba(255,255,255,0.1);"
                         >
-                          <span class="text-xl">🕐</span>
+                          <.icon name="hero-clock" class="w-5 h-5" />
                         </div>
                         <div class="flex-1">
                           <div class="font-medium" style="color: rgba(255,255,255,0.95);">
@@ -129,7 +129,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                           class="w-10 h-10 rounded-lg flex items-center justify-center"
                           style="background: rgba(255,255,255,0.1);"
                         >
-                          <span class="text-xl">👤</span>
+                          <.icon name="hero-user" class="w-5 h-5" />
                         </div>
                         <div class="flex-1">
                           <div class="text-sm" style="color: rgba(255,255,255,0.6);">
@@ -184,7 +184,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     {gettext("Are you sure you want to cancel this appointment?")}
                   </p>
                 </div>
-                
+
     <!-- Meeting Details Card -->
                 <div
                   class="glass-morphism-card mb-8"
@@ -210,7 +210,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                           class="w-10 h-10 rounded-lg flex items-center justify-center"
                           style="background: rgba(255,255,255,0.1);"
                         >
-                          <span class="text-xl">📅</span>
+                          <.icon name="hero-calendar" class="w-5 h-5" />
                         </div>
                         <div class="flex-1">
                           <div class="font-medium" style="color: rgba(255,255,255,0.95);">
@@ -226,7 +226,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                           class="w-10 h-10 rounded-lg flex items-center justify-center"
                           style="background: rgba(255,255,255,0.1);"
                         >
-                          <span class="text-xl">🕐</span>
+                          <.icon name="hero-clock" class="w-5 h-5" />
                         </div>
                         <div class="flex-1">
                           <div class="font-medium" style="color: rgba(255,255,255,0.95);">
@@ -247,7 +247,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                           class="w-10 h-10 rounded-lg flex items-center justify-center"
                           style="background: rgba(255,255,255,0.1);"
                         >
-                          <span class="text-xl">👤</span>
+                          <.icon name="hero-user" class="w-5 h-5" />
                         </div>
                         <div class="flex-1">
                           <div class="text-sm" style="color: rgba(255,255,255,0.6);">
@@ -261,7 +261,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     </div>
                   </div>
                 </div>
-                
+
     <!-- Warning Message -->
                 <div
                   class="mb-6 p-4 rounded-lg flex items-start gap-3"
@@ -283,7 +283,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                     {gettext("A cancellation email will be sent to all participants")}
                   </div>
                 </div>
-                
+
     <!-- Action Buttons -->
                 <div class="flex gap-4">
                   <.loading_button

@@ -1,8 +1,5 @@
 /* Quill Theme Variables - Comprehensive Design Token System */
 
-/* Import Inter font - Modern, clean, and free for commercial use */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 :root {
   /* Typography - Font Family */
   --theme-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

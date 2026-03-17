@@ -7,6 +7,8 @@ defmodule TymeslotWeb.Plugs.ThemeProtectionPlug do
   """
   @behaviour Plug
 
+  require Logger
+
   @impl Plug
   def init(opts), do: opts
 
@@ -18,9 +20,19 @@ defmodule TymeslotWeb.Plugs.ThemeProtectionPlug do
     Enum.reduce_while(plugs, conn, fn plug_info, acc_conn ->
       {plug_mod, plug_opts} = normalize_plug(plug_info)
 
-      case plug_mod.call(acc_conn, plug_mod.init(plug_opts)) do
-        %Plug.Conn{halted: true} = halted_conn -> {:halt, halted_conn}
-        updated_conn -> {:cont, updated_conn}
+      try do
+        case plug_mod.call(acc_conn, plug_mod.init(plug_opts)) do
+          %Plug.Conn{halted: true} = halted_conn -> {:halt, halted_conn}
+          updated_conn -> {:cont, updated_conn}
+        end
+      rescue
+        e ->
+          Logger.error("Theme protection plug raised an exception",
+            plug: inspect(plug_mod),
+            error: Exception.message(e)
+          )
+
+          reraise e, __STACKTRACE__
       end
     end)
   end

@@ -1,6 +1,3 @@
-/* Import Inter font - Modern, clean, and free for commercial use */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 /* Global resets for Rhythm theme — natural document flow, no viewport locking.
    Content scrolls the page; background fills via min-height. */
 html.rhythm-theme {
