@@ -255,8 +255,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   @spec handle_booking_entry(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def handle_booking_entry(socket, params) do
     has_selection =
-      (socket.assigns[:selected_date] != nil || is_binary(params["date"])) &&
-        (socket.assigns[:selected_time] != nil || is_binary(params["time"]))
+      (socket.assigns[:selected_date] != nil ||
+         (is_binary(params["date"]) && params["date"] != "")) &&
+        (socket.assigns[:selected_time] != nil ||
+           (is_binary(params["time"]) && params["time"] != ""))
 
     is_reschedule =
       socket.assigns[:reschedule_meeting_uid] != nil ||

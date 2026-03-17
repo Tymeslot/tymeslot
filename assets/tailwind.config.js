@@ -34,6 +34,7 @@ module.exports = {
     "hero-clipboard-document-check",
     "hero-presentation-chart-line",
     // Additional icons used in the UI
+    "hero-calendar",
     "hero-user",
     "hero-video-camera",
     "hero-link",
