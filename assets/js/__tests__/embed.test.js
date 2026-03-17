@@ -380,6 +380,29 @@ describe('postMessage resize handler', () => {
     expect(wrapper.style.height).toBe('200px')
   })
 
+  test('does not throw when e.data is null', () => {
+    // A postMessage from the expected origin with null data should be silently ignored.
+    expect(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: window.location.origin,
+          data: null
+        })
+      )
+    }).not.toThrow()
+  })
+
+  test('does not throw when e.data is a primitive', () => {
+    expect(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          origin: window.location.origin,
+          data: 'plain string'
+        })
+      )
+    }).not.toThrow()
+  })
+
   test('ignores resize messages that originate from a different domain', () => {
     const container = document.createElement('div')
     container.id = 'booking-container'

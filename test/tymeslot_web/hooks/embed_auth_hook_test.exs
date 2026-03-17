@@ -303,5 +303,26 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
 
       assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
     end
+
+    test "halts when profile has nil allowed_embed_domains and origin is provided" do
+      user = insert(:user)
+
+      profile =
+        insert(:profile, user: user, username: "nulldomains", allowed_embed_domains: nil)
+
+      socket =
+        build_socket(
+          %{},
+          %{x_headers: [{"origin", "https://example.com"}]},
+          connected: true
+        )
+
+      token = Token.sign(profile.username)
+
+      assert {:halt, updated_socket} =
+               EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => token}, socket)
+
+      assert updated_socket.redirected == {:redirect, %{to: "/", status: 302}}
+    end
   end
 end

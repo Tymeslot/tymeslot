@@ -31,7 +31,7 @@
   };
 
   window.addEventListener('error', function(e) {
-    if (e.filename && e.filename.indexOf('embed.js') !== -1) {
+    if (e.filename && /\/embed[^/]*\.js/.test(e.filename)) {
       failSafe(e.message);
     }
   });
@@ -71,6 +71,7 @@
    */
   window.addEventListener('message', function(e) {
     if (e.origin !== BASE_URL) return;
+    if (!e.data || typeof e.data !== 'object') return;
     if (e.data.type === 'tymeslot-resize') {
       var h = Number(e.data.height);
       if (!Number.isFinite(h) || h <= 0) return;
@@ -405,10 +406,7 @@
       const username = container.getAttribute('data-username') || 
                       container.getAttribute('data-tymeslot-inline');
       
-      if (!username) {
-        console.error('Tymeslot: No username provided for inline embed');
-        return;
-      }
+      if (!validateUsername('initInlineEmbeds', username)) return;
       
       const options = {
         theme: container.getAttribute('data-theme'),
@@ -454,6 +452,14 @@
     }
   }
 
+  function validateUsername(methodName, username) {
+    if (!username) {
+      console.error('Tymeslot: No username provided to ' + methodName + '()');
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Public API
    */
@@ -477,6 +483,7 @@
     open: function(username, options = {}) {
       // Remove existing modal if any
       this.close();
+      if (!validateUsername('open', username)) return;
 
       const { modal, container, closeButton } = createModal();
       const wrapper = createBookingIframe(username, options);
@@ -560,18 +567,22 @@
      * Initialize floating button
      */
     initFloating: function(username, options = {}) {
+      if (!validateUsername('initFloating', username)) return;
+
       // Remove existing button if any
       const existing = document.getElementById('tymeslot-floating-button');
       if (existing) existing.remove();
-      
+
       const button = createFloatingButton(username, options);
       document.body.appendChild(button);
     },
-    
+
     /**
      * Programmatically embed inline
      */
     embed: function(selector, username, options = {}) {
+      if (!validateUsername('embed', username)) return;
+
       const container = document.querySelector(selector);
       if (!container) {
         console.error('Tymeslot: Container not found:', selector);

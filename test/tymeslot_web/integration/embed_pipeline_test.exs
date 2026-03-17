@@ -58,6 +58,19 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
       assert csp =~ "frame-ancestors 'self'"
       assert get_resp_header(conn, "x-frame-options") == ["SAMEORIGIN"]
     end
+
+    test "?preview=true with [\"none\"] domains still permits same-origin framing", %{conn: conn} do
+      # Even when the user has explicitly disabled external embedding, the dashboard's
+      # live preview iframe (same origin) must still work.
+      user = insert(:user)
+      insert(:profile, user: user, username: "nonepreview", allowed_embed_domains: ["none"])
+
+      conn = get(conn, "/nonepreview?preview=true")
+
+      csp = conn |> get_resp_header("content-security-policy") |> List.first()
+      assert csp =~ "frame-ancestors 'self'"
+      assert get_resp_header(conn, "x-frame-options") == ["SAMEORIGIN"]
+    end
   end
 
   describe "embed token flow through HTTP pipeline" do

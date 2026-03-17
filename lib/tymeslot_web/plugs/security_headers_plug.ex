@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   alias Tymeslot.Profiles
   alias TymeslotWeb.Helpers.PathUtils
 
+  @local_hosts ~w(localhost 127.0.0.1 ::1)
+
   @impl Plug
   @spec init(keyword()) :: keyword()
   def init(opts), do: opts
@@ -70,8 +72,8 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
             {frame_ancestors, x_frame_options} =
               build_security_headers(profile.allowed_embed_domains, is_preview)
 
-            # Log when embedding is restricted
-            if profile.allowed_embed_domains != [] do
+            # Log when embedding is restricted (skip nil/[]/["none"] — those deny all)
+            if profile.allowed_embed_domains not in [nil, [], ["none"]] do
               referer = List.first(get_req_header(conn, "referer"))
 
               Logger.info("Embed security restrictions applied",
@@ -125,7 +127,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
       domains =
         Enum.map_join(expanded_domains, " ", fn domain ->
-          if domain in ["localhost", "127.0.0.1", "::1"] and is_dev_env do
+          if domain in @local_hosts and is_dev_env do
             "http://#{domain}:*"
           else
             "https://#{domain}"
@@ -145,7 +147,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
             if String.starts_with?(first_domain, "*") do
               nil
             else
-              if first_domain in ["localhost", "127.0.0.1", "::1"] and is_dev_env do
+              if first_domain in @local_hosts and is_dev_env do
                 "ALLOW-FROM http://#{first_domain}"
               else
                 "ALLOW-FROM https://#{first_domain}"
@@ -169,9 +171,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
   # Appends localhost origins in dev/test when not already in the allowed list.
   defp dev_localhost_suffix(allowed_domains, is_dev_env) do
-    local_hosts = ["localhost", "127.0.0.1", "::1"]
-
-    if is_dev_env and not Enum.any?(allowed_domains, &(&1 in local_hosts)) do
+    if is_dev_env and not Enum.any?(allowed_domains, &(&1 in @local_hosts)) do
       " http://localhost:* http://127.0.0.1:*"
     else
       ""
@@ -257,7 +257,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
   defp expand_www_variant("*." <> _rest = domain), do: [domain]
 
-  defp expand_www_variant(domain) when domain in ["localhost", "127.0.0.1", "::1"] do
+  defp expand_www_variant(domain) when domain in @local_hosts do
     [domain]
   end
 

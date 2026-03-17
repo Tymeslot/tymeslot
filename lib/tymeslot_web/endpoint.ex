@@ -78,12 +78,12 @@ defmodule TymeslotWeb.Endpoint do
     at: "/",
     from: :tymeslot,
     gzip: true,
-    only: TymeslotWeb.static_paths(),
+    only: TymeslotWeb.static_paths() ++ ["embed.js"],
     # embed.js is a standalone file at the root (not under /assets/).
-    # Plug.Static's `only` does exact segment matching, so it serves
-    # /embed.js but not the digested /embed-<hash>.js variant.
-    # `only_matching` adds prefix matching to cover digested filenames.
-    only_matching: ["embed"]
+    # `only` handles the canonical /embed.js path.
+    # `only_matching: ["embed-"]` covers digested /embed-<hash>.js variants
+    # without over-matching unrelated paths like /embeddings/... or /embed-anything.
+    only_matching: ["embed-"]
 
   defp serve_robots(%{request_path: "/robots.txt"} = conn, _opts) do
     file = Application.get_env(:tymeslot, :robots_file, "robots.core.txt")

@@ -48,6 +48,7 @@ defmodule TymeslotWeb do
       end
 
       pipeline :theme_browser do
+        plug TymeslotWeb.Plugs.RejectStaticPathsPlug
         plug :accepts, ["html"]
         plug :fetch_session
         plug :fetch_live_flash

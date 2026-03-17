@@ -205,6 +205,15 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       assert length(updated_profile.allowed_embed_domains) == 3
       assert "example.com" in updated_profile.allowed_embed_domains
     end
+
+    test "strips \"none\" sentinel from mixed list, keeps real domains", %{profile: profile} do
+      # ["none", "example.com"] should persist as ["example.com"] — the sentinel
+      # is filtered out by the normalization step in update_allowed_embed_domains/2.
+      assert {:ok, updated_profile} =
+               Profiles.update_allowed_embed_domains(profile, ["none", "example.com"])
+
+      assert updated_profile.allowed_embed_domains == ["example.com"]
+    end
   end
 
   describe "add_embed_domains/2" do

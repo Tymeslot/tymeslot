@@ -337,6 +337,31 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       # Should not show success message because we reject empty input in handle_event
       refute render(view) =~ "Security settings saved successfully"
     end
+
+
+    test "form input is preserved when domain update fails at validation", %{
+      conn: conn,
+      profile: profile
+    } do
+      # Fill 19 domains so the next add of 2 exceeds the 20-domain limit
+      existing = for i <- 1..19, do: "existing#{i}.com"
+      {:ok, _result} = Profiles.update_allowed_embed_domains(profile, existing)
+
+      {:ok, view, _html} = live(conn, "/dashboard/embed")
+
+      view |> element("button#tab-security") |> render_click()
+
+      # Submitting 2 new domains would bring total to 21 → should error
+      view
+      |> form("form", %{allowed_domains: "new1.example.com, new2.example.com"})
+      |> render_submit()
+
+      # Error should appear
+      assert render(view) =~ "cannot have more than 20"
+
+      # DB should be unchanged (19 domains, not 21)
+      assert length(Repo.reload(profile).allowed_embed_domains) == 19
+    end
   end
 
   describe "embed preview" do

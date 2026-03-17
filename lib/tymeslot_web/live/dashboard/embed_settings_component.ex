@@ -17,6 +17,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
   require Logger
 
+  @valid_embed_types Helpers.valid_embed_types()
+  @valid_tabs Helpers.valid_tabs()
+
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # Extract props from parent
@@ -114,12 +117,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("switch_tab", %{"tab" => tab}, socket) do
+  def handle_event("switch_tab", %{"tab" => tab}, socket) when tab in @valid_tabs do
     {:noreply, assign(socket, :active_tab, tab)}
   end
 
-  @impl Phoenix.LiveComponent
-  def handle_event("copy_code", %{"type" => type}, socket) do
+  def handle_event("switch_tab", _params, socket),
+    do: reject_invalid_event("switch_tab", socket)
+
+  def handle_event("copy_code", %{"type" => type}, socket) when type in @valid_embed_types do
     code = Helpers.embed_code(type, socket.assigns)
 
     socket = push_event(socket, "copy-to-clipboard", %{text: code})
@@ -128,16 +133,20 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     {:noreply, socket}
   end
 
-  @impl Phoenix.LiveComponent
-  def handle_event("select_embed_type", %{"type" => type}, socket) do
+  def handle_event("copy_code", _params, socket),
+    do: reject_invalid_event("copy_code", socket)
+
+  def handle_event("select_embed_type", %{"type" => type}, socket)
+      when type in @valid_embed_types do
     {:noreply, assign(socket, :selected_embed_type, type)}
   end
 
-  @impl Phoenix.LiveComponent
+  def handle_event("select_embed_type", _params, socket),
+    do: reject_invalid_event("select_embed_type", socket)
+
   def handle_event("save_embed_domains", %{"allowed_domains" => domains_str}, socket) do
     case Profiles.add_embed_domains(socket.assigns.profile, domains_str) do
       {:ok, merged_domains} ->
-        socket = push_event(socket, "reset-form", %{id: "embed-domains-form"})
         perform_domain_update(socket, merged_domains, "Security settings saved successfully!")
 
       {:error, :empty_input} ->
@@ -150,17 +159,30 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     end
   end
 
-  @impl Phoenix.LiveComponent
-  def handle_event("remove_domain", %{"domain" => domain}, socket) do
-    updated_domains = Enum.reject(socket.assigns.allowed_domains, &(&1 == domain))
-    updated_domains = if updated_domains == [], do: ["none"], else: updated_domains
+  def handle_event("save_embed_domains", _params, socket),
+    do: reject_invalid_event("save_embed_domains", socket)
 
-    perform_domain_update(socket, updated_domains, "Domain removed successfully")
+  def handle_event("remove_domain", %{"domain" => domain}, socket) do
+    if domain not in socket.assigns.allowed_domains do
+      {:noreply, socket}
+    else
+      updated_domains = Enum.reject(socket.assigns.allowed_domains, &(&1 == domain))
+      updated_domains = if updated_domains == [], do: ["none"], else: updated_domains
+
+      perform_domain_update(socket, updated_domains, "Domain removed successfully")
+    end
   end
 
-  @impl Phoenix.LiveComponent
+  def handle_event("remove_domain", _params, socket),
+    do: reject_invalid_event("remove_domain", socket)
+
   def handle_event("clear_embed_domains", _params, socket) do
     perform_domain_update(socket, ["none"], "Embedding is now disabled")
+  end
+
+  defp reject_invalid_event(event_name, socket) do
+    Logger.warning("handle_event received invalid or missing parameter", event: event_name)
+    {:noreply, socket}
   end
 
   defp perform_domain_update(socket, domains_payload, success_message) do
@@ -183,15 +205,13 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
           {:ok, updated_profile} ->
             # Notify parent of profile update
             send(self(), {:profile_updated, updated_profile})
+            Flash.info(success_message)
 
             {:noreply,
              socket
+             |> push_event("reset-form", %{id: "embed-domains-form"})
              |> assign(:profile, updated_profile)
-             |> assign(:allowed_domains, updated_profile.allowed_embed_domains || [])
-             |> then(fn s ->
-               Flash.info(success_message)
-               s
-             end)}
+             |> assign(:allowed_domains, updated_profile.allowed_embed_domains || [])}
 
           {:error, %Changeset{} = changeset} ->
             errors =
