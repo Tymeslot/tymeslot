@@ -111,11 +111,35 @@ defmodule Tymeslot.PaymentsTest do
       assert tx.status == "completed"
     end
 
-    test "returns error when transaction not found" do
-      expect(Tymeslot.Payments.StripeMock, :verify_session, fn "unknown" ->
-        {:ok, %{id: "unknown"}}
-      end)
+    test "skips duplicate processing for already-completed payment" do
+      user = Factory.insert(:user)
 
+      Factory.insert(:payment_transaction,
+        user: user,
+        stripe_id: "sess_completed",
+        status: "completed"
+      )
+
+      # verify_session should never be called — Mox verify_on_exit! enforces this
+      assert {:ok, :payment_processed} =
+               Payments.process_successful_payment("sess_completed", %{"tax" => 0})
+    end
+
+    test "rejects successful webhook for failed/superseded transaction" do
+      user = Factory.insert(:user)
+
+      Factory.insert(:payment_transaction,
+        user: user,
+        stripe_id: "sess_failed",
+        status: "failed"
+      )
+
+      assert {:error, :invalid_transaction_state} =
+               Payments.process_successful_payment("sess_failed", %{})
+    end
+
+    test "returns error when transaction not found" do
+      # verify_session is never reached when there is no transaction record
       assert {:error, :transaction_not_found} =
                Payments.process_successful_payment("unknown", %{})
     end

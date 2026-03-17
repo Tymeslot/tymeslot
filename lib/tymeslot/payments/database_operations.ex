@@ -43,13 +43,19 @@ defmodule Tymeslot.Payments.DatabaseOperations do
   @doc """
   Updates all necessary records when a payment is successful.
   Includes tax information processing.
+
+  Accepts either a transaction struct (avoids a redundant DB lookup) or a Stripe ID string.
   """
-  @spec process_successful_payment(stripe_id(), map(), non_neg_integer()) ::
+  @spec process_successful_payment(transaction() | stripe_id(), map(), non_neg_integer()) ::
           {:ok, :payment_processed}
           | {:error, :transaction_not_found}
           | {:error, any()}
-  def process_successful_payment(stripe_id, tax_info \\ %{}, discount_amount \\ 0) do
-    case PaymentQueries.coordinate_successful_payment(stripe_id, tax_info, discount_amount) do
+  def process_successful_payment(transaction_or_id, tax_info \\ %{}, discount_amount \\ 0) do
+    case PaymentQueries.coordinate_successful_payment(
+           transaction_or_id,
+           tax_info,
+           discount_amount
+         ) do
       {:ok, updated_transaction} ->
         {:ok, process_payment_updates(updated_transaction)}
 

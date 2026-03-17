@@ -216,23 +216,35 @@ defmodule Tymeslot.DatabaseQueries.PaymentQueries do
 
   @doc """
   Coordinates successful payment update with tax information.
-  """
-  @spec coordinate_successful_payment(String.t(), map(), integer()) ::
-          {:ok, PaymentTransaction.t()} | {:error, any()}
-  def coordinate_successful_payment(stripe_id, tax_info \\ %{}, discount_amount \\ 0) do
-    with {:ok, transaction} <- get_transaction_by_stripe_id(stripe_id) do
-      update_attrs = %{
-        status: "completed",
-        tax_amount: Map.get(tax_info, :tax_amount),
-        tax_rate: Map.get(tax_info, :tax_rate),
-        tax_id: Map.get(tax_info, :tax_id),
-        is_eu_business: Map.get(tax_info, :is_eu_business, false),
-        country_code: Map.get(tax_info, :country_code),
-        billing_address: Map.get(tax_info, :billing_address),
-        discount_amount: discount_amount
-      }
 
-      update_transaction(transaction, update_attrs)
+  Accepts either a transaction struct (skips the DB lookup) or a Stripe ID string.
+  """
+  @spec coordinate_successful_payment(PaymentTransaction.t() | String.t(), map(), integer()) ::
+          {:ok, PaymentTransaction.t()} | {:error, any()}
+  def coordinate_successful_payment(transaction_or_id, tax_info \\ %{}, discount_amount \\ 0)
+
+  def coordinate_successful_payment(
+        %PaymentTransaction{} = transaction,
+        tax_info,
+        discount_amount
+      ) do
+    update_attrs = %{
+      status: "completed",
+      tax_amount: Map.get(tax_info, :tax_amount),
+      tax_rate: Map.get(tax_info, :tax_rate),
+      tax_id: Map.get(tax_info, :tax_id),
+      is_eu_business: Map.get(tax_info, :is_eu_business, false),
+      country_code: Map.get(tax_info, :country_code),
+      billing_address: Map.get(tax_info, :billing_address),
+      discount_amount: discount_amount
+    }
+
+    update_transaction(transaction, update_attrs)
+  end
+
+  def coordinate_successful_payment(stripe_id, tax_info, discount_amount) do
+    with {:ok, transaction} <- get_transaction_by_stripe_id(stripe_id) do
+      coordinate_successful_payment(transaction, tax_info, discount_amount)
     end
   end
 end
