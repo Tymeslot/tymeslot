@@ -169,8 +169,9 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
       result = DataTransform.atomize_keys(input)
 
       assert result[:color_scheme] == "default"
-      # Unknown keys are preserved as-is (string or original form)
-      assert Map.has_key?(result, :color_scheme)
+      # Unknown string keys are preserved as strings (not converted to atoms)
+      assert result["unknown_field"] == "value"
+      assert result["another_unknown"] == 42
     end
 
     test "converts all known string keys to atoms" do
