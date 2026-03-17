@@ -7,6 +7,7 @@ defmodule TymeslotWeb.SessionControllerTest do
   alias Tymeslot.DatabaseQueries.UserQueries
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter}
 
   describe "POST /auth/session" do
@@ -303,9 +304,9 @@ defmodule TymeslotWeb.SessionControllerTest do
       expired_time = DateTime.add(DateTime.utc_now(), -25 * 3600, :second)
 
       user = Factory.insert(:user, verified_at: nil, signup_ip: "127.0.0.1")
-      {:ok, _} = UserQueries.set_verification_token(user, "expired_verification_token")
+      {:ok, _token} = UserQueries.set_verification_token(user, "expired_verification_token")
 
-      Tymeslot.Repo.query!(
+      Repo.query!(
         "UPDATE users SET verification_sent_at = $1 WHERE id = $2",
         [expired_time, user.id]
       )

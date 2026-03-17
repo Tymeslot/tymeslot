@@ -74,8 +74,7 @@ defmodule TymeslotWeb.HealthcheckController do
   @essential_checks [:database, :oban]
 
   defp essentials_healthy?(checks) do
-    @essential_checks
-    |> Enum.all?(fn name -> checks[name] == "ok" end)
+    Enum.all?(@essential_checks, fn name -> checks[name] == "ok" end)
   end
 
   defp all_healthy?(checks) do

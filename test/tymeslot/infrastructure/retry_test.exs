@@ -11,23 +11,8 @@ defmodule Tymeslot.Infrastructure.RetryTest do
     end
 
     test "retries on retriable error and succeeds" do
-      {:ok, counter} = Agent.start_link(fn -> 0 end)
-
-      result =
-        Retry.with_backoff(
-          fn ->
-            count = Agent.get_and_update(counter, fn n -> {n, n + 1} end)
-
-            if count < 2 do
-              {:error, "timeout"}
-            else
-              {:ok, :recovered}
-            end
-          end,
-          initial_delay: 1,
-          max_delay: 10,
-          max_attempts: 5
-        )
+      {result, counter} =
+        backoff_with_counter(2, {:error, "timeout"}, {:ok, :recovered}, max_attempts: 5)
 
       assert {:ok, :recovered} = result
       assert Agent.get(counter, & &1) == 3
@@ -46,7 +31,7 @@ defmodule Tymeslot.Infrastructure.RetryTest do
     end
 
     test "does not retry non-retriable errors" do
-      {:ok, counter} = Agent.start_link(fn -> 0 end)
+      counter = new_counter()
 
       result =
         Retry.with_backoff(
@@ -80,16 +65,8 @@ defmodule Tymeslot.Infrastructure.RetryTest do
     end
 
     test "respects custom retriable? function" do
-      {:ok, counter} = Agent.start_link(fn -> 0 end)
-
-      result =
-        Retry.with_backoff(
-          fn ->
-            count = Agent.get_and_update(counter, fn n -> {n, n + 1} end)
-            if count < 1, do: {:error, :custom_error}, else: {:ok, :done}
-          end,
-          initial_delay: 1,
-          max_delay: 10,
+      {result, _counter} =
+        backoff_with_counter(1, {:error, :custom_error}, {:ok, :done},
           retriable?: fn reason -> reason == :custom_error end
         )
 
@@ -100,69 +77,69 @@ defmodule Tymeslot.Infrastructure.RetryTest do
   describe "default_retriable?/1" do
     test "string patterns: retries timeout errors" do
       # Test via with_backoff since default_retriable? is private
-      {:ok, counter} = Agent.start_link(fn -> 0 end)
-
-      Retry.with_backoff(
-        fn ->
-          count = Agent.get_and_update(counter, fn n -> {n, n + 1} end)
-          if count < 1, do: {:error, "Connection timeout occurred"}, else: {:ok, :done}
-        end,
-        initial_delay: 1,
-        max_delay: 10
-      )
-
-      # Called twice (initial + 1 retry) proves timeout is retriable
-      assert Agent.get(counter, & &1) == 2
+      assert_retried_once({:error, "Connection timeout occurred"})
     end
 
     test "string patterns: does not retry unknown errors" do
-      {:ok, counter} = Agent.start_link(fn -> 0 end)
-
-      Retry.with_backoff(
-        fn ->
-          Agent.update(counter, &(&1 + 1))
-          {:error, "invalid credentials"}
-        end,
-        initial_delay: 1,
-        max_delay: 10
-      )
-
-      assert Agent.get(counter, & &1) == 1
+      assert_not_retried({:error, "invalid credentials"})
     end
 
     test "exception patterns: retries Mint.TransportError timeout" do
-      {:ok, counter} = Agent.start_link(fn -> 0 end)
-
-      Retry.with_backoff(
-        fn ->
-          count = Agent.get_and_update(counter, fn n -> {n, n + 1} end)
-
-          if count < 1 do
-            {:error, %Mint.TransportError{reason: :timeout}}
-          else
-            {:ok, :done}
-          end
-        end,
-        initial_delay: 1,
-        max_delay: 10
-      )
-
-      assert Agent.get(counter, & &1) == 2
+      assert_retried_once({:error, %Mint.TransportError{reason: :timeout}})
     end
 
     test "exception patterns: does not retry non-transient Mint errors" do
-      {:ok, counter} = Agent.start_link(fn -> 0 end)
+      assert_not_retried({:error, %Mint.TransportError{reason: :nxdomain}})
+    end
+  end
 
+  defp backoff_with_counter(succeed_after, error_result, success_result, opts \\ []) do
+    counter = new_counter()
+
+    result =
       Retry.with_backoff(
         fn ->
-          Agent.update(counter, &(&1 + 1))
-          {:error, %Mint.TransportError{reason: :nxdomain}}
+          n = Agent.get_and_update(counter, fn c -> {c, c + 1} end)
+          if n < succeed_after, do: error_result, else: success_result
         end,
-        initial_delay: 1,
-        max_delay: 10
+        Keyword.merge([initial_delay: 1, max_delay: 10], opts)
       )
 
-      assert Agent.get(counter, & &1) == 1
-    end
+    {result, counter}
+  end
+
+  defp new_counter do
+    {:ok, counter} = Agent.start_link(fn -> 0 end)
+    counter
+  end
+
+  defp assert_retried_once(error_result) do
+    counter = new_counter()
+
+    Retry.with_backoff(
+      fn ->
+        n = Agent.get_and_update(counter, fn c -> {c, c + 1} end)
+        if n < 1, do: error_result, else: {:ok, :done}
+      end,
+      initial_delay: 1,
+      max_delay: 10
+    )
+
+    assert Agent.get(counter, & &1) == 2
+  end
+
+  defp assert_not_retried(error_result) do
+    counter = new_counter()
+
+    Retry.with_backoff(
+      fn ->
+        Agent.update(counter, &(&1 + 1))
+        error_result
+      end,
+      initial_delay: 1,
+      max_delay: 10
+    )
+
+    assert Agent.get(counter, & &1) == 1
   end
 end
