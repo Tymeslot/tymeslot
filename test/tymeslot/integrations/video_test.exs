@@ -12,8 +12,8 @@ defmodule Tymeslot.Integrations.VideoTest do
   describe "list_integrations/1" do
     test "lists all integrations for a user" do
       user = insert(:user)
-      _i1 = insert(:video_integration, user: user, name: "I1")
-      _i2 = insert(:video_integration, user: user, name: "I2")
+      _i1 = insert(:video_integration, user: user, name: "I1", provider: "mirotalk")
+      _i2 = insert(:video_integration, user: user, name: "I2", provider: "custom")
 
       integrations = Video.list_integrations(user.id)
       assert length(integrations) == 2

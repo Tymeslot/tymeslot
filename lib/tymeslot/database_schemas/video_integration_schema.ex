@@ -144,14 +144,19 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
     case provider do
       "mirotalk" ->
         changeset
-        |> validate_required([:base_url, :api_key])
+        |> validate_required([:base_url])
+        |> require_credential_if_absent(:api_key, :api_key_encrypted)
         |> URLValidator.validate_url(:base_url)
 
       "teams" ->
-        validate_required(changeset, [:tenant_id, :teams_user_id])
+        changeset
+        |> require_credential_if_absent(:tenant_id, :tenant_id_encrypted)
+        |> require_credential_if_absent(:teams_user_id, :teams_user_id_encrypted)
 
       "google_meet" ->
-        validate_required(changeset, [:access_token, :refresh_token])
+        changeset
+        |> require_credential_if_absent(:access_token, :access_token_encrypted)
+        |> require_credential_if_absent(:refresh_token, :refresh_token_encrypted)
 
       "custom" ->
         changeset
@@ -160,6 +165,16 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
 
       _other_provider ->
         changeset
+    end
+  end
+
+  # Only require a virtual credential field when the persisted encrypted
+  # counterpart is absent — i.e., the credential hasn't been stored yet.
+  defp require_credential_if_absent(changeset, virtual_field, encrypted_field) do
+    if get_field(changeset, encrypted_field) do
+      changeset
+    else
+      validate_required(changeset, [virtual_field])
     end
   end
 
