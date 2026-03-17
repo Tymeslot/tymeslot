@@ -19,6 +19,8 @@ defmodule Tymeslot.Payments do
   @type transaction :: PaymentTransaction.t()
   @type stripe_id :: String.t()
 
+  @completed_status "completed"
+
   @doc """
   Initiates a payment transaction for a user.
 
@@ -97,12 +99,20 @@ defmodule Tymeslot.Payments do
     Logger.info("Processing successful payment", stripe_id: stripe_id)
 
     case DatabaseOperations.get_transaction_by_stripe_id(stripe_id) do
-      {:ok, %{status: "completed"}} ->
+      {:ok, %{status: @completed_status}} ->
         Logger.info("Payment already processed, skipping duplicate", stripe_id: stripe_id)
         {:ok, :payment_processed}
 
-      {:ok, _transaction} ->
-        do_process_successful_payment(stripe_id, tax_info, discount_amount)
+      {:ok, %{status: "pending"} = transaction} ->
+        do_process_successful_payment(transaction, tax_info, discount_amount)
+
+      {:ok, %{status: status}} ->
+        Logger.warning("Received successful webhook for non-pending transaction",
+          stripe_id: stripe_id,
+          status: status
+        )
+
+        {:error, :invalid_transaction_state}
 
       {:error, :transaction_not_found} ->
         Logger.error("Transaction not found for successful payment", stripe_id: stripe_id)
@@ -110,10 +120,10 @@ defmodule Tymeslot.Payments do
     end
   end
 
-  defp do_process_successful_payment(stripe_id, tax_info, discount_amount) do
-    with {:ok, _session} <- Config.stripe_provider().verify_session(stripe_id),
+  defp do_process_successful_payment(transaction, tax_info, discount_amount) do
+    with {:ok, _session} <- Config.stripe_provider().verify_session(transaction.stripe_id),
          {:ok, :payment_processed} <-
-           DatabaseOperations.process_successful_payment(stripe_id, tax_info, discount_amount) do
+           DatabaseOperations.process_successful_payment(transaction, tax_info, discount_amount) do
       {:ok, :payment_processed}
     else
       {:error, reason} ->
