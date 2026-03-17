@@ -6,6 +6,7 @@ defmodule Tymeslot.Availability.BusinessHours do
   """
 
   alias Tymeslot.Availability.WeeklySchedule
+  alias Tymeslot.DatabaseQueries.AvailabilityOverrideQueries
   alias Tymeslot.Utils.DateTimeUtils
 
   # Fallback business hours configuration (for backwards compatibility)
@@ -24,10 +25,20 @@ defmodule Tymeslot.Availability.BusinessHours do
   @spec get_business_hours_in_timezone(Date.t(), integer(), String.t(), String.t()) ::
           {:ok, map()} | {:error, String.t()}
   def get_business_hours_in_timezone(date, profile_id, owner_timezone, user_timezone) do
-    day_of_week = Date.day_of_week(date)
+    case AvailabilityOverrideQueries.get_override_by_profile_and_date(profile_id, date) do
+      %{override_type: "unavailable"} ->
+        {:ok, %{start_datetime: nil, end_datetime: nil, selected_date: date}}
 
-    case WeeklySchedule.get_day_availability(profile_id, day_of_week) do
-      %{is_available: true, start_time: start_time, end_time: end_time}
+      %{override_type: "custom_hours", start_time: start_time, end_time: end_time} ->
+        convert_business_hours_to_user_timezone(
+          date,
+          start_time,
+          end_time,
+          owner_timezone,
+          user_timezone
+        )
+
+      %{override_type: "available", start_time: start_time, end_time: end_time}
       when start_time != nil and end_time != nil ->
         convert_business_hours_to_user_timezone(
           date,
@@ -37,9 +48,24 @@ defmodule Tymeslot.Availability.BusinessHours do
           user_timezone
         )
 
-      _other ->
-        # Day not available - return empty availability window
-        {:ok, %{start_datetime: nil, end_datetime: nil, selected_date: date}}
+      _no_override ->
+        # No override or "available" without custom times — fall through to weekly schedule
+        day_of_week = Date.day_of_week(date)
+
+        case WeeklySchedule.get_day_availability(profile_id, day_of_week) do
+          %{is_available: true, start_time: start_time, end_time: end_time}
+          when start_time != nil and end_time != nil ->
+            convert_business_hours_to_user_timezone(
+              date,
+              start_time,
+              end_time,
+              owner_timezone,
+              user_timezone
+            )
+
+          _other ->
+            {:ok, %{start_datetime: nil, end_datetime: nil, selected_date: date}}
+        end
     end
   end
 
@@ -70,11 +96,20 @@ defmodule Tymeslot.Availability.BusinessHours do
   """
   @spec business_day?(Date.t(), integer()) :: boolean()
   def business_day?(date, profile_id) do
-    day_of_week = Date.day_of_week(date)
+    case AvailabilityOverrideQueries.get_override_by_profile_and_date(profile_id, date) do
+      %{override_type: "unavailable"} ->
+        false
 
-    case WeeklySchedule.get_day_availability(profile_id, day_of_week) do
-      %{is_available: true} -> true
-      _other -> false
+      %{override_type: type} when type in ["custom_hours", "available"] ->
+        true
+
+      _no_override ->
+        day_of_week = Date.day_of_week(date)
+
+        case WeeklySchedule.get_day_availability(profile_id, day_of_week) do
+          %{is_available: true} -> true
+          _other -> false
+        end
     end
   end
 
