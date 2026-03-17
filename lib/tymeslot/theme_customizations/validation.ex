@@ -252,8 +252,8 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   """
   @spec validate_file_size(Path.t(), file_kind()) :: validation_result()
   def validate_file_size(file_path, :image) do
-    # 10MB
-    max_size = 10 * 1024 * 1024
+    # 20MB — keep in sync with UploadConstraints.max_file_size(:image)
+    max_size = 20_000_000
     validate_file_size_limit(file_path, max_size, "Image")
   end
 
@@ -304,8 +304,8 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
 
   defp format_bytes(bytes) do
     cond do
-      bytes >= 1_048_576 -> "#{Float.round(bytes / 1_048_576, 1)}MB"
-      bytes >= 1024 -> "#{Float.round(bytes / 1024, 1)}KB"
+      bytes >= 1_000_000 -> "#{Float.round(bytes / 1_000_000, 1)}MB"
+      bytes >= 1_000 -> "#{Float.round(bytes / 1_000, 1)}KB"
       true -> "#{bytes}B"
     end
   end

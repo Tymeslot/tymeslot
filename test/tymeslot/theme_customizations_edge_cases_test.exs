@@ -3,6 +3,7 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
   @moduletag :themes
 
   alias Tymeslot.Profiles
+  alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.{Backgrounds, DataTransform, Defaults}
 
@@ -340,6 +341,31 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
       {:ok, second} = ThemeCustomizations.upsert_theme_customization(profile.id, "1", attrs)
 
       assert first.id == second.id
+    end
+  end
+
+  # ---- Cascade delete ----
+
+  describe "cascade delete when profile is deleted" do
+    test "customizations are removed from DB when profile is deleted" do
+      user = insert(:user)
+      {:ok, profile} = Profiles.get_or_create_profile(user.id)
+
+      {:ok, _customization} =
+        ThemeCustomizations.create_theme_customization(profile.id, "1", %{
+          "color_scheme" => "default",
+          "background_type" => "gradient",
+          "background_value" => "gradient_1"
+        })
+
+      # The customization exists before deletion
+      assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1") != nil
+
+      # Delete the profile — cascade should remove customizations
+      Repo.delete!(profile)
+
+      # Customization must no longer exist
+      assert ThemeCustomizations.get_by_profile_and_theme(profile.id, "1") == nil
     end
   end
 

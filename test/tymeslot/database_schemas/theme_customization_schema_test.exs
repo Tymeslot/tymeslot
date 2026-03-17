@@ -5,6 +5,7 @@ defmodule Tymeslot.DatabaseSchemas.ThemeCustomizationSchemaTest do
   @moduletag :schema
 
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
+  alias Tymeslot.Repo
 
   describe "background validation business rules" do
     test "uploaded video backgrounds require video path" do
@@ -65,6 +66,70 @@ defmodule Tymeslot.DatabaseSchemas.ThemeCustomizationSchemaTest do
       changeset = ThemeCustomizationSchema.changeset(%ThemeCustomizationSchema{}, attrs)
 
       assert changeset.valid?
+    end
+
+    test "gradient background with nil background_value is invalid" do
+      profile = insert(:profile)
+
+      attrs = %{
+        profile_id: profile.id,
+        theme_id: "1",
+        color_scheme: "default",
+        background_type: "gradient",
+        background_value: nil
+      }
+
+      changeset = ThemeCustomizationSchema.changeset(%ThemeCustomizationSchema{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).background_value != []
+    end
+
+    test "color background with nil background_value is invalid" do
+      profile = insert(:profile)
+
+      attrs = %{
+        profile_id: profile.id,
+        theme_id: "1",
+        color_scheme: "default",
+        background_type: "color",
+        background_value: nil
+      }
+
+      changeset = ThemeCustomizationSchema.changeset(%ThemeCustomizationSchema{}, attrs)
+
+      refute changeset.valid?
+      assert errors_on(changeset).background_value != []
+    end
+  end
+
+  describe "unique constraint format" do
+    test "duplicate profile_id + theme_id produces a unique constraint changeset error" do
+      profile = insert(:profile)
+
+      attrs = %{
+        profile_id: profile.id,
+        theme_id: "1",
+        color_scheme: "default",
+        background_type: "gradient",
+        background_value: "gradient_1"
+      }
+
+      {:ok, _first} =
+        %ThemeCustomizationSchema{}
+        |> ThemeCustomizationSchema.changeset(attrs)
+        |> Repo.insert()
+
+      {:error, changeset} =
+        %ThemeCustomizationSchema{}
+        |> ThemeCustomizationSchema.changeset(attrs)
+        |> Repo.insert()
+
+      # The error must be on :profile_id with constraint: :unique so that
+      # ThemeCustomizations.create_theme_customization/3 can detect and recover from it
+      assert Enum.any?(changeset.errors, fn {field, {_msg, opts}} ->
+               field == :profile_id and Keyword.get(opts, :constraint) == :unique
+             end)
     end
   end
 end
