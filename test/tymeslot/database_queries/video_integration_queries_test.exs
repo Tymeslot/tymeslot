@@ -75,8 +75,20 @@ defmodule Tymeslot.DatabaseQueries.VideoIntegrationQueriesTest do
     test "active integrations are ordered by name for user" do
       user = insert(:user)
 
-      insert(:video_integration, user: user, name: "Z Video", provider: "mirotalk", is_active: true)
-      insert(:video_integration, user: user, name: "A Video", provider: "google_meet", is_active: true)
+      insert(:video_integration,
+        user: user,
+        name: "Z Video",
+        provider: "mirotalk",
+        is_active: true
+      )
+
+      insert(:video_integration,
+        user: user,
+        name: "A Video",
+        provider: "google_meet",
+        is_active: true
+      )
+
       insert(:video_integration, user: user, name: "B Video", provider: "teams", is_active: true)
 
       result = VideoIntegrationQueries.list_active_for_user(user.id)

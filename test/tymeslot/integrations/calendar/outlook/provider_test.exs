@@ -342,10 +342,30 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
 
     test "sets transparency: opaque for busy events and transparent for free events" do
       events = [
-        %{id: "busy", show_as: "busy", start: %{"dateTime" => "2024-03-15T14:00:00Z"}, end: %{"dateTime" => "2024-03-15T15:00:00Z"}},
-        %{id: "tentative", show_as: "tentative", start: %{"dateTime" => "2024-03-15T14:00:00Z"}, end: %{"dateTime" => "2024-03-15T15:00:00Z"}},
-        %{id: "oom", show_as: "oom", start: %{"dateTime" => "2024-03-15T14:00:00Z"}, end: %{"dateTime" => "2024-03-15T15:00:00Z"}},
-        %{id: "free", show_as: "free", start: %{"dateTime" => "2024-03-15T14:00:00Z"}, end: %{"dateTime" => "2024-03-15T15:00:00Z"}}
+        %{
+          id: "busy",
+          show_as: "busy",
+          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
+          end: %{"dateTime" => "2024-03-15T15:00:00Z"}
+        },
+        %{
+          id: "tentative",
+          show_as: "tentative",
+          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
+          end: %{"dateTime" => "2024-03-15T15:00:00Z"}
+        },
+        %{
+          id: "oom",
+          show_as: "oom",
+          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
+          end: %{"dateTime" => "2024-03-15T15:00:00Z"}
+        },
+        %{
+          id: "free",
+          show_as: "free",
+          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
+          end: %{"dateTime" => "2024-03-15T15:00:00Z"}
+        }
       ]
 
       results = Provider.convert_events(events)

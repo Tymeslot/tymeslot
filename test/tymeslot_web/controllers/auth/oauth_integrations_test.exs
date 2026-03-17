@@ -320,7 +320,8 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         provider: "google_meet"
       }
 
-      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id, "google_meet" ->
+      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id,
+                                                                          "google_meet" ->
         {:error, :not_found}
       end)
 
@@ -361,7 +362,8 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         provider: "google_meet"
       }
 
-      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id, "google_meet" ->
+      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id,
+                                                                          "google_meet" ->
         {:ok, existing}
       end)
 

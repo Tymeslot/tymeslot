@@ -338,7 +338,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       refute render(view) =~ "Security settings saved successfully"
     end
 
-
     test "form input is preserved when domain update fails at validation", %{
       conn: conn,
       profile: profile
