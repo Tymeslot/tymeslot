@@ -112,10 +112,7 @@ defmodule Tymeslot.PaymentsTest do
     end
 
     test "returns error when transaction not found" do
-      expect(Tymeslot.Payments.StripeMock, :verify_session, fn "unknown" ->
-        {:ok, %{id: "unknown"}}
-      end)
-
+      # verify_session is never reached when there is no transaction record
       assert {:error, :transaction_not_found} =
                Payments.process_successful_payment("unknown", %{})
     end

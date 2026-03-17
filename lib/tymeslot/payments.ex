@@ -96,15 +96,26 @@ defmodule Tymeslot.Payments do
   def process_successful_payment(stripe_id, tax_info, discount_amount \\ 0) do
     Logger.info("Processing successful payment", stripe_id: stripe_id)
 
+    case DatabaseOperations.get_transaction_by_stripe_id(stripe_id) do
+      {:ok, %{status: "completed"}} ->
+        Logger.info("Payment already processed, skipping duplicate", stripe_id: stripe_id)
+        {:ok, :payment_processed}
+
+      {:ok, _transaction} ->
+        do_process_successful_payment(stripe_id, tax_info, discount_amount)
+
+      {:error, :transaction_not_found} ->
+        Logger.error("Transaction not found for successful payment", stripe_id: stripe_id)
+        {:error, :transaction_not_found}
+    end
+  end
+
+  defp do_process_successful_payment(stripe_id, tax_info, discount_amount) do
     with {:ok, _session} <- Config.stripe_provider().verify_session(stripe_id),
          {:ok, :payment_processed} <-
            DatabaseOperations.process_successful_payment(stripe_id, tax_info, discount_amount) do
       {:ok, :payment_processed}
     else
-      {:error, :transaction_not_found} ->
-        Logger.error("Transaction not found for successful payment", stripe_id: stripe_id)
-        {:error, :transaction_not_found}
-
       {:error, reason} ->
         Logger.error("Failed to process payment", reason: inspect(reason))
         {:error, reason}
