@@ -60,6 +60,45 @@ defmodule Tymeslot.ThemeCustomizationsStorageTest do
       end
     end
 
+    test "ensure_directory_exists/1 returns error tuple on permission denied" do
+      # Create a read-only parent directory so mkdir_p inside it fails with :eacces
+      parent = Path.join(System.tmp_dir!(), "tymeslot_readonly_#{:rand.uniform(100_000)}")
+      File.mkdir_p!(parent)
+      File.chmod!(parent, 0o444)
+
+      try do
+        child = Path.join(parent, "subdir")
+        assert {:error, :eacces} = Storage.ensure_directory_exists(child)
+      after
+        File.chmod!(parent, 0o755)
+        File.rm_rf!(parent)
+      end
+    end
+
+    test "store_background_image/3 returns error tuple when directory creation fails" do
+      # Point upload dir at a read-only location so ensure_directory_exists fails
+      readonly = Path.join(System.tmp_dir!(), "tymeslot_ro_#{:rand.uniform(100_000)}")
+      File.mkdir_p!(readonly)
+      File.chmod!(readonly, 0o444)
+
+      original_dir = Application.get_env(:tymeslot, :upload_directory)
+      Application.put_env(:tymeslot, :upload_directory, readonly)
+
+      temp_file = Path.join(System.tmp_dir!(), "test_img_#{:rand.uniform(100_000)}.jpg")
+      # GIF magic bytes so MediaValidator accepts it
+      File.write!(temp_file, "GIF89a" <> "data")
+
+      try do
+        result = Storage.store_background_image(1, "1", %{path: temp_file, filename: "bg.jpg"})
+        assert {:error, :eacces} = result
+      after
+        Application.put_env(:tymeslot, :upload_directory, original_dir)
+        File.chmod!(readonly, 0o755)
+        File.rm_rf!(readonly)
+        File.rm(temp_file)
+      end
+    end
+
     test "store_background_image/3 returns error for non-existent temp file" do
       result =
         Storage.store_background_image(1, "1", %{

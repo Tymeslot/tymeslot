@@ -205,5 +205,24 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
         assert render(view) =~ "Background image uploaded successfully"
       end)
     end
+
+    test "switching browsing type tabs renders each valid category", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      view
+      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> render_click()
+
+      # Each valid tab click should render without error
+      for label <- ["Solid Color", "Gradient", "Image", "Video"] do
+        html =
+          view
+          |> element("button", label)
+          |> render_click()
+
+        # Page remains functional after each tab switch
+        assert is_binary(html)
+      end
+    end
   end
 end
