@@ -16,7 +16,42 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlugTest do
         |> EmbedTokenPlug.call([])
 
       assert conn.assigns[:embed_token]
-      assert {:ok, "sarah"} = Token.verify(conn.assigns.embed_token)
+      assert {:ok, {"sarah", nil}} = Token.verify(conn.assigns.embed_token)
+    end
+
+    test "uses Referer header as parent_origin when present", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "embed=1")
+        |> put_req_header("referer", "https://mysite.com/page")
+        |> EmbedTokenPlug.call([])
+
+      assert conn.assigns[:embed_token]
+      assert {:ok, {"sarah", "https://mysite.com"}} = Token.verify(conn.assigns.embed_token)
+    end
+
+    test "Referer header takes precedence over parent-origin query param", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "embed=1&parent-origin=https://spoofed.com")
+        |> put_req_header("referer", "https://real-site.com/embed-page")
+        |> EmbedTokenPlug.call([])
+
+      assert conn.assigns[:embed_token]
+      assert {:ok, {"sarah", "https://real-site.com"}} = Token.verify(conn.assigns.embed_token)
+    end
+
+    test "falls back to parent-origin param when Referer is absent", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "embed=1&parent-origin=https://mysite.com")
+        |> EmbedTokenPlug.call([])
+
+      assert conn.assigns[:embed_token]
+      assert {:ok, {"sarah", "https://mysite.com"}} = Token.verify(conn.assigns.embed_token)
     end
 
     test "assigns embed_token for nested username paths", %{conn: conn} do
@@ -27,7 +62,7 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlugTest do
         |> EmbedTokenPlug.call([])
 
       assert conn.assigns[:embed_token]
-      assert {:ok, "sarah"} = Token.verify(conn.assigns.embed_token)
+      assert {:ok, {"sarah", nil}} = Token.verify(conn.assigns.embed_token)
     end
 
     test "does not assign embed_token when embed param is absent", %{conn: conn} do
@@ -87,10 +122,11 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlugTest do
         conn
         |> Map.put(:request_path, "/sarah")
         |> Map.put(:query_string, "theme=2&embed=1&locale=de")
+        |> put_req_header("referer", "https://example.com/page")
         |> EmbedTokenPlug.call([])
 
       assert conn.assigns[:embed_token]
-      assert {:ok, "sarah"} = Token.verify(conn.assigns.embed_token)
+      assert {:ok, {"sarah", "https://example.com"}} = Token.verify(conn.assigns.embed_token)
     end
   end
 end

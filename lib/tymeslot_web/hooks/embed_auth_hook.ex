@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
   When an embed token is present in the session (set by `EmbedTokenPlug`
   via the router's session function), this hook:
   1. Verifies the token signature and expiry
-  2. Checks the WebSocket `Origin` header against the profile's allowed domains
+  2. Checks the signed parent origin against the profile's allowed domains
   3. Sets `socket.assigns.embedded` to `true` on success
 
   When no embed token is present (non-embedded pages), the hook passes through.
@@ -33,71 +33,48 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHook do
 
   defp handle_embedded(embed_token, socket) do
     case Token.verify(embed_token) do
-      {:ok, username} ->
+      {:ok, {username, parent_origin}} ->
         if connected?(socket) do
-          # On the connected (WebSocket) render, verify the Origin header
-          # against the profile's allowed domains.
-          case verify_origin(socket, username) do
+          # On the connected (WebSocket) render, verify the signed parent_origin
+          # (set by embed.js at HTTP request time) against the profile's allowed domains.
+          # The WebSocket Origin header always reflects tymeslot's own origin when running
+          # inside an iframe, so parent_origin from the signed token is the correct value
+          # to check.
+          case verify_embedding(username, parent_origin) do
             :ok ->
               {:cont, assign(socket, :embedded, true)}
 
             {:error, reason} ->
               Logger.warning("Embed auth rejected",
                 reason: reason,
-                origin: get_origin_header(socket)
+                parent_origin: parent_origin
               )
 
               {:halt, redirect(socket, to: "/")}
           end
         else
-          # Disconnected (static) render — connect_info is unavailable,
-          # so origin verification is deferred to the WebSocket phase.
+          # Disconnected (static) render — origin verification is deferred to the
+          # WebSocket phase.
           {:cont, assign(socket, :embedded, true)}
         end
 
       {:error, reason} ->
-        Logger.warning("Embed auth rejected",
-          reason: reason,
-          origin: if(connected?(socket), do: get_origin_header(socket))
-        )
-
+        Logger.warning("Embed auth rejected", reason: reason)
         {:halt, redirect(socket, to: "/")}
     end
   end
 
-  defp verify_origin(socket, username) do
-    case get_origin_header(socket) do
+  defp verify_embedding(_username, nil), do: {:error, :missing_origin}
+
+  defp verify_embedding(username, parent_origin) do
+    case Profiles.get_profile_by_username(username) do
+      %{allowed_embed_domains: domains} ->
+        if origin_allowed?(parent_origin, domains),
+          do: :ok,
+          else: {:error, :origin_not_allowed}
+
       nil ->
-        # Browsers always send Origin on cross-origin WebSocket upgrades.
-        # Absence of Origin is unexpected for an embedded context and likely
-        # indicates a non-browser client bypassing the domain whitelist.
-        {:error, :missing_origin}
-
-      origin_url ->
-        case Profiles.get_profile_by_username(username) do
-          %{allowed_embed_domains: domains} ->
-            if origin_allowed?(origin_url, domains) do
-              :ok
-            else
-              {:error, :origin_not_allowed}
-            end
-
-          nil ->
-            {:error, :profile_not_found}
-        end
-    end
-  end
-
-  defp get_origin_header(socket) do
-    case get_connect_info(socket, :x_headers) do
-      headers when is_list(headers) ->
-        Enum.find_value(headers, fn
-          {"origin", value} -> value
-          _other -> nil
-        end)
-
-      _other ->
-        nil
+        {:error, :profile_not_found}
     end
   end
 

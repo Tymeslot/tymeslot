@@ -102,16 +102,26 @@ defmodule Tymeslot.Security.SecurityTest do
       assert {:ok, "none"} = Security.validate_domain("none")
     end
 
-    test "rejects domains with protocols" do
-      assert {:error, _reason} = Security.validate_domain("https://example.com")
-      assert {:error, _reason} = Security.validate_domain("http://localhost")
+    test "strips protocol and accepts the bare domain" do
+      assert {:ok, "example.com"} = Security.validate_domain("https://example.com")
+      assert {:ok, "localhost"} = Security.validate_domain("http://localhost")
     end
 
-    test "rejects domains with paths" do
+    test "strips protocol, trailing slash, and path" do
+      assert {:ok, "example.com"} = Security.validate_domain("https://example.com/")
+      assert {:ok, "example.com"} = Security.validate_domain("https://example.com/path")
+    end
+
+    test "strips protocol and port" do
+      assert {:ok, "example.com"} = Security.validate_domain("https://example.com:443")
+      assert {:ok, "localhost"} = Security.validate_domain("http://localhost:4000")
+    end
+
+    test "rejects domains with paths (no protocol)" do
       assert {:error, _reason} = Security.validate_domain("example.com/path")
     end
 
-    test "rejects domains with ports" do
+    test "rejects domains with ports (no protocol)" do
       assert {:error, _reason} = Security.validate_domain("example.com:8080")
       assert {:error, _reason} = Security.validate_domain("localhost:4000")
     end

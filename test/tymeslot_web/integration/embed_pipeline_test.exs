@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
       assert conn.assigns[:embed_token]
 
       # The token should be valid and contain the right username
-      assert {:ok, "tokenflow"} = Token.verify(conn.assigns.embed_token)
+      assert {:ok, {"tokenflow", _parent_origin}} = Token.verify(conn.assigns.embed_token)
     end
 
     test "request without ?embed=1 does not generate an embed token", %{conn: conn} do
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
       session = Router.scheduling_session(conn)
 
       assert is_binary(session["embed_token"])
-      assert {:ok, "sessionflow"} = Token.verify(session["embed_token"])
+      assert {:ok, {"sessionflow", _parent_origin}} = Token.verify(session["embed_token"])
     end
 
     test "scheduling_session/1 returns nil embed_token for non-embed requests", %{conn: conn} do
