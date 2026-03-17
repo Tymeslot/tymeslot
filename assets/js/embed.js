@@ -475,6 +475,11 @@
      * Open booking in a modal
      */
     open: function(username, options = {}) {
+      if (!username) {
+        console.error('Tymeslot: No username provided to open()');
+        return;
+      }
+
       // Remove existing modal if any
       this.close();
 
@@ -560,18 +565,28 @@
      * Initialize floating button
      */
     initFloating: function(username, options = {}) {
+      if (!username) {
+        console.error('Tymeslot: No username provided to initFloating()');
+        return;
+      }
+
       // Remove existing button if any
       const existing = document.getElementById('tymeslot-floating-button');
       if (existing) existing.remove();
-      
+
       const button = createFloatingButton(username, options);
       document.body.appendChild(button);
     },
-    
+
     /**
      * Programmatically embed inline
      */
     embed: function(selector, username, options = {}) {
+      if (!username) {
+        console.error('Tymeslot: No username provided to embed()');
+        return;
+      }
+
       const container = document.querySelector(selector);
       if (!container) {
         console.error('Tymeslot: Container not found:', selector);

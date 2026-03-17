@@ -17,6 +17,9 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
 
   require Logger
 
+  @valid_embed_types ~w(inline popup link floating)
+  @valid_tabs ~w(options security preview)
+
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # Extract props from parent
@@ -114,12 +117,14 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("switch_tab", %{"tab" => tab}, socket) do
+  def handle_event("switch_tab", %{"tab" => tab}, socket) when tab in @valid_tabs do
     {:noreply, assign(socket, :active_tab, tab)}
   end
 
+  def handle_event("switch_tab", _params, socket), do: {:noreply, socket}
+
   @impl Phoenix.LiveComponent
-  def handle_event("copy_code", %{"type" => type}, socket) do
+  def handle_event("copy_code", %{"type" => type}, socket) when type in @valid_embed_types do
     code = Helpers.embed_code(type, socket.assigns)
 
     socket = push_event(socket, "copy-to-clipboard", %{text: code})
@@ -128,10 +133,15 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
     {:noreply, socket}
   end
 
+  def handle_event("copy_code", _params, socket), do: {:noreply, socket}
+
   @impl Phoenix.LiveComponent
-  def handle_event("select_embed_type", %{"type" => type}, socket) do
+  def handle_event("select_embed_type", %{"type" => type}, socket)
+      when type in @valid_embed_types do
     {:noreply, assign(socket, :selected_embed_type, type)}
   end
+
+  def handle_event("select_embed_type", _params, socket), do: {:noreply, socket}
 
   @impl Phoenix.LiveComponent
   def handle_event("save_embed_domains", %{"allowed_domains" => domains_str}, socket) do
