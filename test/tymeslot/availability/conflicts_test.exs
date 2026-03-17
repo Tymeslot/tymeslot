@@ -180,10 +180,16 @@ defmodule Tymeslot.Availability.ConflictsTest do
   end
 
   describe "filter_available_slots/6 - transparency (free/busy)" do
-    test "does not block slots for Google Calendar free events (transparency: transparent)" do
+    setup do
       date = Date.add(Date.utc_today(), 7)
       slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
+      %{date: date, slots: slots}
+    end
 
+    test "does not block slots for Google Calendar free events (transparency: transparent)", %{
+      date: date,
+      slots: slots
+    } do
       events = [
         %{
           start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
@@ -199,10 +205,10 @@ defmodule Tymeslot.Availability.ConflictsTest do
       assert "11:00 AM" in result
     end
 
-    test "blocks slots for events with nil transparency (default busy)" do
-      date = Date.add(Date.utc_today(), 7)
-      slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
-
+    test "blocks slots for events with nil transparency (default busy)", %{
+      date: date,
+      slots: slots
+    } do
       events = [
         %{
           start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
@@ -218,10 +224,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
       assert "11:00 AM" in result
     end
 
-    test "blocks slots for explicitly opaque (busy) events" do
-      date = Date.add(Date.utc_today(), 7)
-      slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
-
+    test "blocks slots for explicitly opaque (busy) events", %{date: date, slots: slots} do
       events = [
         %{
           start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),

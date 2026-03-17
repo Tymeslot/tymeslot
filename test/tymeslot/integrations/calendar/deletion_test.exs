@@ -157,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
           target_calendar_id: "calendar-123"
         )
 
-      assert {:ok, _} = Deletion.delete_with_primary_reassignment(user.id, integration.id)
+      assert {:ok, _result} = Deletion.delete_with_primary_reassignment(user.id, integration.id)
 
       reloaded = MeetingTypeQueries.get_meeting_type!(meeting_type.id)
       assert reloaded.calendar_integration_id == nil

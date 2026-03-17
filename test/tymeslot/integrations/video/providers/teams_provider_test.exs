@@ -218,12 +218,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
     end
 
     test "returns error when API response is malformed JSON" do
-      config = %{
-        access_token: "valid_token",
-        refresh_token: "refresh_token",
-        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-        oauth_scope: "Calendars.ReadWrite"
-      }
+      config = valid_config()
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
@@ -235,12 +230,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
     end
 
     test "handles malformed or missing fields in Graph API response" do
-      config = %{
-        access_token: "valid_token",
-        refresh_token: "refresh_token",
-        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
-        oauth_scope: "Calendars.ReadWrite"
-      }
+      config = valid_config()
 
       expect(TeamsOAuthHelperMock, :validate_token, fn ^config -> {:ok, :valid} end)
 
@@ -340,5 +330,14 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
       assert metadata[:meeting_id] == "meeting123"
       assert metadata[:passcode] == "123456"
     end
+  end
+
+  defp valid_config do
+    %{
+      access_token: "valid_token",
+      refresh_token: "refresh_token",
+      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+      oauth_scope: "Calendars.ReadWrite"
+    }
   end
 end
