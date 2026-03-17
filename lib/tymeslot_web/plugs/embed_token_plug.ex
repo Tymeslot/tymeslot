@@ -5,6 +5,10 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlug do
   The token is stored in `conn.assigns[:embed_token]` and passed to
   LiveView hooks via the router's session function, enabling WebSocket
   connections that work without session cookies.
+
+  The session cookie is also dropped for embed requests: it would be
+  blocked by the browser anyway (SameSite=Lax in a cross-site iframe),
+  and auth for embedded pages is handled entirely by the embed token.
   """
 
   @behaviour Plug
@@ -24,6 +28,10 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlug do
     conn = fetch_query_params(conn)
 
     if conn.query_params["embed"] == "1" do
+      # Drop the session for embed requests so the browser doesn't receive a
+      # Set-Cookie header it would reject (SameSite=Lax in a cross-site iframe).
+      conn = configure_session(conn, drop: true)
+
       case PathUtils.extract_username_from_path(conn.request_path) do
         nil ->
           conn

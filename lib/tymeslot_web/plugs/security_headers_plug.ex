@@ -99,8 +99,8 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
   end
 
   # Builds the security headers based on allowed domains.
-  # CSP frame-ancestors is the primary security mechanism for modern browsers.
-  # X-Frame-Options is provided as a best-effort fallback for legacy browsers.
+  # CSP frame-ancestors is the sole embedding authority for modern browsers.
+  # X-Frame-Options is only set for non-embed pages (DENY or SAMEORIGIN).
   # Returns {frame_ancestors, x_frame_options | nil}
   defp build_security_headers(allowed_domains, true)
        when allowed_domains in [nil, [], ["none"]] do
@@ -136,26 +136,10 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
 
       frame_ancestors = "'self' #{domains}#{dev_localhost_suffix(allowed_domains, is_dev_env)}"
 
-      # X-Frame-Options ALLOW-FROM is deprecated and only supports a single domain.
-      # It is provided only for defense-in-depth for legacy browsers (IE, old Firefox).
-      # Chrome, Safari, and modern Firefox ignore it.
-      x_frame_options =
-        case allowed_domains do
-          [first_domain | _rest] ->
-            # X-Frame-Options ALLOW-FROM does not support wildcards or multiple domains.
-            # Modern browsers use CSP frame-ancestors anyway.
-            if String.starts_with?(first_domain, "*") do
-              nil
-            else
-              if first_domain in @local_hosts and is_dev_env do
-                "ALLOW-FROM http://#{first_domain}"
-              else
-                "ALLOW-FROM https://#{first_domain}"
-              end
-            end
-        end
-
-      {frame_ancestors, x_frame_options}
+      # X-Frame-Options ALLOW-FROM is deprecated and unsupported in modern browsers.
+      # When frame-ancestors is present in CSP, browsers ignore X-Frame-Options and
+      # log a console warning. Omit it entirely to keep the console clean.
+      {frame_ancestors, nil}
     end
   end
 

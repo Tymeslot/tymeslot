@@ -59,9 +59,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
         |> Map.put(:request_path, "/#{profile.username}")
         |> SecurityHeadersPlug.call(allow_embedding: true)
 
-      # X-Frame-Options should now allow embedding
-      assert [x_frame_options] = get_resp_header(conn, "x-frame-options")
-      assert x_frame_options =~ "ALLOW-FROM https://example.com"
+      # X-Frame-Options is omitted — frame-ancestors is the authority and browsers
+      # log a warning when both are present
+      assert get_resp_header(conn, "x-frame-options") == []
 
       # CSP frame-ancestors should list allowed domains plus www variants
       assert [csp] = get_resp_header(conn, "content-security-policy")
@@ -101,8 +101,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert [csp] = get_resp_header(conn, "content-security-policy")
       assert csp =~ "frame-ancestors 'self' http://localhost:* http://127.0.0.1:* http://::1:*"
 
-      assert [x_frame_options] = get_resp_header(conn, "x-frame-options")
-      assert x_frame_options == "ALLOW-FROM http://localhost"
+      assert get_resp_header(conn, "x-frame-options") == []
     end
 
     test "does not expand www for wildcard domains", %{conn: conn} do
@@ -164,36 +163,14 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert csp =~ "https://other-site.net"
     end
 
-    test "sets X-Frame-Options to first allowed domain", %{conn: conn, profile: profile} do
+    test "omits X-Frame-Options for embed-allowed pages", %{conn: conn, profile: profile} do
       conn =
         conn
         |> Map.put(:request_path, "/#{profile.username}")
         |> SecurityHeadersPlug.call(allow_embedding: true)
 
-      assert [x_frame_options] = get_resp_header(conn, "x-frame-options")
-      # Should use the first domain in the list
-      assert x_frame_options == "ALLOW-FROM https://example.com"
-    end
-
-    test "omits X-Frame-Options when first domain is a wildcard", %{conn: conn} do
-      user = insert(:user)
-
-      profile =
-        insert(:profile,
-          user: user,
-          username: "wildcardxframe",
-          allowed_embed_domains: ["*.example.com"]
-        )
-
-      conn =
-        conn
-        |> Map.put(:request_path, "/#{profile.username}")
-        |> SecurityHeadersPlug.call(allow_embedding: true)
-
-      assert [csp] = get_resp_header(conn, "content-security-policy")
-      assert csp =~ "https://*.example.com"
-
-      # X-Frame-Options should be omitted because it doesn't support wildcards
+      # X-Frame-Options is omitted entirely when frame-ancestors is present — browsers
+      # log a warning when both headers are set
       assert get_resp_header(conn, "x-frame-options") == []
     end
 
@@ -540,7 +517,9 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
       assert get_resp_header(conn, "x-frame-options") != []
     end
 
-    test "CSP and X-Frame-Options work together for restricted embedding", %{conn: conn} do
+    test "CSP frame-ancestors is the sole embedding authority for configured domains", %{
+      conn: conn
+    } do
       user = insert(:user)
 
       profile =
@@ -555,12 +534,11 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlugTest do
         |> Map.put(:request_path, "/#{profile.username}")
         |> SecurityHeadersPlug.call(allow_embedding: true)
 
-      # Both should restrict to the allowed domain
       assert [csp] = get_resp_header(conn, "content-security-policy")
       assert csp =~ "frame-ancestors 'self' https://trusted.com"
 
-      assert [x_frame_options] = get_resp_header(conn, "x-frame-options")
-      assert x_frame_options == "ALLOW-FROM https://trusted.com"
+      # X-Frame-Options is omitted — browsers warn when both are present
+      assert get_resp_header(conn, "x-frame-options") == []
     end
   end
 end

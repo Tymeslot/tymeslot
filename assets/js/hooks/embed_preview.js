@@ -227,7 +227,6 @@ export const EmbedPreview = {
 
     iframe.src = url.toString();
     iframe.setAttribute('title', 'Booking Preview');
-    iframe.setAttribute('allow', 'payment');
     iframe.style.width = '100%';
     iframe.style.height = '100%';
     iframe.style.minHeight = '400px';

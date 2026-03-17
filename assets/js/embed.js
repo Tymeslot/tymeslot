@@ -143,7 +143,6 @@
       opacity: 0;
     `;
     iframe.setAttribute('scrolling', 'auto');
-    iframe.setAttribute('allow', 'payment');
     iframe.setAttribute('title', 'Booking Widget');
 
     // Create wrapper for loading state.

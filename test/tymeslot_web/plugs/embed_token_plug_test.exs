@@ -19,6 +19,26 @@ defmodule TymeslotWeb.Plugs.EmbedTokenPlugTest do
       assert {:ok, {"sarah", nil}} = Token.verify(conn.assigns.embed_token)
     end
 
+    test "drops session for embed requests to suppress cross-site cookie rejection", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "embed=1")
+        |> EmbedTokenPlug.call([])
+
+      assert conn.private[:plug_session_info] == :drop
+    end
+
+    test "preserves session for non-embed requests", %{conn: conn} do
+      conn =
+        conn
+        |> Map.put(:request_path, "/sarah")
+        |> Map.put(:query_string, "")
+        |> EmbedTokenPlug.call([])
+
+      refute conn.private[:plug_session_info] == :drop
+    end
+
     test "uses Referer header as parent_origin when present", %{conn: conn} do
       conn =
         conn
