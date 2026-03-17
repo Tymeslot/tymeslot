@@ -200,8 +200,8 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   @spec render(map()) :: Phoenix.LiveView.Rendered.t()
   def render(assigns) do
     ~H"""
-    <div class="space-y-10 pb-20">
-      <!-- Webhook Modals -->
+    <div>
+      <!-- Modals (outside space-y layout to avoid affecting headline position) -->
       <Modals.delete_webhook_modal
         show={@show_delete_modal}
         on_cancel={JS.push("hide_delete_modal", target: @myself)}
@@ -243,6 +243,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         />
       <% end %>
 
+      <div class="space-y-10 pb-20">
       <%= cond do %>
         <% @show_webhook_form -> %>
         <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -325,6 +326,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
           <% end %>
         </div>
       <% end %>
+      </div>
     </div>
     """
   end

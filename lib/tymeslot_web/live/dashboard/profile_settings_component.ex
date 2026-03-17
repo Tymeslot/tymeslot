@@ -33,9 +33,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
     <div class="space-y-10 pb-20">
       <CoreComponents.section_header icon={:user} title="Profile Settings" saving={@saving} />
 
-      <div class="max-w-5xl mx-auto">
-        <div class="card-glass relative overflow-hidden">
-          <div class="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
+      <div class="card-glass relative overflow-hidden">
+        <div class="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
             <!-- Avatar Section -->
             <.live_component
               module={AvatarUploadComponent}
@@ -85,7 +84,6 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
                 </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
 
