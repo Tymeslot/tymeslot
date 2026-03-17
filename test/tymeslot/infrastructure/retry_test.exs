@@ -93,7 +93,7 @@ defmodule Tymeslot.Infrastructure.RetryTest do
     end
   end
 
-  defp backoff_with_counter(succeed_after, error_result, success_result, opts \\ []) do
+  defp backoff_with_counter(succeed_after, error_result, success_result, opts) do
     counter = new_counter()
 
     result =
