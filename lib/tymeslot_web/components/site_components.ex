@@ -226,8 +226,16 @@ defmodule TymeslotWeb.Components.SiteComponents do
 
   @doc """
   Site footer component with legal links.
+
+  ## Slots
+
+    * `supplemental_nav` — optional extra link columns appended after the built-in
+      footer links. Each slot entry should contain a heading and a list of links that
+      match the built-in column style.
+
   """
-  # No explicit attrs needed - uses config values via Application.get_env
+  slot :supplemental_nav, required: false
+
   @spec site_footer(map()) :: Phoenix.LiveView.Rendered.t()
   def site_footer(assigns) do
     ~H"""
@@ -358,6 +366,13 @@ defmodule TymeslotWeb.Components.SiteComponents do
                   </.link>
                 <% end %>
               <% end %>
+            <% end %>
+          </div>
+          <div :if={@supplemental_nav != []} class="mt-6 pt-4 border-t border-tymeslot-700 grid grid-cols-2 gap-8 text-left sm:grid-cols-3 lg:grid-cols-4">
+            <%= for col <- @supplemental_nav do %>
+              <div>
+                {render_slot(col)}
+              </div>
             <% end %>
           </div>
           <div class="mt-6 pt-4 border-t border-tymeslot-700">
