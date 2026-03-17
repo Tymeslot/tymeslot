@@ -62,27 +62,12 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   """
   @spec store_background_image(integer(), String.t(), map()) ::
           {:ok, String.t()} | {:error, term()}
-  def store_background_image(profile_id, theme_id, %{path: temp_path, filename: filename}) do
-    if MediaValidator.valid_image_file?(temp_path) do
-      dest_dir = get_theme_upload_directory(profile_id, theme_id, "images")
-      ensure_directory_exists(dest_dir)
-
-      case UploadHandler.store_file_atomically(
-             temp_path,
-             dest_dir,
-             filename,
-             %{operation: :store_background_image, profile_id: profile_id, theme_id: theme_id}
-           ) do
-        {:ok, sanitized_filename} ->
-          {:ok,
-           Path.join(["themes", to_string(profile_id), theme_id, "images", sanitized_filename])}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
-    else
-      {:error, :invalid_image_format}
-    end
+  def store_background_image(profile_id, theme_id, file_params) do
+    store_media_file(profile_id, theme_id, file_params,
+      kind: :image,
+      subdir: "images",
+      validator: &MediaValidator.valid_image_file?/1
+    )
   end
 
   @doc """
@@ -90,26 +75,45 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   """
   @spec store_background_video(integer(), String.t(), map()) ::
           {:ok, String.t()} | {:error, term()}
-  def store_background_video(profile_id, theme_id, %{path: temp_path, filename: filename}) do
-    if MediaValidator.valid_video_file?(temp_path) do
-      dest_dir = get_theme_upload_directory(profile_id, theme_id, "videos")
+  def store_background_video(profile_id, theme_id, file_params) do
+    store_media_file(profile_id, theme_id, file_params,
+      kind: :video,
+      subdir: "videos",
+      validator: &MediaValidator.valid_video_file?/1
+    )
+  end
+
+  @operation_names %{image: :store_background_image, video: :store_background_video}
+  @invalid_format_errors %{image: :invalid_image_format, video: :invalid_video_format}
+
+  defp store_media_file(profile_id, theme_id, %{path: temp_path, filename: filename}, opts) do
+    if opts[:validator].(temp_path) do
+      dest_dir = get_theme_upload_directory(profile_id, theme_id, opts[:subdir])
       ensure_directory_exists(dest_dir)
+
+      operation = Map.fetch!(@operation_names, opts[:kind])
 
       case UploadHandler.store_file_atomically(
              temp_path,
              dest_dir,
              filename,
-             %{operation: :store_background_video, profile_id: profile_id, theme_id: theme_id}
+             %{operation: operation, profile_id: profile_id, theme_id: theme_id}
            ) do
         {:ok, sanitized_filename} ->
           {:ok,
-           Path.join(["themes", to_string(profile_id), theme_id, "videos", sanitized_filename])}
+           Path.join([
+             "themes",
+             to_string(profile_id),
+             theme_id,
+             opts[:subdir],
+             sanitized_filename
+           ])}
 
         {:error, reason} ->
           {:error, reason}
       end
     else
-      {:error, :invalid_video_format}
+      {:error, Map.fetch!(@invalid_format_errors, opts[:kind])}
     end
   end
 end

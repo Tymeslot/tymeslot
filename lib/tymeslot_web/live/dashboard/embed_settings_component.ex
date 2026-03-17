@@ -201,16 +201,13 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
           {:ok, updated_profile} ->
             # Notify parent of profile update
             send(self(), {:profile_updated, updated_profile})
+            Flash.info(success_message)
 
             {:noreply,
              socket
              |> push_event("reset-form", %{id: "embed-domains-form"})
              |> assign(:profile, updated_profile)
-             |> assign(:allowed_domains, updated_profile.allowed_embed_domains || [])
-             |> then(fn s ->
-               Flash.info(success_message)
-               s
-             end)}
+             |> assign(:allowed_domains, updated_profile.allowed_embed_domains || [])}
 
           {:error, %Changeset{} = changeset} ->
             errors =

@@ -30,10 +30,10 @@ export const EmbedPreview = {
     }
   },
   ensureEmbedScript() {
-    if (!window.TymeslotBooking) {
+    if (!window.TymeslotBooking && !document.getElementById('tymeslot-embed-script')) {
       const { embedScriptUrl } = this.el.dataset;
       if (!embedScriptUrl) return;
-      
+
       const script = document.createElement('script');
       script.id = 'tymeslot-embed-script';
       script.src = embedScriptUrl;
