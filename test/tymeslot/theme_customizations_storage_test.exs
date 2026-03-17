@@ -1,5 +1,5 @@
 defmodule Tymeslot.ThemeCustomizationsStorageTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :utils
 
   alias Tymeslot.ThemeCustomizations.Storage
