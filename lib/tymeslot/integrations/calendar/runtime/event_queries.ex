@@ -81,11 +81,17 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
     Metrics.time_operation(:get_events_for_month, %{year: year, month: month}, fn ->
       Logger.info("Getting events for month", year: year, month: month, timezone: timezone)
 
-      # Calculate date range for the month
       start_date = Date.new!(year, month, 1)
       end_date = Date.end_of_month(start_date)
 
-      get_events_for_range_fresh(user_id, start_date, end_date)
+      # Convert month boundaries in user's timezone to UTC so we don't miss events
+      # near day boundaries (e.g. UTC+12 starts 12h before UTC midnight)
+      start_dt =
+        DateTime.shift_zone!(DateTime.new!(start_date, ~T[00:00:00], timezone), "Etc/UTC")
+
+      end_dt = DateTime.shift_zone!(DateTime.new!(end_date, ~T[23:59:59], timezone), "Etc/UTC")
+
+      get_events_for_range_fresh(user_id, start_dt, end_dt)
     end)
   end
 
@@ -100,7 +106,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
     {:error, :user_id_required}
   end
 
-  @spec get_events_for_range_fresh(user_id(), Date.t(), Date.t()) ::
+  @spec get_events_for_range_fresh(user_id(), Date.t() | DateTime.t(), Date.t() | DateTime.t()) ::
           {:ok, list(map())} | {:error, term()}
   def get_events_for_range_fresh(user_id, start_date, end_date) when is_integer(user_id) do
     RequestCoalescer.coalesce(user_id, start_date, end_date, fn ->
@@ -129,9 +135,9 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
   defp fetch_events_from_providers(user_id, start_date, end_date) do
     Logger.info("Fetching fresh events for range", start_date: start_date, end_date: end_date)
 
-    # Convert dates to DateTime for provider adapters
-    start_datetime = DateTime.new!(start_date, ~T[00:00:00], "Etc/UTC")
-    end_datetime = DateTime.new!(end_date, ~T[23:59:59], "Etc/UTC")
+    # Convert to DateTime for provider adapters (pass through if already DateTime)
+    start_datetime = to_utc_datetime(start_date, ~T[00:00:00])
+    end_datetime = to_utc_datetime(end_date, ~T[23:59:59])
 
     # Fetch events from all configured calendars
     all_clients = ClientManager.clients(user_id)
@@ -194,4 +200,9 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
   defp successful_result?(_result), do: false
 
   defp extract_events({:ok, events, _path}), do: events
+
+  defp to_utc_datetime(%DateTime{} = dt, _default_time), do: dt
+
+  defp to_utc_datetime(%Date{} = date, default_time),
+    do: DateTime.new!(date, default_time, "Etc/UTC")
 end

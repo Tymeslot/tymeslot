@@ -280,7 +280,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
              |> assign(:is_refreshing, true)
              |> start_async(:refresh_calendars, fn ->
                active
-               |> Task.async_stream(&Calendar.update_integration_with_discovery/1,
+               |> Task.async_stream(
+                 fn integration ->
+                   {integration.name, Calendar.update_integration_with_discovery(integration)}
+                 end,
                  max_concurrency: 5,
                  timeout: 30_000
                )
@@ -366,18 +369,22 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   @impl Phoenix.LiveComponent
   def handle_async(:refresh_calendars, {:ok, results}, socket) do
-    {successes, failures} =
-      Enum.reduce(results, {0, 0}, fn
-        {:ok, {:ok, _result}}, {s, f} -> {s + 1, f}
-        _other, {s, f} -> {s, f + 1}
+    {successes, failed_names} =
+      Enum.reduce(results, {0, []}, fn
+        {:ok, {_name, {:ok, _result}}}, {s, f} -> {s + 1, f}
+        {:ok, {name, _error}}, {s, f} -> {s, [name | f]}
+        _other, {s, f} -> {s, ["unknown" | f]}
       end)
+
+    failures = length(failed_names)
 
     cond do
       failures == 0 ->
         Flash.info("All calendars refreshed successfully")
 
       successes > 0 ->
-        Flash.error("#{successes} refreshed, #{failures} failed. Check connections.")
+        detail = format_refresh_failures(Enum.reverse(failed_names))
+        Flash.error("#{successes} refreshed, #{failures} failed: #{detail}")
 
       true ->
         Flash.error("All calendar refreshes failed.")
@@ -437,6 +444,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   defp normalize_provider("caldav"), do: :caldav
   defp normalize_provider("zimbra"), do: :zimbra
   defp normalize_provider(_other_provider), do: :caldav
+
+  defp format_refresh_failures(names) when length(names) <= 3 do
+    Enum.join(names, ", ")
+  end
+
+  defp format_refresh_failures(names) do
+    shown = names |> Enum.take(3) |> Enum.join(", ")
+    "#{shown} and #{length(names) - 3} more"
+  end
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}
 

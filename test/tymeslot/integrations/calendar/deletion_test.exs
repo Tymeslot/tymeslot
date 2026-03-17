@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
   @moduletag :integrations
 
   import Tymeslot.Factory
+  alias Tymeslot.DatabaseQueries.MeetingTypeQueries
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Integrations.Calendar.Deletion
   alias Tymeslot.Integrations.CalendarManagement
@@ -144,6 +145,23 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
 
       # All integrations should be deleted
       assert CalendarManagement.list_calendar_integrations(user.id) == []
+    end
+
+    test "clears target_calendar_id on meeting types when integration is deleted", %{user: user} do
+      integration = insert(:calendar_integration, user: user)
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          calendar_integration: integration,
+          target_calendar_id: "calendar-123"
+        )
+
+      assert {:ok, _} = Deletion.delete_with_primary_reassignment(user.id, integration.id)
+
+      reloaded = MeetingTypeQueries.get_meeting_type!(meeting_type.id)
+      assert reloaded.calendar_integration_id == nil
+      assert reloaded.target_calendar_id == nil
     end
 
     test "handles deletion when no primary is set", %{user: user} do
