@@ -86,6 +86,11 @@
   [class~="lg:grid-cols-2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* Hide reCAPTCHA v3 badge as per Google's terms (must include disclaimer) */
+.grecaptcha-badge {
+  visibility: hidden;
+}
+
 /* Honeypot security field - visually hidden from humans, accessible to bots */
 /* Uses !important to override any theme or layout CSS that might expose it */
 .honeypot-field {
