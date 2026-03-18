@@ -435,7 +435,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
             <% end %>
 
             <%!-- Supplemental nav columns injected by consumers (e.g. SaaS use cases) --%>
-            <div :for={col <- @supplemental_nav} class={Map.get(col, :class, nil)}>
+            <div :for={col <- @supplemental_nav} class={col[:class]}>
               {render_slot(col)}
             </div>
           </div>
