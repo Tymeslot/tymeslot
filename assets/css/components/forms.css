@@ -87,3 +87,54 @@ select.input {
   background-position: right 1rem center;
   background-size: 1.25rem;
 }
+
+
+/* Range slider — dark background variant (used on marketing calculator) */
+.slider-dark {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  cursor: pointer;
+  outline: none;
+  /* Initial background set by SliderInputHook; this is the fallback */
+  background: var(--color-neutral-700);
+}
+
+.slider-dark::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary-500);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(20, 184, 166, 0.45);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.slider-dark::-webkit-slider-thumb:hover {
+  background: var(--color-primary-400);
+  transform: scale(1.15);
+}
+
+.slider-dark::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-neutral-700);
+}
+
+.slider-dark::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-primary-500);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(20, 184, 166, 0.45);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.slider-dark::-moz-range-thumb:hover {
+  background: var(--color-primary-400);
+  transform: scale(1.15);
+}
