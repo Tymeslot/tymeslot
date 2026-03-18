@@ -17,7 +17,7 @@ defmodule Tymeslot.Embed.TokenTest do
     end
 
     test "parent_origin defaults to nil" do
-      assert {:ok, {"sarah", nil}} = Token.sign("sarah") |> Token.verify()
+      assert {:ok, {"sarah", nil}} = Token.verify(Token.sign("sarah"))
     end
 
     test "includes parent_origin in payload" do
