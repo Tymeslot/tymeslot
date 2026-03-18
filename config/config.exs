@@ -161,6 +161,16 @@ config :tymeslot, Tymeslot.Mailer, adapter: Swoosh.Adapters.Local
 # Configure Swoosh API client
 config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 
+# Resolve the deps directory for esbuild's NODE_PATH.
+# In standalone Core: config/ is at project_root/config/, deps at project_root/deps/ → ../deps
+# In umbrella:        config/ is at umbrella/apps/tymeslot/config/, deps at umbrella/deps/ → ../../../deps
+esbuild_node_path =
+  if File.dir?(Path.expand("../../../deps", __DIR__)) do
+    Path.expand("../../../deps", __DIR__)
+  else
+    Path.expand("../deps", __DIR__)
+  end
+
 # Configure esbuild
 config :esbuild,
   version: "0.17.11",
@@ -168,25 +178,25 @@ config :esbuild,
     args:
       ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
     cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+    env: %{"NODE_PATH" => esbuild_node_path}
   ],
   bundles: [
     args: ~w(js/bundles/auth.js js/bundles/dashboard.js js/bundles/public.js js/bundles/core.js
         --bundle --target=es2017 --outdir=../priv/static/assets/bundles
         --external:/fonts/* --external:/images/*),
     cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+    env: %{"NODE_PATH" => esbuild_node_path}
   ],
   embed: [
     args: ~w(js/embed.js --bundle --target=es2017 --outfile=../priv/static/embed.js),
     cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+    env: %{"NODE_PATH" => esbuild_node_path}
   ],
   iframe_embed: [
     args:
       ~w(js/iframe_embed.js --bundle --target=es2017 --outfile=../priv/static/assets/iframe_embed.js),
     cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+    env: %{"NODE_PATH" => esbuild_node_path}
   ]
 
 # Configure tailwind

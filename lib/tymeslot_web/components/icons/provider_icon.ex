@@ -49,12 +49,20 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
     # Ensure we have all required parameters
     if provider && provider_type && actual_size do
       # Build the path to the PNG file
-      "/icons/providers/#{provider_type}/#{actual_size}/#{provider}.png"
+      filename = normalize_provider_filename(provider)
+      "/icons/providers/#{provider_type}/#{actual_size}/#{filename}.png"
     else
       # Return nil if any parameter is missing
       nil
     end
   end
+
+  # Some providers are referenced by aliases (e.g. "google_calendar") but their
+  # icon files are stored under the shorter base name ("google").
+  defp normalize_provider_filename("google_calendar"), do: "google"
+  defp normalize_provider_filename("outlook_calendar"), do: "outlook"
+  defp normalize_provider_filename("nextcloud_calendar"), do: "nextcloud"
+  defp normalize_provider_filename(provider), do: provider
 
   defp determine_provider_type(provider) do
     case provider do
