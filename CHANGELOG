@@ -1,4 +1,13 @@
 
+[0.99.30]
+* saas: Add missing feature icon keys to validation allowlist and emoji map
+* core: Hide reCAPTCHA v3 badge per Google's terms
+* core: Clean up iframe embedding security headers
+* core: Use signed parent_origin for embed domain verification
+* saas: 27 profession landing pages at /for/:slug
+* core: Redesign site_footer with supplemental_nav slot and column layout
+* saas: Profession landing pages at /for/:slug
+* core: Add supplemental_nav slot to site_footer for injecting extra link columns
 [0.99.29]
 * core: Fix dashboard headline position on automation and profile pages
 * core: Use check_all_queues in healthcheck to handle test mode
