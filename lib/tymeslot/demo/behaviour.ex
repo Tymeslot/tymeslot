@@ -131,6 +131,19 @@ defmodule Tymeslot.Demo.Behaviour do
             ) :: {:ok, map()} | {:error, any()}
 
   @doc """
+  Gets availability for a date range (range-based alternative to get_month_availability).
+  """
+  @callback get_range_availability(
+              user_id :: integer(),
+              start_date :: Date.t(),
+              end_date :: Date.t(),
+              user_timezone :: String.t(),
+              organizer_profile :: map(),
+              context :: map() | nil,
+              duration_minutes :: integer() | nil
+            ) :: {:ok, map()} | {:error, any()}
+
+  @doc """
   Gets calendar days for a month.
   """
   @callback get_calendar_days(

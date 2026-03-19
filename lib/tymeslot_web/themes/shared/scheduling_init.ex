@@ -10,7 +10,14 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
 
   @spec assign_theme_state(LiveView.Socket.t(), String.t()) :: LiveView.Socket.t()
   def assign_theme_state(socket, theme_id) do
-    today = Date.utc_today()
+    timezone = socket.assigns[:user_timezone]
+
+    today =
+      case timezone && DateTime.now(timezone) do
+        {:ok, dt} -> DateTime.to_date(dt)
+        _other -> Date.utc_today()
+      end
+
     week_start = Date.beginning_of_week(today, :monday)
 
     socket

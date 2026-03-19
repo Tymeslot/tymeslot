@@ -17,14 +17,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   def update(assigns, socket) do
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
 
-    # Initial week calculation only if not already set by parent
-    today = Date.utc_today()
-    week_start = Date.beginning_of_week(today, :monday)
-
     {:ok,
      socket
      |> assign(filtered_assigns)
-     |> assign_new(:current_week_start, fn -> week_start end)}
+     |> assign_new(:current_week_start, fn ->
+       Date.beginning_of_week(Date.utc_today(), :monday)
+     end)}
   end
 
   @impl Phoenix.LiveComponent
@@ -216,7 +214,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       phx-click="next_week"
                       phx-target={@myself}
                       phx-disable-with="..."
-                      disabled={CalendarNavigation.next_week_disabled?(@current_week_start, @user_timezone)}
+                      disabled={CalendarNavigation.next_week_disabled?(@current_week_start, @user_timezone, @organizer_profile.advance_booking_days)}
                     >
                       →
                     </button>
@@ -224,7 +222,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 </div>
 
                 <div class="calendar-grid">
-                  <%= for day <- Helpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map) do %>
+                  <%= for day <- Helpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone) do %>
                     <button
                       class={[
                         "calendar-day",

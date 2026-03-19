@@ -224,36 +224,37 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   end
 
   @doc """
-  Gets month availability map showing which days have actual free slots.
+  Gets availability map for a date range showing which days have actual free slots.
 
-  This fetches calendar events for the month and calculates real availability
+  This fetches calendar events and calculates real availability
   including conflicts, used to grey out fully booked days.
 
   ## Parameters
     - user_id: The organizer's user ID
-    - year: Year to check
-    - month: Month to check (1-12)
+    - start_date: First date in the range (inclusive)
+    - end_date: Last date in the range (inclusive)
     - user_timezone: Timezone of the user viewing
     - organizer_profile: Profile with booking settings
     - context: Optional context map (replacing socket)
+    - duration_minutes: Optional meeting duration in minutes
 
   ## Returns
     - `{:ok, map}` where map keys are date strings ("2026-01-15") and values are booleans
     - `{:error, reason}` if calendar fetch fails
   """
-  @spec get_month_availability(
+  @spec get_range_availability(
           integer(),
-          integer(),
-          integer(),
+          Date.t(),
+          Date.t(),
           String.t(),
           map(),
           map() | nil,
           integer() | nil
         ) :: {:ok, map()} | {:error, any()}
-  def get_month_availability(
+  def get_range_availability(
         user_id,
-        year,
-        month,
+        start_date,
+        end_date,
         user_timezone,
         organizer_profile,
         context \\ nil,
@@ -266,10 +267,10 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
 
       demo_user?(organizer_profile) || ContextUtils.get_from_context(context, :demo_mode) ->
         # Delegate to demo provider
-        Demo.get_month_availability(
+        Demo.get_range_availability(
           user_id,
-          year,
-          month,
+          start_date,
+          end_date,
           user_timezone,
           organizer_profile,
           context,
@@ -277,13 +278,12 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
         )
 
       true ->
-        with {:ok, owner_timezone} <- get_owner_timezone(organizer_profile),
-             start_date <- Date.new!(year, month, 1) do
+        with {:ok, owner_timezone} <- get_owner_timezone(organizer_profile) do
           cache_key =
-            AvailabilityCache.month_availability_key(
+            AvailabilityCache.availability_range_key(
               user_id,
-              year,
-              month,
+              start_date,
+              end_date,
               user_timezone,
               duration_minutes
             )
@@ -303,9 +303,9 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
                 duration_minutes: duration_minutes
               }
 
-              Calculate.month_availability(
-                year,
-                month,
+              Calculate.range_availability(
+                start_date,
+                end_date,
                 owner_timezone,
                 user_timezone,
                 events,
@@ -411,10 +411,13 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   def perform_sync_availability_fetch(socket, context) do
     duration_minutes = get_duration_minutes(socket)
 
-    case get_month_availability(
+    {start_date, end_date} =
+      display_range(socket.assigns.current_year, socket.assigns.current_month)
+
+    case get_range_availability(
            socket.assigns.organizer_user_id,
-           socket.assigns.current_year,
-           socket.assigns.current_month,
+           start_date,
+           end_date,
            socket.assigns.user_timezone,
            socket.assigns.organizer_profile,
            context,
@@ -452,13 +455,14 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
     organizer_profile = socket.assigns.organizer_profile
 
     duration_minutes = get_duration_minutes(socket)
+    {start_date, end_date} = display_range(current_year, current_month)
 
     task =
       Task.async(fn ->
-        get_month_availability(
+        get_range_availability(
           organizer_user_id,
-          current_year,
-          current_month,
+          start_date,
+          end_date,
           user_timezone,
           organizer_profile,
           context,
@@ -533,12 +537,38 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   end
 
   @doc """
+  Computes the 42-day display range for a calendar grid.
+
+  Returns {start_date, end_date} matching the exact range that
+  `Calculate.get_calendar_days/5` renders. Uses a Sunday-start week
+  to match the existing calendar grid layout.
+  """
+  @spec display_range(integer(), integer()) :: {Date.t(), Date.t()}
+  def display_range(year, month) do
+    first_day = Date.new!(year, month, 1)
+    days_before = Date.day_of_week(first_day)
+    days_before = if days_before == 7, do: 0, else: days_before
+    start_date = Date.add(first_day, -days_before)
+    end_date = Date.add(start_date, 41)
+    {start_date, end_date}
+  end
+
+  @doc """
   Gets calendar days for a week view.
   """
-  @spec get_week_days(Date.t(), map(), map() | atom() | nil) :: [map()]
-  def get_week_days(week_start, organizer_profile, availability_map \\ nil) do
+  @spec get_week_days(Date.t(), map(), map() | atom() | nil, String.t()) :: [map()]
+  def get_week_days(
+        week_start,
+        organizer_profile,
+        availability_map \\ nil,
+        user_timezone \\ "Etc/UTC"
+      ) do
     if organizer_profile do
-      today = Date.utc_today()
+      today =
+        case DateTime.now(user_timezone) do
+          {:ok, dt} -> DateTime.to_date(dt)
+          _other -> Date.utc_today()
+        end
 
       Enum.map(0..6, fn day_offset ->
         date = Date.add(week_start, day_offset)
@@ -553,7 +583,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
               {Map.get(availability_map, date_string, false), false}
 
             true ->
-              {day_available?(date, organizer_profile), false}
+              {day_available?(date, organizer_profile, today), false}
           end
 
         %{
@@ -570,8 +600,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
     end
   end
 
-  defp day_available?(date, organizer_profile) do
-    today = Date.utc_today()
+  defp day_available?(date, organizer_profile, today) do
     is_weekday = BusinessHours.business_day?(date, organizer_profile.id)
     is_future = Date.compare(date, today) != :lt
     is_within_limit = Date.diff(date, today) <= organizer_profile.advance_booking_days

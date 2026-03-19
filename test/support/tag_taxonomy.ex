@@ -46,6 +46,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :notifications,
       :payments,
       :profiles,
+      :scheduling,
       :security,
       :themes,
       :utils,

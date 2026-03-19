@@ -217,6 +217,66 @@ defmodule Tymeslot.Availability.CalculateTest do
     end
   end
 
+  describe "range_availability/6" do
+    test "returns availability for the exact date range requested" do
+      start_date = ~D[2027-03-28]
+      end_date = ~D[2027-04-06]
+
+      assert {:ok, availability_map} =
+               Calculate.range_availability(
+                 start_date,
+                 end_date,
+                 "America/New_York",
+                 "America/New_York",
+                 [],
+                 %{}
+               )
+
+      assert map_size(availability_map) == 10
+
+      # Contains keys from both March and April
+      assert Map.has_key?(availability_map, "2027-03-28")
+      assert Map.has_key?(availability_map, "2027-03-31")
+      assert Map.has_key?(availability_map, "2027-04-01")
+      assert Map.has_key?(availability_map, "2027-04-06")
+    end
+
+    test "marks past dates as unavailable" do
+      assert {:ok, availability_map} =
+               Calculate.range_availability(
+                 ~D[2020-06-25],
+                 ~D[2020-07-05],
+                 "America/New_York",
+                 "America/New_York",
+                 [],
+                 %{}
+               )
+
+      assert Enum.all?(availability_map, fn {_date, available} -> available == false end)
+    end
+
+    test "respects max_advance_booking_days in config" do
+      config = %{max_advance_booking_days: 7}
+
+      # Check a range far in the future
+      future_start = Date.add(Date.utc_today(), 60)
+      future_end = Date.add(future_start, 10)
+
+      assert {:ok, availability_map} =
+               Calculate.range_availability(
+                 future_start,
+                 future_end,
+                 "America/New_York",
+                 "America/New_York",
+                 [],
+                 config
+               )
+
+      # All dates should be unavailable since they're beyond 7 days
+      assert Enum.all?(availability_map, fn {_date, available} -> available == false end)
+    end
+  end
+
   describe "month_availability/6" do
     test "returns availability map for a month" do
       assert {:ok, availability_map} =

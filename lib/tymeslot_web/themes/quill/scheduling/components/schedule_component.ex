@@ -226,14 +226,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             phx-click="next_week"
                             phx-target={@myself}
                             phx-disable-with="..."
-                            disabled={CalendarNavigation.next_week_disabled?(@current_week_start, @user_timezone)}
+                            disabled={CalendarNavigation.next_week_disabled?(@current_week_start, @user_timezone, @organizer_profile.advance_booking_days)}
                             class="calendar-nav-button p-1 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                           >
                             →
                           </button>
                         </div>
                         <div class="week-day-strip">
-                          <%= for day <- Helpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map) do %>
+                          <%= for day <- Helpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone) do %>
                             <button
                               class={[
                                 "week-day-cell",
@@ -294,7 +294,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                   CalendarNavigation.next_month_disabled?(
                                     @current_year,
                                     @current_month,
-                                    @user_timezone
+                                    @user_timezone,
+                                    @organizer_profile.advance_booking_days
                                   )
                               }
                               class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"

@@ -16,10 +16,10 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigation do
   @doc """
   Checks if next month navigation should be disabled.
   """
-  @spec next_month_disabled?(integer(), integer(), String.t()) :: boolean()
-  def next_month_disabled?(current_year, current_month, user_timezone) do
+  @spec next_month_disabled?(integer(), integer(), String.t(), integer()) :: boolean()
+  def next_month_disabled?(current_year, current_month, user_timezone, advance_booking_days) do
     today = today_in_timezone(user_timezone)
-    max_booking_date = Date.add(today, max_advance_booking_days())
+    max_booking_date = Date.add(today, advance_booking_days)
 
     next_month_first_day =
       if current_month == 12 do
@@ -46,10 +46,10 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigation do
   Checks if next week navigation should be disabled.
   Disabled when the next week would start entirely past the max booking date.
   """
-  @spec next_week_disabled?(Date.t(), String.t()) :: boolean()
-  def next_week_disabled?(current_week_start, user_timezone) do
+  @spec next_week_disabled?(Date.t(), String.t(), integer()) :: boolean()
+  def next_week_disabled?(current_week_start, user_timezone, advance_booking_days) do
     today = today_in_timezone(user_timezone)
-    max_booking_date = Date.add(today, max_advance_booking_days())
+    max_booking_date = Date.add(today, advance_booking_days)
     next_week_start = Date.add(current_week_start, 7)
     Date.compare(next_week_start, max_booking_date) == :gt
   end
@@ -59,9 +59,5 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigation do
       {:ok, dt} -> DateTime.to_date(dt)
       _other -> Date.utc_today()
     end
-  end
-
-  defp max_advance_booking_days do
-    Application.get_env(:tymeslot, :scheduling)[:max_advance_booking_days] || 90
   end
 end

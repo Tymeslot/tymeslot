@@ -15,4 +15,13 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
   def month_availability_key(user_id, year, month, timezone, duration) do
     {:month_availability, user_id, year, month, timezone, duration}
   end
+
+  @doc """
+  Cache key for range-based availability lookups.
+  """
+  @spec availability_range_key(integer(), Date.t(), Date.t(), String.t(), integer() | nil) ::
+          {atom(), integer(), Date.t(), Date.t(), String.t(), integer() | nil}
+  def availability_range_key(user_id, start_date, end_date, timezone, duration) do
+    {:range_availability, user_id, start_date, end_date, timezone, duration}
+  end
 end

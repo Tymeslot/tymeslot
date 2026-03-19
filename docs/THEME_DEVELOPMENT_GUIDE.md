@@ -81,8 +81,8 @@ assets/css/scheduling/themes/[theme_name]/
 | `BookingFlow` | Form validation and submission |
 | `LocalizationHelpers` | Date/time/duration formatting: `format_date/1`, `format_duration/1`, `format_booking_datetime/3`, `format_time_by_locale/1` (respects locale 12h/24h setting — always use this for time slot display), `day_name_short/1` (localized weekday abbreviations), `get_week_display/1` (formatted week range string), `sort_meeting_types/1` (natural sort — use in `update/2` for consistent ordering) |
 | `Tymeslot.Timezones` | Human-readable timezone display: `Timezones.format/1` — use this in confirmation and booking components instead of string-splitting the IANA timezone identifier |
-| `Scheduling.Helpers` | Calendar/week day generation (`get_week_days/3`), week navigation (`handle_week_navigation/2`), availability fetching, slot parsing |
-| `Scheduling.CalendarNavigation` | Navigation boundary checks: `prev/next_month_disabled?/3`, `prev/next_week_disabled?/2` — wire these to nav button `disabled` attributes |
+| `Scheduling.Helpers` | Calendar/week day generation (`get_week_days/4` — pass `@user_timezone`), week navigation (`handle_week_navigation/2`), availability fetching, slot parsing, `display_range/2` for visible date boundaries |
+| `Scheduling.CalendarNavigation` | Navigation boundary checks: `prev_month_disabled?/3`, `next_month_disabled?/4` (pass `@organizer_profile.advance_booking_days`), `prev_week_disabled?/2`, `next_week_disabled?/3` (pass `advance_booking_days`) — wire these to nav button `disabled` attributes |
 | `PathHandlers` | Navigation with locale preservation |
 | `Customization.Helpers` | Theme customization CSS generation |
 | `Customization.Video` | Video background rendering |

@@ -123,6 +123,19 @@ defmodule Tymeslot.Demo.NoOp do
   end
 
   @impl Tymeslot.Demo.Behaviour
+  def get_range_availability(
+        _user_id,
+        _start_date,
+        _end_date,
+        _user_timezone,
+        _organizer_profile,
+        _context \\ nil,
+        _duration_minutes \\ nil
+      ) do
+    {:ok, %{}}
+  end
+
+  @impl Tymeslot.Demo.Behaviour
   def get_month_availability(
         _user_id,
         _year,

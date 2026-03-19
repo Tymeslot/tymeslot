@@ -135,26 +135,30 @@ defmodule Tymeslot.Availability.Calculate do
   end
 
   @doc """
-  Gets availability status for multiple dates in a month.
-  Optimized for calendar display.
+  Gets availability status for an arbitrary date range.
+  Optimized for calendar display where visible dates may span multiple months.
+
+  ## Parameters
+    - start_date: First date in the range (inclusive)
+    - end_date: Last date in the range (inclusive)
+    - owner_timezone: Timezone of the calendar owner
+    - user_timezone: Timezone of the user viewing availability
+    - events: List of existing events
+    - config: Optional configuration overrides
 
   ## Returns
     Map of date strings to availability boolean
   """
-  @spec month_availability(integer(), integer(), String.t(), String.t(), [map()], map()) ::
+  @spec range_availability(Date.t(), Date.t(), String.t(), String.t(), [map()], map()) ::
           {:ok, map()}
-  def month_availability(
-        year,
-        month,
+  def range_availability(
+        start_date,
+        end_date,
         owner_timezone,
         user_timezone,
         events,
         config \\ %{}
       ) do
-    # Get the date range for the month
-    start_date = Date.new!(year, month, 1)
-    end_date = Date.end_of_month(start_date)
-
     # Get today's date in user timezone
     today =
       case DateTime.now(user_timezone) do
@@ -172,7 +176,7 @@ defmodule Tymeslot.Availability.Calculate do
     # Read duration once (if present)
     duration_minutes = Map.get(config, :duration_minutes, 30)
 
-    # Check each date in the month
+    # Check each date in the range
     availability_map =
       Enum.reduce(Date.range(start_date, end_date), %{}, fn date, acc ->
         date_string = Date.to_string(date)
@@ -194,6 +198,31 @@ defmodule Tymeslot.Availability.Calculate do
       end)
 
     {:ok, availability_map}
+  end
+
+  @doc """
+  Gets availability status for multiple dates in a month.
+  Optimized for calendar display.
+
+  Delegates to `range_availability/6` using the first and last day of the month.
+
+  ## Returns
+    Map of date strings to availability boolean
+  """
+  @spec month_availability(integer(), integer(), String.t(), String.t(), [map()], map()) ::
+          {:ok, map()}
+  def month_availability(
+        year,
+        month,
+        owner_timezone,
+        user_timezone,
+        events,
+        config \\ %{}
+      ) do
+    start_date = Date.new!(year, month, 1)
+    end_date = Date.end_of_month(start_date)
+
+    range_availability(start_date, end_date, owner_timezone, user_timezone, events, config)
   end
 
   @doc """

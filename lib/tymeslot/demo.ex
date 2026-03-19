@@ -99,6 +99,35 @@ defmodule Tymeslot.Demo do
           context
         )
 
+  @spec get_range_availability(
+          integer(),
+          Date.t(),
+          Date.t(),
+          String.t(),
+          map(),
+          map() | nil,
+          integer() | nil
+        ) :: {:ok, map()} | {:error, any()}
+  def get_range_availability(
+        user_id,
+        start_date,
+        end_date,
+        user_timezone,
+        organizer_profile,
+        context \\ nil,
+        duration_minutes \\ nil
+      ),
+      do:
+        provider().get_range_availability(
+          user_id,
+          start_date,
+          end_date,
+          user_timezone,
+          organizer_profile,
+          context,
+          duration_minutes
+        )
+
   @spec get_month_availability(
           integer(),
           integer(),
