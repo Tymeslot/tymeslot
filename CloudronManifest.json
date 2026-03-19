@@ -20,6 +20,7 @@
   },
   "manifestVersion": 2,
   "tags": ["calendar", "scheduling", "meetings", "caldav"],
+  "memoryLimit": 1073741824,
   "minBoxVersion": "9.1.0",
   "changelog": "file://CHANGELOG",
   "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
