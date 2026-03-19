@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Layouts do
   import TymeslotWeb.Components.CoreComponents
 
   alias TymeslotWeb.Endpoint
+  alias TymeslotWeb.Themes.Core.Registry
 
   embed_templates "layouts/*"
 
@@ -143,6 +144,28 @@ defmodule TymeslotWeb.Layouts do
       "1" -> "quill-theme"
       "2" -> "rhythm-theme"
       _other -> "quill-theme"
+    end
+  end
+
+  @default_embed_height 400
+
+  @doc """
+  Returns the preferred embed height (in pixels) for a given theme.
+
+  Each theme declares its preferred height in `theme_config()` under the
+  `:preferred_embed_height` key.  When the scheduling page is loaded inside
+  an iframe, `iframe_embed.js` reads this value from
+  `data-preferred-embed-height` on `<html>` and posts it to the parent so
+  `embed.js` can size the iframe instead of using the generic default.
+  """
+  @spec preferred_embed_height(String.t()) :: pos_integer()
+  def preferred_embed_height(theme_id) do
+    case Registry.get_theme_by_id(theme_id) do
+      {:ok, theme} ->
+        theme.module.theme_config()[:preferred_embed_height] || @default_embed_height
+
+      {:error, _} ->
+        @default_embed_height
     end
   end
 

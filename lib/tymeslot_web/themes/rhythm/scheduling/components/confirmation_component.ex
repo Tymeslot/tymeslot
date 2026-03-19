@@ -27,9 +27,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div data-locale={@locale}>
-      <!-- Scheduling Box with Glass Effect -->
-      <div class="scheduling-box">
+    <div class="scheduling-box" data-locale={@locale}>
         <div class="slide-container">
           <div class="slide active">
             <div class="slide-content confirmation-slide">
@@ -144,7 +142,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
             </div>
           </div>
         </div>
-      </div>
     </div>
     """
   end

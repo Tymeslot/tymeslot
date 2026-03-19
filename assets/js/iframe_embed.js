@@ -4,7 +4,12 @@
  * When the scheduling page is loaded inside an iframe (via embed.js),
  * this module:
  * 1. Adds a `data-embedded` attribute to <html> so CSS can adapt
- * 2. Uses ResizeObserver to post height changes to the parent window
+ * 2. Sets `data-embed-mode` ("inline" or "modal") for mode-specific CSS
+ * 3. For inline embeds: posts the theme-preferred height (from
+ *    data-preferred-embed-height on <html>) so embed.js can size the
+ *    iframe instead of using the generic 400px default
+ * 4. For modal embeds: uses ResizeObserver to post height changes to the
+ *    parent window so the modal can size to content
  */
 
 (function () {
@@ -16,15 +21,15 @@
   // Signal to CSS that we're in an iframe
   document.documentElement.setAttribute("data-embedded", "");
 
-  // Post height to parent so embed.js can resize the iframe.
-  // Use body.offsetHeight (actual content) instead of scrollHeight
-  // because scrollHeight = max(viewport, content) and never shrinks
-  // below the iframe's initial viewport size.
-  //
-  // Derive the allowed parent origin. Prefer document.referrer (browser-
-  // provided, hard to spoof). Fall back to the parent-origin URL param
-  // that embed.js passes explicitly — this covers embedding pages that
-  // strip the Referrer header (e.g. referrerpolicy="no-referrer").
+  // Read embed mode from URL params (set by embed.js)
+  const params = new URLSearchParams(window.location.search);
+  const embedMode = params.get('embed-mode') || 'modal';
+  document.documentElement.setAttribute("data-embed-mode", embedMode);
+
+  // --- Derive the allowed parent origin ---
+  // Prefer document.referrer (browser-provided, hard to spoof). Fall back
+  // to the parent-origin URL param that embed.js passes explicitly — this
+  // covers embedding pages that strip the Referrer header.
   // We never broadcast to "*".
   let targetOrigin = null;
   try {
@@ -38,7 +43,6 @@
 
   if (!targetOrigin) {
     try {
-      const params = new URLSearchParams(window.location.search);
       const paramOrigin = params.get('parent-origin');
       if (paramOrigin) {
         const parsed = new URL(paramOrigin);
@@ -52,9 +56,6 @@
   }
 
   if (!targetOrigin) {
-    // Auto-resize is disabled when the embedding page strips the Referrer header
-    // and embed.js did not pass a parent-origin param. The widget will still
-    // render correctly but the iframe height will not auto-adjust to content.
     console.warn(
       'Tymeslot: auto-resize disabled — parent origin could not be determined ' +
       'from document.referrer or parent-origin param. Check that the embedding ' +
@@ -63,6 +64,27 @@
     return;
   }
 
+  // --- Inline mode: post theme-preferred height, then done ---
+  // The theme declares its ideal embed height via data-preferred-embed-height
+  // on <html>. Post it once so embed.js can size the iframe instead of using
+  // the generic 400px default.
+  if (embedMode === 'inline') {
+    const preferred = parseInt(
+      document.documentElement.getAttribute("data-preferred-embed-height"), 10
+    );
+    if (preferred > 0) {
+      window.parent.postMessage(
+        { type: "tymeslot-preferred-height", height: preferred },
+        targetOrigin
+      );
+    }
+    return;
+  }
+
+  // --- Modal mode: post content height so embed.js can size the wrapper ---
+  // Use body.offsetHeight (actual content) instead of scrollHeight
+  // because scrollHeight = max(viewport, content) and never shrinks
+  // below the iframe's initial viewport size.
   let lastPostedHeight = null;
   let rafPending = false;
 

@@ -72,34 +72,36 @@
   window.addEventListener('message', function(e) {
     if (e.origin !== BASE_URL) return;
     if (!e.data || typeof e.data !== 'object') return;
-    if (e.data.type === 'tymeslot-resize') {
-      var h = Number(e.data.height);
-      if (!Number.isFinite(h) || h <= 0) return;
 
-      var iframes = document.querySelectorAll('iframe[title="Booking Widget"]');
-      iframes.forEach(function(iframe) {
-        if (iframe.contentWindow === e.source) {
-          var wrapper = iframe.parentNode;
-          if (!wrapper) return;
+    var type = e.data.type;
+    if (type !== 'tymeslot-resize' && type !== 'tymeslot-preferred-height') return;
 
-          if (wrapper.dataset.constrained) {
-            // Constrained: shrink to content but never exceed the constraint
-            var cap = parseInt(wrapper.dataset.constraintHeight, 10);
-            if (!cap || cap <= 0) return;
-            wrapper.style.height = Math.min(h, cap) + 'px';
-          } else {
-            var floor = parseInt(wrapper.dataset.minHeight || '0', 10);
-            if (floor > 0) {
-              wrapper.style.height = Math.max(h, floor) + 'px';
-              wrapper.style.minHeight = floor + 'px';
-            } else {
-              wrapper.style.height = h + 'px';
-              wrapper.style.minHeight = '0';
-            }
-          }
-        }
-      });
-    }
+    var h = Number(e.data.height);
+    if (!Number.isFinite(h) || h <= 0) return;
+
+    var iframes = document.querySelectorAll('iframe[title="Booking Widget"]');
+    iframes.forEach(function(iframe) {
+      if (iframe.contentWindow !== e.source) return;
+      var wrapper = iframe.parentNode;
+      if (!wrapper) return;
+
+      if (type === 'tymeslot-preferred-height') {
+        // Theme-preferred height for inline embeds.
+        // Only apply when the embedder didn't set a custom data-min-height
+        // (wrapper.dataset.customHeight is set when the embedder provides one).
+        if (wrapper.dataset.constrained || wrapper.dataset.customHeight) return;
+        h = Math.max(h, 200);
+        wrapper.style.height = h + 'px';
+        wrapper.style.minHeight = h + 'px';
+        wrapper.dataset.minHeight = String(h);
+      } else if (wrapper.dataset.constrained) {
+        // tymeslot-resize — constrained (modal): shrink to content
+        // but never exceed the constraint.
+        var cap = parseInt(wrapper.dataset.constraintHeight, 10);
+        if (!cap || cap <= 0) return;
+        wrapper.style.height = Math.min(h, cap) + 'px';
+      }
+    });
   });
 
   /**
@@ -129,6 +131,14 @@
     // Signal embedded context to the server for token generation
     url.searchParams.append('embed', '1');
 
+    // Inline embeds use a fixed viewport — the embedded page fills the iframe
+    // exactly (height: 100%, overflow: hidden) so content adapts to the
+    // available space rather than causing iframe-level scrolling.
+    // Modal embeds omit this so the page can report its content height.
+    if (options._mode !== 'modal') {
+      url.searchParams.append('embed-mode', 'inline');
+    }
+
     // Pass parent origin so iframe_embed.js can post resize messages
     // even when the embedding page strips the Referrer header.
     url.searchParams.append('parent-origin', window.location.origin);
@@ -148,6 +158,7 @@
     // Create wrapper for loading state.
     // Uses min-height as default for unconstrained containers;
     // constrained containers clip the wrapper and the iframe scrolls internally.
+    const hasCustomHeight = !!(options.minHeight && parseInt(options.minHeight, 10) > 0);
     const minHeight = Math.max(parseInt(options.minHeight, 10) || 400, 200);
     const maxWidth = Math.min(Math.max(parseInt(options.maxWidth, 10) || 640, 200), 2000);
     const wrapper = document.createElement('div');
@@ -159,6 +170,7 @@
     wrapper.style.height = minHeight + 'px';
     wrapper.style.minHeight = minHeight + 'px';
     wrapper.dataset.minHeight = String(minHeight);
+    if (hasCustomHeight) wrapper.dataset.customHeight = 'true';
 
     const loader = document.createElement('div');
     loader.className = 'tymeslot-loader';
@@ -252,7 +264,7 @@
   /**
    * Create modal overlay
    */
-  function createModal() {
+  function createModal(contentMaxWidth = 640) {
     const modal = document.createElement('div');
     modal.id = 'tymeslot-modal';
     modal.setAttribute('role', 'dialog');
@@ -280,7 +292,7 @@
     container.style.cssText = `
       position: relative;
       width: 100%;
-      max-width: min(1000px, calc(100vw - 32px));
+      max-width: min(${contentMaxWidth}px, calc(100vw - 32px));
       max-height: ${maxH}px;
       background: transparent;
       border-radius: 16px;
@@ -489,8 +501,9 @@
       this.close();
       if (!validateUsername('open', username)) return;
 
-      const { modal, container, closeButton } = createModal();
-      const wrapper = createBookingIframe(username, options);
+      const contentMaxWidth = Math.min(Math.max(parseInt(options.maxWidth, 10) || 640, 200), 2000);
+      const { modal, container, closeButton } = createModal(contentMaxWidth);
+      const wrapper = createBookingIframe(username, Object.assign({}, options, { _mode: 'modal' }));
       const iframe = wrapper.querySelector('iframe');
 
       if (iframe) {

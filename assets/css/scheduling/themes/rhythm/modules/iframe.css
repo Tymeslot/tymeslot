@@ -1,61 +1,62 @@
 /* iframe.css — Context-driven iframe shell rules.
-   These rules MUST differ when the theme is running inside an iframe,
-   regardless of available size.  They handle structural concerns:
-   height measurement, background positioning, and branding removal.
+   These rules handle structural concerns that differ when the theme runs
+   inside an iframe: background positioning, branding removal, and
+   content-height measurement for modal embeds.
 
-   Contrast with embedded.css, which contains size-driven compaction rules
-   that respond to the constrained space typical of an iframe widget.
+   Layout compaction for small viewports belongs in base.css and the
+   individual module CSS files — they fire identically whether the
+   viewport is a browser window or an iframe.
 
    All selectors are scoped to html.rhythm-theme[data-embedded] so they
    activate only when iframe_embed.js sets the [data-embedded] attribute. */
 
 /* ---------------------------------------------------------------------------
-   1. Size to Content
-   In standalone mode the page fills the viewport (min-height: 100vh).
-   In an iframe the page must size to its content so the parent's
-   ResizeObserver can measure and set the iframe height.
+   1. Base Reset (both modes)
    --------------------------------------------------------------------------- */
 html.rhythm-theme[data-embedded] {
   min-height: auto;
+  margin: 0;
 }
 
-/* height: max-content makes body.offsetHeight reflect actual content
-   so iframe_embed.js can report the correct height to the parent. */
 html.rhythm-theme[data-embedded] body.rhythm-theme {
-  min-height: auto;
-  height: max-content;
+  margin: 0;
+  display: flow-root;
 }
 
-html.rhythm-theme[data-embedded] .video-background-theme,
-html.rhythm-theme[data-embedded] .video-background-theme.theme-grid {
+/* ---------------------------------------------------------------------------
+   2. Modal Mode — size to content for measurement
+   --------------------------------------------------------------------------- */
+html.rhythm-theme[data-embedded][data-embed-mode="modal"] body.rhythm-theme {
+  height: max-content;
+  min-height: 100%;
+}
+
+html.rhythm-theme[data-embedded][data-embed-mode="modal"] .video-background-theme,
+html.rhythm-theme[data-embedded][data-embed-mode="modal"] .video-background-theme.theme-grid {
   min-height: auto;
   grid-template-rows: auto;
   padding: 0;
 }
 
-html.rhythm-theme[data-embedded] .video-background-theme.theme-grid .content-area {
+html.rhythm-theme[data-embedded][data-embed-mode="modal"] .video-background-theme.theme-grid .content-area {
   padding: var(--space-sm);
   overflow: visible;
 }
 
-/* Let every flex/grid layer shrink-wrap its content instead of stretching */
-html.rhythm-theme[data-embedded] .slide-container {
+html.rhythm-theme[data-embedded][data-embed-mode="modal"] .slide-container {
   flex: initial;
 }
 
-html.rhythm-theme[data-embedded] .slide-content {
+html.rhythm-theme[data-embedded][data-embed-mode="modal"] .slide-content {
   flex: initial;
 }
 
-html.rhythm-theme[data-embedded] .schedule-grid {
+html.rhythm-theme[data-embedded][data-embed-mode="modal"] .schedule-grid {
   flex: initial;
 }
 
 /* ---------------------------------------------------------------------------
-   2. Background and Branding
-   Switch background from viewport-fixed to content-relative, suppress video
-   playback (bandwidth saving — gradient/color/image on the container remains),
-   and hide the footer/branding strip.
+   3. Background and Branding (both modes)
    --------------------------------------------------------------------------- */
 
 /* Keep background container visible (it carries var(--theme-background)),
@@ -63,11 +64,6 @@ html.rhythm-theme[data-embedded] .schedule-grid {
    instead of the iframe viewport. */
 html.rhythm-theme[data-embedded] .video-background-container {
   position: absolute;
-}
-
-/* Hide <video> elements to save bandwidth inside iframes. */
-html.rhythm-theme[data-embedded] .video-background-video {
-  display: none;
 }
 
 /* Hide footer/branding */

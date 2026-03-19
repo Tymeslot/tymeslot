@@ -20,55 +20,62 @@
   padding: var(--space-sm);
 }
 
-/* overview-layout: replaces grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-8 items-center */
+/* overview-layout: compact default — avatar floated left with text wrapping
+   beside it.  Upgrades to a 2-col grid at 768px via container query below. */
 .overview-layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-sm);
+  display: block;
   align-items: center;
 }
 
-/* overview-avatar-section: replaces text-center md:text-left */
+.overview-layout::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* overview-avatar-section: float left at small sizes */
 .overview-avatar-section {
-  text-align: center;
+  float: left;
+  margin: 0 var(--space-md) var(--space-xs) 0;
+  text-align: left;
 }
 
 /* overview-avatar-wrapper: replaces inline-block mx-auto md:mx-0 */
 .overview-avatar-wrapper {
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: 0;
+  margin-right: 0;
 }
 
-/* overview-avatar: replaces w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 */
+/* overview-avatar: compact default (80px) */
 .overview-avatar {
-  width: 8rem;
-  height: 8rem;
+  width: 5rem;
+  height: 5rem;
 }
 
-/* overview-success-badge positioning: replaces -bottom-2 -right-2 md:-bottom-4 md:-right-4 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 */
+/* overview-success-badge positioning: compact default */
 .overview-success-badge {
-  bottom: -0.5rem;
-  right: -0.5rem;
-  width: 3rem;
-  height: 3rem;
+  bottom: -4px;
+  right: -4px;
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
-/* overview-success-badge-emoji: replaces text-xl sm:text-2xl md:text-4xl */
+/* overview-success-badge-emoji: compact default */
 .overview-success-badge-emoji {
-  font-size: var(--theme-font-size-xl);
+  font-size: 14px;
 }
 
-/* overview-title: replaces text-xl sm:text-2xl md:text-3xl lg:text-4xl text-center md:text-left */
+/* overview-title: left-aligned at compact size, centered at 768px+ */
 .overview-title {
   font-size: var(--theme-font-size-xl);
-  text-align: center;
+  text-align: left;
 }
 
-/* overview-description: replaces text-sm sm:text-base md:text-lg lg:text-xl mb-3 sm:mb-4 md:mb-6 text-center md:text-left */
+/* overview-description: left-aligned at compact size */
 .overview-description {
   font-size: var(--theme-font-size-sm);
   margin-bottom: var(--space-sm);
-  text-align: center;
+  text-align: left;
 }
 
 /* overview-duration-list: replaces space-y-2 md:space-y-4 */
@@ -115,17 +122,19 @@
   }
 
   .overview-avatar {
-    width: 12rem;
-    height: 12rem;
+    width: 8rem;
+    height: 8rem;
   }
 
   .overview-success-badge {
-    width: 4rem;
-    height: 4rem;
+    bottom: -0.5rem;
+    right: -0.5rem;
+    width: 3rem;
+    height: 3rem;
   }
 
   .overview-success-badge-emoji {
-    font-size: var(--theme-font-size-2xl);
+    font-size: var(--theme-font-size-xl);
   }
 
   .overview-title {
@@ -168,18 +177,26 @@
     padding: var(--space-2xl);
   }
 
+  /* Switch from floated layout to 2-col grid */
   .overview-layout {
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-2xl);
   }
 
+  .overview-layout::after {
+    display: none;
+  }
+
   .overview-avatar-section {
-    text-align: left;
+    float: none;
+    margin: 0;
+    text-align: center;
   }
 
   .overview-avatar-wrapper {
-    margin-left: 0;
-    margin-right: 0;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .overview-avatar {
@@ -258,44 +275,3 @@
   }
 }
 
-/* ============================================================================
-   EMBEDDED — Compact Overview
-   (dissolved from embedded.css Section 3)
-   ============================================================================ */
-
-/* Collapse the 2-col grid into a single column */
-html.quill-theme[data-embedded] .glass-morphism-card .grid.md\:grid-cols-2 {
-  display: block;
-}
-
-/* Float avatar left, shrink to 80px */
-html.quill-theme[data-embedded] .glass-morphism-card .grid.md\:grid-cols-2 > .text-center {
-  float: left;
-  margin: 0 var(--space-md) var(--space-xs) 0;
-  text-align: left;
-}
-
-html.quill-theme[data-embedded] .glass-morphism-card .grid.md\:grid-cols-2 img.rounded-full {
-  width: 80px;
-  height: 80px;
-}
-
-/* Scale down the success badge proportionally.
-   High-specificity prefix (0-3-1) beats Tailwind utilities w-12 h-12 etc. (0-1-0). */
-html.quill-theme[data-embedded] .overview-success-badge {
-  width: 28px;
-  height: 28px;
-  bottom: -4px;
-  right: -4px;
-}
-
-html.quill-theme[data-embedded] .overview-success-badge span {
-  font-size: 14px;
-}
-
-/* Clear float after the grid to avoid collapsing */
-html.quill-theme[data-embedded] .glass-morphism-card .grid.md\:grid-cols-2::after {
-  content: "";
-  display: table;
-  clear: both;
-}

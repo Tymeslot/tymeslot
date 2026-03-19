@@ -152,38 +152,30 @@
   }
 }
 
-/* Embedded compaction — narrow containers get compact calendar treatment */
-@container scheduling (max-width: 520px) {
-  html.rhythm-theme[data-embedded] .calendar-header {
+/* ===== Short Viewport Compaction ===== */
+
+/* Short screens — drop square aspect ratio, reduce vertical padding */
+@media (max-height: 600px) {
+  .calendar-day {
+    aspect-ratio: auto;
+    min-height: auto;
+    padding: var(--space-3xs) var(--space-2xs);
+    gap: 1px;
+  }
+
+  .calendar-header {
     margin-bottom: var(--space-3xs);
   }
 
-  html.rhythm-theme[data-embedded] .calendar-header h3 {
-    font-size: var(--theme-font-size-sm);
-  }
-
-  html.rhythm-theme[data-embedded] .calendar-nav-button {
-    padding: var(--space-3xs) var(--space-2xs);
-    font-size: var(--theme-font-size-xs);
-  }
-
-  html.rhythm-theme[data-embedded] .calendar-day {
-    aspect-ratio: auto;
-    min-height: auto;
-    padding: var(--space-3xs) 2px;
-    gap: 1px;
-    border-radius: var(--radius-sm);
-  }
-
-  html.rhythm-theme[data-embedded] .day-name {
-    font-size: var(--theme-font-size-3xs);
-  }
-
-  html.rhythm-theme[data-embedded] .day-number {
-    font-size: var(--theme-font-size-xs);
-  }
-
-  html.rhythm-theme[data-embedded] .calendar-grid {
+  .calendar-grid {
     gap: 3px;
+  }
+}
+
+/* Extremely short screens — minimal calendar chrome */
+@media (max-height: 400px) {
+  .calendar-day {
+    padding: var(--space-3xs) 2px;
+    border-radius: var(--radius-sm);
   }
 }

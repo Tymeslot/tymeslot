@@ -213,7 +213,8 @@ defmodule TymeslotWeb.Themes.Aurora.Theme do
       flow_steps: 4,
       design_system: :northern_lights,
       supports_duration_selection: true,
-      supports_inline_booking: false
+      supports_inline_booking: false,
+      preferred_embed_height: 400
     }
   end
 
@@ -432,6 +433,16 @@ Each theme needs a small `iframe.css` (~30 lines) for iframe-specific shell rule
 - Reset the primary content container (`.scheduling-box`, `.glass-morphism-card`) to fill the iframe: `width: 100%; max-width: 100%; border-radius: 0; border: none;`
 
 Size-driven compaction (compact calendar, smaller badges, form re-layout) is handled by container queries in each component file — the same queries that handle narrow viewports.
+
+### Preferred Embed Height
+
+Each theme declares a `preferred_embed_height` (in pixels) in its `theme_config()` map. When the scheduling page loads inside an iframe, `iframe_embed.js` reads this value from `data-preferred-embed-height` on `<html>` and posts it to the parent so `embed.js` can size the inline iframe appropriately — instead of using the generic 400px default.
+
+Set this to the minimum height at which the theme's first step (overview) looks comfortable without scrolling. Current values:
+- **Quill**: 400 (compact glassmorphism layout)
+- **Rhythm**: 450 (video background + slide padding need more room)
+
+The embedder can always override this with `data-min-height` on the container element.
 
 ### Creating Theme CSS
 
@@ -1269,4 +1280,5 @@ Before considering your theme complete:
 - [ ] Localization works for all supported languages
 - [ ] Video/image backgrounds work (if supported)
 - [ ] Theme customization renders correctly
+- [ ] `preferred_embed_height` set in `theme_config()` (minimum comfortable height for inline embeds)
 - [ ] Embedded mode tested at constrained and unconstrained heights

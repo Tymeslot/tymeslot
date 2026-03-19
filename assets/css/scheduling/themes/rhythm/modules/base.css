@@ -426,6 +426,14 @@ body.rhythm-theme {
 
 /* Short screens — compact mode */
 @media (max-height: 600px) {
+  .video-background-theme {
+    padding: var(--space-sm);
+  }
+
+  .video-background-theme.theme-grid .content-area {
+    padding: var(--space-sm);
+  }
+
   .slide-title {
     font-size: var(--theme-font-size-lg);
     margin-bottom: var(--space-xs);
@@ -438,6 +446,14 @@ body.rhythm-theme {
 
 /* Extremely short screens — minimal chrome */
 @media (max-height: 400px) {
+  .video-background-theme {
+    padding: var(--space-xs);
+  }
+
+  .video-background-theme.theme-grid .content-area {
+    padding: var(--space-xs);
+  }
+
   .slide {
     padding: var(--space-xs);
   }

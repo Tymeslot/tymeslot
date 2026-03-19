@@ -229,66 +229,67 @@
 }
 
 /* ============================================================================
-   BOOKING FORM — EMBEDDED RE-LAYOUT
-   Applied when the scheduling widget is in an iframe ([data-embedded]).
-   These container queries mirror the embedded.css section 3 rules but use
-   container width rather than the [data-embedded] selector, so the same
-   compact layout fires whenever the container is narrow — not just in iframes.
+   BOOKING FORM — SHORT VIEWPORT COMPACTION
+   Height queries compact the booking slide for small screens / iframes.
    ============================================================================ */
 
-/* Compact meeting summary — single inline bar */
-@container scheduling (max-width: 500px) {
-  html.rhythm-theme[data-embedded] .meeting-summary {
-    padding: clamp(var(--space-3xs), 1.5cqi, var(--space-xs)) clamp(var(--space-xs), 2cqi, var(--space-sm));
+/* Short screens — compact meeting summary, smaller textarea */
+@media (max-height: 600px) {
+  .meeting-summary {
+    padding: var(--space-3xs) var(--space-xs);
     margin-bottom: var(--space-xs);
     gap: 0;
   }
 
-  html.rhythm-theme[data-embedded] .meeting-summary .summary-row {
+  .meeting-summary .summary-row {
     gap: var(--space-sm);
   }
 
-  html.rhythm-theme[data-embedded] .meeting-summary .summary-icon {
+  .meeting-summary .summary-icon {
     display: none;
   }
 
-  html.rhythm-theme[data-embedded] .meeting-summary .summary-label {
+  .meeting-summary .summary-label {
     display: inline;
     margin-top: 0;
   }
 
-  html.rhythm-theme[data-embedded] .meeting-summary .summary-label::before {
+  .meeting-summary .summary-label::before {
     content: " · ";
   }
 
-  html.rhythm-theme[data-embedded] .meeting-summary .summary-value {
+  .meeting-summary .summary-value {
     display: inline;
   }
-}
 
-/* Name + email side-by-side in embedded narrow view */
-@container scheduling (max-width: 500px) {
-  html.rhythm-theme[data-embedded] .booking-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  /* Textarea — compact height */
+  .booking-form textarea.input {
+    min-height: auto;
+    max-height: 4em;
+  }
+
+  /* Tighter form gaps */
+  .booking-form {
     gap: var(--space-xs);
   }
 
-  /* Textarea and everything after spans full width */
-  html.rhythm-theme[data-embedded] .booking-form .form-field-wrapper:nth-child(n+4),
-  html.rhythm-theme[data-embedded] .booking-form .recaptcha-notice,
-  html.rhythm-theme[data-embedded] .booking-form .slide-actions {
-    grid-column: 1 / -1;
+  .rhythm-theme-wrapper .booking-form .label {
+    margin-bottom: var(--space-3xs);
+  }
+}
+
+/* Extremely short screens — minimal booking form */
+@media (max-height: 400px) {
+  .meeting-summary {
+    padding: var(--space-3xs) var(--space-2xs);
+    margin-bottom: var(--space-3xs);
   }
 
-  /* Honeypot (first child) hidden — already display:none, but keep grid happy */
-  html.rhythm-theme[data-embedded] .booking-form > :first-child {
-    grid-column: 1 / -1;
+  .booking-form textarea.input {
+    max-height: 2.5em;
   }
 
-  /* Textarea — compact height instead of 4 rows */
-  html.rhythm-theme[data-embedded] .booking-form textarea.input {
-    min-height: auto;
-    height: 3.5em;
+  .booking-form .slide-actions {
+    padding-top: var(--space-3xs);
   }
 }

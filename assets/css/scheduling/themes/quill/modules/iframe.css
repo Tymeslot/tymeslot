@@ -1,47 +1,56 @@
 /* iframe.css — Context-driven overrides for iframe embeds.
-   These rules adapt the page to the iframe *context* (size-to-content,
-   hide host-page chrome) and are independent of the available viewport width.
-   Viewport/size-driven compaction belongs in responsive.css.
+   These rules handle concerns that differ structurally when the page runs
+   inside an iframe: removing host-page chrome, switching background
+   positioning, and enabling content-height measurement for modal embeds.
+
+   Layout compaction for small viewports belongs in base.css and the
+   individual module CSS files — they fire identically whether the
+   viewport is a browser window or an iframe.
+
    Triggered by the [data-embedded] attribute set by iframe_embed.js. */
 
 /* ---------------------------------------------------------------------------
-   1. Size to Content
-   In standalone mode the page fills the viewport (min-height: 100vh).
-   In an iframe the page must size to its content so the parent's
-   ResizeObserver can measure and set the iframe height.
+   1. Base Reset (both modes)
+   The standalone page uses min-height: 100% on html/body to fill the
+   browser window.  Inside an iframe the viewport is fixed, so we reset
+   to auto and let the content dictate height.
    --------------------------------------------------------------------------- */
 html.quill-theme[data-embedded] {
   min-height: auto;
+  margin: 0;
 }
 
-/* height: max-content makes body.offsetHeight reflect actual content
-   so iframe_embed.js can report the correct height to the parent. */
 html.quill-theme[data-embedded] body.quill-theme {
-  min-height: auto;
-  height: max-content;
+  margin: 0;
+  display: flow-root;
 }
 
-html.quill-theme[data-embedded] .main-gradient.theme-grid {
+/* ---------------------------------------------------------------------------
+   2. Modal Mode — size to content for measurement
+   Modal embeds report their content height to the parent via postMessage
+   so embed.js can size the modal wrapper.  The page must grow to fit its
+   content (max-content) but never be shorter than the iframe viewport
+   (min-height: 100%) to avoid a gap at the bottom.
+   --------------------------------------------------------------------------- */
+html.quill-theme[data-embedded][data-embed-mode="modal"] body.quill-theme {
+  height: max-content;
+  min-height: 100%;
+}
+
+html.quill-theme[data-embedded][data-embed-mode="modal"] .main-gradient.theme-grid {
   min-height: auto;
   grid-template-rows: auto;
 }
 
-html.quill-theme[data-embedded] .quill-theme-wrapper > div {
+html.quill-theme[data-embedded][data-embed-mode="modal"] .quill-theme-wrapper > div {
   flex: initial;
 }
 
 /* ---------------------------------------------------------------------------
-   2. Hide Host-Page Chrome
+   3. Hide Host-Page Chrome
    Remove decorative elements that exist for the standalone page but are
    invisible or wasteful inside an iframe.
    --------------------------------------------------------------------------- */
-
-/* Step navigation — always hidden in iframes to save vertical space.
-   (responsive.css only hides it at max-height: 400px.)
-   High-specificity prefix (0-3-1) beats .quill-theme-wrapper .step-navigation-card (0-2-0). */
-html.quill-theme[data-embedded] .step-navigation-card {
-  display: none;
-}
 
 /* Hide footer/branding */
 html.quill-theme[data-embedded] .footer-gradient {
@@ -63,10 +72,7 @@ html.quill-theme[data-embedded] .language-switcher {
 }
 
 /* ---------------------------------------------------------------------------
-   3. Adaptive Card Height
-   In standalone mode the glass card has a generous min-height so the gradient
-   background doesn't look empty. In iframes the card must shrink-wrap its
-   content — extra whitespace below buttons is wasted.
+   4. Layout Adjustments (both modes)
    --------------------------------------------------------------------------- */
 html.quill-theme[data-embedded] .glass-morphism-card {
   min-height: auto;
@@ -78,16 +84,7 @@ html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area .contain
   margin-bottom: 0;
 }
 
-/* Let every flex layer shrink-wrap its content instead of stretching */
-html.quill-theme[data-embedded] .content-area .container {
-  flex: initial;
-}
-
-html.quill-theme[data-embedded] .time-slots-panel {
-  flex: initial;
-}
-
-html.quill-theme[data-embedded] .slots-box {
-  height: auto;
-  min-height: 0;
+/* Remove the optical-centering bottom padding — every pixel counts. */
+html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area {
+  padding-bottom: 0;
 }
