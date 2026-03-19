@@ -334,7 +334,7 @@ defmodule Tymeslot.Security.Security do
     if String.contains?(domain, "://") do
       case URI.parse(domain) do
         %URI{host: host} when is_binary(host) -> host
-        _ -> domain
+        _uri -> domain
       end
     else
       domain
