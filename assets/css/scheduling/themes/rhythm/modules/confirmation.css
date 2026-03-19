@@ -145,10 +145,10 @@
 }
 
 .ticket-body {
-  padding: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
 }
 
 .ticket-row {
@@ -160,7 +160,7 @@
 .ticket-icon {
   width: var(--icon-xl);
   height: var(--icon-xl);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   background: var(--surface-subtle);
@@ -261,4 +261,160 @@
 .booking-detail-value a:hover {
   color: var(--theme-primary-hover);
   text-decoration: underline;
+}
+
+/* ============================================================================
+   RESPONSIVE — CONTAINER QUERIES
+   ============================================================================ */
+
+/* Narrow container (≤ 479px) — compact confirmation layout */
+@container scheduling (max-width: 479px) {
+  .confirmation-container {
+    padding: var(--space-md) var(--space-sm);
+    gap: var(--space-md);
+  }
+
+  .confirmation-header-section {
+    gap: var(--space-sm);
+  }
+
+  .meeting-ticket {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .ticket-body {
+    padding: var(--space-sm);
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+
+  .ticket-header {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .ticket-footer {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .ticket-row {
+    gap: var(--space-sm);
+  }
+
+  .ticket-icon {
+    width: var(--icon-lg);
+    height: var(--icon-lg);
+  }
+
+  .success-badge {
+    width: 56px;
+    height: 56px;
+  }
+
+  .success-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .confirmation-actions-section {
+    gap: var(--space-sm);
+  }
+
+  .action-button-primary {
+    padding: var(--space-sm) var(--space-lg);
+    min-height: var(--min-touch-target);
+  }
+}
+
+/* ============================================================================
+   SHORT VIEWPORTS — height media queries (kept as @media)
+   ============================================================================ */
+
+@media (max-height: 600px) {
+  .success-badge {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-height: 400px) {
+  .confirmation-container {
+    padding: var(--space-xs);
+    gap: var(--space-xs);
+  }
+
+  .success-badge {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ============================================================================
+   EMBEDDED MODE — container queries at narrow thresholds
+   ============================================================================ */
+
+/* Container — less padding, smaller gaps */
+html.rhythm-theme[data-embedded] .confirmation-container {
+  padding: clamp(var(--space-xs), 2cqi, var(--space-md)) clamp(var(--space-2xs), 1.5cqi, var(--space-sm));
+  gap: var(--space-sm);
+}
+
+/* Header — tighter gap */
+html.rhythm-theme[data-embedded] .confirmation-header-section {
+  gap: var(--space-xs);
+}
+
+/* Smaller success badge */
+html.rhythm-theme[data-embedded] .confirmation-title-row .success-badge {
+  width: 32px;
+  height: 32px;
+}
+
+html.rhythm-theme[data-embedded] .confirmation-title-row {
+  gap: var(--space-sm);
+}
+
+/* Meeting ticket — compact card */
+html.rhythm-theme[data-embedded] .ticket-header {
+  padding: var(--space-xs) var(--space-sm);
+}
+
+/* Ticket body — horizontal row instead of vertical stack */
+html.rhythm-theme[data-embedded] .ticket-body {
+  display: flex;
+  padding: var(--space-sm);
+  flex-direction: row;
+  gap: var(--space-sm);
+}
+
+/* Hide icon circles to save space */
+html.rhythm-theme[data-embedded] .ticket-icon {
+  display: none;
+}
+
+/* Ticket info — inline value + sublabel */
+html.rhythm-theme[data-embedded] .ticket-info {
+  flex-direction: row;
+  gap: var(--space-3xs);
+  align-items: baseline;
+}
+
+html.rhythm-theme[data-embedded] .ticket-sublabel::before {
+  content: "· ";
+}
+
+/* Dividers between horizontal ticket items */
+html.rhythm-theme[data-embedded] .ticket-row + .ticket-row {
+  padding-left: var(--space-sm);
+  border-left: var(--border-width-thin) solid var(--border-subtle);
+}
+
+/* Ticket footer — tighter */
+html.rhythm-theme[data-embedded] .ticket-footer {
+  padding: var(--space-xs) var(--space-sm);
+}
+
+/* Actions — tighter gap */
+html.rhythm-theme[data-embedded] .confirmation-actions-section {
+  gap: var(--space-xs);
 }

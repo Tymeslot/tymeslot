@@ -1,0 +1,90 @@
+/* iframe.css — Context-driven iframe shell rules.
+   These rules MUST differ when the theme is running inside an iframe,
+   regardless of available size.  They handle structural concerns:
+   height measurement, background positioning, and branding removal.
+
+   Contrast with embedded.css, which contains size-driven compaction rules
+   that respond to the constrained space typical of an iframe widget.
+
+   All selectors are scoped to html.rhythm-theme[data-embedded] so they
+   activate only when iframe_embed.js sets the [data-embedded] attribute. */
+
+/* ---------------------------------------------------------------------------
+   1. Size to Content
+   In standalone mode the page fills the viewport (min-height: 100vh).
+   In an iframe the page must size to its content so the parent's
+   ResizeObserver can measure and set the iframe height.
+   --------------------------------------------------------------------------- */
+html.rhythm-theme[data-embedded] {
+  min-height: auto;
+}
+
+/* height: max-content makes body.offsetHeight reflect actual content
+   so iframe_embed.js can report the correct height to the parent. */
+html.rhythm-theme[data-embedded] body.rhythm-theme {
+  min-height: auto;
+  height: max-content;
+}
+
+html.rhythm-theme[data-embedded] .video-background-theme,
+html.rhythm-theme[data-embedded] .video-background-theme.theme-grid {
+  min-height: auto;
+  grid-template-rows: auto;
+  padding: 0;
+}
+
+html.rhythm-theme[data-embedded] .video-background-theme.theme-grid .content-area {
+  padding: var(--space-sm);
+  overflow: visible;
+}
+
+/* Let every flex/grid layer shrink-wrap its content instead of stretching */
+html.rhythm-theme[data-embedded] .slide-container {
+  flex: initial;
+}
+
+html.rhythm-theme[data-embedded] .slide-content {
+  flex: initial;
+}
+
+html.rhythm-theme[data-embedded] .schedule-grid {
+  flex: initial;
+}
+
+/* ---------------------------------------------------------------------------
+   2. Background and Branding
+   Switch background from viewport-fixed to content-relative, suppress video
+   playback (bandwidth saving — gradient/color/image on the container remains),
+   and hide the footer/branding strip.
+   --------------------------------------------------------------------------- */
+
+/* Keep background container visible (it carries var(--theme-background)),
+   but switch from position:fixed to absolute so it fills the content area
+   instead of the iframe viewport. */
+html.rhythm-theme[data-embedded] .video-background-container {
+  position: absolute;
+}
+
+/* Hide <video> elements to save bandwidth inside iframes. */
+html.rhythm-theme[data-embedded] .video-background-video {
+  display: none;
+}
+
+/* Hide footer/branding */
+html.rhythm-theme[data-embedded] .footer-gradient {
+  display: none;
+}
+
+/* Scheduling box — full-width, no border/radius in embedded mode */
+html.rhythm-theme[data-embedded] .scheduling-box {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 0;
+  border: none;
+}
+
+/* Language switcher — tighter to the corner in embedded mode */
+html.rhythm-theme[data-embedded] .language-switcher-container {
+  top: var(--space-xs);
+  right: var(--space-xs);
+}

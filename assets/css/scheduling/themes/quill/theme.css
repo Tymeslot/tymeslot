@@ -2,20 +2,19 @@
 
 /* Import shared utilities */
 @import "../../shared/reset.css";
-@import "../../shared/variables.css";
-@import "../../shared/utilities.css";
+@import "../../shared/layout.css";
 
 /* Import theme modules in dependency order */
 @import "./modules/variables.css";
 @import "./modules/base.css";
+@import "./modules/iframe.css";
 @import "./modules/video.css";
 @import "./modules/typography.css";
-@import "./modules/layouts.css";
 @import "./modules/components.css";
-@import "./modules/glass-components.css";
-@import "./modules/schedule/schedule.css";
+@import "./modules/schedule-header.css";
+@import "./modules/calendar.css";
+@import "./modules/time-slots.css";
 @import "./modules/booking.css";
+@import "./modules/overview.css";
 @import "./modules/confirmation.css";
 @import "./modules/language-switcher.css";
-@import "./modules/responsive.css";
-@import "./modules/embedded.css";

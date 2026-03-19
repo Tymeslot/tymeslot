@@ -86,3 +86,17 @@
     max-height: 100%;
   }
 }
+
+/* Low Memory Devices — hide video to save resources */
+@media (max-device-memory: 4) {
+  .video-background-video {
+    display: none;
+  }
+}
+
+/* Reduced motion — hide video */
+@media (prefers-reduced-motion: reduce) {
+  .video-background-video {
+    display: none;
+  }
+}

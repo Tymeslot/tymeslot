@@ -62,4 +62,32 @@
   }
 }
 
-/* Responsive positioning and widths moved to responsive.css */
+/* ============================================================================
+   CONTAINER-RESPONSIVE LANGUAGE SWITCHER
+   (dissolved from responsive.css — width queries → @container scheduling)
+   ============================================================================ */
+
+@media (max-width: 640px) {
+  .language-switcher {
+    position: fixed;
+    top: var(--space-lg);
+    right: var(--space-lg);
+    z-index: 1000;
+  }
+
+  .language-dropdown-quill {
+    width: var(--dropdown-width-sm);
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  .language-dropdown-quill {
+    width: var(--dropdown-width-md);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .language-dropdown-quill {
+    width: var(--dropdown-width-md);
+  }
+}

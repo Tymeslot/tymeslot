@@ -230,7 +230,7 @@
 }
 
 .calendar-month-year {
-  font-size: var(--theme-font-size-md);
+  font-size: var(--theme-font-size-sm);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -263,7 +263,7 @@
   }
 
   .calendar-month-year {
-    font-size: var(--theme-font-size-md);
+    font-size: var(--theme-font-size-sm);
   }
 }
 

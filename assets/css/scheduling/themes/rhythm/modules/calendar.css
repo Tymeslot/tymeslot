@@ -1,0 +1,189 @@
+/* Calendar Component
+   Self-contained: base styles + fluid sizing + container queries + height queries.
+   Container context: .scheduling-box (container-name: scheduling). */
+
+/* ===== Base Styles ===== */
+
+.calendar-section-wrapper {
+  flex-shrink: 0;
+}
+
+.calendar-section {
+  flex-shrink: 0;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xs);
+}
+
+.calendar-nav-button {
+  background: var(--surface-light);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--theme-text);
+  padding: var(--space-3xs) var(--space-xs);
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+  font-size: var(--theme-font-size-xs);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-nav-button:hover {
+  background: var(--theme-surface);
+  border-color: var(--theme-primary);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--calendar-gap);
+  width: 100%;
+}
+
+.calendar-day {
+  padding: var(--space-sm) var(--space-2xs);
+  background: var(--surface-light);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-md);
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  min-height: var(--calendar-day-min-height);
+  justify-content: center;
+  aspect-ratio: 1;
+}
+
+.day-name {
+  color: var(--theme-text-secondary);
+}
+
+.day-number {
+  color: var(--theme-text);
+}
+
+.calendar-day:hover {
+  background: var(--surface-medium);
+  border-color: var(--theme-primary);
+}
+
+.calendar-day.selected {
+  background: var(--theme-surface);
+  border-color: var(--theme-primary);
+}
+
+.calendar-day:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.calendar-day--loading {
+  opacity: 0.5;
+  cursor: wait;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ===== Fluid Sizing ===== */
+
+.calendar-grid {
+  gap: clamp(2px, 0.5cqi, 0.5rem);
+}
+
+.calendar-day {
+  padding: clamp(0.15rem, 0.8cqi, 0.75rem) clamp(0.1rem, 0.5cqi, 0.5rem);
+}
+
+.day-name {
+  font-size: clamp(0.6rem, 1.8cqi, 0.8rem);
+}
+
+.day-number {
+  font-size: clamp(0.65rem, 2cqi, 1rem);
+}
+
+/* ===== Container Queries ===== */
+
+/* Tablet-like widths */
+@container scheduling (min-width: 480px) and (max-width: 767px) {
+  .calendar-grid {
+    gap: var(--calendar-gap-tablet);
+  }
+
+  .calendar-day {
+    padding: var(--space-sm) var(--space-2xs);
+    min-height: var(--calendar-day-min-height-tablet);
+  }
+}
+
+/* Mobile-like widths */
+@container scheduling (max-width: 479px) {
+  .calendar-section {
+    width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+    margin-bottom: var(--space-sm);
+  }
+
+  .calendar-grid {
+    width: 100%;
+    gap: var(--calendar-gap-mobile);
+    box-sizing: border-box;
+  }
+
+  .calendar-day {
+    padding: var(--space-2xs) var(--space-3xs);
+    min-height: var(--calendar-day-min-height);
+    aspect-ratio: auto;
+    border-width: var(--border-width-thin);
+    box-sizing: border-box;
+  }
+
+  .calendar-header {
+    margin-bottom: var(--space-xs);
+  }
+}
+
+/* Embedded compaction — narrow containers get compact calendar treatment */
+@container scheduling (max-width: 520px) {
+  html.rhythm-theme[data-embedded] .calendar-header {
+    margin-bottom: var(--space-3xs);
+  }
+
+  html.rhythm-theme[data-embedded] .calendar-header h3 {
+    font-size: var(--theme-font-size-sm);
+  }
+
+  html.rhythm-theme[data-embedded] .calendar-nav-button {
+    padding: var(--space-3xs) var(--space-2xs);
+    font-size: var(--theme-font-size-xs);
+  }
+
+  html.rhythm-theme[data-embedded] .calendar-day {
+    aspect-ratio: auto;
+    min-height: auto;
+    padding: var(--space-3xs) 2px;
+    gap: 1px;
+    border-radius: var(--radius-sm);
+  }
+
+  html.rhythm-theme[data-embedded] .day-name {
+    font-size: var(--theme-font-size-3xs);
+  }
+
+  html.rhythm-theme[data-embedded] .day-number {
+    font-size: var(--theme-font-size-xs);
+  }
+
+  html.rhythm-theme[data-embedded] .calendar-grid {
+    gap: 3px;
+  }
+}

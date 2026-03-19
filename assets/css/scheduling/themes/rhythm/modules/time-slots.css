@@ -1,0 +1,125 @@
+/* Time Slots Component */
+
+.time-slots-section {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.time-slots-section-heading {
+  margin-bottom: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.time-slots-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-3xs) var(--space-sm) var(--space-3xs) 0; /* Add right padding for scrollbar */
+  flex: 1 1 auto;
+  min-height: 0; /* Allow proper flex shrinking */
+  max-height: var(--time-slots-max-height);
+  scroll-behavior: smooth;
+}
+
+/* Note: Scrollbar styling is applied via .scroll-y utility class from base.css */
+
+.time-period-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+  margin-bottom: var(--space-xs);
+}
+
+.time-period-header {
+  color: var(--theme-text-secondary);
+  margin: 0;
+  margin-bottom: var(--space-3xs);
+  padding-bottom: var(--space-3xs);
+  border-bottom: var(--border-width-thin) solid var(--border-subtle);
+}
+
+.time-period-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
+  gap: var(--space-3xs);
+}
+
+.time-slot {
+  padding: var(--space-3xs) var(--space-xs);
+  background: var(--surface-medium);
+  border: var(--border-width-thin) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+  text-align: center;
+  min-height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  font-size: var(--theme-font-size-xs);
+}
+
+.time-slot:hover {
+  background: var(--surface-intense);
+  border-color: var(--theme-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.time-slot.selected {
+  background: var(--theme-surface);
+  border-color: var(--theme-primary);
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 var(--border-subtle);
+}
+
+/* ============================================================================
+   CONTAINER QUERY OVERRIDES
+   Replaces width-based @media queries from responsive.css.
+   Container context: .scheduling-box (container-name: scheduling)
+   ============================================================================ */
+
+/* Mobile-equivalent: very narrow container */
+@container scheduling (max-width: 479px) {
+  .time-slots-section {
+    margin-top: var(--space-xs);
+    overflow: hidden;
+  }
+
+  .time-slots-grid {
+    max-height: var(--time-slots-max-height-mobile);
+    padding-right: var(--space-2xs);
+  }
+}
+
+/* ============================================================================
+   HEIGHT MEDIA QUERIES — kept as @media (viewport height has no container equivalent)
+   ============================================================================ */
+
+@media (max-height: 600px) {
+  .time-slots-grid {
+    max-height: 180px;
+  }
+}
+
+@media (max-height: 500px) {
+  .time-slots-grid {
+    max-height: 160px;
+  }
+}
+
+@media (max-height: 400px) {
+  .time-slots-grid {
+    max-height: 120px;
+  }
+}
+
+@media (max-height: 350px) {
+  .time-slots-grid {
+    max-height: 100px;
+  }
+}

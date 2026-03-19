@@ -130,3 +130,64 @@
   color: var(--theme-text-secondary);
   opacity: 0.9;
 }
+
+/* ============================================================================
+   RESPONSIVE — CONTAINER QUERIES
+   ============================================================================ */
+
+/* Narrow container (≤ 479px) — compact organizer profile */
+@container scheduling (max-width: 479px) {
+  .avatar-image {
+    width: var(--avatar-size-lg);
+    height: var(--avatar-size-lg);
+  }
+
+  .organizer-profile {
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+  }
+}
+
+/* ============================================================================
+   SHORT VIEWPORTS — height media queries (kept as @media)
+   ============================================================================ */
+
+@media (max-height: 600px) {
+  .avatar-image {
+    width: var(--avatar-size-lg);
+    height: var(--avatar-size-lg);
+  }
+
+  .organizer-profile {
+    margin-bottom: var(--space-sm);
+    gap: var(--space-sm);
+  }
+}
+
+@media (max-height: 500px) {
+  .organizer-profile {
+    margin-bottom: 0;
+  }
+
+  .organizer-greeting {
+    font-size: var(--theme-font-size-xs);
+  }
+}
+
+@media (max-height: 400px) {
+  .organizer-profile {
+    display: none;
+  }
+}
+
+/* ============================================================================
+   EMBEDDED MODE
+   ============================================================================ */
+
+/* Organizer profile — keep visible in iframes.
+   responsive.css hides it at max-height: 400px, but auto-sizing iframes
+   start with a small viewport and would collapse into a self-reinforcing
+   hide cycle (hide → shrink → stay hidden). */
+html.rhythm-theme[data-embedded] .organizer-profile {
+  display: flex;
+}

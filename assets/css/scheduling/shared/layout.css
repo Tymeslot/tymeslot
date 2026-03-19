@@ -1,0 +1,36 @@
+/* Shared Layout Primitives for Scheduling Themes
+   Contains ONLY structural helpers — no colors, typography, or theme-specific styles.
+   Replaces the old variables.css + utilities.css split. */
+
+/* Import Tailwind CSS for full utility access across all themes */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Border radius scale — themes may override with their own values */
+:root {
+  --radius-none: 0;
+  --radius-sm: 0.125rem;
+  --radius-base: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-full: 9999px;
+}
+
+/* Hide reCAPTCHA v3 badge as per Google's terms (must include disclaimer) */
+.grecaptcha-badge {
+  visibility: hidden;
+}
+
+/* Honeypot security field - visually hidden from humans, accessible to bots */
+.honeypot-field {
+  position: absolute !important;
+  left: -9999px !important;
+  top: auto !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}

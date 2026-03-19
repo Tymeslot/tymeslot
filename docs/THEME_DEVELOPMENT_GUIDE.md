@@ -41,21 +41,19 @@ lib/tymeslot_web/themes/[theme_name]/
 assets/css/scheduling/themes/[theme_name]/
 ├── theme.css                   # Main entry point
 └── modules/
-    ├── variables.css
-    ├── base.css
-    ├── typography.css
-    ├── layouts.css
-    ├── components.css
-    ├── schedule/               # Complex step needs subfolder
-    │   ├── calendar.css        # Monthly grid + weekly strip styles
-    │   ├── time-slots.css
-    │   └── timezone-selector.css
-    ├── booking.css
-    ├── confirmation.css
-    ├── language-switcher.css
-    ├── embedded.css            # iframe-embedded layout overrides
-    ├── video.css               # If video backgrounds
-    └── responsive.css
+    ├── variables.css           # Design tokens (colors, spacing, typography)
+    ├── base.css                # html, body, theme wrapper, root grid
+    ├── iframe.css              # Iframe shell rules (~30 lines)
+    ├── typography.css          # Text styles with fluid clamp() sizes
+    ├── video.css               # Video background (if supported)
+    ├── overview.css            # Organizer profile + avatar (if theme has distinct overview)
+    ├── calendar.css            # Calendar grid + container queries
+    ├── time-slots.css          # Time slot grid + container queries
+    ├── schedule-header.css     # Schedule header + timezone selector
+    ├── booking.css             # Booking form + container queries
+    ├── confirmation.css        # Confirmation + container queries
+    ├── components.css          # Buttons, inputs, duration cards, glassmorphism
+    └── language-switcher.css   # Language switcher
 ```
 
 ### Required Behaviour Callbacks
@@ -81,7 +79,8 @@ assets/css/scheduling/themes/[theme_name]/
 | `InfoHandlers` | Async tasks (availability fetching) |
 | `SchedulingInit` | Socket state initialization — `assign_theme_state/2` for full scheduling state (prefer this), `assign_base_state/1` for core-only assigns |
 | `BookingFlow` | Form validation and submission |
-| `LocalizationHelpers` | Date/time/duration formatting; also `day_name_short/1` (localized weekday abbreviations) and `get_week_display/1` (formatted week range string) |
+| `LocalizationHelpers` | Date/time/duration formatting: `format_date/1`, `format_duration/1`, `format_booking_datetime/3`, `format_time_by_locale/1` (respects locale 12h/24h setting — always use this for time slot display), `day_name_short/1` (localized weekday abbreviations), `get_week_display/1` (formatted week range string), `sort_meeting_types/1` (natural sort — use in `update/2` for consistent ordering) |
+| `Tymeslot.Timezones` | Human-readable timezone display: `Timezones.format/1` — use this in confirmation and booking components instead of string-splitting the IANA timezone identifier |
 | `Scheduling.Helpers` | Calendar/week day generation (`get_week_days/3`), week navigation (`handle_week_navigation/2`), availability fetching, slot parsing |
 | `Scheduling.CalendarNavigation` | Navigation boundary checks: `prev/next_month_disabled?/3`, `prev/next_week_disabled?/2` — wire these to nav button `disabled` attributes |
 | `PathHandlers` | Navigation with locale preservation |
@@ -113,22 +112,19 @@ apps/tymeslot/lib/tymeslot_web/themes/aurora/
 
 apps/tymeslot/assets/css/scheduling/themes/aurora/
 ├── modules/
-│   ├── base.css
-│   ├── booking.css
-│   ├── components.css
-│   ├── confirmation.css
-│   ├── language-switcher.css
-│   ├── layouts.css
-│   ├── overview.css (optional, theme-specific)
-│   ├── responsive.css
-│   ├── schedule/
-│   │   ├── calendar.css        # Monthly grid + weekly strip styles
-│   │   ├── time-slots.css
-│   │   └── timezone-selector.css
-│   ├── embedded.css            # iframe-embedded layout overrides (required)
-│   ├── typography.css
-│   ├── variables.css
-│   └── video.css (if video backgrounds supported)
+│   ├── variables.css           # Design tokens (colors, spacing, typography)
+│   ├── base.css                # Root layout, theme wrapper
+│   ├── iframe.css              # Iframe shell rules (required)
+│   ├── typography.css          # Text styles with fluid clamp() sizes
+│   ├── video.css               # Video background (if supported)
+│   ├── overview.css            # Organizer profile (optional)
+│   ├── calendar.css            # Calendar grid + container queries
+│   ├── time-slots.css          # Time slot grid + container queries
+│   ├── schedule-header.css     # Schedule header + timezone selector
+│   ├── booking.css             # Booking form + container queries
+│   ├── confirmation.css        # Confirmation step
+│   ├── components.css          # Buttons, inputs, duration cards
+│   └── language-switcher.css   # Language dropdown
 └── theme.css
 ```
 
@@ -296,91 +292,156 @@ Themes use a **modular CSS architecture** located in `apps/tymeslot/assets/css/s
 
 ```
 apps/tymeslot/assets/css/scheduling/themes/
-├── shared/                        # Shared utilities (used by all themes)
+├── shared/                        # Shared structural primitives only
 │   ├── reset.css                 # CSS reset
-│   ├── variables.css             # CSS custom properties
-│   └── utilities.css             # Utility classes
+│   └── layout.css                # Border-radius scale, Tailwind import, display helpers
 ├── quill/                         # Quill theme (glassmorphism)
 │   ├── modules/
-│   │   ├── base.css              # Base layout and structure
-│   │   ├── booking.css           # Booking form styles
-│   │   ├── components.css        # Reusable UI components
-│   │   ├── confirmation.css      # Confirmation page
-│   │   ├── embedded.css          # iframe-embedded layout overrides
-│   │   ├── glass-components.css  # Glassmorphism effects
-│   │   ├── language-switcher.css # Language dropdown
-│   │   ├── layouts.css           # Layout utilities
-│   │   ├── responsive.css        # Mobile/tablet breakpoints
-│   │   ├── schedule/             # Schedule step (complex, needs subfolder)
-│   │   │   ├── calendar.css      # Monthly grid + weekly strip styles
-│   │   │   ├── schedule-header.css
-│   │   │   ├── schedule.css
-│   │   │   ├── time-slots.css
-│   │   │   └── timezone-selector.css
+│   │   ├── variables.css         # Design tokens
+│   │   ├── base.css              # Root layout, theme wrapper
+│   │   ├── iframe.css            # Iframe shell rules
+│   │   ├── video.css             # Video background
 │   │   ├── typography.css        # Text styles
-│   │   ├── variables.css         # Theme-specific CSS variables
-│   │   └── video.css             # Video background support
-│   └── theme.css                 # Main entry point (imports all modules)
+│   │   ├── overview.css          # Organizer profile
+│   │   ├── calendar.css          # Calendar + container queries
+│   │   ├── time-slots.css        # Time slots + container queries
+│   │   ├── schedule-header.css   # Schedule header + timezone
+│   │   ├── booking.css           # Booking form
+│   │   ├── confirmation.css      # Confirmation step
+│   │   ├── components.css        # UI components + glassmorphism
+│   │   └── language-switcher.css # Language dropdown
+│   └── theme.css                 # Entry point
 └── rhythm/                        # Rhythm theme (video backgrounds)
     ├── modules/
-    │   ├── base.css
-    │   ├── booking.css
-    │   ├── components.css
-    │   ├── confirmation.css
-    │   ├── embedded.css          # iframe-embedded layout overrides
-    │   ├── language-switcher.css
-    │   ├── layouts.css
-    │   ├── overview.css          # Rhythm-specific overview styles
-    │   ├── responsive.css
-    │   ├── schedule/
-    │   │   ├── calendar.css      # Monthly grid + weekly strip styles
-    │   │   ├── schedule-header.css
-    │   │   ├── time-slots.css
-    │   │   └── timezone-selector.css
-    │   ├── schedule.css          # Main schedule wrapper
-    │   ├── typography.css
     │   ├── variables.css
-    │   └── video.css
+    │   ├── base.css
+    │   ├── iframe.css
+    │   ├── video.css
+    │   ├── typography.css
+    │   ├── overview.css
+    │   ├── calendar.css
+    │   ├── time-slots.css
+    │   ├── schedule-header.css
+    │   ├── booking.css
+    │   ├── confirmation.css
+    │   ├── components.css
+    │   └── language-switcher.css
     └── theme.css
 ```
 
 ### Theme CSS Structure
 
-Each theme's main CSS file (`theme.css`) follows this pattern:
+Each theme's main CSS file (`theme.css`) imports shared primitives then theme modules:
 
 ```css
-/* Quill Theme - Self-Contained Glassmorphism Theme for Scheduling */
-
-/* Import shared utilities */
+/* Import shared structural primitives */
 @import "../../shared/reset.css";
-@import "../../shared/variables.css";
-@import "../../shared/utilities.css";
+@import "../../shared/layout.css";
 
-/* Import theme modules in dependency order */
-@import "./modules/variables.css";      /* Theme-specific variables first */
-@import "./modules/base.css";           /* Base layout and structure */
-@import "./modules/video.css";          /* Video backgrounds (if supported) */
-@import "./modules/typography.css";     /* Text styles */
-@import "./modules/layouts.css";        /* Layout utilities */
-@import "./modules/components.css";     /* Reusable UI components */
-@import "./modules/glass-components.css"; /* Theme-specific (e.g., glassmorphism) */
-@import "./modules/schedule/schedule.css"; /* Schedule step styles */
-@import "./modules/booking.css";        /* Booking form */
-@import "./modules/confirmation.css";   /* Confirmation page */
-@import "./modules/language-switcher.css"; /* Language dropdown */
-@import "./modules/responsive.css";     /* Mobile/tablet breakpoints last */
+/* Import theme modules */
+@import "./modules/variables.css";
+@import "./modules/base.css";
+@import "./modules/iframe.css";
+@import "./modules/video.css";
+@import "./modules/typography.css";
+@import "./modules/components.css";
+@import "./modules/schedule-header.css";
+@import "./modules/calendar.css";
+@import "./modules/time-slots.css";
+@import "./modules/booking.css";
+@import "./modules/overview.css";
+@import "./modules/confirmation.css";
+@import "./modules/language-switcher.css";
 ```
 
-**Note**: Import order matters. Variables must come first, responsive styles last.
+**Note**: Variables must come first. Import order within component files doesn't matter since they're self-contained.
+
+### Intrinsic Responsiveness
+
+Themes use **CSS container queries** and **fluid sizing** instead of viewport breakpoints. Each component file is self-contained — it owns its base styles, container queries, and iframe overrides in one place.
+
+**Container query context:** The primary content container (`.scheduling-box` for Rhythm, `.glass-morphism-card` for Quill) has `container-type: inline-size; container-name: scheduling;`. All child components can use `@container scheduling (...)` queries.
+
+**Fluid sizing with `clamp()` and `cqi` units:**
+```css
+.slide { padding: clamp(0.75rem, 3cqi, 1.5rem); }
+.calendar-day { padding: clamp(0.25rem, 1cqi, 0.75rem); }
+```
+
+The `cqi` unit resolves against the nearest ancestor with `container-type: inline-size`.
+
+**Fluid grids with `auto-fit`:**
+```css
+.time-period-slots { grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr)); }
+```
+
+**Container queries for discrete layout switches:**
+```css
+@container scheduling (min-width: 480px) {
+  .calendar-monthly { display: grid; }
+  .calendar-weekly { display: none; }
+}
+```
+
+**What stays as `@media`:**
+- Height-based switches (`@media (max-height: ...)`) — container height queries have limited support
+- `prefers-reduced-motion`, `print`, `device-memory` — co-located in the component they affect
+- Elements outside the container query context (e.g. language switcher, which sits outside the primary content container) — these must use viewport `@media` queries since `@container` only matches descendants of the container element
+
+**Browser support:** Safari 16+, Chrome 105+, Firefox 110+.
+
+### Template Guidelines
+
+Templates define structure, CSS defines appearance:
+- Use semantic CSS class names describing what the element IS (`.calendar-grid`, `.duration-card`)
+- No visual classes in templates (no `rounded-xl`, `shadow-lg`)
+- No layout classes in templates (no `flex-row`, `grid-cols-2`)
+- No responsive classes in templates (no `sm:`, `md:`, `lg:`)
+- Each theme owns its templates entirely — UI components are theme-specific, not shared
+
+### Shared Components
+
+Only data utilities are shared across themes (`TymeslotWeb.Components.MeetingUtils`):
+- `normalize_slot_list/1` — normalizes time slot data
+- `normalize_slot_time/1` — normalizes time format
+
+All UI components (duration cards, calendar day buttons, time slot buttons, etc.) are theme-owned. Each theme renders its own markup and styles it with its own CSS.
+
+Icon class names stored in the database (e.g., `meeting_type.icon`) must be sanitized before use as CSS class names to prevent CSS injection. Only sanitize the hero-icon path — emoji icons rendered as text content are auto-escaped by Phoenix:
+
+```heex
+<%= if String.starts_with?(@icon, "hero-") do %>
+  <.icon name={sanitize_css_class(@icon)} class="your-icon-class" />
+<% else %>
+  <div class="emoji-icon">{@icon}</div>
+<% end %>
+
+defp sanitize_css_class(class_name) do
+  class_name
+  |> String.replace(~r/[^a-zA-Z0-9\-_]/, "")
+  |> String.slice(0, 100)
+end
+```
+
+### iframe.css
+
+Each theme needs a small `iframe.css` (~30 lines) for iframe-specific shell rules:
+- `height: max-content` on body for height reporting
+- `position` fixes for elements that behave differently in iframes
+- Hide footer/branding in embedded mode
+- Reset the primary content container (`.scheduling-box`, `.glass-morphism-card`) to fill the iframe: `width: 100%; max-width: 100%; border-radius: 0; border: none;`
+
+Size-driven compaction (compact calendar, smaller badges, form re-layout) is handled by container queries in each component file — the same queries that handle narrow viewports.
 
 ### Creating Theme CSS
 
 1. **Create theme directory**: `apps/tymeslot/assets/css/scheduling/themes/your-theme/`
-2. **Create main theme.css** that imports shared utilities and your modules
-3. **Create modular CSS files** in a `modules/` subdirectory
-4. **Add schedule subdirectory** in `modules/schedule/` for complex calendar/scheduling styles
+2. **Create main theme.css** that imports shared primitives and your modules
+3. **Create modular CSS files** in a `modules/` subdirectory — each component file is self-contained
+4. **Set container query context** on the primary content container (`container-type: inline-size; container-name: scheduling;`)
+5. **No external font imports** — use system font stacks or self-hosted fonts only
 
-**Note**: Theme CSS is completely separate from global app styles and uses only the modular architecture in `apps/tymeslot/assets/css/scheduling/themes/`.
+**Note**: Theme CSS is completely separate from global app styles.
 
 ## Theme Requirements
 
@@ -390,14 +451,14 @@ Each theme's main CSS file (`theme.css`) follows this pattern:
 - StateMachine module for state transitions
 - Wrapper component for theme layout
 - CSS file in `apps/tymeslot/assets/css/scheduling/themes/your-theme/theme.css`
-- `modules/embedded.css` with `[data-embedded]`-scoped overrides for iframe mode
+- `modules/iframe.css` with `[data-embedded]`-scoped iframe shell rules
+- Container query context (`container-type: inline-size`) on the primary content container
 - All 4 booking flow states: **overview**, **schedule**, **booking**, **confirmation**
 - All 4 step components as LiveComponents
 - Schedule component must include both the weekly strip (mobile) and monthly grid (desktop) with nav buttons wired to `CalendarNavigation` boundary checks
 - Meeting action components (reschedule, cancel, cancel_confirmed)
 
 ### Nice to Have
-- Mobile responsive design
 - Smooth transitions
 - Accessibility features
 
@@ -653,6 +714,19 @@ end
 
 Errors only appear for fields the user has blurred (`touched_fields` MapSet), and clear automatically when the user corrects the input (validation returns `{:ok, ...}` → `validation_errors` becomes `%{}`).
 
+Each booking input must also include `phx-debounce="blur"` alongside `phx-blur="field_blur"`. The debounce suppresses the `phx-change` event until the field loses focus; the blur event triggers per-field validation. Without the debounce, every keystroke fires a server round-trip:
+
+```heex
+<.input
+  field={f[:name]}
+  errors={FormValidationHelpers.field_errors(@validation_errors, :name)}
+  phx-debounce="blur"
+  phx-blur="field_blur"
+  phx-value-field="name"
+  phx-target={@myself}
+/>
+```
+
 ### LocalizationHelpers
 
 Always use `TymeslotWeb.Themes.Shared.LocalizationHelpers` for formatting dates, times, and durations to ensure they respect the user's locale:
@@ -680,13 +754,14 @@ back_path = PathHandlers.build_path_with_locale(socket, socket.assigns.locale)
 
 Themes use a **modular CSS architecture** located in `assets/css/scheduling/themes/`.
 
-### Shared Utilities
-- `assets/css/scheduling/shared/reset.css`
-- `assets/css/scheduling/shared/variables.css`
-- `assets/css/scheduling/shared/utilities.css`
+### Shared Primitives
+- `assets/css/scheduling/shared/reset.css` — CSS reset
+- `assets/css/scheduling/shared/layout.css` — Border-radius scale, Tailwind import, display/flex/grid helpers
+
+Only structural primitives are shared. All visual components (colors, spacing, typography, buttons) stay per-theme even if currently identical — themes can diverge without fear.
 
 ### Theme Structure
-Each theme should have its own directory with a `theme.css` entry point and a `modules/` subdirectory for specific styles (foundation, components, responsive, etc.).
+Each theme has a `theme.css` entry point and a flat `modules/` subdirectory. Each component file is self-contained — it owns base styles, container queries, and iframe overrides in one place. No separate `responsive.css` or `embedded.css`.
 
 ## Theme Customization & Capabilities
 
@@ -1185,9 +1260,12 @@ Before considering your theme complete:
 - [ ] Schedule component has weekly strip (mobile) + monthly grid (desktop) with `CalendarNavigation` boundary checks on all nav buttons
 - [ ] All 3 meeting action components implemented
 - [ ] CSS theme.css imports all required modules
-- [ ] `modules/embedded.css` created with `[data-embedded]`-scoped iframe overrides
+- [ ] `modules/iframe.css` created with `[data-embedded]`-scoped iframe shell rules
+- [ ] Container query context set on primary content container
+- [ ] No responsive Tailwind classes (`sm:`, `md:`, `lg:`) in templates
+- [ ] No external font imports (use system fonts or self-hosted)
 - [ ] Production checklist tests pass
-- [ ] Mobile responsive design works
+- [ ] Intrinsic responsiveness works at all sizes (no viewport breakpoints)
 - [ ] Localization works for all supported languages
 - [ ] Video/image backgrounds work (if supported)
 - [ ] Theme customization renders correctly

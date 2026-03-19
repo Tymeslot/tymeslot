@@ -596,3 +596,307 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ============================================================================
+   GLASSMORPHISM COMPONENTS
+   (dissolved from glass-components.css)
+   ============================================================================ */
+
+/* Glass Morphism Card — the scheduling container query root */
+.glass-morphism-card {
+  container-type: inline-size;
+  container-name: scheduling;
+  background: linear-gradient(135deg, var(--surface-dark-medium) 0%, var(--surface-dark-light) 100%);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--card-border-radius);
+  border: var(--border-width-thin) solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--theme-text);
+}
+
+/* Calendar card needs more height for the month grid */
+.glass-morphism-card.calendar-card {
+  min-height: var(--card-height-md);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Booking form card - use natural content height */
+.glass-morphism-card.booking-form-card {
+  min-height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Prevent content overflow within glass cards */
+.glass-morphism-card > div {
+  box-sizing: border-box;
+}
+
+/* Step navigation card */
+.step-navigation-card {
+  width: auto;
+  max-width: none;
+}
+
+/* Legacy card-glass for backward compatibility */
+.card-glass {
+  background: var(--surface-light);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  box-shadow: var(--shadow-xl);
+}
+
+/* Meeting Details Card - Glassmorphism style */
+.meeting-details-card {
+  background: linear-gradient(135deg, var(--surface-light) 0%, var(--surface-subtle) 100%);
+  backdrop-filter: blur(var(--glass-blur-lg));
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  color: var(--theme-text);
+  box-shadow:
+    var(--shadow-lg),
+    var(--inset-highlight-subtle);
+}
+
+.meeting-details-card h3 {
+  font-size: var(--theme-font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-lg);
+  color: var(--theme-text);
+  text-shadow: var(--shadow-xs);
+}
+
+/* Action Buttons */
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--button-padding);
+  border-radius: var(--button-radius);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--theme-font-size-base);
+  transition: var(--transition-smooth);
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.action-button--primary {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  color: white;
+  box-shadow: var(--shadow-primary-sm);
+}
+
+.action-button--primary:hover {
+  transform: var(--button-hover-transform);
+  box-shadow: var(--shadow-primary-md);
+}
+
+.action-button--secondary {
+  background: var(--surface-light);
+  color: var(--theme-text);
+  border: var(--border-width-thin) solid var(--border-medium);
+}
+
+.action-button--secondary:hover {
+  background: var(--surface-strong);
+  border-color: var(--theme-primary);
+}
+
+.action-button--danger {
+  background: linear-gradient(135deg, var(--theme-danger) 0%, var(--theme-danger-dark) 100%);
+  color: white;
+}
+
+.action-button--danger:hover {
+  transform: var(--button-hover-transform);
+  box-shadow: var(--shadow-danger-md);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Loading Button */
+.loading-button {
+  position: relative;
+}
+
+.loading-button__spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.spinner {
+  display: inline-block;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  border: var(--border-width-medium) solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Button Components */
+.btn-primary {
+  padding: var(--button-padding);
+  background: var(--theme-primary);
+  color: white;
+  border: none;
+  border-radius: var(--button-radius-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-primary:hover {
+  background: var(--theme-primary-hover);
+  transform: var(--button-hover-transform);
+}
+
+.btn-secondary {
+  padding: var(--button-padding);
+  background: var(--surface-light);
+  color: var(--theme-text);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--button-radius-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-secondary:hover {
+  background: var(--surface-strong);
+  border-color: var(--theme-primary);
+  transform: var(--button-hover-transform);
+}
+
+/* Info Box */
+.info-box {
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-3xl);
+}
+
+/* Empty State (glass variant) */
+.empty-state__content {
+  text-align: center;
+  padding: var(--space-lg);
+}
+
+.empty-state__icon {
+  width: var(--icon-2xl);
+  height: var(--icon-2xl);
+  margin: 0 auto var(--space-xs);
+  color: var(--text-opacity-subtle);
+}
+
+.empty-state__message {
+  font-size: var(--theme-font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-opacity-medium-low);
+}
+
+.empty-state__secondary {
+  font-size: var(--theme-font-size-xs);
+  color: var(--text-opacity-subtle);
+  margin-top: var(--space-3xs);
+}
+
+/* Glass morphism card for step navigation - High specificity selector */
+.quill-theme-wrapper .step-navigation-card {
+  background: linear-gradient(135deg, var(--surface-dark-strong) 0%, var(--surface-dark-medium) 100%);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: var(--border-width-thin) solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Step circles with glassmorphism effect */
+.quill-theme-wrapper [class*="rounded-full"][class*="flex items-center"] {
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  box-shadow:
+    var(--shadow-md),
+    var(--inset-highlight-subtle);
+}
+
+/* Active/completed step enhancement */
+.quill-theme-wrapper [class*="from-purple-800"][class*="to-purple-900"] {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  box-shadow:
+    var(--shadow-primary-md),
+    var(--inset-highlight-strong);
+  border-color: var(--theme-primary);
+}
+
+/* Step connectors with gradient */
+.quill-theme-wrapper [class*="from-purple-800"][class*="to-purple-900"][class*="h-0.5"] {
+  background: linear-gradient(90deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Utility background class */
+[class~="bg-glass"] {
+  background: var(--surface-light);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+}
+
+/* Ultra-wide: centre the glass card with a max-width cap */
+@media (min-width: 1440px) {
+  .glass-morphism-card {
+    max-width: var(--container-lg);
+    margin: 0 auto;
+  }
+}
+
+/* Text Color Utilities */
+.text-quill-primary {
+  color: var(--text-opacity-medium-high);
+  line-height: var(--theme-line-height-relaxed);
+}
+
+.text-quill-secondary {
+  color: var(--text-opacity-low);
+}
+
+/* ============================================================================
+   GLASS CARD MOBILE ADAPTATIONS
+   (dissolved from responsive.css)
+   ============================================================================ */
+
+/* Hide step navigation on narrow viewports */
+@media (max-width: 640px) {
+  .step-navigation-card {
+    display: none;
+  }
+}
+
+/* Let glass card content determine its own height on narrow cards */
+@container scheduling (max-width: 640px) {
+  .glass-morphism-card:not(.step-navigation-card) {
+    min-height: auto;
+  }
+}
+
+/* Compact glass card padding on very narrow cards */
+@container scheduling (max-width: 480px) {
+  .glass-morphism-card > div {
+    padding: var(--space-sm);
+  }
+}

@@ -1,0 +1,269 @@
+/* Schedule Header + Timezone Selector — merged module.
+   Promoted from modules/schedule/schedule-header.css and
+   modules/schedule/timezone-selector.css; responsive and embedded
+   compaction rules consolidated here as container queries.
+   Container context: .glass-morphism-card (container-name: scheduling). */
+
+/* ============================================================================
+   SCHEDULE CARD HEADER
+   ============================================================================ */
+
+.schedule-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.schedule-timezone-area {
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   CALENDAR NAVIGATION BUTTONS
+   ============================================================================ */
+
+.calendar-nav-button {
+  background: var(--surface-light);
+  color: white;
+  border: var(--border-width-thin) solid var(--border-intense);
+  transition: var(--transition-normal);
+}
+
+.calendar-nav-button:hover:not(:disabled) {
+  background: var(--border-medium);
+}
+
+/* ============================================================================
+   TIMEZONE SELECTOR
+   ============================================================================ */
+
+.timezone-label {
+  display: none;
+  color: var(--text-opacity-medium-high);
+  font-size: var(--theme-font-size-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.timezone-trigger {
+  background: linear-gradient(135deg, var(--surface-medium) 0%, var(--surface-subtle) 100%);
+  border: var(--border-width-thin) solid var(--border-medium);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  transition: var(--transition-normal);
+  padding: var(--space-xs) var(--space-xs);
+}
+
+.timezone-trigger:hover {
+  transform: scale(1.01);
+  box-shadow: var(--shadow-lg);
+}
+
+.timezone-name {
+  font-size: var(--theme-font-size-xs);
+}
+
+.timezone-time-display {
+  color: var(--text-opacity-low);
+}
+
+.timezone-time-inline {
+  display: none;
+}
+
+.timezone-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: var(--space-xs);
+}
+
+.timezone-offset-badge {
+  display: none;
+  background: var(--surface-medium);
+  color: var(--text-opacity-medium-high);
+  font-size: var(--theme-font-size-xs);
+  padding: var(--space-3xs) var(--space-xs);
+}
+
+.timezone-offset-badge-dropdown {
+  background: var(--surface-light);
+  color: var(--text-opacity-medium-high);
+}
+
+.timezone-chevron {
+  color: var(--text-opacity-low);
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.timezone-dropdown {
+  background: var(--theme-background);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: var(--border-width-thin) solid var(--border-intense);
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: 16rem;
+}
+
+.timezone-dropdown-header {
+  border-bottom: var(--border-width-thin) solid var(--border-medium);
+}
+
+.timezone-search-input {
+  background: var(--input-bg-glass);
+  color: var(--text-opacity-high);
+}
+
+.timezone-dropdown-item {
+  color: var(--text-opacity-high);
+  transition: var(--transition-fast);
+}
+
+.timezone-dropdown-item:hover {
+  background: var(--surface-medium);
+}
+
+.timezone-dropdown-list {
+  max-height: 12rem;
+}
+
+/* Timezone flag styling */
+.timezone-flag {
+  width: var(--icon-sm);
+  height: var(--flag-height);
+  flex-shrink: 0;
+  border-radius: var(--space-3xs);
+  object-fit: cover;
+}
+
+.timezone-option-flag {
+  width: var(--icon-sm);
+  height: var(--flag-height);
+  flex-shrink: 0;
+  border-radius: var(--space-3xs);
+  object-fit: cover;
+}
+
+/* Layout helpers */
+.timezone-label-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.timezone-trigger-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timezone-trigger-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* ============================================================================
+   CONTAINER QUERIES
+   (replaces @media width queries from responsive.css and embedded.css)
+   ============================================================================ */
+
+/* Medium container — show expanded timezone controls */
+@container scheduling (min-width: 400px) {
+  .timezone-label {
+    display: block;
+  }
+
+  .timezone-trigger {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .timezone-trigger:hover {
+    transform: scale(1.01);
+  }
+
+  .timezone-name {
+    font-size: var(--theme-font-size-sm);
+  }
+
+  .timezone-time-inline {
+    display: block;
+  }
+
+  .timezone-meta {
+    margin-left: var(--space-sm);
+  }
+
+  .timezone-offset-badge {
+    display: block;
+    font-size: var(--theme-font-size-sm);
+    padding: var(--space-3xs) var(--space-sm);
+  }
+
+  .timezone-chevron {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .timezone-dropdown {
+    left: auto;
+    right: 0;
+    width: auto;
+    min-width: 16rem;
+    max-width: 24rem;
+    max-height: 18rem;
+  }
+
+  .timezone-dropdown-list {
+    max-height: 14rem;
+  }
+}
+
+/* Narrow container — compact timezone on mobile */
+@container scheduling (max-width: 399px) {
+  .timezone-selector-wrapper {
+    max-width: calc(100cqi - 2rem);
+  }
+}
+
+/* ============================================================================
+   EMBEDDED COMPACTION
+   ============================================================================ */
+
+/* Stacking context for dropdown z-index in iframes */
+html.quill-theme[data-embedded] .schedule-card-header {
+  position: relative;
+  z-index: 10;
+}
+
+/* Compact timezone selector — hide verbose elements */
+html.quill-theme[data-embedded] .timezone-label {
+  display: none;
+}
+
+html.quill-theme[data-embedded] .timezone-time-display {
+  display: none;
+}
+
+html.quill-theme[data-embedded] .timezone-offset-badge {
+  display: none;
+}
+
+html.quill-theme[data-embedded] .timezone-trigger {
+  padding: var(--space-xs) var(--space-sm);
+}
+
+/* Dropdown positioning in iframes — right-aligned with constrained width */
+html.quill-theme[data-embedded] .timezone-dropdown {
+  left: auto;
+  right: 0;
+  max-width: 16rem;
+}

@@ -50,11 +50,13 @@ body.quill-theme {
   flex-direction: column;
   min-height: 0;
   position: relative;
+  padding-bottom: 10vh;
 }
 
-/* Center the glass card vertically while keeping the step nav at the top.
-   The .container has Tailwind's flex-1 which stretches it to fill all
-   space — override so it sizes to content, then auto margins center it. */
+/* Center the content vertically — optical centering biases upward
+   so the card feels balanced rather than sinking toward the bottom.
+   The bottom padding on content-area steals space from below, shifting
+   the auto-margin midpoint upward. */
 .main-gradient.theme-grid .content-area .container {
   flex: initial;
   margin-top: auto;
@@ -106,21 +108,231 @@ body.quill-theme {
 }
 
 /* Animations */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(var(--animation-slide-distance));
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .animate-fade-in-up {
   animation: fadeInUp 0.3s ease-out;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+/* ============================================================================
+   CONTAINER BREAKPOINTS
+   (dissolved from responsive.css)
+   ============================================================================ */
+
+@media (max-width: 640px) {
+  .container {
+    padding-left: var(--space-lg);
+    padding-right: var(--space-lg);
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  .container {
+    padding-left: var(--space-xl);
+    padding-right: var(--space-xl);
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    max-width: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+    max-width: 1536px;
+  }
+}
+
+/* ============================================================================
+   SHORT VIEWPORTS
+   (dissolved from responsive.css)
+   ============================================================================ */
+
+/* Medium short screens — reduce vertical padding */
+@media (max-height: 700px) and (min-height: 601px) {
+  .glass-morphism-card > div {
+    padding: var(--space-lg);
+  }
+
+  .container {
+    padding-top: var(--space-xs);
+    padding-bottom: var(--space-xs);
+  }
+
+  .section-header {
+    margin-bottom: var(--space-md);
+  }
+}
+
+/* Short screens — compact spacing */
+@media (max-height: 600px) {
+  .section-header {
+    font-size: var(--theme-font-size-md);
+    margin-bottom: var(--space-xs);
+  }
+
+  .glass-morphism-card > div {
+    padding: var(--space-md);
+  }
+
+  .content-area {
+    gap: var(--space-xs);
+  }
+}
+
+/* Very short screens — aggressive compaction */
+@media (max-height: 500px) {
+  .glass-morphism-card > div {
+    padding: var(--space-sm);
+  }
+
+  html.quill-theme .step-item-wrapper .step-label {
+    display: none;
+  }
+
+  .action-button--primary,
+  .action-button--secondary {
+    padding: var(--space-xs) var(--space-sm);
+  }
+}
+
+/* Extremely short screens — minimal chrome */
+@media (max-height: 400px) {
+  .step-navigation-card {
+    display: none;
+  }
+
+  .glass-morphism-card > div {
+    padding: var(--space-xs);
+  }
+
+  .section-header {
+    font-size: var(--theme-font-size-sm);
+  }
+
+  .container {
+    padding-left: var(--space-xs);
+    padding-right: var(--space-xs);
+  }
+}
+
+/* ============================================================================
+   REDUCED MOTION
+   (dissolved from responsive.css)
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+   MOBILE WIDTH ADAPTATIONS
+   (dissolved from responsive.css)
+   ============================================================================ */
+
+/* Prevent horizontal overflow on narrow screens */
+@media (max-width: 640px) {
+  body {
+    overflow-x: hidden;
+    position: relative;
+  }
+}
+
+/* Step indicators — compact layout on narrow cards */
+@container scheduling (max-width: 640px) {
+  .step-indicator-container {
+    gap: var(--space-md);
+  }
+
+  .step-item-wrapper .step-label {
+    font-size: var(--theme-font-size-2xs);
+    margin-top: var(--space-2xs);
+  }
+
+  .step-circle {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .step-connector {
+    width: 1rem;
+  }
+
+  .step-indicator {
+    padding: 0 var(--space-xs);
+  }
+}
+
+/* Hide step labels on very narrow cards — circles alone are sufficient.
+   Specificity boosted with html.quill-theme to beat the display: block rule
+   in booking.css (.quill-theme-wrapper [class*=...] > span:last-child). */
+@container scheduling (max-width: 480px) {
+  html.quill-theme .step-item-wrapper .step-label {
+    display: none;
+  }
+}
+
+/* Hide step connectors on the narrowest cards */
+@container scheduling (max-width: 360px) {
+  .step-connector {
+    display: none;
+  }
+}
+
+/* ============================================================================
+   PRINT
+   (dissolved from responsive.css)
+   ============================================================================ */
+@media print {
+  .glass-morphism-card {
+    background: white;
+    color: black;
+    box-shadow: none;
+    border: var(--border-width-thin) solid #cccccc;
+  }
+
+  button {
+    display: none;
+  }
 }

@@ -379,6 +379,22 @@
 
 /* Mobile-specific component optimizations */
 @media (max-width: 479px) {
+  /* Duration grid - single column on mobile */
+  .duration-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-xs);
+    margin-top: var(--space-sm);
+  }
+
+  .duration-card {
+    min-height: var(--min-touch-target);
+  }
+
+  .duration-button {
+    padding: var(--space-sm);
+    min-height: var(--min-touch-target);
+  }
+
   /* Ensure buttons are large enough for touch */
   .submit-button,
   .action-button-primary {
@@ -412,6 +428,48 @@
   .prev-button,
   .next-button {
     min-height: var(--min-touch-target);
+  }
+}
+
+/* Short screens — compact duration grid */
+@media (max-height: 600px) {
+  .duration-grid {
+    grid-template-columns: 1fr;
+    margin-top: var(--space-sm);
+  }
+
+  .duration-button {
+    padding: var(--space-sm);
+  }
+
+  .duration-description {
+    display: none;
+  }
+}
+
+/* Very short screens — aggressive compaction */
+@media (max-height: 500px) {
+  .duration-button {
+    padding: var(--space-xs);
+  }
+
+  .duration-card {
+    border-radius: var(--radius-md);
+  }
+
+  .action-button-primary,
+  .submit-button,
+  .next-button,
+  .prev-button {
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--theme-font-size-sm);
+  }
+}
+
+/* Extremely short screens */
+@media (max-height: 400px) {
+  .duration-grid {
+    gap: 3px;
   }
 }
 

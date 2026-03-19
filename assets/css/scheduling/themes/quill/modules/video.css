@@ -78,6 +78,13 @@
   }
 }
 
+/* Hide video background when printing */
+@media print {
+  .video-background {
+    display: none;
+  }
+}
+
 /* Ensure content is properly layered above video */
 .quill-theme-wrapper > div:not(.video-background) {
   position: relative;

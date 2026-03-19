@@ -66,6 +66,8 @@
   margin-bottom: 0;
   -webkit-overflow-scrolling: touch;
   width: 100%;
+  max-width: 500px;
+  margin-inline: auto;
 }
 
 /* Form Field Styling
@@ -135,4 +137,158 @@
 .rhythm-theme-wrapper .booking-form .form-field-wrapper > div.mt-2.flex.items-center {
   color: var(--theme-error);
   margin-top: var(--space-3xs);
+}
+
+/* ============================================================================
+   BOOKING FORM — CONTAINER-RESPONSIVE LAYOUT
+   Breakpoint: 420px on .scheduling-box (container-name: scheduling)
+   ============================================================================ */
+
+/* Wide layout — 2-column grid for name + email */
+@container scheduling (min-width: 420px) {
+  .slide-content.booking-slide {
+    max-width: var(--container-xl);
+    margin: 0 auto;
+  }
+
+  .booking-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--space-md);
+    row-gap: var(--space-sm);
+    flex: 1;
+  }
+
+  /* Name and email side by side — nth-child(2) and (3) because the honeypot
+     field is always nth-child(1) in the DOM (even though it's out of flow) */
+  .booking-form .form-field-wrapper:nth-child(2),
+  .booking-form .form-field-wrapper:nth-child(3) {
+    grid-column: span 1;
+  }
+
+  /* Message spans full width */
+  .booking-form .form-field-wrapper:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  /* Recaptcha notice always full width, always below message field */
+  .booking-form .recaptcha-notice {
+    grid-column: 1 / -1;
+  }
+
+  /* Buttons always full width */
+  .booking-form .slide-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Narrow layout — single column */
+@container scheduling (max-width: 419px) {
+  .booking-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .booking-form .form-field-wrapper {
+    width: 100%;
+  }
+
+  .rhythm-theme-wrapper .booking-form textarea.input {
+    min-height: 100px;
+  }
+
+  /* Booking form inputs — explicit padding/height for small containers */
+  .rhythm-theme-wrapper .slide .booking-form .input,
+  .rhythm-theme-wrapper .slide .booking-form input.input,
+  .rhythm-theme-wrapper .slide .booking-form textarea.input {
+    padding: var(--space-sm);
+    min-height: var(--min-touch-target);
+  }
+
+  .rhythm-theme-wrapper .slide .booking-form textarea.input {
+    min-height: 80px;
+  }
+
+  .rhythm-theme-wrapper .slide .booking-form .label {
+    margin-bottom: var(--space-2xs);
+  }
+}
+
+/* Tablet-range — duration adjustments (container ≤ 519px) */
+@container scheduling (max-width: 519px) {
+  /* Duration grid — single column */
+  .duration-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+
+  .duration-button {
+    min-height: var(--min-touch-target);
+  }
+}
+
+/* ============================================================================
+   BOOKING FORM — EMBEDDED RE-LAYOUT
+   Applied when the scheduling widget is in an iframe ([data-embedded]).
+   These container queries mirror the embedded.css section 3 rules but use
+   container width rather than the [data-embedded] selector, so the same
+   compact layout fires whenever the container is narrow — not just in iframes.
+   ============================================================================ */
+
+/* Compact meeting summary — single inline bar */
+@container scheduling (max-width: 500px) {
+  html.rhythm-theme[data-embedded] .meeting-summary {
+    padding: clamp(var(--space-3xs), 1.5cqi, var(--space-xs)) clamp(var(--space-xs), 2cqi, var(--space-sm));
+    margin-bottom: var(--space-xs);
+    gap: 0;
+  }
+
+  html.rhythm-theme[data-embedded] .meeting-summary .summary-row {
+    gap: var(--space-sm);
+  }
+
+  html.rhythm-theme[data-embedded] .meeting-summary .summary-icon {
+    display: none;
+  }
+
+  html.rhythm-theme[data-embedded] .meeting-summary .summary-label {
+    display: inline;
+    margin-top: 0;
+  }
+
+  html.rhythm-theme[data-embedded] .meeting-summary .summary-label::before {
+    content: " · ";
+  }
+
+  html.rhythm-theme[data-embedded] .meeting-summary .summary-value {
+    display: inline;
+  }
+}
+
+/* Name + email side-by-side in embedded narrow view */
+@container scheduling (max-width: 500px) {
+  html.rhythm-theme[data-embedded] .booking-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xs);
+  }
+
+  /* Textarea and everything after spans full width */
+  html.rhythm-theme[data-embedded] .booking-form .form-field-wrapper:nth-child(n+4),
+  html.rhythm-theme[data-embedded] .booking-form .recaptcha-notice,
+  html.rhythm-theme[data-embedded] .booking-form .slide-actions {
+    grid-column: 1 / -1;
+  }
+
+  /* Honeypot (first child) hidden — already display:none, but keep grid happy */
+  html.rhythm-theme[data-embedded] .booking-form > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  /* Textarea — compact height instead of 4 rows */
+  html.rhythm-theme[data-embedded] .booking-form textarea.input {
+    min-height: auto;
+    height: 3.5em;
+  }
 }

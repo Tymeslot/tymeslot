@@ -1,0 +1,93 @@
+/* iframe.css — Context-driven overrides for iframe embeds.
+   These rules adapt the page to the iframe *context* (size-to-content,
+   hide host-page chrome) and are independent of the available viewport width.
+   Viewport/size-driven compaction belongs in responsive.css.
+   Triggered by the [data-embedded] attribute set by iframe_embed.js. */
+
+/* ---------------------------------------------------------------------------
+   1. Size to Content
+   In standalone mode the page fills the viewport (min-height: 100vh).
+   In an iframe the page must size to its content so the parent's
+   ResizeObserver can measure and set the iframe height.
+   --------------------------------------------------------------------------- */
+html.quill-theme[data-embedded] {
+  min-height: auto;
+}
+
+/* height: max-content makes body.offsetHeight reflect actual content
+   so iframe_embed.js can report the correct height to the parent. */
+html.quill-theme[data-embedded] body.quill-theme {
+  min-height: auto;
+  height: max-content;
+}
+
+html.quill-theme[data-embedded] .main-gradient.theme-grid {
+  min-height: auto;
+  grid-template-rows: auto;
+}
+
+html.quill-theme[data-embedded] .quill-theme-wrapper > div {
+  flex: initial;
+}
+
+/* ---------------------------------------------------------------------------
+   2. Hide Host-Page Chrome
+   Remove decorative elements that exist for the standalone page but are
+   invisible or wasteful inside an iframe.
+   --------------------------------------------------------------------------- */
+
+/* Step navigation — always hidden in iframes to save vertical space.
+   (responsive.css only hides it at max-height: 400px.)
+   High-specificity prefix (0-3-1) beats .quill-theme-wrapper .step-navigation-card (0-2-0). */
+html.quill-theme[data-embedded] .step-navigation-card {
+  display: none;
+}
+
+/* Hide footer/branding */
+html.quill-theme[data-embedded] .footer-gradient {
+  display: none;
+}
+
+/* Hide video/gradient background — reduces load time */
+html.quill-theme[data-embedded] .video-background {
+  display: none;
+}
+
+/* Language switcher — override position:fixed from language-switcher.css ≤640px
+   breakpoint and pull tighter to the corner. position:absolute is relative to
+   the nearest positioned ancestor (.glass-morphism-card). */
+html.quill-theme[data-embedded] .language-switcher {
+  position: absolute;
+  top: var(--space-xs);
+  right: var(--space-xs);
+}
+
+/* ---------------------------------------------------------------------------
+   3. Adaptive Card Height
+   In standalone mode the glass card has a generous min-height so the gradient
+   background doesn't look empty. In iframes the card must shrink-wrap its
+   content — extra whitespace below buttons is wasted.
+   --------------------------------------------------------------------------- */
+html.quill-theme[data-embedded] .glass-morphism-card {
+  min-height: auto;
+}
+
+/* Don't center glass card — hug the top, no wasted gradient space. */
+html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area .container {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Let every flex layer shrink-wrap its content instead of stretching */
+html.quill-theme[data-embedded] .content-area .container {
+  flex: initial;
+}
+
+html.quill-theme[data-embedded] .time-slots-panel {
+  flex: initial;
+}
+
+html.quill-theme[data-embedded] .slots-box {
+  height: auto;
+  min-height: 0;
+}

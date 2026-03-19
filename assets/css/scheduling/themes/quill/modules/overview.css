@@ -1,0 +1,301 @@
+/* Overview - Organizer profile, duration cards, and overview layout */
+
+/* Overview Component Styles */
+.overview-success-badge {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+}
+
+/* ============================================================================
+   SEMANTIC CLASSES — replacing responsive Tailwind prefixes in overview_component
+   (dissolved from glass-components.css — width queries → @container scheduling)
+   ============================================================================ */
+
+/* overview-content-area: replaces px-4 py-2 md:py-4 */
+.overview-content-area {
+  padding: var(--space-xs) var(--space-md);
+}
+
+/* overview-card-body: replaces p-3 sm:p-6 md:p-8 lg:p-10 */
+.overview-card-body {
+  padding: var(--space-sm);
+}
+
+/* overview-layout: replaces grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-8 items-center */
+.overview-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+/* overview-avatar-section: replaces text-center md:text-left */
+.overview-avatar-section {
+  text-align: center;
+}
+
+/* overview-avatar-wrapper: replaces inline-block mx-auto md:mx-0 */
+.overview-avatar-wrapper {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* overview-avatar: replaces w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 */
+.overview-avatar {
+  width: 8rem;
+  height: 8rem;
+}
+
+/* overview-success-badge positioning: replaces -bottom-2 -right-2 md:-bottom-4 md:-right-4 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 */
+.overview-success-badge {
+  bottom: -0.5rem;
+  right: -0.5rem;
+  width: 3rem;
+  height: 3rem;
+}
+
+/* overview-success-badge-emoji: replaces text-xl sm:text-2xl md:text-4xl */
+.overview-success-badge-emoji {
+  font-size: var(--theme-font-size-xl);
+}
+
+/* overview-title: replaces text-xl sm:text-2xl md:text-3xl lg:text-4xl text-center md:text-left */
+.overview-title {
+  font-size: var(--theme-font-size-xl);
+  text-align: center;
+}
+
+/* overview-description: replaces text-sm sm:text-base md:text-lg lg:text-xl mb-3 sm:mb-4 md:mb-6 text-center md:text-left */
+.overview-description {
+  font-size: var(--theme-font-size-sm);
+  margin-bottom: var(--space-sm);
+  text-align: center;
+}
+
+/* overview-duration-list: replaces space-y-2 md:space-y-4 */
+.overview-duration-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* overview-next-action: replaces mt-4 md:mt-8 */
+.overview-next-action {
+  margin-top: var(--space-md);
+}
+
+/* duration-card: replaces p-2.5 sm:p-3 md:p-5 */
+.duration-card {
+  padding: var(--space-sm);
+}
+
+/* duration-card-title: replaces text-base sm:text-lg md:text-xl */
+.duration-card-title {
+  font-size: var(--theme-font-size-base);
+}
+
+/* duration-card-description: replaces text-xs sm:text-sm md:text-base */
+.duration-card-description {
+  font-size: var(--theme-font-size-xs);
+}
+
+/* duration-card-icon: replaces w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 */
+.duration-card-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* duration-card-emoji: replaces text-xl sm:text-2xl md:text-3xl */
+.duration-card-emoji {
+  font-size: var(--theme-font-size-xl);
+}
+
+@container scheduling (min-width: 640px) {
+  .overview-card-body {
+    padding: var(--space-lg);
+  }
+
+  .overview-avatar {
+    width: 12rem;
+    height: 12rem;
+  }
+
+  .overview-success-badge {
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .overview-success-badge-emoji {
+    font-size: var(--theme-font-size-2xl);
+  }
+
+  .overview-title {
+    font-size: var(--theme-font-size-2xl);
+  }
+
+  .overview-description {
+    font-size: var(--theme-font-size-base);
+    margin-bottom: var(--space-md);
+  }
+
+  .duration-card {
+    padding: var(--space-sm);
+  }
+
+  .duration-card-title {
+    font-size: var(--theme-font-size-lg);
+  }
+
+  .duration-card-description {
+    font-size: var(--theme-font-size-sm);
+  }
+
+  .duration-card-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .duration-card-emoji {
+    font-size: var(--theme-font-size-2xl);
+  }
+}
+
+@container scheduling (min-width: 768px) {
+  .overview-content-area {
+    padding: var(--space-md) var(--space-md);
+  }
+
+  .overview-card-body {
+    padding: var(--space-2xl);
+  }
+
+  .overview-layout {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2xl);
+  }
+
+  .overview-avatar-section {
+    text-align: left;
+  }
+
+  .overview-avatar-wrapper {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .overview-avatar {
+    width: 16rem;
+    height: 16rem;
+  }
+
+  .overview-success-badge {
+    bottom: -1rem;
+    right: -1rem;
+    width: 6rem;
+    height: 6rem;
+  }
+
+  .overview-success-badge-emoji {
+    font-size: var(--theme-font-size-4xl);
+  }
+
+  .overview-title {
+    font-size: var(--theme-font-size-3xl);
+    text-align: left;
+  }
+
+  .overview-description {
+    font-size: var(--theme-font-size-lg);
+    margin-bottom: var(--space-lg);
+    text-align: left;
+  }
+
+  .overview-duration-list {
+    gap: var(--space-md);
+  }
+
+  .overview-next-action {
+    margin-top: var(--space-2xl);
+  }
+
+  .duration-card {
+    padding: var(--space-lg);
+  }
+
+  .duration-card-title {
+    font-size: var(--theme-font-size-xl);
+  }
+
+  .duration-card-description {
+    font-size: var(--theme-font-size-base);
+  }
+
+  .duration-card-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .duration-card-emoji {
+    font-size: var(--theme-font-size-3xl);
+  }
+}
+
+@container scheduling (min-width: 1024px) {
+  .overview-card-body {
+    padding: var(--space-3xl);
+  }
+
+  .overview-avatar {
+    width: 20rem;
+    height: 20rem;
+  }
+
+  .overview-title {
+    font-size: var(--theme-font-size-4xl);
+  }
+
+  .overview-description {
+    font-size: var(--theme-font-size-xl);
+  }
+}
+
+/* ============================================================================
+   EMBEDDED — Compact Overview
+   (dissolved from embedded.css Section 3)
+   ============================================================================ */
+
+/* Collapse the 2-col grid into a single column */
+html.quill-theme[data-embedded] .glass-morphism-card .grid.md\:grid-cols-2 {
+  display: block;
+}
+
+/* Float avatar left, shrink to 80px */
+html.quill-theme[data-embedded] .glass-morphism-card .grid.md\:grid-cols-2 > .text-center {
+  float: left;
+  margin: 0 var(--space-md) var(--space-xs) 0;
+  text-align: left;
+}
+
+html.quill-theme[data-embedded] .glass-morphism-card .grid.md\:grid-cols-2 img.rounded-full {
+  width: 80px;
+  height: 80px;
+}
+
+/* Scale down the success badge proportionally.
+   High-specificity prefix (0-3-1) beats Tailwind utilities w-12 h-12 etc. (0-1-0). */
+html.quill-theme[data-embedded] .overview-success-badge {
+  width: 28px;
+  height: 28px;
+  bottom: -4px;
+  right: -4px;
+}
+
+html.quill-theme[data-embedded] .overview-success-badge span {
+  font-size: 14px;
+}
+
+/* Clear float after the grid to avoid collapsing */
+html.quill-theme[data-embedded] .glass-morphism-card .grid.md\:grid-cols-2::after {
+  content: "";
+  display: table;
+  clear: both;
+}

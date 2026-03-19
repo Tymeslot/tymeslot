@@ -1,5 +1,4 @@
 /* Quill Theme Variables - Comprehensive Design Token System */
-
 :root {
   /* Typography - Font Family */
   --theme-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -15,6 +14,7 @@
   --theme-font-size-xl: clamp(1.25rem, 2.4vw, 1.375rem);      /* ~20-22px - headings */
   --theme-font-size-2xl: clamp(1.438rem, 2.8vw, 1.625rem);    /* ~23-26px - large headings */
   --theme-font-size-3xl: clamp(1.75rem, 3.5vw, 2.5rem);       /* ~28-40px - hero text */
+  --theme-font-size-4xl: clamp(2rem, 4vw, 3rem);              /* ~32-48px - display text */
 
   /* Typography - Line Heights */
   --theme-line-height-tight: 1.1;
@@ -159,6 +159,7 @@
   --avatar-size-xl: 192px;
 
   /* Component-Specific Tokens - Icons */
+  --icon-2xs: 10px;
   --icon-xs: 12px;
   --icon-sm: 16px;
   --icon-md: 20px;
@@ -259,6 +260,10 @@
   --input-bg-glass-focus: rgba(0, 0, 0, 0.6);
   --input-bg-glass-disabled: rgba(0, 0, 0, 0.2);
   --input-placeholder-glass: rgba(255, 255, 255, 0.5);
+  --input-error-border: var(--theme-error-border);
+  --input-error-border-focus: var(--theme-error-border-focus);
+  --input-error-bg: var(--theme-error-bg);
+  --input-error-focus-ring: var(--theme-primary-focus);
   --input-shadow-base: rgba(0, 0, 0, 0.15);
   --input-shadow-focus: rgba(0, 0, 0, 0.2);
   --input-inset-highlight: rgba(255, 255, 255, 0.1);
