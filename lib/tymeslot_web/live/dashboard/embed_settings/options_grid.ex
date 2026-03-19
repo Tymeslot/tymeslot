@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           {Helpers.embed_code("inline", %{username: @username, base_url: @base_url})}
         </:code>
         <:footer_info>
-          Embeds seamlessly into your page content. Supports <code>data-theme</code>, <code>data-primary-color</code>, and <code>data-locale</code>.
+          Shows the booking calendar right on your page. Copy the code and paste it into your website's HTML.
         </:footer_info>
       </.embed_option_card>
       <.embed_option_card
@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           {Helpers.embed_code("popup", %{username: @username, base_url: @base_url})}
         </:code>
         <:footer_info>
-          Opens booking in a fullscreen modal. Great for CTAs and hero sections. Supports <code>locale</code>, <code>theme</code>, and <code>primaryColor</code> options.
+          Visitors click a button on your page and the booking calendar opens in an overlay.
         </:footer_info>
       </.embed_option_card>
 
@@ -125,7 +125,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           {Helpers.embed_code("link", %{booking_url: @booking_url})}
         </:code>
         <:footer_info>
-          Share in emails, social media, or anywhere you can paste a link.
+          Share this link in emails, social media bios, or messages. No code needed.
         </:footer_info>
       </.embed_option_card>
 
@@ -166,10 +166,24 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           {Helpers.embed_code("floating", %{username: @username, base_url: @base_url})}
         </:code>
         <:footer_info>
-          Always visible on every page. Like a chat widget for booking meetings. Supports <code>theme</code>, <code>primaryColor</code>, and <code>locale</code> customization.
+          A floating button stays visible as visitors scroll — like a chat widget, but for booking.
         </:footer_info>
       </.embed_option_card>
     </div>
+
+    <%!-- Hardcoded link to the cloud docs hub — /docs is not available in standalone Core --%>
+    <p class="mt-6 text-center text-token-sm text-tymeslot-500">
+      Need help? See the
+      <a
+        href="https://tymeslot.app/docs/embed"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-turquoise-600 hover:text-turquoise-700 font-medium underline"
+      >
+        embedding guide
+      </a>
+      for step-by-step instructions, platform tips, and customization options.
+    </p>
     """
   end
 
