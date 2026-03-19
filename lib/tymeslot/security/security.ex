@@ -287,7 +287,10 @@ defmodule Tymeslot.Security.Security do
   """
   @spec validate_domain(String.t()) :: {:ok, String.t()} | {:error, String.t()}
   def validate_domain(domain) when is_binary(domain) do
-    domain = String.trim(domain)
+    domain =
+      domain
+      |> String.trim()
+      |> maybe_extract_host()
 
     cond do
       domain in ["localhost", "127.0.0.1", "::1"] ->
@@ -326,4 +329,15 @@ defmodule Tymeslot.Security.Security do
   end
 
   def validate_domain(_invalid_value), do: {:error, "Invalid domain"}
+
+  defp maybe_extract_host(domain) do
+    if String.contains?(domain, "://") do
+      case URI.parse(domain) do
+        %URI{host: host} when is_binary(host) -> host
+        _ -> domain
+      end
+    else
+      domain
+    end
+  end
 end
