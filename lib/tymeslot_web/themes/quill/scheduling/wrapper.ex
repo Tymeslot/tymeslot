@@ -51,11 +51,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
     <!-- Render background video if configured -->
       <%= if @has_video_background do %>
         <div class="video-background" id="quill-video-container" phx-hook="QuillVideo">
-          <video autoplay muted loop playsinline poster={@video_poster} class="video-background video">
+          <video autoplay muted loop playsinline preload="auto" poster={@video_poster} class="video-background video">
             <% background_video_path = get_background_video_path(@theme_customization) %>
             <%= if background_video_path do %>
               <% sanitized_path = sanitize_path(background_video_path) %>
-              <source src={"/uploads/#{sanitized_path}"} type="video/mp4" />
+              {Phoenix.HTML.raw(VideoHelpers.render_upload_video_sources(sanitized_path))}
             <% else %>
               <!-- Handle preset videos -->
               <% background_value = get_background_value(@theme_customization) %>

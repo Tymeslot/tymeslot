@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
 
   use Phoenix.Component
 
+  alias Tymeslot.Media.Transcoder
   alias TymeslotWeb.Themes.Shared.Assets
 
   @doc """
@@ -40,7 +41,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
       muted
       loop
       playsinline
-      preload="metadata"
+      preload="auto"
       poster={@video_config.poster}
       id={@video_id}
       class="video-background-video"
@@ -74,7 +75,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
       playsinline
       class="video-background-video active"
       id={@video_id_1}
-      preload="metadata"
+      preload="auto"
     >
       {Phoenix.HTML.raw(render_video_sources(@video_config.background_videos))}
       <!-- Fallback for missing video -->
@@ -87,7 +88,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
       playsinline
       class="video-background-video inactive"
       id={@video_id_2}
-      preload="metadata"
+      preload="auto"
     >
       {Phoenix.HTML.raw(render_video_sources(@video_config.background_videos))}
       <!-- Fallback for missing video -->
@@ -167,5 +168,28 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
     desktop_filename
     |> generate_responsive_video_sources()
     |> render_video_sources()
+  end
+
+  @doc """
+  Render responsive video sources for a user-uploaded video.
+  Derives variant paths from the original upload path using the standard
+  naming convention. The original file is always the last fallback source.
+
+  Unlike preset sources (which use -original.mp4), upload sources use the
+  original upload path verbatim as the fallback.
+  """
+  @spec render_upload_video_sources(String.t()) :: String.t()
+  def render_upload_video_sources(upload_path) when is_binary(upload_path) do
+    base = Path.rootname(upload_path)
+
+    variant_sources =
+      Enum.map(Transcoder.variant_definitions(), fn variant ->
+        %{src: "/uploads/#{base <> variant.suffix}", type: variant.type, media: variant.media}
+      end)
+
+    # Original upload is always the last fallback source
+    fallback = %{src: "/uploads/#{upload_path}", type: "video/mp4", media: nil}
+
+    render_video_sources(variant_sources ++ [fallback])
   end
 end

@@ -111,7 +111,9 @@ config :tymeslot, :oban_queues,
   # Oban maintenance tasks (cleanup, stuck jobs)
   maintenance: 1,
   # Oban queue monitoring (separate queue to detect maintenance queue issues)
-  monitoring: 1
+  monitoring: 1,
+  # Video transcoding (responsive variant generation from uploaded videos)
+  media_processing: 1
 
 # Webhook configuration
 config :tymeslot, :webhook_paths, ["/webhooks/stripe"]
@@ -247,6 +249,9 @@ config :tymeslot, :field_validation,
   full_name_max_length: 100
 
 # Social Authentication Configuration moved to runtime.exs (needs runtime env vars)
+
+config :tymeslot, :transcoder, Tymeslot.Media.Transcoder
+config :tymeslot, :video_transcoding_enabled, true
 
 # Provider enable/disable switches
 config :tymeslot, :video_providers, %{

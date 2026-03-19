@@ -17,6 +17,7 @@ defmodule Tymeslot.DatabaseSchemas.ThemeCustomizationSchema do
           background_value: String.t() | nil,
           background_image_path: String.t() | nil,
           background_video_path: String.t() | nil,
+          video_processing: String.t() | nil,
           profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -24,6 +25,7 @@ defmodule Tymeslot.DatabaseSchemas.ThemeCustomizationSchema do
 
   @valid_color_schemes ~w[default turquoise purple sunset ocean forest rose monochrome]
   @valid_background_types ~w[gradient color image video]
+  @valid_video_processing_states ~w[pending completed failed]
 
   schema "theme_customizations" do
     field(:theme_id, :string)
@@ -32,6 +34,7 @@ defmodule Tymeslot.DatabaseSchemas.ThemeCustomizationSchema do
     field(:background_value, :string)
     field(:background_image_path, :string)
     field(:background_video_path, :string)
+    field(:video_processing, :string)
 
     belongs_to(:profile, ProfileSchema, foreign_key: :profile_id)
 
@@ -49,12 +52,14 @@ defmodule Tymeslot.DatabaseSchemas.ThemeCustomizationSchema do
       :background_type,
       :background_value,
       :background_image_path,
-      :background_video_path
+      :background_video_path,
+      :video_processing
     ])
     |> validate_required([:profile_id, :theme_id, :color_scheme, :background_type])
     |> validate_theme_id()
     |> validate_inclusion(:color_scheme, @valid_color_schemes)
     |> validate_inclusion(:background_type, @valid_background_types)
+    |> validate_inclusion(:video_processing, @valid_video_processing_states)
     |> validate_background_value()
     |> foreign_key_constraint(:profile_id)
     |> unique_constraint([:profile_id, :theme_id])
