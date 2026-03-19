@@ -326,5 +326,4 @@ defmodule Tymeslot.Security.Security do
   end
 
   def validate_domain(_invalid_value), do: {:error, "Invalid domain"}
-
 end
