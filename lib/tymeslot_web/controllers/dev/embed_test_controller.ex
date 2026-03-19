@@ -9,19 +9,23 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
 
   ## Testing with an external HTML file
 
-  If you want to test embedding from a standalone HTML file (e.g.
-  `/tmp/tymeslot-demo.html`), you must **serve it over HTTP** rather than opening
-  it directly as a `file://` URL. Opening as `file://` gives the page a `null`
-  origin, which is not covered by the dev CSP `frame-ancestors` allowlist
-  (`http://localhost:* http://127.0.0.1:*`), so the iframe is blocked.
+  If you want to test embedding from a standalone HTML file, you must **serve it
+  over HTTP** rather than opening it directly as a `file://` URL. Opening as
+  `file://` gives the page a `null` origin, which is not covered by the dev CSP
+  `frame-ancestors` allowlist (`http://localhost:* http://127.0.0.1:*`), so the
+  iframe is blocked.
 
-  Serve the file from a local HTTP server instead:
+  A sample page lives at `/tmp/tymeslot-embed-test.html` and covers three
+  `data-min-height` scenarios: default (400px), explicit 600px, and the 200px
+  floor. Use it to validate the attribute end-to-end.
+
+  Serve it from a local HTTP server:
 
       python3 -m http.server 8080 -d /tmp
 
-  Then open `http://localhost:8080/tymeslot-demo.html` in your browser. The page
-  origin is now `http://localhost:8080`, which matches `http://localhost:*` in the
-  CSP and the embed works as expected.
+  Then open `http://localhost:8080/tymeslot-embed-test.html` in your browser. The
+  page origin matches `http://localhost:*` in the CSP and the embed works as
+  expected.
   """
   use TymeslotWeb, :controller
 
@@ -83,11 +87,11 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
         </div>
         <div class="control-group">
           <label>Custom Height (px)</label>
-          <input type="number" id="custom-height" value="500" min="200" max="2000" step="50" />
+          <input type="number" id="custom-height" value="400" min="200" max="2000" step="50" />
         </div>
         <div class="control-group">
           <label>Min Height (px)</label>
-          <input type="number" id="min-height" value="" min="200" max="2000" step="50" placeholder="320 (default)" />
+          <input type="number" id="min-height" value="" min="200" max="2000" step="50" placeholder="400 (default)" />
         </div>
         <div class="control-group">
           <label>&nbsp;</label>
@@ -113,8 +117,8 @@ defmodule TymeslotWeb.Dev.EmbedTestController do
             <p>Container has a fixed max-height — should scroll</p>
           </div>
           <div class="card-body">
-            <span class="size-label" id="constrained-label">500px max</span>
-            <div class="embed-container" id="embed-constrained" style="max-height: 500px; overflow: hidden;"></div>
+            <span class="size-label" id="constrained-label">400px max</span>
+            <div class="embed-container" id="embed-constrained" style="max-height: 400px; overflow: hidden;"></div>
           </div>
         </div>
 

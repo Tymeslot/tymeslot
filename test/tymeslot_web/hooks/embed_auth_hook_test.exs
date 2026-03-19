@@ -99,7 +99,9 @@ defmodule TymeslotWeb.Hooks.EmbedAuthHookTest do
         Phoenix.Token.sign(
           TymeslotWeb.Endpoint,
           "embed_session",
-          {"testuser", "https://example.com"}, signed_at: System.system_time(:second) - 22_000)
+          {"testuser", "https://example.com"},
+          signed_at: System.system_time(:second) - 22_000
+        )
 
       assert {:halt, updated_socket} =
                EmbedAuthHook.on_mount(:default, %{}, %{"embed_token" => expired_token}, socket)

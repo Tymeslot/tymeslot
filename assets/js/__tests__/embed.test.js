@@ -287,7 +287,7 @@ describe('postMessage resize handler', () => {
     )
 
     const height = parseInt(wrapper.style.height, 10)
-    expect(height).toBeGreaterThanOrEqual(320)
+    expect(height).toBeGreaterThanOrEqual(400)
   })
 
   test('unconstrained resize applies reported height when above the floor', () => {
@@ -378,6 +378,63 @@ describe('postMessage resize handler', () => {
     )
 
     expect(wrapper.style.height).toBe('200px')
+  })
+
+  test('applies default maxWidth of 640px and centering margins when no attribute set', () => {
+    const container = document.createElement('div')
+    container.id = 'max-width-default-test'
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#max-width-default-test', 'alice')
+
+    const iframe = document.querySelector('#max-width-default-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    expect(wrapper.style.maxWidth).toBe('640px')
+    expect(wrapper.style.marginLeft).toBe('auto')
+    expect(wrapper.style.marginRight).toBe('auto')
+  })
+
+  test('respects custom data-max-width attribute', () => {
+    const container = document.createElement('div')
+    container.id = 'max-width-custom-test'
+    container.setAttribute('data-max-width', '900')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#max-width-custom-test', 'alice')
+
+    const iframe = document.querySelector('#max-width-custom-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    expect(wrapper.style.maxWidth).toBe('900px')
+  })
+
+  test('data-max-width below 200 is clamped to 200', () => {
+    const container = document.createElement('div')
+    container.id = 'max-width-clamp-test'
+    container.setAttribute('data-max-width', '100')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#max-width-clamp-test', 'alice')
+
+    const iframe = document.querySelector('#max-width-clamp-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    expect(wrapper.style.maxWidth).toBe('200px')
+  })
+
+  test('data-max-width above 2000 is clamped to 2000', () => {
+    const container = document.createElement('div')
+    container.id = 'max-width-upper-clamp-test'
+    container.setAttribute('data-max-width', '5000')
+    document.body.appendChild(container)
+
+    window.TymeslotBooking.embed('#max-width-upper-clamp-test', 'alice')
+
+    const iframe = document.querySelector('#max-width-upper-clamp-test iframe[title="Booking Widget"]')
+    const wrapper = iframe.parentNode
+
+    expect(wrapper.style.maxWidth).toBe('2000px')
   })
 
   test('does not throw when e.data is null', () => {

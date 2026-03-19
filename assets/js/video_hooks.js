@@ -66,30 +66,31 @@ const stopVideoPlayback = (video) => {
 // Quill video hook - simple video background with fallback
 export const QuillVideo = {
   mounted() {
+    // CSS already hides video in embedded context; skip JS overhead entirely.
+    if (document.documentElement.hasAttribute('data-embedded')) return;
+
     const container = this.el;
     const video = container.querySelector('video');
-    
+
     if (!video) return;
-    
+
     // Check for reduced motion preference
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
       video.style.display = 'none';
       return;
     }
-    
+
     // Handle video loading
     video.addEventListener('loadedmetadata', function() {
       video.style.opacity = '1';
     });
-    
+
     // Handle video errors by falling back to gradient/image background
     video.addEventListener('error', function() {
-      console.log('Quill video failed to load, using fallback background');
       video.style.display = 'none';
-      // The CSS background on the container will take over
     });
-    
+
     const applyFallback = () => {
       stopVideoPlayback(video);
       video.style.display = 'none';
@@ -103,7 +104,7 @@ export const QuillVideo = {
     }
 
     this._quillConnectionCleanup = setupConnectionFallback(connection, applyFallback);
-    
+
     // Battery-aware loading
     if ('getBattery' in navigator) {
       navigator.getBattery().then(function(battery) {
@@ -113,7 +114,6 @@ export const QuillVideo = {
       });
     }
 
-    // Save element for cleanup
     this._quillVideo = video;
   },
   destroyed() {
@@ -131,9 +131,9 @@ export const AuthVideo = {
     const singleVideo = document.getElementById('auth-background-video');
     const video1 = document.getElementById('auth-background-video-1');
     const video2 = document.getElementById('auth-background-video-2');
-    
+
     if (!container) return;
-    
+
     // Check for reduced motion preference
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
@@ -143,7 +143,7 @@ export const AuthVideo = {
       container.classList.add('fallback');
       return;
     }
-    
+
     const applyFallback = () => {
       stopVideoPlayback(singleVideo);
       stopVideoPlayback(video1);
@@ -167,29 +167,29 @@ export const AuthVideo = {
       singleVideo.addEventListener('loadedmetadata', function() {
         singleVideo.style.opacity = '1';
       });
-      
       singleVideo.addEventListener('error', function() {
         applyFallback();
       });
       return;
     }
-    
-    // Handle dual video crossfade case
+
+    // Handle dual video crossfade case — pass connection so it isn't re-fetched
     if (video1 && video2) {
-      this.initAuthVideoCrossfade(container, video1, video2);
+      this.initAuthVideoCrossfade(container, video1, video2, connection);
     }
   },
-  
-  initAuthVideoCrossfade(container, video1, video2) {
+
+  initAuthVideoCrossfade(container, video1, video2, connection) {
     let currentVideo = video1;
     let nextVideo = video2;
     let isTransitioning = false;
 
-    // Mobile detection
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // Tracks the video currently being monitored so listeners can be removed
+    // before new ones are added on each crossfade cycle.
+    this._authMonitor = { video: null, timeupdate: null, ended: null };
+
     const isSmallScreen = window.innerWidth <= 768;
 
-    // Allow videos on mobile but with optimized sources
     const applyFallback = () => {
       stopVideoPlayback(video1);
       stopVideoPlayback(video2);
@@ -198,33 +198,16 @@ export const AuthVideo = {
       container.classList.add('fallback');
     };
 
-    const connection = getConnectionInfo();
-    if (isSlowConnection(connection)) {
-      applyFallback();
-      return;
-    }
-
     this._authConnectionCleanup = setupConnectionFallback(connection, applyFallback);
 
-    // Select appropriate video quality based on device and connection
-    if (isMobile || isSmallScreen) {
-      // Use mobile-optimized video sources
-      const sources1 = video1.querySelectorAll('source');
-      const sources2 = video2.querySelectorAll('source');
-      
-      // Prioritize mobile sources by reordering or updating src
-      sources1.forEach(source => {
-        const src = source.getAttribute('src');
-        if (src && src.includes('-mobile')) {
-          video1.src = src;
-        }
-      });
-      
-      sources2.forEach(source => {
-        const src = source.getAttribute('src');
-        if (src && src.includes('-mobile')) {
-          video2.src = src;
-        }
+    // Select appropriate video quality based on screen size
+    if (isSmallScreen) {
+      [{ el: video1, sources: video1.querySelectorAll('source') },
+       { el: video2, sources: video2.querySelectorAll('source') }].forEach(({ el, sources }) => {
+        sources.forEach(source => {
+          const src = source.getAttribute('src');
+          if (src && src.includes('-mobile')) el.src = src;
+        });
       });
     }
 
@@ -238,39 +221,24 @@ export const AuthVideo = {
       });
     }
 
-    // Error handling for both videos
-    [video1, video2].forEach((video, index) => {
-      video.addEventListener('error', function(error) {
-        console.log(`Auth video ${index + 1} failed to load, using fallback:`, error);
-        video1.style.display = 'none';
-        video2.style.display = 'none';
-        container.classList.add('fallback');
-      });
-
-      video.addEventListener('loadstart', function() {
-        console.log(`Auth video ${index + 1} loading started`);
-      });
-
-      video.addEventListener('canplaythrough', function() {
-        console.log(`Auth video ${index + 1} ready to play`);
+    // Error handling — if either video fails, fall back completely
+    [video1, video2].forEach((video) => {
+      video.addEventListener('error', function() {
+        applyFallback();
       });
     });
 
     // Crossfade functionality
     const startCrossfade = () => {
       if (isTransitioning) return;
-      
+
       isTransitioning = true;
 
-      // Prepare next video
       nextVideo.currentTime = 0;
       nextVideo.classList.remove('inactive');
       nextVideo.classList.add('crossfade-in');
 
-      // Start playing next video
-      nextVideo.play().catch(e => {
-        console.log('Auth next video play failed:', e);
-      });
+      nextVideo.play().catch(() => {});
 
       // Complete transition after 800ms (matching CSS transition duration)
       setTimeout(function() {
@@ -281,7 +249,6 @@ export const AuthVideo = {
         nextVideo.classList.remove('crossfade-in');
         nextVideo.classList.add('active');
 
-        // Switch video references
         const temp = currentVideo;
         currentVideo = nextVideo;
         nextVideo = temp;
@@ -291,65 +258,63 @@ export const AuthVideo = {
       }, 800);
     };
 
-    // Monitor current video for crossfade timing
+    // Monitor current video for crossfade timing.
+    // Removes previous listeners before adding new ones to prevent accumulation
+    // across crossfade cycles.
     const setupVideoMonitoring = () => {
-      currentVideo.addEventListener('timeupdate', function() {
-        if (isTransitioning) return;
-        
-        const timeLeft = currentVideo.duration - currentVideo.currentTime;
-        
-        // Start crossfade 1 second before video ends
-        if (timeLeft <= 1.0 && timeLeft > 0.9) {
-          startCrossfade();
-        }
-      });
+      const m = this._authMonitor;
+      if (m.video) {
+        if (m.timeupdate) m.video.removeEventListener('timeupdate', m.timeupdate);
+        if (m.ended) m.video.removeEventListener('ended', m.ended);
+      }
 
-      // Backup trigger in case timeupdate doesn't fire precisely
-      currentVideo.addEventListener('ended', function() {
-        if (!isTransitioning) {
-          startCrossfade();
-        }
-      });
+      m.timeupdate = function() {
+        if (isTransitioning) return;
+        const timeLeft = currentVideo.duration - currentVideo.currentTime;
+        if (timeLeft <= 1.0 && timeLeft > 0.9) startCrossfade();
+      };
+
+      m.ended = function() {
+        if (!isTransitioning) startCrossfade();
+      };
+
+      m.video = currentVideo;
+      currentVideo.addEventListener('timeupdate', m.timeupdate);
+      currentVideo.addEventListener('ended', m.ended);
     };
 
-    // Initial setup
     setupVideoMonitoring();
 
-    // Intersection Observer for performance
+    // Pause/resume based on visibility
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          if (currentVideo.paused) {
-            currentVideo.play().catch(e => {
-              console.log('Auth current video autoplay failed:', e);
-            });
-          }
+          if (currentVideo.paused) currentVideo.play().catch(() => {});
         } else {
-          if (!currentVideo.paused) {
-            currentVideo.pause();
-          }
-          if (!nextVideo.paused && !nextVideo.classList.contains('inactive')) {
-            nextVideo.pause();
-          }
+          if (!currentVideo.paused) currentVideo.pause();
+          if (!nextVideo.paused && !nextVideo.classList.contains('inactive')) nextVideo.pause();
         }
       });
     });
 
     observer.observe(container);
-    // Store observer for cleanup
     this._observer = observer;
-    this._authVideoElements = { container, currentVideo, nextVideo };
   },
+
   destroyed() {
     try { this._observer && this._observer.disconnect(); } catch (e) {}
-    if (this._authVideoElements) {
-      const { currentVideo, nextVideo } = this._authVideoElements;
-      try { currentVideo && currentVideo.pause && currentVideo.pause(); } catch (e) {}
-      try { nextVideo && nextVideo.pause && nextVideo.pause(); } catch (e) {}
+    if (this._authMonitor) {
+      const { video, timeupdate, ended } = this._authMonitor;
+      try { if (video && timeupdate) video.removeEventListener('timeupdate', timeupdate); } catch (e) {}
+      try { if (video && ended) video.removeEventListener('ended', ended); } catch (e) {}
     }
+    ['auth-background-video', 'auth-background-video-1', 'auth-background-video-2'].forEach(id => {
+      const v = document.getElementById(id);
+      try { v && v.pause && v.pause(); } catch (e) {}
+    });
     try { this._authConnectionCleanup && this._authConnectionCleanup(); } catch (e) {}
     this._observer = null;
-    this._authVideoElements = null;
+    this._authMonitor = null;
     this._authConnectionCleanup = null;
   }
 };
@@ -357,6 +322,9 @@ export const AuthVideo = {
 // Rhythm video crossfade hook
 export const RhythmVideo = {
   mounted() {
+    // CSS already hides video in embedded context; skip JS overhead entirely.
+    if (document.documentElement.hasAttribute('data-embedded')) return;
+
     const video1 = document.getElementById('rhythm-background-video-1');
     const video2 = document.getElementById('rhythm-background-video-2');
 
@@ -370,11 +338,8 @@ export const RhythmVideo = {
       return;
     }
 
-    // Mobile detection
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const isSmallScreen = window.innerWidth <= 768;
 
-    // Allow videos on mobile but with optimized sources
     const applyFallback = () => {
       stopVideoPlayback(video1);
       stopVideoPlayback(video2);
@@ -390,25 +355,14 @@ export const RhythmVideo = {
 
     this._rhythmConnectionCleanup = setupConnectionFallback(connection, applyFallback);
 
-    // Select appropriate video quality based on device and connection
-    if (isMobile || isSmallScreen) {
-      // Use mobile-optimized video sources
-      const sources1 = video1.querySelectorAll('source');
-      const sources2 = video2.querySelectorAll('source');
-      
-      // Prioritize mobile sources by reordering or updating src
-      sources1.forEach(source => {
-        const src = source.getAttribute('src');
-        if (src && src.includes('-mobile')) {
-          video1.src = src;
-        }
-      });
-      
-      sources2.forEach(source => {
-        const src = source.getAttribute('src');
-        if (src && src.includes('-mobile')) {
-          video2.src = src;
-        }
+    // Select appropriate video quality based on screen size
+    if (isSmallScreen) {
+      [{ el: video1, sources: video1.querySelectorAll('source') },
+       { el: video2, sources: video2.querySelectorAll('source') }].forEach(({ el, sources }) => {
+        sources.forEach(source => {
+          const src = source.getAttribute('src');
+          if (src && src.includes('-mobile')) el.src = src;
+        });
       });
     }
 
@@ -416,102 +370,116 @@ export const RhythmVideo = {
     let currentVideo = video1;
     let isTransitioning = false;
 
-    // Error handling for both videos
+    // Tracks the video currently being monitored so listeners can be removed
+    // before new ones are added on each crossfade cycle.
+    this._rhythmMonitor = { video: null, timeupdate: null, ended: null };
+
+    // Error handling — if either video fails, fall back completely
     [video1, video2].forEach(video => {
-      video.addEventListener('error', function(error) {
-        console.log('Video failed to load, using fallback:', error);
-        video.style.display = 'none';
-      });
-
-      video.addEventListener('loadstart', function() {
-        console.log('Video loading started');
-      });
-
-      video.addEventListener('canplaythrough', function() {
-        console.log('Video ready to play');
+      video.addEventListener('error', function() {
+        applyFallback();
       });
     });
 
     // Crossfade function
-    function startCrossfade() {
+    const startCrossfade = () => {
       if (isTransitioning) return;
       isTransitioning = true;
 
       const nextVideo = currentVideo === video1 ? video2 : video1;
-      
-      // Prepare next video
+
       nextVideo.currentTime = 0;
       nextVideo.style.opacity = '0';
       nextVideo.style.display = 'block';
-      
-      // Start playing next video
-      nextVideo.play().catch(error => {
-        console.log('Next video play failed:', error);
-        isTransitioning = false;
-        return;
-      });
 
-      // Crossfade transition
-      setTimeout(() => {
-        nextVideo.style.transition = 'opacity 1s ease-in-out';
-        nextVideo.style.opacity = '1';
-        
-        currentVideo.style.transition = 'opacity 1s ease-in-out';
-        currentVideo.style.opacity = '0';
-        
+      nextVideo.play().then(() => {
+        // Crossfade transition
         setTimeout(() => {
-          currentVideo.style.display = 'none';
-          currentVideo.pause();
-          currentVideo = nextVideo;
-          isTransitioning = false;
-          setupVideoMonitoring();
-        }, 1000);
-      }, 100);
-    }
+          nextVideo.style.transition = 'opacity 1s ease-in-out';
+          nextVideo.style.opacity = '1';
 
-    // Monitor video progress for crossfade timing
-    function setupVideoMonitoring() {
-      currentVideo.addEventListener('timeupdate', function() {
+          currentVideo.style.transition = 'opacity 1s ease-in-out';
+          currentVideo.style.opacity = '0';
+
+          setTimeout(() => {
+            currentVideo.style.display = 'none';
+            currentVideo.pause();
+            currentVideo = nextVideo;
+            isTransitioning = false;
+            setupVideoMonitoring();
+          }, 1000);
+        }, 100);
+      }).catch(() => {
+        isTransitioning = false;
+      });
+    };
+
+    // Monitor video progress for crossfade timing.
+    // Removes previous listeners before adding new ones to prevent accumulation
+    // across crossfade cycles.
+    const setupVideoMonitoring = () => {
+      const m = this._rhythmMonitor;
+      if (m.video) {
+        if (m.timeupdate) m.video.removeEventListener('timeupdate', m.timeupdate);
+        if (m.ended) m.video.removeEventListener('ended', m.ended);
+      }
+
+      m.timeupdate = function() {
         if (isTransitioning) return;
-        
         const timeRemaining = currentVideo.duration - currentVideo.currentTime;
-        // Start crossfade 1 second before video ends
-        if (timeRemaining <= 1.0 && timeRemaining > 0.9) {
-          startCrossfade();
-        }
-      });
+        if (timeRemaining <= 1.0 && timeRemaining > 0.9) startCrossfade();
+      };
 
-      // Backup crossfade trigger on video end
-      currentVideo.addEventListener('ended', function() {
-        if (!isTransitioning) {
-          startCrossfade();
-        }
-      });
-    }
+      m.ended = function() {
+        if (!isTransitioning) startCrossfade();
+      };
+
+      m.video = currentVideo;
+      currentVideo.addEventListener('timeupdate', m.timeupdate);
+      currentVideo.addEventListener('ended', m.ended);
+    };
 
     // Start first video
     video1.play().catch(function(error) {
-      console.log('Video autoplay failed:', error);
-      // Try to play on first user interaction
+      // Try to play on first user interaction (autoplay policy)
       const clickHandler = function() {
-        video1.play().catch(function(retryError) {
-          console.log('Video play on interaction failed:', retryError);
-        });
+        video1.play().catch(() => {});
       };
       document.addEventListener('click', clickHandler, { once: true });
-      // Save to remove on destroyed if needed (though once: true should auto-clean)
       this._rhythmClickHandler = clickHandler;
     }.bind(this));
 
     setupVideoMonitoring();
 
-    // No IntersectionObserver here, but store refs for cleanup
+    // Pause/resume based on visibility
+    const container = video1.closest('.video-background-container') || video1.parentElement;
+    if (container) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            if (currentVideo.paused) currentVideo.play().catch(() => {});
+          } else {
+            if (!currentVideo.paused) currentVideo.pause();
+          }
+        });
+      });
+      observer.observe(container);
+      this._rhythmObserver = observer;
+    }
+
     this._rhythmVideoElements = { video1, video2 };
   },
+
   destroyed() {
+    try { this._rhythmObserver && this._rhythmObserver.disconnect(); } catch (e) {}
     if (this._rhythmClickHandler) {
       try { document.removeEventListener('click', this._rhythmClickHandler); } catch (e) {}
       this._rhythmClickHandler = null;
+    }
+    if (this._rhythmMonitor) {
+      const { video, timeupdate, ended } = this._rhythmMonitor;
+      try { if (video && timeupdate) video.removeEventListener('timeupdate', timeupdate); } catch (e) {}
+      try { if (video && ended) video.removeEventListener('ended', ended); } catch (e) {}
     }
     if (this._rhythmVideoElements) {
       const { video1, video2 } = this._rhythmVideoElements;
@@ -520,6 +488,8 @@ export const RhythmVideo = {
       this._rhythmVideoElements = null;
     }
     try { this._rhythmConnectionCleanup && this._rhythmConnectionCleanup(); } catch (e) {}
+    this._rhythmObserver = null;
+    this._rhythmMonitor = null;
     this._rhythmConnectionCleanup = null;
   }
 };

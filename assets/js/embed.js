@@ -148,10 +148,14 @@
     // Create wrapper for loading state.
     // Uses min-height as default for unconstrained containers;
     // constrained containers clip the wrapper and the iframe scrolls internally.
-    const minHeight = Math.max(parseInt(options.minHeight, 10) || 320, 200);
+    const minHeight = Math.max(parseInt(options.minHeight, 10) || 400, 200);
+    const maxWidth = Math.min(Math.max(parseInt(options.maxWidth, 10) || 640, 200), 2000);
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
     wrapper.style.width = '100%';
+    wrapper.style.maxWidth = maxWidth + 'px';
+    wrapper.style.marginLeft = 'auto';
+    wrapper.style.marginRight = 'auto';
     wrapper.style.height = minHeight + 'px';
     wrapper.style.minHeight = minHeight + 'px';
     wrapper.dataset.minHeight = String(minHeight);
@@ -411,7 +415,8 @@
         theme: container.getAttribute('data-theme'),
         primaryColor: container.getAttribute('data-primary-color'),
         locale: container.getAttribute('data-locale'),
-        minHeight: container.getAttribute('data-min-height')
+        minHeight: container.getAttribute('data-min-height'),
+        maxWidth: container.getAttribute('data-max-width')
       };
       
       const wrapper = createBookingIframe(username, options);
@@ -588,9 +593,12 @@
         return;
       }
 
-      // Inherit min-height from container data attribute if not set in options
+      // Inherit min-height and max-width from container data attributes if not set in options
       if (!options.minHeight && container.getAttribute('data-min-height')) {
         options.minHeight = container.getAttribute('data-min-height');
+      }
+      if (!options.maxWidth && container.getAttribute('data-max-width')) {
+        options.maxWidth = container.getAttribute('data-max-width');
       }
 
       const wrapper = createBookingIframe(username, options);
