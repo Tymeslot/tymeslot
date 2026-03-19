@@ -80,7 +80,9 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpersTest do
     end
 
     test "handles maps missing both name and duration_minutes" do
-      result = LocalizationHelpers.sort_meeting_types([%{id: 1}, %{name: "Call", duration_minutes: 15}])
+      result =
+        LocalizationHelpers.sort_meeting_types([%{id: 1}, %{name: "Call", duration_minutes: 15}])
+
       assert length(result) == 2
       # "Call" sorts before the fallback "Untitled" key
       assert List.first(result) == %{name: "Call", duration_minutes: 15}

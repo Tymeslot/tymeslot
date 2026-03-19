@@ -155,5 +155,4 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   defp get_organizer_text(organizer_profile) do
     gettext("with %{name}", name: organizer_profile.user.name || organizer_profile.full_name)
   end
-
 end

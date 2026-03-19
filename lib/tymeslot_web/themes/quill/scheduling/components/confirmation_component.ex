@@ -179,7 +179,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
       |> assign_new(:duration_label, fn -> gettext("Duration") end)
       |> assign_new(:timezone_label, fn -> gettext("Timezone") end)
       |> assign_new(:formatted_date, fn -> LocalizationHelpers.format_date(assigns.date) end)
-      |> assign_new(:formatted_duration, fn -> LocalizationHelpers.format_duration(assigns.duration) end)
+      |> assign_new(:formatted_duration, fn ->
+        LocalizationHelpers.format_duration(assigns.duration)
+      end)
       |> assign_new(:formatted_timezone, fn -> Timezones.format(assigns.timezone) end)
 
     ~H"""

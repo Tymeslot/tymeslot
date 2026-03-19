@@ -18,7 +18,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
     # Filter out reserved assigns that can't be set directly
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
 
-    sorted_meeting_types = LocalizationHelpers.sort_meeting_types(Map.get(filtered_assigns, :meeting_types))
+    sorted_meeting_types =
+      LocalizationHelpers.sort_meeting_types(Map.get(filtered_assigns, :meeting_types))
 
     {:ok, assign(socket, Map.put(filtered_assigns, :meeting_types, sorted_meeting_types))}
   end

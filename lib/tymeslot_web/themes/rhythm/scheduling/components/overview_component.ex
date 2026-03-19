@@ -168,5 +168,4 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
         ~H"{@icon}"
     end
   end
-
 end
