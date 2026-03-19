@@ -8,11 +8,14 @@ defmodule Tymeslot.Workers.VideoTranscoder do
   use Oban.Worker,
     queue: :media_processing,
     max_attempts: 3,
-    priority: 2
+    priority: 2,
+    unique: [
+      fields: [:worker, :args],
+      keys: [:theme_customization_id],
+      states: [:available, :scheduled, :executing, :retryable]
+    ]
 
   require Logger
-
-  import Ecto.Query
 
   alias Ecto.Changeset
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
@@ -24,10 +27,8 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
   @spec enqueue(pos_integer(), String.t()) :: {:ok, Oban.Job.t()} | {:error, term()}
   def enqueue(theme_customization_id, video_path) do
-    cancel_existing_jobs(theme_customization_id)
-
     %{theme_customization_id: theme_customization_id, video_path: video_path}
-    |> new()
+    |> new(replace: [:args, :scheduled_at])
     |> Oban.insert()
   end
 
@@ -82,17 +83,6 @@ defmodule Tymeslot.Workers.VideoTranscoder do
         Logger.error("Video transcoding failed", theme_customization_id: id, reason: reason)
         {:error, reason}
     end
-  end
-
-  defp cancel_existing_jobs(theme_customization_id) do
-    Oban.Job
-    |> where([j], j.worker == "Tymeslot.Workers.VideoTranscoder")
-    |> where([j], j.state in ["available", "scheduled", "retryable"])
-    |> where(
-      [j],
-      fragment("?->>'theme_customization_id' = ?", j.args, ^to_string(theme_customization_id))
-    )
-    |> Oban.cancel_all_jobs()
   end
 
   defp update_status(id, status) do
