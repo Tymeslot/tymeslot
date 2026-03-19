@@ -11,13 +11,16 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   import TymeslotWeb.Components.CoreComponents
-  import TymeslotWeb.Components.MeetingComponents
+  import TymeslotWeb.Components.FlagHelpers
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     # Filter out reserved assigns that can't be set directly
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
-    {:ok, assign(socket, filtered_assigns)}
+
+    sorted_meeting_types = LocalizationHelpers.sort_meeting_types(Map.get(filtered_assigns, :meeting_types))
+
+    {:ok, assign(socket, Map.put(filtered_assigns, :meeting_types, sorted_meeting_types))}
   end
 
   @impl Phoenix.LiveComponent
@@ -32,42 +35,111 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
     {:noreply, socket}
   end
 
+  attr :duration, :string, required: true
+  attr :title, :string, required: true
+  attr :badge, :string, default: nil
+  attr :description, :string, required: true
+  attr :icon, :string, required: true
+  attr :selected, :boolean, default: false
+  attr :target, :any, default: nil
+
+  defp duration_card(assigns) do
+    ~H"""
+    <button
+      phx-click="select_duration"
+      phx-value-duration={@duration}
+      phx-target={@target}
+      data-testid="duration-option"
+      data-duration={@duration}
+      class={"duration-card w-full rounded-xl transition-all duration-300 cursor-pointer transform #{if @selected, do: "scale-105", else: "hover:scale-105"}"}
+      style={duration_card_style(@selected, @duration)}
+    >
+      <div class="flex items-center justify-between">
+        <div class="text-left flex-1">
+          <div class="flex items-start justify-between gap-2 mb-1">
+            <h3 class="duration-card-title font-bold flex-1" style="color: white;">
+              {@title}
+            </h3>
+            <span
+              class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full whitespace-nowrap mt-1"
+              style="background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.95); backdrop-filter: blur(10px);"
+            >
+              {@badge || @duration}
+            </span>
+          </div>
+          <p
+            class="duration-card-description"
+            style={"color: rgba(255,255,255,#{if @selected, do: "0.9", else: "0.8"});"}
+          >
+            {@description}
+          </p>
+        </div>
+        <%= if @icon != "none" do %>
+          <%= if String.starts_with?(@icon, "hero-") do %>
+            <.icon name={sanitize_css_class(@icon)} class="duration-card-icon text-white" />
+          <% else %>
+            <div class="duration-card-emoji">{@icon}</div>
+          <% end %>
+        <% end %>
+      </div>
+    </button>
+    """
+  end
+
+  defp duration_card_style(selected, _duration) do
+    base_style =
+      if selected do
+        "background: linear-gradient(135deg, #4a1d6d 0%, #2d1b69 100%); box-shadow: 0 10px 30px rgba(74,29,109,0.4);"
+      else
+        "background: rgba(255,255,255,0.1);"
+      end
+
+    border =
+      if selected do
+        "border: 2px solid rgba(255,255,255,0.3);"
+      else
+        "border: 2px solid transparent;"
+      end
+
+    base_style <> " " <> border
+  end
+
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="stack flex-1" data-locale={@locale}>
+    <div class="container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
         current_step={1}
         slug={assigns[:selected_duration]}
         username_context={@username_context}
       >
-        <div class="container flex-1 flex items-start justify-center px-4 py-2 md:py-4">
+        <div class="overview-content-area flex items-start justify-center">
           <div class="w-full max-w-5xl">
             <.glass_morphism_card>
-              <div class="p-3 sm:p-6 md:p-8 lg:p-10">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-8 items-center">
-                  <div class="text-center md:text-left">
-                    <div class="relative inline-block mx-auto md:mx-0">
+              <div class="overview-card-body">
+                <div class="overview-layout">
+                  <div class="overview-avatar-section">
+                    <div class="overview-avatar-wrapper relative inline-block">
                       <img
                         src={Demo.avatar_url(@organizer_profile)}
                         alt={Demo.avatar_alt_text(@organizer_profile)}
-                        class="w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 rounded-full object-cover shadow-2xl border-4 border-white/50 transition-all duration-300 hover:scale-105 cursor-pointer"
+                        class="overview-avatar rounded-full object-cover shadow-2xl border-4 border-white/50 transition-all duration-300 hover:scale-105 cursor-pointer"
                       />
-                      <div class="overview-success-badge absolute -bottom-2 -right-2 md:-bottom-4 md:-right-4 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center shadow-lg">
-                        <span class="text-white text-xl sm:text-2xl md:text-4xl">✅</span>
+                      <div class="overview-success-badge absolute rounded-full flex items-center justify-center shadow-lg">
+                        <span class="overview-success-badge-emoji text-white">✅</span>
                       </div>
                     </div>
                   </div>
 
                   <div>
                     <h1
-                      class="section-header text-xl sm:text-2xl md:text-3xl lg:text-4xl text-center md:text-left"
+                      class="section-header overview-title"
                     >
                       {gettext("Let's Connect!")}
                     </h1>
                     <p
-                      class="text-sm sm:text-base md:text-lg lg:text-xl mb-3 sm:mb-4 md:mb-6 text-center md:text-left text-glass-primary"
+                      class="overview-description text-glass-primary"
                     >
                       <%= if display_name = Profiles.display_name(@organizer_profile) do %>
                         {gettext("Hi, I'm %{name}. Select how much time you need for our conversation.", name: display_name)}
@@ -76,7 +148,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                       <% end %>
                     </p>
 
-                    <div class="space-y-2 md:space-y-4">
+                    <div class="overview-duration-list">
                       <%= cond do %>
                         <% @username_context && @meeting_types == [] -> %>
                           <!-- No meeting types available for this user -->
@@ -102,9 +174,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                           <!-- Default duration options (no username context) -->
                           <.duration_card
                             duration="15-minutes"
-                            title="15 Minutes"
+                            title={gettext("15 Minutes")}
                             badge={LocalizationHelpers.format_duration(15)}
-                            description="Quick chat or brief consultation"
+                            description={gettext("Quick chat or brief consultation")}
                             icon="hero-bolt"
                             selected={assigns[:selected_duration] == "15-minutes"}
                             target={@myself}
@@ -112,9 +184,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
 
                           <.duration_card
                             duration="30-minutes"
-                            title="30 Minutes"
+                            title={gettext("30 Minutes")}
                             badge={LocalizationHelpers.format_duration(30)}
-                            description="In-depth discussion or detailed review"
+                            description={gettext("In-depth discussion or detailed review")}
                             icon="hero-rocket-launch"
                             selected={assigns[:selected_duration] == "30-minutes"}
                             target={@myself}
@@ -122,7 +194,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                       <% end %>
                     </div>
 
-                    <div class="mt-4 md:mt-8 animate-fade-in-up">
+                    <div class="overview-next-action animate-fade-in-up">
                       <.action_button
                         phx-click="next_step"
                         phx-target={@myself}

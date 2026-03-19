@@ -5,6 +5,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.CoreComponents
@@ -89,7 +91,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                       </div>
                       <div class="ticket-info">
                         <span class="ticket-value">{@selected_time}</span>
-                        <span class="ticket-sublabel">{format_timezone_display(@user_timezone)}</span>
+                        <span class="ticket-sublabel">{Timezones.format(@user_timezone)}</span>
                       </div>
                     </div>
 
@@ -154,10 +156,4 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
     gettext("with %{name}", name: organizer_profile.user.name || organizer_profile.full_name)
   end
 
-  defp format_timezone_display(timezone) do
-    case String.split(timezone, "/") do
-      [_continent, city | _rest] -> String.replace(city, "_", " ")
-      _other -> timezone
-    end
-  end
 end

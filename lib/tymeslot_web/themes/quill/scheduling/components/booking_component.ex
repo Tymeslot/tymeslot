@@ -50,27 +50,27 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div data-locale={@locale}>
+    <div class="container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
         current_step={3}
         slug={@duration}
         username_context={@username_context}
       >
-        <div class="container stack flex-1">
+        <div class="stack">
           <div class="flex-1 flex items-center justify-center px-4 py-4">
             <div class="w-full max-w-3xl">
               <.glass_morphism_card class="booking-form-card">
-                <div class="p-4 md:p-6 lg:p-8">
+                <div class="booking-card-body">
                   <.section_header
                     level={2}
-                    class="mb-2 md:mb-4"
-                    title_class="section-header text-xl md:text-3xl lg:text-4xl"
+                    class="booking-heading-wrapper"
+                    title_class="section-header booking-heading"
                   >
                     {gettext("Enter Your Details")}
                   </.section_header>
 
-                  <p class="text-quill-primary text-sm md:text-lg lg:text-xl mb-2 md:mb-4">
+                  <p class="booking-subtitle text-quill-primary">
                     <%= if @organizer_profile do %>
                       {gettext("You're booking a %{duration} meeting with %{name}",
                         duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: DateTimeUtils.format_duration(@duration)),
@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                     <% end %>
                   </p>
 
-                  <p class="text-quill-secondary text-xs md:text-sm mb-2 md:mb-6">
+                  <p class="booking-datetime text-quill-secondary">
                     {LocalizationHelpers.format_booking_datetime(@selected_date, @selected_time, @user_timezone)}
                   </p>
 
@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
                     <SecurityFields.recaptcha_fields id_prefix="booking" param_root="booking" />
 
-                    <div class="cluster cluster-xs mt-3">
+                    <div class="booking-actions">
                       <.action_button
                         type="button"
                         phx-click="back_step"

@@ -6,8 +6,10 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Timezones
+  alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+
   import TymeslotWeb.Components.CoreComponents
-  import TymeslotWeb.Components.MeetingComponents
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -25,25 +27,25 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div data-locale={@locale}>
+    <div class="container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
         current_step={4}
         slug={@duration}
         username_context={@username_context}
       >
-        <div class="container stack flex-1">
-          <div class="confirmation-outer flex-1 flex items-center justify-center px-2 sm:px-4 py-2 md:py-4 lg:py-8">
-            <div class="w-full max-w-4xl lg:max-w-6xl">
+        <div class="stack">
+          <div class="confirmation-outer flex-1 flex items-center justify-center">
+            <div class="w-full confirmation-container">
               <.glass_morphism_card>
-                <div class="confirmation-content p-3 md:p-6 lg:p-8">
+                <div class="confirmation-content">
                   <!-- Heading row: badge + title inline -->
-                  <div class="confirmation-heading-row flex items-center gap-3 sm:gap-4 lg:gap-6 mb-3 sm:mb-4">
+                  <div class="confirmation-heading-row flex items-center">
                     <div class="flex-shrink-0">
                       <div class="relative">
-                        <div class="confirmation-badge w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center">
+                        <div class="confirmation-badge rounded-full flex items-center justify-center">
                           <svg
-                            class="w-7 h-7 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 text-white"
+                            class="confirmation-badge-icon text-white"
                             fill="none"
                             stroke="currentColor"
                             stroke-width="3"
@@ -52,9 +54,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
                         </div>
-                        <div class="confirmation-badge-dot absolute -bottom-1 -right-1 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center">
+                        <div class="confirmation-badge-dot absolute rounded-full flex items-center justify-center">
                           <svg
-                            class="w-3 h-3 sm:w-4 sm:h-4 text-white"
+                            class="confirmation-badge-dot-icon text-white"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
@@ -66,7 +68,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     <div class="flex-1 min-w-0" data-testid="confirmation-heading">
                       <.section_header
                         class="mb-1"
-                        title_class="section-header text-lg sm:text-xl md:text-2xl lg:text-4xl"
+                        title_class="section-header confirmation-title"
                       >
                         <%= if @is_rescheduling do %>
                           {gettext("Meeting Rescheduled!")}
@@ -74,7 +76,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           {gettext("meeting_confirmed")}
                         <% end %>
                       </.section_header>
-                      <p class="text-quill-primary text-sm sm:text-base md:text-lg">
+                      <p class="confirmation-subtitle text-quill-primary">
                         <%= if @is_rescheduling do %>
                           {gettext("%{name}, your meeting %{organizer} has been rescheduled.", name: @name, organizer: get_organizer_text(@organizer_profile))}
                         <% else %>
@@ -95,8 +97,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     />
 
                     <div class="confirmation-border-top mt-3 pt-3 border-t">
-                      <div class="cluster cluster-xs">
-                        <div class="confirmation-icon-wrapper w-7 h-7 rounded-full center-content">
+                      <div class="confirmation-email-row">
+                        <div class="confirmation-icon-wrapper rounded-full center-content">
                           <svg
                             class="confirmation-email-link w-3.5 h-3.5"
                             fill="currentColor"
@@ -116,7 +118,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     </div>
                   </.meeting_details_card>
 
-                  <div class="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <div class="confirmation-actions">
                     <.action_button
                       phx-click="schedule_another"
                       phx-target={@myself}
@@ -140,7 +142,70 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
     """
   end
 
-  # Helper functions
+  # ========== MEETING DISPLAY COMPONENTS ==========
+
+  attr :title, :string, default: ""
+  slot :inner_block, required: true
+
+  defp meeting_details_card(assigns) do
+    ~H"""
+    <div class="meeting-details-card">
+      <%= if @title && @title != "" do %>
+        <h3 class="text-lg font-semibold mb-4 text-purple-900">{@title}</h3>
+      <% end %>
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  attr :date, :string, required: true
+  attr :time, :string, required: true
+  attr :duration, :string, required: true
+  attr :timezone, :string, required: true
+  attr :variant, :atom, default: :compact, values: [:compact, :expanded]
+
+  defp booking_details(assigns) do
+    grid_class =
+      case assigns.variant do
+        :expanded -> "booking-details-grid booking-details-grid--expanded"
+        _other -> "booking-details-grid"
+      end
+
+    assigns =
+      assigns
+      |> assign(:grid_class, grid_class)
+      |> assign_new(:date_label, fn -> gettext("Date") end)
+      |> assign_new(:time_label, fn -> gettext("Time") end)
+      |> assign_new(:duration_label, fn -> gettext("Duration") end)
+      |> assign_new(:timezone_label, fn -> gettext("Timezone") end)
+      |> assign_new(:formatted_date, fn -> LocalizationHelpers.format_date(assigns.date) end)
+      |> assign_new(:formatted_duration, fn -> LocalizationHelpers.format_duration(assigns.duration) end)
+      |> assign_new(:formatted_timezone, fn -> Timezones.format(assigns.timezone) end)
+
+    ~H"""
+    <div class={@grid_class}>
+      <div>
+        <p class="booking-detail-label">{@date_label}</p>
+        <p class="booking-detail-value">{@formatted_date}</p>
+      </div>
+      <div>
+        <p class="booking-detail-label">{@time_label}</p>
+        <p class="booking-detail-value">{@time}</p>
+      </div>
+      <div>
+        <p class="booking-detail-label">{@duration_label}</p>
+        <p class="booking-detail-value">{@formatted_duration}</p>
+      </div>
+      <div>
+        <p class="booking-detail-label">{@timezone_label}</p>
+        <p class="booking-detail-value">{@formatted_timezone}</p>
+      </div>
+    </div>
+    """
+  end
+
+  # ========== PRIVATE HELPERS ==========
+
   defp get_organizer_text(nil), do: ""
 
   defp get_organizer_text(organizer_profile) do

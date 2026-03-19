@@ -6,15 +6,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.CoreComponents
-  import TymeslotWeb.Components.FlagHelpers
-  import TymeslotWeb.Components.MeetingComponents
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -95,72 +93,96 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
     {:noreply, socket}
   end
 
-  # Helper function to format advance booking days for display
-  defp format_advance_booking_days(days) when is_integer(days) and days <= 0,
-    do: gettext("same day only")
+  # ========== CALENDAR COMPONENTS ==========
 
-  defp format_advance_booking_days(1), do: gettext("1 day in advance")
+  attr :day, :map, required: true
+  attr :selected, :boolean, default: false
+  attr :available, :boolean, default: true
+  attr :current_month, :boolean, default: true
+  attr :loading, :boolean, default: false
+  attr :rest, :global
 
-  defp format_advance_booking_days(days) when is_integer(days) and days < 7,
-    do: gettext("%{days} days in advance", days: days)
+  defp calendar_day(assigns) do
+    ~H"""
+    <button
+      class={[
+        "calendar-day",
+        @selected && "calendar-day--selected",
+        !@available && "calendar-day--unavailable",
+        !@current_month && "calendar-day--other-month",
+        @day.is_today && "calendar-day--today",
+        Map.get(@day, :past, false) && "calendar-day--past",
+        @loading && "calendar-day--loading"
+      ]}
+      data-testid="calendar-day"
+      data-date={@day[:date] || @day["date"]}
+      disabled={!@available || !@current_month || @loading}
+      {@rest}
+    >
+      <span class="calendar-day__number">{@day.day}</span>
+    </button>
+    """
+  end
 
-  defp format_advance_booking_days(7), do: gettext("1 week in advance")
+  # ========== PRIVATE HELPERS ==========
 
-  defp format_advance_booking_days(days) when is_integer(days) and days < 30,
-    do: format_weeks_advance(days)
+  attr :show, :boolean, required: true
 
-  defp format_advance_booking_days(30), do: gettext("1 month in advance")
-
-  defp format_advance_booking_days(days) when is_integer(days) and days < 365,
-    do: format_months_advance(days)
-
-  defp format_advance_booking_days(365), do: gettext("1 year in advance")
-  defp format_advance_booking_days(days) when is_integer(days), do: format_years_advance(days)
-  defp format_advance_booking_days(_arg), do: gettext("90 days in advance")
-
-  # Helper functions for formatting
-  defp format_weeks_advance(days), do: gettext("%{weeks} weeks in advance", weeks: div(days, 7))
-
-  defp format_months_advance(days),
-    do: gettext("%{months} months in advance", months: div(days, 30))
-
-  defp format_years_advance(days), do: gettext("%{years} years in advance", years: div(days, 365))
+  defp loading_spinner(assigns) do
+    ~H"""
+    <%= if @show do %>
+      <svg
+        class="animate-spin h-4 w-4 text-white opacity-60"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        />
+      </svg>
+    <% end %>
+    """
+  end
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div data-locale={@locale}>
+    <div class="container flex-1" data-locale={@locale}>
       <.page_layout
         show_steps={true}
         current_step={2}
         slug={@duration}
         username_context={@username_context}
       >
-        <div class="container stack flex-1">
-          <div class="flex-1 flex items-start justify-center px-4 py-2 md:py-4">
+        <div class="stack">
+          <div class="schedule-content-area flex-1 flex items-start justify-center">
             <div class="w-full max-w-5xl min-h-0">
               <.glass_morphism_card class="calendar-card">
-                <div class="p-2 md:p-3 lg:p-4 min-h-0">
+                <div class="schedule-card-body min-h-0">
                   <%!-- Header: title + compact timezone trigger --%>
                   <div class="schedule-card-header">
                     <div class="flex-1 min-w-0">
                       <.section_header
                         level={2}
                         class="mb-1"
-                        title_class="section-header text-base md:text-lg lg:text-xl"
+                        title_class="section-header schedule-title"
                       >
                         {gettext("Select a Date & Time")}
                       </.section_header>
 
                       <%= if @organizer_profile do %>
-                        <p class="hidden md:block text-sm md:text-base mb-2 text-glass-primary">
-                          {gettext("Bookings available up to %{advance}", advance: format_advance_booking_days(
+                        <p class="schedule-advance-notice text-glass-primary">
+                          {gettext("Bookings available up to %{advance}", advance: Panels.format_advance_booking_days(
                             @organizer_profile.advance_booking_days
                           ))}
                         </p>
                       <% end %>
 
-                      <p class="hidden md:block text-base md:text-lg font-medium text-glass-primary">
+                      <p class="schedule-duration-label text-glass-primary">
                         <%= if @meeting_type do %>
                           {gettext("Duration: %{duration}", duration: LocalizationHelpers.format_duration(@meeting_type.duration_minutes))}
                         <% else %>
@@ -170,7 +192,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                     </div>
 
                     <div class="schedule-timezone-area">
-                      <.timezone_selector
+                      <Panels.timezone_selector
                         user_timezone={@user_timezone}
                         timezone_search={@timezone_search}
                         timezone_dropdown_open={@timezone_dropdown_open}
@@ -180,11 +202,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                     </div>
                   </div>
 
-                  <div class="flex flex-col lg:flex-row lg:gap-4 xl:gap-6 calendar-slots-container">
+                  <div class="calendar-slots-container">
                     <div class="flex-1 calendar-section">
                       <%!-- Weekly view: shown on small screens --%>
                       <div class="calendar-weekly">
-                        <div class="cluster cluster-between mb-1">
+                        <div class="weekly-nav-row">
                           <button
                             phx-click="prev_week"
                             phx-target={@myself}
@@ -194,7 +216,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                           >
                             ←
                           </button>
-                          <div class="cluster cluster-xs">
+                          <div class="weekly-nav-label">
                             <div class="text-xs font-semibold text-white">
                               {LocalizationHelpers.get_week_display(@current_week_start)}
                             </div>
@@ -232,12 +254,12 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
                       <%!-- Monthly view: shown on larger screens --%>
                       <div class="calendar-monthly">
-                        <div class="cluster cluster-between mb-1 md:mb-2">
-                          <h2 class="text-sm md:text-base lg:text-lg font-bold cluster cluster-xs text-glass-primary">
+                        <div class="calendar-month-header">
+                          <h2 class="calendar-month-title font-bold text-glass-primary">
                             {gettext("Select a Date")}
                             <.loading_spinner show={@availability_status == :loading} />
                           </h2>
-                          <div class="cluster cluster-3xs md:cluster-2xs">
+                          <div class="calendar-nav-cluster">
                             <%= if @availability_status in [:error, :timeout] do %>
                               <div class="text-xs text-amber-300 bg-amber-900/40 px-2 py-1 rounded border border-amber-700/50 flex items-center gap-1">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,11 +279,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                     @user_timezone
                                   )
                               }
-                              class="calendar-nav-button p-1 md:p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                              class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                             >
                               ←
                             </button>
-                            <div class="text-xs md:text-sm lg:text-base font-semibold px-2 md:px-3 text-white">
+                            <div class="calendar-month-label font-semibold text-white">
                               {LocalizationHelpers.get_month_year_display(@current_year, @current_month)}
                             </div>
                             <button
@@ -275,7 +297,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                                     @user_timezone
                                   )
                               }
-                              class="calendar-nav-button p-1 md:p-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
+                              class="calendar-nav-button rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed phx-click-loading:animate-pulse"
                             >
                               →
                             </button>
@@ -308,7 +330,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                       </div>
                     </div>
 
-                    <.time_slots_panel
+                    <Panels.time_slots_panel
                       selected_date={@selected_date}
                       loading_slots={@loading_slots}
                       calendar_error={@calendar_error}
@@ -318,7 +340,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                     />
                   </div>
 
-                  <div class="mt-2 md:mt-3 flex gap-2 flex-shrink-0">
+                  <div class="schedule-actions flex-shrink-0">
                     <.action_button
                       type="button"
                       phx-click="back_step"
@@ -346,260 +368,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
           </div>
         </div>
       </.page_layout>
-    </div>
-    """
-  end
-
-  # Helper functions for timezone display
-  defp get_current_time_display(timezone) do
-    case DateTime.now(timezone) do
-      {:ok, datetime} ->
-        gettext("%{time} local time",
-          time: String.slice(Time.to_string(DateTime.to_time(datetime)), 0, 5)
-        )
-
-      _other ->
-        gettext("local time")
-    end
-  end
-
-  defp get_timezone_offset(timezone) do
-    Timezones.utc_offset(timezone)
-  end
-
-  defp get_timezone_local_time(timezone) do
-    case DateTime.now(timezone) do
-      {:ok, datetime} ->
-        String.slice(Time.to_string(DateTime.to_time(datetime)), 0, 5)
-
-      _other ->
-        "--:--"
-    end
-  end
-
-  attr :show, :boolean, required: true
-
-  defp loading_spinner(assigns) do
-    ~H"""
-    <%= if @show do %>
-      <svg
-        class="animate-spin h-4 w-4 text-white opacity-60"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        />
-      </svg>
-    <% end %>
-    """
-  end
-
-  # Sub-components for better organization
-  defp timezone_selector(assigns) do
-    ~H"""
-    <div class="relative" data-locale={@locale}>
-      <%!-- Label: hidden on small screens --%>
-      <label class="timezone-label text-sm font-medium mb-2 hidden md:block">
-        <div class="cluster cluster-xs">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          {gettext("Your timezone")}
-        </div>
-      </label>
-
-      <div
-        class="group relative cursor-pointer"
-        phx-click="toggle_timezone_dropdown"
-        phx-target={@target}
-      >
-        <div class="timezone-trigger rounded-xl transition-all duration-200 ease-out hover:shadow-lg px-2 py-1.5 md:px-4 md:py-3 md:hover:scale-[1.01]">
-          <div class="cluster cluster-between">
-            <div class="cluster cluster-sm flex-1 min-w-0">
-              <.timezone_flag
-                timezone={@user_timezone}
-                class="timezone-flag shadow-sm"
-                fallback_icon="🌐"
-              />
-              <div class="flex-1 min-w-0">
-                <div class="text-xs md:text-sm font-medium text-white truncate">
-                  {Timezones.format(@user_timezone)}
-                </div>
-                <div class="timezone-time-display text-xs mt-1 hidden md:block">
-                  {get_current_time_display(@user_timezone)}
-                </div>
-              </div>
-            </div>
-            <div class="cluster cluster-xs ml-2 md:ml-3">
-              <div class="timezone-offset-badge text-xs md:text-sm px-2 py-1 md:px-3 md:py-1.5 rounded-full font-medium hidden md:block">
-                {get_timezone_offset(@user_timezone)}
-              </div>
-              <svg
-                class={"timezone-chevron w-3 h-3 md:w-4 md:h-4 transition-transform duration-200 #{if @timezone_dropdown_open, do: "rotate-180", else: "rotate-0"}"}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    <!-- Dropdown with search input at top - no layout shift -->
-      <%= if @timezone_dropdown_open do %>
-        <div class="timezone-dropdown absolute top-full left-0 right-0 md:left-auto md:right-0 w-full md:min-w-[16rem] md:max-w-sm mt-1 max-h-64 md:max-h-72 z-[9999] rounded-xl shadow-2xl border overflow-hidden">
-          <!-- Search input fixed at top of dropdown -->
-          <div class="timezone-dropdown-header p-3">
-            <div class="relative">
-              <input
-                id="timezone-search"
-                type="text"
-                phx-keyup="search_timezone"
-                phx-blur="close_timezone_dropdown"
-                phx-target={@target}
-                name="search"
-                value={@timezone_search}
-                placeholder={gettext("Search cities, countries, or timezones...")}
-                class="timezone-search-input w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-none focus:ring-2 focus:ring-white/30"
-                autocomplete="off"
-                phx-hook="AutoFocus"
-              />
-              <div class="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                <svg
-                  class="w-4 h-4 text-tymeslot-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  >
-                  </path>
-                </svg>
-              </div>
-            </div>
-          </div>
-
-    <!-- Scrollable timezone options -->
-          <div class="scroll-y max-h-48 md:max-h-56">
-            <div class="p-1">
-              <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>
-                <div
-                  phx-click="change_timezone"
-                  phx-value-timezone={value}
-                  phx-target={@target}
-                  class="timezone-dropdown-item w-full text-left px-3 py-2.5 text-sm rounded-lg flex justify-between items-center cursor-pointer transition-all duration-150 group"
-                >
-                  <div class="flex-1 min-w-0">
-                    <div class="font-medium truncate">{label}</div>
-                    <div class="timezone-time-display text-xs mt-0.5">
-                      {get_timezone_local_time(value)}
-                    </div>
-                  </div>
-                  <div class="timezone-offset-badge-dropdown text-sm font-medium px-2.5 py-1 rounded-full transition-colors duration-150">
-                    {offset}
-                  </div>
-                </div>
-              <% end %>
-            </div>
-          </div>
-        </div>
-      <% end %>
-    </div>
-    """
-  end
-
-  defp time_slots_panel(assigns) do
-    ~H"""
-    <div class="time-slots-panel flex flex-col" id="slots-container" phx-hook="AutoScrollToSlots">
-      <% normalized_slots = normalize_slot_list(@available_slots) %>
-      <h2 class="text-sm md:text-base lg:text-lg font-bold mb-1 text-glass-primary">
-        {gettext("Available Times")}
-      </h2>
-      <div class="slots-box flex-1">
-        <%= if @selected_date do %>
-          <%= if @loading_slots do %>
-            <div class="h-full flex items-center justify-center">
-              <.spinner />
-              <span class="ml-3 text-white">{gettext("Loading available times...")}</span>
-            </div>
-          <% else %>
-            <%= if @calendar_error do %>
-              <.info_box variant={:warning}>
-                {@calendar_error}
-              </.info_box>
-            <% end %>
-            <%= if !@calendar_error && length(normalized_slots) > 0 do %>
-              <div class="space-y-3 pr-2" data-slots-loaded>
-                <%= for {period, slots} <- LocalizationHelpers.group_slots_by_period(normalized_slots) do %>
-                  <%= if length(slots) > 0 do %>
-                    <div>
-                      <div class="time-period-label text-xs font-semibold mb-2 px-1">
-                        {period}
-                      </div>
-                      <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5">
-                        <%= for slot_value <- slots do %>
-                          <.time_slot_button
-                            phx-click="select_time"
-                            phx-target={@target}
-                            phx-value-time={slot_value}
-                            slot={%{start_time: Helpers.parse_slot_time(slot_value)}}
-                            selected={@selected_time == slot_value}
-                            disabled={@loading_slots}
-                          />
-                        <% end %>
-                      </div>
-                    </div>
-                  <% end %>
-                <% end %>
-              </div>
-            <% else %>
-              <%= if !@calendar_error do %>
-                <.empty_state
-                  message={gettext("This date is fully booked")}
-                  secondary_message={gettext("Please select another date")}
-                >
-                  <:icon>
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                    >
-                    </path>
-                  </:icon>
-                </.empty_state>
-              <% end %>
-            <% end %>
-          <% end %>
-        <% else %>
-          <div class="h-full flex items-center justify-center">
-            <p class="text-quill-secondary text-sm">
-              {gettext("Please select a date to see available times")}
-            </p>
-          </div>
-        <% end %>
-      </div>
     </div>
     """
   end

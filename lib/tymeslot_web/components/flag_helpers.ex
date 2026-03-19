@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Components.FlagHelpers do
         """
       else
         ~H"""
-        <!-- No flag available for <%= inspect(@country_code) %> -->
+        <!-- No flag available -->
         """
       end
     end
@@ -119,4 +119,15 @@ defmodule TymeslotWeb.Components.FlagHelpers do
   defp locale_to_country_code("uk"), do: :ukr
   defp locale_to_country_code("fr"), do: :fra
   defp locale_to_country_code(_locale), do: nil
+
+  @doc """
+  Sanitizes a CSS class name to prevent XSS — only allows alphanumeric
+  characters, hyphens, and underscores, and truncates to 100 characters.
+  """
+  @spec sanitize_css_class(String.t()) :: String.t()
+  def sanitize_css_class(class_name) do
+    class_name
+    |> String.replace(~r/[^a-zA-Z0-9\-_]/, "")
+    |> String.slice(0, 100)
+  end
 end

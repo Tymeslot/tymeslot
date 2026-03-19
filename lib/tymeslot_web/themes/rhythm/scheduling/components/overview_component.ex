@@ -10,16 +10,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
 
   alias Tymeslot.Demo
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+
+  import TymeslotWeb.Components.FlagHelpers
+
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
 
     # Sort meeting types alphabetically using natural sort (numbers compare numerically)
     sorted_meeting_types =
-      case Map.get(filtered_assigns, :meeting_types) do
-        list when is_list(list) -> Enum.sort_by(list, fn mt -> natural_key(meeting_title(mt)) end)
-        _non_list -> Map.get(filtered_assigns, :meeting_types)
-      end
+      LocalizationHelpers.sort_meeting_types(Map.get(filtered_assigns, :meeting_types))
 
     {:ok,
      socket
@@ -153,46 +153,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   end
 
   defp render_icon(icon) do
+    assigns = %{icon: icon, safe_icon: sanitize_css_class(icon)}
+
     case icon do
       "none" ->
-        ""
+        ~H""
 
       "hero-" <> _rest ->
-        # Sanitize icon to prevent XSS: only allow alphanumeric, hyphens, underscores
-        safe_icon = sanitize_css_class(icon)
-        raw("<span class='#{safe_icon} hero-icon hero-icon--md'></span>")
+        ~H"""
+        <.icon name={@safe_icon} class="hero-icon hero-icon--md" />
+        """
+
+      _emoji ->
+        ~H"{@icon}"
     end
   end
 
-  # Sanitizes a CSS class name to prevent XSS attacks
-  # Only allows alphanumeric characters, hyphens, and underscores
-  defp sanitize_css_class(class_name) do
-    class_name
-    |> String.replace(~r/[^a-zA-Z0-9\-_]/, "")
-    |> String.slice(0, 100)
-  end
-
-  # Natural sort key: split string into number and text segments and normalize
-  defp natural_key(string) do
-    normalized = String.downcase(String.trim(string))
-
-    Enum.map(Regex.scan(~r/\d+|\D+/u, normalized), fn [seg] ->
-      if String.match?(seg, ~r/^\d+$/) do
-        {:num, String.to_integer(seg)}
-      else
-        {:str, seg}
-      end
-    end)
-  end
-
-  # Derive a robust meeting title for sorting: prefer name, fallback to duration
-  defp meeting_title(%{name: name, duration_minutes: duration}) do
-    trimmed = String.trim(name)
-
-    if trimmed != "" do
-      trimmed
-    else
-      "#{duration} minutes"
-    end
-  end
 end

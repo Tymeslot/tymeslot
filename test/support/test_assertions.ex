@@ -6,16 +6,16 @@ defmodule Tymeslot.TestAssertions do
 
   import ExUnit.Assertions
   import Phoenix.LiveViewTest
+  import Ecto.Query
+
+  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Repo
 
   @doc """
   Asserts that a meeting exists in the database with the given attributes.
   """
   @spec assert_meeting_created(keyword()) :: term()
   def assert_meeting_created(attrs) do
-    import Ecto.Query
-    alias Tymeslot.DatabaseSchemas.MeetingSchema
-    alias Tymeslot.Repo
-
     query = from(m in MeetingSchema)
 
     query =
@@ -170,28 +170,11 @@ defmodule Tymeslot.TestAssertions do
     min_slots = Keyword.get(opts, :min_slots, 1)
 
     # Look for time slot patterns (e.g., buttons with time-like text)
-    time_pattern = ~r/\d{1,2}:\d{2}\s*(AM|PM)/i
+    time_pattern = ~r/\d{1,2}:\d{2}(\s*(AM|PM))?/i
     matches = Regex.scan(time_pattern, html)
 
     assert length(matches) >= min_slots,
            "Expected at least #{min_slots} time slots, found #{length(matches)}"
-  end
-
-  @doc """
-  Asserts calendar navigation works without checking specific text.
-  """
-  @spec assert_calendar_navigation(term()) :: term()
-  def assert_calendar_navigation(view) do
-    # Check that navigation elements exist
-    assert has_element?(view, "[data-testid='calendar-prev']") or
-             has_element?(view, "button[phx-click='prev_month']") or
-             has_element?(view, "button", "←"),
-           "Expected previous month navigation"
-
-    assert has_element?(view, "[data-testid='calendar-next']") or
-             has_element?(view, "button[phx-click='next_month']") or
-             has_element?(view, "button", "→"),
-           "Expected next month navigation"
   end
 
   @doc """

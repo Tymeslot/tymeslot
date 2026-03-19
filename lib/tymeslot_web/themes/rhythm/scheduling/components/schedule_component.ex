@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Timezones
-  alias TymeslotWeb.Components.MeetingComponents
+  alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
@@ -248,7 +248,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
     <!-- Time Slots -->
               <div class="time-slots-section">
                 <h3 class="time-slots-section-heading">{gettext("Available Times")}</h3>
-                <% normalized_slots = MeetingComponents.normalize_slot_list(@available_slots) %>
+                <% normalized_slots = MeetingUtils.normalize_slot_list(@available_slots) %>
                 <div class="time-slots-grid scroll-y">
                   <%= if @selected_date do %>
                     <%= if @loading_slots do %>

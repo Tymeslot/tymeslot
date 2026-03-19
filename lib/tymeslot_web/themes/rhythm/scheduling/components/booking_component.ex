@@ -111,6 +111,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 label={gettext("name")}
                 placeholder={gettext("enter_full_name")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :name)}
+                phx-debounce="blur"
                 phx-blur="field_blur"
                 phx-value-field="name"
                 phx-target={@myself}
@@ -122,6 +123,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 type="email"
                 placeholder={gettext("enter_email")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :email)}
+                phx-debounce="blur"
                 phx-blur="field_blur"
                 phx-value-field="email"
                 phx-target={@myself}
@@ -134,6 +136,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                 placeholder={gettext("add_details")}
                 errors={FormValidationHelpers.field_errors(@validation_errors, :message)}
                 rows={4}
+                phx-debounce="blur"
                 phx-blur="field_blur"
                 phx-value-field="message"
                 phx-target={@myself}
