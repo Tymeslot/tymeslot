@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
 
   alias Phoenix.LiveView
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.Workers.VideoTranscoder
 
   @doc """
   Process background image upload with logging.
@@ -85,11 +86,24 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
         attrs = %{
           "background_type" => "video",
           "background_value" => "custom",
-          "background_video_path" => stored_path
+          "background_video_path" => stored_path,
+          "video_processing" => "pending"
         }
 
         case ThemeCustomizations.upsert_theme_customization(profile.id, theme_id, attrs) do
-          {:ok, _customization} ->
+          {:ok, customization} ->
+            if Application.get_env(:tymeslot, :video_transcoding_enabled, true) do
+              case VideoTranscoder.enqueue(customization.id, stored_path) do
+                {:ok, _job} ->
+                  :ok
+
+                {:error, _reason} ->
+                  ThemeCustomizations.upsert_theme_customization(profile.id, theme_id, %{
+                    "video_processing" => "failed"
+                  })
+              end
+            end
+
             {:ok, "Background video uploaded successfully"}
 
           {:error, _reason} ->

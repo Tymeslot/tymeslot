@@ -48,12 +48,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
               playsinline
               poster={@video_poster}
               class="video-background-video active"
-              preload="metadata"
+              preload="auto"
             >
               <% background_video_path = get_background_video_path(@theme_customization) %>
               <%= if background_video_path do %>
                 <% sanitized_path = sanitize_path(background_video_path) %>
-                <source src={"/uploads/#{sanitized_path}"} type="video/mp4" />
+                {Phoenix.HTML.raw(VideoHelpers.render_upload_video_sources(sanitized_path))}
               <% else %>
                 <!-- Handle preset videos -->
                 <% background_value = get_background_value(@theme_customization) %>
@@ -75,12 +75,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
               playsinline
               poster={@video_poster}
               class="video-background-video inactive"
-              preload="metadata"
+              preload="auto"
             >
               <% background_video_path = get_background_video_path(@theme_customization) %>
               <%= if background_video_path do %>
                 <% sanitized_path = sanitize_path(background_video_path) %>
-                <source src={"/uploads/#{sanitized_path}"} type="video/mp4" />
+                {Phoenix.HTML.raw(VideoHelpers.render_upload_video_sources(sanitized_path))}
               <% else %>
                 <!-- Handle preset videos -->
                 <% background_value = get_background_value(@theme_customization) %>

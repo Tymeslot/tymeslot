@@ -8,6 +8,7 @@ defmodule Tymeslot.ThemeCustomizations do
   alias Tymeslot.DatabaseQueries.ThemeCustomizationQueries
   alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
+  alias Tymeslot.Media.Transcoder
   alias TymeslotWeb.Helpers.UploadHandler
 
   # Functional submodules
@@ -150,6 +151,18 @@ defmodule Tymeslot.ThemeCustomizations do
             old_file_path,
             Map.put(context, :file_type, "old_video")
           )
+
+          # Clean up old video variants
+          old_video_path
+          |> Transcoder.derive_variant_paths()
+          |> Enum.each(fn variant_path ->
+            variant_file_path = Storage.build_theme_file_path(variant_path)
+
+            UploadHandler.delete_file_safely(
+              variant_file_path,
+              Map.put(context, :file_type, "old_video_variant")
+            )
+          end)
         end
 
         {:ok, updated}
@@ -183,6 +196,18 @@ defmodule Tymeslot.ThemeCustomizations do
         if customization.background_video_path do
           file_path = Storage.build_theme_file_path(customization.background_video_path)
           UploadHandler.delete_file_safely(file_path, Map.put(context, :file_type, "video"))
+
+          # Clean up transcoded video variants
+          customization.background_video_path
+          |> Transcoder.derive_variant_paths()
+          |> Enum.each(fn variant_path ->
+            variant_file_path = Storage.build_theme_file_path(variant_path)
+
+            UploadHandler.delete_file_safely(
+              variant_file_path,
+              Map.put(context, :file_type, "video_variant")
+            )
+          end)
         end
 
         {:ok, deleted}
