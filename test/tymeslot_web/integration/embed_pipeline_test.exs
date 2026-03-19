@@ -43,7 +43,10 @@ defmodule TymeslotWeb.Integration.EmbedPipelineTest do
 
       csp = conn |> get_resp_header("content-security-policy") |> List.first()
       assert csp =~ "frame-ancestors 'self' https://trusted-site.com"
-      assert get_resp_header(conn, "x-frame-options") == ["ALLOW-FROM https://trusted-site.com"]
+      # X-Frame-Options ALLOW-FROM is deprecated; CSP frame-ancestors is the sole authority
+      # for modern browsers, so the plug intentionally omits X-Frame-Options when domains
+      # are configured.
+      assert get_resp_header(conn, "x-frame-options") == []
     end
 
     test "?preview=true on a scheduling page permits same-origin framing for the dashboard", %{
