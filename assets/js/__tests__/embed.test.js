@@ -190,6 +190,8 @@ describe('postMessage resize handler', () => {
     expect(iframe).not.toBeNull()
 
     const wrapper = iframe.parentNode
+    wrapper.dataset.constrained = 'true'
+    wrapper.dataset.constraintHeight = '800'
 
     window.dispatchEvent(
       new MessageEvent('message', {
@@ -236,8 +238,10 @@ describe('postMessage resize handler', () => {
 
     const iframe = document.querySelector('iframe[title="Booking Widget"]')
     const wrapper = iframe.parentNode
+    wrapper.dataset.constrained = 'true'
+    wrapper.dataset.constraintHeight = '800'
 
-    // Set a known starting height
+    // Set a known starting height via constrained resize
     window.dispatchEvent(
       new MessageEvent('message', {
         origin: window.location.origin,
@@ -290,7 +294,7 @@ describe('postMessage resize handler', () => {
     expect(height).toBeGreaterThanOrEqual(400)
   })
 
-  test('unconstrained resize applies reported height when above the floor', () => {
+  test('unconstrained inline embed ignores tymeslot-resize messages', () => {
     const container = document.createElement('div')
     container.id = 'above-floor-test'
     document.body.appendChild(container)
@@ -299,6 +303,7 @@ describe('postMessage resize handler', () => {
 
     const iframe = document.querySelector('#above-floor-test iframe[title="Booking Widget"]')
     const wrapper = iframe.parentNode
+    const initialHeight = wrapper.style.height
 
     window.dispatchEvent(
       new MessageEvent('message', {
@@ -308,7 +313,7 @@ describe('postMessage resize handler', () => {
       })
     )
 
-    expect(wrapper.style.height).toBe('800px')
+    expect(wrapper.style.height).toBe(initialHeight)
   })
 
   test('respects custom data-min-height from container', () => {
@@ -471,10 +476,11 @@ describe('postMessage resize handler', () => {
     expect(iframe).not.toBeNull()
 
     const wrapper = iframe.parentNode
+    wrapper.dataset.constrained = 'true'
+    wrapper.dataset.constraintHeight = '800'
 
-    // First establish a known height via a legitimate message so the evil-origin
-    // assertion has a meaningful value to compare against, rather than the empty
-    // initial state (which would pass trivially even if no handler existed).
+    // First establish a known height via a legitimate constrained message so the
+    // evil-origin assertion has a meaningful value to compare against.
     window.dispatchEvent(
       new MessageEvent('message', {
         origin: window.location.origin,
