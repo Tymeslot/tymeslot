@@ -31,7 +31,7 @@ defmodule Tymeslot.Media.Transcoder do
       max_height: 720,
       codec: "libx264",
       type: "video/mp4",
-      media: "(max-width: 768px)"
+      media: "(max-width: 1023px)"
     },
     %{
       suffix: "-low.mp4",

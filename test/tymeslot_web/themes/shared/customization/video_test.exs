@@ -16,7 +16,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.VideoTest do
       assert html =~ ~s(src="/uploads/videos/abc123-desktop.mp4")
 
       assert html =~ ~s(src="/uploads/videos/abc123-mobile.mp4")
-      assert html =~ "media=\"(max-width: 768px)\""
+      assert html =~ "media=\"(max-width: 1023px)\""
 
       assert html =~ ~s(src="/uploads/videos/abc123-low.mp4")
       assert html =~ "media=\"(max-width: 480px)\""
@@ -36,6 +36,13 @@ defmodule TymeslotWeb.Themes.Shared.Customization.VideoTest do
 
       assert html =~ ~s(src="/uploads/videos/my.video.file-desktop.webm")
       assert html =~ ~s(src="/uploads/videos/my.video.file.mp4")
+    end
+
+    test "sanitizes path to prevent XSS" do
+      html = Video.render_upload_video_sources("videos/<script>alert(1)</script>.mp4")
+
+      refute html =~ "<script>"
+      refute html =~ "alert(1)"
     end
   end
 end

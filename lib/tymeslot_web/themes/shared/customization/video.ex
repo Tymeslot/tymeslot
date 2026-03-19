@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
   use Phoenix.Component
 
   alias Tymeslot.Media.Transcoder
+  alias Tymeslot.ThemeCustomizations.Validation
   alias TymeslotWeb.Themes.Shared.Assets
 
   @doc """
@@ -180,7 +181,8 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
   """
   @spec render_upload_video_sources(String.t()) :: String.t()
   def render_upload_video_sources(upload_path) when is_binary(upload_path) do
-    base = Path.rootname(upload_path)
+    sanitized = Validation.sanitize_path(upload_path)
+    base = Path.rootname(sanitized)
 
     variant_sources =
       Enum.map(Transcoder.variant_definitions(), fn variant ->
@@ -188,7 +190,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
       end)
 
     # Original upload is always the last fallback source
-    fallback = %{src: "/uploads/#{upload_path}", type: "video/mp4", media: nil}
+    fallback = %{src: "/uploads/#{sanitized}", type: "video/mp4", media: nil}
 
     render_video_sources(variant_sources ++ [fallback])
   end
