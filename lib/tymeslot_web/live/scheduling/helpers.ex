@@ -539,19 +539,11 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   @doc """
   Computes the 42-day display range for a calendar grid.
 
-  Returns {start_date, end_date} matching the exact range that
-  `Calculate.get_calendar_days/5` renders. Uses a Sunday-start week
-  to match the existing calendar grid layout.
+  Delegates to `Calculate.display_range/2` — the single source of truth
+  for the calendar grid window.
   """
   @spec display_range(integer(), integer()) :: {Date.t(), Date.t()}
-  def display_range(year, month) do
-    first_day = Date.new!(year, month, 1)
-    days_before = Date.day_of_week(first_day)
-    days_before = if days_before == 7, do: 0, else: days_before
-    start_date = Date.add(first_day, -days_before)
-    end_date = Date.add(start_date, 41)
-    {start_date, end_date}
-  end
+  defdelegate display_range(year, month), to: Calculate
 
   @doc """
   Gets calendar days for a week view.

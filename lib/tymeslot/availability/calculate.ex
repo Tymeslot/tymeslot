@@ -226,6 +226,23 @@ defmodule Tymeslot.Availability.Calculate do
   end
 
   @doc """
+  Computes the 42-day display range for a calendar grid.
+
+  Returns `{start_date, end_date}` covering exactly the dates rendered by
+  `get_calendar_days/5` — a 6-week (42-day) window starting on the Sunday
+  at or before the first of the month.
+  """
+  @spec display_range(integer(), integer()) :: {Date.t(), Date.t()}
+  def display_range(year, month) do
+    first_day = Date.new!(year, month, 1)
+    days_before = Date.day_of_week(first_day)
+    days_before = if days_before == 7, do: 0, else: days_before
+    start_date = Date.add(first_day, -days_before)
+    end_date = Date.add(start_date, 41)
+    {start_date, end_date}
+  end
+
+  @doc """
   Gets calendar days for display in the UI.
 
   Returns a list of day objects for calendar rendering, including
@@ -263,14 +280,8 @@ defmodule Tymeslot.Availability.Calculate do
         _other -> {Date.utc_today(), DateTime.utc_now()}
       end
 
-    # Create date for the given year/month
-    start_of_month = Date.new!(year, month, 1)
-
-    # Get the first day to display (Sunday of the week containing the 1st)
-    first_day = start_of_month
-    days_before = Date.day_of_week(first_day)
-    days_before = if days_before == 7, do: 0, else: days_before
-    first_display_date = Date.add(first_day, -days_before)
+    # Compute the 42-day display window for this month
+    {first_display_date, _end_date} = display_range(year, month)
 
     # Generate 42 days (6 weeks) for consistent calendar display
     Enum.map(0..41, fn offset ->
