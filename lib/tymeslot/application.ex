@@ -397,8 +397,10 @@ defmodule Tymeslot.Application do
       TokenRefreshJob.schedule_periodic_refresh()
     end)
 
-    # Register Telegram webhook if shared bot mode is enabled
-    if Application.get_env(:tymeslot, :telegram_shared_bot, false) do
+    # Register Telegram webhook if shared bot mode is enabled (production only —
+    # localhost is not reachable by Telegram's servers in dev/test)
+    if Application.get_env(:tymeslot, :telegram_shared_bot, false) and
+         Application.get_env(:tymeslot, :environment) == :prod do
       schedule_supervised("Telegram webhook registration", fn ->
         BotSetup.register_webhook()
       end)
