@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       view |> element("button#tab-security") |> render_click()
 
       view
-      |> form("form", %{allowed_domains: "https://example.com"})
+      |> form("form", %{allowed_domains: "user@example.com"})
       |> render_submit()
 
       assert render(view) =~ "Invalid domain format"

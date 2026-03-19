@@ -396,9 +396,11 @@ defmodule Tymeslot.ProfilesContextTest do
       assert "other.io" in updated.allowed_embed_domains
     end
 
-    test "rejects a list containing an invalid domain", %{profile: profile} do
-      assert {:error, _reason} =
+    test "strips protocol and accepts the extracted host", %{profile: profile} do
+      assert {:ok, updated} =
                Profiles.update_allowed_embed_domains(profile, ["https://bad-format.com"])
+
+      assert "bad-format.com" in updated.allowed_embed_domains
     end
 
     test "treats empty string as the 'none' disabled state", %{profile: profile} do

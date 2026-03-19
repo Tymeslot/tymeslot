@@ -21,7 +21,10 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
         "test123.com",
         "123test.com",
         "*.example.com",
-        "*.sub.example.net"
+        "*.sub.example.net",
+        # Protocols are stripped by validate_domain/1, so these normalize to valid domains
+        "https://example.com",
+        "http://example.com"
       ]
 
       for domain <- valid_domains do
@@ -39,8 +42,6 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
 
     test "rejects invalid domain formats", %{user: user} do
       invalid_domains = [
-        {"https://example.com", "protocol"},
-        {"http://example.com", "protocol"},
         {"example.com/path", "path"},
         {"example.com?query=1", "query"},
         {"example.com#anchor", "anchor"},
@@ -50,6 +51,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
         {"example-.com", "ends with hyphen"},
         {"example", "no TLD"}
         # Note: empty string is filtered out by normalization before validation
+        # Note: protocols (https://, http://) are stripped by validate_domain/1, not rejected
       ]
 
       for {domain, reason} <- invalid_domains do
@@ -137,7 +139,6 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
     test "handles mixed valid and invalid domains", %{user: user} do
       mixed_domains = [
         "valid.com",
-        "https://invalid.com",
         "also-valid.org",
         "invalid@domain.com"
       ]

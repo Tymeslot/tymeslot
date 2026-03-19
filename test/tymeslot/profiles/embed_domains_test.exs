@@ -68,11 +68,11 @@ defmodule Tymeslot.Profiles.EmbedDomainsTest do
       assert updated_profile.allowed_embed_domains == []
     end
 
-    test "rejects domains with protocols", %{profile: profile} do
-      assert {:error, changeset} =
+    test "strips protocols and extracts the host", %{profile: profile} do
+      assert {:ok, updated_profile} =
                Profiles.update_allowed_embed_domains(profile, ["https://example.com"])
 
-      assert changeset.errors[:allowed_embed_domains] != nil
+      assert "example.com" in updated_profile.allowed_embed_domains
     end
 
     test "rejects domains with paths", %{profile: profile} do
