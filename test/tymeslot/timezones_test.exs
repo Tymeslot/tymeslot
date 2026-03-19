@@ -35,7 +35,7 @@ defmodule Tymeslot.TimezonesTest do
 
     test "filters by city name" do
       results = Timezones.search("Brussels")
-      assert length(results) >= 1
+      assert results != []
 
       assert Enum.any?(results, fn {_label, tz_id, _offset} ->
                tz_id == "Europe/Brussels"

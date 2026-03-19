@@ -164,7 +164,7 @@ defmodule TymeslotWeb.Layouts do
       {:ok, theme} ->
         theme.module.theme_config()[:preferred_embed_height] || @default_embed_height
 
-      {:error, _} ->
+      {:error, _reason} ->
         @default_embed_height
     end
   end

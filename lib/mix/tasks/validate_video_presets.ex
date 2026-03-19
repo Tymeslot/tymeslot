@@ -16,7 +16,9 @@ defmodule Mix.Tasks.Tymeslot.ValidateVideoPresets do
 
   @impl Mix.Task
   def run(_args) do
-    unless System.find_executable("ffprobe") do
+    ffprobe = System.find_executable("ffprobe")
+
+    unless ffprobe do
       Mix.raise("ffprobe not found. Install ffmpeg to use this task.")
     end
 
@@ -33,19 +35,19 @@ defmodule Mix.Tasks.Tymeslot.ValidateVideoPresets do
 
     broken =
       Enum.filter(mp4_files, fn file ->
-        {output, 0} = System.cmd("ffprobe", ["-v", "trace", file], stderr_to_stdout: true)
+        {output, 0} = System.cmd(ffprobe, ["-v", "trace", file], stderr_to_stdout: true, env: [])
 
         atoms =
           output
           |> String.split("\n")
-          |> Enum.filter(&String.contains?(&1, "parent:'root'"))
           |> Enum.filter(fn line ->
-            String.contains?(line, "type:'moov'") or String.contains?(line, "type:'mdat'")
+            String.contains?(line, "parent:'root'") and
+              (String.contains?(line, "type:'moov'") or String.contains?(line, "type:'mdat'"))
           end)
 
         case atoms do
-          [first | _] -> String.contains?(first, "mdat")
-          _ -> false
+          [first | _rest] -> String.contains?(first, "mdat")
+          _other -> false
         end
       end)
 

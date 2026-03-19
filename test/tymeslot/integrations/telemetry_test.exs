@@ -15,7 +15,7 @@ defmodule Tymeslot.Integrations.TelemetryTest do
       events = Telemetry.events()
 
       assert is_list(events)
-      assert length(events) > 0
+      assert events != []
 
       # Verify some expected events are present
       assert [:tymeslot, :integration, :operation, :start] in events
