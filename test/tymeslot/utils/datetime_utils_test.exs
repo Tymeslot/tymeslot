@@ -217,5 +217,33 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
       assert result["Morning"] == ["07:30", "09:00"]
       assert result["Afternoon"] == ["13:00", "14:00"]
     end
+
+    test "slots before 5am are grouped as Early Morning" do
+      slots = ["02:00", "03:30", "04:45"]
+      result = DateTimeUtils.group_slots_by_period(slots)
+      assert result["Early Morning"] == ["02:00", "03:30", "04:45"]
+      refute Map.has_key?(result, "Night")
+    end
+
+    test "slots from 21:00 onwards are grouped as Late Night" do
+      slots = ["21:00", "22:30", "23:45"]
+      result = DateTimeUtils.group_slots_by_period(slots)
+      assert result["Late Night"] == ["21:00", "22:30", "23:45"]
+      refute Map.has_key?(result, "Night")
+    end
+
+    test "early morning and late night slots are in separate groups" do
+      slots = ["03:00", "22:00"]
+      result = DateTimeUtils.group_slots_by_period(slots)
+      assert result["Early Morning"] == ["03:00"]
+      assert result["Late Night"] == ["22:00"]
+    end
+
+    test "5:00 AM boundary falls into Morning, not Early Morning" do
+      slots = ["05:00"]
+      result = DateTimeUtils.group_slots_by_period(slots)
+      assert result["Morning"] == ["05:00"]
+      refute Map.has_key?(result, "Early Morning")
+    end
   end
 end

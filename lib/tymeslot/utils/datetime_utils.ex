@@ -107,19 +107,20 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   end
 
   @doc """
-  Groups time slots by time period (Morning, Afternoon, Evening, Night).
+  Groups time slots by time period (Early Morning, Morning, Afternoon, Evening, Late Night).
 
   Slots within each period are sorted chronologically by their parsed time value,
   so times like "7:30 AM" correctly appear before "11:30 AM".
 
   ## Examples
-      iex> slots = ["9:00 AM", "2:00 PM", "7:00 PM", "11:00 PM"]
+      iex> slots = ["2:00 AM", "9:00 AM", "2:00 PM", "7:00 PM", "11:00 PM"]
       iex> Tymeslot.Utils.DateTimeUtils.group_slots_by_period(slots)
       %{
+        "Early Morning" => ["2:00 AM"],
         "Morning" => ["9:00 AM"],
         "Afternoon" => ["2:00 PM"],
         "Evening" => ["7:00 PM"],
-        "Night" => ["11:00 PM"]
+        "Late Night" => ["11:00 PM"]
       }
   """
   @spec group_slots_by_period([String.t()]) :: %{optional(String.t()) => [String.t()]}
@@ -153,10 +154,11 @@ defmodule Tymeslot.Utils.DateTimeUtils do
     end
   end
 
+  defp determine_period_from_hour(hour) when hour >= 0 and hour < 5, do: "Early Morning"
   defp determine_period_from_hour(hour) when hour >= 5 and hour < 12, do: "Morning"
   defp determine_period_from_hour(hour) when hour >= 12 and hour < 17, do: "Afternoon"
   defp determine_period_from_hour(hour) when hour >= 17 and hour < 21, do: "Evening"
-  defp determine_period_from_hour(_hour), do: "Night"
+  defp determine_period_from_hour(_hour), do: "Late Night"
 
   @doc """
   Formats duration for URL parameters.

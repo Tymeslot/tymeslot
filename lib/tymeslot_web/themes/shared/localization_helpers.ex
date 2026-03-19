@@ -15,10 +15,11 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     grouped = DateTimeUtils.group_slots_by_period(slots)
 
     [
-      {gettext("Night"), Map.get(grouped, "Night", [])},
+      {gettext("Early Morning"), Map.get(grouped, "Early Morning", [])},
       {gettext("Morning"), Map.get(grouped, "Morning", [])},
       {gettext("Afternoon"), Map.get(grouped, "Afternoon", [])},
-      {gettext("Evening"), Map.get(grouped, "Evening", [])}
+      {gettext("Evening"), Map.get(grouped, "Evening", [])},
+      {gettext("Late Night"), Map.get(grouped, "Late Night", [])}
     ]
   end
 
