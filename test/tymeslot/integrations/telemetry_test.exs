@@ -15,7 +15,7 @@ defmodule Tymeslot.Integrations.TelemetryTest do
       events = Telemetry.events()
 
       assert is_list(events)
-      assert events != []
+      refute Enum.empty?(events)
 
       # Verify some expected events are present
       assert [:tymeslot, :integration, :operation, :start] in events
