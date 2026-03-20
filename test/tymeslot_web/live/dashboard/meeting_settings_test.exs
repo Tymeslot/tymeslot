@@ -133,6 +133,26 @@ defmodule TymeslotWeb.Dashboard.MeetingSettingsTest do
       assert render(view) =~ "Meeting type status updated"
       assert Repo.reload!(meeting_type).is_active == true
     end
+
+    test "toggling twice returns to original state", %{conn: conn, user: user} do
+      meeting_type = insert(:meeting_type, user: user, is_active: true)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      # First toggle: active → inactive
+      view
+      |> element("[phx-click='toggle_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      assert Repo.reload!(meeting_type).is_active == false
+
+      # Second toggle: inactive → active
+      view
+      |> element("[phx-click='toggle_type'][phx-value-id='#{meeting_type.id}']")
+      |> render_click()
+
+      assert Repo.reload!(meeting_type).is_active == true
+    end
   end
 
   # ===========================================================================

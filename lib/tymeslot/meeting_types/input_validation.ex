@@ -304,15 +304,23 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   defp validate_meeting_name(name, metadata) when is_binary(name) do
     case UniversalSanitizer.sanitize_and_validate(name, allow_html: false, metadata: metadata) do
       {:ok, sanitized_name} ->
+        trimmed = String.trim(sanitized_name)
+
+        slug =
+          trimmed |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-") |> String.trim("-")
+
         cond do
           String.length(sanitized_name) > 100 ->
             {:error, %{name: "Meeting name must be 100 characters or less"}}
 
-          String.length(String.trim(sanitized_name)) < 2 ->
+          String.length(trimmed) < 2 ->
             {:error, %{name: "Meeting name must be at least 2 characters"}}
 
+          slug == "" ->
+            {:error, %{name: "Meeting name must contain at least one letter or number"}}
+
           true ->
-            {:ok, String.trim(sanitized_name)}
+            {:ok, trimmed}
         end
 
       {:error, error} ->

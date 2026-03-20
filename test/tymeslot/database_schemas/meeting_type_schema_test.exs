@@ -52,6 +52,19 @@ defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchemaTest do
       assert "You already have a meeting type with this name" in errors_on(changeset).user_id
     end
 
+    test "schema allows non-divisible-by-5 durations (form layer enforces this)" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Odd Duration",
+        duration_minutes: 7,
+        user_id: user.id
+      }
+
+      changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
+      assert changeset.valid?
+    end
+
     test "prevents more than three reminders" do
       user = insert(:user)
 

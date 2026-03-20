@@ -6,6 +6,7 @@ defmodule Tymeslot.Bookings.CreateTest do
 
   alias __MODULE__.MockCalendar
   alias Tymeslot.Bookings.Create
+  alias Tymeslot.MeetingTypes
 
   # Shared test setup helper
   defp setup_booking_test do
@@ -259,7 +260,7 @@ defmodule Tymeslot.Bookings.CreateTest do
       assert meeting.meeting_type == meeting_type.name
     end
 
-    test "ignores meeting_type_id that does not belong to organizer", %{
+    test "rejects meeting_type_id that does not belong to organizer", %{
       user: user,
       form_data: form_data
     } do
@@ -279,11 +280,9 @@ defmodule Tymeslot.Bookings.CreateTest do
         meeting_type_id: other_meeting_type.id
       }
 
-      assert {:ok, meeting} = Create.execute(meeting_params, form_data)
-
-      assert meeting.meeting_type_id == nil
-      assert meeting.meeting_type == "General Meeting"
-      assert meeting.video_integration_id == nil
+      assert {:error,
+              "This meeting type is no longer available. Please go back and select another."} =
+               Create.execute(meeting_params, form_data)
     end
 
     test "ignores video_integration_id that does not belong to organizer", %{
@@ -330,6 +329,32 @@ defmodule Tymeslot.Bookings.CreateTest do
       }
 
       assert {:error, "This meeting type is no longer available. Please refresh the page."} =
+               Create.execute(meeting_params, form_data)
+    end
+
+    test "fails when meeting type has been deleted", %{
+      user: user,
+      form_data: form_data
+    } do
+      meeting_type = insert(:meeting_type, user: user, is_active: true)
+      deleted_id = meeting_type.id
+
+      # Delete the meeting type
+      MeetingTypes.delete_meeting_type(meeting_type)
+
+      set_calendar_empty()
+
+      meeting_params = %{
+        date: Date.add(Date.utc_today(), 1),
+        time: "12:00",
+        duration: "30min",
+        user_timezone: "UTC",
+        organizer_user_id: user.id,
+        meeting_type_id: deleted_id
+      }
+
+      assert {:error,
+              "This meeting type is no longer available. Please go back and select another."} =
                Create.execute(meeting_params, form_data)
     end
   end

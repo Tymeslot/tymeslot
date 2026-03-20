@@ -166,9 +166,9 @@ defmodule Tymeslot.Bookings.Create do
     alias Tymeslot.MeetingTypes
 
     case MeetingTypes.get_meeting_type(type_id, user_id) do
-      nil -> :ok
       %{is_active: true} -> :ok
-      _other -> {:error, :meeting_type_inactive}
+      %{is_active: false} -> {:error, :meeting_type_inactive}
+      nil -> {:error, :meeting_type_not_found}
     end
   end
 
@@ -295,6 +295,9 @@ defmodule Tymeslot.Bookings.Create do
     case reason do
       :meeting_type_inactive ->
         "This meeting type is no longer available. Please refresh the page."
+
+      :meeting_type_not_found ->
+        "This meeting type is no longer available. Please go back and select another."
 
       :time_conflict ->
         "This time slot is no longer available. Please select a different time."

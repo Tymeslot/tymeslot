@@ -26,6 +26,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
      |> assign(:form_errors, %{})
      |> assign(:saving, false)
      |> assign(:video_integrations, [])
+     |> assign(:toggling_type_id, nil)
      |> ModalHook.mount_modal(delete_meeting_type: false)}
   end
 
@@ -123,35 +124,45 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
 
   def handle_event("toggle_type", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
+    type_id = String.to_integer(id)
 
-    with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
-      type_id = String.to_integer(id)
-      type = MeetingTypes.get_meeting_type(type_id, user_id)
+    if socket.assigns.toggling_type_id == type_id do
+      {:noreply, socket}
+    else
+      with_rate_limit(RateLimiter.check_meeting_type_write_rate_limit(user_id), socket, fn ->
+        socket
+        |> assign(:toggling_type_id, type_id)
+        |> do_toggle_type(type_id, user_id)
+      end)
+    end
+  end
 
-      if type do
+  defp do_toggle_type(socket, type_id, user_id) do
+    case MeetingTypes.get_meeting_type(type_id, user_id) do
+      nil ->
+        Flash.error("Meeting type not found")
+        {:noreply, assign(socket, :toggling_type_id, nil)}
+
+      type ->
         case MeetingTypes.toggle_meeting_type_status(type, %{is_active: !type.is_active}) do
           {:ok, updated_type} ->
             send(self(), {:meeting_type_changed})
             Flash.info("Meeting type status updated")
 
-            # Update local state immediately for responsive UI
             updated_meeting_types =
               Enum.map(socket.assigns.meeting_types, fn
                 t when t.id == updated_type.id -> updated_type
                 t -> t
               end)
 
-            {:noreply, assign(socket, meeting_types: updated_meeting_types)}
+            {:noreply,
+             assign(socket, meeting_types: updated_meeting_types, toggling_type_id: nil)}
 
           {:error, _reason} ->
             Flash.error("Failed to update meeting type")
-            {:noreply, socket}
+            {:noreply, assign(socket, :toggling_type_id, nil)}
         end
-      else
-        Flash.error("Meeting type not found")
-        {:noreply, socket}
-      end
-    end)
+    end
   end
 
   def handle_event("show_delete_modal", %{"id" => id}, socket) do

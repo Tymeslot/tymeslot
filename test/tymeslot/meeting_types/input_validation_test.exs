@@ -298,4 +298,30 @@ defmodule Tymeslot.MeetingTypes.InputValidationTest do
       assert {:error, _msg} = InputValidation.validate_min_advance_hours("tomorrow")
     end
   end
+
+  describe "validate_meeting_type_form/2 - names that produce empty slugs" do
+    test "rejects name consisting only of special characters" do
+      params = %{
+        "name" => "!!!",
+        "duration" => "30",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
+      assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
+      assert errors.name =~ "at least one letter or number"
+    end
+
+    test "rejects name consisting only of punctuation" do
+      params = %{
+        "name" => "....",
+        "duration" => "30",
+        "icon" => "none",
+        "meeting_mode" => "personal"
+      }
+
+      assert {:error, errors} = InputValidation.validate_meeting_type_form(params)
+      assert errors.name =~ "at least one letter or number"
+    end
+  end
 end

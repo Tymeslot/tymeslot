@@ -281,9 +281,9 @@ defmodule Tymeslot.MeetingTypesTest do
       mt1 = insert(:meeting_type, user: user1, name: "User1 First", sort_order: 0)
       mt2 = insert(:meeting_type, user: user1, name: "User1 Second", sort_order: 1)
 
-      # Try to reorder user1's types as user2
+      # Try to reorder user1's types as user2 — rolls back because IDs don't match
       new_order = [mt2.id, mt1.id]
-      assert {:ok, _result} = MeetingTypes.reorder_meeting_types(user2.id, new_order)
+      assert {:error, :partial_reorder} = MeetingTypes.reorder_meeting_types(user2.id, new_order)
 
       # Verify user1's types remain unchanged
       types = MeetingTypes.get_all_meeting_types(user1.id)
@@ -295,6 +295,22 @@ defmodule Tymeslot.MeetingTypesTest do
       user = insert(:user)
 
       assert {:ok, _result} = MeetingTypes.reorder_meeting_types(user.id, [])
+    end
+  end
+
+  describe "to_slug/1" do
+    test "produces empty string for special-character-only names" do
+      user = insert(:user)
+
+      # Bypass form validation by inserting directly with a special-char name
+      {:ok, mt} =
+        MeetingTypes.create_meeting_type(%{
+          name: "---",
+          duration_minutes: 30,
+          user_id: user.id
+        })
+
+      assert MeetingTypes.to_slug(mt) == ""
     end
   end
 end

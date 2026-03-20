@@ -320,11 +320,20 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
     now = NaiveDateTime.utc_now(:second)
 
     Repo.transaction(fn ->
-      Enum.with_index(meeting_type_ids, fn meeting_type_id, index ->
-        MeetingTypeSchema
-        |> where([mt], mt.id == ^meeting_type_id and mt.user_id == ^user_id)
-        |> Repo.update_all(set: [sort_order: index, updated_at: now])
-      end)
+      results =
+        Enum.with_index(meeting_type_ids, fn meeting_type_id, index ->
+          MeetingTypeSchema
+          |> where([mt], mt.id == ^meeting_type_id and mt.user_id == ^user_id)
+          |> Repo.update_all(set: [sort_order: index, updated_at: now])
+        end)
+
+      total_updated = Enum.sum(Enum.map(results, fn {count, _nil} -> count end))
+
+      if total_updated != length(meeting_type_ids) do
+        Repo.rollback(:partial_reorder)
+      else
+        results
+      end
     end)
   end
 

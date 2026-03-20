@@ -540,9 +540,12 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
       mt1 = insert(:meeting_type, user: user1, name: "User1 Type1", sort_order: 0)
       mt2 = insert(:meeting_type, user: user1, name: "User1 Type2", sort_order: 1)
 
-      # Try to reorder user1's types using user2's id
+      # Try to reorder user1's types using user2's id — rolls back because
+      # none of user2's types match the given IDs
       new_order = [mt2.id, mt1.id]
-      assert {:ok, _result} = MeetingTypeQueries.reorder_meeting_types(user2.id, new_order)
+
+      assert {:error, :partial_reorder} =
+               MeetingTypeQueries.reorder_meeting_types(user2.id, new_order)
 
       # Verify user1's types were NOT reordered (security check)
       types = MeetingTypeQueries.list_all_meeting_types(user1.id)
@@ -609,6 +612,49 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
 
       # Verify updated_at was updated (should be after past_time)
       assert NaiveDateTime.compare(Enum.at(types, 0).updated_at, mt3.updated_at) == :gt
+    end
+
+    test "rolls back when list contains nonexistent IDs" do
+      user = insert(:user)
+
+      mt1 = insert(:meeting_type, user: user, name: "Existing", sort_order: 0)
+
+      # Include one valid and one nonexistent ID
+      assert {:error, :partial_reorder} =
+               MeetingTypeQueries.reorder_meeting_types(user.id, [mt1.id, 999_999])
+
+      # Verify original sort order is preserved (transaction rolled back)
+      reloaded = Repo.get!(Tymeslot.DatabaseSchemas.MeetingTypeSchema, mt1.id)
+      assert reloaded.sort_order == 0
+    end
+  end
+
+  describe "clear_calendar_references/1" do
+    test "clears calendar fields on meeting types referencing the given integration" do
+      user = insert(:user)
+      calendar = insert(:calendar_integration, user: user)
+
+      mt =
+        insert(:meeting_type,
+          user: user,
+          calendar_integration_id: calendar.id,
+          target_calendar_id: "cal-1"
+        )
+
+      # Another meeting type without the integration (should be untouched)
+      mt_other = insert(:meeting_type, user: user, name: "Other")
+
+      {updated_count, _nil} = MeetingTypeQueries.clear_calendar_references(calendar.id)
+
+      assert updated_count == 1
+
+      reloaded = Repo.get!(Tymeslot.DatabaseSchemas.MeetingTypeSchema, mt.id)
+      assert reloaded.calendar_integration_id == nil
+      assert reloaded.target_calendar_id == nil
+
+      reloaded_other = Repo.get!(Tymeslot.DatabaseSchemas.MeetingTypeSchema, mt_other.id)
+      assert reloaded_other.calendar_integration_id == nil
+      assert reloaded_other.target_calendar_id == nil
     end
   end
 end

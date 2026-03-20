@@ -392,4 +392,59 @@ defmodule Tymeslot.MeetingTypes.FormProcessingTest do
       assert updated.target_calendar_id == caldav_path
     end
   end
+
+  # =====================================
+  # Cross-user Video Integration
+  # =====================================
+
+  describe "video integration cross-user isolation" do
+    test "rejects video integration belonging to another user" do
+      user_a = insert(:user)
+      user_b = insert(:user)
+      video_integration = insert(:video_integration, user: user_a, is_active: true)
+
+      form_params = %{
+        "name" => "Cross-User Video",
+        "duration" => "30",
+        "description" => "Should fail",
+        "is_active" => "true"
+      }
+
+      ui_state = %{
+        meeting_mode: "video",
+        selected_icon: "hero-phone",
+        selected_video_integration_id: video_integration.id
+      }
+
+      assert {:error, :invalid_video_integration} =
+               MeetingTypes.create_meeting_type_from_form(user_b.id, form_params, ui_state)
+    end
+  end
+
+  # =====================================
+  # Malformed Reminder Config
+  # =====================================
+
+  describe "malformed reminder config" do
+    test "rejects malformed JSON reminder config" do
+      user = insert(:user)
+
+      form_params = %{
+        "name" => "Broken Reminder",
+        "duration" => "30",
+        "description" => "Malformed reminder JSON",
+        "is_active" => "true",
+        "reminder_config" => "{broken"
+      }
+
+      ui_state = %{
+        meeting_mode: "in_person",
+        selected_icon: "hero-clock",
+        selected_video_integration_id: nil
+      }
+
+      assert {:error, :invalid_reminder_config} =
+               MeetingTypes.create_meeting_type_from_form(user.id, form_params, ui_state)
+    end
+  end
 end
