@@ -641,8 +641,16 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
           target_calendar_id: "cal-1"
         )
 
-      # Another meeting type without the integration (should be untouched)
-      mt_other = insert(:meeting_type, user: user, name: "Other")
+      # Another meeting type with a different integration (should be untouched)
+      other_calendar = insert(:calendar_integration, user: user)
+
+      mt_other =
+        insert(:meeting_type,
+          user: user,
+          name: "Other",
+          calendar_integration_id: other_calendar.id,
+          target_calendar_id: "other-cal"
+        )
 
       {updated_count, _nil} = MeetingTypeQueries.clear_calendar_references(calendar.id)
 
@@ -653,8 +661,8 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
       assert reloaded.target_calendar_id == nil
 
       reloaded_other = Repo.get!(Tymeslot.DatabaseSchemas.MeetingTypeSchema, mt_other.id)
-      assert reloaded_other.calendar_integration_id == nil
-      assert reloaded_other.target_calendar_id == nil
+      assert reloaded_other.calendar_integration_id == other_calendar.id
+      assert reloaded_other.target_calendar_id == "other-cal"
     end
   end
 end
