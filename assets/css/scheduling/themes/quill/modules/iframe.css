@@ -78,8 +78,8 @@ html.quill-theme[data-embedded] .glass-morphism-card {
   min-height: auto;
 }
 
-/* Don't center glass card — hug the top, no wasted gradient space. */
-html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area .container {
+/* Modal mode: hug the top — no wasted space when the modal sizes to content. */
+html.quill-theme[data-embedded][data-embed-mode="modal"] .main-gradient.theme-grid .content-area .container {
   margin-top: 0;
   margin-bottom: 0;
 }
