@@ -5,6 +5,7 @@ defmodule Tymeslot.Availability.Breaks do
 
   alias Ecto.Changeset
   alias Tymeslot.DatabaseQueries.AvailabilityBreakQueries
+  alias Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries
   alias Tymeslot.DatabaseSchemas.AvailabilityBreakSchema
   alias Tymeslot.Utils.TimeRange
 
@@ -60,7 +61,31 @@ defmodule Tymeslot.Availability.Breaks do
   end
 
   @doc """
-  Deletes a break.
+  Deletes a break, verifying ownership against the given profile_id.
+
+  Returns `{:error, "Unauthorized"}` if the break belongs to a different profile,
+  or `{:error, "Break not found"}` if the break does not exist.
+  """
+  @spec delete_break(integer(), integer()) ::
+          {:ok, AvailabilityBreakSchema.t()} | {:error, String.t()}
+  def delete_break(break_id, profile_id) do
+    case AvailabilityBreakQueries.get_break(break_id) do
+      nil ->
+        {:error, "Break not found"}
+
+      %AvailabilityBreakSchema{} = break ->
+        case WeeklyAvailabilityQueries.get_weekly_availability(break.weekly_availability_id) do
+          nil -> {:error, "Schedule not found"}
+          %{profile_id: ^profile_id} -> AvailabilityBreakQueries.delete_break(break)
+          %{profile_id: _other} -> {:error, "Unauthorized"}
+        end
+    end
+  end
+
+  @doc """
+  Deletes a break by ID without ownership verification.
+
+  Deprecated: use `delete_break/2` with a `profile_id` to prevent IDOR vulnerabilities.
   """
   @spec delete_break(integer()) :: {:ok, AvailabilityBreakSchema.t()} | {:error, String.t()}
   def delete_break(break_id) do
@@ -88,7 +113,12 @@ defmodule Tymeslot.Availability.Breaks do
           {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t() | String.t()}
   def add_quick_break(weekly_availability_id, start_time, duration_minutes, label \\ nil) do
     end_time = Time.add(start_time, duration_minutes * 60, :second)
-    add_break(weekly_availability_id, start_time, end_time, label)
+
+    if Time.compare(end_time, start_time) != :gt do
+      {:error, "Break duration extends past end of day"}
+    else
+      add_break(weekly_availability_id, start_time, end_time, label)
+    end
   rescue
     _other ->
       {:error, "Invalid time calculation"}

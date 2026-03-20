@@ -60,6 +60,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
 
       updated_schedule = update_day_in_schedule(socket.assigns.weekly_schedule, updated_day)
       send(self(), {:reload_schedule})
+
       {:noreply, assign(socket, :weekly_schedule, updated_schedule)}
     else
       {:error, _changeset} ->
@@ -191,10 +192,11 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   def handle_event("confirm_delete_break", _params, socket) do
     break_data = socket.assigns.delete_break_modal_data
 
-    case AvailabilityActions.delete_break(break_data.id) do
+    case AvailabilityActions.delete_break(break_data.id, profile_id(socket)) do
       {:ok, _break} ->
         Flash.info("Break deleted")
         send(self(), {:reload_schedule})
+
         {:noreply, ModalHook.hide_modal(socket, :delete_break)}
 
       {:error, _reason} ->
@@ -271,6 +273,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       day_names = Enum.map_join(to_days, ", ", &AvailabilityActions.day_name/1)
       Flash.info("Settings copied to #{day_names}")
       send(self(), {:reload_schedule})
+
       {:noreply, socket}
     else
       {:error, validation_error} when is_binary(validation_error) ->
@@ -303,6 +306,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       {:ok, _result} ->
         Flash.info("#{day_data.day_name} settings cleared")
         send(self(), {:reload_schedule})
+
         {:noreply, ModalHook.hide_modal(socket, :clear_day)}
 
       {:error, _reason} ->
@@ -352,6 +356,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       {:ok, _updated} ->
         Flash.info("#{AvailabilityActions.day_name(day)} hours updated")
         send(self(), {:reload_schedule})
+
         {:noreply, assign(socket, :form_errors, %{})}
 
       {:error, :invalid_time_format} ->
