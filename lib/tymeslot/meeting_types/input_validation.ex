@@ -310,7 +310,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
           trimmed |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-") |> String.trim("-")
 
         cond do
-          String.length(sanitized_name) > 100 ->
+          String.length(trimmed) > 100 ->
             {:error, %{name: "Meeting name must be 100 characters or less"}}
 
           String.length(trimmed) < 2 ->
