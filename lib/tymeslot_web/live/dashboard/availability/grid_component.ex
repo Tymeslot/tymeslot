@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   # Grid spans 6:00 AM to 10:30 PM (990 minutes total)
   @grid_start_minutes 6 * 60
   @grid_total_minutes 990
+  @slot_duration_minutes 30
 
   @days [
     {"Monday", 1},
@@ -106,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
                 </div>
               <% end %>
 
-              <!-- Time Slots Grid (30-minute intervals) -->
+              <!-- Time Slots Grid -->
               <%= for hour <- 6..22 do %>
                 <%= for minute <- [0, 30] do %>
                   <div class="font-black text-tymeslot-400 text-right py-1 pr-4 text-[10px] sm:text-xs uppercase tracking-tighter">
@@ -246,7 +247,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
          minute
        ) do
     slot_start = Time.new!(hour, minute, 0)
-    slot_end = Time.add(slot_start, 30, :minute)
+    slot_end = Time.add(slot_start, @slot_duration_minutes, :minute)
 
     slot_in_business_hours =
       Time.compare(slot_start, end_time) == :lt and Time.compare(slot_end, start_time) == :gt

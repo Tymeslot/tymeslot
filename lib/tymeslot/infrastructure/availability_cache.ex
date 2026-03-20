@@ -24,4 +24,15 @@ defmodule Tymeslot.Infrastructure.AvailabilityCache do
   def availability_range_key(user_id, start_date, end_date, timezone, duration) do
     {:range_availability, user_id, start_date, end_date, timezone, duration}
   end
+
+  @doc """
+  Invalidates all cached availability data for a user.
+  Call after any mutation to the user's availability schedule.
+  """
+  @spec invalidate_for_user(integer()) :: :ok
+  def invalidate_for_user(user_id) do
+    invalidate_pattern({:month_availability, user_id, :_, :_, :_, :_})
+    invalidate_pattern({:range_availability, user_id, :_, :_, :_, :_})
+    :ok
+  end
 end
