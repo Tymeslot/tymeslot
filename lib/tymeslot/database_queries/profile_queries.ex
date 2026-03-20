@@ -58,6 +58,18 @@ defmodule Tymeslot.DatabaseQueries.ProfileQueries do
   end
 
   @doc """
+  Gets a profile by profile ID, returning `nil` if not found.
+  Preloads the associated user for convenience.
+  """
+  @spec get_profile(integer()) :: ProfileSchema.t() | nil
+  def get_profile(profile_id) when is_integer(profile_id) do
+    case Repo.get(ProfileSchema, profile_id) do
+      nil -> nil
+      profile -> Repo.preload(profile, :user)
+    end
+  end
+
+  @doc """
   Gets a profile by profile ID, raising if not found.
   Preloads the associated user for convenience.
   """

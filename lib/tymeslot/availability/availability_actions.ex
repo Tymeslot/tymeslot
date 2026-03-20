@@ -131,6 +131,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
 
   Deprecated: use `delete_break/2` with a `profile_id` to prevent IDOR vulnerabilities.
   """
+  @deprecated "Use delete_break/2 with a profile_id to prevent IDOR vulnerabilities"
   @spec delete_break(integer()) :: {:ok, term()} | {:error, String.t()}
   def delete_break(break_id) do
     Breaks.delete_break(break_id)
@@ -209,8 +210,11 @@ defmodule Tymeslot.Availability.AvailabilityActions do
     do: field |> to_string() |> String.replace("_", " ") |> String.capitalize()
 
   defp with_cache_invalidation({:ok, _data} = result, profile_id) do
-    %{user_id: user_id} = ProfileQueries.get_profile!(profile_id)
-    AvailabilityCache.invalidate_for_user(user_id)
+    case ProfileQueries.get_profile(profile_id) do
+      %{user_id: user_id} -> AvailabilityCache.invalidate_for_user(user_id)
+      nil -> :ok
+    end
+
     result
   end
 

@@ -270,15 +270,15 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
       %{profile: profile, day: day, break: break}
     end
 
-    test "successfully deletes existing break", %{day: day, break: break} do
-      assert {:ok, _deleted} = AvailabilityActions.delete_break(break.id)
+    test "successfully deletes existing break", %{profile: profile, day: day, break: break} do
+      assert {:ok, _deleted} = AvailabilityActions.delete_break(break.id, profile.id)
 
       breaks = Breaks.get_breaks_for_day(day.id)
       assert breaks == []
     end
 
-    test "returns error for non-existent break" do
-      result = AvailabilityActions.delete_break(999_999)
+    test "returns error for non-existent break", %{profile: profile} do
+      result = AvailabilityActions.delete_break(999_999, profile.id)
 
       assert {:error, "Break not found"} = result
     end

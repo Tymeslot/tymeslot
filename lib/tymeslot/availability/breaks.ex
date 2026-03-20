@@ -87,6 +87,7 @@ defmodule Tymeslot.Availability.Breaks do
 
   Deprecated: use `delete_break/2` with a `profile_id` to prevent IDOR vulnerabilities.
   """
+  @deprecated "Use delete_break/2 with a profile_id to prevent IDOR vulnerabilities"
   @spec delete_break(integer()) :: {:ok, AvailabilityBreakSchema.t()} | {:error, String.t()}
   def delete_break(break_id) do
     case AvailabilityBreakQueries.get_break(break_id) do
@@ -111,7 +112,8 @@ defmodule Tymeslot.Availability.Breaks do
   """
   @spec add_quick_break(integer(), Time.t(), integer(), String.t() | nil) ::
           {:ok, AvailabilityBreakSchema.t()} | {:error, Ecto.Changeset.t() | String.t()}
-  def add_quick_break(weekly_availability_id, start_time, duration_minutes, label \\ nil) do
+  def add_quick_break(weekly_availability_id, start_time, duration_minutes, label \\ nil)
+      when is_integer(duration_minutes) and duration_minutes > 0 do
     end_time = Time.add(start_time, duration_minutes * 60, :second)
 
     if Time.compare(end_time, start_time) != :gt do
