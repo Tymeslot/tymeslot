@@ -1,4 +1,13 @@
 
+[0.99.32]
+* core: Resolve WebSocket and OAuth failures on Cloudron deployment
+* core: Check max length against trimmed name in meeting type validation
+* core: Strengthen clear_calendar_references test isolation
+* core: Harden meeting types edge cases — booking validation, reorder integrity, input guards
+* themes: Scope container margin removal to modal embed mode only
+* core: Add @deprecated attrs, non-raising profile lookup, duration guard
+* core: Harden availability edge cases — IDOR protection, cache invalidation, input guards
+* core: Point tzdata at writable directory on Cloudron
 [0.99.31]
 * saas: Use pattern match instead of != for non-empty list assertion
 * saas: Replace length/1 check with empty list comparison in changelog test
