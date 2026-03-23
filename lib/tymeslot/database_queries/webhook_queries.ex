@@ -120,24 +120,27 @@ defmodule Tymeslot.DatabaseQueries.WebhookQueries do
   def record_failure(%WebhookSchema{id: id}, reason) do
     # Use atomic increment to prevent race conditions
     # returning: true is supported by PostgreSQL
-    {1, [updated_webhook]} =
-      WebhookSchema
-      |> where([w], w.id == ^id)
-      |> select([w], w)
-      |> Repo.update_all(
-        set: [last_status: "failed: #{reason}"],
-        inc: [failure_count: 1]
-      )
+    case WebhookSchema
+         |> where([w], w.id == ^id)
+         |> select([w], w)
+         |> Repo.update_all(
+           set: [last_status: "failed: #{reason}"],
+           inc: [failure_count: 1]
+         ) do
+      {0, []} ->
+        {:error, :not_found}
 
-    # Handle auto-disabling if necessary
-    if updated_webhook.failure_count >= 10 do
-      update_webhook(updated_webhook, %{
-        is_active: false,
-        disabled_at: DateTime.utc_now(),
-        disabled_reason: "Too many consecutive failures: #{reason}"
-      })
-    else
-      {:ok, updated_webhook}
+      {1, [updated_webhook]} ->
+        # Handle auto-disabling if necessary
+        if updated_webhook.failure_count >= 10 do
+          update_webhook(updated_webhook, %{
+            is_active: false,
+            disabled_at: DateTime.utc_now(),
+            disabled_reason: "Too many consecutive failures: #{reason}"
+          })
+        else
+          {:ok, updated_webhook}
+        end
     end
   end
 

@@ -64,7 +64,7 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
   end
 
   describe "perform/1 - transcoding failure" do
-    test "sets status to failed when a variant transcode errors" do
+    test "does not set status to failed on non-final attempt" do
       theme_customization = insert_theme_customization()
 
       expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
@@ -78,6 +78,29 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
                  "theme_customization_id" => theme_customization.id,
                  "video_path" => "uploads/test-video.mp4"
                })
+
+      updated = Repo.get!(ThemeCustomizationSchema, theme_customization.id)
+      refute updated.video_processing == "failed"
+    end
+
+    test "sets status to failed on final attempt" do
+      theme_customization = insert_theme_customization()
+
+      expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
+
+      expect(Tymeslot.Media.TranscoderMock, :transcode, fn _src, _out, _opts ->
+        {:error, "ffmpeg exited with status 1"}
+      end)
+
+      assert {:error, _reason} =
+               perform_job(
+                 VideoTranscoder,
+                 %{
+                   "theme_customization_id" => theme_customization.id,
+                   "video_path" => "uploads/test-video.mp4"
+                 },
+                 attempt: 3
+               )
 
       updated = Repo.get!(ThemeCustomizationSchema, theme_customization.id)
       assert updated.video_processing == "failed"
@@ -98,6 +121,23 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
                  "theme_customization_id" => theme_customization.id,
                  "video_path" => "uploads/test-video.mp4"
                })
+    end
+  end
+
+  describe "perform/1 - path traversal" do
+    test "rejects video_path containing directory traversal and sets status to failed" do
+      theme_customization = insert_theme_customization()
+
+      expect(Tymeslot.Media.TranscoderMock, :available?, fn -> true end)
+
+      assert {:error, "Invalid video path"} =
+               perform_job(VideoTranscoder, %{
+                 "theme_customization_id" => theme_customization.id,
+                 "video_path" => "../../etc/passwd"
+               })
+
+      updated = Repo.get!(ThemeCustomizationSchema, theme_customization.id)
+      assert updated.video_processing == "failed"
     end
   end
 

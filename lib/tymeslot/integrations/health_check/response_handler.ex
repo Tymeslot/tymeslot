@@ -78,11 +78,12 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     :ok
   end
 
-  def handle_transition(type, integration, {:became_healthy, :unhealthy, :healthy}, _health_state) do
+  def handle_transition(type, integration, {:became_healthy, old_status, :healthy}, _health_state) do
     Logger.info("Integration health recovered",
       type: type,
       integration_id: integration.id,
-      provider: integration.provider
+      provider: integration.provider,
+      previous_status: inspect(old_status)
     )
 
     clear_notification_state(type, integration.id)

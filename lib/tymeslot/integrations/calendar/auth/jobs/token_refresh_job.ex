@@ -209,6 +209,16 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
     end
   end
 
+  defp categorize_error(reason) when is_atom(reason) do
+    permanent_atoms = [:unsupported_provider, :invalid_provider, :missing_credentials]
+
+    if reason in permanent_atoms do
+      :permanent
+    else
+      categorize_error(to_string(reason))
+    end
+  end
+
   defp categorize_error(_reason), do: :retryable
 
   defp permanent_error?(reason_lower) do

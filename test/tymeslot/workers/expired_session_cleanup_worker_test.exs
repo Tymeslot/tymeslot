@@ -33,11 +33,6 @@ defmodule Tymeslot.Workers.ExpiredSessionCleanupWorkerTest do
       assert :ok = perform_job(ExpiredSessionCleanupWorker, %{})
     end
 
-    test "handles errors gracefully (resilient to query failures)" do
-      # Worker should complete even if unexpected errors occur
-      assert :ok = perform_job(ExpiredSessionCleanupWorker, %{})
-    end
-
     test "handles sessions at exact expiry boundary" do
       user = insert(:user)
 

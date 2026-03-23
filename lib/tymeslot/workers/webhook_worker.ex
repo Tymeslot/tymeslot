@@ -46,8 +46,6 @@ defmodule Tymeslot.Workers.WebhookWorker do
          :ok <- check_feature_access(webhook.user_id, webhook_id, event_type, feature),
          {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
          {:ok, _delivery} <- deliver_webhook(webhook, event_type, meeting, attempt) do
-      # Record success
-      WebhookQueries.record_success(webhook, DateTime.utc_now())
       :ok
     else
       {:error, :not_found} ->
@@ -240,23 +238,28 @@ defmodule Tymeslot.Workers.WebhookWorker do
           Map.put(delivery_attrs, :error_message, truncate_response(error_message))
       end
 
-    {:ok, delivery} = WebhookQueries.create_delivery(delivery_attrs)
+    case WebhookQueries.create_delivery(delivery_attrs) do
+      {:ok, delivery} ->
+        # Update webhook status (success/failure)
+        # We only record success/failure on the first attempt or if it's a success
+        # to avoid double-counting failures if Oban retries.
+        case result do
+          {:ok, status, _body} when status >= 200 and status < 300 ->
+            WebhookQueries.record_success(webhook)
+            {:ok, delivery}
 
-    # Update webhook status (success/failure)
-    # We only record success/failure on the first attempt or if it's a success
-    # to avoid double-counting failures if Oban retries.
-    case result do
-      {:ok, status, _body} when status >= 200 and status < 300 ->
-        WebhookQueries.record_success(webhook)
-        {:ok, delivery}
+          {:ok, status, _body} ->
+            if attempt == 1, do: WebhookQueries.record_failure(webhook, "HTTP #{status}")
+            {:error, {:http_error, status}}
 
-      {:ok, status, _body} ->
-        if attempt == 1, do: WebhookQueries.record_failure(webhook, "HTTP #{status}")
-        {:error, {:http_error, status}}
+          {:error, reason} ->
+            if attempt == 1, do: WebhookQueries.record_failure(webhook, to_string(reason))
+            {:error, reason}
+        end
 
       {:error, reason} ->
-        if attempt == 1, do: WebhookQueries.record_failure(webhook, to_string(reason))
-        {:error, reason}
+        Logger.warning("Failed to create webhook delivery log", error: inspect(reason))
+        {:error, :delivery_log_failed}
     end
   end
 
@@ -286,15 +289,17 @@ defmodule Tymeslot.Workers.WebhookWorker do
     if attempt == 1, do: WebhookQueries.record_failure(webhook, "SSRF Blocked: #{reason}")
 
     # Create a delivery log for the blocked attempt
-    {:ok, _delivery} =
-      WebhookQueries.create_delivery(%{
-        webhook_id: webhook.id,
-        event_type: event_type,
-        meeting_id: meeting.id,
-        payload: %{},
-        attempt_count: attempt,
-        error_message: "Blocked by SSRF protection: #{reason}"
-      })
+    case WebhookQueries.create_delivery(%{
+           webhook_id: webhook.id,
+           event_type: event_type,
+           meeting_id: meeting.id,
+           payload: %{},
+           attempt_count: attempt,
+           error_message: "Blocked by SSRF protection: #{reason}"
+         }) do
+      {:ok, _delivery} -> :ok
+      {:error, err} -> Logger.warning("Failed to create SSRF delivery log", error: inspect(err))
+    end
 
     {:error, :blocked_by_ssrf}
   end

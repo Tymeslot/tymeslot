@@ -519,7 +519,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
        }) do
     with {:ok, user} <- UserQueries.get_user(user_id),
          {:ok, integration} <- fetch_integration(integration_type, integration_id) do
-      type_atom = String.to_existing_atom(integration_type)
+      type_atom = safe_integration_type_atom(integration_type)
 
       case email_service_module().send_integration_unhealthy_notification(
              user,
@@ -568,6 +568,14 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     do: VideoIntegrationQueries.get(integration_id)
 
   defp fetch_integration(_type, _id), do: {:error, :not_found}
+
+  defp safe_integration_type_atom("calendar"), do: :calendar
+  defp safe_integration_type_atom("video"), do: :video
+
+  defp safe_integration_type_atom(type) do
+    Logger.warning("Unknown integration type in email worker", type: type)
+    String.to_atom(type)
+  end
 
   defp email_service_module do
     Application.get_env(:tymeslot, :email_service_module) ||

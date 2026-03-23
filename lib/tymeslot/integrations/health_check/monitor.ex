@@ -160,9 +160,9 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       {_last_check_at, old, :unhealthy} when old != :unhealthy ->
         {:became_unhealthy, old, :unhealthy}
 
-      # Recovery to healthy
-      {_last_check_at, :unhealthy, :healthy} ->
-        {:became_healthy, :unhealthy, :healthy}
+      # Recovery to healthy (from unhealthy or degraded)
+      {_last_check_at, old, :healthy} when old in [:unhealthy, :degraded] ->
+        {:became_healthy, old, :healthy}
 
       # Degradation from healthy
       {_last_check_at, :healthy, :degraded} ->

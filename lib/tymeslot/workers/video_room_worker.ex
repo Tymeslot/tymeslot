@@ -91,7 +91,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
           # 5 minutes uniqueness window
           period: 300,
           fields: [:args, :queue],
-          keys: [:meeting_id]
+          keys: [:meeting_id, :send_emails]
         ]
       )
       |> Oban.insert()
@@ -135,7 +135,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
           # 5 minutes uniqueness window
           period: 300,
           fields: [:args, :queue],
-          keys: [:meeting_id]
+          keys: [:meeting_id, :send_emails]
         ]
       )
       |> Oban.insert()
@@ -175,7 +175,10 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   defp format_insert_error(other), do: inspect(other)
 
   defp execute_with_timeout(meeting_id, send_emails, attempt, job) do
-    task = Task.async(fn -> Meetings.add_video_room_to_meeting(meeting_id) end)
+    task =
+      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        Meetings.add_video_room_to_meeting(meeting_id)
+      end)
 
     case Task.yield(task, @video_api_timeout_ms) || Task.shutdown(task) do
       {:ok, {:ok, meeting}} ->

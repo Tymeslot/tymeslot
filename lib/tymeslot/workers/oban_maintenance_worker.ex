@@ -46,7 +46,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
   """
   @spec schedule_next_run() :: {:ok, Oban.Job.t()} | {:error, term()}
   def schedule_next_run do
-    %{action: "maintenance"}
+    %{}
     # 30 minutes
     |> new(schedule_in: 1800)
     |> Oban.insert()
@@ -103,8 +103,13 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
   end
 
   defp transition_stuck_job_to_discarded(job) do
-    # Calculate how long the job was stuck
-    stuck_duration = DateTime.diff(DateTime.utc_now(), job.attempted_at, :second)
+    # Calculate how long the job was stuck (guard against nil attempted_at)
+    stuck_duration =
+      if job.attempted_at do
+        DateTime.diff(DateTime.utc_now(), job.attempted_at, :second)
+      else
+        0
+      end
 
     # Build error information
     error_info = %{

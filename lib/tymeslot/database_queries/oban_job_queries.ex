@@ -42,11 +42,13 @@ defmodule Tymeslot.DatabaseQueries.ObanJobQueries do
   @spec update_job_to_discarded(Oban.Job.t(), map()) ::
           {:ok, Oban.Job.t()} | {:error, Ecto.Changeset.t()}
   def update_job_to_discarded(job, error_info) do
+    existing_errors = job.errors || []
+
     job
     |> Changeset.change(%{
       state: "discarded",
       discarded_at: DateTime.utc_now(),
-      errors: job.errors ++ [error_info]
+      errors: existing_errors ++ [error_info]
     })
     |> Repo.update()
   end

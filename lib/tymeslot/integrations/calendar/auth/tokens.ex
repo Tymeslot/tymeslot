@@ -12,6 +12,8 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.Shared.Lock
 
+  require Logger
+
   @type integration :: map()
   @type user_id :: pos_integer()
 
@@ -137,14 +139,13 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
       {:ok, updated} ->
         {:ok, CalendarIntegrationSchema.decrypt_oauth_tokens(updated)}
 
-      {:error, _changeset} ->
-        {:ok,
-         %{
-           integration
-           | access_token: access,
-             refresh_token: refresh,
-             token_expires_at: expires_at
-         }}
+      {:error, changeset} ->
+        Logger.error("Failed to persist refreshed OAuth tokens",
+          integration_id: integration.id,
+          error: inspect(changeset.errors)
+        )
+
+        {:error, :token_persistence_failed}
     end
   end
 

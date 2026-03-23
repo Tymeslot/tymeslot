@@ -190,6 +190,11 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
         {:ok, "new-uid"}
       end)
 
+      # persist_calendar_mapping is called after create — no integration so it returns error
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _meeting ->
+        {:error, :not_found}
+      end)
+
       assert :ok =
                perform_job(CalendarEventWorker, %{
                  "action" => "update",
@@ -226,6 +231,11 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       expect(Tymeslot.CalendarMock, :create_event, fn _data, id ->
         assert id == user.id
         {:ok, "new-uid"}
+      end)
+
+      # persist_calendar_mapping is called after create to save the new UID
+      expect(Tymeslot.CalendarMock, :get_booking_integration_info, fn _meeting ->
+        {:ok, %{integration_id: integration.id, calendar_path: "primary"}}
       end)
 
       assert :ok =

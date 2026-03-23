@@ -45,7 +45,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       handle_result(result, job)
     else
       task =
-        Task.async(fn ->
+        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
           dispatch_action(action, meeting_id, attempt)
         end)
 
@@ -78,6 +78,15 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     case Task.yield(task, @calendar_timeout_ms) || Task.shutdown(task) do
       {:ok, result} ->
         handle_result(result, job)
+
+      {:exit, reason} ->
+        Logger.error("Calendar operation crashed",
+          action: action,
+          meeting_id: meeting_id,
+          reason: inspect(reason)
+        )
+
+        {:error, "Calendar operation crashed: #{inspect(reason)}"}
 
       nil ->
         Logger.error("Calendar operation timed out",
@@ -393,8 +402,14 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
     # Use the organizer_user_id to create in the correct calendar
     case calendar_module().create_event(event_data, meeting.organizer_user_id) do
-      {:ok, _result} -> :ok
-      error -> error
+      {:ok, result} ->
+        # Persist the new UID so future updates target the correct event
+        returned_uid = if is_map(result), do: Map.get(result, :uid), else: nil
+        persist_calendar_mapping(meeting, returned_uid)
+        :ok
+
+      error ->
+        error
     end
   end
 
@@ -527,7 +542,18 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         # so subsequent updates can use it.
         attrs = if returned_uid, do: Map.put(attrs, :uid, returned_uid), else: attrs
 
-        _update_result = MeetingQueries.update_meeting(meeting, attrs)
+        case MeetingQueries.update_meeting(meeting, attrs) do
+          {:ok, _updated} ->
+            :ok
+
+          {:error, changeset} ->
+            Logger.error("Failed to persist calendar mapping",
+              meeting_id: meeting.id,
+              error: inspect(changeset.errors)
+            )
+
+            {:error, :calendar_mapping_persistence_failed}
+        end
 
       _no_integration_info ->
         :ok

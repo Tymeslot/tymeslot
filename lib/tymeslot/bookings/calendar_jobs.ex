@@ -37,7 +37,7 @@ defmodule Tymeslot.Bookings.CalendarJobs do
           period: 300,
           fields: [:args, :queue],
           keys: [:action, :meeting_id],
-          states: [:available, :scheduled, :executing]
+          states: [:available, :scheduled, :executing, :retryable]
         ]
       )
 

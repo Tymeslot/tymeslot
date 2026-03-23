@@ -143,21 +143,23 @@ defmodule Tymeslot.Webhooks do
   """
   @spec test_webhook_connection(String.t(), String.t() | nil) :: :ok | {:error, String.t()}
   def test_webhook_connection(url, token \\ nil) do
-    payload = PayloadBuilder.build_test_payload()
-    headers = build_headers(payload, token)
+    with :ok <- WebhookSchema.validate_url_format(url) do
+      payload = PayloadBuilder.build_test_payload()
+      headers = build_headers(payload, token)
 
-    case http_client().post(url, Jason.encode!(payload), headers, receive_timeout: 10_000) do
-      {:ok, %{status: status}} when status >= 200 and status < 300 ->
-        :ok
+      case http_client().post(url, Jason.encode!(payload), headers, receive_timeout: 10_000) do
+        {:ok, %{status: status}} when status >= 200 and status < 300 ->
+          :ok
 
-      {:ok, %{status: status}} ->
-        {:error, "Webhook returned status #{status}"}
+        {:ok, %{status: status}} ->
+          {:error, "Webhook returned status #{status}"}
 
-      {:error, %{reason: reason}} ->
-        {:error, "Connection failed: #{inspect(reason)}"}
+        {:error, %{reason: reason}} ->
+          {:error, "Connection failed: #{inspect(reason)}"}
 
-      {:error, reason} ->
-        {:error, "Connection failed: #{inspect(reason)}"}
+        {:error, reason} ->
+          {:error, "Connection failed: #{inspect(reason)}"}
+      end
     end
   end
 

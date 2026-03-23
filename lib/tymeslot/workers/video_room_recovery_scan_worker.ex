@@ -34,6 +34,6 @@ defmodule Tymeslot.Workers.VideoRoomRecoveryScanWorker do
   rescue
     error ->
       Logger.error("Video room recovery scan failed", error: error)
-      :ok
+      {:error, Exception.message(error)}
   end
 end

@@ -381,7 +381,10 @@ defmodule Tymeslot.Workers.EmailWorker do
   end
 
   defp execute_email_job_with_timeout(action, args, job) do
-    task = Task.async(fn -> EmailWorkerHandlers.execute_email_action(action, args) end)
+    task =
+      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        EmailWorkerHandlers.execute_email_action(action, args)
+      end)
 
     case Task.yield(task, @email_timeout_ms) || Task.shutdown(task) do
       {:ok, result} ->

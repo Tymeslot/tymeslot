@@ -201,7 +201,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
 
       assert_enqueued(
         worker: ObanMaintenanceWorker,
-        args: %{"action" => "maintenance"}
+        args: %{}
       )
     end
   end
@@ -224,7 +224,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorkerTest do
 
       assert_enqueued(
         worker: ObanMaintenanceWorker,
-        args: %{"action" => "maintenance"}
+        args: %{}
       )
     end
 

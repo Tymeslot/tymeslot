@@ -45,22 +45,35 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
   }
 
   # Get a threshold value from config or use default
+  # Uses explicit nil check so that 0 is respected as a valid threshold
   defp get_threshold(key) do
     config = Application.get_env(:tymeslot, :oban_monitoring, @default_thresholds)
 
-    Map.get(config, key) ||
-      Map.fetch!(@default_thresholds, key)
+    case Map.get(config, key) do
+      nil -> Map.fetch!(@default_thresholds, key)
+      value -> value
+    end
   end
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
     Logger.debug("ObanQueueMonitorWorker performing queue health check")
 
-    check_job_accumulation()
-    check_stuck_available_jobs()
-    check_stuck_retryable_jobs()
+    safe_check("check_job_accumulation", &check_job_accumulation/0)
+    safe_check("check_stuck_available_jobs", &check_stuck_available_jobs/0)
+    safe_check("check_stuck_retryable_jobs", &check_stuck_retryable_jobs/0)
 
     :ok
+  end
+
+  defp safe_check(name, check_fn) do
+    check_fn.()
+  rescue
+    error ->
+      Logger.error("Queue monitor check failed",
+        check: name,
+        error: Exception.message(error)
+      )
   end
 
   # Check for job accumulation in queues

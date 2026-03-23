@@ -33,28 +33,41 @@ defmodule Tymeslot.Workers.VideoTranscoder do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"theme_customization_id" => id, "video_path" => video_path}}) do
+  def perform(
+        %Oban.Job{args: %{"theme_customization_id" => id, "video_path" => video_path}} = job
+      ) do
     if transcoding_enabled?() do
-      run_if_available(id, video_path)
+      run_if_available(id, video_path, job)
     else
       {:cancel, "transcoding disabled"}
     end
   end
 
-  defp run_if_available(id, video_path) do
+  defp run_if_available(id, video_path, job) do
     transcoder = transcoder_impl()
 
     if transcoder.available?() do
-      run_transcoding(id, video_path, transcoder)
+      run_transcoding(id, video_path, transcoder, job)
     else
       update_status(id, @status_failed)
       {:cancel, "ffmpeg not available"}
     end
   end
 
-  defp run_transcoding(id, video_path, transcoder) do
+  defp run_transcoding(id, video_path, transcoder, job) do
     upload_dir = Application.get_env(:tymeslot, :upload_directory, "uploads")
     source_path = Path.join(upload_dir, video_path)
+
+    if path_within_directory?(source_path, upload_dir) do
+      transcode_variants(id, source_path, transcoder, job)
+    else
+      Logger.error("Path traversal attempt detected", video_path: video_path)
+      update_status(id, @status_failed)
+      {:error, "Invalid video path"}
+    end
+  end
+
+  defp transcode_variants(id, source_path, transcoder, job) do
     base_path = Path.rootname(source_path)
 
     result =
@@ -79,7 +92,11 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
       {:error, reason} ->
         cleanup_variants(base_path)
-        update_status(id, @status_failed)
+
+        if job.attempt >= job.max_attempts do
+          update_status(id, @status_failed)
+        end
+
         Logger.error("Video transcoding failed", theme_customization_id: id, reason: reason)
         {:error, reason}
     end
@@ -87,8 +104,23 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
   defp update_status(id, status) do
     case Repo.get(ThemeCustomizationSchema, id) do
-      nil -> :ok
-      record -> record |> Changeset.change(%{video_processing: status}) |> Repo.update()
+      nil ->
+        :ok
+
+      record ->
+        case record |> Changeset.change(%{video_processing: status}) |> Repo.update() do
+          {:ok, _updated} ->
+            :ok
+
+          {:error, changeset} ->
+            Logger.warning("Failed to update video processing status",
+              theme_customization_id: id,
+              status: status,
+              error: inspect(changeset.errors)
+            )
+
+            {:error, :status_update_failed}
+        end
     end
   end
 
@@ -105,5 +137,12 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
   defp transcoder_impl do
     Application.get_env(:tymeslot, :transcoder, Tymeslot.Media.Transcoder)
+  end
+
+  defp path_within_directory?(path, directory) do
+    expanded_path = Path.expand(path)
+    expanded_dir = Path.expand(directory)
+
+    String.starts_with?(expanded_path, expanded_dir <> "/")
   end
 end

@@ -142,7 +142,13 @@ defmodule Tymeslot.Workers.TelegramWorker do
           Map.put(delivery_attrs, :error_message, truncate(error_msg, 255))
       end
 
-    TelegramQueries.create_delivery(delivery_attrs)
+    case TelegramQueries.create_delivery(delivery_attrs) do
+      {:ok, _delivery} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to create Telegram delivery log", error: inspect(reason))
+    end
 
     case result do
       {:ok, status, _body} when status >= 200 and status < 300 ->
@@ -154,22 +160,22 @@ defmodule Tymeslot.Workers.TelegramWorker do
         {:discard, "Unauthorized"}
 
       {:ok, 400, body} ->
-        handle_400_error(integration, body, attempt)
+        handle_400_error(integration, body)
 
       {:ok, 429, body} ->
         handle_rate_limit(body)
 
       {:ok, status, _body} ->
-        if attempt == 1, do: TelegramQueries.record_failure(integration, "HTTP #{status}")
+        TelegramQueries.record_failure(integration, "HTTP #{status}")
         {:error, {:http_error, status}}
 
       {:error, reason} ->
-        if attempt == 1, do: TelegramQueries.record_failure(integration, to_string(reason))
+        TelegramQueries.record_failure(integration, to_string(reason))
         {:error, reason}
     end
   end
 
-  defp handle_400_error(integration, body, attempt) do
+  defp handle_400_error(integration, body) do
     description = extract_error_description(body)
 
     cond do
@@ -182,9 +188,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
         {:discard, "Bot kicked"}
 
       true ->
-        if attempt == 1,
-          do: TelegramQueries.record_failure(integration, "Bad Request: #{description}")
-
+        TelegramQueries.record_failure(integration, "Bad Request: #{description}")
         {:error, {:bad_request, description}}
     end
   end
