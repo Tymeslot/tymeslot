@@ -137,34 +137,6 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
     end
   end
 
-  defp do_toggle_type(socket, type_id, user_id) do
-    case MeetingTypes.get_meeting_type(type_id, user_id) do
-      nil ->
-        Flash.error("Meeting type not found")
-        {:noreply, assign(socket, :toggling_type_id, nil)}
-
-      type ->
-        case MeetingTypes.toggle_meeting_type_status(type, %{is_active: !type.is_active}) do
-          {:ok, updated_type} ->
-            send(self(), {:meeting_type_changed})
-            Flash.info("Meeting type status updated")
-
-            updated_meeting_types =
-              Enum.map(socket.assigns.meeting_types, fn
-                t when t.id == updated_type.id -> updated_type
-                t -> t
-              end)
-
-            {:noreply,
-             assign(socket, meeting_types: updated_meeting_types, toggling_type_id: nil)}
-
-          {:error, _reason} ->
-            Flash.error("Failed to update meeting type")
-            {:noreply, assign(socket, :toggling_type_id, nil)}
-        end
-    end
-  end
-
   def handle_event("show_delete_modal", %{"id" => id}, socket) do
     type_id = String.to_integer(id)
     type = MeetingTypes.get_meeting_type(type_id, socket.assigns.current_user.id)
@@ -237,6 +209,34 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   end
 
   # Private functions
+
+  defp do_toggle_type(socket, type_id, user_id) do
+    case MeetingTypes.get_meeting_type(type_id, user_id) do
+      nil ->
+        Flash.error("Meeting type not found")
+        {:noreply, assign(socket, :toggling_type_id, nil)}
+
+      type ->
+        case MeetingTypes.toggle_meeting_type_status(type, %{is_active: !type.is_active}) do
+          {:ok, updated_type} ->
+            send(self(), {:meeting_type_changed})
+            Flash.info("Meeting type status updated")
+
+            updated_meeting_types =
+              Enum.map(socket.assigns.meeting_types, fn
+                t when t.id == updated_type.id -> updated_type
+                t -> t
+              end)
+
+            {:noreply,
+             assign(socket, meeting_types: updated_meeting_types, toggling_type_id: nil)}
+
+          {:error, _reason} ->
+            Flash.error("Failed to update meeting type")
+            {:noreply, assign(socket, :toggling_type_id, nil)}
+        end
+    end
+  end
 
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
     Flash.error(message)
