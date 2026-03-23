@@ -284,8 +284,13 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   @impl Phoenix.LiveView
-  def handle_info(:hide_saving, socket) do
-    {:noreply, assign(socket, saving: false, saving_timer_ref: nil)}
+  def handle_info({:hide_saving, gen}, socket) do
+    if gen == socket.assigns[:saving_gen] do
+      {:noreply, assign(socket, saving: false, saving_timer_ref: nil)}
+    else
+      # Stale timer message from a cancelled generation — ignore
+      {:noreply, socket}
+    end
   end
 
   @impl Phoenix.LiveView
@@ -316,11 +321,24 @@ defmodule TymeslotWeb.DashboardLive do
     {:noreply, socket}
   end
 
-  # Generic external redirect message from components
+  # Generic external redirect message from components.
+  # Only HTTPS URLs are allowed to prevent open-redirect attacks from
+  # malicious or buggy extension components.
   @spec handle_info({:external_redirect, String.t()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info({:external_redirect, url}, socket) when is_binary(url) do
-    {:noreply, redirect(socket, external: url)}
+    case URI.parse(url) do
+      %URI{scheme: "https", host: host} when is_binary(host) and host != "" ->
+        {:noreply, redirect(socket, external: url)}
+
+      _other ->
+        Logger.warning("Rejected external redirect to non-HTTPS URL",
+          url: url,
+          user_id: socket.assigns[:current_user] && socket.assigns.current_user.id
+        )
+
+        {:noreply, put_flash(socket, :error, "Invalid redirect URL")}
+    end
   end
 
   @spec handle_info({:reload_schedule}, Phoenix.LiveView.Socket.t()) ::
@@ -417,8 +435,9 @@ defmodule TymeslotWeb.DashboardLive do
       Process.cancel_timer(ref)
     end
 
-    ref = Process.send_after(self(), :hide_saving, duration)
-    assign(socket, saving: true, saving_timer_ref: ref)
+    gen = (socket.assigns[:saving_gen] || 0) + 1
+    ref = Process.send_after(self(), {:hide_saving, gen}, duration)
+    assign(socket, saving: true, saving_timer_ref: ref, saving_gen: gen)
   end
 
   @spec component_for_action(atom(), map() | nil) :: module()

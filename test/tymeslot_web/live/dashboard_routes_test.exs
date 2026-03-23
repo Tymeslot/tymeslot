@@ -266,4 +266,106 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       assert html =~ "Welcome back!"
     end
   end
+
+  describe "onboarding redirect" do
+    test "redirects to onboarding when onboarding is not completed", %{conn: conn} do
+      DashboardCache.clear_all()
+      user = insert(:user, onboarding_completed_at: nil)
+      insert(:profile, user: user, username: "incomplete", booking_theme: "1")
+
+      conn =
+        conn
+        |> init_test_session(%{})
+        |> log_in_user(user)
+
+      assert {:error, {:redirect, %{to: "/onboarding"}}} = live(conn, ~p"/dashboard")
+    end
+  end
+
+  describe "overview - invalid timezone" do
+    setup %{conn: conn} do
+      DashboardCache.clear_all()
+
+      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+
+      insert(:profile,
+        user: user,
+        username: "badtz",
+        full_name: "Bad TZ User",
+        timezone: "Invalid/Timezone",
+        booking_theme: "1"
+      )
+
+      conn =
+        conn
+        |> init_test_session(%{})
+        |> log_in_user(user)
+
+      {:ok, %{conn: conn, user: user}}
+    end
+
+    test "renders meeting without crashing when profile timezone is invalid", %{
+      conn: conn,
+      user: user
+    } do
+      insert(:meeting,
+        organizer_email: user.email,
+        title: "Timeless Meeting",
+        attendee_name: "Jane"
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      # Meeting still renders even with invalid timezone — time falls back to UTC
+      assert html =~ "Timeless Meeting"
+      assert html =~ "Jane"
+    end
+  end
+
+  describe "external redirect validation" do
+    setup %{conn: conn} do
+      {:ok, setup_authenticated_user(conn)}
+    end
+
+    test "allows HTTPS external redirects", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      send(view.pid, {:external_redirect, "https://accounts.google.com/o/oauth2/auth"})
+
+      assert_redirect(view, "https://accounts.google.com/o/oauth2/auth")
+    end
+
+    test "rejects non-HTTPS external redirects", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      send(view.pid, {:external_redirect, "http://evil.com/phish"})
+
+      html = render(view)
+      assert html =~ "Invalid redirect URL"
+    end
+
+    test "rejects javascript: scheme redirects", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      send(view.pid, {:external_redirect, "javascript:alert(1)"})
+
+      html = render(view)
+      assert html =~ "Invalid redirect URL"
+    end
+  end
+
+  describe "handle_info resilience" do
+    setup %{conn: conn} do
+      {:ok, setup_authenticated_user(conn)}
+    end
+
+    test "silently ignores unknown messages", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      send(view.pid, {:completely_unknown_message, "some data"})
+
+      # Should not crash, should still render the dashboard
+      assert render(view) =~ "Welcome back"
+    end
+  end
 end

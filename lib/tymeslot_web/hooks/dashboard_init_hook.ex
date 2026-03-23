@@ -41,7 +41,24 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
             DashboardContext.get_integration_status(user.id)
           end)
 
-        [profile, integration_status] = Task.await_many([profile_task, integration_task])
+        results = Task.yield_many([profile_task, integration_task], :timer.seconds(5))
+
+        Enum.each(results, fn
+          {task, nil} -> Task.shutdown(task, :brutal_kill)
+          _ -> :ok
+        end)
+
+        profile =
+          case Enum.at(results, 0) do
+            {_task, {:ok, value}} -> value
+            _timeout_or_error -> %ProfileSchema{user_id: user.id}
+          end
+
+        integration_status =
+          case Enum.at(results, 1) do
+            {_task, {:ok, value}} -> value
+            _timeout_or_error -> DashboardContext.default_integration_status()
+          end
 
         # Read extension/feature config once at mount so components receive stable assigns
         # rather than calling Application.get_env on every render.

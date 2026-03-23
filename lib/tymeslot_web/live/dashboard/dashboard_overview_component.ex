@@ -11,6 +11,12 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
   @spec format_meeting_time(map(), String.t() | nil) :: String.t()
 
   @impl Phoenix.LiveComponent
+  def update(assigns, socket) do
+    upcoming_meetings = get_in(assigns, [:shared_data, :upcoming_meetings]) || []
+    {:ok, socket |> assign(assigns) |> assign(:upcoming_meetings, upcoming_meetings)}
+  end
+
+  @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
@@ -31,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
           </p>
         </div>
       </div>
-      
+
       <!-- Dashboard Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Upcoming Meetings -->
@@ -40,7 +46,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
             <.section_header
               level={2}
               title="Upcoming Meetings"
-              count={length(Map.get(@shared_data || %{}, :upcoming_meetings, []))}
+              count={length(@upcoming_meetings)}
             />
             <.link
               patch={~p"/dashboard/meetings"}
@@ -50,7 +56,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
             </.link>
           </div>
 
-          <%= if Map.get(@shared_data || %{}, :upcoming_meetings, []) == [] do %>
+          <%= if @upcoming_meetings == [] do %>
             <div class="text-center py-12 bg-tymeslot-50/50 rounded-token-2xl border-2 border-dashed border-tymeslot-100">
               <div class="w-16 h-16 bg-white rounded-token-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
                 <IconComponents.icon name={:calendar} class="w-8 h-8 text-tymeslot-300" />
@@ -59,7 +65,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
             </div>
           <% else %>
             <div class="space-y-4">
-              <%= for meeting <- Map.get(@shared_data || %{}, :upcoming_meetings, []) do %>
+              <%= for meeting <- @upcoming_meetings do %>
                 <.meeting_preview meeting={meeting} profile={@profile} />
               <% end %>
             </div>

@@ -159,4 +159,31 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
       assert hd(meetings).status == "confirmed"
     end
   end
+
+  describe "default_integration_status/0" do
+    test "returns all-false, all-zero defaults" do
+      result = DashboardContext.default_integration_status()
+
+      assert result == %{
+               has_calendar: false,
+               has_video: false,
+               has_meeting_types: false,
+               calendar_count: 0,
+               video_count: 0,
+               meeting_types_count: 0
+             }
+    end
+  end
+
+  describe "get_integration_status/1" do
+    test "returns defaults for nil user_id" do
+      assert DashboardContext.get_integration_status(nil) ==
+               DashboardContext.default_integration_status()
+    end
+
+    test "returns defaults for non-integer user_id" do
+      assert DashboardContext.get_integration_status("not_an_id") ==
+               DashboardContext.default_integration_status()
+    end
+  end
 end
