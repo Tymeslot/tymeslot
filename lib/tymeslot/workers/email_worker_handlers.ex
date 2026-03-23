@@ -574,7 +574,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
 
   defp safe_integration_type_atom(type) do
     Logger.warning("Unknown integration type in email worker", type: type)
-    String.to_atom(type)
+    :unknown
   end
 
   defp email_service_module do

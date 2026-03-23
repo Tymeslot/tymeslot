@@ -31,8 +31,11 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
          {:ok, _result} <- test_connection(updated) do
       {:ok, updated}
     else
-      {:error, :token_refresh_failed} -> {:error, :token_expired}
-      {:error, reason} -> {:error, reason}
+      {:error, reason} when reason in [:token_refresh_failed, :token_persistence_failed] ->
+        {:error, :token_expired}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

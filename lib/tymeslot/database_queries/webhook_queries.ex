@@ -116,7 +116,7 @@ defmodule Tymeslot.DatabaseQueries.WebhookQueries do
   Records a failed webhook delivery.
   """
   @spec record_failure(WebhookSchema.t(), String.t()) ::
-          {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t() | :not_found}
   def record_failure(%WebhookSchema{id: id}, reason) do
     # Use atomic increment to prevent race conditions
     # returning: true is supported by PostgreSQL
