@@ -363,6 +363,77 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchemaTest do
     end
   end
 
+  describe "unique_active_video_account_per_user constraint" do
+    test "allows same provider with different account IDs" do
+      user = insert(:user)
+
+      insert(:video_integration,
+        user: user,
+        provider: "custom",
+        provider_account_id: "https://meet.example.com/room-a",
+        custom_meeting_url: "https://meet.example.com/room-a"
+      )
+
+      attrs = %{
+        user_id: user.id,
+        name: "Second Custom",
+        provider: "custom",
+        provider_account_id: "https://meet.example.com/room-b",
+        custom_meeting_url: "https://meet.example.com/room-b"
+      }
+
+      assert {:ok, _integration} =
+               %VideoIntegrationSchema{}
+               |> VideoIntegrationSchema.changeset(attrs)
+               |> Repo.insert()
+    end
+
+    test "rejects same provider with same account ID for same user" do
+      user = insert(:user)
+
+      insert(:video_integration,
+        user: user,
+        provider: "custom",
+        provider_account_id: "https://meet.example.com/room-a",
+        custom_meeting_url: "https://meet.example.com/room-a"
+      )
+
+      attrs = %{
+        user_id: user.id,
+        name: "Duplicate Custom",
+        provider: "custom",
+        provider_account_id: "https://meet.example.com/room-a",
+        custom_meeting_url: "https://meet.example.com/room-a"
+      }
+
+      {:error, changeset} =
+        %VideoIntegrationSchema{}
+        |> VideoIntegrationSchema.changeset(attrs)
+        |> Repo.insert()
+
+      assert "an integration for this account already exists" in errors_on(changeset).user_id
+    end
+
+    test "allows nil provider_account_id without constraint violation" do
+      user = insert(:user)
+      insert(:video_integration, user: user, provider: "google_meet", provider_account_id: nil)
+
+      attrs = %{
+        user_id: user.id,
+        name: "Another Google Meet",
+        provider: "google_meet",
+        provider_account_id: nil,
+        access_token: "token-2",
+        refresh_token: "refresh-2"
+      }
+
+      assert {:ok, _integration} =
+               %VideoIntegrationSchema{}
+               |> VideoIntegrationSchema.changeset(attrs)
+               |> Repo.insert()
+    end
+  end
+
   describe "changeset/2 - foreign key constraints" do
     test "enforces foreign key constraint on user_id" do
       attrs = %{

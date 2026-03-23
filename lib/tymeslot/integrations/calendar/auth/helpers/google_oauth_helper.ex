@@ -37,7 +37,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
           {:ok, map()} | {:error, String.t()}
   def handle_callback(code, state, redirect_uri) do
     with {:ok, tokens} <- GoogleOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
-         {:ok, integration} <- create_or_update_calendar_integration(tokens.user_id, tokens) do
+         {:ok, integration} <-
+           create_or_update_calendar_integration(tokens.user_id, tokens, tokens[:integration_id]) do
       {:ok, integration}
     else
       {:error, reason} -> {:error, reason}
@@ -62,46 +63,94 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
   # Private functions
 
-  defp create_or_update_calendar_integration(user_id, tokens) do
-    # Check if we have an existing Google Calendar integration for this user
-    case CalendarIntegrationQueries.get_by_user_and_provider(user_id, "google") do
-      {:error, :not_found} ->
-        # No existing integration, create new one
-        attrs = %{
-          user_id: user_id,
-          name: "Google Calendar",
-          provider: "google",
-          base_url: "https://www.googleapis.com/calendar/v3",
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          token_expires_at: tokens.expires_at,
-          oauth_scope: tokens.scope,
-          is_active: true
-        }
+  defp create_or_update_calendar_integration(user_id, tokens, integration_id) do
+    token_attrs = %{
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      token_expires_at: tokens.expires_at,
+      oauth_scope: tokens.scope,
+      provider_account_id: tokens[:provider_account_id],
+      provider_account_email: tokens[:provider_account_email]
+    }
 
-        with {:ok, integration} <- CalendarIntegrationQueries.create_with_auto_primary(attrs) do
-          # Automatically discover calendars and set primary as default
-          discover_and_configure_calendars(integration)
+    cond do
+      # Re-authorization of specific integration
+      integration_id ->
+        case CalendarIntegrationQueries.get_for_user(integration_id, user_id) do
+          {:ok, existing} ->
+            verify_account_match(existing, tokens[:provider_account_id], fn ->
+              update_existing_integration(existing, token_attrs)
+            end)
+
+          {:error, :not_found} ->
+            {:error, "Integration not found"}
         end
 
-      {:ok, existing_integration} ->
-        # Update existing integration with new tokens and scope
-        attrs = %{
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          token_expires_at: tokens.expires_at,
-          oauth_scope: tokens.scope
-        }
+      # New connection with known account
+      is_binary(tokens[:provider_account_id]) ->
+        case CalendarIntegrationQueries.get_by_account_for_user(
+               user_id,
+               "google",
+               tokens[:provider_account_id]
+             ) do
+          {:ok, existing} ->
+            update_existing_integration(existing, token_attrs)
 
-        with {:ok, updated_integration} <-
-               CalendarIntegrationQueries.update(existing_integration, attrs) do
-          # For existing integrations, only discover if no calendars are configured
-          if updated_integration.calendar_list == [] do
-            discover_and_configure_calendars(updated_integration)
-          else
-            {:ok, updated_integration}
-          end
+          {:error, :not_found} ->
+            create_new_google_integration(user_id, token_attrs)
         end
+
+      # Fallback — legacy per-provider match
+      true ->
+        case CalendarIntegrationQueries.get_by_user_and_provider(user_id, "google") do
+          {:ok, existing} ->
+            update_existing_integration(existing, token_attrs)
+
+          {:error, :not_found} ->
+            create_new_google_integration(user_id, token_attrs)
+        end
+    end
+  end
+
+  defp create_new_google_integration(user_id, token_attrs) do
+    attrs =
+      Map.merge(token_attrs, %{
+        user_id: user_id,
+        name: "Google Calendar",
+        provider: "google",
+        base_url: "https://www.googleapis.com/calendar/v3",
+        is_active: true
+      })
+
+    with {:ok, integration} <- CalendarIntegrationQueries.create_with_auto_primary(attrs) do
+      discover_and_configure_calendars(integration)
+    end
+  end
+
+  defp update_existing_integration(existing, token_attrs) do
+    with {:ok, updated} <- CalendarIntegrationQueries.update(existing, token_attrs) do
+      if updated.calendar_list == [] do
+        discover_and_configure_calendars(updated)
+      else
+        {:ok, updated}
+      end
+    end
+  end
+
+  defp verify_account_match(existing, new_account_id, update_fn) do
+    cond do
+      is_nil(existing.provider_account_id) ->
+        update_fn.()
+
+      is_nil(new_account_id) ->
+        update_fn.()
+
+      existing.provider_account_id == new_account_id ->
+        update_fn.()
+
+      true ->
+        {:error,
+         "You authenticated with a different account than the one linked to this integration. Please use the correct account."}
     end
   end
 

@@ -28,9 +28,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
       assert url =~ "scope=https%3A%2F%2Fgraph.microsoft.com%2FCalendars.ReadWrite"
     end
 
-    test "handles custom scopes" do
-      url = OAuthHelper.authorization_url(1, "http://uri", ["Calendars.Read"])
-      assert url =~ "scope=Calendars.Read"
+    test "accepts options for login_hint" do
+      url = OAuthHelper.authorization_url(1, "http://uri", login_hint: "user@example.com")
+      assert url =~ "login_hint=user%40example.com"
     end
   end
 

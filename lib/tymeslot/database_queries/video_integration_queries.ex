@@ -115,6 +115,31 @@ defmodule Tymeslot.DatabaseQueries.VideoIntegrationQueries do
   end
 
   @doc """
+  Finds an active video integration by provider and account ID for a user.
+  """
+  @spec get_by_account_for_user(integer(), String.t(), String.t()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+  def get_by_account_for_user(user_id, provider, provider_account_id)
+      when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
+    result =
+      VideoIntegrationSchema
+      |> where(
+        [v],
+        v.user_id == ^user_id and
+          v.provider == ^provider and
+          v.provider_account_id == ^provider_account_id and
+          v.is_active == true
+      )
+      |> limit(1)
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      integration -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
+    end
+  end
+
+  @doc """
   Creates a new video integration.
   """
   @spec create(map()) :: {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}

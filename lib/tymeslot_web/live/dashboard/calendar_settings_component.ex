@@ -191,6 +191,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
             Flash.info("Calendar integration added successfully")
             {:noreply, socket |> reset_integration_form_state() |> load_integrations()}
 
+          {:error, :duplicate_integration} ->
+            {:noreply,
+             assign(socket,
+               form_errors: %{
+                 generic: ["A calendar integration with this configuration already exists"]
+               },
+               is_saving: false
+             )}
+
           {:error, {:form_errors, errors}} ->
             {:noreply, assign(socket, form_errors: errors, is_saving: false)}
 

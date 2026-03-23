@@ -34,6 +34,8 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
           verify_ssl: boolean(),
           is_active: boolean(),
           last_sync_at: DateTime.t() | nil,
+          provider_account_id: String.t() | nil,
+          provider_account_email: String.t() | nil,
           sync_error: String.t() | nil,
           user: Tymeslot.DatabaseSchemas.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
@@ -56,6 +58,8 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
     field(:verify_ssl, :boolean, default: true)
     field(:is_active, :boolean, default: true)
     field(:last_sync_at, :utc_datetime)
+    field(:provider_account_id, :string)
+    field(:provider_account_email, :string)
     field(:sync_error, :string)
 
     # Virtual fields for decrypted values
@@ -88,6 +92,8 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
       :default_booking_calendar_id,
       :verify_ssl,
       :is_active,
+      :provider_account_id,
+      :provider_account_email,
       :user_id,
       :sync_error
     ])
@@ -103,6 +109,10 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
     |> check_constraint(:provider, name: :calendar_integrations_provider_check)
     |> unique_constraint(:default_booking_calendar_id,
       name: :unique_booking_calendar_per_user
+    )
+    |> unique_constraint([:user_id, :provider, :provider_account_id],
+      name: :unique_active_calendar_account_per_user,
+      message: "an integration for this account already exists"
     )
   end
 

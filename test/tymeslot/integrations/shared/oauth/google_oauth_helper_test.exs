@@ -28,9 +28,9 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
       assert url =~ "https://accounts.google.com/o/oauth2/v2/auth"
       assert url =~ "client_id=#{@client_id}"
       assert url =~ "redirect_uri=http%3A%2F%2Flocalhost%2Fcallback"
-      assert url =~ "scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar"
+      assert url =~ "scope=openid+email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar"
       assert url =~ "access_type=offline"
-      assert url =~ "prompt=consent"
+      assert url =~ "prompt=consent+select_account"
       assert url =~ "state="
     end
 
@@ -43,7 +43,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
         ])
 
       assert url =~
-               "scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fmeetings.space.created+custom"
+               "scope=openid+email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fmeetings.space.created+custom"
     end
 
     test "overrides options" do
@@ -151,7 +151,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
   describe "state management" do
     test "generates and validates state" do
       state = GoogleOAuthHelper.generate_state(456)
-      assert {:ok, 456} = GoogleOAuthHelper.validate_state(state)
+      assert {:ok, %{user_id: 456, integration_id: nil}} = GoogleOAuthHelper.validate_state(state)
     end
 
     test "fails for invalid state" do

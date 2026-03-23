@@ -579,6 +579,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
                     <span class="text-token-sm font-medium truncate max-w-full">
                       {integration.name}
                     </span>
+                    <span
+                      :if={integration.provider_account_email}
+                      class="text-token-xs text-muted truncate max-w-full"
+                    >
+                      {integration.provider_account_email}
+                    </span>
                   </div>
                 </button>
               <% end %>

@@ -48,6 +48,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
               />
             </div>
 
+            <!-- Account Email -->
+            <p :if={@integration.provider_account_email} class="text-sm text-tymeslot-500 truncate">
+              {@integration.provider_account_email}
+            </p>
             <!-- Provider Type -->
             <div class="text-xs text-tymeslot-600 mb-2">
               <%= case @integration.provider do %>
@@ -102,6 +106,18 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
               <% end %>
             </button>
           <% end %>
+
+          <button
+            :if={@integration.provider in ["google_meet", "teams"]}
+            phx-click="reconnect_integration"
+            phx-value-id={@integration.id}
+            phx-target={@myself}
+            class="btn btn-sm btn-secondary"
+            title="Reconnect OAuth"
+          >
+            <.icon name="hero-arrow-path" class="w-4 h-4 mr-1" />
+            Reconnect
+          </button>
 
           <button
             phx-click="show"

@@ -25,7 +25,8 @@ defmodule TymeslotWeb.VideoOAuthController do
     with :ok <- RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)),
          :ok <- validate_state_parameter(state, google_state_secret()),
          {:ok, tokens} <- GoogleOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
-         {:ok, _integration} <- create_google_meet_integration(tokens) do
+         {:ok, _integration} <-
+           create_or_update_google_meet_integration(tokens, tokens[:integration_id]) do
       DashboardContext.invalidate_integration_status(tokens.user_id)
 
       conn
@@ -88,7 +89,8 @@ defmodule TymeslotWeb.VideoOAuthController do
          :ok <- validate_state_parameter(state, teams_state_secret()),
          {:ok, tokens} <- TeamsOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
          :ok <- validate_teams_tokens(tokens),
-         {:ok, _integration} <- create_teams_integration(tokens) do
+         {:ok, _integration} <-
+           create_or_update_teams_integration(tokens, tokens[:integration_id]) do
       DashboardContext.invalidate_integration_status(tokens.user_id)
 
       conn
@@ -198,32 +200,28 @@ defmodule TymeslotWeb.VideoOAuthController do
       raise "Outlook OAuth state secret not configured"
   end
 
-  defp create_google_meet_integration(tokens) do
+  defp create_or_update_google_meet_integration(tokens, integration_id) do
     token_attrs = %{
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       token_expires_at: tokens.expires_at,
       oauth_scope: tokens.scope,
-      is_active: true
+      is_active: true,
+      provider_account_id: tokens[:provider_account_id],
+      provider_account_email: tokens[:provider_account_email]
     }
 
-    case VideoIntegrationQueries.get_by_provider_for_user(tokens.user_id, "google_meet") do
-      {:ok, existing} ->
-        VideoIntegrationQueries.update(existing, token_attrs)
-
-      {:error, :not_found} ->
-        attrs =
-          Map.merge(token_attrs, %{
-            user_id: tokens.user_id,
-            name: "Google Meet",
-            provider: "google_meet"
-          })
-
-        VideoIntegrationQueries.create(attrs)
-    end
+    match_or_create_integration(
+      tokens.user_id,
+      "google_meet",
+      "Google Meet",
+      tokens[:provider_account_id],
+      integration_id,
+      token_attrs
+    )
   end
 
-  defp create_teams_integration(tokens) do
+  defp create_or_update_teams_integration(tokens, integration_id) do
     token_attrs = %{
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
@@ -231,22 +229,130 @@ defmodule TymeslotWeb.VideoOAuthController do
       oauth_scope: tokens.scope,
       is_active: true,
       tenant_id: tokens.tenant_id,
-      teams_user_id: tokens.teams_user_id
+      teams_user_id: tokens.teams_user_id,
+      provider_account_id: tokens[:provider_account_id],
+      provider_account_email: tokens[:provider_account_email]
     }
 
-    case VideoIntegrationQueries.get_by_provider_for_user(tokens.user_id, "teams") do
-      {:ok, existing} ->
-        VideoIntegrationQueries.update(existing, token_attrs)
+    match_or_create_integration(
+      tokens.user_id,
+      "teams",
+      "Microsoft Teams",
+      tokens[:provider_account_id],
+      integration_id,
+      token_attrs
+    )
+  end
 
-      {:error, :not_found} ->
-        attrs =
-          Map.merge(token_attrs, %{
-            user_id: tokens.user_id,
-            name: "Microsoft Teams",
-            provider: "teams"
-          })
+  defp match_or_create_integration(
+         user_id,
+         provider,
+         name,
+         provider_account_id,
+         integration_id,
+         token_attrs
+       ) do
+    cond do
+      # Re-authorization of specific integration
+      integration_id ->
+        case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
+          {:ok, existing} ->
+            verify_account_match(existing, provider_account_id, fn ->
+              VideoIntegrationQueries.update(existing, token_attrs)
+            end)
 
-        VideoIntegrationQueries.create(attrs)
+          {:error, :not_found} ->
+            {:error, "Integration not found"}
+        end
+
+      # New connection with known account — check if this account already exists
+      is_binary(provider_account_id) ->
+        case VideoIntegrationQueries.get_by_account_for_user(
+               user_id,
+               provider,
+               provider_account_id
+             ) do
+          {:ok, existing} ->
+            VideoIntegrationQueries.update(existing, token_attrs)
+
+          {:error, :not_found} ->
+            create_with_race_protection(user_id, provider, name, provider_account_id, token_attrs)
+        end
+
+      # Fallback for missing id_token — use legacy per-provider match
+      true ->
+        case VideoIntegrationQueries.get_by_provider_for_user(user_id, provider) do
+          {:ok, existing} ->
+            VideoIntegrationQueries.update(existing, token_attrs)
+
+          {:error, :not_found} ->
+            VideoIntegrationQueries.create(
+              Map.merge(token_attrs, %{
+                user_id: user_id,
+                name: name,
+                provider: provider
+              })
+            )
+        end
     end
+  end
+
+  defp create_with_race_protection(user_id, provider, name, provider_account_id, token_attrs) do
+    create_attrs =
+      Map.merge(token_attrs, %{
+        user_id: user_id,
+        name: name,
+        provider: provider
+      })
+
+    case VideoIntegrationQueries.create(create_attrs) do
+      {:ok, _integration} = success ->
+        success
+
+      {:error, %Ecto.Changeset{} = cs} ->
+        if unique_account_violation?(cs) do
+          # Race condition: concurrent create won. Retry as update.
+          case VideoIntegrationQueries.get_by_account_for_user(
+                 user_id,
+                 provider,
+                 provider_account_id
+               ) do
+            {:ok, existing} -> VideoIntegrationQueries.update(existing, token_attrs)
+            {:error, :not_found} -> {:error, cs}
+          end
+        else
+          {:error, cs}
+        end
+    end
+  end
+
+  defp verify_account_match(existing, new_account_id, update_fn) do
+    cond do
+      is_nil(existing.provider_account_id) ->
+        update_fn.()
+
+      is_nil(new_account_id) ->
+        update_fn.()
+
+      existing.provider_account_id == new_account_id ->
+        update_fn.()
+
+      true ->
+        {:error,
+         "You authenticated with a different account than the one linked to this integration. Please use the correct account."}
+    end
+  end
+
+  defp unique_account_violation?(changeset) do
+    Enum.any?(changeset.errors, fn
+      {_field, {_msg, [constraint: :unique, constraint_name: name]}} ->
+        name in [
+          "unique_active_video_account_per_user",
+          "unique_active_calendar_account_per_user"
+        ]
+
+      _other ->
+        false
+    end)
   end
 end

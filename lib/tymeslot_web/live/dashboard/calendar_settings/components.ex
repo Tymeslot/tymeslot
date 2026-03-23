@@ -280,6 +280,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
                 :if={@health_state && @health_state.status == :unhealthy}
               />
             </div>
+            <p :if={@integration.provider_account_email} class="text-sm text-tymeslot-500 truncate -mt-1 mb-1">
+              {@integration.provider_account_email}
+            </p>
 
             <p :if={!@integration.is_active} class="text-sm text-tymeslot-400 font-medium italic">
               This integration is currently disabled. Toggle the switch to enable conflict checking.

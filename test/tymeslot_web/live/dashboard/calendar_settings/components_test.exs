@@ -29,7 +29,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         calendar_paths: [],
         base_url: nil,
         is_primary: true,
-        default_booking_calendar_id: nil
+        default_booking_calendar_id: nil,
+        provider_account_email: nil
       }
 
       assigns = %{

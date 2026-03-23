@@ -10,38 +10,34 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
 
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.Common.OAuth.IdToken
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
 
-  @calendar_scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile"
+  @calendar_scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile email"
   @oauth_base_url "https://login.microsoftonline.com/common/oauth2/v2.0"
   @token_url "#{@oauth_base_url}/token"
 
   @doc """
   Generates the OAuth authorization URL for Microsoft/Outlook Calendar.
   """
-  @spec authorization_url(pos_integer(), String.t()) :: String.t()
-  def authorization_url(user_id, redirect_uri) do
-    authorization_url(user_id, redirect_uri, [@calendar_scope])
-  end
-
-  @doc """
-  Generates the OAuth authorization URL for Microsoft/Outlook Calendar with specific scopes.
-  """
-  @spec authorization_url(pos_integer(), String.t(), list(atom() | String.t())) :: String.t()
-  def authorization_url(user_id, redirect_uri, scopes) do
-    state = State.generate(user_id, state_secret())
-    scope_string = Enum.join(scopes, " ")
+  @spec authorization_url(pos_integer(), String.t(), keyword()) :: String.t()
+  def authorization_url(user_id, redirect_uri, options \\ []) do
+    integration_id = Keyword.get(options, :integration_id)
+    login_hint = Keyword.get(options, :login_hint)
+    state = State.generate(user_id, state_secret(), integration_id)
 
     params = %{
       client_id: outlook_client_id(),
       redirect_uri: redirect_uri,
       response_type: "code",
-      scope: scope_string,
+      scope: @calendar_scope,
       state: state,
       response_mode: "query",
-      prompt: "consent"
+      prompt: "select_account"
     }
+
+    params = if login_hint, do: Map.put(params, :login_hint, login_hint), else: params
 
     query_string = URI.encode_query(params)
     "#{@oauth_base_url}/authorize?" <> query_string
@@ -53,9 +49,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   @spec handle_callback(String.t(), String.t(), String.t()) ::
           {:ok, map()} | {:error, String.t()}
   def handle_callback(code, state, redirect_uri) do
-    with {:ok, user_id} <- verify_state(state),
+    with {:ok, %{user_id: user_id, integration_id: integration_id}} <- verify_state(state),
          {:ok, tokens} <- exchange_code_for_tokens(code, redirect_uri),
-         {:ok, integration} <- create_calendar_integration(user_id, tokens) do
+         {:ok, integration} <- create_calendar_integration(user_id, tokens, integration_id) do
       {:ok, integration}
     else
       {:error, reason} -> {:error, reason}
@@ -104,22 +100,90 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
 
   defp verify_state(_invalid), do: {:error, "Invalid state parameter"}
 
-  defp create_calendar_integration(user_id, tokens) do
-    attrs = %{
-      user_id: user_id,
-      name: "Outlook Calendar",
-      provider: "outlook",
-      base_url: "https://graph.microsoft.com/v1.0",
+  defp create_calendar_integration(user_id, tokens, integration_id) do
+    {provider_account_id, provider_account_email} =
+      case IdToken.decode(tokens[:id_token]) do
+        {:ok, claims} -> {claims.oid, claims.email}
+        {:error, _reason} -> {nil, nil}
+      end
+
+    token_attrs = %{
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       token_expires_at: tokens.expires_at,
       oauth_scope: tokens.scope,
-      is_active: true
+      is_active: true,
+      provider_account_id: provider_account_id,
+      provider_account_email: provider_account_email
     }
 
+    cond do
+      # Re-authorization of specific integration
+      integration_id ->
+        case CalendarIntegrationQueries.get_for_user(integration_id, user_id) do
+          {:ok, existing} ->
+            verify_account_match(existing, provider_account_id, fn ->
+              CalendarIntegrationQueries.update(existing, token_attrs)
+            end)
+
+          {:error, :not_found} ->
+            {:error, "Integration not found"}
+        end
+
+      # New connection with known account
+      is_binary(provider_account_id) ->
+        case CalendarIntegrationQueries.get_by_account_for_user(
+               user_id,
+               "outlook",
+               provider_account_id
+             ) do
+          {:ok, existing} ->
+            CalendarIntegrationQueries.update(existing, token_attrs)
+
+          {:error, :not_found} ->
+            create_new_outlook_integration(user_id, token_attrs)
+        end
+
+      # Fallback — legacy behavior
+      true ->
+        case CalendarIntegrationQueries.get_by_user_and_provider(user_id, "outlook") do
+          {:ok, existing} ->
+            CalendarIntegrationQueries.update(existing, token_attrs)
+
+          {:error, :not_found} ->
+            create_new_outlook_integration(user_id, token_attrs)
+        end
+    end
+  end
+
+  defp create_new_outlook_integration(user_id, token_attrs) do
+    attrs =
+      Map.merge(token_attrs, %{
+        user_id: user_id,
+        name: "Outlook Calendar",
+        provider: "outlook",
+        base_url: "https://graph.microsoft.com/v1.0"
+      })
+
     with {:ok, integration} <- CalendarIntegrationQueries.create_with_auto_primary(attrs) do
-      # Automatically discover calendars and set primary as default
       discover_and_configure_calendars(integration)
+    end
+  end
+
+  defp verify_account_match(existing, new_account_id, update_fn) do
+    cond do
+      is_nil(existing.provider_account_id) ->
+        update_fn.()
+
+      is_nil(new_account_id) ->
+        update_fn.()
+
+      existing.provider_account_id == new_account_id ->
+        update_fn.()
+
+      true ->
+        {:error,
+         "You authenticated with a different account than the one linked to this integration. Please use the correct account."}
     end
   end
 

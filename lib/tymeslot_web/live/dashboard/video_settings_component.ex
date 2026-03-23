@@ -170,6 +170,14 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
                  |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
                  |> assign(:saving, false)}
 
+              {:error, :duplicate_integration} ->
+                {:noreply,
+                 socket
+                 |> assign(:form_errors, %{
+                   base: "A video integration with this configuration already exists"
+                 })
+                 |> assign(:saving, false)}
+
               {:error, reason} ->
                 {:noreply,
                  socket
@@ -185,6 +193,22 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
            |> assign(:form_values, params)}
       end
     end)
+  end
+
+  def handle_event("reconnect_integration", %{"id" => id}, socket) do
+    user_id = socket.assigns.current_user.id
+    integration_id = normalize_id(id)
+
+    integration = Enum.find(socket.assigns.integrations, &(&1.id == integration_id))
+
+    if integration do
+      case Video.oauth_reconnect_url(user_id, integration) do
+        {:ok, url} -> {:noreply, redirect(socket, external: url)}
+        {:error, _} -> {:noreply, socket}
+      end
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do

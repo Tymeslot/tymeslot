@@ -214,6 +214,56 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchemaTest do
     end
   end
 
+  describe "unique_active_calendar_account_per_user constraint" do
+    test "allows same provider with different account IDs" do
+      user = insert(:user)
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "caldav",
+        provider_account_id: "https://dav.example.com||user1"
+      )
+
+      attrs = %{
+        name: "Second CalDAV",
+        provider: "caldav",
+        base_url: "https://dav.example.com",
+        provider_account_id: "https://dav.example.com||user2",
+        user_id: user.id
+      }
+
+      assert {:ok, _integration} =
+               %CalendarIntegrationSchema{}
+               |> CalendarIntegrationSchema.changeset(attrs)
+               |> Repo.insert()
+    end
+
+    test "rejects same provider with same account ID" do
+      user = insert(:user)
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "caldav",
+        provider_account_id: "https://dav.example.com||user1"
+      )
+
+      attrs = %{
+        name: "Duplicate CalDAV",
+        provider: "caldav",
+        base_url: "https://dav.example.com",
+        provider_account_id: "https://dav.example.com||user1",
+        user_id: user.id
+      }
+
+      {:error, changeset} =
+        %CalendarIntegrationSchema{}
+        |> CalendarIntegrationSchema.changeset(attrs)
+        |> Repo.insert()
+
+      assert "an integration for this account already exists" in errors_on(changeset).user_id
+    end
+  end
+
   describe "decrypt_credentials/1" do
     test "decrypts username and password" do
       user = insert(:user)

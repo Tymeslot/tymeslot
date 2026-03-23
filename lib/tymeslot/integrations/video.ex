@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Video do
 
   # Database
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
+  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
 
   # OAuth helpers
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
@@ -62,25 +63,53 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   defp do_create_integration(:mirotalk, attrs) do
+    # Set provider_account_id for dedup
+    base_url = attrs[:base_url] || attrs["base_url"]
+    attrs = Map.put(attrs, :provider_account_id, base_url)
+
     # Pre-test the connection prior to creation for better UX
     config = %{
       api_key: attrs[:api_key] || attrs["api_key"],
-      base_url: attrs[:base_url] || attrs["base_url"]
+      base_url: base_url
     }
 
-    case ProviderRegistry.test_provider_connection(:mirotalk, config) do
-      {:ok, _msg} -> VideoIntegrationQueries.create(attrs)
-      {:error, reason} -> {:error, reason}
+    with {:ok, _msg} <- ProviderRegistry.test_provider_connection(:mirotalk, config),
+         :ok <- check_no_duplicate(attrs) do
+      VideoIntegrationQueries.create(attrs)
     end
   end
 
-  # OAuth providers are created after OAuth callback normally; allow manual create only for custom/mirotalk
+  defp do_create_integration(:custom, attrs) do
+    # Set provider_account_id from custom_meeting_url for dedup
+    custom_url = attrs[:custom_meeting_url] || attrs["custom_meeting_url"]
+    attrs = Map.put(attrs, :provider_account_id, custom_url)
+
+    with :ok <- check_no_duplicate(attrs) do
+      VideoIntegrationQueries.create(attrs)
+    end
+  end
+
+  # OAuth providers are created after OAuth callback normally; allow manual create only for none
   defp do_create_integration(provider, attrs)
-       when provider in [:google_meet, :teams, :custom, :none] do
+       when provider in [:google_meet, :teams, :none] do
     VideoIntegrationQueries.create(attrs)
   end
 
   defp do_create_integration(_unknown, _attrs), do: {:error, :unknown_provider}
+
+  defp check_no_duplicate(%{
+         user_id: user_id,
+         provider: provider,
+         provider_account_id: account_id
+       })
+       when is_binary(account_id) and account_id != "" do
+    case VideoIntegrationQueries.get_by_account_for_user(user_id, to_string(provider), account_id) do
+      {:ok, _existing} -> {:error, :duplicate_integration}
+      {:error, :not_found} -> :ok
+    end
+  end
+
+  defp check_no_duplicate(_attrs), do: :ok
 
   # ---------------
   # Update
@@ -181,6 +210,41 @@ defmodule Tymeslot.Integrations.Video do
       _other ->
         {:error, "Provider does not support OAuth"}
     end
+  end
+
+  @doc """
+  Generates an OAuth reconnect URL for an existing integration.
+  Passes login_hint and integration_id for targeted re-authorization.
+  """
+  @spec oauth_reconnect_url(pos_integer(), VideoIntegrationSchema.t()) ::
+          {:ok, String.t()} | {:error, String.t()}
+  def oauth_reconnect_url(user_id, integration) do
+    opts = [
+      integration_id: integration.id,
+      login_hint: integration.provider_account_email
+    ]
+
+    provider = normalize_provider(integration.provider)
+
+    case provider do
+      :google_meet ->
+        redirect_uri = "#{Endpoint.url()}/auth/google/video/callback"
+
+        url =
+          google_oauth_helper().authorization_url(user_id, redirect_uri, [:calendar, :meet], opts)
+
+        {:ok, url}
+
+      :teams ->
+        redirect_uri = "#{Endpoint.url()}/auth/teams/video/callback"
+        url = teams_oauth_helper().authorization_url(user_id, redirect_uri, opts)
+        {:ok, url}
+
+      _other ->
+        {:error, "Provider does not support OAuth reconnection"}
+    end
+  rescue
+    error -> {:error, "Failed to generate reconnect URL: #{Exception.message(error)}"}
   end
 
   # ---------------

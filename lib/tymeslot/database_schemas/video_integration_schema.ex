@@ -25,6 +25,8 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
           custom_meeting_url: String.t() | nil,
           token_expires_at: DateTime.t() | nil,
           oauth_scope: String.t() | nil,
+          provider_account_id: String.t() | nil,
+          provider_account_email: String.t() | nil,
           is_active: boolean(),
           settings: map(),
           user: Tymeslot.DatabaseSchemas.UserSchema.t() | Ecto.Association.NotLoaded.t(),
@@ -47,6 +49,8 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
     field(:custom_meeting_url, :string)
     field(:token_expires_at, :utc_datetime)
     field(:oauth_scope, :string)
+    field(:provider_account_id, :string)
+    field(:provider_account_email, :string)
     field(:is_active, :boolean, default: true)
     field(:settings, :map, default: %{})
 
@@ -84,6 +88,8 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
       :custom_meeting_url,
       :token_expires_at,
       :oauth_scope,
+      :provider_account_id,
+      :provider_account_email,
       :is_active,
       :settings,
       :user_id
@@ -96,6 +102,10 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
     |> validate_provider_specific_fields()
     |> encrypt_credentials()
     |> foreign_key_constraint(:user_id)
+    |> unique_constraint([:user_id, :provider, :provider_account_id],
+      name: :unique_active_video_account_per_user,
+      message: "an integration for this account already exists"
+    )
   end
 
   @doc """
