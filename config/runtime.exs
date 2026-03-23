@@ -167,24 +167,36 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST")
+  host =
+    System.get_env("PHX_HOST") ||
+      System.get_env("CLOUDRON_APP_DOMAIN") ||
+      raise("environment variable PHX_HOST is missing")
+
   port = String.to_integer(System.get_env("PORT") || "4000")
 
   # Allowed origins for LiveView WebSocket (align with CSP 'connect-src' and site origin)
-  allowed_origins =
-    case System.get_env("WS_ALLOWED_ORIGINS") do
-      nil ->
-        [
-          "https://#{host}",
-          "http://#{host}",
-          "http://localhost:4000",
-          "https://localhost:4000"
-        ]
+  # Cloudron: disable origin check — Cloudron's reverse proxy handles CORS
+  # Docker: build an allow-list from the host or WS_ALLOWED_ORIGINS
+  check_origin_config =
+    case deployment_type do
+      "cloudron" ->
+        false
 
-      list ->
-        list
-        |> String.split(",")
-        |> Enum.map(&String.trim/1)
+      "docker" ->
+        case System.get_env("WS_ALLOWED_ORIGINS") do
+          nil ->
+            [
+              "https://#{host}",
+              "http://#{host}",
+              "http://localhost:4000",
+              "https://localhost:4000"
+            ]
+
+          list ->
+            list
+            |> String.split(",")
+            |> Enum.map(&String.trim/1)
+        end
     end
 
   config :tymeslot, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
@@ -222,7 +234,7 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base,
-    check_origin: allowed_origins
+    check_origin: check_origin_config
 
   # Database configuration helper
   get_database_config = fn deployment_type, overrides ->
@@ -455,19 +467,12 @@ from_name =
       do: raise("environment variable EMAIL_FROM_NAME is missing"),
       else: "Tymeslot"
 
-phx_host =
-  System.get_env("PHX_HOST") ||
-    System.get_env("CLOUDRON_APP_DOMAIN") ||
-    if config_env() == :prod,
-      do: raise("environment variable PHX_HOST is missing"),
-      else: "tymeslot.app"
-
 config :tymeslot, :email,
   from_name: from_name,
   from_email: from_email,
   support_email: System.get_env("EMAIL_SUPPORT_ADDRESS") || from_email,
   contact_recipient: System.get_env("EMAIL_CONTACT_RECIPIENT") || from_email,
-  domain: phx_host
+  domain: host
 
 # Stripe Payment Configuration (optional for core, can be configured later)
 if config_env() == :prod do
