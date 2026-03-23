@@ -26,9 +26,11 @@ Tymeslot is designed to work seamlessly with Cloudron's managed infrastructure. 
 
 ## Installation
 
-Tymeslot is distributed as a community app. Install it directly from the Cloudron dashboard — no Docker or local build tools required.
+There are two ways to install Tymeslot on Cloudron:
 
-### Via Dashboard (Recommended)
+### Option A: Community Package (Recommended)
+
+Install via Cloudron's [community package system](https://forum.cloudron.io/topic/15046/update-on-community-packages). This gives you automatic update notifications and one-click upgrades — the same experience as official Cloudron apps.
 
 1. Open your Cloudron dashboard and go to **App Store**
 2. Click **Install via URL**
@@ -37,11 +39,30 @@ Tymeslot is distributed as a community app. Install it directly from the Cloudro
    https://raw.githubusercontent.com/Tymeslot/tymeslot/main/apps/tymeslot/CloudronVersions.json
    ```
 4. Choose a location (e.g. `tymeslot.yourdomain.com`) and click **Install**
-5. Once running, set the required environment variables (see below)
+
+Cloudron handles the Docker image, health checks, and updates automatically. When a new version is published, you'll see an update prompt in the dashboard.
+
+### Option B: Manual Docker Build
+
+Build and install from source using the Cloudron CLI. Use this if you want to run a custom fork or a version not yet published to the community package.
+
+1. Clone the repository and build the Docker image:
+   ```bash
+   git clone https://github.com/Tymeslot/tymeslot.git
+   cd tymeslot
+   docker build -t your-registry/tymeslot-cloudron:latest .
+   docker push your-registry/tymeslot-cloudron:latest
+   ```
+2. Install using the Cloudron CLI:
+   ```bash
+   cloudron install --image your-registry/tymeslot-cloudron:latest
+   ```
+
+With this method you manage image builds and updates yourself. To update, rebuild the image and run `cloudron update --app tymeslot.yourdomain.com`.
 
 ### Required Environment Variables
 
-After installation, set these via the dashboard **Environment** tab or CLI:
+After installation (either method), set these via the dashboard **Environment** tab or CLI:
 
 ```bash
 SECRET=$(openssl rand -base64 64 | tr -d '\n')
@@ -50,6 +71,8 @@ cloudron env set --app tymeslot.yourdomain.com \
   PHX_HOST=tymeslot.yourdomain.com \
   PORT=4000
 ```
+
+> **Note:** `PHX_HOST` must match your Cloudron domain exactly. If unset, Tymeslot falls back to `CLOUDRON_APP_DOMAIN` (provided automatically by Cloudron), but setting it explicitly is recommended.
 
 ### Accessing Your Installation
 
@@ -286,9 +309,21 @@ cloudron logs --app tymeslot.yourdomain.com --follow
 
 ## Updates
 
-Cloudron checks for new versions automatically. When a new release is published, you will see an update prompt in the dashboard. Apply it with one click or via CLI:
+### Community Package (Option A)
+
+Cloudron checks for new versions automatically. When a new release is published, you'll see an update prompt in the dashboard — apply it with one click or via CLI:
 
 ```bash
+cloudron update --app tymeslot.yourdomain.com
+```
+
+### Manual Docker Build (Option B)
+
+Rebuild the image from the latest source and push it to your registry, then update:
+
+```bash
+docker build -t your-registry/tymeslot-cloudron:latest .
+docker push your-registry/tymeslot-cloudron:latest
 cloudron update --app tymeslot.yourdomain.com
 ```
 
