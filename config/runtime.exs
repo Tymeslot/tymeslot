@@ -146,6 +146,22 @@ if config_env() == :prod do
   # Do not print debug messages in production
   config :logger, level: :info
 
+  # Disable tzdata auto-updates: the release filesystem is read-only in containers.
+  # Timezone data is bundled at build time; redeploy to pick up tz updates.
+  config :tzdata, :autoupdate, :disabled
+
+  # Point tzdata at a writable directory so it doesn't crash trying to write
+  # poll timestamps to the read-only release filesystem. The start script
+  # seeds this directory with the bundled release_ets data on first boot.
+  config :tzdata, :data_dir, "/app/data/tzdata"
+
+  # Structured JSON logging for production containers
+  config :logger, :default_handler,
+    formatter:
+      LoggerJSON.Formatters.Basic.new(
+        metadata: {:all_except, [:conn, :socket, :mfa, :pid, :gl, :domain]}
+      )
+
   # Database configuration based on deployment type (define early as it's used for URL scheme)
   # Defaults to "docker" if DEPLOYMENT_TYPE is not set or unknown
   deployment_type =
