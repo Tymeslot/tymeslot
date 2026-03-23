@@ -383,6 +383,25 @@ defmodule Tymeslot.Emails.Templates.SystemEmailsTest do
     end
   end
 
+  describe "render/2 security" do
+    test "CalendarSyncError.render/2 handles XML-hostile error reason without crashing" do
+      meeting = insert(:meeting)
+      html = CalendarSyncError.render(meeting, "<CalDAV:error> tag not closed & invalid")
+
+      assert is_binary(html)
+      assert String.length(html) > 500
+      refute html =~ "<CalDAV:error>"
+    end
+
+    test "CalendarSyncError.render/2 handles XML-hostile binary error without crashing" do
+      meeting = insert(:meeting)
+      html = CalendarSyncError.render(meeting, "Response: <foo/> & </bar> unclosed")
+
+      assert is_binary(html)
+      assert String.length(html) > 500
+    end
+  end
+
   describe "render_text security" do
     # Plain-text email bodies are not rendered as HTML, so tags are harmless literal
     # characters. The security properties that matter are: the function never crashes

@@ -33,6 +33,7 @@ msgid "Appointment Confirmed!"
 msgstr "Rendez-vous confirmé !"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:146
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:94
 #, elixir-autogen, elixir-format
 msgid "Best,"
 msgstr "Cordialement,"
@@ -45,6 +46,7 @@ msgid "CANCELLED APPOINTMENT DETAILS:"
 msgstr "DÉTAILS DU RENDEZ-VOUS ANNULÉ :"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:87
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:49
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Annuler"
@@ -93,6 +95,7 @@ msgstr "Date :"
 
 #: lib/tymeslot/emails/shared/meeting_components.ex:45
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Duration"
 msgstr "Durée"
@@ -188,6 +191,7 @@ msgstr "Rejoindre quand vous êtes prêt"
 
 #: lib/tymeslot/emails/shared/meeting_components.ex:45
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Location"
 msgstr "Lieu"
@@ -210,6 +214,7 @@ msgstr "Au plaisir de vous rencontrer !"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_attendee.ex:102
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:82
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:86
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "DÉTAILS DE LA RÉUNION :"
@@ -243,6 +248,8 @@ msgstr "Réunion annulée - %{date} avec %{name}"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:31
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:69
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:27
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:84
 #, elixir-autogen, elixir-format
 msgid "Meeting with %{name}"
 msgstr "Réunion avec %{name}"
@@ -328,6 +335,7 @@ msgstr "Rappels programmés"
 #: lib/tymeslot/emails/templates/appointment_confirmation_attendee.ex:51
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:37
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:87
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:49
 #, elixir-autogen, elixir-format
 msgid "Reschedule"
 msgstr "Reporter"
@@ -383,6 +391,7 @@ msgid "This time slot is now available for booking again."
 msgstr "Ce créneau est de nouveau disponible à la réservation."
 
 #: lib/tymeslot/emails/shared/meeting_components.ex:44
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr "Heure"
@@ -423,6 +432,7 @@ msgid "Video meeting:"
 msgstr "Visioconférence :"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Virtual"
 msgstr "Virtuel"
@@ -467,6 +477,7 @@ msgid "in 30 minutes"
 msgstr "dans 30 minutes"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "min"
 msgstr "min"
@@ -533,9 +544,9 @@ msgid "%{name} has scheduled a meeting with you."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:109
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "- No reminder emails are scheduled for this appointment"
-msgstr "Aucun rappel par e-mail n'est prévu pour ce rendez-vous."
+msgstr "- Aucun rappel par e-mail n'est prévu pour ce rendez-vous."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:87
 #, elixir-autogen, elixir-format
@@ -558,14 +569,14 @@ msgid "- Test video/audio setup if virtual"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:123
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "15 minutes"
-msgstr "minute"
+msgstr "15 minutes"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:31
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Meeting Details"
-msgstr "Réunion"
+msgstr "Détails de la réunion"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:24
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:78
@@ -600,3 +611,48 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your calendar has been updated to reflect this cancellation."
 msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:89
+#, elixir-autogen, elixir-format
+msgid "QUICK PREP:"
+msgstr "PRÉPARATION RAPIDE :"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:48
+#, elixir-autogen, elixir-format
+msgid "Quick actions:"
+msgstr "Actions rapides :"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:82
+#, elixir-autogen, elixir-format
+msgid "STARTING IN %{time_until}"
+msgstr "DANS %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:26
+#, elixir-autogen, elixir-format
+msgid "Starting in %{time_until}"
+msgstr "Dans %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:92
+#, elixir-autogen, elixir-format
+msgid "• Agenda ready"
+msgstr "• Ordre du jour prêt"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:90
+#, elixir-autogen, elixir-format
+msgid "• Camera & mic ready"
+msgstr "• Caméra et micro prêts"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:90
+#, elixir-autogen, elixir-format
+msgid "• Location confirmed"
+msgstr "• Lieu confirmé"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:91
+#, elixir-autogen, elixir-format
+msgid "• Materials prepared"
+msgstr "• Matériaux préparés"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:57
+#, elixir-autogen, elixir-format
+msgid "⏰ Meeting with %{name} in %{time_until}"
+msgstr "⏰ Réunion avec %{name} dans %{time_until}"

@@ -178,7 +178,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizerTest do
     end
 
     test "text body shows reminder message when reminders_enabled is true" do
-      details = build_appointment_details(%{reminders_enabled: true, reminder_time: "30 minutes"})
+      details =
+        build_appointment_details(%{
+          reminders_enabled: true,
+          reminder_raw: %{value: 30, unit: "minutes"}
+        })
 
       email =
         AppointmentConfirmationOrganizer.confirmation_email("organizer@example.com", details)

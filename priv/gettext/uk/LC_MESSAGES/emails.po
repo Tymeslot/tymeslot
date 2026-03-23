@@ -33,6 +33,7 @@ msgid "Appointment Confirmed!"
 msgstr "Зустріч підтверджено!"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:146
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:94
 #, elixir-autogen, elixir-format
 msgid "Best,"
 msgstr "З повагою,"
@@ -45,6 +46,7 @@ msgid "CANCELLED APPOINTMENT DETAILS:"
 msgstr "ДЕТАЛІ СКАСОВАНОЇ ЗУСТРІЧІ:"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:87
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:49
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Скасувати"
@@ -93,6 +95,7 @@ msgstr "Дата:"
 
 #: lib/tymeslot/emails/shared/meeting_components.ex:45
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Duration"
 msgstr "Тривалість"
@@ -188,6 +191,7 @@ msgstr "Приєднуйтеся, коли будете готові"
 
 #: lib/tymeslot/emails/shared/meeting_components.ex:45
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Location"
 msgstr "Місце проведення"
@@ -210,6 +214,7 @@ msgstr "З нетерпінням чекаю на зустріч!"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_attendee.ex:102
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:82
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:86
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "ДЕТАЛІ ЗУСТРІЧІ:"
@@ -243,6 +248,8 @@ msgstr "Зустріч скасовано — %{date} з %{name}"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:31
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:69
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:27
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:84
 #, elixir-autogen, elixir-format
 msgid "Meeting with %{name}"
 msgstr "Зустріч із %{name}"
@@ -328,6 +335,7 @@ msgstr "Заплановані нагадування"
 #: lib/tymeslot/emails/templates/appointment_confirmation_attendee.ex:51
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:37
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:87
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:49
 #, elixir-autogen, elixir-format
 msgid "Reschedule"
 msgstr "Перенести"
@@ -383,6 +391,7 @@ msgid "This time slot is now available for booking again."
 msgstr "Цей час знову доступний для бронювання."
 
 #: lib/tymeslot/emails/shared/meeting_components.ex:44
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr "Час"
@@ -423,6 +432,7 @@ msgid "Video meeting:"
 msgstr "Відеозустріч:"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Virtual"
 msgstr "Онлайн"
@@ -467,6 +477,7 @@ msgid "in 30 minutes"
 msgstr "через 30 хвилин"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "min"
 msgstr "хв"
@@ -536,9 +547,9 @@ msgid "%{name} has scheduled a meeting with you."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:109
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "- No reminder emails are scheduled for this appointment"
-msgstr "Для цієї зустрічі не заплановано нагадувань електронною поштою."
+msgstr "- Для цієї зустрічі не заплановано нагадувань електронною поштою."
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:87
 #, elixir-autogen, elixir-format
@@ -561,14 +572,14 @@ msgid "- Test video/audio setup if virtual"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:123
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "15 minutes"
-msgstr "хвилина"
+msgstr "15 хвилин"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:31
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Meeting Details"
-msgstr "Зустріч"
+msgstr "Деталі зустрічі"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:24
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:78
@@ -603,3 +614,48 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Your calendar has been updated to reflect this cancellation."
 msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:89
+#, elixir-autogen, elixir-format
+msgid "QUICK PREP:"
+msgstr "ШВИДКА ПІДГОТОВКА:"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:48
+#, elixir-autogen, elixir-format
+msgid "Quick actions:"
+msgstr "Швидкі дії:"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:82
+#, elixir-autogen, elixir-format
+msgid "STARTING IN %{time_until}"
+msgstr "ПОЧИНАЄТЬСЯ ЧЕРЕЗ %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:26
+#, elixir-autogen, elixir-format
+msgid "Starting in %{time_until}"
+msgstr "Починається через %{time_until}"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:92
+#, elixir-autogen, elixir-format
+msgid "• Agenda ready"
+msgstr "• Порядок денний готовий"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:90
+#, elixir-autogen, elixir-format
+msgid "• Camera & mic ready"
+msgstr "• Камера та мікрофон готові"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:90
+#, elixir-autogen, elixir-format
+msgid "• Location confirmed"
+msgstr "• Місце підтверджено"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:91
+#, elixir-autogen, elixir-format
+msgid "• Materials prepared"
+msgstr "• Матеріали підготовлено"
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:57
+#, elixir-autogen, elixir-format
+msgid "⏰ Meeting with %{name} in %{time_until}"
+msgstr "⏰ Зустріч з %{name} через %{time_until}"

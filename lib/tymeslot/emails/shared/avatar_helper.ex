@@ -21,6 +21,10 @@ defmodule Tymeslot.Emails.Shared.AvatarHelper do
 
       url when is_binary(url) ->
         url
+
+      _other ->
+        name = Map.get(details, :organizer_name) || "User"
+        generate_default_avatar(name)
     end
   end
 

@@ -120,7 +120,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizer do
         )
 
       _other ->
-        appointment_details[:reminder_time] || dgettext("emails", "15 minutes")
+        dgettext("emails", "15 minutes")
     end
   end
 

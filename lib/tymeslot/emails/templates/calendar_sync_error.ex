@@ -3,7 +3,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   MJML template for calendar sync error notification sent to the calendar owner.
   """
 
-  alias Tymeslot.Emails.Shared.{Components, TemplateHelper, TimezoneHelper}
+  alias Tymeslot.Emails.Shared.{Components, SharedHelpers, TemplateHelper, TimezoneHelper}
   alias Tymeslot.Profiles
 
   @doc """
@@ -50,7 +50,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
         <mj-section background-color="#fef2f2" border="1px solid #fecaca" border-radius="6px" padding="12px">
           <mj-column>
             <mj-text color="#991b1b" font-size="13px" font-family="monospace">
-              #{error_details}
+              #{SharedHelpers.sanitize_for_email(error_details)}
             </mj-text>
           </mj-column>
         </mj-section>

@@ -33,6 +33,7 @@ msgid "Appointment Confirmed!"
 msgstr "Appointment Confirmed!"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:146
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:94
 #, elixir-autogen, elixir-format
 msgid "Best,"
 msgstr "Best,"
@@ -45,6 +46,7 @@ msgid "CANCELLED APPOINTMENT DETAILS:"
 msgstr "CANCELLED APPOINTMENT DETAILS:"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:87
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:49
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Cancel"
@@ -93,6 +95,7 @@ msgstr "Date:"
 
 #: lib/tymeslot/emails/shared/meeting_components.ex:45
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Duration"
 msgstr "Duration"
@@ -188,6 +191,7 @@ msgstr "Join When Ready"
 
 #: lib/tymeslot/emails/shared/meeting_components.ex:45
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Location"
 msgstr "Location"
@@ -210,6 +214,7 @@ msgstr "Looking forward to meeting you!"
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_attendee.ex:102
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:82
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:86
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "MEETING DETAILS:"
@@ -243,6 +248,8 @@ msgstr "Meeting Cancelled - %{date} with %{name}"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:31
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:69
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:27
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:84
 #, elixir-autogen, elixir-format
 msgid "Meeting with %{name}"
 msgstr "Meeting with %{name}"
@@ -328,6 +335,7 @@ msgstr "Reminders Scheduled"
 #: lib/tymeslot/emails/templates/appointment_confirmation_attendee.ex:51
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:37
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:87
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:49
 #, elixir-autogen, elixir-format
 msgid "Reschedule"
 msgstr "Reschedule"
@@ -383,6 +391,7 @@ msgid "This time slot is now available for booking again."
 msgstr "This time slot is now available for booking again."
 
 #: lib/tymeslot/emails/shared/meeting_components.ex:44
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Time"
 msgstr "Time"
@@ -423,6 +432,7 @@ msgid "Video meeting:"
 msgstr "Video meeting:"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "Virtual"
 msgstr "Virtual"
@@ -467,6 +477,7 @@ msgid "in 30 minutes"
 msgstr "in 30 minutes"
 
 #: lib/tymeslot/emails/templates/appointment_reminder_attendee.ex:64
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:29
 #, elixir-autogen, elixir-format
 msgid "min"
 msgstr "min"
@@ -533,9 +544,9 @@ msgid "%{name} has scheduled a meeting with you."
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:109
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "- No reminder emails are scheduled for this appointment"
-msgstr "No reminder emails are scheduled for this appointment."
+msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:87
 #, elixir-autogen, elixir-format
@@ -558,14 +569,14 @@ msgid "- Test video/audio setup if virtual"
 msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:123
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "15 minutes"
-msgstr "minute"
+msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:31
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Meeting Details"
-msgstr "Meeting"
+msgstr ""
 
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:24
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:78
@@ -599,4 +610,49 @@ msgstr ""
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:132
 #, elixir-autogen, elixir-format
 msgid "Your calendar has been updated to reflect this cancellation."
+msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:89
+#, elixir-autogen, elixir-format
+msgid "QUICK PREP:"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:48
+#, elixir-autogen, elixir-format
+msgid "Quick actions:"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:82
+#, elixir-autogen, elixir-format
+msgid "STARTING IN %{time_until}"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:26
+#, elixir-autogen, elixir-format
+msgid "Starting in %{time_until}"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:92
+#, elixir-autogen, elixir-format
+msgid "• Agenda ready"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:90
+#, elixir-autogen, elixir-format
+msgid "• Camera & mic ready"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:90
+#, elixir-autogen, elixir-format
+msgid "• Location confirmed"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:91
+#, elixir-autogen, elixir-format
+msgid "• Materials prepared"
+msgstr ""
+
+#: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:57
+#, elixir-autogen, elixir-format
+msgid "⏰ Meeting with %{name} in %{time_until}"
 msgstr ""
