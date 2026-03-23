@@ -1,5 +1,7 @@
 
-[0.99.32]
+[0.99.33]
+* core: Add tzdata and logger config to core runtime.exs
+* core: Group handle_event clauses in ServiceSettingsComponent
 * core: Resolve WebSocket and OAuth failures on Cloudron deployment
 * core: Check max length against trimmed name in meeting type validation
 * core: Strengthen clear_calendar_references test isolation
