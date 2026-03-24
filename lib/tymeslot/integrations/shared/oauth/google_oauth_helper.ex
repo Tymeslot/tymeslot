@@ -255,8 +255,18 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
     {provider_account_id, provider_account_email} =
       case IdToken.decode(response["id_token"]) do
-        {:ok, claims} -> {claims.sub, claims.email}
-        {:error, _reason} -> {nil, nil}
+        {:ok, claims} ->
+          {claims.sub, claims.email}
+
+        {:error, reason} ->
+          if response["id_token"] do
+            Logger.warning(
+              "Failed to decode Google id_token — account dedup falling back to legacy match",
+              reason: inspect(reason)
+            )
+          end
+
+          {nil, nil}
       end
 
     %{

@@ -197,18 +197,24 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
   def handle_event("reconnect_integration", %{"id" => id}, socket) do
     user_id = socket.assigns.current_user.id
-    integration_id = normalize_id(id)
 
-    integration = Enum.find(socket.assigns.integrations, &(&1.id == integration_id))
+    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+      integration_id = normalize_id(id)
+      integration = Enum.find(socket.assigns.integrations, &(&1.id == integration_id))
 
-    if integration do
-      case Video.oauth_reconnect_url(user_id, integration) do
-        {:ok, url} -> {:noreply, redirect(socket, external: url)}
-        {:error, _} -> {:noreply, socket}
+      if integration do
+        case Video.oauth_reconnect_url(user_id, integration) do
+          {:ok, url} ->
+            {:noreply, redirect(socket, external: url)}
+
+          {:error, _reason} ->
+            notify_parent({:flash, {:error, "Failed to reconnect. Please try again."}})
+            {:noreply, socket}
+        end
+      else
+        {:noreply, socket}
       end
-    else
-      {:noreply, socket}
-    end
+    end)
   end
 
   def handle_event("toggle_integration", %{"id" => id}, socket) do

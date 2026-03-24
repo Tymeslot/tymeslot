@@ -56,10 +56,13 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     provider = params["provider"] || params[:provider]
     url = params["url"] || params[:url]
     username = params["username"] || params[:username]
+    calendar_paths = params["calendar_paths"] || params[:calendar_paths]
 
     if is_binary(url) and url != "" and is_binary(username) and username != "" and
          is_binary(provider) do
-      account_id = "#{url}||#{username}"
+      # Derive account_id using the same normalization as prepare_attrs
+      {base_url, _paths} = parse_calendar_configuration(provider, url, calendar_paths)
+      account_id = "#{base_url}||#{username}"
 
       case CalendarIntegrationQueries.get_by_account_for_user(user_id, provider, account_id) do
         {:ok, _existing} -> {:error, :duplicate_integration}

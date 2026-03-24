@@ -42,6 +42,18 @@ defmodule Tymeslot.Repo.Migrations.AddProviderAccountFieldsAndReplaceUniqueness 
       where: "is_active = true AND provider_account_id IS NOT NULL",
       name: :unique_active_calendar_account_per_user
     )
+
+    # Guard legacy/unbackfilled rows where provider_account_id is still NULL —
+    # preserves the old one-per-provider guarantee until accounts are identified.
+    create unique_index(:video_integrations, [:user_id, :provider],
+      where: "is_active = true AND provider_account_id IS NULL",
+      name: :unique_active_video_null_account_per_user
+    )
+
+    create unique_index(:calendar_integrations, [:user_id, :provider],
+      where: "is_active = true AND provider_account_id IS NULL",
+      name: :unique_active_calendar_null_account_per_user
+    )
   end
 
   def down do
@@ -51,11 +63,14 @@ defmodule Tymeslot.Repo.Migrations.AddProviderAccountFieldsAndReplaceUniqueness 
     drop_if_exists index(:calendar_integrations, [:user_id, :provider, :provider_account_id],
                      name: :unique_active_calendar_account_per_user)
 
-    # Restore old constraint (best-effort; may fail if duplicates now exist)
-    create unique_index(:video_integrations, [:user_id, :provider],
-      where: "is_active = true",
-      name: :one_active_integration_per_user_provider
-    )
+    drop_if_exists index(:video_integrations, [:user_id, :provider],
+                     name: :unique_active_video_null_account_per_user)
+
+    drop_if_exists index(:calendar_integrations, [:user_id, :provider],
+                     name: :unique_active_calendar_null_account_per_user)
+
+    # NOTE: Old per-provider constraint is NOT restored — multi-account data may
+    # exist. Manual deduplication is required before recreating it.
 
     alter table(:video_integrations) do
       remove :provider_account_id

@@ -114,6 +114,10 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
       name: :unique_active_calendar_account_per_user,
       message: "an integration for this account already exists"
     )
+    |> unique_constraint([:user_id, :provider],
+      name: :unique_active_calendar_null_account_per_user,
+      message: "an integration for this provider already exists"
+    )
   end
 
   @doc """

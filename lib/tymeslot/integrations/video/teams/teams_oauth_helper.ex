@@ -63,8 +63,19 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
          {:ok, profile} <- fetch_user_profile(tokens.access_token) do
       id_claims =
         case IdToken.decode(tokens[:id_token]) do
-          {:ok, claims} -> claims
-          {:error, _reason} -> %{oid: nil, email: nil, tid: nil}
+          {:ok, claims} ->
+            claims
+
+          {:error, reason} ->
+            if tokens[:id_token] do
+              Logger.warning(
+                "Failed to decode Teams id_token — account dedup falling back to profile data",
+                user_id: user_id,
+                reason: inspect(reason)
+              )
+            end
+
+            %{oid: nil, email: nil, tid: nil}
         end
 
       tenant_id = id_claims.tid || profile["tenant_id"] || "common"

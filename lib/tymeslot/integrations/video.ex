@@ -25,6 +25,8 @@ defmodule Tymeslot.Integrations.Video do
 
   alias TymeslotWeb.Endpoint
 
+  require Logger
+
   @type provider :: :google_meet | :teams | :mirotalk | :custom | :none | String.t()
 
   # ---------------
@@ -268,6 +270,12 @@ defmodule Tymeslot.Integrations.Video do
   end
 
   defp fallback_match_or_create(user_id, provider, name, token_attrs) do
+    Logger.warning(
+      "OAuth callback missing provider_account_id — using legacy per-provider match",
+      user_id: user_id,
+      provider: provider
+    )
+
     case VideoIntegrationQueries.get_by_provider_for_user(user_id, provider) do
       {:ok, existing} ->
         VideoIntegrationQueries.update(existing, token_attrs)

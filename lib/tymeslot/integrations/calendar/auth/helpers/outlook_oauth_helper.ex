@@ -15,6 +15,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
 
+  require Logger
+
   @calendar_scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile email"
   @oauth_base_url "https://login.microsoftonline.com/common/oauth2/v2.0"
   @token_url "#{@oauth_base_url}/token"
@@ -104,8 +106,19 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   defp create_calendar_integration(user_id, tokens, integration_id) do
     {provider_account_id, provider_account_email} =
       case IdToken.decode(tokens[:id_token]) do
-        {:ok, claims} -> {claims.oid, claims.email}
-        {:error, _reason} -> {nil, nil}
+        {:ok, claims} ->
+          {claims.oid, claims.email}
+
+        {:error, reason} ->
+          if tokens[:id_token] do
+            Logger.warning(
+              "Failed to decode Outlook id_token — account dedup falling back to legacy match",
+              user_id: user_id,
+              reason: inspect(reason)
+            )
+          end
+
+          {nil, nil}
       end
 
     token_attrs = %{
@@ -124,7 +137,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
         case CalendarIntegrationQueries.get_for_user(integration_id, user_id) do
           {:ok, existing} ->
             AccountMatch.verify_account_match(existing, provider_account_id, fn ->
-              CalendarIntegrationQueries.update(existing, token_attrs)
+              update_existing_integration(existing, token_attrs)
             end)
 
           {:error, :not_found} ->
@@ -139,7 +152,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
                provider_account_id
              ) do
           {:ok, existing} ->
-            CalendarIntegrationQueries.update(existing, token_attrs)
+            update_existing_integration(existing, token_attrs)
 
           {:error, :not_found} ->
             create_new_outlook_integration(user_id, provider_account_id, token_attrs)
@@ -149,11 +162,21 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
       true ->
         case CalendarIntegrationQueries.get_by_user_and_provider(user_id, "outlook") do
           {:ok, existing} ->
-            CalendarIntegrationQueries.update(existing, token_attrs)
+            update_existing_integration(existing, token_attrs)
 
           {:error, :not_found} ->
             create_new_outlook_integration(user_id, nil, token_attrs)
         end
+    end
+  end
+
+  defp update_existing_integration(existing, token_attrs) do
+    with {:ok, updated} <- CalendarIntegrationQueries.update(existing, token_attrs) do
+      if updated.calendar_list == [] do
+        discover_and_configure_calendars(updated)
+      else
+        {:ok, updated}
+      end
     end
   end
 
