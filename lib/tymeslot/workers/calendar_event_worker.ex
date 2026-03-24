@@ -405,8 +405,11 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       {:ok, result} ->
         # Persist the new UID so future updates target the correct event
         returned_uid = if is_map(result), do: Map.get(result, :uid), else: nil
-        persist_calendar_mapping(meeting, returned_uid)
-        :ok
+
+        case persist_calendar_mapping(meeting, returned_uid) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
 
       error ->
         error
