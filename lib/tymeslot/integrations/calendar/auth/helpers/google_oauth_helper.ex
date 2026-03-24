@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
   Now requests full calendar scope to support Google Meet creation.
   """
+  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec authorization_url(pos_integer(), String.t()) :: String.t()
   def authorization_url(user_id, redirect_uri) do
     GoogleOAuthHelper.authorization_url(user_id, redirect_uri, [:calendar])
@@ -26,6 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   @doc """
   Generates the OAuth authorization URL for Google Calendar with specific scopes.
   """
+  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec authorization_url(pos_integer(), String.t(), list(atom() | String.t())) :: String.t()
   def authorization_url(user_id, redirect_uri, scopes) do
     GoogleOAuthHelper.authorization_url(user_id, redirect_uri, scopes)
@@ -34,6 +36,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   @doc """
   Handles the OAuth callback and creates or updates a calendar integration.
   """
+  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec handle_callback(String.t(), String.t(), String.t()) ::
           {:ok, map()} | {:error, String.t()}
   def handle_callback(code, state, redirect_uri) do
@@ -49,6 +52,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   @doc """
   Exchanges authorization code for access and refresh tokens.
   """
+  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec exchange_code_for_tokens(String.t(), String.t()) :: {:ok, map()} | {:error, term()}
   def exchange_code_for_tokens(code, redirect_uri) do
     GoogleOAuthHelper.exchange_code_for_tokens(code, redirect_uri)
@@ -57,6 +61,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   @doc """
   Refreshes an access token using a refresh token.
   """
+  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()} | {:error, term()}
   def refresh_access_token(refresh_token, current_scope \\ nil) do
     GoogleOAuthHelper.refresh_access_token(refresh_token, current_scope)

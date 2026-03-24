@@ -1,7 +1,9 @@
 defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchemaTest do
   use Tymeslot.DataCase, async: true
-  @moduletag :utils
+  @moduletag :database
+  @moduletag :schema
 
+  import Ecto.Changeset
   import Tymeslot.Factory
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Security.Encryption
@@ -50,8 +52,8 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchemaTest do
 
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
-      # Provider has default value of "caldav"
-      assert changeset.valid? or Map.has_key?(changeset.data, :provider)
+      assert changeset.valid?
+      assert get_field(changeset, :provider) == "caldav"
     end
 
     test "requires base_url field" do
@@ -97,9 +99,9 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchemaTest do
 
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
-      # Scheme is auto-added, so check if result has proper URL structure
-      # May be valid after scheme addition
-      assert is_map(changeset)
+      # ensure_scheme prepends https:// so "not-a-valid-url" becomes a valid URL
+      assert changeset.valid?
+      assert changeset.changes.base_url == "https://not-a-valid-url"
     end
 
     test "ensures scheme is added to base_url" do

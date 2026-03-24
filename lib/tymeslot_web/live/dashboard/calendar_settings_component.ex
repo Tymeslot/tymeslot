@@ -45,17 +45,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       |> load_integrations()
       |> assign_new(:security_metadata, fn -> DashboardHelpers.get_security_metadata(socket) end)
 
-    # Handle events from parent-driven modal interactions if any
-    socket =
-      case {assigns[:event], assigns[:params]} do
-        {"add_integration", %{"integration" => params}} ->
-          {_noreply, socket} = handle_event("add_integration", %{"integration" => params}, socket)
-          socket
-
-        _other_event ->
-          socket
-      end
-
     {:ok, socket}
   end
 

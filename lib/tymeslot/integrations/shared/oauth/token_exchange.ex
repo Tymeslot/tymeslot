@@ -116,17 +116,22 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
   end
 
   defp parse_token_response(response_body, fallback_refresh_token, fallback_scope) do
-    response = Jason.decode!(response_body)
-    expires_at = DateTime.add(DateTime.utc_now(), response["expires_in"], :second)
+    case Jason.decode(response_body) do
+      {:ok, response} ->
+        expires_at = DateTime.add(DateTime.utc_now(), response["expires_in"], :second)
 
-    {:ok,
-     %{
-       access_token: response["access_token"],
-       refresh_token: response["refresh_token"] || fallback_refresh_token,
-       id_token: response["id_token"],
-       expires_at: expires_at,
-       scope: response["scope"] || fallback_scope
-     }}
+        {:ok,
+         %{
+           access_token: response["access_token"],
+           refresh_token: response["refresh_token"] || fallback_refresh_token,
+           id_token: response["id_token"],
+           expires_at: expires_at,
+           scope: response["scope"] || fallback_scope
+         }}
+
+      {:error, _decode_error} ->
+        {:error, {:http_error, 200, "Invalid JSON response from token endpoint"}}
+    end
   end
 
   defp normalize_response(%{status: _status} = resp), do: resp

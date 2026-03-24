@@ -100,7 +100,7 @@ defmodule Tymeslot.Repo.Migrations.PopulateCalendarListForExistingIntegrations d
     |> String.split("/")
     |> List.last()
     |> String.replace(".ics", "")
-    |> String.replace("_", "")
+    |> String.replace("_", " ")
     |> String.capitalize()
   end
 end

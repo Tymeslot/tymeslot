@@ -24,10 +24,11 @@ defmodule Tymeslot.Integrations.Shared.MicrosoftConfig do
   @doc """
   Returns the state secret used for OAuth CSRF protection.
   """
-  @spec state_secret() :: String.t() | nil
+  @spec state_secret() :: String.t()
   def state_secret do
     Application.get_env(:tymeslot, :outlook_oauth)[:state_secret] ||
-      System.get_env("OUTLOOK_STATE_SECRET")
+      System.get_env("OUTLOOK_STATE_SECRET") ||
+      raise "Microsoft OAuth State Secret not configured"
   end
 
   @doc """

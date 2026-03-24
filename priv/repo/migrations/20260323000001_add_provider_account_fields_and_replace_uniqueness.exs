@@ -57,29 +57,17 @@ defmodule Tymeslot.Repo.Migrations.AddProviderAccountFieldsAndReplaceUniqueness 
   end
 
   def down do
-    drop_if_exists index(:video_integrations, [:user_id, :provider, :provider_account_id],
-                     name: :unique_active_video_account_per_user)
+    raise """
+    Cannot roll back multi-account migration automatically.
 
-    drop_if_exists index(:calendar_integrations, [:user_id, :provider, :provider_account_id],
-                     name: :unique_active_calendar_account_per_user)
+    Multi-account rows may exist — the old one-per-provider uniqueness constraint
+    cannot be restored without first deduplicating any users who have connected
+    multiple accounts for the same provider. Resolve manually:
 
-    drop_if_exists index(:video_integrations, [:user_id, :provider],
-                     name: :unique_active_video_null_account_per_user)
-
-    drop_if_exists index(:calendar_integrations, [:user_id, :provider],
-                     name: :unique_active_calendar_null_account_per_user)
-
-    # NOTE: Old per-provider constraint is NOT restored — multi-account data may
-    # exist. Manual deduplication is required before recreating it.
-
-    alter table(:video_integrations) do
-      remove :provider_account_id
-      remove :provider_account_email
-    end
-
-    alter table(:calendar_integrations) do
-      remove :provider_account_id
-      remove :provider_account_email
-    end
+      1. Identify users with multiple active integrations per provider
+      2. Deactivate or remove duplicates
+      3. Re-create the old unique index
+      4. Drop the new columns
+    """
   end
 end

@@ -114,13 +114,8 @@ defmodule TymeslotWeb.VideoOAuthController do
       {:error, reason} ->
         Logger.error("Teams OAuth flow failed", reason: inspect(reason))
 
-        message =
-          if is_binary(reason),
-            do: reason,
-            else: "Failed to connect Microsoft Teams. Please try again."
-
         conn
-        |> put_flash(:error, message)
+        |> put_flash(:error, "Failed to connect Microsoft Teams. Please try again.")
         |> redirect(to: ~p"/dashboard/video")
     end
   end
@@ -171,7 +166,9 @@ defmodule TymeslotWeb.VideoOAuthController do
       :ok
     else
       Logger.error("Teams OAuth tokens missing required fields: tenant_id or teams_user_id",
-        tokens: inspect(tokens)
+        has_tenant_id: not is_nil(tokens[:tenant_id]),
+        has_teams_user_id: not is_nil(tokens[:teams_user_id]),
+        user_id: tokens[:user_id]
       )
 
       {:error, "Missing required Microsoft Teams information (tenant_id or user_id)."}

@@ -24,6 +24,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   @doc """
   Generates the OAuth authorization URL for Microsoft/Outlook Calendar.
   """
+  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec authorization_url(pos_integer(), String.t(), keyword()) :: String.t()
   def authorization_url(user_id, redirect_uri, options \\ []) do
     integration_id = Keyword.get(options, :integration_id)
@@ -49,6 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   @doc """
   Handles the OAuth callback and creates a calendar integration.
   """
+  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec handle_callback(String.t(), String.t(), String.t()) ::
           {:ok, map()} | {:error, String.t()}
   def handle_callback(code, state, redirect_uri) do
@@ -64,6 +66,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   @doc """
   Exchanges authorization code for access and refresh tokens.
   """
+  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec exchange_code_for_tokens(String.t(), String.t()) :: {:ok, map()} | {:error, String.t()}
   def exchange_code_for_tokens(code, redirect_uri) do
     TokenExchange.exchange_code_for_tokens(
@@ -79,6 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   @doc """
   Refreshes an access token using a refresh token.
   """
+  @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()} | {:error, String.t()}
   def refresh_access_token(refresh_token, current_scope \\ nil) do
     TokenExchange.refresh_access_token(

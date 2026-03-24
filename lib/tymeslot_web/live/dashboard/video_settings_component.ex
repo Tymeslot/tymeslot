@@ -49,11 +49,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:ok, socket}
   end
 
+  @impl Phoenix.LiveComponent
   def handle_event("track_form_change", %{"integration" => params}, socket) do
     {:noreply, assign(socket, :form_values, params)}
   end
 
-  @impl Phoenix.LiveComponent
   def handle_event("back_to_providers", _params, socket) do
     {:noreply,
      socket
@@ -163,7 +163,8 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           {:noreply,
            socket
            |> assign(:form_errors, validation_errors)
-           |> assign(:form_values, params)}
+           |> assign(:form_values, params)
+           |> assign(:saving, false)}
       end
     end)
   end

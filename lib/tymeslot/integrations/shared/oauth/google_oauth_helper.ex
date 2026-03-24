@@ -187,25 +187,31 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
     case http_client().request(:get, url, "", headers, []) do
       {:ok, %{status: 200, body: response_body}} ->
-        response = Jason.decode!(response_body)
-        actual_scope = response["scope"] || ""
-        actual_scopes = String.split(actual_scope, " ")
+        case Jason.decode(response_body) do
+          {:ok, response} ->
+            actual_scope = response["scope"] || ""
+            actual_scopes = String.split(actual_scope, " ")
 
-        expected_scope_strings = build_scope_list(expected_scopes)
+            expected_scope_strings = build_scope_list(expected_scopes)
 
-        missing_scopes = expected_scope_strings -- actual_scopes
+            missing_scopes = expected_scope_strings -- actual_scopes
 
-        if Enum.empty?(missing_scopes) do
-          {:ok, actual_scopes}
-        else
-          {:error, "Token missing required scopes: #{Enum.join(missing_scopes, ", ")}"}
+            if Enum.empty?(missing_scopes) do
+              {:ok, actual_scopes}
+            else
+              {:error, "Token missing required scopes: #{Enum.join(missing_scopes, ", ")}"}
+            end
+
+          {:error, _decode_error} ->
+            {:error, "Invalid JSON response from token validation endpoint"}
         end
 
       {:ok, %{status: 400, body: _value}} ->
         {:error, "Invalid or expired access token"}
 
       {:ok, %{status: status, body: body}} ->
-        {:error, "Token validation failed: HTTP #{status} - #{body}"}
+        {:error,
+         "Token validation failed: HTTP #{status} - #{Redactor.redact_and_truncate(body)}"}
 
       {:error, reason} ->
         {:error, "Network error during token validation: #{inspect(reason)}"}

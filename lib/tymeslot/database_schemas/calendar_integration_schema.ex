@@ -107,9 +107,6 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
     |> encrypt_credentials()
     |> foreign_key_constraint(:user_id)
     |> check_constraint(:provider, name: :calendar_integrations_provider_check)
-    |> unique_constraint(:default_booking_calendar_id,
-      name: :unique_booking_calendar_per_user
-    )
     |> unique_constraint([:user_id, :provider, :provider_account_id],
       name: :unique_active_calendar_account_per_user,
       message: "an integration for this account already exists"

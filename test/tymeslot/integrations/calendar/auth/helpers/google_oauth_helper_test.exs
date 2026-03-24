@@ -34,7 +34,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
   end
 
   defp expect_token_response(access_token, refresh_token) do
-    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
       {:ok,
        %{
          status: 200,
@@ -116,7 +116,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
 
   describe "token operations" do
     test "exchange_code_for_tokens delegates to base helper" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
          %{
            status: 200,
@@ -132,7 +132,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
     end
 
     test "refresh_access_token delegates to base helper" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
          %{
            status: 200,

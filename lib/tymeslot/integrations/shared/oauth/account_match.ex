@@ -14,11 +14,21 @@ defmodule Tymeslot.Integrations.Common.OAuth.AccountMatch do
         when result: {:ok, any()} | {:error, any()}
   def verify_account_match(existing, new_account_id, update_fn) do
     cond do
+      is_nil(existing.provider_account_id) and is_nil(new_account_id) ->
+        update_fn.()
+
       is_nil(existing.provider_account_id) ->
         update_fn.()
 
       is_nil(new_account_id) ->
-        update_fn.()
+        Logger.warning(
+          "OAuth re-authorization could not verify account identity — id_token decode may have failed",
+          integration_id: existing.id,
+          existing_account_id: existing.provider_account_id
+        )
+
+        {:error,
+         "Could not verify your account identity. Please try again. If the problem persists, remove and re-add the integration."}
 
       existing.provider_account_id == new_account_id ->
         update_fn.()

@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   Renders the section for already connected calendars.
   """
   attr :integrations, :list, required: true
-  attr :testing_integration_id, :integer, required: true
+  attr :testing_integration_id, :any, default: nil
   attr :validating_integration_id, :integer, required: true
   attr :is_refreshing, :boolean, required: true
   attr :myself, :any, required: true

@@ -5,6 +5,7 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
 
   import Ecto.Query
   alias Ecto.Changeset
+  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.Repo
@@ -156,9 +157,6 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
     # Count existing integrations before this one
     existing_count = count_for_user(user_id)
 
-    # If the profile has no primary OR this is the first integration, set as primary
-    alias Tymeslot.DatabaseQueries.ProfileQueries
-
     need_primary =
       case ProfileQueries.get_by_user_id(user_id) do
         {:ok, %{primary_calendar_integration_id: nil}} -> true
@@ -174,9 +172,6 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   defp set_integration_as_primary(integration) do
-    # Import ProfileQueries to set primary
-    alias Tymeslot.DatabaseQueries.ProfileQueries
-
     # Clear other booking calendars and set this as primary
     clear_others_fn = fn ->
       # No need to clear others for the first integration
@@ -280,15 +275,11 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   @doc """
-  Updates a calendar integration - alias for update/2.
+  Updates a calendar integration - delegates to update/2.
   """
   @spec update_integration(CalendarIntegrationSchema.t(), map()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_integration(%CalendarIntegrationSchema{} = integration, attrs) do
-    integration
-    |> CalendarIntegrationSchema.changeset(attrs)
-    |> Repo.update()
-  end
+  defdelegate update_integration(integration, attrs), to: __MODULE__, as: :update
 
   @doc """
   Counts calendar integrations for a user.
