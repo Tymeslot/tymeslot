@@ -155,11 +155,15 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
     [calendar_integrations, video_integrations, meeting_types] =
       Enum.map(results, fn
-        {_task, {:ok, value}} -> value
+        {_task, {:ok, value}} ->
+          value
+
         {task, nil} ->
           Task.shutdown(task, :brutal_kill)
           []
-        _exit_or_error -> []
+
+        _exit_or_error ->
+          []
       end)
 
     %{
