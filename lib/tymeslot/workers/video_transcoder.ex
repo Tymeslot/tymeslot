@@ -143,6 +143,13 @@ defmodule Tymeslot.Workers.VideoTranscoder do
     expanded_path = Path.expand(path)
     expanded_dir = Path.expand(directory)
 
-    String.starts_with?(expanded_path, expanded_dir <> "/")
+    within_dir? = String.starts_with?(expanded_path, expanded_dir <> "/")
+    not_symlink? = not symlink?(expanded_path)
+
+    within_dir? and not_symlink?
+  end
+
+  defp symlink?(path) do
+    match?({:ok, %{type: :symlink}}, File.lstat(path))
   end
 end

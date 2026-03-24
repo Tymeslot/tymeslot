@@ -160,22 +160,22 @@ defmodule Tymeslot.Workers.TelegramWorker do
         {:discard, "Unauthorized"}
 
       {:ok, 400, body} ->
-        handle_400_error(integration, body)
+        handle_400_error(integration, body, attempt)
 
       {:ok, 429, body} ->
         handle_rate_limit(body)
 
       {:ok, status, _body} ->
-        TelegramQueries.record_failure(integration, "HTTP #{status}")
+        if attempt == 1, do: TelegramQueries.record_failure(integration, "HTTP #{status}")
         {:error, {:http_error, status}}
 
       {:error, reason} ->
-        TelegramQueries.record_failure(integration, to_string(reason))
+        if attempt == 1, do: TelegramQueries.record_failure(integration, to_string(reason))
         {:error, reason}
     end
   end
 
-  defp handle_400_error(integration, body) do
+  defp handle_400_error(integration, body, attempt) do
     description = extract_error_description(body)
 
     cond do
@@ -188,7 +188,9 @@ defmodule Tymeslot.Workers.TelegramWorker do
         {:discard, "Bot kicked"}
 
       true ->
-        TelegramQueries.record_failure(integration, "Bad Request: #{description}")
+        if attempt == 1,
+          do: TelegramQueries.record_failure(integration, "Bad Request: #{description}")
+
         {:error, {:bad_request, description}}
     end
   end
