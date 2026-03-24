@@ -121,6 +121,11 @@ defmodule Tymeslot.Workers.TelegramWorker do
   end
 
   defp handle_result(integration, event_type, meeting_id, message, attempt, result) do
+    log_delivery(integration, event_type, meeting_id, message, attempt, result)
+    handle_api_result(integration, attempt, result)
+  end
+
+  defp log_delivery(integration, event_type, meeting_id, message, attempt, result) do
     delivery_attrs = %{
       integration_id: integration.id,
       event_type: event_type,
@@ -149,7 +154,9 @@ defmodule Tymeslot.Workers.TelegramWorker do
       {:error, reason} ->
         Logger.warning("Failed to create Telegram delivery log", error: inspect(reason))
     end
+  end
 
+  defp handle_api_result(integration, attempt, result) do
     case result do
       {:ok, status, _body} when status >= 200 and status < 300 ->
         TelegramQueries.record_success(integration)

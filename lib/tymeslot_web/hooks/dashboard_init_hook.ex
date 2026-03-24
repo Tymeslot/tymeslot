@@ -30,62 +30,66 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
         {:halt, redirect(socket, to: ~p"/onboarding")}
 
       true ->
-        # Load profile and integration status concurrently — they are independent
-        profile_task =
-          Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-            Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
-          end)
-
-        integration_task =
-          Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-            DashboardContext.get_integration_status(user.id)
-          end)
-
-        results = Task.yield_many([profile_task, integration_task], :timer.seconds(5))
-
-        Enum.each(results, fn
-          {task, nil} -> Task.shutdown(task, :brutal_kill)
-          _ -> :ok
-        end)
-
-        profile =
-          case Enum.at(results, 0) do
-            {_task, {:ok, value}} -> value
-            _timeout_or_error -> %ProfileSchema{user_id: user.id}
-          end
-
-        integration_status =
-          case Enum.at(results, 1) do
-            {_task, {:ok, value}} -> value
-            _timeout_or_error -> DashboardContext.default_integration_status()
-          end
-
-        # Read extension/feature config once at mount so components receive stable assigns
-        # rather than calling Application.get_env on every render.
-        socket =
-          socket
-          |> assign(:profile, profile)
-          |> assign(:integration_status, integration_status)
-          |> assign_new(:saving, fn -> false end)
-          |> assign_new(:saving_timer_ref, fn -> nil end)
-          |> assign(
-            :sidebar_extensions,
-            Application.get_env(:tymeslot, :dashboard_sidebar_extensions, [])
-          )
-          |> assign(
-            :feature_placeholder_components,
-            Application.get_env(:tymeslot, :feature_placeholder_components, %{})
-          )
-          |> assign(
-            :dashboard_action_components,
-            Application.get_env(:tymeslot, :dashboard_action_components, %{})
-          )
-          |> assign(
-            :dashboard_feature_gates,
-            Application.get_env(:tymeslot, :dashboard_feature_gates, %{})
-          )
-
-        {:cont, socket}
+        mount_dashboard_data(user, socket)
     end
+  end
+
+  defp mount_dashboard_data(user, socket) do
+    # Load profile and integration status concurrently — they are independent
+    profile_task =
+      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
+      end)
+
+    integration_task =
+      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        DashboardContext.get_integration_status(user.id)
+      end)
+
+    results = Task.yield_many([profile_task, integration_task], :timer.seconds(5))
+
+    Enum.each(results, fn
+      {task, nil} -> Task.shutdown(task, :brutal_kill)
+      _result -> :ok
+    end)
+
+    profile =
+      case Enum.at(results, 0) do
+        {_task, {:ok, value}} -> value
+        _timeout_or_error -> %ProfileSchema{user_id: user.id}
+      end
+
+    integration_status =
+      case Enum.at(results, 1) do
+        {_task, {:ok, value}} -> value
+        _timeout_or_error -> DashboardContext.default_integration_status()
+      end
+
+    # Read extension/feature config once at mount so components receive stable assigns
+    # rather than calling Application.get_env on every render.
+    socket =
+      socket
+      |> assign(:profile, profile)
+      |> assign(:integration_status, integration_status)
+      |> assign_new(:saving, fn -> false end)
+      |> assign_new(:saving_timer_ref, fn -> nil end)
+      |> assign(
+        :sidebar_extensions,
+        Application.get_env(:tymeslot, :dashboard_sidebar_extensions, [])
+      )
+      |> assign(
+        :feature_placeholder_components,
+        Application.get_env(:tymeslot, :feature_placeholder_components, %{})
+      )
+      |> assign(
+        :dashboard_action_components,
+        Application.get_env(:tymeslot, :dashboard_action_components, %{})
+      )
+      |> assign(
+        :dashboard_feature_gates,
+        Application.get_env(:tymeslot, :dashboard_feature_gates, %{})
+      )
+
+    {:cont, socket}
   end
 end
