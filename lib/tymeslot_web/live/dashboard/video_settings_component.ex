@@ -153,37 +153,10 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
              |> assign(:form_errors, %{base: "Please select a provider"})
              |> assign(:saving, false)}
           else
-            case Video.create_integration(user_id, provider, map_keys_to_atoms(validated_params)) do
-              {:ok, _integration} ->
-                notify_parent({:flash, {:info, "Video integration added successfully"}})
-                notify_parent({:integration_added, :video})
-
-                {:noreply,
-                 socket
-                 |> reset_form_state()
-                 |> load_integrations()
-                 |> assign(:form_values, %{})}
-
-              {:error, %Ecto.Changeset{} = changeset} ->
-                {:noreply,
-                 socket
-                 |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
-                 |> assign(:saving, false)}
-
-              {:error, :duplicate_integration} ->
-                {:noreply,
-                 socket
-                 |> assign(:form_errors, %{
-                   base: "A video integration with this configuration already exists"
-                 })
-                 |> assign(:saving, false)}
-
-              {:error, reason} ->
-                {:noreply,
-                 socket
-                 |> assign(:saving, false)
-                 |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
-            end
+            handle_create_result(
+              Video.create_integration(user_id, provider, map_keys_to_atoms(validated_params)),
+              socket
+            )
           end
 
         {:error, validation_errors} ->
@@ -425,6 +398,40 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   # Private functions
+
+  defp handle_create_result({:ok, _integration}, socket) do
+    notify_parent({:flash, {:info, "Video integration added successfully"}})
+    notify_parent({:integration_added, :video})
+
+    {:noreply,
+     socket
+     |> reset_form_state()
+     |> load_integrations()
+     |> assign(:form_values, %{})}
+  end
+
+  defp handle_create_result({:error, %Ecto.Changeset{} = changeset}, socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
+     |> assign(:saving, false)}
+  end
+
+  defp handle_create_result({:error, :duplicate_integration}, socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base: "A video integration with this configuration already exists"
+     })
+     |> assign(:saving, false)}
+  end
+
+  defp handle_create_result({:error, reason}, socket) do
+    {:noreply,
+     socket
+     |> assign(:saving, false)
+     |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
+  end
 
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
     notify_parent({:flash, {:error, message}})

@@ -576,13 +576,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
                 >
                   <div class="flex flex-col items-center justify-center space-y-1">
                     <.provider_icon provider={integration.provider} size={@icon_size} />
-                    <span class="text-token-sm font-medium truncate max-w-full">
-                      {integration.name}
-                    </span>
-                    <span
-                      :if={integration.provider_account_email}
-                      class="text-token-xs text-muted truncate max-w-full"
-                    >
+                    <span class="text-token-sm font-medium truncate max-w-full">{integration.name}</span>
+                    <span :if={integration.provider_account_email} class="text-token-xs text-muted truncate max-w-full">
                       {integration.provider_account_email}
                     </span>
                   </div>

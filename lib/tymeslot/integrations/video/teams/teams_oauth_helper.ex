@@ -61,50 +61,50 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
          {:ok, tokens} <- fetch_tokens(code, redirect_uri),
          :ok <- verify_required_scopes(tokens),
          {:ok, profile} <- fetch_user_profile(tokens.access_token) do
-      id_claims =
-        case IdToken.decode(tokens[:id_token]) do
-          {:ok, claims} ->
-            claims
-
-          {:error, reason} ->
-            if tokens[:id_token] do
-              Logger.warning(
-                "Failed to decode Teams id_token — account dedup falling back to profile data",
-                user_id: user_id,
-                reason: inspect(reason)
-              )
-            end
-
-            %{oid: nil, email: nil, tid: nil}
-        end
-
-      tenant_id = id_claims.tid || profile["tenant_id"] || "common"
-      provider_account_id = id_claims.oid || profile["id"]
-      provider_account_email = id_claims.email || profile["mail"]
-
-      # Ensure scope is set - for Teams we must have the calendar scopes.
-      returned_scope = tokens[:scope] || tokens.scope || ""
-
-      scope =
-        if String.contains?(returned_scope, "Calendars.ReadWrite") do
-          returned_scope
-        else
-          @teams_scope
-        end
-
-      {:ok,
-       Map.merge(tokens, %{
-         user_id: user_id,
-         integration_id: integration_id,
-         teams_user_id: profile["id"],
-         tenant_id: tenant_id,
-         provider_account_id: provider_account_id,
-         provider_account_email: provider_account_email,
-         scope: scope
-       })}
+      {:ok, build_result_tokens(tokens, user_id, integration_id, profile)}
     else
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  defp build_result_tokens(tokens, user_id, integration_id, profile) do
+    id_claims = decode_id_claims(tokens, user_id)
+
+    Map.merge(tokens, %{
+      user_id: user_id,
+      integration_id: integration_id,
+      teams_user_id: profile["id"],
+      tenant_id: id_claims.tid || profile["tenant_id"] || "common",
+      provider_account_id: id_claims.oid || profile["id"],
+      provider_account_email: id_claims.email || profile["mail"],
+      scope: ensure_calendar_scope(tokens)
+    })
+  end
+
+  defp decode_id_claims(tokens, user_id) do
+    case IdToken.decode(tokens[:id_token]) do
+      {:ok, claims} ->
+        claims
+
+      {:error, reason} ->
+        if tokens[:id_token] do
+          Logger.warning(
+            "Failed to decode Teams id_token — account dedup falling back to profile data",
+            user_id: user_id,
+            reason: inspect(reason)
+          )
+        end
+
+        %{oid: nil, email: nil, tid: nil}
+    end
+  end
+
+  defp ensure_calendar_scope(tokens) do
+    returned_scope = tokens[:scope] || tokens.scope || ""
+
+    if String.contains?(returned_scope, "Calendars.ReadWrite"),
+      do: returned_scope,
+      else: @teams_scope
   end
 
   defp fetch_user_profile(token) do

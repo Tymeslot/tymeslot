@@ -414,7 +414,7 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchemaTest do
       assert "an integration for this account already exists" in errors_on(changeset).user_id
     end
 
-    test "allows nil provider_account_id without constraint violation" do
+    test "rejects second nil provider_account_id for same user and provider" do
       user = insert(:user)
       insert(:video_integration, user: user, provider: "google_meet", provider_account_id: nil)
 
@@ -425,6 +425,26 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchemaTest do
         provider_account_id: nil,
         access_token: "token-2",
         refresh_token: "refresh-2"
+      }
+
+      {:error, changeset} =
+        %VideoIntegrationSchema{}
+        |> VideoIntegrationSchema.changeset(attrs)
+        |> Repo.insert()
+
+      assert "an integration for this provider already exists" in errors_on(changeset).user_id
+    end
+
+    test "allows nil provider_account_id for different providers" do
+      user = insert(:user)
+      insert(:video_integration, user: user, provider: "google_meet", provider_account_id: nil)
+
+      attrs = %{
+        user_id: user.id,
+        name: "Custom Meeting",
+        provider: "custom",
+        provider_account_id: nil,
+        custom_meeting_url: "https://meet.example.com/room"
       }
 
       assert {:ok, _integration} =

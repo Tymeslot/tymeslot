@@ -30,7 +30,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         provider: "google",
         is_active: true,
         calendar_list: [%{"id" => "cal1", "name" => "Work", "selected" => true}],
-        default_booking_calendar_id: "cal1"
+        default_booking_calendar_id: "cal1",
+        provider_account_email: nil
       },
       validating_integration_id: 0,
       myself: "some-target"
@@ -49,7 +50,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         name: "My Calendar",
         provider: "google",
         is_active: false,
-        calendar_list: []
+        calendar_list: [],
+        provider_account_email: nil
       },
       validating_integration_id: 0,
       myself: "some-target"
@@ -67,7 +69,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         name: "My Calendar",
         provider: "google",
         is_active: true,
-        calendar_list: nil
+        calendar_list: nil,
+        provider_account_email: nil
       },
       validating_integration_id: 0,
       myself: "some-target"
