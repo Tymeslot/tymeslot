@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
 
   @doc """
@@ -78,7 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
       integration_id ->
         case CalendarIntegrationQueries.get_for_user(integration_id, user_id) do
           {:ok, existing} ->
-            verify_account_match(existing, tokens[:provider_account_id], fn ->
+            AccountMatch.verify_account_match(existing, tokens[:provider_account_id], fn ->
               update_existing_integration(existing, token_attrs)
             end)
 
@@ -97,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
             update_existing_integration(existing, token_attrs)
 
           {:error, :not_found} ->
-            create_new_google_integration(user_id, token_attrs)
+            create_new_google_integration(user_id, tokens[:provider_account_id], token_attrs)
         end
 
       # Fallback — legacy per-provider match
@@ -107,12 +108,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
             update_existing_integration(existing, token_attrs)
 
           {:error, :not_found} ->
-            create_new_google_integration(user_id, token_attrs)
+            create_new_google_integration(user_id, nil, token_attrs)
         end
     end
   end
 
-  defp create_new_google_integration(user_id, token_attrs) do
+  defp create_new_google_integration(user_id, provider_account_id, token_attrs) do
     attrs =
       Map.merge(token_attrs, %{
         user_id: user_id,
@@ -122,8 +123,31 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
         is_active: true
       })
 
-    with {:ok, integration} <- CalendarIntegrationQueries.create_with_auto_primary(attrs) do
-      discover_and_configure_calendars(integration)
+    create_fn = fn -> CalendarIntegrationQueries.create_with_auto_primary(attrs) end
+
+    result =
+      if is_binary(provider_account_id) do
+        AccountMatch.create_with_race_protection(
+          create_fn,
+          fn ->
+            CalendarIntegrationQueries.get_by_account_for_user(
+              user_id,
+              "google",
+              provider_account_id
+            )
+          end,
+          fn existing -> CalendarIntegrationQueries.update(existing, token_attrs) end
+        )
+      else
+        create_fn.()
+      end
+
+    with {:ok, integration} <- result do
+      if integration.calendar_list == [] do
+        discover_and_configure_calendars(integration)
+      else
+        {:ok, integration}
+      end
     end
   end
 
@@ -134,23 +158,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
       else
         {:ok, updated}
       end
-    end
-  end
-
-  defp verify_account_match(existing, new_account_id, update_fn) do
-    cond do
-      is_nil(existing.provider_account_id) ->
-        update_fn.()
-
-      is_nil(new_account_id) ->
-        update_fn.()
-
-      existing.provider_account_id == new_account_id ->
-        update_fn.()
-
-      true ->
-        {:error,
-         "You authenticated with a different account than the one linked to this integration. Please use the correct account."}
     end
   end
 

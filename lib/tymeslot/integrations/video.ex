@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
 
   # OAuth helpers
+  alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
 
@@ -193,6 +194,92 @@ defmodule Tymeslot.Integrations.Video do
   defdelegate valid_meeting_url?(url), to: Urls
 
   # ---------------
+  # OAuth create-or-update
+  # ---------------
+
+  @doc """
+  Creates or updates an OAuth video integration from callback token data.
+
+  Handles three scenarios:
+  1. Re-authorization of a specific integration (integration_id present)
+  2. New connection with a known account (provider_account_id present)
+  3. Legacy fallback — match by user + provider
+  """
+  @spec match_or_create_oauth_integration(
+          pos_integer(),
+          String.t(),
+          String.t(),
+          String.t() | nil,
+          pos_integer() | nil,
+          map()
+        ) :: {:ok, VideoIntegrationSchema.t()} | {:error, any()}
+  def match_or_create_oauth_integration(
+        user_id,
+        provider,
+        name,
+        provider_account_id,
+        integration_id,
+        token_attrs
+      ) do
+    cond do
+      integration_id ->
+        reauthorize_existing(user_id, integration_id, provider_account_id, token_attrs)
+
+      is_binary(provider_account_id) ->
+        match_or_create_by_account(user_id, provider, name, provider_account_id, token_attrs)
+
+      true ->
+        fallback_match_or_create(user_id, provider, name, token_attrs)
+    end
+  end
+
+  defp reauthorize_existing(user_id, integration_id, provider_account_id, token_attrs) do
+    case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
+      {:ok, existing} ->
+        AccountMatch.verify_account_match(existing, provider_account_id, fn ->
+          VideoIntegrationQueries.update(existing, token_attrs)
+        end)
+
+      {:error, :not_found} ->
+        {:error, "Integration not found"}
+    end
+  end
+
+  defp match_or_create_by_account(user_id, provider, name, provider_account_id, token_attrs) do
+    case VideoIntegrationQueries.get_by_account_for_user(user_id, provider, provider_account_id) do
+      {:ok, existing} ->
+        VideoIntegrationQueries.update(existing, token_attrs)
+
+      {:error, :not_found} ->
+        create_attrs = Map.merge(token_attrs, %{user_id: user_id, name: name, provider: provider})
+
+        AccountMatch.create_with_race_protection(
+          fn -> VideoIntegrationQueries.create(create_attrs) end,
+          fn ->
+            VideoIntegrationQueries.get_by_account_for_user(
+              user_id,
+              provider,
+              provider_account_id
+            )
+          end,
+          fn existing -> VideoIntegrationQueries.update(existing, token_attrs) end
+        )
+    end
+  end
+
+  defp fallback_match_or_create(user_id, provider, name, token_attrs) do
+    case VideoIntegrationQueries.get_by_provider_for_user(user_id, provider) do
+      {:ok, existing} ->
+        VideoIntegrationQueries.update(existing, token_attrs)
+
+      {:error, :not_found} ->
+        VideoIntegrationQueries.create(
+          Map.merge(token_attrs, %{user_id: user_id, name: name, provider: provider})
+        )
+    end
+  end
+
+  # ---------------
   # OAuth URL generation
   # ---------------
   @spec oauth_authorization_url(pos_integer(), provider()) ::
@@ -243,8 +330,6 @@ defmodule Tymeslot.Integrations.Video do
       _other ->
         {:error, "Provider does not support OAuth reconnection"}
     end
-  rescue
-    error -> {:error, "Failed to generate reconnect URL: #{Exception.message(error)}"}
   end
 
   # ---------------
