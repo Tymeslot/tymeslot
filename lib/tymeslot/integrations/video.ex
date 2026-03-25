@@ -37,6 +37,15 @@ defmodule Tymeslot.Integrations.Video do
     VideoIntegrationQueries.list_all_for_user(user_id)
   end
 
+  @doc """
+  Gets a single video integration by ID for a specific user.
+  """
+  @spec get_integration(pos_integer(), pos_integer()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+  def get_integration(user_id, id) when is_integer(user_id) and is_integer(id) do
+    VideoIntegrationQueries.get_for_user(id, user_id)
+  end
+
   # ---------------
   # Create
   # ---------------

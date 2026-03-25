@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
+  alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -214,6 +215,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     else
       {:error, :rate_limited, message} ->
         Flash.error(message)
+        {:noreply, socket}
+
+      {:error, :duplicate_account} ->
+        Flash.error("Cannot reactivate — another active integration already uses this account")
         {:noreply, socket}
 
       {:error, reason} ->

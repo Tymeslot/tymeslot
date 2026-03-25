@@ -57,17 +57,18 @@ defmodule Tymeslot.Repo.Migrations.AddProviderAccountFieldsAndReplaceUniqueness 
   end
 
   def down do
-    raise """
-    Cannot roll back multi-account migration automatically.
+    raise Ecto.MigrationError,
+      message: """
+      Cannot roll back multi-account migration automatically.
 
-    Multi-account rows may exist — the old one-per-provider uniqueness constraint
-    cannot be restored without first deduplicating any users who have connected
-    multiple accounts for the same provider. Resolve manually:
+      Multi-account rows may exist — the old one-per-provider uniqueness constraint
+      cannot be restored without first deduplicating any users who have connected
+      multiple accounts for the same provider. Resolve manually:
 
-      1. Identify users with multiple active integrations per provider
-      2. Deactivate or remove duplicates
-      3. Re-create the old unique index
-      4. Drop the new columns
-    """
+        1. Identify users with multiple active integrations per provider
+        2. Deactivate or remove duplicates
+        3. Re-create the old unique index
+        4. Drop the new columns
+      """
   end
 end

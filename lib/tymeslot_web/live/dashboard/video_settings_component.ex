@@ -173,20 +173,25 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      integration_id = normalize_id(id)
-      integration = Enum.find(socket.assigns.integrations, &(&1.id == integration_id))
+      case normalize_id(id) do
+        nil ->
+          {:noreply, socket}
 
-      if integration do
-        case Video.oauth_reconnect_url(user_id, integration) do
-          {:ok, url} ->
-            {:noreply, redirect(socket, external: url)}
+        integration_id ->
+          case Video.get_integration(user_id, integration_id) do
+            {:ok, integration} ->
+              case Video.oauth_reconnect_url(user_id, integration) do
+                {:ok, url} ->
+                  {:noreply, redirect(socket, external: url)}
 
-          {:error, _reason} ->
-            notify_parent({:flash, {:error, "Failed to reconnect. Please try again."}})
-            {:noreply, socket}
-        end
-      else
-        {:noreply, socket}
+                {:error, _reason} ->
+                  notify_parent({:flash, {:error, "Failed to reconnect. Please try again."}})
+                  {:noreply, socket}
+              end
+
+            {:error, :not_found} ->
+              {:noreply, socket}
+          end
       end
     end)
   end
@@ -195,15 +200,30 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      case Video.toggle_integration(user_id, normalize_id(id)) do
-        {:ok, _result} ->
-          notify_parent({:flash, {:info, "Integration status updated"}})
-          notify_parent({:integration_updated, :video})
-          {:noreply, load_integrations(socket)}
-
-        {:error, _reason} ->
-          notify_parent({:flash, {:error, "Failed to update integration status"}})
+      case normalize_id(id) do
+        nil ->
           {:noreply, socket}
+
+        integration_id ->
+          case Video.toggle_integration(user_id, integration_id) do
+            {:ok, _result} ->
+              notify_parent({:flash, {:info, "Integration status updated"}})
+              notify_parent({:integration_updated, :video})
+              {:noreply, load_integrations(socket)}
+
+            {:error, :duplicate_account} ->
+              notify_parent(
+                {:flash,
+                 {:error,
+                  "Cannot reactivate — another active integration already uses this account"}}
+              )
+
+              {:noreply, socket}
+
+            {:error, _reason} ->
+              notify_parent({:flash, {:error, "Failed to update integration status"}})
+              {:noreply, socket}
+          end
       end
     end)
   end
@@ -212,17 +232,22 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      int_id = normalize_id(id)
-      provider = get_provider_name(socket, int_id)
+      case normalize_id(id) do
+        nil ->
+          {:noreply, socket}
 
-      socket =
-        socket
-        |> assign(:testing_connection, int_id)
-        |> start_async(:test_connection, fn ->
-          {provider, Video.test_connection(user_id, int_id)}
-        end)
+        int_id ->
+          provider = get_provider_name(socket, int_id)
 
-      {:noreply, socket}
+          socket =
+            socket
+            |> assign(:testing_connection, int_id)
+            |> start_async(:test_connection, fn ->
+              {provider, Video.test_connection(user_id, int_id)}
+            end)
+
+          {:noreply, socket}
+      end
     end)
   end
 
@@ -499,7 +524,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   defp normalize_id(id) when is_integer(id), do: id
-  defp normalize_id(id) when is_binary(id), do: String.to_integer(id)
+
+  defp normalize_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int, ""} -> int
+      _other -> nil
+    end
+  end
 
   defp map_field_to_atom(field) do
     case field do

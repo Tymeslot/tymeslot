@@ -206,7 +206,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
               provider_account_id
             )
           end,
-          fn existing -> CalendarIntegrationQueries.update(existing, token_attrs) end
+          fn existing -> update_existing_integration(existing, token_attrs) end
         )
       else
         create_fn.()
