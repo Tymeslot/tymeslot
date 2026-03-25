@@ -344,17 +344,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       user_id = 123
       new_expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
-      :meck.expect(GoogleOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, "state" ->
-        {:ok,
-         %{
-           user_id: user_id,
-           access_token: "new_at",
-           refresh_token: "new_rt",
-           expires_at: new_expires_at,
-           scope: "new_scope"
-         }}
-      end)
-
       existing = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
         id: 42,
         user_id: user_id,
@@ -362,8 +351,19 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         provider: "google_meet"
       }
 
-      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id,
-                                                                          "google_meet" ->
+      :meck.expect(GoogleOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, "state" ->
+        {:ok,
+         %{
+           user_id: user_id,
+           access_token: "new_at",
+           refresh_token: "new_rt",
+           expires_at: new_expires_at,
+           scope: "new_scope",
+           integration_id: existing.id
+         }}
+      end)
+
+      :meck.expect(VideoIntegrationQueries, :get_for_user, fn 42, ^user_id ->
         {:ok, existing}
       end)
 
@@ -429,6 +429,13 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     test "teams_callback updates existing integration on re-authorization", %{conn: conn} do
       user_id = 456
 
+      existing = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+        id: 99,
+        user_id: user_id,
+        name: "Microsoft Teams",
+        provider: "teams"
+      }
+
       :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, "state" ->
         {:ok,
          %{
@@ -438,18 +445,12 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
            expires_at: DateTime.utc_now(),
            scope: "new_scope",
            tenant_id: "new-tenant-id",
-           teams_user_id: "new-teams-user-id"
+           teams_user_id: "new-teams-user-id",
+           integration_id: existing.id
          }}
       end)
 
-      existing = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
-        id: 99,
-        user_id: user_id,
-        name: "Microsoft Teams",
-        provider: "teams"
-      }
-
-      :meck.expect(VideoIntegrationQueries, :get_by_provider_for_user, fn ^user_id, "teams" ->
+      :meck.expect(VideoIntegrationQueries, :get_for_user, fn 99, ^user_id ->
         {:ok, existing}
       end)
 

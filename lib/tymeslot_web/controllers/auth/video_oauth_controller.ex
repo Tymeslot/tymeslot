@@ -111,6 +111,13 @@ defmodule TymeslotWeb.VideoOAuthController do
         |> put_flash(:error, "Invalid authentication state. Please try again.")
         |> redirect(to: ~p"/dashboard/video")
 
+      {:error, :missing_teams_fields} ->
+        Logger.warning("Teams OAuth callback missing required fields: tenant_id or teams_user_id")
+
+        conn
+        |> put_flash(:error, "Missing required Microsoft Teams information. Please try again.")
+        |> redirect(to: ~p"/dashboard/video")
+
       {:error, reason} ->
         Logger.error("Teams OAuth flow failed", reason: inspect(reason))
 
@@ -171,7 +178,7 @@ defmodule TymeslotWeb.VideoOAuthController do
         user_id: tokens[:user_id]
       )
 
-      {:error, "Missing required Microsoft Teams information (tenant_id or user_id)."}
+      {:error, :missing_teams_fields}
     end
   end
 
