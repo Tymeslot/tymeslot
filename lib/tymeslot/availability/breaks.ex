@@ -83,23 +83,6 @@ defmodule Tymeslot.Availability.Breaks do
   end
 
   @doc """
-  Deletes a break by ID without ownership verification.
-
-  Deprecated: use `delete_break/2` with a `profile_id` to prevent IDOR vulnerabilities.
-  """
-  @deprecated "Use delete_break/2 with a profile_id to prevent IDOR vulnerabilities"
-  @spec delete_break(integer()) :: {:ok, AvailabilityBreakSchema.t()} | {:error, String.t()}
-  def delete_break(break_id) do
-    case AvailabilityBreakQueries.get_break(break_id) do
-      nil ->
-        {:error, "Break not found"}
-
-      break ->
-        AvailabilityBreakQueries.delete_break(break)
-    end
-  end
-
-  @doc """
   Reorders breaks based on a list of break IDs.
   """
   @spec reorder_breaks(integer(), list(integer())) :: {:ok, integer()} | {:error, term()}

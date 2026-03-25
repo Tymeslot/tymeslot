@@ -126,17 +126,6 @@ defmodule Tymeslot.Availability.AvailabilityActions do
     with_cache_invalidation(result, profile_id)
   end
 
-  @doc """
-  Deletes a break without ownership verification.
-
-  Deprecated: use `delete_break/2` with a `profile_id` to prevent IDOR vulnerabilities.
-  """
-  @deprecated "Use delete_break/2 with a profile_id to prevent IDOR vulnerabilities"
-  @spec delete_break(integer()) :: {:ok, term()} | {:error, String.t()}
-  def delete_break(break_id) do
-    Breaks.delete_break(break_id)
-  end
-
   # Bulk Operations
 
   @doc """
