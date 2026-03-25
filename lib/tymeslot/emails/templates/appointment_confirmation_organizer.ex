@@ -94,15 +94,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationOrganizer do
   end
 
   defp organizer_reminder_line(appointment_details) do
-    reminders_enabled =
-      case Map.get(appointment_details, :reminders_enabled) do
-        nil -> true
-        false -> false
-        true -> true
-        _other -> true
-      end
-
-    if reminders_enabled do
+    if Map.get(appointment_details, :reminders_enabled) != false do
       reminder_time = format_reminder_for_organizer(appointment_details)
       dgettext("emails", "- Set a reminder %{time} before", time: reminder_time)
     else

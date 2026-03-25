@@ -88,7 +88,6 @@ defmodule Tymeslot.Emails.Shared.Styles do
   @border_color "#e4e4e7"
   @border_gray "#e5e7eb"
   @border_subtle "#f0f0f1"
-  @border_light_gray "#e4e4e7"
 
   # Accent borders
   @border_red "#fecaca"
@@ -129,7 +128,6 @@ defmodule Tymeslot.Emails.Shared.Styles do
   # Font sizes - Refined scale
   @font_size_xs "12px"
   @font_size_sm "14px"
-  @font_size_base "16px"
   @font_size_md "16px"
   @font_size_lg "18px"
   @font_size_xl "20px"
@@ -187,10 +185,10 @@ defmodule Tymeslot.Emails.Shared.Styles do
 
   @doc "Get alert background color based on type"
   @spec alert_background_color(String.t()) :: String.t()
-  def alert_background_color("success"), do: "#f0fdf4"
-  def alert_background_color("error"), do: "#fef2f2"
-  def alert_background_color("warning"), do: "#fffbeb"
-  def alert_background_color("info"), do: "#eff6ff"
+  def alert_background_color("success"), do: @background_green_light
+  def alert_background_color("error"), do: @background_red_light
+  def alert_background_color("warning"), do: @background_yellow_light
+  def alert_background_color("info"), do: @background_blue_light
   def alert_background_color(_type), do: @background_light
 
   @doc "Get alert border color based on type"
@@ -516,7 +514,7 @@ defmodule Tymeslot.Emails.Shared.Styles do
   @spec font_size(:xs | :sm | :base | :md | :lg | :xl | :"2xl" | :"3xl") :: String.t()
   def font_size(:xs), do: @font_size_xs
   def font_size(:sm), do: @font_size_sm
-  def font_size(:base), do: @font_size_base
+  def font_size(:base), do: @font_size_md
   def font_size(:md), do: @font_size_md
   def font_size(:lg), do: @font_size_lg
   def font_size(:xl), do: @font_size_xl
@@ -580,7 +578,7 @@ defmodule Tymeslot.Emails.Shared.Styles do
   def border_color(:gray), do: @border_gray
   def border_color(:red), do: @border_red
   def border_color(:yellow), do: @border_yellow
-  def border_color(:light_gray), do: @border_light_gray
+  def border_color(:light_gray), do: @border_color
   def border_color(:subtle), do: @border_subtle
 
   # Calendar component colors

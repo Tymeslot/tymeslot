@@ -225,9 +225,6 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
           SharedHelpers.sanitize_for_email(url)
       end
 
-    # Use the same value for href, sanitized
-    safe_href = safe_url
-
     """
     <mj-section padding="0">
       <mj-column>
@@ -244,7 +241,7 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
           padding-top="12px"
           align="center"
         >
-          <a href="#{safe_href}" style="color: #{Styles.component_color(:link)}; text-decoration: underline; word-break: break-all;">
+          <a href="#{safe_url}" style="color: #{Styles.component_color(:link)}; text-decoration: underline; word-break: break-all;">
             #{safe_url}
           </a>
         </mj-text>

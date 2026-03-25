@@ -82,8 +82,6 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     organizer_name =
       SharedHelpers.sanitize_for_email(organizer_details[:name] || fetch_from_name())
 
-    _organizer_email = organizer_details[:email] || fetch_from_email()
-
     organizer_avatar_url =
       case organizer_details[:avatar_url] do
         nil ->
