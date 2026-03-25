@@ -1,7 +1,9 @@
 defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchemaTest do
   use Tymeslot.DataCase, async: true
-  @moduletag :utils
+  @moduletag :database
+  @moduletag :schema
 
+  import Ecto.Changeset
   import Tymeslot.Factory
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Security.Encryption
@@ -50,8 +52,8 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchemaTest do
 
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
-      # Provider has default value of "caldav"
-      assert changeset.valid? or Map.has_key?(changeset.data, :provider)
+      assert changeset.valid?
+      assert get_field(changeset, :provider) == "caldav"
     end
 
     test "requires base_url field" do
@@ -97,9 +99,9 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchemaTest do
 
       changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
 
-      # Scheme is auto-added, so check if result has proper URL structure
-      # May be valid after scheme addition
-      assert is_map(changeset)
+      # ensure_scheme prepends https:// so "not-a-valid-url" becomes a valid URL
+      assert changeset.valid?
+      assert changeset.changes.base_url == "https://not-a-valid-url"
     end
 
     test "ensures scheme is added to base_url" do
@@ -211,6 +213,56 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchemaTest do
 
       assert changeset.valid?
       assert changeset.changes.calendar_list == calendar_list
+    end
+  end
+
+  describe "unique_active_calendar_account_per_user constraint" do
+    test "allows same provider with different account IDs" do
+      user = insert(:user)
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "caldav",
+        provider_account_id: "https://dav.example.com||user1"
+      )
+
+      attrs = %{
+        name: "Second CalDAV",
+        provider: "caldav",
+        base_url: "https://dav.example.com",
+        provider_account_id: "https://dav.example.com||user2",
+        user_id: user.id
+      }
+
+      assert {:ok, _integration} =
+               %CalendarIntegrationSchema{}
+               |> CalendarIntegrationSchema.changeset(attrs)
+               |> Repo.insert()
+    end
+
+    test "rejects same provider with same account ID" do
+      user = insert(:user)
+
+      insert(:calendar_integration,
+        user: user,
+        provider: "caldav",
+        provider_account_id: "https://dav.example.com||user1"
+      )
+
+      attrs = %{
+        name: "Duplicate CalDAV",
+        provider: "caldav",
+        base_url: "https://dav.example.com",
+        provider_account_id: "https://dav.example.com||user1",
+        user_id: user.id
+      }
+
+      {:error, changeset} =
+        %CalendarIntegrationSchema{}
+        |> CalendarIntegrationSchema.changeset(attrs)
+        |> Repo.insert()
+
+      assert "an integration for this account already exists" in errors_on(changeset).user_id
     end
   end
 

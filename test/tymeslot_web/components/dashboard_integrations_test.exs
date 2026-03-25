@@ -30,7 +30,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         provider: "google",
         is_active: true,
         calendar_list: [%{"id" => "cal1", "name" => "Work", "selected" => true}],
-        default_booking_calendar_id: "cal1"
+        default_booking_calendar_id: "cal1",
+        provider_account_email: nil
       },
       validating_integration_id: 0,
       myself: "some-target"
@@ -49,7 +50,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         name: "My Calendar",
         provider: "google",
         is_active: false,
-        calendar_list: []
+        calendar_list: [],
+        provider_account_email: nil
       },
       validating_integration_id: 0,
       myself: "some-target"
@@ -67,7 +69,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         name: "My Calendar",
         provider: "google",
         is_active: true,
-        calendar_list: nil
+        calendar_list: nil,
+        provider_account_email: nil
       },
       validating_integration_id: 0,
       myself: "some-target"
@@ -498,17 +501,17 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
           }
         }
 
-      # Test that the handler processes the toggle correctly
-      # The actual Calendar.update_calendar_selection call would require DB setup
-      {:noreply, _updated_socket} =
+      # The Calendar.update_calendar_selection call requires DB setup,
+      # so this test only verifies the handler doesn't crash on valid input.
+      # The pattern match itself is the assertion.
+      {:noreply, updated_socket} =
         CalendarSettingsComponent.handle_event(
           "toggle_calendar_selection",
           %{"integration_id" => "1", "calendar_id" => "cal1"},
           socket
         )
 
-      # Handler should process without crashing
-      assert true
+      assert updated_socket.assigns.integrations == [integration]
     end
 
     test "handles empty calendar_list" do

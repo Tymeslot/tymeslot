@@ -115,6 +115,57 @@ defmodule Tymeslot.DatabaseQueries.VideoIntegrationQueries do
   end
 
   @doc """
+  Finds an active video integration by provider and account ID for a user.
+  """
+  @spec get_by_account_for_user(integer(), String.t(), String.t()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+  def get_by_account_for_user(user_id, provider, provider_account_id)
+      when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
+    result =
+      VideoIntegrationSchema
+      |> where(
+        [v],
+        v.user_id == ^user_id and
+          v.provider == ^provider and
+          v.provider_account_id == ^provider_account_id and
+          v.is_active == true
+      )
+      |> limit(1)
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      integration -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
+    end
+  end
+
+  @doc """
+  Finds any video integration (active or inactive) by provider and account ID for a user.
+  Used to detect inactive duplicates before creating a new row.
+  """
+  @spec get_any_by_account_for_user(integer(), String.t(), String.t()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+  def get_any_by_account_for_user(user_id, provider, provider_account_id)
+      when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
+    result =
+      VideoIntegrationSchema
+      |> where(
+        [v],
+        v.user_id == ^user_id and
+          v.provider == ^provider and
+          v.provider_account_id == ^provider_account_id
+      )
+      |> order_by([v], desc: v.is_active)
+      |> limit(1)
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      integration -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
+    end
+  end
+
+  @doc """
   Creates a new video integration.
   """
   @spec create(map()) :: {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -146,13 +197,43 @@ defmodule Tymeslot.DatabaseQueries.VideoIntegrationQueries do
 
   @doc """
   Toggles the active status of an integration.
+
+  When reactivating, checks that no other active integration exists for the same
+  `(user_id, provider, provider_account_id)` to prevent a unique-constraint violation.
   """
   @spec toggle_active(VideoIntegrationSchema.t()) ::
-          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | :duplicate_account}
   def toggle_active(%VideoIntegrationSchema{} = integration) do
-    integration
-    |> Changeset.change(%{is_active: !integration.is_active})
-    |> Repo.update()
+    if integration.is_active do
+      integration
+      |> Changeset.change(%{is_active: false})
+      |> Repo.update()
+    else
+      case check_reactivation_conflict(integration) do
+        :ok ->
+          integration
+          |> Changeset.change(%{is_active: true})
+          |> Repo.update()
+
+        {:error, :duplicate_account} = err ->
+          err
+      end
+    end
+  end
+
+  defp check_reactivation_conflict(%{provider_account_id: nil}), do: :ok
+
+  defp check_reactivation_conflict(%{provider_account_id: ""}), do: :ok
+
+  defp check_reactivation_conflict(integration) do
+    case get_by_account_for_user(
+           integration.user_id,
+           integration.provider,
+           integration.provider_account_id
+         ) do
+      {:ok, _existing} -> {:error, :duplicate_account}
+      {:error, :not_found} -> :ok
+    end
   end
 
   @doc """

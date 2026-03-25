@@ -7,9 +7,9 @@ defmodule TymeslotWeb.VideoOAuthController do
   require Logger
 
   alias Tymeslot.Dashboard.DashboardContext
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Endpoint
@@ -25,7 +25,8 @@ defmodule TymeslotWeb.VideoOAuthController do
     with :ok <- RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)),
          :ok <- validate_state_parameter(state, google_state_secret()),
          {:ok, tokens} <- GoogleOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
-         {:ok, _integration} <- create_google_meet_integration(tokens) do
+         {:ok, _integration} <-
+           create_or_update_google_meet_integration(tokens, tokens[:integration_id]) do
       DashboardContext.invalidate_integration_status(tokens.user_id)
 
       conn
@@ -88,7 +89,8 @@ defmodule TymeslotWeb.VideoOAuthController do
          :ok <- validate_state_parameter(state, teams_state_secret()),
          {:ok, tokens} <- TeamsOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
          :ok <- validate_teams_tokens(tokens),
-         {:ok, _integration} <- create_teams_integration(tokens) do
+         {:ok, _integration} <-
+           create_or_update_teams_integration(tokens, tokens[:integration_id]) do
       DashboardContext.invalidate_integration_status(tokens.user_id)
 
       conn
@@ -112,13 +114,8 @@ defmodule TymeslotWeb.VideoOAuthController do
       {:error, reason} ->
         Logger.error("Teams OAuth flow failed", reason: inspect(reason))
 
-        message =
-          if is_binary(reason),
-            do: reason,
-            else: "Failed to connect Microsoft Teams. Please try again."
-
         conn
-        |> put_flash(:error, message)
+        |> put_flash(:error, "Failed to connect Microsoft Teams. Please try again.")
         |> redirect(to: ~p"/dashboard/video")
     end
   end
@@ -169,7 +166,9 @@ defmodule TymeslotWeb.VideoOAuthController do
       :ok
     else
       Logger.error("Teams OAuth tokens missing required fields: tenant_id or teams_user_id",
-        tokens: inspect(tokens)
+        has_tenant_id: not is_nil(tokens[:tenant_id]),
+        has_teams_user_id: not is_nil(tokens[:teams_user_id]),
+        user_id: tokens[:user_id]
       )
 
       {:error, "Missing required Microsoft Teams information (tenant_id or user_id)."}
@@ -198,32 +197,28 @@ defmodule TymeslotWeb.VideoOAuthController do
       raise "Outlook OAuth state secret not configured"
   end
 
-  defp create_google_meet_integration(tokens) do
+  defp create_or_update_google_meet_integration(tokens, integration_id) do
     token_attrs = %{
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       token_expires_at: tokens.expires_at,
       oauth_scope: tokens.scope,
-      is_active: true
+      is_active: true,
+      provider_account_id: tokens[:provider_account_id],
+      provider_account_email: tokens[:provider_account_email]
     }
 
-    case VideoIntegrationQueries.get_by_provider_for_user(tokens.user_id, "google_meet") do
-      {:ok, existing} ->
-        VideoIntegrationQueries.update(existing, token_attrs)
-
-      {:error, :not_found} ->
-        attrs =
-          Map.merge(token_attrs, %{
-            user_id: tokens.user_id,
-            name: "Google Meet",
-            provider: "google_meet"
-          })
-
-        VideoIntegrationQueries.create(attrs)
-    end
+    Video.match_or_create_oauth_integration(
+      tokens.user_id,
+      "google_meet",
+      "Google Meet",
+      tokens[:provider_account_id],
+      integration_id,
+      token_attrs
+    )
   end
 
-  defp create_teams_integration(tokens) do
+  defp create_or_update_teams_integration(tokens, integration_id) do
     token_attrs = %{
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
@@ -231,22 +226,18 @@ defmodule TymeslotWeb.VideoOAuthController do
       oauth_scope: tokens.scope,
       is_active: true,
       tenant_id: tokens.tenant_id,
-      teams_user_id: tokens.teams_user_id
+      teams_user_id: tokens.teams_user_id,
+      provider_account_id: tokens[:provider_account_id],
+      provider_account_email: tokens[:provider_account_email]
     }
 
-    case VideoIntegrationQueries.get_by_provider_for_user(tokens.user_id, "teams") do
-      {:ok, existing} ->
-        VideoIntegrationQueries.update(existing, token_attrs)
-
-      {:error, :not_found} ->
-        attrs =
-          Map.merge(token_attrs, %{
-            user_id: tokens.user_id,
-            name: "Microsoft Teams",
-            provider: "teams"
-          })
-
-        VideoIntegrationQueries.create(attrs)
-    end
+    Video.match_or_create_oauth_integration(
+      tokens.user_id,
+      "teams",
+      "Microsoft Teams",
+      tokens[:provider_account_id],
+      integration_id,
+      token_attrs
+    )
   end
 end

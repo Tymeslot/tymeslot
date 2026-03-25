@@ -9,12 +9,14 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Integrations.Common.OAuth.{State, TokenExchange}
+  alias Tymeslot.Integrations.Common.OAuth.{IdToken, State, TokenExchange}
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
 
   require Logger
 
   @default_scopes %{
+    openid: "openid",
+    email: "email",
     calendar: "https://www.googleapis.com/auth/calendar",
     meet: "https://www.googleapis.com/auth/meetings.space.created"
   }
@@ -38,8 +40,16 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   @spec authorization_url(integer(), String.t(), list(atom() | String.t()), keyword()) ::
           String.t()
   def authorization_url(user_id, redirect_uri, scopes, options \\ []) do
-    state = generate_state(user_id)
-    scope_string = build_scope_string(scopes)
+    integration_id = Keyword.get(options, :integration_id)
+    login_hint = Keyword.get(options, :login_hint)
+    state = generate_state(user_id, integration_id)
+
+    # Always include openid and email for account identification
+    all_scopes = Enum.uniq([:openid, :email | scopes])
+    scope_string = build_scope_string(all_scopes)
+
+    # Re-auth uses select_account only; new connections use consent + select_account
+    default_prompt = if integration_id, do: "select_account", else: "consent select_account"
 
     base_params = %{
       client_id: google_client_id(),
@@ -48,13 +58,17 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
       scope: scope_string,
       state: state,
       access_type: Keyword.get(options, :access_type, "offline"),
-      prompt: Keyword.get(options, :prompt, "consent")
+      prompt: Keyword.get(options, :prompt, default_prompt)
     }
+
+    # Add login_hint if provided
+    base_params =
+      if login_hint, do: Map.put(base_params, :login_hint, login_hint), else: base_params
 
     # Add any additional options
     params =
       options
-      |> Keyword.drop([:access_type, :prompt])
+      |> Keyword.drop([:access_type, :prompt, :integration_id, :login_hint])
       |> Enum.into(base_params)
 
     query_string = URI.encode_query(params)
@@ -84,19 +98,20 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
     case TokenFlow.exchange_code(@token_url, body, provider: :google) do
       {:ok, response} ->
-        expires_at = DateTime.add(DateTime.utc_now(), response["expires_in"], :second)
-
-        tokens = %{
-          access_token: response["access_token"],
-          refresh_token: response["refresh_token"],
-          expires_at: expires_at,
-          scope: response["scope"]
-        }
+        tokens = build_token_map(response)
 
         case validate_state(state) do
-          {:ok, user_id} -> {:ok, Map.put(tokens, :user_id, user_id)}
-          {:error, _reason} when is_nil(state) -> {:ok, tokens}
-          {:error, reason} -> {:error, reason}
+          {:ok, %{user_id: user_id} = state_data} ->
+            {:ok,
+             tokens
+             |> Map.put(:user_id, user_id)
+             |> Map.put(:integration_id, state_data.integration_id)}
+
+          {:error, _reason} when is_nil(state) ->
+            {:ok, tokens}
+
+          {:error, reason} ->
+            {:error, reason}
         end
 
       {:error, {:http_error, status, body}} ->
@@ -172,25 +187,31 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
     case http_client().request(:get, url, "", headers, []) do
       {:ok, %{status: 200, body: response_body}} ->
-        response = Jason.decode!(response_body)
-        actual_scope = response["scope"] || ""
-        actual_scopes = String.split(actual_scope, " ")
+        case Jason.decode(response_body) do
+          {:ok, response} ->
+            actual_scope = response["scope"] || ""
+            actual_scopes = String.split(actual_scope, " ")
 
-        expected_scope_strings = build_scope_list(expected_scopes)
+            expected_scope_strings = build_scope_list(expected_scopes)
 
-        missing_scopes = expected_scope_strings -- actual_scopes
+            missing_scopes = expected_scope_strings -- actual_scopes
 
-        if Enum.empty?(missing_scopes) do
-          {:ok, actual_scopes}
-        else
-          {:error, "Token missing required scopes: #{Enum.join(missing_scopes, ", ")}"}
+            if Enum.empty?(missing_scopes) do
+              {:ok, actual_scopes}
+            else
+              {:error, "Token missing required scopes: #{Enum.join(missing_scopes, ", ")}"}
+            end
+
+          {:error, _decode_error} ->
+            {:error, "Invalid JSON response from token validation endpoint"}
         end
 
       {:ok, %{status: 400, body: _value}} ->
         {:error, "Invalid or expired access token"}
 
       {:ok, %{status: status, body: body}} ->
-        {:error, "Token validation failed: HTTP #{status} - #{body}"}
+        {:error,
+         "Token validation failed: HTTP #{status} - #{Redactor.redact_and_truncate(body)}"}
 
       {:error, reason} ->
         {:error, "Network error during token validation: #{inspect(reason)}"}
@@ -200,16 +221,16 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   @doc """
   Generates a secure state parameter for OAuth flow.
   """
-  @spec generate_state(integer()) :: String.t()
-  def generate_state(user_id) do
-    State.generate(user_id, state_secret())
+  @spec generate_state(integer(), pos_integer() | nil) :: String.t()
+  def generate_state(user_id, integration_id \\ nil) do
+    State.generate(user_id, state_secret(), integration_id)
   end
 
   @doc """
-  Validates and extracts user ID from state parameter.
+  Validates and extracts state data from state parameter.
   """
-  @spec validate_state(String.t()) :: {:ok, integer()} | {:error, String.t()}
-  @spec validate_state(any()) :: {:error, String.t()}
+  @spec validate_state(String.t() | any()) ::
+          {:ok, State.validated()} | {:error, String.t()}
   def validate_state(state) when is_binary(state) do
     State.validate(state, state_secret())
   end
@@ -234,6 +255,35 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   def scope_string(scope_string) when is_binary(scope_string), do: scope_string
 
   # Private functions
+
+  defp build_token_map(response) do
+    expires_at = DateTime.add(DateTime.utc_now(), response["expires_in"], :second)
+
+    {provider_account_id, provider_account_email} =
+      case IdToken.decode(response["id_token"]) do
+        {:ok, claims} ->
+          {claims.sub, claims.email}
+
+        {:error, reason} ->
+          if response["id_token"] do
+            Logger.warning(
+              "Failed to decode Google id_token — account dedup falling back to legacy match",
+              reason: inspect(reason)
+            )
+          end
+
+          {nil, nil}
+      end
+
+    %{
+      access_token: response["access_token"],
+      refresh_token: response["refresh_token"],
+      expires_at: expires_at,
+      scope: response["scope"],
+      provider_account_id: provider_account_id,
+      provider_account_email: provider_account_email
+    }
+  end
 
   defp build_scope_string(scopes) when is_list(scopes) do
     scopes

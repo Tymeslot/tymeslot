@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
+  alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
   alias TymeslotWeb.Live.Shared.Flash
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
@@ -44,17 +45,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       |> assign(assigns)
       |> load_integrations()
       |> assign_new(:security_metadata, fn -> DashboardHelpers.get_security_metadata(socket) end)
-
-    # Handle events from parent-driven modal interactions if any
-    socket =
-      case {assigns[:event], assigns[:params]} do
-        {"add_integration", %{"integration" => params}} ->
-          {_noreply, socket} = handle_event("add_integration", %{"integration" => params}, socket)
-          socket
-
-        _other_event ->
-          socket
-      end
 
     {:ok, socket}
   end
@@ -191,6 +181,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
             Flash.info("Calendar integration added successfully")
             {:noreply, socket |> reset_integration_form_state() |> load_integrations()}
 
+          {:error, :duplicate_integration} ->
+            {:noreply,
+             assign(socket,
+               form_errors: %{
+                 generic: ["A calendar integration with this configuration already exists"]
+               },
+               is_saving: false
+             )}
+
           {:error, {:form_errors, errors}} ->
             {:noreply, assign(socket, form_errors: errors, is_saving: false)}
 
@@ -216,6 +215,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     else
       {:error, :rate_limited, message} ->
         Flash.error(message)
+        {:noreply, socket}
+
+      {:error, :duplicate_account} ->
+        Flash.error("Cannot reactivate — another active integration already uses this account")
         {:noreply, socket}
 
       {:error, reason} ->
@@ -495,6 +498,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
         <Components.available_providers_section
           available_calendar_providers={@available_calendar_providers}
+          integrations={@integrations}
           myself={@myself}
         />
       <% end %>

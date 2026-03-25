@@ -49,11 +49,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     {:ok, socket}
   end
 
+  @impl Phoenix.LiveComponent
   def handle_event("track_form_change", %{"integration" => params}, socket) do
     {:noreply, assign(socket, :form_values, params)}
   end
 
-  @impl Phoenix.LiveComponent
   def handle_event("back_to_providers", _params, socket) do
     {:noreply,
      socket
@@ -153,36 +153,45 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
              |> assign(:form_errors, %{base: "Please select a provider"})
              |> assign(:saving, false)}
           else
-            case Video.create_integration(user_id, provider, map_keys_to_atoms(validated_params)) do
-              {:ok, _integration} ->
-                notify_parent({:flash, {:info, "Video integration added successfully"}})
-                notify_parent({:integration_added, :video})
-
-                {:noreply,
-                 socket
-                 |> reset_form_state()
-                 |> load_integrations()
-                 |> assign(:form_values, %{})}
-
-              {:error, %Ecto.Changeset{} = changeset} ->
-                {:noreply,
-                 socket
-                 |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
-                 |> assign(:saving, false)}
-
-              {:error, reason} ->
-                {:noreply,
-                 socket
-                 |> assign(:saving, false)
-                 |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
-            end
+            handle_create_result(
+              Video.create_integration(user_id, provider, map_keys_to_atoms(validated_params)),
+              socket
+            )
           end
 
         {:error, validation_errors} ->
           {:noreply,
            socket
            |> assign(:form_errors, validation_errors)
-           |> assign(:form_values, params)}
+           |> assign(:form_values, params)
+           |> assign(:saving, false)}
+      end
+    end)
+  end
+
+  def handle_event("reconnect_integration", %{"id" => id}, socket) do
+    user_id = socket.assigns.current_user.id
+
+    with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
+      case normalize_id(id) do
+        nil ->
+          {:noreply, socket}
+
+        integration_id ->
+          case Video.get_integration(user_id, integration_id) do
+            {:ok, integration} ->
+              case Video.oauth_reconnect_url(user_id, integration) do
+                {:ok, url} ->
+                  {:noreply, redirect(socket, external: url)}
+
+                {:error, _reason} ->
+                  notify_parent({:flash, {:error, "Failed to reconnect. Please try again."}})
+                  {:noreply, socket}
+              end
+
+            {:error, :not_found} ->
+              {:noreply, socket}
+          end
       end
     end)
   end
@@ -191,15 +200,30 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      case Video.toggle_integration(user_id, normalize_id(id)) do
-        {:ok, _result} ->
-          notify_parent({:flash, {:info, "Integration status updated"}})
-          notify_parent({:integration_updated, :video})
-          {:noreply, load_integrations(socket)}
-
-        {:error, _reason} ->
-          notify_parent({:flash, {:error, "Failed to update integration status"}})
+      case normalize_id(id) do
+        nil ->
           {:noreply, socket}
+
+        integration_id ->
+          case Video.toggle_integration(user_id, integration_id) do
+            {:ok, _result} ->
+              notify_parent({:flash, {:info, "Integration status updated"}})
+              notify_parent({:integration_updated, :video})
+              {:noreply, load_integrations(socket)}
+
+            {:error, :duplicate_account} ->
+              notify_parent(
+                {:flash,
+                 {:error,
+                  "Cannot reactivate — another active integration already uses this account"}}
+              )
+
+              {:noreply, socket}
+
+            {:error, _reason} ->
+              notify_parent({:flash, {:error, "Failed to update integration status"}})
+              {:noreply, socket}
+          end
       end
     end)
   end
@@ -208,17 +232,22 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
     user_id = socket.assigns.current_user.id
 
     with_rate_limit(RateLimiter.check_integration_write_rate_limit(user_id), socket, fn ->
-      int_id = normalize_id(id)
-      provider = get_provider_name(socket, int_id)
+      case normalize_id(id) do
+        nil ->
+          {:noreply, socket}
 
-      socket =
-        socket
-        |> assign(:testing_connection, int_id)
-        |> start_async(:test_connection, fn ->
-          {provider, Video.test_connection(user_id, int_id)}
-        end)
+        int_id ->
+          provider = get_provider_name(socket, int_id)
 
-      {:noreply, socket}
+          socket =
+            socket
+            |> assign(:testing_connection, int_id)
+            |> start_async(:test_connection, fn ->
+              {provider, Video.test_connection(user_id, int_id)}
+            end)
+
+          {:noreply, socket}
+      end
     end)
   end
 
@@ -361,11 +390,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
             <%= for descp <- @available_video_providers do %>
               <% provider = Atom.to_string(descp.type) %>
               <% {desc, btn} = get_provider_display_info(descp.type) %>
+              <% has_existing = Enum.any?(@integrations, &(&1.provider == provider)) %>
               <ProviderCard.provider_card
                 provider={provider}
                 title={descp.display_name}
                 description={desc}
-                button_text={btn}
+                button_text={if has_existing, do: "Add Another Account", else: btn}
                 click_event="setup_provider"
                 target={@myself}
                 provider_value={provider}
@@ -395,6 +425,40 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   # Private functions
+
+  defp handle_create_result({:ok, _integration}, socket) do
+    notify_parent({:flash, {:info, "Video integration added successfully"}})
+    notify_parent({:integration_added, :video})
+
+    {:noreply,
+     socket
+     |> reset_form_state()
+     |> load_integrations()
+     |> assign(:form_values, %{})}
+  end
+
+  defp handle_create_result({:error, %Ecto.Changeset{} = changeset}, socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, ChangesetUtils.get_first_error(changeset))
+     |> assign(:saving, false)}
+  end
+
+  defp handle_create_result({:error, :duplicate_integration}, socket) do
+    {:noreply,
+     socket
+     |> assign(:form_errors, %{
+       base: "A video integration with this configuration already exists"
+     })
+     |> assign(:saving, false)}
+  end
+
+  defp handle_create_result({:error, reason}, socket) do
+    {:noreply,
+     socket
+     |> assign(:saving, false)
+     |> assign(:form_errors, IntegrationProviders.reason_to_form_errors(reason))}
+  end
 
   defp with_rate_limit({:error, :rate_limited, message}, socket, _action) do
     notify_parent({:flash, {:error, message}})
@@ -461,7 +525,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   end
 
   defp normalize_id(id) when is_integer(id), do: id
-  defp normalize_id(id) when is_binary(id), do: String.to_integer(id)
+
+  defp normalize_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int, ""} -> int
+      _other -> nil
+    end
+  end
 
   defp map_field_to_atom(field) do
     case field do

@@ -154,6 +154,7 @@ defmodule Tymeslot.Factory do
       username_encrypted: Encryption.encrypt(username),
       password_encrypted: Encryption.encrypt("password123"),
       provider: "caldav",
+      provider_account_id: sequence(:cal_account_id, &"cal-account-#{&1}"),
       is_active: true,
       user: build(:user)
     }
@@ -174,6 +175,7 @@ defmodule Tymeslot.Factory do
       teams_user_id_encrypted: Encryption.encrypt("test-teams-user-id"),
       access_token_encrypted: Encryption.encrypt("test-access-token"),
       refresh_token_encrypted: Encryption.encrypt("test-refresh-token"),
+      provider_account_id: sequence(:video_account_id, &"video-account-#{&1}"),
       is_active: true,
       settings: %{},
       user: build(:user)

@@ -11,13 +11,14 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
 
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Retry
+  alias Tymeslot.Integrations.Common.OAuth.IdToken
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
 
   require Logger
 
-  @teams_scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile"
+  @teams_scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile email"
 
   @oauth_base_url "https://login.microsoftonline.com/common/oauth2/v2.0"
   @token_url "#{@oauth_base_url}/token"
@@ -25,9 +26,11 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
   @doc """
   Generates the OAuth authorization URL for Microsoft Teams.
   """
-  @spec authorization_url(term(), String.t()) :: String.t()
-  def authorization_url(user_id, redirect_uri) do
-    state = generate_state(user_id)
+  @spec authorization_url(term(), String.t(), keyword()) :: String.t()
+  def authorization_url(user_id, redirect_uri, options \\ []) do
+    integration_id = Keyword.get(options, :integration_id)
+    login_hint = Keyword.get(options, :login_hint)
+    state = generate_state(user_id, integration_id)
 
     params = %{
       client_id: MicrosoftConfig.client_id(),
@@ -36,9 +39,10 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
       scope: @teams_scope,
       state: state,
       response_mode: "query",
-      # Force consent to ensure Calendars.ReadWrite scope is granted
-      prompt: "consent"
+      prompt: "select_account"
     }
+
+    params = if login_hint, do: Map.put(params, :login_hint, login_hint), else: params
 
     query_string = URI.encode_query(params)
     url = "#{@oauth_base_url}/authorize?" <> query_string
@@ -53,53 +57,54 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
   @spec exchange_code_for_tokens(String.t(), String.t(), String.t()) ::
           {:ok, map()} | {:error, String.t()}
   def exchange_code_for_tokens(code, redirect_uri, state) do
-    with {:ok, user_id} <- verify_state(state),
+    with {:ok, %{user_id: user_id, integration_id: integration_id}} <- verify_state(state),
          {:ok, tokens} <- fetch_tokens(code, redirect_uri),
          :ok <- verify_required_scopes(tokens),
          {:ok, profile} <- fetch_user_profile(tokens.access_token) do
-      tenant_id =
-        extract_tenant_id_from_id_token(tokens[:id_token]) || profile["tenant_id"] || "common"
-
-      # Ensure scope is set - for Teams we must have the calendar scopes.
-      # If Microsoft returned a scope string, ensure our required scopes are in it.
-      returned_scope = tokens[:scope] || tokens.scope || ""
-
-      scope =
-        if String.contains?(returned_scope, "Calendars.ReadWrite") do
-          returned_scope
-        else
-          # Force inclusion of Teams scopes if Microsoft was "lazy" in the response
-          # but only if we don't already have them.
-          @teams_scope
-        end
-
-      {:ok,
-       Map.merge(tokens, %{
-         user_id: user_id,
-         teams_user_id: profile["id"],
-         tenant_id: tenant_id,
-         scope: scope
-       })}
+      {:ok, build_result_tokens(tokens, user_id, integration_id, profile)}
     else
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp extract_tenant_id_from_id_token(nil), do: nil
+  defp build_result_tokens(tokens, user_id, integration_id, profile) do
+    id_claims = decode_id_claims(tokens, user_id)
 
-  defp extract_tenant_id_from_id_token(id_token) do
-    case String.split(id_token, ".") do
-      [_first, payload_b64, _last] ->
-        with {:ok, payload_json} <- Base.url_decode64(payload_b64, padding: false),
-             {:ok, %{"tid" => tenant_id}} <- Jason.decode(payload_json) do
-          tenant_id
-        else
-          _other -> nil
+    Map.merge(tokens, %{
+      user_id: user_id,
+      integration_id: integration_id,
+      teams_user_id: profile["id"],
+      tenant_id: id_claims.tid || profile["tenant_id"] || "common",
+      provider_account_id: id_claims.oid || profile["id"],
+      provider_account_email: id_claims.email || profile["mail"],
+      scope: ensure_calendar_scope(tokens)
+    })
+  end
+
+  defp decode_id_claims(tokens, user_id) do
+    case IdToken.decode(tokens[:id_token]) do
+      {:ok, claims} ->
+        claims
+
+      {:error, reason} ->
+        if tokens[:id_token] do
+          Logger.warning(
+            "Failed to decode Teams id_token — account dedup falling back to profile data",
+            user_id: user_id,
+            reason: inspect(reason)
+          )
         end
 
-      _other ->
-        nil
+        %{oid: nil, email: nil, tid: nil}
     end
+  end
+
+  defp ensure_calendar_scope(tokens) do
+    returned_scope = tokens[:scope] || tokens.scope || ""
+
+    if String.contains?(returned_scope, "Calendars.ReadWrite"),
+      do: returned_scope,
+      else: @teams_scope
   end
 
   defp fetch_user_profile(token) do
@@ -209,8 +214,8 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
     )
   end
 
-  defp generate_state(user_id) do
-    State.generate(user_id, MicrosoftConfig.state_secret())
+  defp generate_state(user_id, integration_id) do
+    State.generate(user_id, MicrosoftConfig.state_secret(), integration_id)
   end
 
   defp verify_state(state) when is_binary(state) do

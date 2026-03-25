@@ -28,9 +28,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
       assert url =~ "scope=https%3A%2F%2Fgraph.microsoft.com%2FCalendars.ReadWrite"
     end
 
-    test "handles custom scopes" do
-      url = OAuthHelper.authorization_url(1, "http://uri", ["Calendars.Read"])
-      assert url =~ "scope=Calendars.Read"
+    test "accepts options for login_hint" do
+      url = OAuthHelper.authorization_url(1, "http://uri", login_hint: "user@example.com")
+      assert url =~ "login_hint=user%40example.com"
     end
   end
 
@@ -76,7 +76,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
   end
 
   defp expect_token_response(access_token, refresh_token) do
-    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
       {:ok,
        %{
          status: 200,
@@ -93,7 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
 
   describe "token operations" do
     test "exchange_code_for_tokens uses TokenExchange" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
          %{
            status: 200,
@@ -109,7 +109,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
     end
 
     test "refresh_access_token uses TokenExchange" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
          %{
            status: 200,

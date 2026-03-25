@@ -24,29 +24,37 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
     test "returns URL from base helper" do
       url = OAuthHelper.authorization_url(1, "http://uri")
       assert url =~ "https://accounts.google.com/o/oauth2/v2/auth"
-      assert url =~ "scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar"
+      assert url =~ "scope=openid+email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar"
     end
 
     test "handles custom scopes" do
       url = OAuthHelper.authorization_url(1, "http://uri", ["read"])
-      assert url =~ "scope=read"
+      assert url =~ "scope=openid+email+read"
     end
   end
 
-  defp expect_token_response(access_token, refresh_token) do
-    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
-      {:ok,
-       %{
-         status: 200,
-         body:
-           Jason.encode!(%{
-             "access_token" => access_token,
-             "refresh_token" => refresh_token,
-             "expires_in" => 3600,
-             "scope" => "calendar"
-           })
-       }}
+  defp expect_token_response(access_token, refresh_token, opts \\ []) do
+    id_token = Keyword.get(opts, :id_token)
+
+    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+      base = %{
+        "access_token" => access_token,
+        "refresh_token" => refresh_token,
+        "expires_in" => 3600,
+        "scope" => "calendar"
+      }
+
+      body = if id_token, do: Map.put(base, "id_token", id_token), else: base
+
+      {:ok, %{status: 200, body: Jason.encode!(body)}}
     end)
+  end
+
+  defp fake_id_token(sub, email \\ "test@example.com") do
+    header = Base.url_encode64("{}", padding: false)
+    payload = Base.url_encode64(Jason.encode!(%{"sub" => sub, "email" => email}), padding: false)
+    signature = Base.url_encode64("sig", padding: false)
+    "#{header}.#{payload}.#{signature}"
   end
 
   describe "handle_callback/3" do
@@ -75,13 +83,19 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
     test "updates existing integration" do
       user = insert(:user)
       insert(:profile, user: user)
+      account_id = "google-sub-123"
 
       existing =
-        insert(:calendar_integration, user: user, provider: "google", access_token: "old")
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          provider_account_id: account_id,
+          access_token: "old"
+        )
 
       state = GoogleOAuthHelper.generate_state(user.id)
 
-      expect_token_response("new-at", "new-rt")
+      expect_token_response("new-at", "new-rt", id_token: fake_id_token(account_id))
 
       # Expect discovery if calendar_list is empty
       expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
@@ -116,7 +130,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
 
   describe "token operations" do
     test "exchange_code_for_tokens delegates to base helper" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
          %{
            status: 200,
@@ -132,7 +146,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
     end
 
     test "refresh_access_token delegates to base helper" do
-      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
         {:ok,
          %{
            status: 200,

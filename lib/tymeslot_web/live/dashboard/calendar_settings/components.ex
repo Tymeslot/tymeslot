@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   Renders the section for already connected calendars.
   """
   attr :integrations, :list, required: true
-  attr :testing_integration_id, :integer, required: true
+  attr :testing_integration_id, :any, default: nil
   attr :validating_integration_id, :integer, required: true
   attr :is_refreshing, :boolean, required: true
   attr :myself, :any, required: true
@@ -280,6 +280,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
                 :if={@health_state && @health_state.status == :unhealthy}
               />
             </div>
+            <p :if={@integration.provider_account_email} class="text-sm text-tymeslot-500 truncate -mt-1 mb-1">
+              {@integration.provider_account_email}
+            </p>
 
             <p :if={!@integration.is_active} class="text-sm text-tymeslot-400 font-medium italic">
               This integration is currently disabled. Toggle the switch to enable conflict checking.
@@ -384,6 +387,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   Renders the grid of available calendar providers.
   """
   attr :available_calendar_providers, :list, required: true
+  attr :integrations, :list, default: []
   attr :myself, :any, required: true
 
   @spec available_providers_section(map()) :: Phoenix.LiveView.Rendered.t()
@@ -400,11 +404,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         <%= for descp <- @available_calendar_providers do %>
           <% info = Helpers.provider_card_info(descp.type) %>
+          <% has_existing = Enum.any?(@integrations, &(&1.provider == info.provider)) %>
           <ProviderCard.provider_card
             provider={info.provider}
             title={descp.display_name}
             description={info.desc}
-            button_text={info.btn}
+            button_text={if has_existing, do: "Add Another Account", else: info.btn}
             click_event={info.click}
             target={@myself}
             provider_value={info.provider}

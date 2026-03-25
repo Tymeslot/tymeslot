@@ -5,6 +5,7 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
 
   import Ecto.Query
   alias Ecto.Changeset
+  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.Repo
@@ -99,6 +100,57 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   @doc """
+  Finds an active calendar integration by provider and account ID for a user.
+  """
+  @spec get_by_account_for_user(integer(), String.t(), String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def get_by_account_for_user(user_id, provider, provider_account_id)
+      when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
+    result =
+      CalendarIntegrationSchema
+      |> where(
+        [c],
+        c.user_id == ^user_id and
+          c.provider == ^provider and
+          c.provider_account_id == ^provider_account_id and
+          c.is_active == true
+      )
+      |> limit(1)
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      integration -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
+    end
+  end
+
+  @doc """
+  Finds any calendar integration (active or inactive) by provider and account ID for a user.
+  Used to detect inactive duplicates before creating a new row.
+  """
+  @spec get_any_by_account_for_user(integer(), String.t(), String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def get_any_by_account_for_user(user_id, provider, provider_account_id)
+      when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
+    result =
+      CalendarIntegrationSchema
+      |> where(
+        [c],
+        c.user_id == ^user_id and
+          c.provider == ^provider and
+          c.provider_account_id == ^provider_account_id
+      )
+      |> order_by([c], desc: c.is_active)
+      |> limit(1)
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      integration -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
+    end
+  end
+
+  @doc """
   Creates a new calendar integration.
   """
   @spec create(map()) :: {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -131,9 +183,6 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
     # Count existing integrations before this one
     existing_count = count_for_user(user_id)
 
-    # If the profile has no primary OR this is the first integration, set as primary
-    alias Tymeslot.DatabaseQueries.ProfileQueries
-
     need_primary =
       case ProfileQueries.get_by_user_id(user_id) do
         {:ok, %{primary_calendar_integration_id: nil}} -> true
@@ -149,9 +198,6 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   defp set_integration_as_primary(integration) do
-    # Import ProfileQueries to set primary
-    alias Tymeslot.DatabaseQueries.ProfileQueries
-
     # Clear other booking calendars and set this as primary
     clear_others_fn = fn ->
       # No need to clear others for the first integration
@@ -217,13 +263,43 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
 
   @doc """
   Toggles the active status of an integration.
+
+  When reactivating, checks that no other active integration exists for the same
+  `(user_id, provider, provider_account_id)` to prevent a unique-constraint violation.
   """
   @spec toggle_active(CalendarIntegrationSchema.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | :duplicate_account}
   def toggle_active(%CalendarIntegrationSchema{} = integration) do
-    integration
-    |> Changeset.change(%{is_active: !integration.is_active})
-    |> Repo.update()
+    if integration.is_active do
+      integration
+      |> Changeset.change(%{is_active: false})
+      |> Repo.update()
+    else
+      case check_reactivation_conflict(integration) do
+        :ok ->
+          integration
+          |> Changeset.change(%{is_active: true})
+          |> Repo.update()
+
+        {:error, :duplicate_account} = err ->
+          err
+      end
+    end
+  end
+
+  defp check_reactivation_conflict(%{provider_account_id: nil}), do: :ok
+
+  defp check_reactivation_conflict(%{provider_account_id: ""}), do: :ok
+
+  defp check_reactivation_conflict(integration) do
+    case get_by_account_for_user(
+           integration.user_id,
+           integration.provider,
+           integration.provider_account_id
+         ) do
+      {:ok, _existing} -> {:error, :duplicate_account}
+      {:error, :not_found} -> :ok
+    end
   end
 
   @doc """
@@ -255,15 +331,11 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   @doc """
-  Updates a calendar integration - alias for update/2.
+  Updates a calendar integration - delegates to update/2.
   """
   @spec update_integration(CalendarIntegrationSchema.t(), map()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def update_integration(%CalendarIntegrationSchema{} = integration, attrs) do
-    integration
-    |> CalendarIntegrationSchema.changeset(attrs)
-    |> Repo.update()
-  end
+  defdelegate update_integration(integration, attrs), to: __MODULE__, as: :update
 
   @doc """
   Counts calendar integrations for a user.

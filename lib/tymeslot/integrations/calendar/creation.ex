@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   enforcing primary-integration invariants.
   """
 
+  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
@@ -34,16 +35,42 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     with {:ok, sanitized} <-
            CalendarInputValidation.validate_calendar_integration_form(params, metadata: metadata),
          validated <- Map.merge(params, sanitized),
+         :ok <- check_no_duplicate_calendar(user_id, validated),
          count_before <- length(CalendarManagement.list_calendar_integrations(user_id)),
          {:ok, integration} <- Calendar.create_integration(validated, user_id) do
       ensure_primary_on_first(user_id, integration.id, count_before)
       {:ok, integration}
     else
+      {:error, :duplicate_integration} ->
+        {:error, :duplicate_integration}
+
       {:error, %Ecto.Changeset{} = cs} ->
         {:error, {:changeset, cs}}
 
       {:error, validation_errors} when is_map(validation_errors) ->
         {:error, {:form_errors, validation_errors}}
+    end
+  end
+
+  defp check_no_duplicate_calendar(user_id, params) do
+    provider = params["provider"] || params[:provider]
+    url = params["url"] || params[:url]
+    username = params["username"] || params[:username]
+    calendar_paths = params["calendar_paths"] || params[:calendar_paths]
+
+    if is_binary(url) and url != "" and is_binary(username) and username != "" and
+         is_binary(provider) do
+      # Derive account_id using the same normalization as prepare_attrs
+      {base_url, _paths} = parse_calendar_configuration(provider, url, calendar_paths)
+      account_id = "#{base_url}||#{username}"
+
+      # Check both active and inactive integrations to prevent duplicate rows
+      case CalendarIntegrationQueries.get_any_by_account_for_user(user_id, provider, account_id) do
+        {:ok, _existing} -> {:error, :duplicate_integration}
+        {:error, :not_found} -> :ok
+      end
+    else
+      :ok
     end
   end
 
@@ -79,6 +106,12 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
     {base_url, calendar_paths_list} = parse_calendar_configuration(provider, url, calendar_paths)
 
+    # Derive provider_account_id for CalDAV-family dedup: base_url||username
+    provider_account_id =
+      if is_binary(base_url) and base_url != "" and is_binary(username) and username != "",
+        do: "#{base_url}||#{username}",
+        else: nil
+
     attrs = %{
       user_id: user_id,
       name: name,
@@ -87,6 +120,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       username: username,
       password: password,
       calendar_paths: calendar_paths_list,
+      provider_account_id: provider_account_id,
       is_active: true
     }
 
