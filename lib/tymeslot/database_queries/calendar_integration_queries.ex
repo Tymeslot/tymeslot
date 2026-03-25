@@ -125,6 +125,32 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   @doc """
+  Finds any calendar integration (active or inactive) by provider and account ID for a user.
+  Used to detect inactive duplicates before creating a new row.
+  """
+  @spec get_any_by_account_for_user(integer(), String.t(), String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def get_any_by_account_for_user(user_id, provider, provider_account_id)
+      when is_integer(user_id) and is_binary(provider) and is_binary(provider_account_id) do
+    result =
+      CalendarIntegrationSchema
+      |> where(
+        [c],
+        c.user_id == ^user_id and
+          c.provider == ^provider and
+          c.provider_account_id == ^provider_account_id
+      )
+      |> order_by([c], desc: c.is_active)
+      |> limit(1)
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      integration -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
+    end
+  end
+
+  @doc """
   Creates a new calendar integration.
   """
   @spec create(map()) :: {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}

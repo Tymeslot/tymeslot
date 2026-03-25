@@ -498,6 +498,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
         <Components.available_providers_section
           available_calendar_providers={@available_calendar_providers}
+          integrations={@integrations}
           myself={@myself}
         />
       <% end %>

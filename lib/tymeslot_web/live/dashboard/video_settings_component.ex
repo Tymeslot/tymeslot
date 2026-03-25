@@ -390,11 +390,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
             <%= for descp <- @available_video_providers do %>
               <% provider = Atom.to_string(descp.type) %>
               <% {desc, btn} = get_provider_display_info(descp.type) %>
+              <% has_existing = Enum.any?(@integrations, &(&1.provider == provider)) %>
               <ProviderCard.provider_card
                 provider={provider}
                 title={descp.display_name}
                 description={desc}
-                button_text={btn}
+                button_text={if has_existing, do: "Add Another Account", else: btn}
                 click_event="setup_provider"
                 target={@myself}
                 provider_value={provider}

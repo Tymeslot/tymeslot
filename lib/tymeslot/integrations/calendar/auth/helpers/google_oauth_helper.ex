@@ -106,11 +106,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
             create_new_google_integration(user_id, tokens[:provider_account_id], token_attrs)
         end
 
-      # Fallback — legacy per-provider match
+      # Fallback — no account ID available
       true ->
         case CalendarIntegrationQueries.get_by_user_and_provider(user_id, "google") do
-          {:ok, existing} ->
-            update_existing_integration(existing, token_attrs)
+          {:ok, _existing} ->
+            # User already has Google integration(s) but we can't identify which account
+            # this callback belongs to. Reject to avoid silently overwriting.
+            {:error,
+             "Could not identify your Google account. Please try again. If the problem persists, remove and re-add the integration."}
 
           {:error, :not_found} ->
             create_new_google_integration(user_id, nil, token_attrs)
@@ -132,16 +135,32 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
     result =
       if is_binary(provider_account_id) do
-        AccountMatch.create_with_race_protection(
-          create_fn,
+        reactivation_attrs = Map.put(token_attrs, :is_active, true)
+
+        AccountMatch.find_or_create_with_reactivation(
           fn ->
-            CalendarIntegrationQueries.get_by_account_for_user(
+            CalendarIntegrationQueries.get_any_by_account_for_user(
               user_id,
               "google",
               provider_account_id
             )
           end,
-          fn existing -> CalendarIntegrationQueries.update(existing, token_attrs) end
+          fn existing ->
+            update_existing_integration(existing, reactivation_attrs)
+          end,
+          fn ->
+            AccountMatch.create_with_race_protection(
+              create_fn,
+              fn ->
+                CalendarIntegrationQueries.get_by_account_for_user(
+                  user_id,
+                  "google",
+                  provider_account_id
+                )
+              end,
+              fn existing -> CalendarIntegrationQueries.update(existing, token_attrs) end
+            )
+          end
         )
       else
         create_fn.()

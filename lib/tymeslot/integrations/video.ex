@@ -115,7 +115,12 @@ defmodule Tymeslot.Integrations.Video do
          provider_account_id: account_id
        })
        when is_binary(account_id) and account_id != "" do
-    case VideoIntegrationQueries.get_by_account_for_user(user_id, to_string(provider), account_id) do
+    # Check both active and inactive integrations to prevent duplicate rows
+    case VideoIntegrationQueries.get_any_by_account_for_user(
+           user_id,
+           to_string(provider),
+           account_id
+         ) do
       {:ok, _existing} -> {:error, :duplicate_integration}
       {:error, :not_found} -> :ok
     end
@@ -262,8 +267,24 @@ defmodule Tymeslot.Integrations.Video do
         VideoIntegrationQueries.update(existing, token_attrs)
 
       {:error, :not_found} ->
-        create_attrs = Map.merge(token_attrs, %{user_id: user_id, name: name, provider: provider})
+        reactivate_or_create_video(user_id, provider, name, provider_account_id, token_attrs)
+    end
+  end
 
+  defp reactivate_or_create_video(user_id, provider, name, provider_account_id, token_attrs) do
+    reactivation_attrs = Map.put(token_attrs, :is_active, true)
+    create_attrs = Map.merge(token_attrs, %{user_id: user_id, name: name, provider: provider})
+
+    AccountMatch.find_or_create_with_reactivation(
+      fn ->
+        VideoIntegrationQueries.get_any_by_account_for_user(
+          user_id,
+          provider,
+          provider_account_id
+        )
+      end,
+      fn existing -> VideoIntegrationQueries.update(existing, reactivation_attrs) end,
+      fn ->
         AccountMatch.create_with_race_protection(
           fn -> VideoIntegrationQueries.create(create_attrs) end,
           fn ->
@@ -275,7 +296,8 @@ defmodule Tymeslot.Integrations.Video do
           end,
           fn existing -> VideoIntegrationQueries.update(existing, token_attrs) end
         )
-    end
+      end
+    )
   end
 
   defp fallback_match_or_create(user_id, provider, name, token_attrs) do
@@ -286,8 +308,11 @@ defmodule Tymeslot.Integrations.Video do
     )
 
     case VideoIntegrationQueries.get_by_provider_for_user(user_id, provider) do
-      {:ok, existing} ->
-        VideoIntegrationQueries.update(existing, token_attrs)
+      {:ok, _existing} ->
+        # User already has integration(s) for this provider but we can't identify
+        # which account this callback belongs to. Reject to avoid silently overwriting.
+        {:error,
+         "Could not identify your account. Please try again. If the problem persists, remove and re-add the integration."}
 
       {:error, :not_found} ->
         VideoIntegrationQueries.create(

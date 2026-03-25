@@ -64,7 +64,8 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
       {base_url, _paths} = parse_calendar_configuration(provider, url, calendar_paths)
       account_id = "#{base_url}||#{username}"
 
-      case CalendarIntegrationQueries.get_by_account_for_user(user_id, provider, account_id) do
+      # Check both active and inactive integrations to prevent duplicate rows
+      case CalendarIntegrationQueries.get_any_by_account_for_user(user_id, provider, account_id) do
         {:ok, _existing} -> {:error, :duplicate_integration}
         {:error, :not_found} -> :ok
       end

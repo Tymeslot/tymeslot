@@ -74,6 +74,26 @@ defmodule Tymeslot.Integrations.Common.OAuth.AccountMatch do
   end
 
   @doc """
+  Finds an existing integration (active or inactive) by account, reactivating if needed,
+  or creates a new one. Prevents duplicate rows when reconnecting an inactive account.
+
+  - `find_any_fn` looks up any row (active or inactive) for the account
+  - `update_fn` updates the found row's tokens and reactivates it
+  - `create_fn` creates a new row if no match at all
+  """
+  @spec find_or_create_with_reactivation(
+          find_any_fn :: (-> {:ok, any()} | {:error, :not_found}),
+          update_fn :: (any() -> {:ok, any()} | {:error, any()}),
+          create_fn :: (-> {:ok, any()} | {:error, any()})
+        ) :: {:ok, any()} | {:error, any()}
+  def find_or_create_with_reactivation(find_any_fn, update_fn, create_fn) do
+    case find_any_fn.() do
+      {:ok, existing} -> update_fn.(existing)
+      {:error, :not_found} -> create_fn.()
+    end
+  end
+
+  @doc """
   Checks if an Ecto changeset error is a unique account constraint violation.
   """
   @spec unique_account_violation?(Ecto.Changeset.t()) :: boolean()
