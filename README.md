@@ -2,226 +2,34 @@
 
 <img src="./priv/static/images/brand/logo-with-text.svg" alt="Tymeslot" height="80" />
 
-**The Open-Source Alternative to Calendly**
+**Open-source appointment scheduling. Self-host in minutes.**
 
-Enterprise-grade meeting scheduling platform built with Elixir & Phoenix LiveView
+Booking pages, calendar sync, video rooms, and automated emails — on your server. Built on Elixir/OTP so it keeps running while you're not looking.
 
 [![License: Elastic-2.0](https://img.shields.io/badge/License-Elastic--2.0-blue.svg)](https://www.elastic.co/licensing/elastic-license)
 [![Elixir](https://img.shields.io/badge/Elixir-1.19.3-purple.svg)](https://elixir-lang.org)
 [![Phoenix](https://img.shields.io/badge/Phoenix-1.8-orange.svg)](https://phoenixframework.org)
-[![Phoenix LiveView](https://img.shields.io/badge/Phoenix%20LiveView-1.1-red.svg)](https://github.com/phoenixframework/phoenix_live_view)
+[![Phoenix LiveView](https://img.shields.io/badge/LiveView-1.1-red.svg)](https://github.com/phoenixframework/phoenix_live_view)
 [![GitHub stars](https://img.shields.io/github/stars/tymeslot/tymeslot?style=social)](https://github.com/tymeslot/tymeslot/stargazers)
 
-[🚀 Try Cloud Version](https://tymeslot.app) · [📖 Documentation](https://tymeslot.app/docs) · [🐛 Report Bug](https://github.com/tymeslot/tymeslot/issues)
+[**Deploy with Docker →**](README-Docker.md) · [**Try Cloud →**](https://tymeslot.app)<br>
+[**Docs →**](https://tymeslot.app/docs) · [**Issues →**](https://github.com/tymeslot/tymeslot/issues)
 
 </div>
 
 ---
 
-## 🎯 Why Choose Tymeslot?
+Tymeslot is a scheduling platform you deploy yourself. Connect your calendars, set your hours, share a booking link — and it handles the rest: video rooms generated at booking time, confirmation emails with `.ics` attachments, configurable reminders, reschedule and cancel flows, and webhook notifications when anything changes.
 
-### 🔓 Open Source (ELv2)
-Fork, audit, contribute — or just use it. No vendor lock-in, ever.
+Single Docker container. PostgreSQL included. Built on Elixir/OTP — designed to run unattended without falling over.
 
-### 🏠 Your Data, Your Rules
-Self-host on Docker/Cloudron or use our managed cloud.
+No tracking pixels. No analytics pipeline. No data leaving your server.
 
-### 🆓 Full-Featured Free Tier
-Everything you need to get started. Forever. No credit card required.
+> Evaluating alternatives? [See how Tymeslot compares to Calendly.](#tymeslot-vs-calendly)
 
-### 🔒 Privacy-First
-No tracking pixels, no data mining, no selling your data.
+---
 
-### 🎨 Professional Templates
-Responsive email designs with calendar attachments.
-
-### ⚡ Built for Performance
-Real-time updates with Phoenix LiveView. Blazing fast.
-
-## 🔌 Integrations
-
-### Calendar Providers (6)
-
-<div align="center">
-  <img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="48" title="Google Calendar" />
-  <img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook Calendar" height="48" title="Outlook Calendar" />
-  <img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="48" title="CalDAV" />
-  <img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="48" title="Nextcloud Calendar" />
-  <img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="48" title="Radicale" />
-  <img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="48" title="Zimbra" />
-</div>
-
-Google Calendar · Outlook · CalDAV · Nextcloud · Radicale · Zimbra
-
-### Video Conferencing (5)
-
-<div align="center">
-  <img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="48" title="Google Meet" />
-  <img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="48" title="Microsoft Teams" />
-  <img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="48" title="MiroTalk P2P" />
-  <img src="./priv/static/icons/providers/video/medium/local.png" alt="Local Meeting" height="48" title="In-Person / Phone" />
-  <img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom Links" height="48" title="Custom Video Links" />
-</div>
-
-Google Meet · Microsoft Teams · MiroTalk P2P · In-Person / Phone · Custom Links
-
-## 💰 Simple, Transparent Pricing
-
-### 🆓 Free Forever — Self-Hosted or Cloud
-
-- ✅ Unlimited bookings & meeting types
-- ✅ All 6 calendar providers
-- ✅ All 5 video platforms
-- ✅ Multi-language (EN, DE, UK)
-- ✅ Webhooks & embedding
-- ✅ Advanced reminders
-- ✅ Community support
-
-**Perfect for:** Individuals, small teams, self-hosters
-
-### ⭐ Pro Tier — €5/month · Cloud Only
-
-- ✅ Everything in Free
-- ✅ Priority support
-- ✅ Support open-source development
-- ✅ Early access to new features
-
-**Perfect for:** Professional businesses, agencies
-
-[Get Started →](https://tymeslot.app)
-
-> **Self-Hosting**: Always free. Deploy on Docker, Cloudron, or bare metal — no licensing fees, ever.
-
-## ✨ Feature Highlights
-
-### 🔐 Authentication & Users
-- Multi-provider OAuth (Google, GitHub)
-- Generic OAuth/OIDC SSO (Keycloak, Authentik, Okta, Azure AD, etc.)
-- Email/password with verification
-- Customizable profiles & avatars
-- 4-step onboarding flow
-
-### 🧠 Smart Scheduling
-- 90+ timezone-aware cities
-- Custom business hours & breaks
-- Real-time conflict detection
-- Configurable meeting types
-
-### 📅 Calendar Sync
-- 6 calendar providers
-- Full CRUD operations
-- Auto token refresh
-- Calendar discovery
-
-### 🎥 Video Conferencing
-- 5 video providers
-- Auto room creation
-- Role-based access
-- OAuth integration
-
-### 📧 Email System
-- Professional templates (MJML)
-- 5 notification types
-- Calendar attachments
-- Delivery tracking
-
-### 🔒 Security
-- Rate limiting
-- AES encryption
-- XSS protection
-- Circuit breakers
-
-### 🌍 Internationalization
-- 3 languages (EN, DE, UK)
-- Auto browser detection
-- Localized booking pages
-- DST handling
-
-### 🔗 Embedding
-- Secure iframe widgets
-- Domain restrictions
-- Webhook notifications
-- Customizable pages
-
-### ⏰ Reminders
-- Unlimited per meeting
-- Flexible timing
-- Email notifications
-- Automatic retry
-
-## 📸 Screenshots
-
-**Dashboard & Management**
-
-![Dashboard](./priv/static/images/screenshots/dashboard.png)
-
-**Availability & Scheduling**
-
-![Availability](./priv/static/images/screenshots/availability.png)
-
-**Embedded Booking Widget**
-
-![Embedding](./priv/static/images/screenshots/embedding.png)
-
-## 🆚 Tymeslot vs Calendly
-
-| Feature | Tymeslot | Calendly |
-|---------|----------|----------|
-| **Open Source** | ✅ Yes | ❌ No |
-| **Self-Hosting** | ✅ Free Forever | ❌ Not Available |
-| **Data Privacy** | ✅ Your Infrastructure | ❌ Their Servers |
-| **Unlimited Bookings** | ✅ Free Tier | ❌ Paid Only |
-| **Calendar Providers** | 6 Providers | 3 Providers |
-| **Video Providers** | 5 Providers | 3 Providers |
-| **Multi-Language** | ✅ 3 Languages | ✅ Multiple |
-| **Webhooks** | ✅ Free Tier | ❌ Paid Only |
-| **Embedding** | ✅ Free Tier | ✅ Available |
-
-## 💼 Perfect For
-
-### 👨‍💼 Freelancers & Consultants
-Replace endless email chains with professional booking pages.
-
-### 🏢 Small Businesses
-Coordinate team availability without enterprise pricing.
-
-### 🔒 Privacy-Conscious Orgs
-Keep scheduling data on your own infrastructure.
-
-### 🌍 International Teams
-Multi-language support for global customer bases.
-
-### 💻 Developers & Tech Teams
-Extensible platform with webhook integrations.
-
-### 📖 Open Source Projects
-Embed booking widgets in your documentation.
-
-## 🛠️ Built With
-
-**Backend:** Elixir 1.19 · Phoenix 1.8 · Phoenix LiveView 1.1 · Oban
-**Database:** PostgreSQL 14+ · Ecto SQL
-**Frontend:** Tailwind CSS · ESBuild · Alpine.js
-**Email:** Swoosh · MJML Templates
-**Infrastructure:** Docker · Cloudron Ready
-
-## 🚀 Getting Started
-
-### ☁️ Cloud
-[Try Now →](https://tymeslot.app) — Zero setup · Start in 60 seconds
-
-### 🐳 Docker
-[Guide →](README-Docker.md) — Self-hosting · Full control
-
-### 📦 Cloudron
-[Guide →](README-Cloudron.md) — One-click install · Managed platform
-
-### 🚂 Railway
-[Deploy →](https://railway.com/deploy/tymeslot) — One-click cloud deploy · No server management
-
-## 🐳 Quick Start (Docker Image)
-
-If you already have Docker installed, you can pull and run the image in one step:
+## Quick Start
 
 ```bash
 docker run --name tymeslot \
@@ -233,116 +41,247 @@ docker run --name tymeslot \
   youruser/tymeslot:latest
 ```
 
-This command pulls the image automatically if it is not present locally. For a full Docker guide, see [README-Docker.md](README-Docker.md).
+Open [http://localhost:4000](http://localhost:4000) — your scheduling platform is running. For SMTP, TLS, and reverse proxy setup, see the [Docker guide](README-Docker.md).
 
-## 🤝 Contributing
+---
 
-### ⭐ Star the Repo
-[Star →](https://github.com/tymeslot/tymeslot/stargazers) — Help others discover Tymeslot.
+## Features
 
-### 💰 Support Development
-[Subscribe →](https://tymeslot.app) — Fund open-source development.
+### Scheduling
 
-### 🐛 Report Issues
-[Open Issue →](https://github.com/tymeslot/tymeslot/issues) — Bugs & feature requests.
+- **No double-bookings** — every connected calendar is checked at the moment of booking, not on a schedule; one conflict anywhere blocks the slot everywhere
+- **Availability that reflects reality** — working hours per day, date-specific overrides for holidays, and vacation blocks without touching a calendar
+- **Buffer time** — pad before, after, or both, per meeting type (0–120 min)
+- **Booking window** — nobody schedules six months out without your permission (1–365 days)
+- **Minimum notice** — enough lead time that you can actually prepare (0–168 hours)
+- **Timezone-aware** — 90+ cities, DST handled correctly, browser-detected on the booking page
 
-### 💻 Contribute Code
-[Guidelines →](CONTRIBUTING.md) — Local setup, development workflow & PR process.
+### Calendar Integrations
 
-## 🛡️ Security
+<div align="center">
+  <img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="48" title="Google Calendar" />
+  <img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook Calendar" height="48" title="Outlook Calendar" />
+  <img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="48" title="CalDAV" />
+  <img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="48" title="Nextcloud Calendar" />
+  <img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="48" title="Radicale" />
+  <img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="48" title="Zimbra" />
+</div>
 
-**Built-in Protection**
-- ✅ Input sanitization & XSS protection
-- ✅ AES encryption for credentials
-- ✅ Rate limiting & IP protection
-- ✅ Security headers (CSP, HSTS, CSRF)
-- ✅ Spam protection (honeypot + reCAPTCHA v3)
-- ✅ Regular dependency updates
+| Provider | Auth |
+|----------|------|
+| Google Calendar | OAuth 2.0 with automatic token refresh |
+| Microsoft Outlook / 365 | OAuth 2.0 with automatic token refresh |
+| CalDAV | Username / password |
+| Nextcloud Calendar | CalDAV |
+| Zimbra | CalDAV |
+| Radicale | CalDAV |
 
-**Spam Protection**
+Connect as many calendars as you have. Assign each meeting type to whichever calendar it belongs in. If an integration goes down, you get an email — you won't find out from a missed meeting.
 
-Protect signup and booking forms from bots:
-- **Honeypot**: Invisible field catches automated bots
-- **reCAPTCHA v3**: Google's invisible bot detection (optional)
+### Video Conferencing
 
-Enable in your environment:
-```bash
-export RECAPTCHA_SITE_KEY="your_key"
-export RECAPTCHA_SECRET_KEY="your_secret"
-export RECAPTCHA_SIGNUP_ENABLED="true"
-export RECAPTCHA_BOOKING_ENABLED="true"
-```
+<div align="center">
+  <img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="48" title="Google Meet" />
+  <img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="48" title="Microsoft Teams" />
+  <img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="48" title="MiroTalk P2P" />
+  <img src="./priv/static/icons/providers/video/medium/local.png" alt="In-Person / Phone" height="48" title="In-Person / Phone" />
+  <img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom Links" height="48" title="Custom Video Links" />
+</div>
 
-Get keys at [Google reCAPTCHA](https://www.google.com/recaptcha/admin)
+| Provider | Notes |
+|----------|-------|
+| Google Meet | Auto-generated via OAuth |
+| Microsoft Teams | Auto-generated via OAuth |
+| MiroTalk P2P | Self-hosted open-source WebRTC |
+| In-Person / Phone | Location/phone in email, no link |
+| Custom link | Static or dynamic URL |
 
-**Registration Control**
+Each meeting type picks its own provider — a sales call can use Meet while an internal sync uses MiroTalk.
 
-Disable new user sign-ups without taking down the app — useful for invite-only or closed deployments. Defaults to `true` (registration open) when the variable is unset.
+### Authentication
 
-When disabled:
-- The sign-up page and "Sign up" link are hidden
-- Email and OAuth registration attempts are rejected with an informative message
-- Existing users can still log in normally
+Works with whatever you already use for identity:
 
-How to set `REGISTRATION_ENABLED=false` depends on your deployment:
+- Email/password with verification flow
+- Google OAuth, GitHub OAuth
+- Generic OAuth 2.0 / OIDC — Keycloak, Authentik, Okta, Azure AD, or any standards-compliant provider
+- Registration and password auth can each be disabled independently — SSO-only and closed deployments are first-class. See [Configuration](#configuration).
 
-| Deployment | How to set it |
-|---|---|
-| Local dev | Add `REGISTRATION_ENABLED=false` to your `.env` file and `export` it before starting the server, or run `export REGISTRATION_ENABLED=false` directly |
-| Docker Compose | Add `REGISTRATION_ENABLED=false` to your `.env` file — it is forwarded to the container automatically |
-| `docker run` | Pass `-e REGISTRATION_ENABLED=false`, or use `--env-file .env` to load your `.env` file |
-| Railway | Set `REGISTRATION_ENABLED` to `false` in the Railway dashboard under Variables |
-| Cloudron | Set `REGISTRATION_ENABLED` to `false` in the Cloudron app settings |
+### Notifications & Automation
 
-**Password Authentication Control**
+**Email** — responsive MJML templates, `.ics` attachment on every outgoing email:
+- Booking confirmation — organizer and attendee
+- Reminders — configurable count and timing (minutes/hours/days before), per meeting type
+- Cancellation and reschedule notices — both parties, via signed guest links
+- Integration health alerts — you hear about a broken calendar before your bookers do
 
-Disable email/password login entirely and require OAuth — useful for SSO-only deployments (Keycloak, Authentik, Google Workspace, etc.) where you want to enforce identity-provider authentication. Defaults to `true` (password auth enabled) when the variable is unset.
+**Telegram** — booking, cancellation, and reschedule alerts to your phone. Use a shared bot or configure a personal one per user.
 
-When disabled:
-- The login form, sign-up page, and password reset flow are hidden
-- Direct `POST /auth/session` requests are rejected with an error redirect
-- Password-based registration and reset attempts return an informative error
-- OAuth login and registration continue to work normally
-- Existing users with passwords can still sign in via OAuth if configured
+**Webhooks** — HMAC-signed HTTP POST on `meeting_created`, `meeting_cancelled`, and `meeting_rescheduled`. Plug it into n8n, Zapier, Make, or your own backend.
 
-How to set `PASSWORD_AUTH_ENABLED=false` depends on your deployment:
+### Booking Lifecycle
 
-| Deployment | How to set it |
-|---|---|
-| Local dev | Add `PASSWORD_AUTH_ENABLED=false` to your `.env` file and `export` it before starting the server, or run `export PASSWORD_AUTH_ENABLED=false` directly |
-| Docker Compose | Add `PASSWORD_AUTH_ENABLED=false` to your `.env` file — it is forwarded to the container automatically |
-| `docker run` | Pass `-e PASSWORD_AUTH_ENABLED=false`, or use `--env-file .env` to load your `.env` file |
-| Railway | Set `PASSWORD_AUTH_ENABLED` to `false` in the Railway dashboard under Variables |
-| Cloudron | Set `PASSWORD_AUTH_ENABLED` to `false` in the Cloudron app settings |
+- Attendees book without an account — name, email, timezone, optional message, done
+- Every confirmation includes signed cancel and reschedule links — no login, no support ticket
+- Attendees can propose a new time; the organizer gets notified and confirms
+- Calendar events write on booking, update on reschedule, cancel on cancellation
 
-**Report Vulnerabilities**
+### Embedding
 
-Use our [contact page](https://tymeslot.app/contact) for security issues.
+Drop a `<script>` tag on any page and pick your embed style:
 
-## 📄 License
+| Mode | Description |
+|------|-------------|
+| Inline | Renders the booking widget inline on the page |
+| Popup modal | Full-screen overlay triggered by any element |
+| Floating button | Fixed-position widget anchored to a corner |
+| Direct link | Personal booking URL (`/:username/:meeting-type`) |
 
-This project is licensed under the Elastic License 2.0 - see the [LICENSE](LICENSE) file for details.
+Embeds are signed (6-hour token expiry) and domain-locked — your widget, only on your site.
 
-## 🏢 About
+### Customization
 
-Tymeslot is developed by:
-- **[Luka Karsten Breitig](https://lukabreitig.com)**
-- **Diletta Luna OÜ**
-- Sepapaja 6, 15551 Tallinn, Estonia
+- **Two themes** — Quill and Rhythm, both with dark mode
+- **Accent color** — override the brand color to match your identity
+- **Backgrounds** — solid, gradient, image, or video, with presets if you'd rather not choose
+- **Four languages** — English, German, Ukrainian, French, browser-detected with manual override
+- **White-label** — strip Tymeslot branding entirely (Pro, cloud only)
 
-## 💬 Community & Support
+### Security
 
-- 💬 [Join Discussions](https://github.com/tymeslot/tymeslot/discussions) — Get help from the community
-- 🐛 [Report Bugs](https://github.com/tymeslot/tymeslot/issues) — Help us improve
-- 💡 [Request Features](https://github.com/tymeslot/tymeslot/issues) — Share your ideas
-- 📧 [Contact Us](https://tymeslot.app/contact) — Business inquiries
-- ⭐ [Star on GitHub](https://github.com/tymeslot/tymeslot/stargazers) — Show your support
+Security is structural here, not bolted on after the fact:
+
+- OAuth tokens and API credentials are AES-encrypted at rest — they never appear in logs as plaintext
+- Rate limiting on every public endpoint: booking, auth, and embed
+- No third-party analytics, tracking pixels, or outbound data of any kind
+- CSRF on all forms, HMAC signatures on webhook payloads, signed tokens on embeds and guest links
+- Optional reCAPTCHA v3 and honeypot fields on all public forms — see [Configuration](#configuration)
+
+---
+
+## Screenshots
+
+**Dashboard**
+
+![Dashboard](./priv/static/images/screenshots/dashboard.png)
+
+**Booking Page**
+
+![Availability](./priv/static/images/screenshots/availability.png)
+
+**Embed Widget**
+
+![Embedding](./priv/static/images/screenshots/embedding.png)
+
+---
+
+## Deployment
+
+| Method | Guide | Notes |
+|--------|-------|-------|
+| Docker | [README-Docker.md](README-Docker.md) | Recommended for most self-hosters |
+| Cloudron | [README-Cloudron.md](README-Cloudron.md) | One-click install, automatic updates |
+| Railway | [Deploy →](https://railway.com/deploy/tymeslot) | One-click, no server management |
+| Cloud | [tymeslot.app](https://tymeslot.app) | Managed, zero setup |
+
+---
+
+## Configuration
+
+Key environment variables for self-hosted deployments.
+
+**Required:**
+
+| Variable | Description |
+|----------|-------------|
+| `SECRET_KEY_BASE` | Generate with `openssl rand -base64 64` |
+| `PHX_HOST` | Public hostname for URL generation |
+
+**Access control:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REGISTRATION_ENABLED` | `true` | Set `false` to close sign-ups |
+| `PASSWORD_AUTH_ENABLED` | `true` | Set `false` for OAuth/SSO only |
+
+**Spam protection (optional):**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RECAPTCHA_SITE_KEY` | — | Enables reCAPTCHA v3 |
+| `RECAPTCHA_SECRET_KEY` | — | Pair with site key |
+| `RECAPTCHA_SIGNUP_ENABLED` | `false` | reCAPTCHA on signup |
+| `RECAPTCHA_BOOKING_ENABLED` | `false` | reCAPTCHA on booking |
+
+For the full configuration reference (SMTP, database, OAuth provider credentials, etc.), see the [Docker guide](README-Docker.md).
+
+### Disabling registration
+
+Set `REGISTRATION_ENABLED=false` to close sign-ups without taking the app down — useful for invite-only or single-user deployments. When disabled, the sign-up page is hidden and OAuth registration is rejected; existing users continue to log in normally.
+
+### SSO-only mode
+
+Set `PASSWORD_AUTH_ENABLED=false` to hide the email/password form entirely and require OAuth or OIDC. Direct `POST /auth/session` requests are rejected with an error. Existing users with passwords can still sign in via OAuth if configured.
+
+Report security vulnerabilities via the [contact page](https://tymeslot.app/contact).
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Language | Elixir 1.19 / OTP 28 |
+| Web | Phoenix 1.8 · Phoenix LiveView 1.1 |
+| Database | PostgreSQL 14+ · Ecto SQL |
+| Background jobs | Oban |
+| Frontend | Tailwind CSS · Alpine.js · ESBuild |
+| Email | Swoosh · MJML |
+| Deployment | Docker · Cloudron |
+
+---
+
+## Tymeslot vs Calendly
+
+| | Tymeslot | Calendly |
+|--|----------|----------|
+| Open source | ✅ ELv2 | ❌ |
+| Self-hosting | ✅ Free forever | ❌ Not available |
+| Data ownership | ✅ Your infrastructure | ❌ Their servers |
+| Unlimited bookings | ✅ Free tier | ❌ Paid only |
+| Calendar providers | 6 | 3 |
+| Video providers | 5 | 3 |
+| Webhooks | ✅ Free tier | ❌ Paid only |
+| No tracking | ✅ | ❌ |
+
+---
+
+## Pricing
+
+**Free** — self-hosted or cloud. Full feature set, all integrations, unlimited bookings, no credit card required.
+
+**Pro — €5/month (cloud only).** White-label branding, priority support, early access to new features.
+
+Self-hosting is always free. No feature restrictions, no licensing fees, ever.
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup and the PR process. Bugs and feature requests go in [Issues](https://github.com/tymeslot/tymeslot/issues).
+
+## License
+
+[Elastic License 2.0](LICENSE) — free to use and self-host; commercial redistribution requires a separate agreement.
+
+## About
+
+Built by [Luka Karsten Breitig](https://lukabreitig.com) · Diletta Luna OÜ · Tallinn, Estonia
 
 ---
 
 <div align="center">
 
-**Built with ❤️ using Elixir, Phoenix, and LiveView**<br />
-Made by [Luka Karsten Breitig](https://lukabreitig.com) · Diletta Luna OÜ · Tallinn, Estonia
+Built with Elixir, Phoenix, and LiveView
 
 </div>
