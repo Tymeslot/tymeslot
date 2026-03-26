@@ -1059,9 +1059,9 @@ msgstr "Confirmation"
 #: lib/tymeslot_web/components/step_navigation.ex:30
 #, elixir-autogen, elixir-format
 msgid "Date & Time"
-msgstr ""
+msgstr "Date & Time"
 
 #: lib/tymeslot_web/components/step_navigation.ex:39
 #, elixir-autogen, elixir-format
 msgid "Details"
-msgstr ""
+msgstr "Details"
