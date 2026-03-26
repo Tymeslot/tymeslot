@@ -102,7 +102,6 @@ defmodule Tymeslot.MixProject do
       {:caldav_client, "~> 2.0"},
       {:webdavex, "~> 0.3.3"},
       {:tz, "~> 0.28"},
-      {:tz_extra, "~> 0.45"},
       {:uuid, "~> 1.1"},
       {:bcrypt_elixir, "~> 3.2"},
       {:oauth2, "~> 2.1"},

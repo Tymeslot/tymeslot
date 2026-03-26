@@ -1,210 +1,159 @@
 defmodule Tymeslot.Timezones.Data do
   @moduledoc """
-  Compile-time enriched timezone data from TzExtra.
-  Builds all lookup maps and option lists at compile time for O(1) access.
+  Timezone data aggregated from curated city lists.
+  Builds all lookup maps and search indexes at compile time for O(1) access.
   """
 
   alias Tymeslot.Timezones.{CountryCodes, Formatting}
 
-  # Search aliases: common city names that map to IANA IDs with different names
+  alias Tymeslot.Timezones.Cities.{
+    Africa,
+    Americas,
+    Asia,
+    Europe,
+    Oceania
+  }
+
+  # Search aliases: common alternate names that map to timezone IDs in our list.
+  # Only needed when the alias doesn't match any city or country name already
+  # present in the entries (e.g. "Mumbai" won't match "Kolkata, India").
   @search_aliases %{
     "mumbai" => "Asia/Kolkata",
+    "bombay" => "Asia/Kolkata",
+    "calcutta" => "Asia/Kolkata",
     "new delhi" => "Asia/Kolkata",
     "delhi" => "Asia/Kolkata",
-    "calcutta" => "Asia/Kolkata",
+    "madras" => "Asia/Kolkata",
     "beijing" => "Asia/Shanghai",
+    "peking" => "Asia/Shanghai",
     "cape town" => "Africa/Johannesburg",
-    "ho chi minh" => "Asia/Ho_Chi_Minh",
     "saigon" => "Asia/Ho_Chi_Minh",
     "constantinople" => "Europe/Istanbul",
-    "bombay" => "Asia/Kolkata",
-    "madras" => "Asia/Kolkata",
-    "peking" => "Asia/Shanghai",
     "rangoon" => "Asia/Yangon",
     "burma" => "Asia/Yangon",
     "ivory coast" => "Africa/Abidjan",
-    "hong kong" => "Asia/Hong_Kong",
     "wellington" => "Pacific/Auckland"
   }
 
-  # zone1970.tab gives the IANA-authoritative primary country for each timezone_id.
-  # The first country code in each line is the one the timezone is named for.
-  # TzExtra sorts countries alphabetically, but zone1970.tab has the right order.
-  @zone1970_primary_countries (
-                                priv = to_string(:code.priv_dir(:tz))
-
-                                tzdata_dir =
-                                  Enum.find(File.ls!(priv), &String.starts_with?(&1, "tzdata"))
-
-                                path = Path.join([priv, tzdata_dir, "zone1970.tab"])
-
-                                File.read!(path)
-                                |> String.split("\n")
-                                |> Enum.reject(
-                                  &(String.starts_with?(&1, "#") or String.trim(&1) == "")
-                                )
-                                |> Enum.flat_map(fn line ->
-                                  case String.split(line, "\t") do
-                                    [codes, _coords, tz_id | _rest] ->
-                                      [{tz_id, codes |> String.split(",") |> List.first()}]
-
-                                    _line ->
-                                      []
-                                  end
-                                end)
-                                |> Map.new()
-                              )
-
-  # Country overrides: timezone_id => ISO alpha-2 country code.
-  # Used only for genuinely disputed territories where the IANA assignment
-  # doesn't reflect the internationally recognised country.
-  # Note: most "wrong primary country" issues are fixed by @zone1970_primary_countries above.
-  @country_overrides %{
-    # Simferopol is the capital of Crimea, internationally recognised as Ukraine
-    # despite Russian occupation since 2014. zone1970.tab lists Russia first.
-    "Europe/Simferopol" => "UA"
+  # Legacy IANA IDs that should normalize to current canonical IDs.
+  # Only genuine renames go here — NOT link IDs like Europe/Amsterdam
+  # (which are their own entries in our city lists).
+  @legacy_ids %{
+    "Europe/Kiev" => "Europe/Kyiv"
   }
 
-  # Label overrides for entries where the default derivation isn't ideal
-  @label_overrides %{
-    "America/Argentina/Buenos_Aires" => "Buenos Aires",
-    "America/Argentina/Cordoba" => "Cordoba",
-    "America/Argentina/Salta" => "Salta",
-    "America/Argentina/Jujuy" => "Jujuy",
-    "America/Argentina/Tucuman" => "Tucuman",
-    "America/Argentina/Catamarca" => "Catamarca",
-    "America/Argentina/La_Rioja" => "La Rioja",
-    "America/Argentina/San_Juan" => "San Juan",
-    "America/Argentina/Mendoza" => "Mendoza",
-    "America/Argentina/San_Luis" => "San Luis",
-    "America/Argentina/Rio_Gallegos" => "Rio Gallegos",
-    "America/Argentina/Ushuaia" => "Ushuaia",
-    "America/Indiana/Indianapolis" => "Indianapolis",
-    "America/Indiana/Knox" => "Knox",
-    "America/Indiana/Marengo" => "Marengo",
-    "America/Indiana/Petersburg" => "Petersburg",
-    "America/Indiana/Tell_City" => "Tell City",
-    "America/Indiana/Vevay" => "Vevay",
-    "America/Indiana/Vincennes" => "Vincennes",
-    "America/Indiana/Winamac" => "Winamac",
-    "America/Kentucky/Louisville" => "Louisville",
-    "America/Kentucky/Monticello" => "Monticello",
-    "America/North_Dakota/Beulah" => "Beulah",
-    "America/North_Dakota/Center" => "Center",
-    "America/North_Dakota/New_Salem" => "New Salem"
-  }
-
-  @enrich_entry fn entry, overrides ->
-    city =
-      Map.get(overrides, entry.time_zone_id) ||
-        entry.time_zone_id
-        |> String.split("/")
-        |> List.last()
-        |> String.replace("_", " ")
-
-    %{
-      timezone_id: entry.time_zone_id,
-      label: "#{city}, #{entry.country.name}",
-      country_alpha3: CountryCodes.to_alpha3(entry.country.code),
-      city: city,
-      country_name: entry.country.name,
-      country_code: entry.country.code
-    }
-  end
-
-  # All entries from TzExtra, enriched with city/country info.
-  # A timezone_id can appear multiple times (once per country that uses it).
+  # Aggregate all city entries from continent modules.
   @all_entries (
-                 enrich = @enrich_entry
-                 overrides = @label_overrides
+                 entries =
+                   Americas.cities() ++
+                     Europe.cities() ++
+                     Asia.cities() ++
+                     Africa.cities() ++
+                     Oceania.cities()
 
-                 TzExtra.countries_time_zones()
-                 |> Enum.map(&enrich.(&1, overrides))
-                 |> Enum.sort_by(& &1.label)
+                 Enum.map(entries, fn {tz_id, city, country_name, country_code} ->
+                   %{
+                     timezone_id: tz_id,
+                     label: "#{city}, #{country_name}",
+                     country_alpha3: CountryCodes.to_alpha3(country_code),
+                     city: city,
+                     country_name: country_name,
+                     country_code: country_code
+                   }
+                 end)
                )
 
-  # Primary entry per timezone_id: selected using the IANA-authoritative zone1970.tab
-  # primary country, with @country_overrides applied on top for disputed territories.
-  # Falls back to the first (alphabetical) TzExtra entry for any timezone not in zone1970.tab.
-  @primary_entries (
-                     enrich = @enrich_entry
-                     label_overrides = @label_overrides
-                     country_overrides = @country_overrides
-                     zone1970 = @zone1970_primary_countries
+  # Options list sorted alphabetically by label
+  @options @all_entries
+           |> Enum.sort_by(& &1.label)
+           |> Enum.map(fn e -> {e.label, e.timezone_id} end)
 
-                     all_tz_entries = TzExtra.countries_time_zones()
+  # Lookup maps
+  @timezone_to_country Map.new(@all_entries, fn e -> {e.timezone_id, e.country_alpha3} end)
+  @timezone_to_label Map.new(@all_entries, fn e -> {e.timezone_id, e.label} end)
+  @valid_ids MapSet.new(@all_entries, fn e -> e.timezone_id end)
 
-                     # Index all entries by {timezone_id, country_code} for O(1) lookup
-                     by_tz_and_country =
-                       Map.new(all_tz_entries, fn entry ->
-                         {{entry.time_zone_id, entry.country.code}, entry}
-                       end)
-
-                     # First alphabetical entry per timezone_id (fallback only)
-                     first_by_tz_id =
-                       Enum.reduce(all_tz_entries, %{}, fn entry, acc ->
-                         Map.put_new(acc, entry.time_zone_id, entry)
-                       end)
-
-                     entries =
-                       Enum.map(first_by_tz_id, fn {tz_id, first_entry} ->
-                         # Priority: country_overrides > zone1970 primary > first alphabetical
-                         preferred_code =
-                           Map.get(country_overrides, tz_id) ||
-                             Map.get(zone1970, tz_id)
-
-                         entry =
-                           case preferred_code do
-                             nil -> first_entry
-                             code -> Map.get(by_tz_and_country, {tz_id, code}, first_entry)
-                           end
-
-                         enrich.(entry, label_overrides)
-                       end)
-
-                     Enum.sort_by(entries, & &1.label)
-                   )
-
-  # Options list uses deduplicated primary entries (one per timezone_id)
-  @options Enum.map(@primary_entries, fn e -> {e.label, e.timezone_id} end)
-
-  # Lookup maps use primary entry per timezone_id
-  @timezone_to_country Map.new(@primary_entries, fn e -> {e.timezone_id, e.country_alpha3} end)
-  @timezone_to_label Map.new(@primary_entries, fn e -> {e.timezone_id, e.label} end)
-  @valid_ids MapSet.new(@primary_entries, fn e -> e.timezone_id end)
-
-  # Search index uses ALL entries (so searching "Netherlands" finds Europe/Brussels)
+  # Search index: lowercase label → entry, plus aliases
   @search_index (
-                  primary_by_id = Map.new(@primary_entries, fn e -> {e.timezone_id, e} end)
+                  entry_by_id = Map.new(@all_entries, fn e -> {e.timezone_id, e} end)
 
-                  # Index all entries (including duplicate timezone_ids for different countries)
-                  base_index =
-                    Enum.map(@all_entries, fn entry ->
-                      primary = Map.fetch!(primary_by_id, entry.timezone_id)
-                      {String.downcase(entry.label), primary}
+                  label_index =
+                    Enum.flat_map(@all_entries, fn entry ->
+                      # Index both "city, country" and "country" separately
+                      [
+                        {String.downcase(entry.label), entry},
+                        {String.downcase(entry.country_name), entry}
+                      ]
                     end)
 
-                  # Add search aliases
                   alias_index =
                     Enum.flat_map(@search_aliases, fn {alias_name, tz_id} ->
-                      case Map.get(primary_by_id, tz_id) do
+                      case Map.get(entry_by_id, tz_id) do
                         nil -> []
                         entry -> [{alias_name, entry}]
                       end
                     end)
 
-                  base_index ++ alias_index
+                  label_index ++ alias_index
                 )
+
+  # Popular timezones shown when the dropdown opens without a search term.
+  # Ordered by rough west-to-east sweep so the UTC offsets feel natural.
+  @popular_ids [
+    "America/Los_Angeles",
+    "America/Denver",
+    "America/Chicago",
+    "America/New_York",
+    "America/Sao_Paulo",
+    "Europe/London",
+    "Europe/Amsterdam",
+    "Europe/Paris",
+    "Europe/Berlin",
+    "Europe/Helsinki",
+    "Europe/Moscow",
+    "Asia/Dubai",
+    "Asia/Kolkata",
+    "Asia/Bangkok",
+    "Asia/Shanghai",
+    "Asia/Tokyo",
+    "Australia/Sydney",
+    "Pacific/Auckland"
+  ]
+
+  @popular_set MapSet.new(@popular_ids)
+
+  @popular_options (
+                     options_map = Map.new(@options, fn {_label, tz_id} = opt -> {tz_id, opt} end)
+
+                     popular =
+                       @popular_ids
+                       |> Enum.flat_map(fn tz_id ->
+                         case Map.get(options_map, tz_id) do
+                           nil -> []
+                           opt -> [opt]
+                         end
+                       end)
+                       |> Enum.map(fn {label, tz_id} ->
+                         {label, tz_id, Formatting.utc_offset(tz_id)}
+                       end)
+
+                     rest =
+                       @options
+                       |> Enum.reject(fn {_label, tz_id} ->
+                         MapSet.member?(@popular_set, tz_id)
+                       end)
+                       |> Enum.map(fn {label, tz_id} ->
+                         {label, tz_id, Formatting.utc_offset(tz_id)}
+                       end)
+
+                     popular ++ rest
+                   )
 
   @spec all_options() :: [{String.t(), String.t()}]
   def all_options, do: @options
 
   @spec search(String.t()) :: [{String.t(), String.t(), String.t()}]
-  def search("") do
-    @options
-    |> Enum.take(50)
-    |> Enum.map(fn {label, tz_id} -> {label, tz_id, Formatting.utc_offset(tz_id)} end)
-  end
+  def search(""), do: @popular_options
 
   def search(term) do
     search_lower = String.downcase(term)
@@ -239,10 +188,7 @@ defmodule Tymeslot.Timezones.Data do
 
   @spec normalize(term()) :: term()
   def normalize(timezone_id) when is_binary(timezone_id) do
-    case TzExtra.canonical_time_zone_id(timezone_id) do
-      {:ok, canonical} -> canonical
-      {:error, _reason} -> timezone_id
-    end
+    Map.get(@legacy_ids, timezone_id, timezone_id)
   end
 
   def normalize(nil), do: nil
@@ -255,8 +201,6 @@ defmodule Tymeslot.Timezones.Data do
 
   def valid?(_other), do: false
 
-  # Dialyzer traces through the compile-time @valid_ids constant and exposes
-  # MapSet's opaque internal map type, producing a false contract_with_opaque.
   @dialyzer {:no_contracts, valid_ids: 0}
   @spec valid_ids() :: MapSet.t(String.t())
   def valid_ids, do: @valid_ids

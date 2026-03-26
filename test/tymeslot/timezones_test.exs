@@ -8,7 +8,7 @@ defmodule Tymeslot.TimezonesTest do
   describe "all_options/0" do
     test "returns a non-empty list of {label, timezone_id} tuples" do
       options = Timezones.all_options()
-      assert length(options) > 100
+      assert length(options) > 80
 
       {label, tz_id} = hd(options)
       assert is_binary(label)
@@ -20,17 +20,28 @@ defmodule Tymeslot.TimezonesTest do
         assert Timezones.valid?(tz_id), "Expected #{tz_id} to be valid"
       end
     end
+
+    test "options are sorted alphabetically by label" do
+      labels = Enum.map(Timezones.all_options(), fn {label, _tz_id} -> label end)
+      assert labels == Enum.sort(labels)
+    end
   end
 
   describe "search/1" do
-    test "returns all options (capped at 50) for empty string" do
+    test "returns all options with popular timezones first for empty string" do
       results = Timezones.search("")
-      assert length(results) == 50
+      assert length(results) > 50
 
       {label, tz_id, offset} = hd(results)
       assert is_binary(label)
       assert is_binary(tz_id)
       assert is_binary(offset)
+
+      # Popular timezones appear before the alphabetical rest
+      tz_ids = Enum.map(results, fn {_l, id, _o} -> id end)
+      la_idx = Enum.find_index(tz_ids, &(&1 == "America/Los_Angeles"))
+      tokyo_idx = Enum.find_index(tz_ids, &(&1 == "Asia/Tokyo"))
+      assert la_idx < tokyo_idx
     end
 
     test "filters by city name" do
@@ -47,9 +58,27 @@ defmodule Tymeslot.TimezonesTest do
       assert Enum.any?(results, fn {_l, tz, _o} -> tz == "Asia/Kolkata" end)
     end
 
-    test "searches across countries sharing a timezone" do
+    test "finds Amsterdam as its own entry" do
+      results = Timezones.search("Amsterdam")
+      assert Enum.any?(results, fn {_l, tz, _o} -> tz == "Europe/Amsterdam" end)
+    end
+
+    test "finds Netherlands and returns Amsterdam" do
       results = Timezones.search("Netherlands")
-      assert Enum.any?(results, fn {_l, tz, _o} -> tz == "Europe/Brussels" end)
+      assert Enum.any?(results, fn {_l, tz, _o} -> tz == "Europe/Amsterdam" end)
+    end
+
+    test "finds Stockholm, Oslo, Copenhagen as own entries" do
+      for {query, expected_tz} <- [
+            {"Stockholm", "Europe/Stockholm"},
+            {"Oslo", "Europe/Oslo"},
+            {"Copenhagen", "Europe/Copenhagen"}
+          ] do
+        results = Timezones.search(query)
+
+        assert Enum.any?(results, fn {_l, tz, _o} -> tz == expected_tz end),
+               "Expected #{expected_tz} in results for '#{query}'"
+      end
     end
 
     test "limits results to 50" do
@@ -65,12 +94,19 @@ defmodule Tymeslot.TimezonesTest do
       assert Timezones.country_code("Asia/Tokyo") == :jpn
     end
 
-    test "maps Berlin to Germany, not Denmark (zone1970 primary country)" do
+    test "returns correct country for cities that are IANA links" do
+      assert Timezones.country_code("Europe/Amsterdam") == :nld
+      assert Timezones.country_code("Europe/Stockholm") == :swe
+      assert Timezones.country_code("Europe/Oslo") == :nor
+      assert Timezones.country_code("Europe/Copenhagen") == :dnk
+    end
+
+    test "maps Berlin to Germany" do
       assert Timezones.country_code("Europe/Berlin") == :deu
       assert Timezones.format("Europe/Berlin") == "Berlin, Germany"
     end
 
-    test "maps Simferopol to Ukraine (country override for disputed territory)" do
+    test "maps Simferopol to Ukraine" do
       assert Timezones.country_code("Europe/Simferopol") == :ukr
       assert Timezones.format("Europe/Simferopol") == "Simferopol, Ukraine"
     end
@@ -86,12 +122,13 @@ defmodule Tymeslot.TimezonesTest do
   end
 
   describe "normalize/1" do
-    test "normalizes legacy timezone IDs" do
+    test "normalizes legacy Europe/Kiev to Europe/Kyiv" do
       assert Timezones.normalize("Europe/Kiev") == "Europe/Kyiv"
     end
 
-    test "passes through canonical IDs unchanged" do
+    test "passes through canonical and link IDs unchanged" do
       assert Timezones.normalize("Europe/Brussels") == "Europe/Brussels"
+      assert Timezones.normalize("Europe/Amsterdam") == "Europe/Amsterdam"
     end
 
     test "handles nil gracefully" do
@@ -100,14 +137,18 @@ defmodule Tymeslot.TimezonesTest do
   end
 
   describe "valid?/1" do
-    test "returns true for country-based timezones" do
+    test "returns true for canonical timezones" do
       assert Timezones.valid?("Europe/Brussels")
       assert Timezones.valid?("America/New_York")
     end
 
+    test "returns true for IANA link cities in our list" do
+      assert Timezones.valid?("Europe/Amsterdam")
+      assert Timezones.valid?("Europe/Stockholm")
+      assert Timezones.valid?("Atlantic/Reykjavik")
+    end
+
     test "returns false for non-country IANA timezones" do
-      # UTC and Etc/* zones are valid IANA but not country-based;
-      # they have no display label and fall back to the default.
       refute Timezones.valid?("UTC")
       refute Timezones.valid?("Etc/UTC")
     end
@@ -128,6 +169,7 @@ defmodule Tymeslot.TimezonesTest do
       ids = Timezones.valid_ids()
       assert %MapSet{} = ids
       assert MapSet.member?(ids, "Europe/Brussels")
+      assert MapSet.member?(ids, "Europe/Amsterdam")
       refute MapSet.member?(ids, "Fake/Zone")
     end
   end
@@ -136,6 +178,7 @@ defmodule Tymeslot.TimezonesTest do
     test "formats known timezone as 'City, Country'" do
       assert Timezones.format("America/New_York") == "New York, United States"
       assert Timezones.format("Europe/Brussels") == "Brussels, Belgium"
+      assert Timezones.format("Europe/Amsterdam") == "Amsterdam, Netherlands"
     end
 
     test "normalizes before formatting" do
