@@ -61,8 +61,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   defp do_get_base_path(_action, username, _socket), do: "/#{username}"
 
   defp build_query_params(socket, locale) do
-    %{"locale" => locale}
-    |> maybe_put_query_param("theme", socket.assigns[:theme_id])
+    maybe_put_query_param(%{"locale" => locale}, "theme", socket.assigns[:theme_id])
   end
 
   defp get_slug(socket) do

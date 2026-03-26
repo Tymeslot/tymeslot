@@ -97,34 +97,33 @@ defmodule TymeslotWeb.VideoOAuthController do
       |> put_flash(:info, "Microsoft Teams connected successfully!")
       |> redirect(to: ~p"/dashboard/video")
     else
-      {:error, :rate_limited, message} ->
-        Logger.warning("Rate limit exceeded for Teams OAuth callback")
-
-        conn
-        |> put_flash(:error, message)
-        |> redirect(to: ~p"/dashboard/video")
-
-      {:error, :invalid_state, _reason} ->
-        Logger.warning("Invalid state parameter in Teams OAuth callback")
-
-        conn
-        |> put_flash(:error, "Invalid authentication state. Please try again.")
-        |> redirect(to: ~p"/dashboard/video")
-
-      {:error, :missing_teams_fields} ->
-        Logger.warning("Teams OAuth callback missing required fields: tenant_id or teams_user_id")
-
-        conn
-        |> put_flash(:error, "Missing required Microsoft Teams information. Please try again.")
-        |> redirect(to: ~p"/dashboard/video")
-
-      {:error, reason} ->
-        Logger.error("Teams OAuth flow failed", reason: inspect(reason))
-
-        conn
-        |> put_flash(:error, "Failed to connect Microsoft Teams. Please try again.")
-        |> redirect(to: ~p"/dashboard/video")
+      error -> handle_teams_oauth_error(conn, error)
     end
+  end
+
+  defp handle_teams_oauth_error(conn, error) do
+    message =
+      case error do
+        {:error, :rate_limited, msg} ->
+          Logger.warning("Rate limit exceeded for Teams OAuth callback")
+          msg
+
+        {:error, :invalid_state, _reason} ->
+          Logger.warning("Invalid state parameter in Teams OAuth callback")
+          "Invalid authentication state. Please try again."
+
+        {:error, :missing_teams_fields} ->
+          Logger.warning("Teams OAuth callback missing required fields: tenant_id or teams_user_id")
+          "Missing required Microsoft Teams information. Please try again."
+
+        {:error, reason} ->
+          Logger.error("Teams OAuth flow failed", reason: inspect(reason))
+          "Failed to connect Microsoft Teams. Please try again."
+      end
+
+    conn
+    |> put_flash(:error, message)
+    |> redirect(to: ~p"/dashboard/video")
   end
 
   def teams_callback(conn, %{"error" => error} = params) do
