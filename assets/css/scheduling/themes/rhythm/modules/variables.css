@@ -121,7 +121,7 @@
 
   /* Dropdown/Popover specific */
   --dropdown-width: var(--container-xs);
-  --dropdown-max-height: 280px;
+  --dropdown-max-height: 420px;
   --dropdown-max-height-mobile: 60vh;
 
   /* Calendar specific */

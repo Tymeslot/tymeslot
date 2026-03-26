@@ -142,7 +142,10 @@ defmodule TymeslotWeb.VideoOAuthController do
           "Invalid authentication state. Please try again."
 
         {:error, :missing_teams_fields} ->
-          Logger.warning("Teams OAuth callback missing required fields: tenant_id or teams_user_id")
+          Logger.warning(
+            "Teams OAuth callback missing required fields: tenant_id or teams_user_id"
+          )
+
           "Missing required Microsoft Teams information. Please try again."
 
         {:error, reason} ->

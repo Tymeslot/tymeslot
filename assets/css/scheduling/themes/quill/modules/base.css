@@ -320,6 +320,36 @@ body.quill-theme {
 }
 
 /* ============================================================================
+   SCROLLABLE CONTAINERS
+   ============================================================================ */
+
+.scroll-y {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.scroll-y::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+}
+
+.scroll-y::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 3px;
+}
+
+.scroll-y::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+.scroll-y::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ============================================================================
    PRINT
    (dissolved from responsive.css)
    ============================================================================ */

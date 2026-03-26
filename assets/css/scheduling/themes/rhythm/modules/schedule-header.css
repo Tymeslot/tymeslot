@@ -75,6 +75,7 @@
 
 .timezone-dropdown-wrapper {
   position: relative;
+  width: 14rem;
 }
 
 .timezone-trigger {
@@ -115,6 +116,8 @@
   box-shadow: var(--shadow-lg);
   max-height: var(--dropdown-max-height);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   width: var(--dropdown-width);
   min-width: var(--dropdown-width);
 }
@@ -177,7 +180,8 @@
 }
 
 .timezone-options {
-  max-height: 240px;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Note: Scrollbar styling is applied via .scroll-y utility class from base.css */

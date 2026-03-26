@@ -229,7 +229,7 @@
   --dropdown-width: 300px;
   --dropdown-width-sm: 160px;
   --dropdown-width-md: 180px;
-  --dropdown-max-height: 300px;
+  --dropdown-max-height: 420px;
 
   /* Component-Specific Tokens - Scrollbar */
   --scrollbar-width: 6px;

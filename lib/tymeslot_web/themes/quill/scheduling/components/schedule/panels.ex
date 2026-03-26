@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
+  alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
   import TymeslotWeb.Components.CoreComponents
   import TymeslotWeb.Components.FlagHelpers
@@ -27,9 +28,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
     ~H"""
     <div class="relative" data-locale={@locale}>
       <%!-- Label: hidden on small screens --%>
-      <label class="timezone-label font-medium">
+      <label class="timezone-label">
         <div class="timezone-label-content">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="timezone-label-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -41,34 +42,37 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
         </div>
       </label>
 
-      <div
-        class="group relative cursor-pointer"
-        phx-click="toggle_timezone_dropdown"
-        phx-target={@target}
-      >
-        <div class="timezone-trigger rounded-xl transition-all duration-200 ease-out hover:shadow-lg">
+      <div class="timezone-dropdown-wrapper">
+        <button
+          class="timezone-trigger"
+          phx-click="toggle_timezone_dropdown"
+          phx-target={@target}
+          type="button"
+        >
           <div class="timezone-trigger-row">
-            <div class="timezone-trigger-info flex-1 min-w-0">
+            <div class="timezone-trigger-info">
               <.timezone_flag
                 timezone={@user_timezone}
-                class="timezone-flag shadow-sm"
+                class="timezone-flag"
                 fallback_icon="🌐"
               />
-              <div class="flex-1 min-w-0">
-                <div class="timezone-name font-medium text-white truncate">
+              <div class="timezone-trigger-text">
+                <div class="timezone-name">
                   {Timezones.format(@user_timezone)}
                 </div>
-                <div class="timezone-time-display timezone-time-inline text-xs mt-1">
-                  {get_current_time_display(@user_timezone)}
+                <div class="timezone-time-display timezone-time-inline">
+                  {gettext("%{time} local time",
+                    time: TimezoneHelpers.format_local_time(@user_timezone)
+                  )}
                 </div>
               </div>
             </div>
             <div class="timezone-meta">
-              <div class="timezone-offset-badge rounded-full font-medium">
-                {get_timezone_offset(@user_timezone)}
+              <div class="timezone-offset-badge">
+                {Timezones.utc_offset(@user_timezone)}
               </div>
               <svg
-                class={"timezone-chevron transition-transform duration-200 #{if @timezone_dropdown_open, do: "rotate-180", else: "rotate-0"}"}
+                class={["timezone-chevron", @timezone_dropdown_open && "open"]}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -82,70 +86,57 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
               </svg>
             </div>
           </div>
-        </div>
-      </div>
+        </button>
 
-    <%!-- Dropdown with search input at top - no layout shift --%>
-      <%= if @timezone_dropdown_open do %>
-        <div class="timezone-dropdown absolute top-full mt-1 z-[9999] rounded-xl shadow-2xl border overflow-hidden">
-          <div class="timezone-dropdown-header p-3">
-            <div class="relative">
+        <%!-- Dropdown: uses phx-click-away (not phx-blur) so clicks inside
+             the list don't close the dropdown prematurely --%>
+        <%= if @timezone_dropdown_open do %>
+          <div
+            class="timezone-dropdown"
+            phx-click-away="close_timezone_dropdown"
+            phx-target={@target}
+          >
+            <div class="timezone-search-wrapper">
               <input
                 id="timezone-search"
                 type="text"
+                class="timezone-search"
                 phx-keyup="search_timezone"
-                phx-blur="close_timezone_dropdown"
                 phx-target={@target}
                 name="search"
                 value={@timezone_search}
                 placeholder={gettext("Search cities, countries, or timezones...")}
-                class="timezone-search-input w-full px-4 py-2 rounded-lg text-sm border-0 pr-10 focus:outline-none focus:ring-2 focus:ring-white/30"
                 autocomplete="off"
                 phx-hook="AutoFocus"
               />
-              <div class="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                <svg
-                  class="w-4 h-4 text-tymeslot-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  >
-                  </path>
-                </svg>
-              </div>
             </div>
-          </div>
 
-          <div class="timezone-dropdown-list scroll-y">
-            <div class="p-1">
+            <div class="timezone-options scroll-y">
               <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>
-                <div
+                <button
+                  class="timezone-option"
                   phx-click="change_timezone"
                   phx-value-timezone={value}
                   phx-target={@target}
-                  class="timezone-dropdown-item w-full text-left px-3 py-2.5 text-sm rounded-lg flex justify-between items-center cursor-pointer transition-all duration-150 group"
+                  type="button"
                 >
-                  <div class="flex-1 min-w-0">
-                    <div class="font-medium truncate">{label}</div>
-                    <div class="timezone-time-display text-xs mt-0.5">
-                      {get_timezone_local_time(value)}
+                  <div class="timezone-option-content">
+                    <.timezone_flag
+                      timezone={value}
+                      class="timezone-option-flag"
+                      fallback_icon="🌐"
+                    />
+                    <div class="timezone-option-text">
+                      <div class="timezone-option-label">{label}</div>
+                      <div class="timezone-option-offset">{offset}</div>
                     </div>
                   </div>
-                  <div class="timezone-offset-badge-dropdown text-sm font-medium px-2.5 py-1 rounded-full transition-colors duration-150">
-                    {offset}
-                  </div>
-                </div>
+                </button>
               <% end %>
             </div>
           </div>
-        </div>
-      <% end %>
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -303,32 +294,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
   def format_advance_booking_days(_arg), do: gettext("90 days in advance")
 
   # ========== PRIVATE HELPERS ==========
-
-  defp get_current_time_display(timezone) do
-    case DateTime.now(timezone) do
-      {:ok, datetime} ->
-        gettext("%{time} local time",
-          time: String.slice(Time.to_string(DateTime.to_time(datetime)), 0, 5)
-        )
-
-      _other ->
-        gettext("local time")
-    end
-  end
-
-  defp get_timezone_offset(timezone) do
-    Timezones.utc_offset(timezone)
-  end
-
-  defp get_timezone_local_time(timezone) do
-    case DateTime.now(timezone) do
-      {:ok, datetime} ->
-        String.slice(Time.to_string(DateTime.to_time(datetime)), 0, 5)
-
-      _other ->
-        "--:--"
-    end
-  end
 
   defp format_weeks_advance(days), do: gettext("%{weeks} weeks in advance", weeks: div(days, 7))
 

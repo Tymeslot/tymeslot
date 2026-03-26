@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
   use Phoenix.Component
 
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
   attr :profile, :map, required: true
   attr :timezone_options, :list, default: []
@@ -67,7 +68,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                     {Timezones.format((@profile && @profile.timezone) || "UTC")}
                   </div>
                   <div class="text-xs mt-1 text-tymeslot-600">
-                    {get_current_time_display((@profile && @profile.timezone) || "UTC")}
+                    {TimezoneHelpers.format_local_time((@profile && @profile.timezone) || "UTC")} local time
                   </div>
                 </div>
               </div>
@@ -156,7 +157,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
                         <div class="flex-1 min-w-0">
                           <div class="font-medium truncate text-tymeslot-800">{label}</div>
                           <div class="text-xs mt-0.5 text-tymeslot-600">
-                            {get_timezone_local_time(value)} local time • {offset}
+                            {TimezoneHelpers.format_local_time(value)} local time • {offset}
                           </div>
                         </div>
                       </div>
@@ -189,35 +190,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
     """
   end
 
-  # Timezone helper functions
-  defp get_current_time_display(timezone) do
-    case DateTime.now(timezone) do
-      {:ok, datetime} ->
-        datetime
-        |> DateTime.to_time()
-        |> Time.to_string()
-        |> String.slice(0, 5)
-        |> Kernel.<>(" local time")
-
-      _other ->
-        "Local time"
-    end
-  end
-
   defp get_timezone_offset(timezone) do
     Timezones.utc_offset(timezone)
-  end
-
-  defp get_timezone_local_time(timezone) do
-    case DateTime.now(timezone) do
-      {:ok, datetime} ->
-        datetime
-        |> DateTime.to_time()
-        |> Time.to_string()
-        |> String.slice(0, 5)
-
-      _other ->
-        "--:--"
-    end
   end
 end
