@@ -37,7 +37,6 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
     "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar.",
     title: "⚠️ Calendar Sync Error")}
 
-    <%!-- Main Content --%>
     <mj-section background-color="#ffffff" border-radius="8px" padding="20px">
       <mj-column>
         #{Components.title_section("Meeting Details")}
@@ -66,7 +65,6 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
       </mj-column>
     </mj-section>
 
-    <%!-- Footer --%>
     <mj-section padding="20px 0 0 0">
       <mj-column>
         <mj-text align="center" color="#52525b" font-size="12px">

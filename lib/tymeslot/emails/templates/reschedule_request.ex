@@ -38,7 +38,6 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
       mjml_content = """
       #{Components.title_section("📅 #{dgettext("emails", "Reschedule Request")}",
       subtitle: dgettext("emails", "Hi %{name}, I need to reschedule our upcoming meeting. Could you please select a new time that works for you?", name: meeting.attendee_name))}
-      <%!-- Cancelled Meeting Details --%>
       <mj-section padding="20px 0">
         <mj-column>
           <mj-text font-size="16px" font-weight="600" padding-bottom="10px">
@@ -47,7 +46,6 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
           #{Components.meeting_details_table(meeting_details, locale)}
         </mj-column>
       </mj-section>
-      <%!-- Call to Action --%>
       <mj-section padding="12px 0">
         <mj-column>
           <mj-text font-size="16px" color="#3f3f46" line-height="24px" padding-bottom="16px">

@@ -52,8 +52,7 @@ defmodule Tymeslot.Emails.Shared.Layouts do
       <mj-body background-color="#{Styles.background_color(:slate)}" css-class="force-light-bg">
         <mj-wrapper padding="12px 12px" background-color="#{Styles.background_color(:slate)}">
           <mj-wrapper background-color="#{Styles.background_color(:white)}" border-radius="#{Styles.card_radius()}" padding="0" css-class="glass-card force-light-bg">
-            <%!-- Header with Logo --%>
-            <mj-section padding="20px 20px 12px 20px">
+              <mj-section padding="20px 20px 12px 20px">
               <mj-column>
                 <mj-image
                   src="#{logo_data_uri}"
@@ -65,7 +64,6 @@ defmodule Tymeslot.Emails.Shared.Layouts do
               </mj-column>
             </mj-section>
 
-            <%!-- Divider --%>
             <mj-section padding="0 20px">
               <mj-column>
                 <mj-divider border-color="#{Styles.border_color(:subtle)}" border-width="1px" padding="0" />
@@ -76,7 +74,6 @@ defmodule Tymeslot.Emails.Shared.Layouts do
               #{content}
             </mj-wrapper>
 
-            <%!-- Footer --%>
             <mj-section
               background-color="#{Styles.background_color(:gray)}"
               border-radius="0 0 #{Styles.card_radius()} #{Styles.card_radius()}"

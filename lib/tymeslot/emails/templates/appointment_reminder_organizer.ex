@@ -22,12 +22,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderOrganizer do
   def reminder_email(organizer_email, appointment_details) do
     Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(), fn ->
       mjml_content = """
-      <%!-- Time Alert --%>
       #{Components.time_alert_badge(dgettext("emails", "Starting in %{time_until}", time_until: appointment_details.time_until), style: :danger)}
       #{Components.title_section(dgettext("emails", "Meeting with %{name}", name: appointment_details.attendee_name), align: "center")}
-      <%!-- Quick Info --%>
       #{Components.quick_info_grid([%{label: dgettext("emails", "Time"), value: TimezoneHelper.format_time_owner_tz(appointment_details)}, %{label: dgettext("emails", "Duration"), value: "#{appointment_details.duration} #{dgettext("emails", "min")}"}, %{label: dgettext("emails", "Location"), value: appointment_details.location || dgettext("emails", "Virtual")}])}
-      <%!-- Attendee Info --%>
       <mj-section padding="10px 0 0 0" background-color="#fafafa" border-radius="6px">
         <mj-column>
           <mj-text font-size="13px" font-weight="600" padding="0 0 4px 0" css-class="mobile-text">
@@ -44,7 +41,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderOrganizer do
         style: :reminder,
         role: "organizer")
       end}
-      <%!-- Quick Actions --%>
       #{Components.centered_text(dgettext("emails", "Quick actions:"), font_size: "11px", color: "#52525b", padding: "10px 0 6px 0")}
       #{Components.meeting_actions_bar([%{text: dgettext("emails", "Reschedule"), url: appointment_details.reschedule_url, style: :secondary}, %{text: dgettext("emails", "Cancel"), url: appointment_details.cancel_url, style: :danger}])}
       """
