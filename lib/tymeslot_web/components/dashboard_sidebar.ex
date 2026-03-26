@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
   @spec sidebar(map()) :: Phoenix.LiveView.Rendered.t()
   def sidebar(assigns) do
     ~H"""
-    <!-- Mobile Overlay -->
+    <%!-- Mobile Overlay --%>
     <div
       id="dashboard-sidebar-overlay"
       class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30 dashboard-sidebar-overlay hidden"
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       class="dashboard-sidebar lg:w-64 w-80 h-screen lg:h-full overflow-y-auto lg:flex-shrink-0 lg:relative fixed top-0 left-0 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
     >
       <div class="p-6">
-        <!-- Mobile Close Button -->
+        <%!-- Mobile Close Button --%>
         <div class="lg:hidden flex items-center justify-between mb-6">
           <TymeslotWeb.Components.CoreComponents.logo mode={:full} img_class="h-12" />
           <button
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           </button>
         </div>
 
-    <!-- Scheduling Link (Mobile and Desktop) -->
+    <%!-- Scheduling Link (Mobile and Desktop) --%>
         <div class="mb-6 flex gap-2">
           <.link
             :if={LinkAccessPolicy.can_link?(@profile, @integration_status)}
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
           </button>
         </div>
 
-    <!-- Navigation Links -->
+    <%!-- Navigation Links --%>
         <nav class="space-y-3 mt-6">
           <div>
             <div class="dashboard-nav-section-title">General</div>
@@ -253,7 +253,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
       ]}
     >
       {render_slot(@inner_block)}
-      <!-- Notification Badge -->
+      <%!-- Notification Badge --%>
       <div
         :if={@show_notification}
         class={[

@@ -109,14 +109,14 @@ defmodule TymeslotWeb.OnboardingLive do
   def render(assigns) do
     ~H"""
     <main class="min-h-screen bg-gradient-to-br from-turquoise-600 via-cyan-600 to-blue-600 flex items-start sm:items-center justify-center px-4 py-6 sm:p-6 relative overflow-y-auto">
-      <!-- Animated background elements -->
+      <%!-- Animated background elements --%>
       <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]"></div>
       <div class="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(6,182,212,0.3),transparent_50%)]"></div>
 
       <div class="w-full max-w-5xl relative z-10 animate-in fade-in zoom-in-95 duration-700">
         <div class="flex-1 flex flex-col items-center">
           <div class="w-full">
-            <!-- Progress indicator with enhancements -->
+            <%!-- Progress indicator with enhancements --%>
             <div class="progress-indicator">
               <div class="progress-indicator-container">
                 <%= for {step, index} <- Enum.with_index(@steps) do %>
@@ -156,10 +156,10 @@ defmodule TymeslotWeb.OnboardingLive do
               </div>
             </div>
 
-    <!-- Main content card -->
+    <%!-- Main content card --%>
             <div class="card-glass">
               <div class="p-6 sm:p-8 lg:p-10">
-                <!-- Company logo and name -->
+                <%!-- Company logo and name --%>
                 <div class="flex items-center justify-center mb-6">
                   <TymeslotWeb.Components.CoreComponents.logo
                     mode={:full}
@@ -191,7 +191,7 @@ defmodule TymeslotWeb.OnboardingLive do
                   <% end %>
                 </div>
 
-      <!-- Navigation buttons -->
+      <%!-- Navigation buttons --%>
                 <div class="flex flex-col sm:flex-row items-center justify-between mt-6 pt-6 border-t-2 border-tymeslot-50 gap-4">
                   <button type="button" phx-click="show_skip_modal" class="text-tymeslot-400 hover:text-tymeslot-600 font-black uppercase tracking-widest text-xs transition-colors">
                     Skip for now
@@ -215,7 +215,7 @@ defmodule TymeslotWeb.OnboardingLive do
         </div>
       </div>
 
-    <!-- Skip confirmation modal -->
+    <%!-- Skip confirmation modal --%>
       <SkipConfirmationModal.skip_confirmation_modal show={@show_skip_modal} />
     </main>
     """

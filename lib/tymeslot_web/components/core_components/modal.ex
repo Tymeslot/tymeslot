@@ -35,19 +35,19 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
       # Large modal for forms
       <.modal id="form-modal" show={@show_modal} size={:large}>
         <:header>Edit Profile</:header>
-        <!-- Form content here -->
+        <%!-- Form content here --%>
       </.modal>
 
       # Extra large modal for complex content
       <.modal id="details-modal" show={@show_modal} size={:xlarge}>
         <:header>Meeting Details</:header>
-        <!-- Detailed content here -->
+        <%!-- Detailed content here --%>
       </.modal>
 
       # Full screen modal
       <.modal id="full-modal" show={@show_modal} size={:full}>
         <:header>Full Screen View</:header>
-        <!-- Full screen content here -->
+        <%!-- Full screen content here --%>
       </.modal>
   """
   attr :id, :string, required: true
@@ -74,7 +74,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
           class={["modal-content bg-white rounded-[2.5rem] shadow-2xl border-2 border-tymeslot-50 relative overflow-hidden", modal_size_class(@size)]}
           phx-click-away={if @show, do: @on_cancel}
         >
-          <!-- Header -->
+          <%!-- Header --%>
           <%= if @header != [] do %>
             <div class="modal-header px-8 py-6 border-b-2 border-tymeslot-50 flex items-center justify-between">
               <h3 class="modal-title text-2xl font-black text-tymeslot-900 tracking-tight">
@@ -98,12 +98,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
             </div>
           <% end %>
           
-    <!-- Body -->
+    <%!-- Body --%>
           <div class="modal-body p-8">
             {render_slot(@inner_block)}
           </div>
           
-    <!-- Footer -->
+    <%!-- Footer --%>
           <%= if @footer != [] do %>
             <div class="modal-footer px-8 py-6 bg-tymeslot-50/50 border-t-2 border-tymeslot-50">
               {render_slot(@footer)}

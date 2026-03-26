@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
       </div>
 
       <div class="space-y-6">
-        <!-- Explanation -->
+        <%!-- Explanation --%>
         <div class="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-token-xl p-6">
           <div class="flex items-start space-x-3">
             <svg class="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,7 +60,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
           </div>
         </div>
 
-        <!-- Domain Input Form -->
+        <%!-- Domain Input Form --%>
         <.form_wrapper
           for={%{}}
           id="embed-domains-form"
@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
             Enter a domain and press enter to add it. Don't include <code class="bg-tymeslot-100 px-1 py-0.5 rounded">https://</code> or paths.
           </p>
 
-          <!-- Current Domains Tags -->
+          <%!-- Current Domains Tags --%>
           <%= if @allowed_domains != [] and @allowed_domains != ["none"] do %>
             <div class="flex flex-wrap gap-2 mt-4">
               <%= for domain <- @allowed_domains do %>
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
             </div>
           <% end %>
 
-          <!-- Current Status -->
+          <%!-- Current Status --%>
           <div class="bg-tymeslot-50 rounded-token-lg p-4 border-2 border-tymeslot-200">
             <p class="text-token-sm font-semibold text-tymeslot-700 mb-2">Current Status:</p>
             <div class="flex items-center space-x-2">
@@ -129,7 +129,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.SecuritySection do
             </div>
           </div>
 
-          <!-- Action Buttons -->
+          <%!-- Action Buttons --%>
           <div class="flex space-x-3">
             <.action_button type="submit">
               Add Domain

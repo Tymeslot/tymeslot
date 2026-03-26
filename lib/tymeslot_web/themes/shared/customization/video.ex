@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
       class="video-background-video"
     >
       {Phoenix.HTML.raw(render_video_sources(@video_config.background_videos))}
-      <!-- Fallback gradient background -->
+      <%!-- Fallback gradient background --%>
       <div style={@fallback_style}></div>
     </video>
     """
@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
     }
 
     ~H"""
-    <!-- Primary video element -->
+    <%!-- Primary video element --%>
     <video
       autoplay
       muted
@@ -79,11 +79,11 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
       preload="auto"
     >
       {Phoenix.HTML.raw(render_video_sources(@video_config.background_videos))}
-      <!-- Fallback for missing video -->
+      <%!-- Fallback for missing video --%>
       <div style={@fallback_style}></div>
     </video>
 
-    <!-- Secondary video element for crossfading -->
+    <%!-- Secondary video element for crossfading --%>
     <video
       muted
       playsinline
@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Video do
       preload="auto"
     >
       {Phoenix.HTML.raw(render_video_sources(@video_config.background_videos))}
-      <!-- Fallback for missing video -->
+      <%!-- Fallback for missing video --%>
       <div style={@fallback_style}></div>
     </video>
     """

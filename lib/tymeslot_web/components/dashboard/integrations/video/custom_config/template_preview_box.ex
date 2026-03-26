@@ -34,24 +34,24 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.Templ
       preview_container_class(@status)
     ]}>
       <div class="h-full flex gap-2.5 p-3 text-sm overflow-y-auto">
-        <!-- Icon Column (Fixed Width) -->
+        <%!-- Icon Column (Fixed Width) --%>
         <div class="flex-shrink-0 w-5">
           <.status_icon status={@status} />
         </div>
 
-        <!-- Content Column (Flex Layout) -->
+        <%!-- Content Column (Flex Layout) --%>
         <div class="flex-1 min-w-0 flex flex-col">
-          <!-- Row 1: Status Title (Always Present) -->
+          <%!-- Row 1: Status Title (Always Present) --%>
           <div class={status_title_class(@status)}>
             {@title}
           </div>
 
-          <!-- Row 2: Description (Always Present) -->
+          <%!-- Row 2: Description (Always Present) --%>
           <div class={message_class(@status)}>
             {@message}
           </div>
 
-          <!-- Row 3: Preview Code (With Top Margin) -->
+          <%!-- Row 3: Preview Code (With Top Margin) --%>
           <%= if @preview do %>
             <code class={preview_code_class(@status)}>
               {@preview}

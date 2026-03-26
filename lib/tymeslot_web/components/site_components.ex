@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
           </.link>
         <% end %>
         
-    <!-- Desktop Navigation -->
+    <%!-- Desktop Navigation --%>
         <div class="hidden md:flex items-center gap-6">
           <%= if Config.show_marketing_links?() do %>
             <%= if features_url = Application.get_env(:tymeslot, :features_url) do %>
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
           <% end %>
         </div>
         
-    <!-- Mobile Menu Button -->
+    <%!-- Mobile Menu Button --%>
         <button
           class="md:hidden mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-turquoise-100 hover:bg-turquoise-200 transition-colors"
           phx-click={
@@ -129,7 +129,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
           </svg>
         </button>
         
-    <!-- Mobile Menu -->
+    <%!-- Mobile Menu --%>
         <div
           id="mobile-menu"
           class="mobile-menu md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-md border-t border-tymeslot-200 shadow-lg hidden"

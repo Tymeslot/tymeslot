@@ -184,7 +184,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
           JPG, PNG, GIF or WebP. Max 10MB.
         </p>
 
-        <!-- Upload progress -->
+        <%!-- Upload progress --%>
         <%= if @uploads && @uploads[:avatar] do %>
           <%= for err <- upload_errors(@uploads.avatar) do %>
             <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-1">

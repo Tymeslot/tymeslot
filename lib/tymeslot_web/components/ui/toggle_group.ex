@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Components.UI.ToggleGroup do
               </div>
             <% end %>
             
-    <!-- Responsive text display -->
+    <%!-- Responsive text display --%>
             <%= if option[:short_label] do %>
               <span class={responsive_text_class(@size, :full)}>
                 {option.label}

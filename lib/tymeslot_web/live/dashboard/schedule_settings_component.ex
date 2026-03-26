@@ -79,7 +79,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
         />
 
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-          <!-- Input Mode Toggle -->
+          <%!-- Input Mode Toggle --%>
           <div class="bg-white border-2 border-tymeslot-50 p-1.5 rounded-token-2xl shadow-sm flex items-center">
             <button
               phx-click="toggle_input_mode"

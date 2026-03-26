@@ -104,7 +104,7 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsStep do
           </p>
         </div>
 
-    <!-- Timezone component inside form -->
+    <%!-- Timezone component inside form --%>
         <div class="onboarding-form-group pt-3 border-t-2 border-tymeslot-50">
           <label class="label mb-3">Your Timezone</label>
           <TimezoneDropdown.timezone_dropdown

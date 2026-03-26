@@ -73,7 +73,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   def tabs(assigns) do
     ~H"""
     <div class="space-y-6">
-      <!-- Tab Navigation -->
+      <%!-- Tab Navigation --%>
       <div class="bg-white rounded-token-2xl border-2 border-tymeslot-100 p-2 shadow-sm">
         <nav
           role="tablist"
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
         </nav>
       </div>
 
-      <!-- Tab Panels -->
+      <%!-- Tab Panels --%>
       <%= for tab <- @tab do %>
         <div
           role="tabpanel"

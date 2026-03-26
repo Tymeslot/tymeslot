@@ -20,14 +20,14 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
       phx-click-away={if @dropdown_open, do: "hide_user_dropdown", else: nil}
       phx-target={@myself}
     >
-      <!-- Dropdown toggle button -->
+      <%!-- Dropdown toggle button --%>
       <button
         type="button"
         class="flex items-center space-x-3 bg-white border-2 border-tymeslot-50 rounded-2xl px-3 py-2 shadow-sm hover:border-turquoise-100 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-turquoise-500"
         phx-click="toggle_user_dropdown"
         phx-target={@myself}
       >
-        <!-- User avatar -->
+        <%!-- User avatar --%>
         <div class="w-10 h-10 rounded-xl overflow-hidden bg-tymeslot-100 border-2 border-white shadow-sm flex-shrink-0">
           <img
             src={Profiles.avatar_url(@profile, :thumb)}
@@ -35,9 +35,9 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
             class="w-full h-full object-cover"
           />
         </div>
-        <!-- Display name -->
+        <%!-- Display name --%>
         <span class="text-tymeslot-800 font-black hidden sm:inline">{@truncated_name}</span>
-        <!-- Dropdown arrow -->
+        <%!-- Dropdown arrow --%>
         <svg
           class={[
             "w-5 h-5 text-tymeslot-400 transition-transform duration-300",
@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
         </svg>
       </button>
       
-    <!-- Dropdown menu -->
+    <%!-- Dropdown menu --%>
       <div
         class={[
           "absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl ring-1 ring-tymeslot-200 focus:outline-none border-2 border-tymeslot-50 overflow-hidden z-[100]",
@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
         aria-orientation="vertical"
       >
         <div class="py-2" role="none">
-          <!-- Account Settings -->
+          <%!-- Account Settings --%>
           <div
             phx-click="navigate_and_close"
             phx-value-path="/dashboard/account"
@@ -96,10 +96,10 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
             Account Settings
           </div>
           
-    <!-- Divider -->
+    <%!-- Divider --%>
           <div class="border-t-2 border-tymeslot-50 my-1"></div>
           
-    <!-- Sign Out -->
+    <%!-- Sign Out --%>
           <.link
             href={~p"/auth/logout"}
             method="delete"

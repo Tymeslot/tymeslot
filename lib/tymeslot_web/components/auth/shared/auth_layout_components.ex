@@ -89,7 +89,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
 
     ~H"""
     <main class="min-h-screen relative overflow-hidden flex items-center justify-center p-4 sm:p-6">
-      <!-- Video Background -->
+      <%!-- Video Background --%>
       <div class="video-background-container" id="auth-video-container" phx-hook="AuthVideo">
         <div class="absolute inset-0 bg-gradient-to-br from-turquoise-600 to-blue-600 opacity-20"></div>
         <%= for {video_id, index} <- Enum.with_index(AuthVideoConfig.auth_video_ids(), 1) do %>
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
         <% end %>
       </div>
 
-      <!-- Content Overlay -->
+      <%!-- Content Overlay --%>
       <div class="w-full max-w-[500px] relative z-10 animate-in fade-in zoom-in-95 duration-700">
         <.auth_back_link />
         

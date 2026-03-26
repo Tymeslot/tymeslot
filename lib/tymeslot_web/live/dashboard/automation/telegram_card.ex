@@ -25,9 +25,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
       card_style(@integration.status)
     ]}>
       <div class="flex flex-col gap-4">
-        <!-- Top row: Icon + Info + Toggle/Badge -->
+        <%!-- Top row: Icon + Info + Toggle/Badge --%>
         <div class="flex items-start gap-4 sm:gap-5">
-          <!-- Telegram Icon -->
+          <%!-- Telegram Icon --%>
           <div class={[
             "p-3 rounded-2xl transition-colors duration-300 flex-shrink-0",
             icon_bg(@integration.status)
@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             </svg>
           </div>
 
-          <!-- Integration Details -->
+          <%!-- Integration Details --%>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-2">
               <h3 class={[
@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               </div>
             <% end %>
 
-            <!-- Event Tags -->
+            <%!-- Event Tags --%>
             <div class="flex flex-wrap gap-2 mb-4">
               <%= for event <- @integration.events do %>
                 <span class={[
@@ -68,13 +68,13 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               <% end %>
             </div>
 
-            <!-- Status-specific content -->
+            <%!-- Status-specific content --%>
             <%= if @integration.status == :pending_link do %>
               <div class="text-token-sm text-amber-600 font-medium">
                 Connect Telegram to start receiving notifications.
               </div>
             <% else %>
-              <!-- Last Triggered Info -->
+              <%!-- Last Triggered Info --%>
               <%= if @integration.last_triggered_at do %>
                 <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
                   <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,7 +99,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             <% end %>
           </div>
 
-          <!-- Status Toggle (active/paused only) -->
+          <%!-- Status Toggle (active/paused only) --%>
           <div class="flex-shrink-0 ml-2">
             <%= if @integration.status in [:active, :paused] do %>
               <StatusSwitch.status_switch
@@ -115,9 +115,9 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
           </div>
         </div>
 
-        <!-- Bottom: Actions -->
+        <%!-- Bottom: Actions --%>
         <div class="flex items-center gap-2 flex-shrink-0 border-t border-tymeslot-100 pt-3">
-          <!-- Test Button -->
+          <%!-- Test Button --%>
           <%= if @integration.status in [:active, :paused] do %>
             <button
               phx-click={@on_test}
@@ -144,7 +144,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             </button>
           <% end %>
 
-          <!-- Connect Button (pending_link + shared bot only) -->
+          <%!-- Connect Button (pending_link + shared bot only) --%>
           <%= if @integration.status == :pending_link && @integration.bot_mode == "shared" && @on_reconnect do %>
             <button
               phx-click={@on_reconnect}
@@ -154,7 +154,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             </button>
           <% end %>
 
-          <!-- Re-enable Button (auto_disabled only) -->
+          <%!-- Re-enable Button (auto_disabled only) --%>
           <%= if @integration.status == :auto_disabled && @on_reenable do %>
             <button
               phx-click={@on_reenable}
@@ -164,7 +164,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
             </button>
           <% end %>
 
-          <!-- Logs Button -->
+          <%!-- Logs Button --%>
           <button
             phx-click={@on_view_deliveries}
             class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
@@ -176,7 +176,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
           </button>
 
           <div class="ml-auto flex items-center gap-1">
-            <!-- Edit Button -->
+            <%!-- Edit Button --%>
             <%= if @integration.status != :pending_link do %>
               <button
                 phx-click={@on_edit}
@@ -189,7 +189,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               </button>
             <% end %>
 
-            <!-- Disconnect Button (shared bot mode only) -->
+            <%!-- Disconnect Button (shared bot mode only) --%>
             <%= if @on_disconnect && @integration.bot_mode == "shared" && @integration.chat_id do %>
               <button
                 phx-click={@on_disconnect}
@@ -202,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCard do
               </button>
             <% end %>
 
-            <!-- Delete Button -->
+            <%!-- Delete Button --%>
             <button
               phx-click={@on_delete}
               class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"

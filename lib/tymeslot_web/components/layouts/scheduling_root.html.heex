@@ -14,10 +14,10 @@
     <link rel="icon" type="image/svg+xml" href={~p"/images/brand/favicon.svg"} />
     <link rel="alternate icon" href={~p"/images/brand/favicon.ico"} />
 
-    <!-- Theme-specific CSS -->
+    <%!-- Theme-specific CSS --%>
     {render_theme_css(assigns[:theme_id] || "1")}
 
-    <!-- Additional CSS from external layers (e.g., SaaS branding) -->
+    <%!-- Additional CSS from external layers (e.g., SaaS branding) --%>
     <%= for css_path <- Application.get_env(:tymeslot, :scheduling_additional_css, []) do %>
       <link phx-track-static rel="stylesheet" href={css_path} />
     <% end %>

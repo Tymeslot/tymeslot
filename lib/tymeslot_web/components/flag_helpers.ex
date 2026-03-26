@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Components.FlagHelpers do
         """
       else
         ~H"""
-        <!-- No flag available -->
+        <%!-- No flag available --%>
         """
       end
     end

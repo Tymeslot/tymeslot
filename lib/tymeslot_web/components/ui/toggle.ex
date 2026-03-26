@@ -212,7 +212,7 @@ defmodule TymeslotWeb.Components.UI.Toggle do
           />
         </svg>
       <% _ -> %>
-        <!-- Default icon or custom icon can be added here -->
+        <%!-- Default icon or custom icon can be added here --%>
         <div class={[@icon_class, "bg-tymeslot-400 rounded"]}></div>
     <% end %>
     """

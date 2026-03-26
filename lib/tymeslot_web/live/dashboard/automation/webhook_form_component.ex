@@ -63,7 +63,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
 
     ~H"""
     <div class="space-y-8 pb-20">
-      <!-- Toolbar -->
+      <%!-- Toolbar --%>
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
         <.section_header
           icon={:webhook}
@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
         </button>
       </div>
 
-      <!-- Form -->
+      <%!-- Form --%>
       <form
         id="webhook-form"
         phx-submit={
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
         phx-target={@parent_component}
         class="space-y-8"
       >
-        <!-- Name Field -->
+        <%!-- Name Field --%>
         <div class="card-glass">
           <div class="mb-6">
             <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Webhook Details</h3>
@@ -185,7 +185,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
           </div>
         </div>
 
-        <!-- Events Selection -->
+        <%!-- Events Selection --%>
         <div class="card-glass">
           <div class="mb-6">
             <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Event Subscriptions</h3>
@@ -216,7 +216,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
           <% end %>
         </div>
 
-        <!-- Form Actions -->
+        <%!-- Form Actions --%>
         <div class="flex justify-end gap-3 pt-4">
           <CoreComponents.action_button
             variant={:secondary}

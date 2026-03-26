@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
 
       <div class="card-glass relative overflow-hidden">
         <div class="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
-            <!-- Avatar Section -->
+            <%!-- Avatar Section --%>
             <.live_component
               module={AvatarUploadComponent}
               id="avatar-upload"
@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
               current_user={@current_user}
             />
 
-            <!-- Settings Forms Section -->
+            <%!-- Settings Forms Section --%>
             <div class="lg:col-span-2 space-y-10 lg:border-l-2 lg:border-tymeslot-50 lg:pl-12 pt-4">
               <div class="flex items-center gap-4 mb-2">
                 <div class="w-12 h-12 bg-cyan-50 rounded-token-xl flex items-center justify-center border border-cyan-100 shadow-sm">
@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsComponent do
         </div>
       </div>
 
-      <!-- Delete Avatar Modal (rendered outside card to avoid z-index stacking issues) -->
+      <%!-- Delete Avatar Modal (rendered outside card to avoid z-index stacking issues) --%>
       <.live_component
         module={DeleteAvatarModal}
         id="delete-avatar-modal"

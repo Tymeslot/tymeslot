@@ -313,7 +313,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
       />
 
       <%= if (@show_edit_overlay && @editing_type) || @show_add_form do %>
-        <!-- Form View (Add or Edit) -->
+        <%!-- Form View (Add or Edit) --%>
         <div
           id="meeting-type-config-view"
           phx-hook="ScrollReset"
@@ -356,9 +356,9 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
           </div>
         </div>
       <% else %>
-        <!-- Normal View -->
+        <%!-- Normal View --%>
         <div class="space-y-10">
-          <!-- Meeting Types Section -->
+          <%!-- Meeting Types Section --%>
           <div class="space-y-6">
             <MeetingTypesListComponent.meeting_types_section
               meeting_types={@meeting_types}
@@ -368,7 +368,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
             />
           </div>
 
-    <!-- Scheduling Settings -->
+    <%!-- Scheduling Settings --%>
           <div class="animate-in fade-in duration-700">
             <.live_component
               module={SchedulingSettingsComponent}
@@ -380,7 +380,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
           </div>
         </div>
 
-    <!-- Delete Meeting Type Modal -->
+    <%!-- Delete Meeting Type Modal --%>
         <DeleteMeetingTypeModal.delete_meeting_type_modal
           show={@show_delete_meeting_type_modal}
           meeting_type={@delete_meeting_type_modal_data}
@@ -388,7 +388,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
         />
       <% end %>
 
-    <!-- Add spacing after content to prevent flush bottom -->
+    <%!-- Add spacing after content to prevent flush bottom --%>
       <div class="pb-8"></div>
     </div>
     """

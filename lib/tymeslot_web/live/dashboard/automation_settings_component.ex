@@ -201,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   def render(assigns) do
     ~H"""
     <div>
-      <!-- Modals (outside space-y layout to avoid affecting headline position) -->
+      <%!-- Modals (outside space-y layout to avoid affecting headline position) --%>
       <Modals.delete_webhook_modal
         show={@show_delete_modal}
         on_cancel={JS.push("hide_delete_modal", target: @myself)}
@@ -224,14 +224,14 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         on_confirm={JS.push("regenerate_token", target: @myself)}
       />
 
-      <!-- Telegram Delete Modal -->
+      <%!-- Telegram Delete Modal --%>
       <Modals.delete_telegram_modal
         show={@show_telegram_delete_modal}
         on_cancel={JS.push("hide_telegram_delete_modal", target: @myself)}
         on_confirm={JS.push("delete_telegram", target: @myself)}
       />
 
-      <!-- Telegram Deliveries Modal -->
+      <%!-- Telegram Deliveries Modal --%>
       <%= if @show_telegram_deliveries_modal && @selected_telegram do %>
         <Modals.telegram_deliveries_modal
           id="telegram-deliveries-modal"
@@ -278,7 +278,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         <% true -> %>
         <.section_header icon={:webhook} title="Automation" />
 
-        <!-- Tabs Navigation -->
+        <%!-- Tabs Navigation --%>
         <div class="flex flex-wrap gap-4 bg-tymeslot-50/50 p-2 rounded-[2rem] border-2 border-tymeslot-50 mb-10">
           <button
             phx-click={JS.push("switch_tab", value: %{"tab" => "webhooks"}, target: @myself)}
@@ -309,7 +309,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
           <% end %>
         </div>
 
-        <!-- Tab Content -->
+        <%!-- Tab Content --%>
         <div class="space-y-12">
           <%= if @active_tab == :webhooks do %>
             <.webhook_tab_content

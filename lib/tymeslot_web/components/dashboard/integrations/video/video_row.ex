@@ -27,14 +27,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
       "card-glass transition-all duration-200",
       !@integration.is_active && "card-glass-unavailable"
     ]}>
-      <!-- Top row: info + toggle -->
+      <%!-- Top row: info + toggle --%>
       <div class="flex items-start justify-between gap-4">
-        <!-- Left: Info -->
+        <%!-- Left: Info --%>
         <div class="flex items-start gap-4 min-w-0">
           <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} class="mt-1 flex-shrink-0" />
 
           <div class="min-w-0">
-            <!-- Title -->
+            <%!-- Title --%>
             <div class="flex items-center gap-2 mb-1">
               <h4 class="text-base font-bold text-tymeslot-900 truncate">
                 <%= if @integration.name == @provider_display_name do %>
@@ -48,11 +48,11 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
               />
             </div>
 
-            <!-- Account Email -->
+            <%!-- Account Email --%>
             <p :if={@integration.provider_account_email} class="text-sm text-tymeslot-500 truncate">
               {@integration.provider_account_email}
             </p>
-            <!-- Provider Type -->
+            <%!-- Provider Type --%>
             <div class="text-xs text-tymeslot-600 mb-2">
               <%= case @integration.provider do %>
                 <% "google_meet" -> %>
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
               <% end %>
             </div>
 
-            <!-- Details -->
+            <%!-- Details --%>
             <div class="text-sm text-tymeslot-600 break-all">
               <%= if @integration.is_active do %>
                 <%= if @integration.provider in ["google_meet", "teams"] do %>
@@ -87,7 +87,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
           </div>
         </div>
 
-        <!-- Desktop: actions + toggle inline -->
+        <%!-- Desktop: actions + toggle inline --%>
         <div class="hidden sm:flex items-center gap-1 flex-shrink-0">
           <%= if @integration.is_active do %>
             <button
@@ -150,7 +150,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
           />
         </div>
 
-        <!-- Mobile: toggle only -->
+        <%!-- Mobile: toggle only --%>
         <div class="flex-shrink-0 sm:hidden">
           <StatusSwitch.status_switch
             id={"video-toggle-mobile-#{@integration.id}"}
@@ -164,7 +164,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
         </div>
       </div>
 
-      <!-- Mobile: action buttons below -->
+      <%!-- Mobile: action buttons below --%>
       <div class="flex items-center justify-end gap-1 mt-2 sm:hidden">
         <%= if @integration.is_active do %>
           <button

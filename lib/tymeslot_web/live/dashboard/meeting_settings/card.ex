@@ -21,7 +21,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
       if(@type.is_active, do: "card-glass-available", else: "card-glass-unavailable")
     ]}>
       <div class="flex items-center gap-3">
-        <!-- Drag Handle -->
+        <%!-- Drag Handle --%>
         <div class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 flex-shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -37,7 +37,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           <span class={[@type.icon, "w-5 h-5 text-tymeslot-600 flex-shrink-0"]} />
         <% end %>
 
-        <!-- Name + details -->
+        <%!-- Name + details --%>
         <div class="flex-1 min-w-0">
           <h3 class="text-token-base font-medium text-tymeslot-800 truncate">
             {@type.name}
@@ -108,7 +108,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
           </div>
         </div>
 
-        <!-- Actions -->
+        <%!-- Actions --%>
         <div class="flex items-center gap-1.5 flex-shrink-0">
           <button
             phx-click="edit_type"

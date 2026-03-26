@@ -151,7 +151,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
     ~H"""
     <div :if={@integrations != []} class="space-y-12">
-      <!-- Active Calendars Section -->
+      <%!-- Active Calendars Section --%>
       <div :if={@active_integrations != []} class="space-y-6">
         <div class="flex items-center justify-between gap-4 flex-col md:flex-row">
           <div>
@@ -204,7 +204,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         </div>
       </div>
 
-      <!-- Inactive Calendars Section -->
+      <%!-- Inactive Calendars Section --%>
       <div :if={@inactive_integrations != []} class="space-y-6">
         <div>
           <h3 class="text-xl font-black text-tymeslot-400 tracking-tight flex items-center gap-3">
@@ -260,9 +260,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       "card-glass p-6 transition-all duration-300 hover:shadow-xl group",
       !@integration.is_active && "opacity-75 grayscale-[0.5] hover:grayscale-0"
     ]}>
-      <!-- Top row: info + toggle -->
+      <%!-- Top row: info + toggle --%>
       <div class="flex items-start justify-between gap-4">
-        <!-- Info -->
+        <%!-- Info --%>
         <div class="flex items-start gap-4 min-w-0">
           <div class="p-3 bg-tymeslot-50 rounded-2xl group-hover:bg-white group-hover:shadow-md transition-all border border-tymeslot-100 group-hover:border-turquoise-100 flex-shrink-0">
             <ProviderIcon.provider_icon provider={@integration.provider} size={@icon_size} />
@@ -290,7 +290,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           </div>
         </div>
 
-        <!-- Actions + toggle (top right) -->
+        <%!-- Actions + toggle (top right) --%>
         <div class="flex items-center gap-1 flex-shrink-0">
           <button
             :if={@integration.provider == "google" && Helpers.needs_scope_upgrade?(@integration)}
@@ -328,7 +328,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         </div>
       </div>
 
-      <!-- Calendar Selection Grid (full width, active only) -->
+      <%!-- Calendar Selection Grid (full width, active only) --%>
       <div :if={@integration.is_active} class="mt-6">
         <div class="flex items-center gap-2 mb-3">
           <span class="text-[10px] font-black uppercase tracking-widest text-tymeslot-400">

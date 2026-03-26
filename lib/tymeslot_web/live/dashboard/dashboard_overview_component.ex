@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
         title="Overview"
       />
 
-      <!-- Welcome Section -->
+      <%!-- Welcome Section --%>
       <div class="bg-gradient-to-br from-turquoise-600 via-cyan-600 to-blue-600 rounded-token-3xl p-8 lg:p-12 text-white shadow-2xl shadow-turquoise-500/20 relative overflow-hidden">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]"></div>
         <div class="relative z-10">
@@ -38,9 +38,9 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
         </div>
       </div>
 
-      <!-- Dashboard Grid -->
+      <%!-- Dashboard Grid --%>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Upcoming Meetings -->
+        <%!-- Upcoming Meetings --%>
         <div class="card-glass h-full">
           <div class="flex items-center justify-between mb-8">
             <.section_header
@@ -71,8 +71,8 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
             </div>
           <% end %>
         </div>
-        
-    <!-- Quick Actions -->
+
+    <%!-- Quick Actions --%>
         <div class="card-glass h-full">
           <.section_header
             level={2}

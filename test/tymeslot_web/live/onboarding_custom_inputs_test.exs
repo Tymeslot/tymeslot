@@ -191,14 +191,12 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       assert html =~ ~s(name="buffer_minutes")
       assert html =~ "btn-tag-selector-primary--active"
 
-      # The "15 min" preset button should NOT have the active class
-      # Extract the section between the preset buttons
-      [_before, preset_section | _after] =
-        String.split(html, "<!-- Custom input or \"Custom\" button -->", parts: 2)
+      # The "15 min" preset button should NOT have the active class.
+      # Split on the custom input's name attribute to isolate the preset buttons section.
+      [preset_buttons_section, _rest] =
+        String.split(html, ~s(name="buffer_minutes"), parts: 2)
 
-      # In the preset section, "15 min" should not have the --active class nearby
-      # (this is a bit fragile, but checks that preset buttons aren't highlighted)
-      refute preset_section =~ ~r/15 min.*btn-tag-selector-primary--active/s
+      refute preset_buttons_section =~ ~r/15 min.*btn-tag-selector-primary--active/s
     end
 
     test "custom input remains visible when typing a different preset value", %{conn: conn} do

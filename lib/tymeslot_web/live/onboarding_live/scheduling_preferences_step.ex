@@ -45,7 +45,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
       </div>
 
       <form phx-change="update_scheduling_preferences" phx-debounce="300" class="onboarding-form text-left">
-        <!-- Buffer Time Between Meetings -->
+        <%!-- Buffer Time Between Meetings --%>
         <div class="onboarding-form-group">
           <label class="label">
             Buffer Between Meetings
@@ -73,7 +73,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
               </button>
             <% end %>
 
-            <!-- Custom input or "Custom" button -->
+            <%!-- Custom input or "Custom" button --%>
             <.custom_input_toggle
               field_name="buffer_minutes"
               current_value={@profile.buffer_minutes}
@@ -89,7 +89,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
           <% end %>
         </div>
 
-    <!-- Advance Booking Window -->
+    <%!-- Advance Booking Window --%>
         <div class="onboarding-form-group pt-6 border-t-2 border-tymeslot-50">
           <label class="label">
             Booking Window
@@ -117,7 +117,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
               </button>
             <% end %>
 
-            <!-- Custom input or "Custom" button -->
+            <%!-- Custom input or "Custom" button --%>
             <.custom_input_toggle
               field_name="advance_booking_days"
               current_value={@profile.advance_booking_days}
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
           <% end %>
         </div>
 
-    <!-- Minimum Advance Notice -->
+    <%!-- Minimum Advance Notice --%>
         <div class="onboarding-form-group pt-6 border-t-2 border-tymeslot-50">
           <label class="label">
             Minimum Notice
@@ -161,7 +161,7 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
               </button>
             <% end %>
 
-            <!-- Custom input or "Custom" button -->
+            <%!-- Custom input or "Custom" button --%>
             <.custom_input_toggle
               field_name="min_advance_hours"
               current_value={@profile.min_advance_hours}

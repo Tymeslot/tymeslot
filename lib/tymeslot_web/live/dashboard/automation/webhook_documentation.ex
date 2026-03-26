@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
       </div>
 
       <div class="space-y-6">
-        <!-- What are webhooks -->
+        <%!-- What are webhooks --%>
         <div class="p-5 bg-gradient-to-br from-turquoise-50 to-cyan-50 rounded-token-2xl border-2 border-turquoise-100">
           <div class="flex items-start gap-3 mb-3">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
           </p>
         </div>
 
-        <!-- Quick Setup -->
+        <%!-- Quick Setup --%>
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
           </div>
         </div>
 
-        <!-- Available Events -->
+        <%!-- Available Events --%>
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookDocumentation do
           </div>
         </div>
 
-        <!-- Security -->
+        <%!-- Security --%>
         <div>
           <div class="flex items-start gap-3 mb-4">
             <div class="w-2 h-2 rounded-full bg-turquoise-500 animate-pulse mt-1.5"></div>

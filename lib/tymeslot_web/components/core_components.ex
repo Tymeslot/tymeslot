@@ -330,19 +330,19 @@ defmodule TymeslotWeb.Components.CoreComponents do
       # Large modal for forms
       <.modal id=\"form-modal\" show={@show_modal} size={:large}>
         <:header>Edit Profile</:header>
-        <!-- Form content here -->
+        <%!-- Form content here --%>
       </.modal>
 
       # Extra large modal for complex content
       <.modal id=\"details-modal\" show={@show_modal} size={:xlarge}>
         <:header>Meeting Details</:header>
-        <!-- Detailed content here -->
+        <%!-- Detailed content here --%>
       </.modal>
 
       # Full screen modal
       <.modal id=\"full-modal\" show={@show_modal} size={:full}>
         <:header>Full Screen View</:header>
-        <!-- Full screen content here -->
+        <%!-- Full screen content here --%>
       </.modal>
   """
   attr :id, :string, required: true

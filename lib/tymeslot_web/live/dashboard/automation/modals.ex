@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
       </:header>
 
       <form id="webhook-form-modal-form" phx-submit={@on_submit} phx-target={@myself} class="space-y-6">
-        <!-- Name Field -->
+        <%!-- Name Field --%>
         <.input
           name="webhook[name]"
           label="Webhook Name"
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
           icon="hero-tag"
         />
 
-        <!-- URL Field -->
+        <%!-- URL Field --%>
         <.input
           name="webhook[url]"
           type="url"
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
           icon="hero-link"
         />
 
-        <!-- Events Selection -->
+        <%!-- Events Selection --%>
         <div class="space-y-3 mt-6">
           <label class="block text-token-sm font-black text-tymeslot-900">Events to Subscribe *</label>
           <div class="space-y-2">

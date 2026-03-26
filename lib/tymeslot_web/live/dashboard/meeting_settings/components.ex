@@ -40,10 +40,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
         Buffer Between Appointments
       </label>
 
-    <!-- Tag-based Selection -->
+    <%!-- Tag-based Selection --%>
       <form phx-change="update_buffer_minutes" phx-debounce="300" phx-target={@myself}>
       <div class="flex flex-wrap items-center gap-3">
-        <!-- Quick preset tags -->
+        <%!-- Quick preset tags --%>
         <%= for minutes <- [0, 5, 10, 15, 30, 60] do %>
           <button
             type="button"
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
           </button>
         <% end %>
 
-    <!-- Custom input tag -->
+    <%!-- Custom input tag --%>
         <%= if @custom_mode or @buffer_value not in [0, 5, 10, 15, 30, 60] do %>
           <div class="btn-tag-selector btn-tag-selector-primary--active !p-0 overflow-hidden">
             <input
@@ -124,10 +124,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
         How Far in Advance Can People Book
       </label>
 
-    <!-- Tag-based Selection -->
+    <%!-- Tag-based Selection --%>
       <form phx-change="update_advance_booking_days" phx-debounce="300" phx-target={@myself}>
       <div class="flex flex-wrap items-center gap-3">
-        <!-- Quick preset tags -->
+        <%!-- Quick preset tags --%>
         <%= for {days, label} <- [
           {7, "1 week"},
           {14, "2 weeks"},
@@ -150,8 +150,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
             {label}
           </button>
         <% end %>
-        
-    <!-- Custom input tag -->
+
+    <%!-- Custom input tag --%>
         <%= if @custom_mode or @booking_days not in [7, 14, 30, 60, 90, 180] do %>
           <div class="btn-tag-selector btn-tag-selector-secondary--active !p-0 overflow-hidden">
             <input
@@ -211,10 +211,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
         Minimum Booking Notice
       </label>
 
-    <!-- Tag-based Selection -->
+    <%!-- Tag-based Selection --%>
       <form phx-change="update_min_advance_hours" phx-debounce="300" phx-target={@myself}>
       <div class="flex flex-wrap items-center gap-3">
-        <!-- Quick preset tags -->
+        <%!-- Quick preset tags --%>
         <%= for {hours, label} <- [
           {0, "instant"},
           {1, "1 hour"},
@@ -237,8 +237,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
             {label}
           </button>
         <% end %>
-        
-    <!-- Custom input tag -->
+
+    <%!-- Custom input tag --%>
         <%= if @custom_mode or @notice_hours not in [0, 1, 4, 24, 48, 168] do %>
           <div class="btn-tag-selector btn-tag-selector-tertiary--active !p-0 overflow-hidden">
             <input
@@ -298,7 +298,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
       <p class="text-token-sm text-tymeslot-600">
         Add up to three reminder emails for this meeting type. We recommend using only one.
       </p>
-      
+
       <div class="mt-3 flex flex-wrap items-center gap-3">
         <%= if @reminders == [] do %>
           <span class="text-token-sm text-tymeslot-500 italic">No reminders configured.</span>
@@ -326,7 +326,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
 
       <div class="mt-4 space-y-3">
         <div class="flex flex-wrap items-center gap-2">
-          <!-- Quick add buttons -->
+          <%!-- Quick add buttons --%>
           <%= unless Enum.any?(@reminders, &(&1.value == 30 and &1.unit == "minutes")) do %>
             <button
               type="button"

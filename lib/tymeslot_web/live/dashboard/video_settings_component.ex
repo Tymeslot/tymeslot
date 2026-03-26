@@ -281,7 +281,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
       <.section_header icon={:video} title="Video Integration" />
 
       <%= if @view_mode == :config do %>
-        <!-- Configuration Page Mode -->
+        <%!-- Configuration Page Mode --%>
         <div
           id="video-config-view"
           phx-hook="ScrollReset"
@@ -333,13 +333,13 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           </div>
         </div>
       <% else %>
-        <!-- Connected Video Providers Section -->
+        <%!-- Connected Video Providers Section --%>
         <%= if @integrations != [] do %>
           <% {active_integrations, inactive_integrations} = Enum.split_with(@integrations, & &1.is_active) %>
           <% show_section_headers = active_integrations != [] and inactive_integrations != [] %>
 
           <div class="space-y-6">
-            <!-- Active Video Integrations -->
+            <%!-- Active Video Integrations --%>
             <%= if active_integrations != [] do %>
               <div class="space-y-3">
                 <%= if show_section_headers do %>
@@ -357,7 +357,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
               </div>
             <% end %>
 
-            <!-- Inactive Video Integrations -->
+            <%!-- Inactive Video Integrations --%>
             <%= if inactive_integrations != [] do %>
               <div class="space-y-3">
                 <%= if show_section_headers do %>
@@ -377,7 +377,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
           </div>
         <% end %>
 
-        <!-- Available Video Providers Section -->
+        <%!-- Available Video Providers Section --%>
         <div class="space-y-8 mt-12">
           <div class="max-w-4xl">
             <.section_header level={2} title="Available Providers" />
@@ -405,7 +405,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         </div>
       <% end %>
 
-      <!-- Edit Integration Modal -->
+      <%!-- Edit Integration Modal --%>
       <.live_component
         module={EditVideoIntegrationModal}
         id="edit-video-modal"
@@ -413,7 +413,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
         current_user={@current_user}
       />
 
-      <!-- Delete Confirmation Modal -->
+      <%!-- Delete Confirmation Modal --%>
       <.live_component
         module={DeleteIntegrationModal}
         id="delete-video-modal"

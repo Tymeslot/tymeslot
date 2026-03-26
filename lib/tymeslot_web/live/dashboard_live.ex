@@ -211,7 +211,7 @@ defmodule TymeslotWeb.DashboardLive do
     >
       <.flash_group flash={@flash} id="dashboard-flash-group" />
 
-      <!-- Content -->
+      <%!-- Content --%>
       <div class="dashboard-content">
         <%= if @should_render_feature do %>
           <.live_component
@@ -420,7 +420,7 @@ defmodule TymeslotWeb.DashboardLive do
         feature={@section}
       />
     <% else %>
-      <!-- Core fallback: just show a simple message -->
+      <%!-- Core fallback: just show a simple message --%>
       <div class="p-8 text-center text-tymeslot-500">
         <p>This feature (<%= @feature_name %>) is not available on your current plan.</p>
       </div>

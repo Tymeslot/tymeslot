@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
   def render(assigns) do
     ~H"""
     <div class="space-y-10 pb-20">
-      <!-- Header -->
+      <%!-- Header --%>
       <.section_header
         icon={:code}
         title="Embed & Share"
@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsComponent do
         Add your booking page to any website. Choose the option that works best for you.
       </p>
 
-      <!-- Tabbed Interface -->
+      <%!-- Tabbed Interface --%>
       <.tabs active_tab={@active_tab} target={@myself}>
         <:tab id="options" label="Embed Options" icon={:code}>
           <OptionsGrid.options_grid

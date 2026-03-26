@@ -19,9 +19,9 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInl
 
     ~H"""
     <div class={"rounded-lg overflow-hidden border border-tymeslot-200 #{ @class }"}>
-      <!-- Scope CSS variables to this wrapper via inline style -->
+      <%!-- Scope CSS variables to this wrapper via inline style --%>
       <div class="relative" style={"#{@css_vars}"}>
-        <!-- Background layer using the scoped CSS variables -->
+        <%!-- Background layer using the scoped CSS variables --%>
         <div
           class="h-40 w-full"
           style="
@@ -33,8 +33,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.ThemePreviewInl
           "
         >
         </div>
-        
-    <!-- Foreground demo card to showcase primary colors and surfaces -->
+
+    <%!-- Foreground demo card to showcase primary colors and surfaces --%>
         <div class="absolute inset-0 flex items-center justify-center p-4">
           <div
             class="rounded-xl shadow-lg max-w-sm w-full"

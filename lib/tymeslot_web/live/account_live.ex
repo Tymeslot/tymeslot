@@ -27,11 +27,11 @@ defmodule TymeslotWeb.AccountLive do
   def render(assigns) do
     ~H"""
     <div class="min-h-screen">
-      <!-- Simple header with back button -->
+      <%!-- Simple header with back button --%>
       <nav class="brand-nav mb-6 relative" style="z-index: 50;">
         <div class="container mx-auto px-4">
           <div class="flex items-center justify-between h-16">
-            <!-- Back to Dashboard button -->
+            <%!-- Back to Dashboard button --%>
             <.link
               patch={~p"/dashboard"}
               class="inline-flex items-center space-x-2 btn-secondary text-sm px-4 py-2"
@@ -40,7 +40,7 @@ defmodule TymeslotWeb.AccountLive do
               <span>Back to Dashboard</span>
             </.link>
             
-    <!-- User dropdown -->
+    <%!-- User dropdown --%>
             <div class="relative">
               <.live_component
                 module={TymeslotWeb.Components.UserDropdownComponent}
@@ -53,7 +53,7 @@ defmodule TymeslotWeb.AccountLive do
         </div>
       </nav>
       
-    <!-- Account content -->
+    <%!-- Account content --%>
       <div class="container mx-auto px-4 py-8">
         <main>
           <div class="max-w-6xl mx-auto">

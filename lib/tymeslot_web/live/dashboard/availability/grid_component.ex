@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
           </div>
         </div>
 
-        <!-- Mobile: day-by-day timeline bars -->
+        <%!-- Mobile: day-by-day timeline bars --%>
         <div class="sm:hidden space-y-2">
           <%= for {day_name, day_num} <- @days do %>
             <% avail = Map.get(@day_map, day_num) %>
@@ -95,11 +95,11 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
           <% end %>
         </div>
 
-        <!-- Desktop: full grid -->
+        <%!-- Desktop: full grid --%>
         <div class="hidden sm:block overflow-x-auto">
           <div class="min-w-[800px] bg-tymeslot-50/50 rounded-token-3xl p-6 border-2 border-tymeslot-50">
             <div class="grid grid-cols-8 gap-2 text-xs sm:text-sm">
-              <!-- Header Row -->
+              <%!-- Header Row --%>
               <div class="font-black text-tymeslot-400 uppercase tracking-widest text-center py-4"></div>
               <%= for {day_name, _day_number} <- [{"Mon", 1}, {"Tue", 2}, {"Wed", 3}, {"Thu", 4}, {"Fri", 5}, {"Sat", 6}, {"Sun", 7}] do %>
                 <div class="font-black text-tymeslot-700 text-center py-4 bg-white rounded-token-xl border-2 border-white shadow-sm">
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
                 </div>
               <% end %>
 
-              <!-- Time Slots Grid -->
+              <%!-- Time Slots Grid --%>
               <%= for hour <- 6..22 do %>
                 <%= for minute <- [0, 30] do %>
                   <div class="font-black text-tymeslot-400 text-right py-1 pr-4 text-[10px] sm:text-xs uppercase tracking-tighter">
@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
           </div>
         </div>
 
-        <!-- Legend -->
+        <%!-- Legend --%>
         <div class="mt-10 flex flex-wrap items-center justify-center gap-8 bg-tymeslot-50/50 p-6 rounded-token-2xl border-2 border-tymeslot-50">
           <div class="flex items-center gap-3">
             <div

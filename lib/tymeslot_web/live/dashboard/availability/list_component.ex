@@ -421,7 +421,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   def render(assigns) do
     ~H"""
     <div>
-      <!-- Timezone Display Header -->
+      <%!-- Timezone Display Header --%>
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-2 sm:space-y-0">
         <.section_header
           level={2}
@@ -429,8 +429,8 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
         />
         <Helpers.timezone_display timezone_display={@timezone_display} country_code={@country_code} />
       </div>
-      
-    <!-- Weekly Schedule -->
+
+    <%!-- Weekly Schedule --%>
       <div class="space-y-1">
         <%= for day_availability <- @weekly_schedule do %>
           <.day_card
@@ -521,7 +521,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
       </div>
 
       <%= if @day_availability.is_available do %>
-        <!-- Work Hours -->
+        <%!-- Work Hours --%>
         <div class="mb-6 pb-6 border-b-2 border-tymeslot-50">
           <form phx-change="update_day_hours" phx-target={@myself} phx-debounce="500">
             <input type="hidden" name="day" value={@day_availability.day_of_week} />
@@ -547,8 +547,8 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
             </div>
           </form>
         </div>
-        
-    <!-- Breaks -->
+
+    <%!-- Breaks --%>
         <div class="space-y-4">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
@@ -603,7 +603,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
             </div>
           <% end %>
 
-    <!-- Add Break Form -->
+    <%!-- Add Break Form --%>
           <%= if @show_add_break_form == @day_availability.day_of_week do %>
             <form
               phx-submit="add_break"
@@ -664,8 +664,8 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
             </form>
           <% end %>
         </div>
-        
-    <!-- Action Bar -->
+
+    <%!-- Action Bar --%>
         <div class="flex flex-wrap items-center justify-between gap-4 mt-6 pt-6 border-t-2 border-tymeslot-50">
           <div class="flex flex-wrap gap-3">
             <button

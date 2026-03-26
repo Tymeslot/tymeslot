@@ -57,6 +57,8 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           Shows the booking calendar right on your page. Copy the code and paste it into your website's HTML.
         </:footer_info>
       </.embed_option_card>
+
+      <%!-- Popup Modal option card --%>
       <.embed_option_card
         type="popup"
         selected={@selected_embed_type == "popup"}
@@ -152,7 +154,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
                 <div class="h-2 bg-tymeslot-200 rounded w-2/3"></div>
               </div>
             </div>
-            <!-- Floating button preview -->
+            <%!-- Floating button preview --%>
             <div class="absolute bottom-4 right-4">
               <div class="w-8 h-8 rounded-full shadow-lg flex items-center justify-center bg-turquoise-600">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,7 +173,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
       </.embed_option_card>
     </div>
 
-    <%!-- Hardcoded link to the cloud docs hub — /docs is not available in standalone Core --%>
+    <%!-- Hardcoded link to the cloud docs hub (slash-docs is not available in standalone Core) --%>
     <p class="mt-6 text-center text-token-sm text-tymeslot-500">
       Need help? See the
       <a
@@ -224,12 +226,12 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettings.OptionsGrid do
           </span>
         </div>
 
-        <!-- Preview -->
+        <%!-- Preview --%>
         <div class="mb-4 bg-tymeslot-50 rounded-token-lg p-4 border-2 border-tymeslot-200">
           <%= render_slot(@preview) %>
         </div>
 
-        <!-- Code Snippet -->
+        <%!-- Code Snippet --%>
         <div class="relative">
           <pre class="bg-tymeslot-900 text-tymeslot-100 rounded-token-lg p-4 pr-20 text-token-xs whitespace-pre-wrap break-all"><code class="block"><%= @code |> render_slot() |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary() |> String.split("\n") |> Enum.map_join("\n", &String.trim/1) |> String.trim() |> Phoenix.HTML.raw() %></code></pre>
           <button

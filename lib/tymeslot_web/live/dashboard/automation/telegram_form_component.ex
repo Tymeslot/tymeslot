@@ -62,7 +62,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
 
     ~H"""
     <div class="space-y-8 pb-20">
-      <!-- Toolbar -->
+      <%!-- Toolbar --%>
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
         <.section_header
           icon={:automation}
@@ -83,14 +83,14 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
       </div>
 
       <%= if @shared_bot_mode && @mode == :create && @wizard_step == 1 do %>
-        <!-- Shared Bot: Step 1 — Deep Link -->
+        <%!-- Shared Bot: Step 1 — Deep Link --%>
         <.shared_bot_step1
           deep_link={@deep_link}
           link_expired={@link_expired}
           parent_component={@parent_component}
         />
       <% else %>
-        <!-- Standard Form (own-bot create/edit, shared-bot step 2/edit) -->
+        <%!-- Standard Form (own-bot create/edit, shared-bot step 2/edit) --%>
         <form
           id="telegram-form"
           phx-submit={
@@ -103,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
           phx-target={@parent_component}
           class="space-y-8"
         >
-          <!-- Name & Details -->
+          <%!-- Name & Details --%>
           <div class="card-glass">
             <div class="mb-6">
               <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Integration Details</h3>
@@ -168,7 +168,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
             </div>
           </div>
 
-          <!-- Events Selection -->
+          <%!-- Events Selection --%>
           <div class="card-glass">
             <div class="mb-6">
               <h3 class="text-token-xl font-black text-tymeslot-900 tracking-tight">Event Subscriptions</h3>
@@ -199,7 +199,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
             <% end %>
           </div>
 
-          <!-- Form Actions -->
+          <%!-- Form Actions --%>
           <div class="flex justify-end gap-3 pt-4">
             <CoreComponents.action_button
               variant={:secondary}

@@ -146,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         myself={@myself}
       />
 
-      <!-- Hidden fields -->
+      <%!-- Hidden fields --%>
       <%= for reminder <- @reminders do %>
         <input type="hidden" name="meeting_type[reminder_config][][value]" value={reminder.value} />
         <input type="hidden" name="meeting_type[reminder_config][][unit]" value={reminder.unit} />

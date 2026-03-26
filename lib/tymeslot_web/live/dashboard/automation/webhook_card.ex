@@ -27,9 +27,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
       )
     ]}>
       <div class="flex flex-col gap-4">
-        <!-- Top row: Icon + Info + Toggle -->
+        <%!-- Top row: Icon + Info + Toggle --%>
         <div class="flex items-start gap-4 sm:gap-5">
-          <!-- Webhook Icon -->
+          <%!-- Webhook Icon --%>
           <div class={[
             "p-3 rounded-2xl transition-colors duration-300 flex-shrink-0",
             if(@webhook.is_active,
@@ -48,7 +48,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             />
           </div>
 
-          <!-- Webhook Details -->
+          <%!-- Webhook Details --%>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-2">
               <h3 class={[
@@ -76,7 +76,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               <%= @webhook.url %>
             </div>
 
-            <!-- Event Tags -->
+            <%!-- Event Tags --%>
             <div class="flex flex-wrap gap-2 mb-4">
               <%= for event <- @webhook.events do %>
                 <span class={[
@@ -96,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               <% end %>
             </div>
 
-            <!-- Last Triggered Info -->
+            <%!-- Last Triggered Info --%>
             <%= if @webhook.last_triggered_at do %>
               <div class="flex items-center gap-2 text-token-sm text-tymeslot-500">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             <% end %>
           </div>
 
-          <!-- Status Toggle (top right) -->
+          <%!-- Status Toggle (top right) --%>
           <div class="flex-shrink-0 ml-2">
             <StatusSwitch.status_switch
               id={"webhook-toggle-#{@webhook.id}"}
@@ -145,9 +145,9 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
           </div>
         </div>
 
-        <!-- Bottom: Actions -->
+        <%!-- Bottom: Actions --%>
         <div class="flex items-center gap-2 flex-shrink-0 border-t border-tymeslot-100 pt-3">
-          <!-- Test Button -->
+          <%!-- Test Button --%>
           <button
             phx-click={@on_test}
             disabled={@testing || !@webhook.is_active}
@@ -189,7 +189,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
             <% end %>
           </button>
 
-          <!-- View Logs Button -->
+          <%!-- View Logs Button --%>
           <button
             phx-click={@on_view_deliveries}
             class="inline-flex items-center gap-1.5 px-3 py-2 rounded-token-xl border-2 bg-white border-tymeslot-100 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all text-token-sm"
@@ -207,7 +207,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
           </button>
 
           <div class="ml-auto flex items-center gap-1">
-            <!-- Edit Button -->
+            <%!-- Edit Button --%>
             <button
               phx-click={@on_edit}
               class="p-2.5 text-tymeslot-400 hover:text-turquoise-600 hover:bg-turquoise-50 rounded-token-xl transition-all"
@@ -223,7 +223,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookCard do
               </svg>
             </button>
 
-            <!-- Delete Button -->
+            <%!-- Delete Button --%>
             <button
               phx-click={@on_delete}
               class="p-2.5 text-tymeslot-300 hover:text-red-500 hover:bg-red-50 rounded-token-xl transition-all"

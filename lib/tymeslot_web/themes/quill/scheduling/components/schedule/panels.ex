@@ -85,7 +85,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
         </div>
       </div>
 
-    <!-- Dropdown with search input at top - no layout shift -->
+    <%!-- Dropdown with search input at top - no layout shift --%>
       <%= if @timezone_dropdown_open do %>
         <div class="timezone-dropdown absolute top-full mt-1 z-[9999] rounded-xl shadow-2xl border overflow-hidden">
           <div class="timezone-dropdown-header p-3">

@@ -39,13 +39,13 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
         </div>
       </label>
       
-    <!-- Timezone selector container with click-away -->
+    <%!-- Timezone selector container with click-away --%>
       <div
         class="relative"
         phx-click-away={if @timezone_dropdown_open, do: "close_timezone_dropdown", else: nil}
         {if @target && @timezone_dropdown_open, do: [{"phx-target", @target}], else: []}
       >
-        <!-- Current timezone display -->
+        <%!-- Current timezone display --%>
         <button
           class="group relative cursor-pointer z-50 w-full text-left"
           phx-click="toggle_timezone_dropdown"
@@ -94,13 +94,13 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
           </div>
         </button>
         
-    <!-- Dropdown with search - opens upward -->
+    <%!-- Dropdown with search - opens upward --%>
         <%= if @timezone_dropdown_open do %>
           <div
             class="absolute bottom-full left-0 right-0 mb-2 max-h-64 z-40 brand-card rounded-xl shadow-lg border border-white/30 overflow-hidden"
             style="position: absolute; bottom: 100%; margin-bottom: 8px;"
           >
-            <!-- Search input -->
+            <%!-- Search input --%>
             <div class="p-3 border-b border-white/20">
               <div class="relative">
                 <input
@@ -134,7 +134,7 @@ defmodule TymeslotWeb.Components.TimezoneDropdown do
               </div>
             </div>
             
-    <!-- Scrollable timezone options -->
+    <%!-- Scrollable timezone options --%>
             <div class="max-h-48 overflow-y-auto">
               <div class="p-1">
                 <%= for {label, value, offset} <- Timezones.search(@timezone_search || "") do %>

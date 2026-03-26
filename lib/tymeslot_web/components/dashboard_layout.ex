@@ -24,14 +24,14 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   def dashboard_layout(assigns) do
     ~H"""
     <div class="h-screen flex flex-col overflow-hidden" id="dashboard-root" phx-hook="ClipboardCopy">
-      <!-- Top Navigation - Glass box with container -->
+      <%!-- Top Navigation - Glass box with container --%>
       <div class="flex-shrink-0">
         <.top_navigation current_user={@current_user} profile={@profile} />
       </div>
 
-      <!-- Main Layout Area - Sidebar and Content -->
+      <%!-- Main Layout Area - Sidebar and Content --%>
       <div class="flex-1 flex overflow-hidden lg:gap-8">
-        <!-- Left Sidebar - Hidden on mobile/tablet, overlay when open -->
+        <%!-- Left Sidebar - Hidden on mobile/tablet, overlay when open --%>
         <DashboardSidebar.sidebar
           current_action={@current_action}
           integration_status={@integration_status}
@@ -40,7 +40,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           sidebar_extensions={@sidebar_extensions}
         />
 
-        <!-- Main Content Area - Full width on mobile/tablet -->
+        <%!-- Main Content Area - Full width on mobile/tablet --%>
         <div
           id="dashboard-content-container"
           class="flex-1 min-w-0 w-full lg:ml-0 overflow-y-auto"
@@ -71,9 +71,9 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       <nav class="brand-nav relative" style="z-index: 50;">
         <div class="w-full px-2 sm:px-4">
           <div class="flex items-center justify-between h-16">
-            <!-- Left side: Logo and Mobile Menu Button -->
+            <%!-- Left side: Logo and Mobile Menu Button --%>
             <div class="flex items-center space-x-4 -ml-2 sm:-ml-4 flex-1 min-w-0">
-              <!-- Mobile Menu Button -->
+              <%!-- Mobile Menu Button --%>
               <button
                 class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all flex-shrink-0"
                 phx-click={
@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
                 </svg>
               </button>
 
-    <!-- Logo with Icon and Text -->
+    <%!-- Logo with Icon and Text --%>
               <div class="flex items-center space-x-3 flex-shrink-0">
                 <TymeslotWeb.Components.CoreComponents.logo
                   mode={:full}
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               </div>
             </div>
 
-    <!-- Right side: User dropdown -->
+    <%!-- Right side: User dropdown --%>
             <div class="relative flex-shrink-0">
               <.live_component
                 module={UserDropdownComponent}

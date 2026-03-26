@@ -42,7 +42,7 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
         slider_state_class(@checked),
         slider_size_class(@size)
       ]}>
-        <!-- Inactive icon (X) -->
+        <%!-- Inactive icon (X) --%>
         <span class={[
           "status-toggle-icon",
           icon_visibility_class(!@checked)
@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Components.UI.StatusSwitch do
           </svg>
         </span>
         
-    <!-- Active icon (checkmark) -->
+    <%!-- Active icon (checkmark) --%>
         <span class={[
           "status-toggle-icon",
           icon_visibility_class(@checked)

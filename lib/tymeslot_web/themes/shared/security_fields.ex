@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
   @spec honeypot_field(map()) :: Phoenix.LiveView.Rendered.t()
   def honeypot_field(assigns) do
     ~H"""
-    <!-- Honeypot field (hidden from real users, visible to bots) -->
+    <%!-- Honeypot field (hidden from real users, visible to bots) --%>
     <div class="honeypot-field" aria-hidden="true">
       <label for={"#{@id_prefix}-website"}>Website</label>
       <input
