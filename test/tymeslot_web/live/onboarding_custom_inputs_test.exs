@@ -196,7 +196,9 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       [preset_buttons_section, _rest] =
         String.split(html, ~s(name="buffer_minutes"), parts: 2)
 
-      refute preset_buttons_section =~ ~r/15 min.*btn-tag-selector-primary--active/s
+      # Match the HTML structure: class attribute appears BEFORE button text content.
+      # The custom input wrapper also has --active, but its content is an <input>, not "15 min".
+      refute preset_buttons_section =~ ~r/btn-tag-selector-primary--active[^>]*>\s*15 min/s
     end
 
     test "custom input remains visible when typing a different preset value", %{conn: conn} do
