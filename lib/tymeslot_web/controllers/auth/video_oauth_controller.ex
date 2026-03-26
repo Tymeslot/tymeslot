@@ -122,6 +122,14 @@ defmodule TymeslotWeb.VideoOAuthController do
     |> redirect(to: ~p"/dashboard/video")
   end
 
+  def teams_callback(conn, params) do
+    Logger.warning("Invalid Teams OAuth callback params", params: inspect(params))
+
+    conn
+    |> put_flash(:error, "Invalid authentication response. Please try again.")
+    |> redirect(to: ~p"/dashboard/video")
+  end
+
   defp handle_teams_oauth_error(conn, error) do
     message =
       case error do
@@ -144,14 +152,6 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, message)
-    |> redirect(to: ~p"/dashboard/video")
-  end
-
-  def teams_callback(conn, params) do
-    Logger.warning("Invalid Teams OAuth callback params", params: inspect(params))
-
-    conn
-    |> put_flash(:error, "Invalid authentication response. Please try again.")
     |> redirect(to: ~p"/dashboard/video")
   end
 
