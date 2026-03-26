@@ -101,6 +101,27 @@ defmodule TymeslotWeb.VideoOAuthController do
     end
   end
 
+  def teams_callback(conn, %{"error" => error} = params) do
+    error_description = Map.get(params, "error_description", "")
+    Logger.warning("Teams OAuth error", error: error, description: error_description)
+
+    error_message =
+      cond do
+        microsoft_admin_consent_error?(error_description) ->
+          "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
+
+        error == "access_denied" ->
+          "Authorization was denied. Please try again."
+
+        true ->
+          "Authentication failed. Please try again."
+      end
+
+    conn
+    |> put_flash(:error, error_message)
+    |> redirect(to: ~p"/dashboard/video")
+  end
+
   defp handle_teams_oauth_error(conn, error) do
     message =
       case error do
@@ -123,27 +144,6 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, message)
-    |> redirect(to: ~p"/dashboard/video")
-  end
-
-  def teams_callback(conn, %{"error" => error} = params) do
-    error_description = Map.get(params, "error_description", "")
-    Logger.warning("Teams OAuth error", error: error, description: error_description)
-
-    error_message =
-      cond do
-        microsoft_admin_consent_error?(error_description) ->
-          "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
-
-        error == "access_denied" ->
-          "Authorization was denied. Please try again."
-
-        true ->
-          "Authentication failed. Please try again."
-      end
-
-    conn
-    |> put_flash(:error, error_message)
     |> redirect(to: ~p"/dashboard/video")
   end
 
