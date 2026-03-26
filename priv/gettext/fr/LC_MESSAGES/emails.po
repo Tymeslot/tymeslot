@@ -509,7 +509,7 @@ msgstr "bientôt"
 msgid "Add to your calendar:"
 msgstr "Ajouter à votre agenda :"
 
-#: lib/tymeslot/emails/shared/ui_components.ex:240
+#: lib/tymeslot/emails/shared/ui_components.ex:237
 #, elixir-autogen, elixir-format
 msgid "Having trouble with the button? Copy and paste this link into your browser:"
 msgstr "Le bouton ne fonctionne pas ? Copiez-collez ce lien dans votre navigateur :"
@@ -543,7 +543,7 @@ msgstr[1] "heures"
 msgid "%{name} has scheduled a meeting with you."
 msgstr ""
 
-#: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:109
+#: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:101
 #, elixir-autogen, elixir-format
 msgid "- No reminder emails are scheduled for this appointment"
 msgstr "- Aucun rappel par e-mail n'est prévu pour ce rendez-vous."
@@ -558,7 +558,7 @@ msgstr ""
 msgid "- Review any relevant materials"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:107
+#: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:99
 #, elixir-autogen, elixir-format
 msgid "- Set a reminder %{time} before"
 msgstr ""
@@ -568,7 +568,7 @@ msgstr ""
 msgid "- Test video/audio setup if virtual"
 msgstr ""
 
-#: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:123
+#: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:115
 #, elixir-autogen, elixir-format
 msgid "15 minutes"
 msgstr "15 minutes"

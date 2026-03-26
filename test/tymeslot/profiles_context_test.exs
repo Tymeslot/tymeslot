@@ -264,14 +264,48 @@ defmodule Tymeslot.ProfilesContextTest do
       assert is_nil(updated.avatar)
     end
 
-    test "display_name returns full name or nil" do
+    test "display_name returns full_name when present" do
       assert Profiles.display_name(insert(:profile, full_name: "John Doe")) == "John Doe"
-      assert Profiles.display_name(insert(:profile, full_name: "")) == nil
+    end
+
+    test "display_name returns nil for nil profile" do
       assert Profiles.display_name(nil) == nil
     end
 
-    test "display_name returns nil for whitespace-only name" do
-      assert Profiles.display_name(insert(:profile, full_name: "   ")) == nil
+    test "display_name falls back to user.name when full_name is blank" do
+      user = insert(:user, name: "Jane Smith")
+      profile = insert(:profile, user: user, full_name: nil)
+      assert Profiles.display_name(profile) == "Jane Smith"
+
+      profile_empty = insert(:profile, user: insert(:user, name: "Fallback"), full_name: "")
+      assert Profiles.display_name(profile_empty) == "Fallback"
+    end
+
+    test "display_name returns nil when both full_name and user.name are blank" do
+      user = insert(:user, name: nil)
+      profile = insert(:profile, user: user, full_name: "")
+      assert Profiles.display_name(profile) == nil
+    end
+
+    test "display_name returns nil for whitespace-only names" do
+      user = insert(:user, name: "   ")
+      profile = insert(:profile, user: user, full_name: "   ")
+      assert Profiles.display_name(profile) == nil
+    end
+
+    test "display_name returns nil when user association is not loaded" do
+      profile = insert(:profile, full_name: nil)
+
+      unloaded = %{
+        profile
+        | user: %Ecto.Association.NotLoaded{
+            __field__: :user,
+            __cardinality__: :one,
+            __owner__: profile.__struct__
+          }
+      }
+
+      assert Profiles.display_name(unloaded) == nil
     end
   end
 

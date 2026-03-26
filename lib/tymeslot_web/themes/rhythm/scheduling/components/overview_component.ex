@@ -6,9 +6,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Profiles
-
   alias Tymeslot.Demo
+  alias Tymeslot.MeetingTypes
+  alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.FlagHelpers
@@ -21,10 +21,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
     sorted_meeting_types =
       LocalizationHelpers.sort_meeting_types(Map.get(filtered_assigns, :meeting_types))
 
-    {:ok,
-     socket
-     |> assign(Map.put(filtered_assigns, :meeting_types, sorted_meeting_types))
-     |> assign_new(:selected_duration, fn -> nil end)}
+    {:ok, assign(socket, Map.put(filtered_assigns, :meeting_types, sorted_meeting_types))}
   end
 
   @impl Phoenix.LiveComponent
@@ -58,7 +55,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
               {gettext("Schedule with %{name}", name: display_name(@organizer_profile))}
             </h1>
 
-    <!-- Organizer Profile -->
             <div class="organizer-profile">
               <div class="organizer-avatar">
                 <img
@@ -78,7 +74,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
               </div>
             </div>
 
-            <!-- Duration Selection -->
             <%= if @username_context && @meeting_types == [] do %>
               <div class="overview-empty-state">
                 <p class="overview-empty-title">{gettext("No meeting types available")}</p>
@@ -87,7 +82,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
             <% else %>
               <div class="duration-grid">
                 <%= for meeting_type <- @meeting_types do %>
-                  <% slug = Tymeslot.MeetingTypes.to_slug(meeting_type) %>
+                  <% slug = MeetingTypes.to_slug(meeting_type) %>
                   <div class={"duration-card #{if @selected_duration == slug, do: "selected", else: ""}"}>
                     <button
                       phx-click="select_duration"
@@ -117,7 +112,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
               </div>
             <% end %>
 
-    <!-- Navigation -->
             <div class="slide-actions">
               <button
                 class={if is_nil(@selected_duration), do: "next-button disabled", else: "next-button"}

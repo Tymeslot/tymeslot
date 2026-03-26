@@ -14,7 +14,7 @@
       content out of the clipped area on short viewports */
 
 .scheduling-box:has(.confirmation-slide) {
-  width: 600px;
+  width: min(600px, 100%);
   max-height: none;
 }
 
@@ -182,6 +182,32 @@
   color: var(--theme-text-secondary);
 }
 
+/* Shared meeting-detail-* classes — styled to match ticket-* appearance */
+.meeting-detail-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.meeting-detail-icon-wrapper {
+  display: none;
+}
+
+.meeting-detail-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs);
+}
+
+.meeting-detail-value {
+  color: var(--theme-text);
+}
+
+.meeting-detail-label {
+  color: var(--theme-text-secondary);
+}
+
 .ticket-footer {
   padding: var(--space-md) var(--space-lg);
   background: rgba(255, 255, 255, 0.03);
@@ -306,6 +332,15 @@
     height: var(--icon-lg);
   }
 
+  .meeting-detail-row {
+    gap: var(--space-sm);
+  }
+
+  .meeting-detail-icon-wrapper {
+    width: var(--icon-lg);
+    height: var(--icon-lg);
+  }
+
   .success-badge {
     width: 56px;
     height: 56px;
@@ -405,6 +440,26 @@ html.rhythm-theme[data-embedded] .ticket-sublabel::before {
 
 /* Dividers between horizontal ticket items */
 html.rhythm-theme[data-embedded] .ticket-row + .ticket-row {
+  padding-left: var(--space-sm);
+  border-left: var(--border-width-thin) solid var(--border-subtle);
+}
+
+/* Shared meeting-detail-* — embedded overrides (mirror ticket-* behavior) */
+html.rhythm-theme[data-embedded] .meeting-detail-icon-wrapper {
+  display: none;
+}
+
+html.rhythm-theme[data-embedded] .meeting-detail-info {
+  flex-direction: row;
+  gap: var(--space-3xs);
+  align-items: baseline;
+}
+
+html.rhythm-theme[data-embedded] .meeting-detail-label::before {
+  content: "· ";
+}
+
+html.rhythm-theme[data-embedded] .meeting-detail-row + .meeting-detail-row {
   padding-left: var(--space-sm);
   border-left: var(--border-width-thin) solid var(--border-subtle);
 }

@@ -340,12 +340,20 @@ defmodule Tymeslot.Profiles do
   def display_name(nil), do: nil
 
   def display_name(profile) do
-    if profile.full_name && String.trim(profile.full_name) != "" do
-      profile.full_name
-    else
-      nil
+    cond do
+      profile.full_name && String.trim(profile.full_name) != "" ->
+        profile.full_name
+
+      (name = user_name(profile)) && String.trim(name) != "" ->
+        name
+
+      true ->
+        nil
     end
   end
+
+  defp user_name(%{user: %{name: name}}) when is_binary(name), do: name
+  defp user_name(_profile), do: nil
 
   # --- Theme & Embed Settings ---
 

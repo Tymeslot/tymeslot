@@ -25,7 +25,12 @@
       if (typeof TymeslotBooking !== 'undefined' && TymeslotBooking.showError) {
         TymeslotBooking.showError(c);
       } else {
-        c.innerHTML = '<div style="padding:20px;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-family:sans-serif;"><strong>Booking system unavailable.</strong></div>';
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = 'padding:20px;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-family:sans-serif;';
+        const strong = document.createElement('strong');
+        strong.textContent = 'Booking system unavailable.';
+        errorDiv.appendChild(strong);
+        c.replaceChildren(errorDiv);
       }
     });
   };
@@ -303,7 +308,7 @@
     `;
     
     const closeButton = document.createElement('button');
-    closeButton.innerHTML = '×';
+    closeButton.textContent = '\u00D7';
     closeButton.style.cssText = `
       position: absolute;
       top: 16px;
@@ -530,20 +535,42 @@
       closeButton.focus();
 
       // Update constraint on window resize / orientation change
+      let resizeRafPending = false;
       const resizeHandler = () => {
-        var newMax = viewportMaxHeight();
-        container.style.maxHeight = newMax + 'px';
-        if (wrapper.dataset.constrained) {
-          wrapper.dataset.constraintHeight = String(newMax);
+        if (!resizeRafPending) {
+          resizeRafPending = true;
+          requestAnimationFrame(() => {
+            resizeRafPending = false;
+            var newMax = viewportMaxHeight();
+            container.style.maxHeight = newMax + 'px';
+            if (wrapper.dataset.constrained) {
+              wrapper.dataset.constraintHeight = String(newMax);
+            }
+          });
         }
       };
       window.addEventListener('resize', resizeHandler);
       modal.resizeHandler = resizeHandler;
       
-      // Handle escape key
+      // Handle keyboard interactions: Escape closes, Tab cycles within modal
+      const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"]), iframe';
       const escapeHandler = (e) => {
         if (e.key === 'Escape') {
           this.close();
+          return;
+        }
+        if (e.key === 'Tab') {
+          const focusable = Array.from(modal.querySelectorAll(FOCUSABLE)).filter(el => !el.hidden && el.getAttribute('aria-hidden') !== 'true');
+          if (focusable.length === 0) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
         }
       };
       document.addEventListener('keydown', escapeHandler);

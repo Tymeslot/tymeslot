@@ -53,7 +53,7 @@
 /* Base interactive element */
 .interactive {
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: transform var(--transition-normal);
 }
 
 .interactive:hover {
@@ -66,7 +66,7 @@
 
 /* Hover lift utility - subtle elevation on hover */
 .hover-lift {
-  transition: all var(--transition-smooth);
+  transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
 }
 
 .hover-lift:hover {
@@ -77,18 +77,11 @@
   transform: translateY(0);
 }
 
-.interactive:disabled,
-.interactive[disabled],
-.interactive.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-  pointer-events: none;
-}
+/* Disabled states — in shared/utilities.css */
 
 /* Selection state pattern */
 .selectable {
-  transition: all var(--transition-smooth);
+  transition: background var(--transition-smooth), border-color var(--transition-smooth), box-shadow var(--transition-smooth);
 }
 
 .selectable:hover {
@@ -103,12 +96,7 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Focus visible for keyboard navigation */
-.interactive:focus-visible,
-.selectable:focus-visible {
-  outline: 2px solid var(--theme-primary);
-  outline-offset: 2px;
-}
+/* Focus visible — in shared/utilities.css */
 
 /* ============================================
    ICON UTILITIES
@@ -184,9 +172,7 @@
    LOADING SPINNER
    ============================================ */
 
-.loading-spinner {
-  animation: spin 1s linear infinite;
-}
+/* .loading-spinner and @keyframes spin — in shared/utilities.css */
 
 .loading-spinner-track {
   opacity: 0.25;
@@ -194,15 +180,6 @@
 
 .loading-spinner-path {
   opacity: 0.75;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* ============================================
@@ -240,7 +217,7 @@
   justify-content: center;
   gap: 0.5rem;
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: background var(--transition-smooth), border-color var(--transition-smooth), transform var(--transition-smooth);
   border-radius: var(--radius-md);
   font-family: var(--theme-font-family);
 }
@@ -378,7 +355,7 @@
 }
 
 /* Mobile-specific component optimizations */
-@media (max-width: 479px) {
+@container scheduling (max-width: 479px) {
   /* Duration grid - single column on mobile */
   .duration-grid {
     grid-template-columns: 1fr;
@@ -422,7 +399,7 @@
 }
 
 /* Tablet-specific component optimizations */
-@media (min-width: 480px) and (max-width: 767px) {
+@container scheduling (min-width: 480px) and (max-width: 767px) {
   .submit-button,
   .action-button-primary,
   .prev-button,

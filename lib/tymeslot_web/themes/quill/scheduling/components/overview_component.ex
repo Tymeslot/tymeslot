@@ -52,26 +52,19 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
       phx-target={@target}
       data-testid="duration-option"
       data-duration={@duration}
-      class={"duration-card w-full rounded-xl transition-all duration-300 cursor-pointer transform #{if @selected, do: "scale-105", else: "hover:scale-105"}"}
-      style={duration_card_style(@selected, @duration)}
+      class={"duration-card w-full rounded-xl cursor-pointer transform #{if @selected, do: "duration-card--selected scale-105", else: "duration-card--unselected hover:scale-105"}"}
     >
       <div class="flex items-center justify-between">
         <div class="text-left flex-1">
           <div class="flex items-start justify-between gap-2 mb-1">
-            <h3 class="duration-card-title font-bold flex-1" style="color: white;">
+            <h3 class="duration-card-title font-bold flex-1">
               {@title}
             </h3>
-            <span
-              class="inline-block px-2 py-0.5 text-xs font-semibold rounded-full whitespace-nowrap mt-1"
-              style="background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.95); backdrop-filter: blur(10px);"
-            >
+            <span class="duration-card-badge inline-block px-2 py-0.5 text-xs font-semibold rounded-full whitespace-nowrap mt-1">
               {@badge || @duration}
             </span>
           </div>
-          <p
-            class="duration-card-description"
-            style={"color: rgba(255,255,255,#{if @selected, do: "0.9", else: "0.8"});"}
-          >
+          <p class="duration-card-description">
             {@description}
           </p>
         </div>
@@ -85,24 +78,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
       </div>
     </button>
     """
-  end
-
-  defp duration_card_style(selected, _duration) do
-    base_style =
-      if selected do
-        "background: linear-gradient(135deg, #4a1d6d 0%, #2d1b69 100%); box-shadow: 0 10px 30px rgba(74,29,109,0.4);"
-      else
-        "background: rgba(255,255,255,0.1);"
-      end
-
-    border =
-      if selected do
-        "border: 2px solid rgba(255,255,255,0.3);"
-      else
-        "border: 2px solid transparent;"
-      end
-
-    base_style <> " " <> border
   end
 
   @impl Phoenix.LiveComponent
@@ -152,13 +127,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                     <div class="overview-duration-list">
                       <%= cond do %>
                         <% @username_context && @meeting_types == [] -> %>
-                          <!-- No meeting types available for this user -->
                           <div class="text-center py-8 text-purple-300">
                             <p class="text-lg font-medium">{gettext("No meeting types available")}</p>
                             <p class="text-sm mt-1">{gettext("Please contact the organizer")}</p>
                           </div>
                         <% @username_context && length(@meeting_types) > 0 -> %>
-                          <!-- Show user's configured meeting types -->
                           <%= for meeting_type <- @meeting_types do %>
                             <% slug = MeetingTypes.to_slug(meeting_type) %>
                             <.duration_card
@@ -172,7 +145,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.OverviewComponent do
                             />
                           <% end %>
                         <% true -> %>
-                          <!-- Default duration options (no username context) -->
                           <.duration_card
                             duration="15-minutes"
                             title={gettext("15 Minutes")}

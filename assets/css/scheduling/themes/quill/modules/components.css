@@ -37,32 +37,6 @@
   background: var(--surface-intense);
 }
 
-/* Backdrop blur utilities */
-.blur-none {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.blur-sm {
-  backdrop-filter: blur(var(--glass-blur-sm));
-  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
-}
-
-.blur-md {
-  backdrop-filter: blur(var(--glass-blur-md));
-  -webkit-backdrop-filter: blur(var(--glass-blur-md));
-}
-
-.blur-lg {
-  backdrop-filter: blur(var(--glass-blur-lg));
-  -webkit-backdrop-filter: blur(var(--glass-blur-lg));
-}
-
-.blur-xl {
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-}
-
 /* Elevation utilities combining surface + shadow + blur */
 .elevation-1 {
   background: var(--surface-light);
@@ -103,7 +77,7 @@
 /* Base interactive element */
 .interactive {
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: transform var(--transition-normal);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -117,7 +91,7 @@
 
 /* Hover lift utility - subtle elevation on hover */
 .hover-lift {
-  transition: all var(--transition-smooth);
+  transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
 }
 
 .hover-lift:hover {
@@ -150,19 +124,11 @@
     0 0 20px var(--theme-primary-focus);
 }
 
-/* Disabled states */
-.interactive:disabled,
-.interactive[disabled],
-.interactive.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-  pointer-events: none;
-}
+/* Disabled states — in shared/utilities.css */
 
 /* Selection state pattern */
 .selectable {
-  transition: all var(--transition-smooth);
+  transition: background var(--transition-smooth), border-color var(--transition-smooth), box-shadow var(--transition-smooth), color var(--transition-smooth);
   cursor: pointer;
 }
 
@@ -179,12 +145,7 @@
   color: white;
 }
 
-/* Focus visible for keyboard navigation */
-.interactive:focus-visible,
-.selectable:focus-visible {
-  outline: 2px solid var(--theme-primary);
-  outline-offset: 2px;
-}
+/* Focus visible — in shared/utilities.css */
 
 /* Remove focus outline for mouse users */
 .interactive:focus:not(:focus-visible),
@@ -290,18 +251,7 @@
    LOADING STATES
    ============================================ */
 
-.loading-spinner {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+/* .loading-spinner and @keyframes spin — in shared/utilities.css */
 
 .loading-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -459,7 +409,7 @@
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   box-shadow: var(--shadow-md);
-  transition: all var(--transition-smooth);
+  transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-smooth);
 }
 
 .card-interactive {
@@ -827,7 +777,7 @@
 }
 
 /* Step circles with glassmorphism effect */
-.quill-theme-wrapper [class*="rounded-full"][class*="flex items-center"] {
+.quill-theme-wrapper .step-circle {
   backdrop-filter: blur(var(--glass-blur-sm));
   -webkit-backdrop-filter: blur(var(--glass-blur-sm));
   box-shadow:
@@ -836,7 +786,7 @@
 }
 
 /* Active/completed step enhancement */
-.quill-theme-wrapper [class*="from-purple-800"][class*="to-purple-900"] {
+.quill-theme-wrapper .step-circle--active {
   background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
   box-shadow:
     var(--shadow-primary-md),
@@ -845,7 +795,7 @@
 }
 
 /* Step connectors with gradient */
-.quill-theme-wrapper [class*="from-purple-800"][class*="to-purple-900"][class*="h-0.5"] {
+.quill-theme-wrapper .step-connector--active {
   background: linear-gradient(90deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
   box-shadow: var(--shadow-xs);
 }
@@ -899,4 +849,60 @@
   .glass-morphism-card > div {
     padding: var(--space-sm);
   }
+}
+
+/* Shared meeting-detail-* classes — Quill glassmorphism styling */
+.meeting-detail-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.meeting-detail-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.meeting-detail-icon-wrapper {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.meeting-detail-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.meeting-detail-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.meeting-detail-value {
+  font-weight: 500;
+  color: var(--text-opacity-high);
+}
+
+.meeting-detail-label {
+  font-size: var(--theme-font-size-sm);
+  color: var(--text-opacity-medium-low);
+}
+
+/* Organizer row — separator above */
+.meeting-detail-row--organizer {
+  padding-top: var(--space-md);
+  border-top: var(--border-width-thin) solid var(--border-subtle);
+}
+
+/* Override organizer name color to theme primary */
+.meeting-detail-row--organizer .meeting-detail-value {
+  color: var(--theme-primary);
 }

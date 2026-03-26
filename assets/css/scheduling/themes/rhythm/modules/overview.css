@@ -79,7 +79,7 @@
   background: var(--surface-light);
   border: var(--border-width-thin) solid var(--border-medium);
   border-radius: var(--radius-lg);
-  transition: all var(--transition-smooth);
+  transition: background var(--transition-smooth), border-color var(--transition-smooth), transform var(--transition-smooth), box-shadow var(--transition-smooth);
 }
 
 .duration-card:hover {

@@ -88,7 +88,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
     <!-- Dropdown with search input at top - no layout shift -->
       <%= if @timezone_dropdown_open do %>
         <div class="timezone-dropdown absolute top-full mt-1 z-[9999] rounded-xl shadow-2xl border overflow-hidden">
-          <!-- Search input fixed at top of dropdown -->
           <div class="timezone-dropdown-header p-3">
             <div class="relative">
               <input
@@ -123,7 +122,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
             </div>
           </div>
 
-    <!-- Scrollable timezone options -->
           <div class="timezone-dropdown-list scroll-y">
             <div class="p-1">
               <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>

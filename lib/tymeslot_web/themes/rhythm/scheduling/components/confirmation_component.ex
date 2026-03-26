@@ -6,10 +6,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
-
-  import TymeslotWeb.Components.CoreComponents
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -31,9 +30,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
         <div class="slide-container">
           <div class="slide active">
             <div class="slide-content confirmation-slide">
-              <!-- New Vertical Celebration Layout -->
               <div class="confirmation-container">
-                <!-- Success Header with Animation -->
                 <div class="confirmation-header-section">
                   <div class="confirmation-title-row">
                     <div class="success-badge">
@@ -63,7 +60,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   </p>
                 </div>
                 
-    <!-- Meeting Ticket Card -->
                 <div class="meeting-ticket">
                   <div class="ticket-header">
                     <span class="ticket-label">{gettext("Meeting Details")}</span>
@@ -100,7 +96,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                         </div>
                         <div class="ticket-info">
                           <span class="ticket-value">
-                            {@organizer_profile.user.name || @organizer_profile.full_name}
+                            {Profiles.display_name(@organizer_profile)}
                           </span>
                           <span class="ticket-sublabel">{gettext("Appointment host")}</span>
                         </div>
@@ -115,7 +111,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                           stroke-linecap="round"
                           stroke-linejoin="round"
                           stroke-width="2"
-                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z"
+                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                         />
                       </svg>
                       <span>{gettext("Sent to")} <strong>{@email}</strong></span>
@@ -123,7 +119,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
                   </div>
                 </div>
                 
-    <!-- Actions Section -->
                 <div class="confirmation-actions-section">
                   <button
                     phx-click="schedule_another"
@@ -150,6 +145,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
   defp get_organizer_text(nil), do: ""
 
   defp get_organizer_text(organizer_profile) do
-    gettext("with %{name}", name: organizer_profile.user.name || organizer_profile.full_name)
+    case Profiles.display_name(organizer_profile) do
+      nil -> ""
+      name -> gettext("with %{name}", name: name)
+    end
   end
 end

@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
     base_path = get_base_path(socket)
     query_params = build_query_params(socket, locale)
     query_string = URI.encode_query(query_params)
-    "#{base_path}?#{query_string}"
+    if query_string == "", do: base_path, else: "#{base_path}?#{query_string}"
   end
 
   defp get_base_path(socket) do
@@ -61,11 +61,8 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
   defp do_get_base_path(_action, username, _socket), do: "/#{username}"
 
   defp build_query_params(socket, locale) do
-    slug = get_slug(socket)
-
     %{"locale" => locale}
     |> maybe_put_query_param("theme", socket.assigns[:theme_id])
-    |> maybe_put_query_param("slug", slug)
   end
 
   defp get_slug(socket) do
@@ -75,4 +72,19 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlers do
 
   defp maybe_put_query_param(params, _param_key, nil), do: params
   defp maybe_put_query_param(params, key, value), do: Map.put(params, key, value)
+
+  @doc """
+  Returns the organizer's scheduling page path, e.g. "/username".
+  Falls back to "/" if the profile or username is unavailable.
+  """
+  @spec organizer_scheduling_path(map()) :: String.t()
+  def organizer_scheduling_path(assigns) do
+    case assigns[:organizer_profile] do
+      %{username: username} when is_binary(username) and username != "" ->
+        "/#{username}"
+
+      _other ->
+        "/"
+    end
+  end
 end

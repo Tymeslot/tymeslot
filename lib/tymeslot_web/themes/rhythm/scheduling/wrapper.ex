@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
 
   import TymeslotWeb.Themes.Shared.Customization.Helpers
   import TymeslotWeb.Components.LanguageSwitcher
-  alias TymeslotWeb.Themes.Shared.Customization.Video, as: VideoHelpers
+  import TymeslotWeb.Themes.Shared.VideoSources, only: [video_sources: 1]
 
   attr :theme_customization, :map, default: nil
   attr :custom_css, :string, default: nil
@@ -27,7 +27,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
 
     ~H"""
     <div class="rhythm-theme-wrapper theme-2" data-locale={assigns[:locale]}>
-      <!-- Render custom CSS if available -->
       <%= if assigns[:custom_css] && assigns[:custom_css] != "" do %>
         <style type="text/css">
           :root {
@@ -36,7 +35,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
         </style>
       <% end %>
 
-    <!-- Render background based on type -->
       <%= cond do %>
         <% @has_video_background -> %>
           <div class="video-background-container" id="rhythm-video-container" phx-hook="RhythmVideo">
@@ -48,26 +46,10 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
               playsinline
               poster={@video_poster}
               class="video-background-video active"
-              preload="auto"
+              preload="metadata"
             >
-              <% background_video_path = get_background_video_path(@theme_customization) %>
-              <%= if background_video_path do %>
-                <% sanitized_path = sanitize_path(background_video_path) %>
-                {Phoenix.HTML.raw(VideoHelpers.render_upload_video_sources(sanitized_path))}
-              <% else %>
-                <!-- Handle preset videos -->
-                <% background_value = get_background_value(@theme_customization) %>
-                <%= if background_value && String.starts_with?(background_value, "preset:") do %>
-                  <% preset_id = background_value %>
-                  <% preset =
-                    Tymeslot.DatabaseSchemas.ThemeCustomizationSchema.video_presets()[preset_id] %>
-                  <%= if preset do %>
-                    {Phoenix.HTML.raw(VideoHelpers.render_preset_video_sources(preset.file))}
-                  <% end %>
-                <% end %>
-              <% end %>
+              <.video_sources theme_customization={@theme_customization} />
             </video>
-            <!-- Second video for crossfade -->
             <video
               id="rhythm-background-video-2"
               muted
@@ -75,38 +57,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
               playsinline
               poster={@video_poster}
               class="video-background-video inactive"
-              preload="auto"
+              preload="none"
             >
-              <% background_video_path = get_background_video_path(@theme_customization) %>
-              <%= if background_video_path do %>
-                <% sanitized_path = sanitize_path(background_video_path) %>
-                {Phoenix.HTML.raw(VideoHelpers.render_upload_video_sources(sanitized_path))}
-              <% else %>
-                <!-- Handle preset videos -->
-                <% background_value = get_background_value(@theme_customization) %>
-                <%= if background_value && String.starts_with?(background_value, "preset:") do %>
-                  <% preset_id = background_value %>
-                  <% preset =
-                    Tymeslot.DatabaseSchemas.ThemeCustomizationSchema.video_presets()[preset_id] %>
-                  <%= if preset do %>
-                    {Phoenix.HTML.raw(VideoHelpers.render_preset_video_sources(preset.file))}
-                  <% end %>
-                <% end %>
-              <% end %>
+              <.video_sources theme_customization={@theme_customization} />
             </video>
           </div>
         <% assigns[:theme_customization] && get_background_type(assigns[:theme_customization]) in ["gradient", "color", "image"] -> %>
           <div class="video-background-container" style={get_background_style(assigns[:theme_customization])}>
           </div>
         <% true -> %>
-          <!-- Default gradient background -->
           <div class="video-background-container"></div>
       <% end %>
 
-      <!-- Main wrapper -->
       <div class="video-background-theme theme-grid">
         <div class="content-area">
-          <!-- Language Switcher -->
           <%= if assigns[:locale] && assigns[:language_dropdown_open] != nil do %>
             <div class={[
               "language-switcher-container",

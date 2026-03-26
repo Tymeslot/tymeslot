@@ -4,6 +4,7 @@ defmodule TymeslotWeb.StepNavigation do
   """
 
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   attr :current_step, :integer, required: true
   attr :class, :string, default: ""
@@ -17,8 +18,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={1}
         current_step={@current_step}
-        label="Duration"
-        path={get_step_path(@username_context, 1)}
+        label={gettext("Duration")}
         clickable={@current_step > 1}
       />
 
@@ -27,12 +27,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={2}
         current_step={@current_step}
-        label="Date & Time"
-        path={
-          if @slug && @current_step > 2,
-            do: get_step_path(@username_context, 2, @slug),
-            else: nil
-        }
+        label={gettext("Date & Time")}
         clickable={@current_step > 2 && @slug != nil}
       />
 
@@ -41,12 +36,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={3}
         current_step={@current_step}
-        label="Details"
-        path={
-          if @slug && @current_step > 3,
-            do: get_step_path(@username_context, 3, @slug),
-            else: nil
-        }
+        label={gettext("Details")}
         clickable={@current_step > 3 && @slug != nil}
       />
 
@@ -55,8 +45,7 @@ defmodule TymeslotWeb.StepNavigation do
       <.step_item
         step={4}
         current_step={@current_step}
-        label="Confirmation"
-        path=""
+        label={gettext("Confirmation")}
         clickable={false}
       />
     </div>
@@ -66,14 +55,13 @@ defmodule TymeslotWeb.StepNavigation do
   attr :step, :integer, required: true
   attr :current_step, :integer, required: true
   attr :label, :string, required: true
-  attr :path, :string, default: nil
   attr :clickable, :boolean, default: false
 
   @spec step_item(map()) :: Phoenix.LiveView.Rendered.t()
   def step_item(assigns) do
     ~H"""
     <div class="step-item-wrapper flex flex-col items-center">
-      <%= if @clickable && @path do %>
+      <%= if @clickable do %>
         <button
           phx-click="navigate_to_step"
           phx-value-step={@step}
@@ -82,7 +70,7 @@ defmodule TymeslotWeb.StepNavigation do
           <div class={"step-circle " <> step_class(@step, @current_step) <> " cursor-pointer hover:scale-125 transform transition-all"}>
             <span class="text-sm font-bold">{@step}</span>
           </div>
-          <span class={"step-label " <> step_label_class(@step, @current_step) <> " mt-1 sm:mt-2 text-xs group-hover:text-purple-200 transition-colors"}>
+          <span class={"step-label " <> step_label_class(@step, @current_step) <> " mt-1 sm:mt-2 text-xs transition-colors"}>
             {@label}
           </span>
         </button>
@@ -99,7 +87,7 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp step_class(step, current) when step <= current do
-    "w-8 h-8 rounded-full bg-gradient-to-r from-purple-800 to-purple-900 text-white flex items-center justify-center shadow-lg border border-white/20 transition-all duration-300 scale-110"
+    "step-circle--active w-8 h-8 rounded-full bg-gradient-to-r from-purple-800 to-purple-900 text-white flex items-center justify-center shadow-lg border border-white/20 transition-all duration-300 scale-110"
   end
 
   defp step_class(_step, _current) do
@@ -107,7 +95,7 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp connector_class(step, current) when step < current do
-    "w-4 sm:w-8 md:w-12 h-0.5 sm:h-1 bg-gradient-to-r from-purple-800 to-purple-900 rounded shadow-sm transition-all duration-500"
+    "step-connector--active w-4 sm:w-8 md:w-12 h-0.5 sm:h-1 bg-gradient-to-r from-purple-800 to-purple-900 rounded shadow-sm transition-all duration-500"
   end
 
   defp connector_class(_step, _current) do
@@ -123,32 +111,6 @@ defmodule TymeslotWeb.StepNavigation do
   end
 
   defp step_label_class(_step, _current) do
-    "text-white/80 drop-shadow-md"
+    "step-label--upcoming text-white/80 drop-shadow-md"
   end
-
-  defp get_step_path(username_context, step, slug \\ nil)
-
-  defp get_step_path(username_context, 1, _slug) do
-    if username_context, do: "/#{username_context}", else: "/"
-  end
-
-  defp get_step_path(username_context, 2, slug) when is_binary(slug) do
-    if username_context do
-      "/#{username_context}/#{slug}"
-    else
-      nil
-    end
-  end
-
-  defp get_step_path(_username_context, 2, _slug), do: nil
-
-  defp get_step_path(username_context, 3, slug) when is_binary(slug) do
-    if username_context do
-      "/#{username_context}/#{slug}/book"
-    else
-      nil
-    end
-  end
-
-  defp get_step_path(_username_context, 3, _slug), do: nil
 end

@@ -752,6 +752,31 @@ describe('modal keyboard and focus management', () => {
     const closeBtn = document.querySelector('#tymeslot-modal button[aria-label="Close booking widget"]')
     expect(closeBtn).not.toBeNull()
   })
+
+  test('Tab on last focusable element wraps to first', () => {
+    window.TymeslotBooking.open('alice')
+
+    const modal = document.getElementById('tymeslot-modal')
+    const focusable = modal.querySelectorAll('a[href], button:not([disabled]), textarea, input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"]), iframe')
+    const last = focusable[focusable.length - 1]
+    last.focus()
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }))
+
+    expect(document.activeElement).toBe(focusable[0])
+  })
+
+  test('Shift+Tab on first focusable element wraps to last', () => {
+    window.TymeslotBooking.open('alice')
+
+    const modal = document.getElementById('tymeslot-modal')
+    const focusable = modal.querySelectorAll('a[href], button:not([disabled]), textarea, input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"]), iframe')
+    focusable[0].focus()
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }))
+
+    expect(document.activeElement).toBe(focusable[focusable.length - 1])
+  })
 })
 
 describe('floating button options', () => {

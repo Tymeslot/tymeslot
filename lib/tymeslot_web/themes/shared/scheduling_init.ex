@@ -52,6 +52,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:loading_slots, false)
     |> assign(:calendar_error, nil)
     |> assign(:timezone_dropdown_open, false)
+    |> assign(:language_dropdown_open, false)
     |> assign(:timezone_search, "")
     |> assign(:reschedule_meeting_uid, nil)
     |> assign(:is_rescheduling, false)

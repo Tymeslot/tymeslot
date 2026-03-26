@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Timezones
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -39,7 +40,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
             <div class="w-full confirmation-container">
               <.glass_morphism_card>
                 <div class="confirmation-content">
-                  <!-- Heading row: badge + title inline -->
                   <div class="confirmation-heading-row flex items-center">
                     <div class="flex-shrink-0">
                       <div class="relative">
@@ -86,7 +86,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                     </div>
                   </div>
 
-                  <!-- Details + actions -->
                   <.meeting_details_card title="">
                     <.booking_details
                       date={@selected_date}
@@ -211,6 +210,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   defp get_organizer_text(nil), do: ""
 
   defp get_organizer_text(organizer_profile) do
-    gettext("with %{name}", name: organizer_profile.user.name || organizer_profile.full_name)
+    case Profiles.display_name(organizer_profile) do
+      nil -> ""
+      name -> gettext("with %{name}", name: name)
+    end
   end
 end

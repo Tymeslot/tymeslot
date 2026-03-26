@@ -26,14 +26,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
       language_dropdown_open={@language_dropdown_open}
       show_language_switcher={true}
     >
-      <!-- Scheduling Box with Glass Effect -->
       <div class="scheduling-box">
         <div class="slide-container">
           <div class="slide active">
             <div class="slide-content confirmation-slide">
-              <!-- Confirmation Container -->
               <div class="confirmation-container">
-                <!-- Header with Icon -->
                 <div class="confirmation-header-section">
                   <div class="success-badge">
                     <div class="success-badge-inner">
@@ -57,7 +54,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                   </p>
                 </div>
                 
-    <!-- Info Box -->
                 <div class="meeting-ticket">
                   <div class="ticket-body">
                     <div class="email-confirmation">
@@ -76,7 +72,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.CancelConfirmed do
                   </div>
                 </div>
                 
-    <!-- Action Buttons -->
                 <div class="confirmation-actions">
                   <button
                     phx-click={JS.navigate("/")}

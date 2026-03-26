@@ -13,8 +13,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
 
-  import TymeslotWeb.Components.CoreComponents
-
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
@@ -54,7 +52,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content booking-slide">
-            <!-- Organizer Header -->
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
                 organizer_profile={@organizer_profile}
@@ -63,7 +60,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               />
             </div>
 
-    <!-- Meeting Summary -->
             <div class="meeting-summary compact">
               <div class="summary-row">
                 <div class="summary-item">
@@ -91,7 +87,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
               </div>
             </div>
 
-    <!-- Contact Form -->
             <.form
               :let={f}
               for={@form}
@@ -144,7 +139,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
 
               <SecurityFields.recaptcha_fields id_prefix="booking" param_root="booking" />
 
-    <!-- Navigation -->
               <div class="slide-actions horizontal">
                 <button
                   type="button"

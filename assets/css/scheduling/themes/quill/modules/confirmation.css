@@ -58,17 +58,7 @@
   text-decoration: underline;
 }
 
-/* Duration card styling helper */
-@supports (selector(:has(*))) {
-  .duration-card:has(button[phx-click="select_duration"]) {
-    /* Modern browsers with :has() support */
-  }
-}
-
-/* ============================================================================
-   TEMP: will convert to @container
-   Semantic classes replacing responsive Tailwind prefixes in confirmation_component
-   ============================================================================ */
+/* Semantic classes replacing responsive Tailwind prefixes in confirmation_component */
 
 /* confirmation-container: replaces max-w-4xl lg:max-w-6xl */
 .confirmation-container {

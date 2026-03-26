@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -180,7 +181,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
   # Helper functions
   defp get_organizer_name(organizer_profile, username_context) do
-    organizer_profile.user.name || organizer_profile.full_name || username_context
+    Profiles.display_name(organizer_profile) || username_context
   end
 
   defp get_submit_title(submitting, form) do

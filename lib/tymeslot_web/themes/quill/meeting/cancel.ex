@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
 
   import TymeslotWeb.Components.CoreComponents
+  import TymeslotWeb.Themes.Shared.Components.MeetingDetails, only: [meeting_detail_rows: 1]
 
   attr :theme_customization, :map, required: true
   attr :custom_css, :string, required: true
@@ -36,8 +37,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
         <div class="w-full max-w-2xl">
           <.glass_morphism_card>
             <div class="p-8">
-              <%= if assigns[:meeting_kept] do %>
-                <!-- Meeting Kept State -->
+              <%= if @meeting_kept do %>
                 <div class="text-center mb-8">
                   <div class="mx-auto mb-4 w-16 h-16">
                     <svg
@@ -67,7 +67,6 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                   </p>
                 </div>
 
-    <!-- Meeting Details Card -->
                 <div
                   class="glass-morphism-card mb-8"
                   style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);"
@@ -85,66 +84,15 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                       </span>
                     </div>
 
-                    <div class="space-y-4">
-                      <!-- Date Row -->
-                      <div class="flex items-center gap-4">
-                        <div
-                          class="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style="background: rgba(255,255,255,0.1);"
-                        >
-                          <.icon name="hero-calendar" class="w-5 h-5" />
-                        </div>
-                        <div class="flex-1">
-                          <div class="font-medium" style="color: rgba(255,255,255,0.95);">
-                            {LocaleFormat.format_date(@meeting.start_time, @locale)}
-                          </div>
-                          <div class="text-sm" style="color: rgba(255,255,255,0.6);">{gettext("Date")}</div>
-                        </div>
-                      </div>
-
-    <!-- Time Row -->
-                      <div class="flex items-center gap-4">
-                        <div
-                          class="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style="background: rgba(255,255,255,0.1);"
-                        >
-                          <.icon name="hero-clock" class="w-5 h-5" />
-                        </div>
-                        <div class="flex-1">
-                          <div class="font-medium" style="color: rgba(255,255,255,0.95);">
-                            {LocaleFormat.format_time(@meeting.start_time, @locale)}
-                          </div>
-                          <div class="text-sm" style="color: rgba(255,255,255,0.6);">
-                            {@meeting.attendee_timezone}
-                          </div>
-                        </div>
-                      </div>
-
-    <!-- Organizer Row -->
-                      <div
-                        class="flex items-center gap-4 pt-4"
-                        style="border-top: 1px solid rgba(255,255,255,0.1);"
-                      >
-                        <div
-                          class="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style="background: rgba(255,255,255,0.1);"
-                        >
-                          <.icon name="hero-user" class="w-5 h-5" />
-                        </div>
-                        <div class="flex-1">
-                          <div class="text-sm" style="color: rgba(255,255,255,0.6);">
-                            {gettext("Meeting with")}
-                          </div>
-                          <div class="font-medium" style="color: var(--theme-primary);">
-                            {@meeting.organizer_name}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <.meeting_detail_rows
+                      date={LocaleFormat.format_date(@meeting.start_time, @locale)}
+                      time={LocaleFormat.format_time(@meeting.start_time, @locale)}
+                      timezone={@meeting.attendee_timezone}
+                      organizer_name={@meeting.organizer_name}
+                    />
                   </div>
                 </div>
 
-    <!-- Success Message -->
                 <div class="text-center">
                   <p class="mb-6" style="color: rgba(255,255,255,0.85);">
                     {gettext("We look forward to seeing you at the scheduled time.")}
@@ -155,7 +103,6 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                   </.action_button>
                 </div>
               <% else %>
-                <!-- Cancel State -->
                 <div class="text-center mb-8">
                   <div class="mx-auto mb-4 w-16 h-16">
                     <svg
@@ -185,7 +132,6 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                   </p>
                 </div>
 
-    <!-- Meeting Details Card -->
                 <div
                   class="glass-morphism-card mb-8"
                   style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);"
@@ -203,66 +149,15 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                       </span>
                     </div>
 
-                    <div class="space-y-4">
-                      <!-- Date Row -->
-                      <div class="flex items-center gap-4">
-                        <div
-                          class="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style="background: rgba(255,255,255,0.1);"
-                        >
-                          <.icon name="hero-calendar" class="w-5 h-5" />
-                        </div>
-                        <div class="flex-1">
-                          <div class="font-medium" style="color: rgba(255,255,255,0.95);">
-                            {LocaleFormat.format_date(@meeting.start_time, @locale)}
-                          </div>
-                          <div class="text-sm" style="color: rgba(255,255,255,0.6);">{gettext("Date")}</div>
-                        </div>
-                      </div>
-
-    <!-- Time Row -->
-                      <div class="flex items-center gap-4">
-                        <div
-                          class="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style="background: rgba(255,255,255,0.1);"
-                        >
-                          <.icon name="hero-clock" class="w-5 h-5" />
-                        </div>
-                        <div class="flex-1">
-                          <div class="font-medium" style="color: rgba(255,255,255,0.95);">
-                            {LocaleFormat.format_time(@meeting.start_time, @locale)}
-                          </div>
-                          <div class="text-sm" style="color: rgba(255,255,255,0.6);">
-                            {@meeting.attendee_timezone}
-                          </div>
-                        </div>
-                      </div>
-
-    <!-- Organizer Row -->
-                      <div
-                        class="flex items-center gap-4 pt-4"
-                        style="border-top: 1px solid rgba(255,255,255,0.1);"
-                      >
-                        <div
-                          class="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style="background: rgba(255,255,255,0.1);"
-                        >
-                          <.icon name="hero-user" class="w-5 h-5" />
-                        </div>
-                        <div class="flex-1">
-                          <div class="text-sm" style="color: rgba(255,255,255,0.6);">
-                            {gettext("Meeting with")}
-                          </div>
-                          <div class="font-medium" style="color: var(--theme-primary);">
-                            {@meeting.organizer_name}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <.meeting_detail_rows
+                      date={LocaleFormat.format_date(@meeting.start_time, @locale)}
+                      time={LocaleFormat.format_time(@meeting.start_time, @locale)}
+                      timezone={@meeting.attendee_timezone}
+                      organizer_name={@meeting.organizer_name}
+                    />
                   </div>
                 </div>
 
-    <!-- Warning Message -->
                 <div
                   class="mb-6 p-4 rounded-lg flex items-start gap-3"
                   style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);"
@@ -284,7 +179,6 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Cancel do
                   </div>
                 </div>
 
-    <!-- Action Buttons -->
                 <div class="flex gap-4">
                   <.loading_button
                     type="button"

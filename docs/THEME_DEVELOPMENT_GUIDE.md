@@ -83,9 +83,12 @@ assets/css/scheduling/themes/[theme_name]/
 | `Tymeslot.Timezones` | Human-readable timezone display: `Timezones.format/1` — use this in confirmation and booking components instead of string-splitting the IANA timezone identifier |
 | `Scheduling.Helpers` | Calendar/week day generation (`get_week_days/4` — pass `@user_timezone`), week navigation (`handle_week_navigation/2`), availability fetching, slot parsing, `display_range/2` for visible date boundaries |
 | `Scheduling.CalendarNavigation` | Navigation boundary checks: `prev_month_disabled?/3`, `next_month_disabled?/4` (pass `@organizer_profile.advance_booking_days`), `prev_week_disabled?/2`, `next_week_disabled?/3` (pass `advance_booking_days`) — wire these to nav button `disabled` attributes |
-| `PathHandlers` | Navigation with locale preservation |
+| `PathHandlers` | Navigation with locale preservation; `organizer_scheduling_path/1` for back-to-calendar links in cancel/reschedule pages |
 | `Customization.Helpers` | Theme customization CSS generation |
 | `Customization.Video` | Video background rendering |
+| `SchedulingLive` | Shared LiveView macro — `use TymeslotWeb.Themes.Shared.SchedulingLive, theme_id: "N"` injects all common callbacks; only `render/1` (and optional overrides) needed in your LiveView |
+| `VideoSources` | Shared component rendering `<source>` elements for video backgrounds; import and use `<.video_sources theme_customization={@theme_customization} />` in your wrapper |
+| `Shared.Components.MeetingDetails` | Shared `meeting_detail_rows/1` component for cancel/reschedule pages; renders date, time, timezone, and organizer rows with icons |
 
 ## Quick Start
 
@@ -801,9 +804,43 @@ These components should reside in `lib/tymeslot_web/themes/[theme_name]/meeting/
 
 Modern themes follow a layered architecture that keeps the LiveView thin and maintainable:
 
-#### 1. **StateMachine Module**
+#### 1. **SchedulingLive Macro**
 
-Each theme has its own `StateMachine` module (`themes/[theme_name]/scheduling/state_machine.ex`) that handles:
+All common LiveView callbacks are provided by the shared macro — no per-theme boilerplate needed:
+
+```elixir
+defmodule TymeslotWeb.Themes.Aurora.Scheduling.Live do
+  use TymeslotWeb.Themes.Shared.SchedulingLive, theme_id: "3"
+
+  alias TymeslotWeb.Themes.Aurora.Scheduling.Components.{
+    BookingComponent, ConfirmationComponent, OverviewComponent, ScheduleComponent
+  }
+  alias TymeslotWeb.Themes.Aurora.Scheduling.Wrapper, as: AuroraThemeWrapper
+
+  # Only override if your theme needs extra events (e.g. month navigation for calendar themes)
+  # defp handle_theme_event(event, params, socket), do: {:noreply, socket}
+  # defp handle_theme_schedule_event(socket, event, data), do: {:noreply, socket}
+
+  @impl Phoenix.LiveView
+  def render(assigns) do
+    ~H"""
+    <AuroraThemeWrapper.aurora_wrapper ...>
+      ...
+    </AuroraThemeWrapper.aurora_wrapper>
+    """
+  end
+end
+```
+
+The macro injects `mount/3`, `handle_params/3`, all `handle_info/2` clauses, and `handle_event/3` handlers for language, booking, and scheduling events. Extension points `handle_theme_event/3` and `handle_theme_schedule_event/3` are `defoverridable` — implement them only if you need theme-specific events (e.g. month navigation for a full-calendar theme like Quill).
+
+State machine logic (initial state, transition validation, navigation guards) lives in the shared `StateMachineHelpers` module — no per-theme StateMachine module is required.
+
+#### 2. **Legacy: Per-Theme StateMachine Module**
+
+> **Deprecated** — do not create new per-theme `state_machine.ex` files. The shared `StateMachineHelpers` covers all standard transitions. If you need custom transition validation, override `handle_theme_event/3` in your LiveView instead.
+
+For historical reference, the shared module handles:
 
 ```elixir
 defmodule TymeslotWeb.Themes.Aurora.Scheduling.StateMachine do
@@ -872,7 +909,7 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.StateMachine do
 end
 ```
 
-#### 2. **Wrapper Component**
+#### 3. **Wrapper Component**
 
 The wrapper provides the theme's visual shell (background, language switcher, branding):
 
@@ -901,12 +938,10 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Wrapper do
 
     ~H"""
     <div class="aurora-theme-container" style={@generated_css}>
-      <!-- Video background (if supported) -->
       <%= if @theme_customization do %>
         <%= Video.render_video_container(:aurora, assigns) %>
       <% end %>
 
-      <!-- Language switcher -->
       <.language_switcher
         locale={@locale}
         locales={LocaleHandler.get_locales_with_metadata()}
@@ -914,12 +949,10 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Wrapper do
         theme={:aurora}
       />
 
-      <!-- Main content -->
       <div class="aurora-content">
         <%= render_slot(@inner_block) %>
       </div>
 
-      <!-- Branding footer -->
       <%= if @should_show_branding do %>
         <div class="branding-footer">
           Powered by Tymeslot
@@ -931,7 +964,7 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Wrapper do
 end
 ```
 
-#### 3. **Step Components**
+#### 4. **Step Components**
 
 Each step is a separate LiveComponent:
 
@@ -968,18 +1001,21 @@ defmodule TymeslotWeb.Themes.Aurora.Scheduling.Components.OverviewComponent do
 end
 ```
 
-#### 4. **Shared Modules**
+#### 5. **Shared Modules**
 
 Leverage shared modules to avoid duplication:
 
+- **SchedulingLive** (macro): All LiveView callbacks — `use TymeslotWeb.Themes.Shared.SchedulingLive, theme_id: "N"`
 - **SchedulingInit**: Base state initialization
 - **BookingFlow**: Form validation and submission
 - **EventHandlers**: Common event handling with callbacks
 - **InfoHandlers**: Async task handling (availability fetching)
 - **LocalizationHelpers**: Date/time formatting
 - **PathHandlers**: Navigation with locale preservation
+- **VideoSources**: `<.video_sources theme_customization={...} />` — video `<source>` elements for wrapper components
+- **MeetingDetails**: `<.meeting_detail_rows date={...} time={...} timezone={...} organizer_name={...} />` — shared cancel/reschedule row layout
 
-#### 5. **Event Communication Pattern**
+#### 6. **Event Communication Pattern**
 
 Components send events to the LiveView using a standardized pattern:
 
@@ -1006,14 +1042,7 @@ The LiveView's `render/1` function delegates to the wrapper and components:
 ```elixir
 @impl Phoenix.LiveView
 def render(assigns) do
-  organizer_user_id =
-    case assigns[:organizer_profile] do
-      %{user_id: user_id} -> user_id
-      _other -> nil
-    end
-
-  assigns = assign(assigns, :organizer_user_id, organizer_user_id)
-
+  # organizer_user_id is already set during mount by Scheduling.Helpers
   ~H"""
   <AuroraWrapper.aurora_wrapper
     custom_css={assigns[:custom_css]}
@@ -1101,7 +1130,25 @@ Presets are defined in `database_schemas/theme_customization_schema.ex`.
 
 ### Video Container Rendering
 
-For themes with video backgrounds, use `TymeslotWeb.Themes.Shared.Customization.Video` to render an optimized video container:
+For themes with video backgrounds, use the `VideoSources` shared component to render `<source>` elements inside your video container. Import it in your wrapper:
+
+```elixir
+import TymeslotWeb.Themes.Shared.VideoSources, only: [video_sources: 1]
+```
+
+Then use it in your wrapper template:
+
+```heex
+<div class="your-video-container">
+  <video autoplay muted loop playsinline>
+    <.video_sources theme_customization={@theme_customization} />
+  </video>
+</div>
+```
+
+The component handles both user-uploaded videos and preset videos automatically, selecting the correct source paths and falling back to nothing if no video is configured.
+
+For full video container rendering with crossfade and loading fallbacks, you can still use `TymeslotWeb.Themes.Shared.Customization.Video` directly:
 
 ```elixir
 alias TymeslotWeb.Themes.Shared.Customization.Video
@@ -1111,11 +1158,6 @@ alias TymeslotWeb.Themes.Shared.Customization.Video
   <%= Video.render_video_container(@theme_key, assigns) %>
 </div>
 ```
-
-This helper automatically handles:
-- **Responsive Sources**: Loading different qualities based on screen size
-- **Crossfading**: Smooth transitions for themes that support it
-- **Fallbacks**: Displaying a gradient while the video is loading
 
 ### Multi-Quality Video System
 
@@ -1173,26 +1215,30 @@ LocalizationHelpers.format_date(@selected_date)
 1. **Copy an existing theme** (Quill or Rhythm) as a starting point
 2. **Update the registry** with your theme metadata
 3. **Rename files and modules** to match your theme name
-4. **Customize the StateMachine** if you need different validation logic
-5. **Update the Wrapper** with your theme's visual design
+4. **Create `live.ex`** with `use TymeslotWeb.Themes.Shared.SchedulingLive, theme_id: "N"` — no per-theme StateMachine needed
+5. **Update the Wrapper** with your theme's visual design; use `<.video_sources .../>` for video backgrounds
 6. **Modify step components** (overview, schedule, booking, confirmation)
-7. **Create CSS modules** in `assets/css/scheduling/themes/your-theme/`
-8. **Implement meeting actions** (reschedule, cancel, cancel_confirmed)
+7. **Create CSS modules** in `assets/css/scheduling/themes/your-theme/`; import `../../shared/utilities.css` in your theme.css
+8. **Implement meeting actions** (reschedule, cancel, cancel_confirmed); use `<.meeting_detail_rows .../>` for the detail layout
 9. **Test with production checklist**
 
 ### What to Copy vs. What to Customize
 
-**Copy as-is** (shared logic, rarely changes):
-- LiveView event handlers (`handle_info`, `handle_event`)
-- State initialization helpers
-- Shared module usage (LiveHelpers, EventHandlers, etc.)
+**Don't copy at all** — the shared macro provides this automatically:
+- `use TymeslotWeb.Themes.Shared.SchedulingLive, theme_id: "N"` replaces all LiveView event handlers, state init, and shared module wiring
+- No per-theme `state_machine.ex` — `StateMachineHelpers` is shared
 
 **Customize** (theme-specific):
-- StateMachine validation rules
+- `render/1` — wrapper component and step layout
+- `handle_theme_event/3` override — only if your theme has unique events (e.g. Quill's `navigate_to_step`)
+- `handle_theme_schedule_event/3` override — only if your theme has calendar month navigation
 - Wrapper component layout and design
 - Step component templates and styles
 - CSS modules and variables
-- Meeting action component designs
+- Meeting action component designs (use `<.meeting_detail_rows .../>` for the rows)
+
+**Do not re-derive in `render/1`** (already in socket assigns):
+- `organizer_user_id` — set during mount by `SchedulingInit.assign_base_state/1` via `Scheduling.Helpers`. Do not extract it from `organizer_profile` in `render/1`; read `@organizer_user_id` directly.
 
 ### Testing Your Theme
 

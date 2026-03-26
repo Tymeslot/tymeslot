@@ -24,7 +24,6 @@
    beside it.  Upgrades to a 2-col grid at 768px via container query below. */
 .overview-layout {
   display: block;
-  align-items: center;
 }
 
 .overview-layout::after {
@@ -95,14 +94,38 @@
   padding: var(--space-sm);
 }
 
+/* Duration card states */
+.duration-card--selected {
+  background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-hover) 100%);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--theme-primary) 40%, transparent);
+  border: 2px solid var(--glass-border);
+}
+
+.duration-card--unselected {
+  background: var(--surface-light);
+  border: 2px solid transparent;
+}
+
+.duration-card--selected .duration-card-description {
+  color: var(--text-opacity-medium-high);
+}
+
+.duration-card-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-opacity-high);
+  backdrop-filter: blur(10px);
+}
+
 /* duration-card-title: replaces text-base sm:text-lg md:text-xl */
 .duration-card-title {
   font-size: var(--theme-font-size-base);
+  color: var(--text-opacity-high);
 }
 
 /* duration-card-description: replaces text-xs sm:text-sm md:text-base */
 .duration-card-description {
   font-size: var(--theme-font-size-xs);
+  color: var(--text-opacity-medium-low);
 }
 
 /* duration-card-icon: replaces w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 */

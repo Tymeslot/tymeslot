@@ -31,7 +31,6 @@ body.quill-theme {
 /* Main gradient background */
 .main-gradient {
   background: var(--theme-background);
-  background-attachment: fixed;
   min-width: 100%;
   width: 100%;
   position: relative;

@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  import TymeslotWeb.Components.CoreComponents
+  import TymeslotWeb.Themes.Shared.Components.MeetingDetails, only: [meeting_detail_rows: 1]
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Helpers.LocaleFormat
@@ -32,16 +32,13 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
       language_dropdown_open={@language_dropdown_open}
       show_language_switcher={true}
     >
-      <!-- Scheduling Box with Glass Effect -->
       <div class="scheduling-box">
         <div class="slide-container">
           <div class="slide active">
             <div class="slide-content confirmation-slide">
-              <!-- Cancel Container -->
               <div class="confirmation-container">
-                <!-- Header with Icon -->
                 <div class="confirmation-header-section">
-                  <%= if assigns[:meeting_kept] do %>
+                  <%= if @meeting_kept do %>
                     <div class="success-badge success-badge--transparent">
                       <div class="success-badge-inner success-badge-inner--success">
                         <svg
@@ -96,50 +93,21 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                   <% end %>
                 </div>
                 
-    <!-- Meeting Ticket Card -->
                 <div class="meeting-ticket">
                   <div class="ticket-header">
                     <span class="ticket-label">{gettext("Meeting Details")}</span>
                     <span class="ticket-badge">{@meeting.duration} min</span>
                   </div>
 
-                  <div class="ticket-body">
-                    <div class="ticket-row">
-                      <div class="ticket-icon">
-                        <.icon name="hero-calendar" class="hero-icon hero-icon--md" />
-                      </div>
-                      <div class="ticket-info">
-                        <span class="ticket-value">
-                          {LocaleFormat.format_date(@meeting.start_time, @locale)}
-                        </span>
-                        <span class="ticket-sublabel">{gettext("Date")}</span>
-                      </div>
-                    </div>
+                  <.meeting_detail_rows
+                    date={LocaleFormat.format_date(@meeting.start_time, @locale)}
+                    time={LocaleFormat.format_time(@meeting.start_time, @locale)}
+                    timezone={@meeting.attendee_timezone}
+                    organizer_name={@meeting.organizer_name}
+                    class="ticket-body"
+                  />
 
-                    <div class="ticket-row">
-                      <div class="ticket-icon">
-                        <.icon name="hero-clock" class="hero-icon hero-icon--md" />
-                      </div>
-                      <div class="ticket-info">
-                        <span class="ticket-value">
-                          {LocaleFormat.format_time(@meeting.start_time, @locale)}
-                        </span>
-                        <span class="ticket-sublabel">{@meeting.attendee_timezone}</span>
-                      </div>
-                    </div>
-
-                    <div class="ticket-row">
-                      <div class="ticket-icon">
-                        <.icon name="hero-user" class="hero-icon hero-icon--md" />
-                      </div>
-                      <div class="ticket-info">
-                        <span class="ticket-sublabel">{gettext("Meeting with")}</span>
-                        <span class="ticket-value">{@meeting.organizer_name}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <%= if assigns[:meeting_kept] do %>
+                  <%= if @meeting_kept do %>
                     <div class="ticket-footer">
                       <div class="email-confirmation">
                         <svg
@@ -175,8 +143,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Meeting.Cancel do
                   <% end %>
                 </div>
                 
-    <!-- Action Buttons -->
-                <%= if assigns[:meeting_kept] do %>
+                <%= if @meeting_kept do %>
                   <div class="confirmation-actions centered">
                     <button
                       phx-click={JS.navigate("/")}

@@ -8,8 +8,10 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Helpers.LocaleFormat
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper
+  alias TymeslotWeb.Themes.Shared.PathHandlers
 
   import TymeslotWeb.Components.CoreComponents
+  import TymeslotWeb.Themes.Shared.Components.MeetingDetails, only: [meeting_detail_rows: 1]
 
   attr :theme_customization, :map, required: true
   attr :custom_css, :string, required: true
@@ -35,7 +37,6 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
         <div class="w-full max-w-2xl">
           <.glass_morphism_card>
             <div class="p-8">
-              <!-- Header -->
               <div class="text-center mb-8">
                 <div class="mx-auto mb-4 w-12 h-12">
                   <svg
@@ -65,7 +66,6 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                 </p>
               </div>
 
-    <!-- Meeting Details Card -->
               <div
                 class="glass-morphism-card mb-8"
                 style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);"
@@ -83,64 +83,15 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
                     </span>
                   </div>
 
-                  <div class="space-y-4">
-                    <!-- Date Row -->
-                    <div class="flex items-center gap-4">
-                      <div
-                        class="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style="background: rgba(255,255,255,0.1);"
-                      >
-                        <.icon name="hero-calendar" class="w-5 h-5" />
-                      </div>
-                      <div class="flex-1">
-                        <div class="font-medium" style="color: rgba(255,255,255,0.95);">
-                          {LocaleFormat.format_date(@meeting.start_time, @locale)}
-                        </div>
-                        <div class="text-sm" style="color: rgba(255,255,255,0.6);">{gettext("Date")}</div>
-                      </div>
-                    </div>
-
-    <!-- Time Row -->
-                    <div class="flex items-center gap-4">
-                      <div
-                        class="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style="background: rgba(255,255,255,0.1);"
-                      >
-                        <.icon name="hero-clock" class="w-5 h-5" />
-                      </div>
-                      <div class="flex-1">
-                        <div class="font-medium" style="color: rgba(255,255,255,0.95);">
-                          {LocaleFormat.format_time(@meeting.start_time, @locale)}
-                        </div>
-                        <div class="text-sm" style="color: rgba(255,255,255,0.6);">
-                          {@meeting.attendee_timezone}
-                        </div>
-                      </div>
-                    </div>
-
-    <!-- Organizer Row -->
-                    <div
-                      class="flex items-center gap-4 pt-4"
-                      style="border-top: 1px solid rgba(255,255,255,0.1);"
-                    >
-                      <div
-                        class="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style="background: rgba(255,255,255,0.1);"
-                      >
-                        <.icon name="hero-user" class="w-5 h-5" />
-                      </div>
-                      <div class="flex-1">
-                        <div class="text-sm" style="color: rgba(255,255,255,0.6);">{gettext("Meeting with")}</div>
-                        <div class="font-medium" style="color: var(--theme-primary);">
-                          {@meeting.organizer_name}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <.meeting_detail_rows
+                    date={LocaleFormat.format_date(@meeting.start_time, @locale)}
+                    time={LocaleFormat.format_time(@meeting.start_time, @locale)}
+                    timezone={@meeting.attendee_timezone}
+                    organizer_name={@meeting.organizer_name}
+                  />
                 </div>
               </div>
 
-    <!-- Action Section -->
               <div class="text-center">
                 <p class="mb-6" style="color: rgba(255,255,255,0.85);">
                   {gettext("Ready to pick a new time? Let's find one that works better for you.")}
@@ -148,7 +99,7 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
 
                 <.action_button
                   type="button"
-                  phx-click={JS.navigate(get_calendar_url(assigns))}
+                  phx-click={JS.navigate(PathHandlers.organizer_scheduling_path(assigns))}
                   variant={:primary}
                 >
                   <span>{gettext("Choose New Time")}</span>
@@ -173,15 +124,5 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.Reschedule do
       </div>
     </Wrapper.quill_wrapper>
     """
-  end
-
-  defp get_calendar_url(assigns) do
-    username =
-      case assigns[:organizer_profile] do
-        %{username: username} when is_binary(username) -> username
-        _other -> "schedule"
-      end
-
-    "/#{username}"
   end
 end

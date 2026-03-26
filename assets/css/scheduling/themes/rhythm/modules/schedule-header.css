@@ -86,7 +86,7 @@
   backdrop-filter: blur(10px);
   color: var(--theme-text);
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: background var(--transition-normal), border-color var(--transition-normal), transform var(--transition-normal);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -163,7 +163,7 @@
   border: var(--border-width-thin) solid var(--border-light);
   border-radius: var(--radius-sm);
   color: var(--theme-text);
-  transition: all var(--transition-normal);
+  transition: border-color var(--transition-normal), background var(--transition-normal);
 }
 
 .timezone-search:focus {
@@ -189,7 +189,7 @@
   border: none;
   color: var(--theme-text);
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: background var(--transition-normal);
   text-align: left;
   border-bottom: var(--border-width-thin) solid var(--border-subtle);
 }

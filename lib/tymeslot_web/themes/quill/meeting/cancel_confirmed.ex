@@ -32,7 +32,6 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
         <div class="w-full max-w-md">
           <.glass_morphism_card>
             <div class="p-8">
-              <!-- Header -->
               <div class="text-center">
                 <div class="mx-auto mb-4 w-16 h-16">
                   <svg
@@ -61,7 +60,6 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                   {gettext("Your meeting has been successfully cancelled.")}
                 </p>
                 
-    <!-- Info Box -->
                 <div
                   class="mb-8 p-4 rounded-lg flex items-start gap-3"
                   style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);"
@@ -85,7 +83,6 @@ defmodule TymeslotWeb.Themes.Quill.Meeting.CancelConfirmed do
                   </div>
                 </div>
                 
-    <!-- Action Button -->
                 <div class="space-y-4">
                   <.action_button
                     type="button"

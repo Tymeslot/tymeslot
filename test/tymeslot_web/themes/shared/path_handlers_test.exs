@@ -29,7 +29,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       }
 
       path = PathHandlers.build_path_with_locale(socket, "uk")
-      assert path == "/johndoe/30-minutes?locale=uk&slug=30-minutes&theme=2"
+      assert path == "/johndoe/30-minutes?locale=uk&theme=2"
     end
 
     test "builds path for booking action" do
@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
       }
 
       path = PathHandlers.build_path_with_locale(socket, "en")
-      assert path == "/johndoe/60-minutes/book?locale=en&slug=60-minutes&theme=1"
+      assert path == "/johndoe/60-minutes/book?locale=en&theme=1"
     end
 
     test "builds path for confirmation action" do
@@ -99,6 +99,27 @@ defmodule TymeslotWeb.Themes.Shared.PathHandlersTest do
 
       path = PathHandlers.build_path_with_locale(socket, "de")
       assert path == "/johndoe?locale=de"
+    end
+  end
+
+  describe "organizer_scheduling_path/1" do
+    test "returns path with username when organizer profile has username" do
+      assigns = %{organizer_profile: %{username: "janedoe"}}
+      assert PathHandlers.organizer_scheduling_path(assigns) == "/janedoe"
+    end
+
+    test "falls back to root when username is empty" do
+      assigns = %{organizer_profile: %{username: ""}}
+      assert PathHandlers.organizer_scheduling_path(assigns) == "/"
+    end
+
+    test "falls back to root when organizer profile is nil" do
+      assigns = %{organizer_profile: nil}
+      assert PathHandlers.organizer_scheduling_path(assigns) == "/"
+    end
+
+    test "falls back to root when organizer profile is missing from assigns" do
+      assert PathHandlers.organizer_scheduling_path(%{}) == "/"
     end
   end
 end

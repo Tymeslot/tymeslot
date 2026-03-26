@@ -26,7 +26,7 @@
   color: var(--theme-text);
   padding: var(--space-3xs) var(--space-xs);
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: background var(--transition-smooth), border-color var(--transition-smooth);
   font-size: var(--theme-font-size-xs);
   line-height: 1;
   display: inline-flex;
@@ -53,7 +53,7 @@
   border-radius: var(--radius-md);
   color: var(--theme-text);
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: background var(--transition-smooth), border-color var(--transition-smooth);
   text-align: center;
   display: flex;
   flex-direction: column;

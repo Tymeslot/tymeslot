@@ -100,7 +100,7 @@
   background: var(--surface-light);
   color: var(--theme-text);
   min-height: var(--min-touch-target);
-  transition: all var(--transition-normal);
+  transition: border-color var(--transition-normal), background var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .rhythm-theme-wrapper .booking-form .input::placeholder,

@@ -17,12 +17,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   def update(assigns, socket) do
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
 
-    {:ok,
-     socket
-     |> assign(filtered_assigns)
-     |> assign_new(:current_week_start, fn ->
-       Date.beginning_of_week(Date.utc_today(), :monday)
-     end)}
+    {:ok, assign(socket, filtered_assigns)}
   end
 
   @impl Phoenix.LiveComponent
@@ -104,14 +99,12 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
       <div class="slide-container">
         <div class="slide active">
           <div class="slide-content schedule-slide">
-            <!-- Organizer Header -->
             <div class="schedule-header">
               <OrganizerHeader.organizer_header_small
                 organizer_profile={@organizer_profile}
                 meeting_type={@meeting_type}
                 selected_duration={@selected_duration}
               />
-              <!-- Timezone Selector -->
               <div class="timezone-selector-container">
                 <label class="timezone-label">{gettext("Your timezone")}:</label>
                 <div class="timezone-dropdown-wrapper">
@@ -185,9 +178,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
               </div>
             </div>
 
-    <!-- Calendar and Time Selection -->
             <div class="schedule-grid">
-              <!-- Calendar -->
               <div class="calendar-section calendar-section-wrapper">
                 <div class="calendar-header">
                   <button
@@ -243,7 +234,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 </div>
               </div>
 
-    <!-- Time Slots -->
               <div class="time-slots-section">
                 <h3 class="time-slots-section-heading">{gettext("Available Times")}</h3>
                 <% normalized_slots = MeetingUtils.normalize_slot_list(@available_slots) %>
@@ -302,7 +292,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
               </div>
             </div>
 
-    <!-- Navigation -->
             <div class="slide-actions horizontal">
               <button
                 class="prev-button"

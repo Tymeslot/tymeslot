@@ -51,13 +51,8 @@
   background: var(--theme-accent);
 }
 
-/* Step Navigation Override - Always show labels in Quill theme */
-.quill-theme-wrapper .hidden.sm\\:block {
-  display: block;
-}
-
 /* Step labels styling for glassmorphism theme */
-.quill-theme-wrapper [class*="flex flex-col items-center"] > span:last-child {
+.quill-theme-wrapper .step-item-wrapper .step-label {
   display: block;
   margin-top: var(--space-xs);
   font-size: var(--theme-font-size-xs);
@@ -68,34 +63,34 @@
   opacity: 1;
 }
 
-/* Active step label */
-.quill-theme-wrapper .text-white.font-bold.drop-shadow-md {
+/* Active step label — matches step_label_class(step, current) when step == current */
+.quill-theme-wrapper .step-label.text-white.font-bold.drop-shadow-md {
   color: var(--theme-text);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* Completed step label */
-.quill-theme-wrapper .text-gray-200.drop-shadow-md {
+/* Completed step label — matches text-tymeslot-100 */
+.quill-theme-wrapper .step-label.text-tymeslot-100.drop-shadow-md {
   color: var(--theme-text-secondary);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-/* Upcoming step label */
-.quill-theme-wrapper .text-gray-300.drop-shadow-md {
+/* Upcoming step label — matches step-label--upcoming */
+.quill-theme-wrapper .step-label.step-label--upcoming {
   color: var(--text-opacity-very-subtle);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Hover effects for clickable steps */
-.quill-theme-wrapper button [class*="cursor-pointer"]:hover {
+.quill-theme-wrapper .step-circle.cursor-pointer:hover {
   transform: scale(1.1);
 }
 
-.quill-theme-wrapper button span.group-hover\\:text-purple-200 {
+.quill-theme-wrapper button .step-label {
   transition: color var(--transition-smooth);
 }
 
-.quill-theme-wrapper button:hover span.group-hover\\:text-purple-200 {
+.quill-theme-wrapper button:hover .step-label {
   color: var(--theme-primary);
 }
 
@@ -321,10 +316,7 @@
   gap: var(--space-lg);
 }
 
-/* ============================================================================
-   TEMP: will convert to @container
-   Semantic classes replacing responsive Tailwind prefixes in booking_component
-   ============================================================================ */
+/* Semantic classes replacing responsive Tailwind prefixes in booking_component */
 
 /* booking-card-body: replaces p-4 md:p-6 lg:p-8 */
 .booking-card-body {

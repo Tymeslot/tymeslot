@@ -4,9 +4,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
   """
   use Phoenix.Component
 
-  alias TymeslotWeb.Themes.Shared.Customization.Video, as: VideoHelpers
-
   import TymeslotWeb.Themes.Shared.Customization.Helpers
+  import TymeslotWeb.Themes.Shared.VideoSources, only: [video_sources: 1]
   import TymeslotWeb.Components.LanguageSwitcher
 
   attr :theme_customization, :map, default: nil
@@ -28,7 +27,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
 
     ~H"""
     <div class="quill-theme-wrapper theme-1" data-locale={assigns[:locale]}>
-      <!-- Render custom CSS if available -->
       <%= if assigns[:custom_css] && assigns[:custom_css] != "" do %>
         <style type="text/css">
           :root {
@@ -48,31 +46,14 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
         <% end %>
       <% end %>
 
-    <!-- Render background video if configured -->
       <%= if @has_video_background do %>
         <div class="video-background" id="quill-video-container" phx-hook="QuillVideo">
-          <video autoplay muted loop playsinline preload="auto" poster={@video_poster} class="video-background video">
-            <% background_video_path = get_background_video_path(@theme_customization) %>
-            <%= if background_video_path do %>
-              <% sanitized_path = sanitize_path(background_video_path) %>
-              {Phoenix.HTML.raw(VideoHelpers.render_upload_video_sources(sanitized_path))}
-            <% else %>
-              <!-- Handle preset videos -->
-              <% background_value = get_background_value(@theme_customization) %>
-              <%= if background_value && String.starts_with?(background_value, "preset:") do %>
-                <% preset_id = background_value %>
-                <% preset =
-                  Tymeslot.DatabaseSchemas.ThemeCustomizationSchema.video_presets()[preset_id] %>
-                <%= if preset do %>
-                  {Phoenix.HTML.raw(VideoHelpers.render_preset_video_sources(preset.file))}
-                <% end %>
-              <% end %>
-            <% end %>
+          <video autoplay muted loop playsinline preload="metadata" poster={@video_poster} class="video-background video">
+            <.video_sources theme_customization={@theme_customization} />
           </video>
         </div>
       <% end %>
 
-      <!-- Apply background styles to main gradient -->
       <div
         class={[
           "main-gradient theme-grid",
@@ -85,7 +66,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Wrapper do
         }
       >
         <div class="content-area">
-          <!-- Language Switcher -->
           <%= if assigns[:locale] && assigns[:language_dropdown_open] != nil do %>
             <div class={[
               "fixed top-6 right-6 z-50 language-switcher-wrapper",

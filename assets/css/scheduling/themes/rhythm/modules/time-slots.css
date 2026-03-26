@@ -52,7 +52,7 @@
   border-radius: var(--radius-sm);
   color: var(--theme-text);
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: background var(--transition-smooth), border-color var(--transition-smooth), transform var(--transition-smooth), box-shadow var(--transition-smooth);
   text-align: center;
   min-height: auto;
   display: flex;

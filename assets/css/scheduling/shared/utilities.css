@@ -1,0 +1,34 @@
+/* ============================================================================
+   SHARED UTILITIES — identical across all themes
+   ============================================================================ */
+
+/* Disabled state for interactive elements */
+.interactive:disabled,
+.interactive[disabled],
+.interactive.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
+}
+
+/* Focus visible outline for keyboard navigation */
+.interactive:focus-visible,
+.selectable:focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
+}
+
+/* Loading spinner animation */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

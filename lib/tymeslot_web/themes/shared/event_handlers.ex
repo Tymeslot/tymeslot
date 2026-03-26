@@ -2,6 +2,8 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
   @moduledoc """
   Shared event handlers for theme scheduling LiveViews.
   """
+  require Logger
+
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.Helpers
   import Phoenix.Component, only: [assign: 3]
@@ -43,7 +45,12 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
           {:noreply, LiveView.Socket.t()}
   def handle_timezone_change(socket, data, timezone_handler_module) do
     case timezone_handler_module.handle_timezone_change(socket, data) do
-      {:ok, updated_socket} -> {:noreply, updated_socket}
+      {:ok, updated_socket} ->
+        {:noreply, updated_socket}
+
+      {:error, reason} ->
+        Logger.warning("Timezone change failed", reason: inspect(reason))
+        {:noreply, socket}
     end
   end
 
