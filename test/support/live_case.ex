@@ -21,6 +21,7 @@ defmodule TymeslotWeb.LiveCase do
       import Phoenix.ConnTest
       import Phoenix.LiveViewTest
       import TymeslotWeb.ConnCase
+      import Tymeslot.TestHelpers.Eventually
 
       # Routes generation with the ~p sigil
       unquote(TymeslotWeb.verified_routes())
@@ -29,16 +30,7 @@ defmodule TymeslotWeb.LiveCase do
       @endpoint TymeslotWeb.Endpoint
 
       defp wait_until(fun, timeout \\ 5000) do
-        if timeout <= 0 do
-          fun.() || flunk("Timed out waiting for condition")
-        else
-          if fun.() do
-            :ok
-          else
-            Process.sleep(100)
-            wait_until(fun, timeout - 100)
-          end
-        end
+        eventually(fun, timeout: timeout, interval: 100)
       end
     end
   end

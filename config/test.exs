@@ -3,6 +3,10 @@ import Config
 # Configure environment
 config :tymeslot, environment: :test, test_mode: true
 
+# Reduce bcrypt cost for tests — default log_rounds (12) adds ~200-400ms per
+# password hash, which compounds across hundreds of factory user inserts.
+config :bcrypt_elixir, log_rounds: 4
+
 # Disable legal acceptance gate in tests
 config :tymeslot, enforce_legal_acceptance_gate: false
 

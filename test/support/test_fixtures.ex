@@ -87,22 +87,20 @@ defmodule Tymeslot.TestFixtures do
   """
   @spec create_timezone_test_fixtures() :: {term(), term()}
   def create_timezone_test_fixtures do
+    tomorrow = Date.add(Date.utc_today(), 1)
+    day_after = Date.add(Date.utc_today(), 2)
+
     # Meeting at 11:59 PM UTC
     late_meeting =
       create_meeting_fixture(%{
-        start_time:
-          DateTime.utc_now()
-          |> DateTime.add(1, :day)
-          |> Map.put(:hour, 23)
-          |> Map.put(:minute, 59),
+        start_time: DateTime.new!(tomorrow, ~T[23:59:00], "Etc/UTC"),
         attendee_name: "Late Night User"
       })
 
     # Meeting at 12:01 AM UTC next day
     early_meeting =
       create_meeting_fixture(%{
-        start_time:
-          Map.put(Map.put(DateTime.add(DateTime.utc_now(), 2, :day), :hour, 0), :minute, 1),
+        start_time: DateTime.new!(day_after, ~T[00:01:00], "Etc/UTC"),
         attendee_name: "Early Morning User"
       })
 

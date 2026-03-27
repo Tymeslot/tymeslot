@@ -120,10 +120,9 @@ max_cases =
       end
   end
 
-ExUnit.start(exclude: [:backup_tests, :oauth_integration, :calendar_integration, :e2e])
+ExUnit.start()
 
-# Configure ExUnit to exclude backup tests, OAuth integration tests, and calendar
-# integration tests by default. Integration tests now run by default.
+# Exclude slow/external test suites by default — run them explicitly with --include.
 exunit_config = [
   exclude: [
     backup_tests: true,

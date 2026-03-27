@@ -233,7 +233,6 @@ defmodule Tymeslot.TestMocks do
   @spec setup_mirotalk_mocks(keyword()) :: term()
   def setup_mirotalk_mocks(opts \\ []) do
     room_url = Keyword.get(opts, :room_url, "https://test.mirotalk.com/join/test-room-123")
-    _default_room_id = Keyword.get(opts, :room_id, "test-room-123")
     create_result = Keyword.get(opts, :create_result, {:ok, room_url})
 
     Tymeslot.MiroTalkAPIMock

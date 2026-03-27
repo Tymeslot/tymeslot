@@ -7,6 +7,8 @@ defmodule Tymeslot.BookingTestHelpers do
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
 
+  alias Tymeslot.TestHelpers.Eventually
+
   @endpoint TymeslotWeb.Endpoint
 
   @doc """
@@ -73,15 +75,6 @@ defmodule Tymeslot.BookingTestHelpers do
   end
 
   defp wait_until(fun, timeout \\ 5000) do
-    if timeout <= 0 do
-      fun.() || flunk("Timed out waiting for condition")
-    else
-      if fun.() do
-        :ok
-      else
-        Process.sleep(100)
-        wait_until(fun, timeout - 100)
-      end
-    end
+    Eventually.eventually(fun, timeout: timeout, interval: 100)
   end
 end

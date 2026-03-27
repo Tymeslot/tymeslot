@@ -17,6 +17,7 @@ defmodule Tymeslot.AuthTestHelpers do
   alias Tymeslot.Auth
   alias Tymeslot.Auth.{PasswordReset, Session}
   alias Tymeslot.Factory
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.Token
 
   @doc """
@@ -96,18 +97,17 @@ defmodule Tymeslot.AuthTestHelpers do
   @doc """
   Clears rate limiting for a given IP or email.
   """
-  @spec clear_rate_limits(String.t()) :: true
+  @spec clear_rate_limits(String.t()) :: :ok
   def clear_rate_limits(identifier) do
-    key = "auth_attempt:#{identifier}"
-    :ets.delete(:rate_limiter, key)
+    RateLimiter.clear_bucket("auth_attempt:#{identifier}")
   end
 
   @doc """
   Clears all rate limits (useful in setup).
   """
-  @spec clear_all_rate_limits() :: true
+  @spec clear_all_rate_limits() :: :ok
   def clear_all_rate_limits do
-    :ets.delete_all_objects(:rate_limiter)
+    RateLimiter.clear_all()
   end
 
   @doc """

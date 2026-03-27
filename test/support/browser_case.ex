@@ -26,6 +26,8 @@ defmodule TymeslotWeb.BrowserCase do
   alias Tymeslot.DataCase
   alias Tymeslot.TestMocks
 
+  import Tymeslot.ConfigTestHelpers
+
   using do
     quote do
       use Wallaby.Feature
@@ -48,7 +50,7 @@ defmodule TymeslotWeb.BrowserCase do
     # enforce_legal_agreements: true, which overrides the core test.exs value via
     # umbrella config load ordering. The runtime override below ensures Core E2E
     # tests never see the SaaS legal gate.
-    Application.put_env(:tymeslot, :enforce_legal_agreements, false)
+    with_config(:tymeslot, :enforce_legal_agreements, false)
 
     # Browser requests are handled by a different OS process than the test,
     # so Mox expectations must be set globally.
