@@ -278,7 +278,7 @@ defmodule Tymeslot.Profiles do
       filename ->
         extension = filename |> Path.extname() |> String.downcase()
 
-        if extension in Avatars.accepted_extensions() do
+        if extension in [".jpg", ".jpeg", ".png", ".gif", ".webp"] do
           :ok
         else
           {:error, "Invalid file type. Only JPG, PNG, GIF, and WebP files are allowed"}
@@ -292,9 +292,7 @@ defmodule Tymeslot.Profiles do
         :ok
 
       size when is_integer(size) ->
-        if size <= Avatars.max_file_size(),
-          do: :ok,
-          else: {:error, "File too large. Maximum size is 10MB"}
+        if size <= 10_000_000, do: :ok, else: {:error, "File too large. Maximum size is 10MB"}
 
       _other ->
         {:error, "Invalid file size"}

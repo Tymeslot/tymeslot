@@ -6,7 +6,6 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Profiles
-  alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
 
@@ -19,9 +18,9 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
         socket
       else
         allow_upload(socket, :avatar,
-          accept: Avatars.accepted_extensions(),
+          accept: ~w(.jpg .jpeg .png .gif .webp),
           max_entries: 1,
-          max_file_size: Avatars.max_file_size(),
+          max_file_size: 10_000_000,
           auto_upload: true,
           progress: &handle_avatar_progress/3
         )

@@ -11,13 +11,11 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.DisplayNameFormComponent do
   import TymeslotWeb.Components.CoreComponents
 
   @impl Phoenix.LiveComponent
-  def mount(socket) do
-    {:ok, assign(socket, :form_errors, %{})}
-  end
-
-  @impl Phoenix.LiveComponent
   def update(assigns, socket) do
-    {:ok, assign(socket, assigns)}
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:form_errors, %{})}
   end
 
   @impl Phoenix.LiveComponent

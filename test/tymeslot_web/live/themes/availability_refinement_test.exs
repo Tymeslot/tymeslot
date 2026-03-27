@@ -143,14 +143,8 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
       today_in_tz = DateTime.to_date(now_in_tz)
       today_str = Date.to_string(today_in_tz)
 
-      # The timezone must be set via connect_params (simulating browser detection),
-      # because LiveView mount/3 only receives path params — query params are not
-      # available until handle_params/3, which is too late for the initial timezone
-      # assignment in assign_user_timezone/2.
       {:ok, view, _html} =
-        conn
-        |> put_connect_params(%{"timezone" => timezone})
-        |> live(~p"/#{profile.username}/30-minutes?timezone=#{timezone}")
+        live(conn, ~p"/#{profile.username}/30-minutes?timezone=#{timezone}")
 
       # Business hours are 00:00-01:00 and min_advance_hours defaults to 3,
       # so the earliest bookable time is now+3h which always exceeds the 01:00
