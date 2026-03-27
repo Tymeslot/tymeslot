@@ -22,7 +22,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
       details = [
         "#{dgettext("emails", "Date:")} #{SharedHelpers.format_date(appointment_details.date, locale)}",
         format_time_line(appointment_details, locale),
-        format_location_line(appointment_details.location),
+        format_location_line(appointment_details),
         format_meeting_type_line(appointment_details.meeting_type)
       ]
 
@@ -143,10 +143,8 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
     end
   end
 
-  defp format_location_line(location) when is_binary(location) and location != "",
-    do: "#{dgettext("emails", "Location:")} #{location}"
-
-  defp format_location_line(_location), do: nil
+  defp format_location_line(details),
+    do: "#{dgettext("emails", "Location:")} #{SharedHelpers.format_location(details)}"
 
   defp format_meeting_type_line(meeting_type) when is_binary(meeting_type) and meeting_type != "",
     do: "#{dgettext("emails", "Type:")} #{meeting_type}"

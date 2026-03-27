@@ -61,7 +61,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderAttendee do
         </mj-column>
       </mj-section>
 
-      #{Components.quick_info_grid([%{label: dgettext("emails", "Duration"), value: "#{appointment_details.duration} #{dgettext("emails", "min")}"}, %{label: dgettext("emails", "Location"), value: appointment_details.location || dgettext("emails", "Virtual")}])}
+      #{Components.quick_info_grid([%{label: dgettext("emails", "Duration"), value: "#{appointment_details.duration} #{dgettext("emails", "min")}"}, %{label: dgettext("emails", "Location"), value: SharedHelpers.format_location(appointment_details)}])}
 
       #{if Map.get(appointment_details, :meeting_url) do
         Components.video_meeting_section(appointment_details.meeting_url,
@@ -147,4 +147,5 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderAttendee do
     #{appointment_details.organizer_name}
     """
   end
+
 end

@@ -26,6 +26,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationAttendee do
         start_time: appointment_details.start_time_attendee_tz,
         duration: appointment_details.duration,
         location: appointment_details.location,
+        location_type: Map.get(appointment_details, :location_type),
         meeting_type: appointment_details.meeting_type,
         video_url: appointment_details.attendee_video_url,
         video_url_role: "attendee"

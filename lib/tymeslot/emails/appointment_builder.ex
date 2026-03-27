@@ -234,21 +234,12 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
   end
 
-  defp format_location(meeting) do
-    if meeting.meeting_url do
-      dgettext("emails", "Video Call")
-    else
-      meeting.location || dgettext("emails", "To be determined")
-    end
-  end
+  # Return the raw location string from the database without translating.
+  # Translation happens at render time in the shared components, which run
+  # inside the correct locale for each recipient (organizer vs attendee).
+  defp format_location(meeting), do: meeting.location
 
-  defp format_location_details(meeting) do
-    if meeting.meeting_url do
-      dgettext("emails", "Video Call")
-    else
-      meeting.location || dgettext("emails", "Location to be determined")
-    end
-  end
+  defp format_location_details(meeting), do: meeting.location
 
   defp convert_to_timezone(datetime, timezone) do
     DateTimeUtils.convert_to_timezone(datetime, timezone)

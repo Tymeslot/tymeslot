@@ -229,6 +229,16 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   end
 
   @doc """
+  Translates a location label based on location_type.
+  Must be called within a `Gettext.with_locale` block to produce the correct locale.
+  Falls back to the raw location string, or a translated default if nil.
+  """
+  @spec format_location(map()) :: String.t()
+  def format_location(%{location_type: :video}), do: dgettext("emails", "Video Call")
+  def format_location(%{location_type: :phone}), do: dgettext("emails", "Phone Call")
+  def format_location(details), do: details[:location] || dgettext("emails", "TBD")
+
+  @doc """
   Truncates text to a maximum length with ellipsis.
   """
   @spec truncate(String.t(), integer()) :: String.t()

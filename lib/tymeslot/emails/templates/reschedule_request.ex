@@ -29,8 +29,14 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
         date: attendee_time,
         start_time_attendee_tz: attendee_time,
         duration: meeting.duration,
-        location: meeting.location || dgettext("emails", "To be determined"),
-        location_type: if(meeting.meeting_url, do: :video, else: :custom),
+        location: meeting.location,
+        location_type:
+          cond do
+            meeting.meeting_url -> :video
+            meeting.location == "Phone Call" -> :phone
+            meeting.location == "In Person" -> :in_person
+            true -> :custom
+          end,
         meeting_type: meeting.meeting_type || dgettext("emails", "Meeting"),
         timezone: meeting.attendee_timezone || "UTC"
       }
@@ -76,11 +82,11 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
         )
       )
       |> html_body(html_body)
-      |> text_body(build_text_body(meeting, attendee_time, locale))
+      |> text_body(build_text_body(meeting, meeting_details, locale))
     end)
   end
 
-  defp build_text_body(meeting, attendee_time, locale) do
+  defp build_text_body(meeting, details, locale) do
     """
     #{dgettext("emails", "Reschedule Request")}
 
@@ -89,11 +95,11 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     #{dgettext("emails", "I need to reschedule our upcoming meeting. Could you please select a new time that works for you?")}
 
     #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
-    #{dgettext("emails", "Date:")} #{SharedHelpers.format_date_short(attendee_time, locale)}
-    #{dgettext("emails", "Duration:")} #{SharedHelpers.format_duration(meeting.duration, locale)}
-    #{dgettext("emails", "Location:")} #{meeting.location || dgettext("emails", "To be determined")}
-    #{dgettext("emails", "Type:")} #{meeting.meeting_type || dgettext("emails", "Meeting")}
-    #{dgettext("emails", "Timezone:")} #{meeting.attendee_timezone || "UTC"}
+    #{dgettext("emails", "Date:")} #{SharedHelpers.format_date_short(details.date, locale)}
+    #{dgettext("emails", "Duration:")} #{SharedHelpers.format_duration(details.duration, locale)}
+    #{dgettext("emails", "Location:")} #{SharedHelpers.format_location(details)}
+    #{dgettext("emails", "Type:")} #{details.meeting_type}
+    #{dgettext("emails", "Timezone:")} #{details.timezone}
 
     #{dgettext("emails", "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.")}
 

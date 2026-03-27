@@ -42,7 +42,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
       >
         <mj-column>
           #{detail_row("📅", dgettext("emails", "Date"), SharedHelpers.format_date(details.date, locale), "🕐", dgettext("emails", "Time"), format_meeting_time(details, locale))}
-          #{detail_row("⏱️", dgettext("emails", "Duration"), SharedHelpers.format_duration(details.duration, locale), location_icon(details[:location_type]), dgettext("emails", "Location"), details[:location] || dgettext("emails", "TBD"))}
+          #{detail_row("⏱️", dgettext("emails", "Duration"), SharedHelpers.format_duration(details.duration, locale), location_icon(details[:location_type]), dgettext("emails", "Location"), SharedHelpers.format_location(details))}
           #{meeting_type_detail_section(details[:meeting_type])}
         </mj-column>
       </mj-section>

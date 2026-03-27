@@ -395,7 +395,7 @@ msgstr "%{count} Minuten"
 msgid "%{date} at %{time}"
 msgstr "%{date} um %{time}"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:289
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:280
 #, elixir-autogen, elixir-format
 msgid "%{days} days in advance"
 msgstr "%{days} Tage im Voraus"
@@ -410,7 +410,7 @@ msgstr "%{hour_text} %{minute_text}"
 msgid "%{minutes} minutes"
 msgstr "%{minutes} Minuten"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:336
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:301
 #, elixir-autogen, elixir-format
 msgid "%{months} months in advance"
 msgstr "%{months} Monate im Voraus"
@@ -456,7 +456,7 @@ msgstr "%{time} %{timezone}"
 msgid "%{time} UTC"
 msgstr "%{time} UTC"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:310
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:64
 #, elixir-autogen, elixir-format
 msgid "%{time} local time"
 msgstr "%{time} Ortszeit"
@@ -466,17 +466,17 @@ msgstr "%{time} Ortszeit"
 msgid "%{weekday}, %{day} %{month} %{year} at %{time} %{timezone}"
 msgstr "%{weekday}, %{day}. %{month} %{year} um %{time} %{timezone}"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:333
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:298
 #, elixir-autogen, elixir-format
 msgid "%{weeks} weeks in advance"
 msgstr "%{weeks} Wochen im Voraus"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:338
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:303
 #, elixir-autogen, elixir-format
 msgid "%{years} years in advance"
 msgstr "%{years} Jahre im Voraus"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:286
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:277
 #, elixir-autogen, elixir-format
 msgid "1 day in advance"
 msgstr "1 Tag im Voraus"
@@ -493,22 +493,22 @@ msgstr "1 Stunde"
 msgid "1 minute"
 msgstr "1 Minute"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:296
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:287
 #, elixir-autogen, elixir-format
 msgid "1 month in advance"
 msgstr "1 Monat im Voraus"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:291
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:282
 #, elixir-autogen, elixir-format
 msgid "1 week in advance"
 msgstr "1 Woche im Voraus"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:301
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:292
 #, elixir-autogen, elixir-format
 msgid "1 year in advance"
 msgstr "1 Jahr im Voraus"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:303
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:294
 #, elixir-autogen, elixir-format
 msgid "90 days in advance"
 msgstr "90 Tage im Voraus"
@@ -539,7 +539,7 @@ msgstr "Sind Sie sicher, dass Sie diesen Termin absagen möchten?"
 msgid "August"
 msgstr "August"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:168
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:159
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:238
 #, elixir-autogen, elixir-format
 msgid "Available Times"
@@ -636,7 +636,7 @@ msgstr "Juli"
 msgid "June"
 msgstr "Juni"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:175
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:166
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:244
 #, elixir-autogen, elixir-format
 msgid "Loading available times..."
@@ -724,13 +724,13 @@ msgstr "November"
 msgid "October"
 msgstr "Oktober"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:229
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:220
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:288
 #, elixir-autogen, elixir-format
 msgid "Please select a date to see available times"
 msgstr "Bitte wählen Sie ein Datum, um verfügbare Zeiten zu sehen"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:211
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:202
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:281
 #, elixir-autogen, elixir-format
 msgid "Please select another date"
@@ -768,7 +768,7 @@ msgstr "Samstag"
 msgid "Schedule Another Meeting"
 msgstr "Weiteren Termin buchen"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:101
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:108
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:141
 #, elixir-autogen, elixir-format
 msgid "Search cities, countries, or timezones..."
@@ -830,7 +830,7 @@ msgstr "DO"
 msgid "TUE"
 msgstr "DI"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:210
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:201
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:280
 #, elixir-autogen, elixir-format
 msgid "This date is fully booked"
@@ -888,16 +888,11 @@ msgstr "Alles bereit!"
 msgid "Your meeting has been successfully cancelled."
 msgstr "Ihr Termin wurde erfolgreich abgesagt."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:40
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:41
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:109
 #, elixir-autogen, elixir-format
 msgid "Your timezone"
 msgstr "Ihre Zeitzone"
-
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:315
-#, elixir-autogen, elixir-format
-msgid "local time"
-msgstr "Ortszeit"
 
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex:80
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/booking_component.ex:82
@@ -910,7 +905,7 @@ msgstr "Termin"
 msgid "next_step"
 msgstr "Nächster Schritt"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:284
+#: lib/tymeslot_web/themes/quill/scheduling/components/schedule/panels.ex:275
 #, elixir-autogen, elixir-format
 msgid "same day only"
 msgstr "Nur am selben Tag"

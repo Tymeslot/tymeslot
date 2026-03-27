@@ -24,7 +24,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderOrganizer do
       mjml_content = """
       #{Components.time_alert_badge(dgettext("emails", "Starting in %{time_until}", time_until: appointment_details.time_until), style: :danger)}
       #{Components.title_section(dgettext("emails", "Meeting with %{name}", name: appointment_details.attendee_name), align: "center")}
-      #{Components.quick_info_grid([%{label: dgettext("emails", "Time"), value: TimezoneHelper.format_time_owner_tz(appointment_details)}, %{label: dgettext("emails", "Duration"), value: "#{appointment_details.duration} #{dgettext("emails", "min")}"}, %{label: dgettext("emails", "Location"), value: appointment_details.location || dgettext("emails", "Virtual")}])}
+      #{Components.quick_info_grid([%{label: dgettext("emails", "Time"), value: TimezoneHelper.format_time_owner_tz(appointment_details)}, %{label: dgettext("emails", "Duration"), value: "#{appointment_details.duration} #{dgettext("emails", "min")}"}, %{label: dgettext("emails", "Location"), value: SharedHelpers.format_location(appointment_details)}])}
       <mj-section padding="10px 0 0 0" background-color="#fafafa" border-radius="6px">
         <mj-column>
           <mj-text font-size="13px" font-weight="600" padding="0 0 4px 0" css-class="mobile-text">
