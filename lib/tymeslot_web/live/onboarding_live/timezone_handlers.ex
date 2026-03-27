@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Profiles.Settings
+  alias Tymeslot.Timezones
 
   @doc """
   Handles toggling the timezone dropdown visibility.
@@ -50,31 +51,19 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
   @spec handle_change_timezone(String.t(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_change_timezone(timezone, socket) do
-    # Close dropdown and clear search, but explicitly preserve form_data
     socket =
       socket
       |> Component.assign(:timezone_dropdown_open, false)
       |> Component.assign(:timezone_search, "")
-      # Ensure form_data is preserved
-      |> Component.assign(:form_data, socket.assigns.form_data)
 
-    # First validate the timezone
     case validate_timezone(timezone) do
       {:ok, validated_timezone} ->
-        # Update and persist the timezone
-        case Settings.update_timezone(
-               socket.assigns.profile,
-               validated_timezone
-             ) do
+        case Settings.update_timezone(socket.assigns.profile, validated_timezone) do
           {:ok, profile} ->
-            socket =
-              socket
-              |> Component.assign(:profile, profile)
-              |> Component.assign(:form_errors, %{})
-              # Explicitly preserve form_data
-              |> Component.assign(:form_data, socket.assigns.form_data)
-
-            {:noreply, socket}
+            {:noreply,
+             socket
+             |> Component.assign(:profile, profile)
+             |> Component.assign(:form_errors, %{})}
 
           {:error, _reason} ->
             {:noreply,
@@ -86,23 +75,17 @@ defmodule TymeslotWeb.OnboardingLive.TimezoneHandlers do
         end
 
       {:error, errors} ->
-        socket =
-          socket
-          |> Component.assign(:form_errors, errors)
-          # Preserve form_data even on error
-          |> Component.assign(:form_data, socket.assigns.form_data)
-
-        {:noreply, socket}
+        {:noreply, Component.assign(socket, :form_errors, errors)}
     end
   end
 
   # Private helpers
 
   defp validate_timezone(timezone) when is_binary(timezone) do
-    if String.match?(timezone, ~r/^[A-Za-z_]+\/[A-Za-z_]+$/) or timezone in ["UTC", "GMT"] do
+    if Timezones.valid?(timezone) do
       {:ok, timezone}
     else
-      {:error, %{timezone: "Invalid timezone format"}}
+      {:error, %{timezone: "Invalid timezone"}}
     end
   end
 

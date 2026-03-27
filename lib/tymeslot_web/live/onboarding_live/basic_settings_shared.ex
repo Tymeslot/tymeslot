@@ -55,6 +55,20 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   end
 
   @doc """
+  Builds the initial form_data map from the current user and profile on the socket.
+  """
+  @spec build_form_data(Phoenix.LiveView.Socket.t()) :: map()
+  def build_form_data(socket) do
+    user = socket.assigns.current_user
+    profile = socket.assigns.profile
+
+    %{
+      "full_name" => user.name || profile.full_name || "",
+      "username" => profile.username || ""
+    }
+  end
+
+  @doc """
   Applies validation errors to the socket.
   """
   @spec apply_validation_errors(Phoenix.LiveView.Socket.t(), map()) ::

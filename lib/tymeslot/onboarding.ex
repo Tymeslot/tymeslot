@@ -6,34 +6,6 @@ defmodule Tymeslot.Onboarding do
   alias Tymeslot.Auth
   alias Tymeslot.Profiles
 
-  @steps [:welcome, :basic_settings, :scheduling_preferences, :complete]
-
-  @doc """
-  Returns the list of onboarding steps.
-  """
-  @spec get_steps() :: [atom()]
-  def get_steps, do: @steps
-
-  @doc """
-  Determines the next step in the onboarding flow.
-  """
-  @spec next_step(atom()) :: {:ok, atom()} | {:complete, atom()} | {:error, :invalid_step}
-  def next_step(:welcome), do: {:ok, :basic_settings}
-  def next_step(:basic_settings), do: {:ok, :scheduling_preferences}
-  def next_step(:scheduling_preferences), do: {:ok, :complete}
-  def next_step(:complete), do: {:complete, :complete}
-  def next_step(_invalid_step), do: {:error, :invalid_step}
-
-  @doc """
-  Determines the previous step in the onboarding flow.
-  """
-  @spec previous_step(atom()) :: {:ok, atom()} | {:error, :first_step | :invalid_step}
-  def previous_step(:basic_settings), do: {:ok, :welcome}
-  def previous_step(:scheduling_preferences), do: {:ok, :basic_settings}
-  def previous_step(:complete), do: {:ok, :scheduling_preferences}
-  def previous_step(:welcome), do: {:error, :first_step}
-  def previous_step(_invalid_step), do: {:error, :invalid_step}
-
   @doc """
   Creates a mock profile for development mode.
   """
@@ -91,21 +63,4 @@ defmodule Tymeslot.Onboarding do
       Auth.mark_onboarding_complete(user)
     end
   end
-
-  @doc """
-  Validates if a step is valid within the onboarding flow.
-  """
-  @spec valid_step?(atom() | String.t() | any()) :: boolean()
-  def valid_step?(step) when is_atom(step) do
-    step in @steps
-  end
-
-  def valid_step?(step) when is_binary(step) do
-    step_atom = String.to_existing_atom(step)
-    step_atom in @steps
-  rescue
-    ArgumentError -> false
-  end
-
-  def valid_step?(_invalid), do: false
 end

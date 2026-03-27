@@ -7,6 +7,7 @@ defmodule TymeslotWeb.OnboardingLive do
   alias Tymeslot.Timezones
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.BasicSettingsHandlers
+  alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.BasicSettingsStep
   alias TymeslotWeb.OnboardingLive.CompleteStep
   alias TymeslotWeb.OnboardingLive.NavigationHandlers
@@ -23,34 +24,28 @@ defmodule TymeslotWeb.OnboardingLive do
   def mount(_params, _session, socket) do
     user = socket.assigns.current_user
 
-    # Check if this is a debug route by examining the live_action
     is_debug = socket.assigns.live_action in [:debug_welcome, :debug_step]
 
-    # Check if user has already completed onboarding (skip for debug routes)
     if user.onboarding_completed_at && !is_debug do
       socket = put_flash(socket, :info, "You have already completed onboarding.")
       {:ok, redirect(socket, to: ~p"/dashboard")}
     else
-      # Handle profile creation
       {:ok, profile} = Onboarding.get_or_create_profile(user.id)
 
-      # Use existing user name if available, otherwise fall back to profile full_name
-      default_full_name = user.name || profile.full_name || ""
-
-      # Read detected timezone from connect params (set in assets/js/app.js)
-      connect_params = get_connect_params(socket) || %{}
-      detected_timezone = connect_params["timezone"]
-
-      # Decide prefill value (pure function) and persist immediately so the DB
-      # stays in sync with what the UI displays.  Without this, the in-memory
-      # struct fools Ecto's change tracking and the timezone never reaches the DB.
-      prefilled_timezone = Timezone.prefill_timezone(profile.timezone, detected_timezone)
-
+      # Persist browser-detected timezone only on the connected mount to avoid
+      # a wasted DB write during the static render (connect params are nil then).
       profile =
-        if prefilled_timezone != profile.timezone do
-          case Profiles.update_timezone(profile, prefilled_timezone) do
-            {:ok, updated_profile} -> updated_profile
-            {:error, _reason} -> Map.put(profile, :timezone, prefilled_timezone)
+        if connected?(socket) do
+          detected_timezone = get_connect_params(socket)["timezone"]
+          prefilled = Timezone.prefill_timezone(profile.timezone, detected_timezone)
+
+          if prefilled != profile.timezone do
+            case Profiles.update_timezone(profile, prefilled) do
+              {:ok, updated} -> updated
+              {:error, _reason} -> Map.put(profile, :timezone, prefilled)
+            end
+          else
+            profile
           end
         else
           profile
@@ -59,10 +54,7 @@ defmodule TymeslotWeb.OnboardingLive do
       socket =
         socket
         |> assign(:profile, profile)
-        |> assign(:form_data, %{
-          "full_name" => default_full_name,
-          "username" => profile.username || ""
-        })
+        |> then(&assign(&1, :form_data, BasicSettingsShared.build_form_data(&1)))
         |> assign(:current_step, :welcome)
         |> assign(:step_data, %{})
         |> assign(:show_skip_modal, false)
@@ -281,38 +273,26 @@ defmodule TymeslotWeb.OnboardingLive do
   - socket: The LiveView socket
   """
   def handle_event("focus_custom_input", %{"setting" => setting}, socket) do
-    # Defensive nil checks to prevent crashes with invalid settings or missing profile
     with %{} = config <- StepConfig.custom_input_config()[setting],
          %{} = profile <- socket.assigns[:profile] do
       current = Map.get(profile, config.field) || config.constraints.default_custom
 
-      # If current is a preset, use custom default; otherwise keep current custom value
       custom_value =
-        if current in config.presets do
-          config.constraints.default_custom
-        else
-          current
-        end
+        if current in config.presets,
+          do: config.constraints.default_custom,
+          else: current
 
-      # Update profile first via handler, then enable custom mode only on success
       params = %{setting => to_string(custom_value)}
 
       {:noreply, updated_socket} =
         SchedulingHandlers.handle_update_scheduling_preferences(params, socket)
 
-      # Check if update was successful
       if Map.get(updated_socket.assigns, :form_errors, %{}) == %{} do
-        # Success - enable custom mode for this field
-        socket_with_mode =
-          CustomInputModeHelper.enable_custom_mode(updated_socket, config.field)
-
-        {:noreply, socket_with_mode}
+        {:noreply, CustomInputModeHelper.enable_custom_mode(updated_socket, config.field)}
       else
-        # Validation or update failed - don't enable custom mode
         {:noreply, updated_socket}
       end
     else
-      # Invalid setting name or missing profile - return unchanged socket
       _other -> {:noreply, socket}
     end
   end

@@ -27,16 +27,6 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingPreferencesStep do
 
   @spec scheduling_preferences_step(map()) :: Phoenix.LiveView.Rendered.t()
   def scheduling_preferences_step(assigns) do
-    # Ensure custom_input_mode exists with defaults
-    assigns =
-      assign_new(assigns, :custom_input_mode, fn ->
-        %{
-          buffer_minutes: false,
-          advance_booking_days: false,
-          min_advance_hours: false
-        }
-      end)
-
     ~H"""
     <div class="onboarding-step">
       <div class="text-center mb-6">

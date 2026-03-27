@@ -8,6 +8,8 @@ defmodule TymeslotWeb.OnboardingLive.CompleteStep do
 
   use Phoenix.Component
 
+  alias TymeslotWeb.OnboardingLive.StepConfig
+
   @doc """
   Renders the completion step component.
   """
@@ -17,8 +19,8 @@ defmodule TymeslotWeb.OnboardingLive.CompleteStep do
     ~H"""
     <div class="onboarding-step">
       <div class="mb-4">
-        <h2 class="onboarding-title">You're All Set!</h2>
-        <p class="onboarding-subtitle">Your Tymeslot account is ready to launch</p>
+        <h2 class="onboarding-title">{StepConfig.step_title(:complete)}</h2>
+        <p class="onboarding-subtitle">{StepConfig.step_description(:complete)}</p>
       </div>
 
       <div class="space-y-4 text-left">

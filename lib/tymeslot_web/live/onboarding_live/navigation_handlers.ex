@@ -15,6 +15,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Tymeslot.Profiles
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
+  alias TymeslotWeb.OnboardingLive.StepConfig
 
   @doc """
   Handles the next step navigation event.
@@ -24,21 +25,18 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   """
   @spec handle_next_step(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_next_step(socket) do
-    current_step = socket.assigns.current_step
-
-    case current_step do
-      :welcome ->
-        {:noreply,
-         socket |> Component.assign(:current_step, :basic_settings) |> LiveView.clear_flash()}
-
+    case socket.assigns.current_step do
       :basic_settings ->
         handle_basic_settings_next(socket)
 
-      :scheduling_preferences ->
-        {:noreply, socket |> Component.assign(:current_step, :complete) |> LiveView.clear_flash()}
-
       :complete ->
         {:noreply, complete_onboarding(socket)}
+
+      step ->
+        {:noreply,
+         socket
+         |> Component.assign(:current_step, StepConfig.next_step(step))
+         |> LiveView.clear_flash()}
     end
   end
 
@@ -51,40 +49,31 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   @spec handle_previous_step(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_previous_step(socket) do
-    current_step = socket.assigns.current_step
-
-    case current_step do
-      :basic_settings ->
-        {:noreply, socket |> Component.assign(:current_step, :welcome) |> LiveView.clear_flash()}
-
+    case socket.assigns.current_step do
       :scheduling_preferences ->
-        # Reload form_data from profile when going back
-        # Use user name if available, otherwise fall back to profile full_name
-        default_full_name =
-          socket.assigns.current_user.name || socket.assigns.profile.full_name || ""
-
-        socket =
-          socket
-          |> Component.assign(:current_step, :basic_settings)
-          |> Component.assign(:form_data, %{
-            "full_name" => default_full_name,
-            "username" => socket.assigns.profile.username || ""
-          })
-          |> LiveView.clear_flash()
-
-        {:noreply, socket}
+        {:noreply,
+         socket
+         |> Component.assign(:current_step, StepConfig.previous_step(:scheduling_preferences))
+         |> Component.assign(:form_data, BasicSettingsShared.build_form_data(socket))
+         |> LiveView.clear_flash()}
 
       :complete ->
         {:noreply,
          socket
-         |> Component.assign(:current_step, :scheduling_preferences)
+         |> Component.assign(:current_step, StepConfig.previous_step(:complete))
          |> Component.assign_new(:custom_input_mode, fn ->
            CustomInputModeHelper.default_custom_mode()
          end)
          |> LiveView.clear_flash()}
 
-      _other ->
-        {:noreply, socket}
+      step ->
+        case StepConfig.previous_step(step) do
+          nil ->
+            {:noreply, socket}
+
+          prev ->
+            {:noreply, socket |> Component.assign(:current_step, prev) |> LiveView.clear_flash()}
+        end
     end
   end
 
@@ -115,7 +104,6 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     {:noreply, complete_onboarding(socket)}
   end
 
-  # Private helper function
   defp complete_onboarding(socket) do
     user = socket.assigns.current_user
 
@@ -126,12 +114,10 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         # This prevents broken booking URLs if they skip setup
         case ensure_username(profile, user.id) do
           {:ok, _profile} ->
-            # Check if this is a debug route
             is_debug = socket.assigns.live_action in [:debug_welcome, :debug_step]
 
             case Onboarding.complete_onboarding(user) do
               {:ok, _user} ->
-                # For debug routes, show completion message but stay on debug route
                 if is_debug do
                   socket
                   |> LiveView.put_flash(
@@ -183,11 +169,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
           |> Component.assign(:profile, profile)
           |> Component.assign(:current_step, :scheduling_preferences)
           |> Component.assign_new(:custom_input_mode, fn ->
-            %{
-              buffer_minutes: false,
-              advance_booking_days: false,
-              min_advance_hours: false
-            }
+            CustomInputModeHelper.default_custom_mode()
           end)
           |> LiveView.clear_flash()
 

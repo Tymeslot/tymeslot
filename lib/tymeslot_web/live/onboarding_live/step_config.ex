@@ -12,13 +12,92 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @typedoc "A label/value tuple used for select options."
   @type option :: {String.t(), non_neg_integer()}
 
+  @steps [:welcome, :basic_settings, :scheduling_preferences, :complete]
+  @step_index Map.new(Enum.with_index(@steps))
+
+  @buffer_time_options [
+    {"No buffer", 0},
+    {"15 min", 15},
+    {"30 min", 30},
+    {"45 min", 45},
+    {"60 min", 60}
+  ]
+
+  @buffer_time_values Enum.map(@buffer_time_options, &elem(&1, 1))
+
+  @buffer_minutes_constraints %{
+    min: 0,
+    max: 120,
+    step: 5,
+    default_custom: 20,
+    unit: "min",
+    color: "turquoise"
+  }
+
+  @advance_booking_options [
+    {"1 week", 7},
+    {"2 weeks", 14},
+    {"1 month", 30},
+    {"3 months", 90},
+    {"6 months", 180},
+    {"1 year", 365}
+  ]
+
+  @advance_booking_values Enum.map(@advance_booking_options, &elem(&1, 1))
+
+  @advance_booking_constraints %{
+    min: 1,
+    max: 365,
+    step: 1,
+    default_custom: 120,
+    unit: "days",
+    color: "cyan"
+  }
+
+  @min_advance_options [
+    {"No minimum", 0},
+    {"1 hour", 1},
+    {"3 hours", 3},
+    {"6 hours", 6},
+    {"12 hours", 12},
+    {"24 hours", 24},
+    {"48 hours", 48}
+  ]
+
+  @min_advance_values Enum.map(@min_advance_options, &elem(&1, 1))
+
+  @min_advance_constraints %{
+    min: 0,
+    max: 168,
+    step: 1,
+    default_custom: 8,
+    unit: "hours",
+    color: "blue"
+  }
+
+  @custom_input_config %{
+    "buffer_minutes" => %{
+      field: :buffer_minutes,
+      presets: @buffer_time_values,
+      constraints: @buffer_minutes_constraints
+    },
+    "advance_booking_days" => %{
+      field: :advance_booking_days,
+      presets: @advance_booking_values,
+      constraints: @advance_booking_constraints
+    },
+    "min_advance_hours" => %{
+      field: :min_advance_hours,
+      presets: @min_advance_values,
+      constraints: @min_advance_constraints
+    }
+  }
+
   @doc """
   Returns the list of available onboarding steps in order.
   """
   @spec get_steps() :: [step()]
-  def get_steps do
-    [:welcome, :basic_settings, :scheduling_preferences, :complete]
-  end
+  def get_steps, do: @steps
 
   @doc """
   Validates if a given step name is valid.
@@ -26,129 +105,43 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @spec valid_step?(binary()) :: boolean()
   def valid_step?(step_name) when is_binary(step_name) do
     step_atom = String.to_existing_atom(step_name)
-    step_atom in get_steps()
+    step_atom in @steps
   rescue
     ArgumentError -> false
   end
 
   @spec valid_step?(step()) :: boolean()
-  def valid_step?(step_atom) when is_atom(step_atom) do
-    step_atom in get_steps()
-  end
+  def valid_step?(step_atom) when is_atom(step_atom), do: step_atom in @steps
 
   @spec valid_step?(term()) :: boolean()
   def valid_step?(_other), do: false
 
-  @doc """
-  Returns configuration for buffer time options.
-  """
   @spec buffer_time_options() :: [option()]
-  def buffer_time_options do
-    [
-      {"No buffer", 0},
-      {"15 min", 15},
-      {"30 min", 30},
-      {"45 min", 45},
-      {"60 min", 60}
-    ]
-  end
+  def buffer_time_options, do: @buffer_time_options
 
-  @doc """
-  Returns preset values for buffer time (without labels).
-  Used to check if current value matches a preset.
-  """
   @spec buffer_time_values() :: [integer()]
-  def buffer_time_values, do: [0, 15, 30, 45, 60]
+  def buffer_time_values, do: @buffer_time_values
 
-  @doc """
-  Returns constraints and configuration for buffer_minutes custom input.
-  """
   @spec buffer_minutes_constraints() :: map()
-  def buffer_minutes_constraints do
-    %{
-      min: 0,
-      max: 120,
-      step: 5,
-      default_custom: 20,
-      unit: "min",
-      color: "turquoise"
-    }
-  end
+  def buffer_minutes_constraints, do: @buffer_minutes_constraints
 
-  @doc """
-  Returns configuration for advance booking window options.
-  """
   @spec advance_booking_options() :: [option()]
-  def advance_booking_options do
-    [
-      {"1 week", 7},
-      {"2 weeks", 14},
-      {"1 month", 30},
-      {"3 months", 90},
-      {"6 months", 180},
-      {"1 year", 365}
-    ]
-  end
+  def advance_booking_options, do: @advance_booking_options
 
-  @doc """
-  Returns preset values for advance booking (without labels).
-  Used to check if current value matches a preset.
-  """
   @spec advance_booking_values() :: [integer()]
-  def advance_booking_values, do: [7, 14, 30, 90, 180, 365]
+  def advance_booking_values, do: @advance_booking_values
 
-  @doc """
-  Returns constraints and configuration for advance_booking_days custom input.
-  """
   @spec advance_booking_constraints() :: map()
-  def advance_booking_constraints do
-    %{
-      min: 1,
-      max: 365,
-      step: 1,
-      default_custom: 120,
-      unit: "days",
-      color: "cyan"
-    }
-  end
+  def advance_booking_constraints, do: @advance_booking_constraints
 
-  @doc """
-  Returns configuration for minimum advance notice options.
-  """
   @spec min_advance_options() :: [option()]
-  def min_advance_options do
-    [
-      {"No minimum", 0},
-      {"1 hour", 1},
-      {"3 hours", 3},
-      {"6 hours", 6},
-      {"12 hours", 12},
-      {"24 hours", 24},
-      {"48 hours", 48}
-    ]
-  end
+  def min_advance_options, do: @min_advance_options
 
-  @doc """
-  Returns preset values for minimum advance notice (without labels).
-  Used to check if current value matches a preset.
-  """
   @spec min_advance_values() :: [integer()]
-  def min_advance_values, do: [0, 1, 3, 6, 12, 24, 48]
+  def min_advance_values, do: @min_advance_values
 
-  @doc """
-  Returns constraints and configuration for min_advance_hours custom input.
-  """
   @spec min_advance_constraints() :: map()
-  def min_advance_constraints do
-    %{
-      min: 0,
-      max: 168,
-      step: 1,
-      default_custom: 8,
-      unit: "hours",
-      color: "blue"
-    }
-  end
+  def min_advance_constraints, do: @min_advance_constraints
 
   @doc """
   Returns custom input configuration for all scheduling preference fields.
@@ -159,25 +152,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   - constraints: Min/max/step/default values
   """
   @spec custom_input_config() :: map()
-  def custom_input_config do
-    %{
-      "buffer_minutes" => %{
-        field: :buffer_minutes,
-        presets: buffer_time_values(),
-        constraints: buffer_minutes_constraints()
-      },
-      "advance_booking_days" => %{
-        field: :advance_booking_days,
-        presets: advance_booking_values(),
-        constraints: advance_booking_constraints()
-      },
-      "min_advance_hours" => %{
-        field: :min_advance_hours,
-        presets: min_advance_values(),
-        constraints: min_advance_constraints()
-      }
-    }
-  end
+  def custom_input_config, do: @custom_input_config
 
   @doc """
   Returns the step title for display purposes.
@@ -202,11 +177,7 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   """
   @spec step_completed?(step(), step()) :: boolean()
   def step_completed?(step, current_step) do
-    steps = get_steps()
-    step_index = Enum.find_index(steps, &(&1 == step))
-    current_index = Enum.find_index(steps, &(&1 == current_step))
-
-    step_index < current_index
+    @step_index[step] < @step_index[current_step]
   end
 
   @doc """
