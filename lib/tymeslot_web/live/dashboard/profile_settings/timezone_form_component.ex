@@ -11,16 +11,19 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.TimezoneFormComponent do
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
-    timezone_options = Timezones.all_options()
-
+  def mount(socket) do
     {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(timezone_options: timezone_options)
-     |> assign(timezone_dropdown_open: false)
-     |> assign(timezone_search: "")
-     |> assign(:form_errors, %{})}
+     assign(socket,
+       timezone_options: Timezones.all_options(),
+       timezone_dropdown_open: false,
+       timezone_search: "",
+       form_errors: %{}
+     )}
+  end
+
+  @impl Phoenix.LiveComponent
+  def update(assigns, socket) do
+    {:ok, assign(socket, assigns)}
   end
 
   @impl Phoenix.LiveComponent
