@@ -248,11 +248,13 @@ Report security vulnerabilities via the [contact page](https://tymeslot.app/cont
 | Open source | ✅ ELv2 | ❌ |
 | Self-hosting | ✅ Free forever | ❌ Not available |
 | Data ownership | ✅ Your infrastructure | ❌ Their servers |
-| Unlimited bookings | ✅ Free tier | ❌ Paid only |
-| Calendar providers | 6 | 3 |
-| Video providers | 5 | 3 |
-| Webhooks | ✅ Free tier | ❌ Paid only |
 | No tracking | ✅ | ❌ |
+| Unlimited event types | ✅ Free tier | ❌ 1 on free plan |
+| Calendar providers | 6 | 3 |
+| Webhooks | ✅ Free tier | ❌ Paid only |
+| SSO / OIDC | ✅ Free tier | ❌ Enterprise only |
+| Telegram notifications | ✅ Built-in | ❌ |
+| White-label | ✅ €5/mo | ❌ $16+/user/mo |
 
 ---
 
