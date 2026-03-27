@@ -19,7 +19,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
   This module provides:
   - GenServer lifecycle management for periodic scheduling
   - Public API surface for the health check system
-  - Integration with Oban worker for async execution
+  - Stateless orchestration functions called directly by Oban workers
   - Coordination of the check flow: Schedule → Assess → Analyze → Monitor → Respond
 
   Health state is persisted to the `integration_health_states` table so it
@@ -72,7 +72,8 @@ defmodule Tymeslot.Integrations.HealthCheck do
 
   @doc """
   Performs a single health check for an integration.
-  Called by Oban worker.
+  Called directly by Oban workers — does not go through the GenServer,
+  so multiple checks can run concurrently without serialising.
 
   ## Orchestration Flow
 
@@ -88,7 +89,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
   @spec perform_single_check(integration_type(), integer()) :: :ok | {:error, any()}
   def perform_single_check(type, integration_id) do
     Logger.debug("Performing single health check", type: type, id: integration_id)
-    GenServer.call(__MODULE__, {:perform_single_check, type, integration_id}, 60_000)
+    orchestrate_health_check(type, integration_id)
   end
 
   @doc """
@@ -136,15 +137,14 @@ defmodule Tymeslot.Integrations.HealthCheck do
     interval = Keyword.get(opts, :check_interval, @check_interval)
     initial_delay = Keyword.get(opts, :initial_delay, 1000)
 
-    if initial_delay > 0 do
-      Process.send_after(self(), :scheduled_check, initial_delay)
-    end
+    timer =
+      if initial_delay > 0 do
+        Process.send_after(self(), :scheduled_check, initial_delay)
+      else
+        schedule_next_check(interval)
+      end
 
-    state = %State{
-      check_timer: schedule_next_check(interval)
-    }
-
-    {:ok, state}
+    {:ok, %State{check_timer: timer}}
   end
 
   @impl GenServer
@@ -152,11 +152,6 @@ defmodule Tymeslot.Integrations.HealthCheck do
     Logger.info("Manual health check triggered for all integrations")
     Scheduler.schedule_all(force: true)
     {:reply, :ok, state}
-  end
-
-  def handle_call({:perform_single_check, type, id}, _from, state) do
-    result = orchestrate_health_check(type, id)
-    {:reply, result, state}
   end
 
   @impl GenServer
@@ -181,6 +176,14 @@ defmodule Tymeslot.Integrations.HealthCheck do
       end
 
     case integration_result do
+      {:ok, %{is_active: false}} ->
+        Logger.debug("Skipping health check for deactivated integration",
+          type: type,
+          integration_id: id
+        )
+
+        :ok
+
       {:ok, integration} ->
         # Step 1: Get current health state from DB (creates default record if absent)
         old_health_state = Monitor.get_state(type, id, integration.user_id)

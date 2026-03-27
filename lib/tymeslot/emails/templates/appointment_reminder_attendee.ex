@@ -147,5 +147,4 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderAttendee do
     #{appointment_details.organizer_name}
     """
   end
-
 end

@@ -9,13 +9,17 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.{CalendarIntegrationQueries, VideoIntegrationQueries}
+  alias Tymeslot.DatabaseQueries.{
+    CalendarIntegrationQueries,
+    IntegrationHealthStateQueries,
+    VideoIntegrationQueries
+  }
+
   alias Tymeslot.Infrastructure.{CalendarCircuitBreaker, VideoCircuitBreaker}
-  alias Tymeslot.Integrations.HealthCheck.Monitor
+  alias Tymeslot.Integrations.HealthCheck.{Monitor, ProviderHelpers}
   alias Tymeslot.Workers.IntegrationHealthWorker
 
   @max_jitter_ms 30_000
-  @check_interval :timer.minutes(30)
 
   @type integration_type :: :calendar | :video
 
@@ -35,6 +39,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
     Enum.each(VideoIntegrationQueries.list_all_active(), fn int ->
       schedule_if_due(:video, int, now, force)
     end)
+
+    IntegrationHealthStateQueries.delete_orphaned()
 
     :ok
   end
@@ -73,7 +79,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
         last_error_class: health_state.last_error_class
       )
 
-      enqueue_if_allowed(type, integration.id)
+      enqueue_if_allowed(type, integration)
     else
       Logger.debug("Skipping integration health check (backoff)",
         type: type,
@@ -85,29 +91,22 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
     end
   end
 
-  defp enqueue_if_allowed(type, integration_id) do
-    # Check circuit breaker for backpressure
-    if should_skip_due_to_circuit?(type, integration_id) do
+  defp enqueue_if_allowed(type, integration) do
+    if should_skip_due_to_circuit?(type, integration) do
       :ok
     else
-      enqueue_job(type, integration_id)
+      enqueue_job(type, integration.id)
     end
   end
 
   defp enqueue_job(type, integration_id) do
-    # Use Oban's built-in unique job constraints to prevent duplicates
     job =
       IntegrationHealthWorker.new(
         %{
           "type" => Atom.to_string(type),
           "integration_id" => integration_id
         },
-        scheduled_at: scheduled_at_with_jitter(),
-        unique: [
-          period: div(@check_interval, 1000),
-          keys: [:type, :integration_id],
-          states: [:available, :scheduled, :retryable, :executing]
-        ]
+        scheduled_at: scheduled_at_with_jitter()
       )
 
     result = Oban.insert(job)
@@ -138,30 +137,13 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
     end
   end
 
-  defp should_skip_due_to_circuit?(type, integration_id) do
-    integration_result =
-      case type do
-        :calendar -> CalendarIntegrationQueries.get(integration_id)
-        :video -> VideoIntegrationQueries.get(integration_id)
-      end
+  defp should_skip_due_to_circuit?(type, integration) do
+    provider_atom = ProviderHelpers.safe_to_existing_atom(integration.provider)
 
-    case integration_result do
-      {:ok, integration} ->
-        provider_atom = safe_to_existing_atom(integration.provider)
-
-        if provider_atom do
-          check_circuit_breaker(type, integration, provider_atom)
-        else
-          false
-        end
-
-      {:error, :not_found} ->
-        Logger.debug("Integration not found, skipping enqueue",
-          type: type,
-          integration_id: integration_id
-        )
-
-        true
+    if provider_atom do
+      check_circuit_breaker(type, integration, provider_atom)
+    else
+      false
     end
   end
 
@@ -231,22 +213,5 @@ defmodule Tymeslot.Integrations.HealthCheck.Scheduler do
 
         false
     end
-  end
-
-  defp safe_to_existing_atom("" = value) do
-    Logger.warning("Empty provider name encountered", value: value)
-    nil
-  end
-
-  defp safe_to_existing_atom(value) when is_binary(value) do
-    String.to_existing_atom(value)
-  rescue
-    ArgumentError ->
-      Logger.warning("Provider name not recognized, check for typos",
-        value: value,
-        hint: "Valid providers: google, outlook, caldav, nextcloud, radicale, teams, etc."
-      )
-
-      nil
   end
 end

@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
 
   alias Tymeslot.DatabaseSchemas.{CalendarIntegrationSchema, VideoIntegrationSchema}
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.HealthCheck.ProviderHelpers
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
 
   @type integration_type :: :calendar | :video
@@ -44,15 +45,15 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
   end
 
   def test_integration(:video, integration) do
-    provider_atom = safe_to_existing_atom(integration.provider)
-    decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
-    config = build_video_config(provider_atom, integration, decrypted)
+    provider_atom = ProviderHelpers.safe_to_existing_atom(integration.provider)
 
     case provider_atom do
       nil ->
         {:error, :unsupported_provider}
 
       provider ->
+        decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
+        config = build_video_config(provider, integration, decrypted)
         test_video_provider(provider, config)
     end
   end
@@ -109,24 +110,5 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
         success: match?({:ok, _}, result)
       }
     )
-  end
-
-  defp safe_to_existing_atom(nil), do: nil
-
-  defp safe_to_existing_atom("" = value) do
-    Logger.warning("Empty provider name encountered", value: value)
-    nil
-  end
-
-  defp safe_to_existing_atom(value) when is_binary(value) do
-    String.to_existing_atom(value)
-  rescue
-    ArgumentError ->
-      Logger.warning("Provider name not recognized, check for typos",
-        value: value,
-        hint: "Valid providers: google, outlook, caldav, nextcloud, radicale, teams, etc."
-      )
-
-      nil
   end
 end

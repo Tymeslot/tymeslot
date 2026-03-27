@@ -152,6 +152,85 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
 
       assert new_state.failures == 3
       assert new_state.status == :unhealthy
+      assert %DateTime{} = new_state.became_unhealthy_at
+    end
+
+    test "preserves became_unhealthy_at on subsequent hard failures" do
+      unhealthy_since = DateTime.add(DateTime.utc_now(), -49, :hour)
+
+      old_state = %{
+        failures: 3,
+        successes: 0,
+        last_check_at: DateTime.utc_now(),
+        status: :unhealthy,
+        backoff_ms: :timer.hours(1),
+        last_error_class: :hard,
+        became_unhealthy_at: unhealthy_since,
+        notification_sent_at: nil
+      }
+
+      new_state = Monitor.update_health(old_state, {:error, :unauthorized, :hard})
+
+      assert new_state.failures == 4
+      assert new_state.became_unhealthy_at == unhealthy_since
+    end
+  end
+
+  describe "update_health/2 with persistent transient errors (escalation)" do
+    test "does not increment failures while backoff is below max" do
+      old_state = %{
+        failures: 0,
+        successes: 0,
+        last_check_at: DateTime.utc_now(),
+        status: :healthy,
+        backoff_ms: :timer.minutes(5),
+        last_error_class: :transient,
+        became_unhealthy_at: nil,
+        notification_sent_at: nil
+      }
+
+      new_state = Monitor.update_health(old_state, {:error, :econnrefused, :transient})
+
+      assert new_state.failures == 0
+      assert new_state.status == :healthy
+    end
+
+    test "starts incrementing failures when backoff reaches max" do
+      old_state = %{
+        failures: 0,
+        successes: 0,
+        last_check_at: DateTime.utc_now(),
+        status: :healthy,
+        backoff_ms: :timer.hours(1),
+        last_error_class: :transient,
+        became_unhealthy_at: nil,
+        notification_sent_at: nil
+      }
+
+      new_state = Monitor.update_health(old_state, {:error, :econnrefused, :transient})
+
+      assert new_state.failures == 1
+      assert new_state.status == :degraded
+      assert new_state.last_error_class == :transient
+    end
+
+    test "reaches unhealthy after sustained transient failures at max backoff" do
+      old_state = %{
+        failures: 2,
+        successes: 0,
+        last_check_at: DateTime.utc_now(),
+        status: :degraded,
+        backoff_ms: :timer.hours(1),
+        last_error_class: :transient,
+        became_unhealthy_at: nil,
+        notification_sent_at: nil
+      }
+
+      new_state = Monitor.update_health(old_state, {:error, :econnrefused, :transient})
+
+      assert new_state.failures == 3
+      assert new_state.status == :unhealthy
+      assert %DateTime{} = new_state.became_unhealthy_at
     end
   end
 
@@ -308,6 +387,17 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       assert record.failures == 1
     end
 
+    test "put_state returns {0, nil} when no record exists" do
+      health_state = %{
+        Monitor.initial_state()
+        | failures: 1,
+          status: :degraded,
+          last_check_at: DateTime.utc_now()
+      }
+
+      assert {0, nil} = Monitor.put_state(:calendar, -1, health_state)
+    end
+
     test "put_state persists video integration state to DB" do
       user = insert(:user)
       integration = insert(:video_integration, user: user)
@@ -321,6 +411,75 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       {:ok, record} = IntegrationHealthStateQueries.get(:video, integration.id)
       assert record.status == "degraded"
       assert record.failures == 2
+    end
+  end
+
+  describe "from_db_record/1" do
+    test "handles unexpected status string without crashing" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      {:ok, _record} =
+        IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+
+      {1, _nil} =
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+          status: "some_future_status"
+        )
+
+      health = Monitor.get_state(:calendar, integration.id, user.id)
+      assert health.status == :degraded
+    end
+
+    test "handles unexpected last_error_class string without crashing" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      {:ok, _record} =
+        IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+
+      {1, _nil} =
+        IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+          last_error_class: "unknown_class"
+        )
+
+      health = Monitor.get_state(:calendar, integration.id, user.id)
+      assert health.last_error_class == :hard
+    end
+  end
+
+  describe "orphaned health state cleanup" do
+    test "delete_orphaned removes health states for deleted integrations" do
+      user = insert(:user)
+      cal = insert(:calendar_integration, user: user)
+      vid = insert(:video_integration, user: user)
+
+      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, cal.id, user.id)
+      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:video, vid.id, user.id)
+
+      # Create orphaned records (integration IDs that don't exist)
+      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, -999, user.id)
+      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:video, -998, user.id)
+
+      {deleted, _nil} = IntegrationHealthStateQueries.delete_orphaned()
+
+      assert deleted == 2
+
+      # Real records still exist
+      assert {:ok, _record} = IntegrationHealthStateQueries.get(:calendar, cal.id)
+      assert {:ok, _record} = IntegrationHealthStateQueries.get(:video, vid.id)
+
+      # Orphaned records are gone
+      assert {:error, :not_found} = IntegrationHealthStateQueries.get(:calendar, -999)
+      assert {:error, :not_found} = IntegrationHealthStateQueries.get(:video, -998)
+    end
+
+    test "delete_orphaned returns {0, nil} when no orphans exist" do
+      user = insert(:user)
+      cal = insert(:calendar_integration, user: user)
+      {:ok, _record} = IntegrationHealthStateQueries.get_or_init(:calendar, cal.id, user.id)
+
+      assert {0, _nil} = IntegrationHealthStateQueries.delete_orphaned()
     end
   end
 

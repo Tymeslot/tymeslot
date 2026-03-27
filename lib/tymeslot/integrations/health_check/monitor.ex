@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   @failure_threshold 3
   @recovery_threshold 2
   @check_interval :timer.minutes(30)
+  @max_backoff_ms :timer.hours(1)
 
   @type health_status :: :healthy | :degraded | :unhealthy
   @type integration_type :: :calendar | :video
@@ -102,12 +103,37 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   def update_health(health_state, {:error, _error_reason, :transient}) do
     new_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :transient)
 
-    %{
-      health_state
-      | last_check_at: DateTime.utc_now(),
-        backoff_ms: new_backoff,
-        last_error_class: :transient
-    }
+    # When backoff has reached max, the same transient error has persisted across
+    # multiple checks (e.g. econnrefused for over an hour). Start incrementing
+    # the failure counter so the integration eventually reaches :unhealthy and
+    # triggers the 48h user notification.
+    if health_state.backoff_ms >= @max_backoff_ms do
+      failures = health_state.failures + 1
+      new_status = determine_status(failures, 0)
+
+      became_unhealthy_at =
+        if new_status == :unhealthy and is_nil(health_state.became_unhealthy_at),
+          do: DateTime.utc_now(),
+          else: health_state.became_unhealthy_at
+
+      %{
+        health_state
+        | failures: failures,
+          successes: 0,
+          last_check_at: DateTime.utc_now(),
+          status: new_status,
+          backoff_ms: new_backoff,
+          last_error_class: :transient,
+          became_unhealthy_at: became_unhealthy_at
+      }
+    else
+      %{
+        health_state
+        | last_check_at: DateTime.utc_now(),
+          backoff_ms: new_backoff,
+          last_error_class: :transient
+      }
+    end
   end
 
   def update_health(health_state, {:error, _error_reason, :hard}) do
@@ -236,10 +262,9 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       failures: record.failures,
       successes: record.successes,
       last_check_at: record.last_check_at,
-      status: String.to_existing_atom(record.status),
+      status: safe_to_status(record.status),
       backoff_ms: record.backoff_ms,
-      last_error_class:
-        record.last_error_class && String.to_existing_atom(record.last_error_class),
+      last_error_class: safe_to_error_class(record.last_error_class),
       became_unhealthy_at: record.became_unhealthy_at,
       notification_sent_at: record.notification_sent_at
     }
@@ -264,6 +289,26 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       nil -> base
       user_id -> Map.put(base, :user_id, user_id)
     end
+  end
+
+  @valid_statuses ~w(healthy degraded unhealthy)a
+
+  defp safe_to_status(str) when is_binary(str) do
+    atom = String.to_existing_atom(str)
+    if atom in @valid_statuses, do: atom, else: :degraded
+  rescue
+    ArgumentError -> :degraded
+  end
+
+  @valid_error_classes ~w(transient hard)a
+
+  defp safe_to_error_class(nil), do: nil
+
+  defp safe_to_error_class(str) when is_binary(str) do
+    atom = String.to_existing_atom(str)
+    if atom in @valid_error_classes, do: atom, else: :hard
+  rescue
+    ArgumentError -> :hard
   end
 
   defp count_by_status(integration_lists, status) do

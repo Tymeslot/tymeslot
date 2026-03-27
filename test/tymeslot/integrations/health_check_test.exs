@@ -246,6 +246,28 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
     end
   end
 
+  describe "deactivated integration handling" do
+    test "skips health check for deactivated calendar integration" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration, user: user, is_active: false, provider: "google")
+
+      result = HealthCheck.perform_single_check(:calendar, integration.id)
+
+      assert result == :ok
+    end
+
+    test "skips health check for deactivated video integration" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, is_active: false, provider: "mirotalk")
+
+      result = HealthCheck.perform_single_check(:video, integration.id)
+
+      assert result == :ok
+    end
+  end
+
   describe "circuit breaker integration" do
     test "circuit breaker opens after repeated failures" do
       alias Tymeslot.Infrastructure.CalendarCircuitBreaker
@@ -315,9 +337,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
 
       # Try to enqueue again - should skip because job already exists
       HealthCheck.check_all_integrations()
-
-      # Wait for processing
-      Process.sleep(100)
+      sync_with_server()
 
       final_job_count =
         Repo.one(
@@ -379,7 +399,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
 
       # Check integrations - should enqueue normally
       HealthCheck.check_all_integrations()
-      Process.sleep(100)
+      sync_with_server()
 
       # Verify job was enqueued
       job_count =
@@ -488,6 +508,18 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       assert String.to_existing_atom("google") == :google
       assert String.to_existing_atom("outlook") == :outlook
       assert String.to_existing_atom("mirotalk") == :mirotalk
+    end
+  end
+
+  describe "deleted integration handling" do
+    test "returns :ok for non-existent calendar integration" do
+      result = HealthCheck.perform_single_check(:calendar, -1)
+      assert result == :ok
+    end
+
+    test "returns :ok for non-existent video integration" do
+      result = HealthCheck.perform_single_check(:video, -1)
+      assert result == :ok
     end
   end
 

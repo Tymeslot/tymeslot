@@ -9,7 +9,12 @@ defmodule Tymeslot.DatabaseQueries.IntegrationHealthStateQueries do
 
   import Ecto.Query
 
-  alias Tymeslot.DatabaseSchemas.IntegrationHealthStateSchema
+  alias Tymeslot.DatabaseSchemas.{
+    CalendarIntegrationSchema,
+    IntegrationHealthStateSchema,
+    VideoIntegrationSchema
+  }
+
   alias Tymeslot.Repo
 
   @doc """
@@ -108,6 +113,18 @@ defmodule Tymeslot.DatabaseQueries.IntegrationHealthStateQueries do
   end
 
   @doc """
+  Deletes health state records whose integration no longer exists.
+  Runs a NOT IN subquery per integration type.
+  """
+  @spec delete_orphaned() :: {non_neg_integer(), nil}
+  def delete_orphaned do
+    calendar_deleted = delete_orphaned_by_type("calendar", CalendarIntegrationSchema)
+    video_deleted = delete_orphaned_by_type("video", VideoIntegrationSchema)
+
+    {elem(calendar_deleted, 0) + elem(video_deleted, 0), nil}
+  end
+
+  @doc """
   Returns all unhealthy integration health state records for a user.
   Used to populate in-app health badges on integration cards.
   """
@@ -116,5 +133,15 @@ defmodule Tymeslot.DatabaseQueries.IntegrationHealthStateQueries do
     IntegrationHealthStateSchema
     |> where([s], s.user_id == ^user_id and s.status == "unhealthy")
     |> Repo.all()
+  end
+
+  defp delete_orphaned_by_type(type_str, integration_schema) do
+    orphaned_query =
+      from(s in IntegrationHealthStateSchema,
+        where: s.integration_type == ^type_str,
+        where: s.integration_id not in subquery(from(i in integration_schema, select: i.id))
+      )
+
+    Repo.delete_all(orphaned_query)
   end
 end

@@ -122,6 +122,21 @@ defmodule Tymeslot.Integrations.HealthCheck.AssessorTest do
       assert is_integer(duration)
     end
 
+    test "returns unsupported_provider for unrecognised provider without calling decrypt" do
+      user = insert(:user)
+
+      integration =
+        insert(:video_integration,
+          user: user,
+          provider: "nonexistent_provider_xyz_#{System.unique_integer()}"
+        )
+
+      {result, duration} = Assessor.assess(:video, integration)
+
+      assert result == {:error, :unsupported_provider}
+      assert is_integer(duration)
+    end
+
     test "handles empty provider name" do
       user = insert(:user)
       integration = insert(:video_integration, user: user, provider: "")

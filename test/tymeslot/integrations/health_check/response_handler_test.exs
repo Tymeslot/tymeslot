@@ -1,9 +1,16 @@
 defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :integrations
 
-  alias Tymeslot.DatabaseQueries.{CalendarIntegrationQueries, VideoIntegrationQueries}
+  alias Tymeslot.DatabaseQueries.{
+    CalendarIntegrationQueries,
+    IntegrationHealthStateQueries,
+    VideoIntegrationQueries
+  }
+
   alias Tymeslot.Integrations.HealthCheck.ResponseHandler
+  alias Tymeslot.Workers.EmailWorker
 
   # Minimal health state that does not trigger notifications
   # (became_unhealthy_at is nil, so maybe_notify_user short-circuits)
@@ -208,6 +215,254 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
 
       {:ok, updated} = VideoIntegrationQueries.get(integration.id)
       refute updated.is_active
+    end
+  end
+
+  describe "48-hour notification" do
+    test "schedules email when unhealthy for over 48 hours" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      health_state = %{
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour),
+        notification_sent_at: nil,
+        status: :unhealthy,
+        failures: 3,
+        successes: 0
+      }
+
+      assert ResponseHandler.handle_transition(
+               :calendar,
+               integration,
+               {:no_change, :unhealthy, :unhealthy},
+               health_state
+             ) == :ok
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_unhealthy_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
+    end
+
+    test "does not schedule email before 48 hours" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      health_state = %{
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -47, :hour),
+        notification_sent_at: nil,
+        status: :unhealthy,
+        failures: 3,
+        successes: 0
+      }
+
+      assert ResponseHandler.handle_transition(
+               :calendar,
+               integration,
+               {:no_change, :unhealthy, :unhealthy},
+               health_state
+             ) == :ok
+
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "does not schedule email when became_unhealthy_at is nil" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      assert ResponseHandler.handle_transition(
+               :calendar,
+               integration,
+               {:no_change, :unhealthy, :unhealthy},
+               unhealthy_health_state()
+             ) == :ok
+
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "respects 30-day cooldown after previous notification" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      health_state = %{
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour),
+        notification_sent_at: DateTime.add(DateTime.utc_now(), -15, :day),
+        status: :unhealthy,
+        failures: 3,
+        successes: 0
+      }
+
+      assert ResponseHandler.handle_transition(
+               :calendar,
+               integration,
+               {:no_change, :unhealthy, :unhealthy},
+               health_state
+             ) == :ok
+
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    test "sends again after 30-day cooldown expires" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      health_state = %{
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour),
+        notification_sent_at: DateTime.add(DateTime.utc_now(), -31, :day),
+        status: :unhealthy,
+        failures: 3,
+        successes: 0
+      }
+
+      assert ResponseHandler.handle_transition(
+               :calendar,
+               integration,
+               {:no_change, :unhealthy, :unhealthy},
+               health_state
+             ) == :ok
+
+      assert_enqueued(worker: EmailWorker)
+    end
+
+    test "schedules email on initial_failure when already unhealthy for 48+ hours" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      health_state = %{
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -50, :hour),
+        notification_sent_at: nil,
+        status: :unhealthy,
+        failures: 3,
+        successes: 0
+      }
+
+      assert ResponseHandler.handle_transition(
+               :calendar,
+               integration,
+               {:initial_failure, nil, :unhealthy},
+               health_state
+             ) == :ok
+
+      assert_enqueued(worker: EmailWorker)
+    end
+
+    test "schedules email on became_unhealthy when already past 48 hours" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, is_active: true)
+
+      health_state = %{
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -50, :hour),
+        notification_sent_at: nil,
+        status: :unhealthy,
+        failures: 3,
+        successes: 0
+      }
+
+      assert ResponseHandler.handle_transition(
+               :video,
+               integration,
+               {:became_unhealthy, :degraded, :unhealthy},
+               health_state
+             ) == :ok
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_unhealthy_notification",
+          "integration_type" => "video"
+        }
+      )
+    end
+  end
+
+  describe "handle_transition/5 with explicit now" do
+    test "schedules notification when unhealthy for 48+ hours" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      health_state = %{
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -49, :hour),
+        notification_sent_at: nil,
+        status: :unhealthy,
+        failures: 5,
+        successes: 0
+      }
+
+      now = DateTime.utc_now()
+
+      ResponseHandler.handle_transition(
+        :calendar,
+        integration,
+        {:no_change, :unhealthy, :unhealthy},
+        health_state,
+        now
+      )
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_unhealthy_notification",
+          "user_id" => user.id
+        }
+      )
+    end
+
+    test "does not schedule notification when unhealthy for less than 48 hours" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      health_state = %{
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -24, :hour),
+        notification_sent_at: nil,
+        status: :unhealthy,
+        failures: 5,
+        successes: 0
+      }
+
+      now = DateTime.utc_now()
+
+      ResponseHandler.handle_transition(
+        :calendar,
+        integration,
+        {:no_change, :unhealthy, :unhealthy},
+        health_state,
+        now
+      )
+
+      refute_enqueued(worker: EmailWorker)
+    end
+  end
+
+  describe "recovery clears notification state" do
+    test "clears became_unhealthy_at and notification_sent_at on recovery" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      # Seed health state record with unhealthy timestamps
+      IntegrationHealthStateQueries.get_or_init(:calendar, integration.id, user.id)
+
+      IntegrationHealthStateQueries.update_fields(:calendar, integration.id,
+        status: "unhealthy",
+        failures: 3,
+        became_unhealthy_at: DateTime.add(DateTime.utc_now(), -50, :hour),
+        notification_sent_at: DateTime.add(DateTime.utc_now(), -2, :day)
+      )
+
+      assert ResponseHandler.handle_transition(
+               :calendar,
+               integration,
+               {:became_healthy, :unhealthy, :healthy},
+               healthy_health_state()
+             ) == :ok
+
+      {:ok, record} = IntegrationHealthStateQueries.get(:calendar, integration.id)
+      assert is_nil(record.became_unhealthy_at)
+      assert is_nil(record.notification_sent_at)
     end
   end
 end
