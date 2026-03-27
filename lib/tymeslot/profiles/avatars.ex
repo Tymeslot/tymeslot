@@ -6,14 +6,25 @@ defmodule Tymeslot.Profiles.Avatars do
 
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.Profiles
   alias Tymeslot.Utils.AvatarUtils
-  alias TymeslotWeb.Helpers.UploadHandler
-
   alias Tymeslot.Utils.MediaValidator
+  alias TymeslotWeb.Helpers.UploadHandler
 
   @type profile :: ProfileSchema.t()
   @type uploaded_entry :: map()
   @type result(t) :: {:ok, t} | {:error, any()}
+
+  @accepted_extensions ~w(.jpg .jpeg .png .gif .webp)
+  @max_file_size 10_000_000
+
+  @doc "Returns the list of accepted avatar file extensions."
+  @spec accepted_extensions() :: [String.t()]
+  def accepted_extensions, do: @accepted_extensions
+
+  @doc "Returns the maximum avatar file size in bytes."
+  @spec max_file_size() :: pos_integer()
+  def max_file_size, do: @max_file_size
 
   @doc """
   Updates a user's avatar file and database record.
@@ -84,15 +95,9 @@ defmodule Tymeslot.Profiles.Avatars do
   def avatar_alt_text(nil), do: "Profile"
 
   def avatar_alt_text(profile) do
-    cond do
-      profile.full_name && String.trim(profile.full_name) != "" ->
-        profile.full_name
-
-      profile.user && profile.user.email ->
-        "Profile of #{profile.user.email}"
-
-      true ->
-        "Profile"
+    case Profiles.display_name(profile) do
+      nil -> "Profile"
+      name -> name
     end
   end
 

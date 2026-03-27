@@ -13,14 +13,19 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
-  def update(assigns, socket) do
+  def mount(socket) do
     {:ok,
-     socket
-     |> assign(assigns)
-     |> assign(username_check: nil)
-     |> assign(username_available: nil)
-     |> assign(saving: false)
-     |> assign(:form_errors, %{})}
+     assign(socket,
+       username_check: nil,
+       username_available: nil,
+       saving: false,
+       form_errors: %{}
+     )}
+  end
+
+  @impl Phoenix.LiveComponent
+  def update(assigns, socket) do
+    {:ok, assign(socket, assigns)}
   end
 
   @impl Phoenix.LiveComponent
@@ -79,15 +84,12 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
   end
 
   defp handle_successful_username_update(socket, updated_profile, sanitized_username) do
-    base_url = Policy.app_url()
-    display_url = String.replace(base_url, ~r/^https?:\/\//, "")
-
     send(self(), {:profile_updated, updated_profile})
 
     send(
       self(),
       {:flash,
-       {:info, "Username updated! Your booking page: #{display_url}/#{sanitized_username}"}}
+       {:info, "Username updated! Your booking page: #{display_url()}/#{sanitized_username}"}}
     )
 
     {:noreply,
@@ -112,8 +114,12 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
     end
   end
 
+  defp display_url, do: String.replace(Policy.app_url(), ~r/^https?:\/\//, "")
+
   @impl Phoenix.LiveComponent
   def render(assigns) do
+    assigns = assign(assigns, :display_url, display_url())
+
     ~H"""
     <div id="username-form-container">
       <.section_header level={3} title="Custom URL" class="mb-4" />
@@ -121,9 +127,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
         <div>
           <div class="flex flex-col sm:flex-row items-stretch gap-4">
             <div class="flex-1">
-              <% base_url = Policy.app_url() %>
-              <% display_url = String.replace(base_url, ~r/^https?:\/\//, "") %>
-              <% prefix_length = String.length(display_url) + 1 %>
+              <% prefix_length = String.length(@display_url) + 1 %>
               <% input_padding = "--leading-icon-width: #{prefix_length}ch;" %>
               <.input
                 name="username"
@@ -138,7 +142,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
                 style={input_padding}
               >
                 <:leading_icon>
-                  <span class="text-tymeslot-400 font-bold text-token-sm tracking-tight whitespace-nowrap">{display_url}/</span>
+                  <span class="text-tymeslot-400 font-bold text-token-sm tracking-tight whitespace-nowrap">{@display_url}/</span>
                 </:leading_icon>
 
                 <%= if @username_check && (!@profile || @username_check != @profile.username) do %>
@@ -174,22 +178,20 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
               </button>
             </div>
           </div>
-          
+
           <div class="mt-4">
             <%= if @profile && @profile.username do %>
-              <% base_url = Policy.app_url() %>
-              <% display_url = String.replace(base_url, ~r/^https?:\/\//, "") %>
               <div class="flex items-center gap-2 text-token-sm font-bold text-tymeslot-500">
                 <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                 </svg>
-                Live at: 
+                Live at:
                 <a
-                  href={"#{base_url}/#{if @profile, do: @profile.username, else: ""}"}
+                  href={"#{Policy.app_url()}/#{@profile.username}"}
                   target="_blank"
                   class="text-turquoise-600 hover:text-turquoise-700 underline decoration-2 decoration-turquoise-100 underline-offset-4 transition-colors"
                 >
-                  {display_url}/{if @profile, do: @profile.username, else: ""}
+                  {@display_url}/{@profile.username}
                 </a>
               </div>
             <% else %>
