@@ -82,7 +82,6 @@ defmodule TymeslotWeb.OnboardingLive.SchedulingHandlers do
         else
           :error -> []
           :ok -> []
-          {:ok, _value} -> []
         end
       end)
       |> Map.new()
