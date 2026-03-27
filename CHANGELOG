@@ -1,4 +1,35 @@
 
+[0.99.34]
+* core: Derive display location from meeting fields in AppointmentBuilder
+* core: Remove unreachable pattern in scheduling_handlers with/else
+* core: Translate email location labels at render time per recipient locale
+* core: Set timezone via connect_params in availability refinement test
+* core: Set timezone via connect_params in availability refinement test
+* saas: Replace length/1 check with empty list comparison
+* core: Remove double scrollbar on time slots in constrained-height embeds
+* core: Reword comment to avoid triggering UseCoreInputs Credo check
+* core: Fix timezone dropdown height, width, and popular ordering
+* saas: Remove unimplemented daily booking limits feature
+* core: Improve Quill overview duration card visibility and avatar alignment
+* core: Prevent time slots from stretching when period has few slots
+* core: Remove HEEx comments from MJML heredoc strings
+* core: Align video OAuth re-auth tests with current integration-matching logic
+* core: Close multi-account integration gaps
+* core: Address code review findings in multi-account integrations
+* core: Harden multi-account OAuth security, correctness, and test quality
+* core: Resolve code review findings in multi-account integrations
+* core: Harden multi-account integration dedup, rate limiting, and observability
+* core: Harden workers against edge cases and security gaps
+* core: Propagate persist_calendar_mapping errors in create path
+* core: Restore first-attempt failure guards and add symlink check
+* core: Address code review findings in worker hardening
+* core: Harden Oban workers against edge cases and security gaps
+* core: Harden dashboard against task timeouts and open redirects
+* core: I18n organizer reminder email and sanitize error output in CalDAV sync
+* Preserve existing versions when adding new entry in set_version
+* core: Replace TzExtra with curated continent city modules
+* core: Multi-account integration support
+* core: Multi-account integration support with per-account uniqueness
 [0.99.33]
 * core: Add tzdata and logger config to core runtime.exs
 * core: Group handle_event clauses in ServiceSettingsComponent
