@@ -88,3 +88,18 @@ html.quill-theme[data-embedded][data-embed-mode="modal"] .main-gradient.theme-gr
 html.quill-theme[data-embedded] .main-gradient.theme-grid .content-area {
   padding-bottom: 0;
 }
+
+/* ---------------------------------------------------------------------------
+   5. Embedded: single scroll point for time slots
+   The height @media queries in time-slots.css cap .slots-box with a
+   max-height + overflow-y: auto based on the *iframe* viewport, but that
+   viewport doesn't reflect the embedding page's available space.  This
+   creates a double scrollbar: the slots scroll internally AND the page
+   (or outer container) scrolls.  Fix: let the slots flow to their
+   natural height so only the page body scrolls.
+   --------------------------------------------------------------------------- */
+html.quill-theme[data-embedded] .slots-box {
+  max-height: none;
+  overflow-y: visible;
+  height: auto;
+}
