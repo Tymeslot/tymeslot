@@ -234,12 +234,25 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
   end
 
-  # Return the raw location string from the database without translating.
-  # Translation happens at render time in the shared components, which run
-  # inside the correct locale for each recipient (organizer vs attendee).
-  defp format_location(meeting), do: meeting.location
+  # Derive a display location from the meeting's fields.  When a video URL is
+  # present the location is "Video Call" regardless of any physical location
+  # stored on the record; when nothing is set at all a placeholder is returned.
+  # Translation of these labels happens at render time in the shared components.
+  defp format_location(meeting) do
+    cond do
+      meeting.meeting_url -> "Video Call"
+      meeting.location -> meeting.location
+      true -> "To be determined"
+    end
+  end
 
-  defp format_location_details(meeting), do: meeting.location
+  defp format_location_details(meeting) do
+    cond do
+      meeting.meeting_url -> "Video Call"
+      meeting.location -> meeting.location
+      true -> "Location to be determined"
+    end
+  end
 
   defp convert_to_timezone(datetime, timezone) do
     DateTimeUtils.convert_to_timezone(datetime, timezone)
