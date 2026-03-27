@@ -15,7 +15,6 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
   """
 
   setup do
-    ensure_rate_limiter_started()
     RateLimiter.clear_all()
 
     # Ensure legal agreements are enforced for consistent form structure in tests
@@ -93,7 +92,4 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
     assert html =~ "Too many email verification attempts. Please try again later."
   end
 
-  defp ensure_rate_limiter_started do
-    RateLimiter.clear_all()
-  end
 end

@@ -8,15 +8,12 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Repo
-  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
 
   setup tags do
     Mox.set_mox_from_context(tags)
-    ensure_rate_limiter_started()
-    RateLimiter.clear_all()
 
     TestMocks.setup_email_mocks()
     TestMocks.setup_subscription_mocks()
@@ -563,7 +560,4 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
     Date.add(first_sunday, 7)
   end
 
-  defp ensure_rate_limiter_started do
-    RateLimiter.clear_all()
-  end
 end

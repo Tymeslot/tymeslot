@@ -8,15 +8,12 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Repo
-  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
 
   setup tags do
     Mox.set_mox_from_context(tags)
-    ensure_rate_limiter_started()
-    RateLimiter.clear_all()
     AvailabilityCache.clear_all()
 
     TestMocks.setup_all_mocks()
@@ -241,7 +238,4 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
     target_date
   end
 
-  defp ensure_rate_limiter_started do
-    RateLimiter.clear_all()
-  end
 end

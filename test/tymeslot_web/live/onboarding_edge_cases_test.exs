@@ -18,14 +18,11 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   import TymeslotWeb.OnboardingTestHelpers
 
   alias Tymeslot.Repo
-  alias Tymeslot.Security.RateLimiter
 
   setup :verify_on_exit!
 
   setup tags do
     Mox.set_mox_from_context(tags)
-    ensure_rate_limiter_started()
-    RateLimiter.clear_all()
     {:ok, conn: setup_onboarding_session(tags.conn)}
   end
 

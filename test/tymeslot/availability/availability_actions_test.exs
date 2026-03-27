@@ -11,6 +11,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
   alias Tymeslot.Availability.Breaks
   alias Tymeslot.Availability.WeeklySchedule
   import Tymeslot.AvailabilityTestHelpers
+  import Tymeslot.MeetingTestHelpers
 
   # =====================================
   # Weekly Schedule Management Behaviors
@@ -335,7 +336,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
   describe "when copying day settings" do
     setup do
-      %{profile: profile} = create_profile()
+      %{profile: profile} = create_user_with_profile()
 
       # Create Monday with specific settings
       {:ok, monday} =
@@ -373,7 +374,7 @@ defmodule Tymeslot.Availability.AvailabilityActionsTest do
 
   describe "when applying preset schedules" do
     setup do
-      %{profile: profile} = create_profile()
+      %{profile: profile} = create_user_with_profile()
       %{profile: profile}
     end
 

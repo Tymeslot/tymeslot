@@ -11,7 +11,6 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
   alias Tymeslot.Security.RateLimiter
 
   setup do
-    ensure_rate_limiter_started()
     RateLimiter.clear_all()
 
     # Save original config and env vars
@@ -452,7 +451,4 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
     end
   end
 
-  defp ensure_rate_limiter_started do
-    RateLimiter.clear_all()
-  end
 end

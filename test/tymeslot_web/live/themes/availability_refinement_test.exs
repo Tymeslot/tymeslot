@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
   alias Ecto.Adapters.SQL.Sandbox
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Repo
-  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!
@@ -17,8 +16,6 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
   setup tags do
     Mox.set_mox_from_context(tags)
     Sandbox.mode(Repo, {:shared, self()})
-    ensure_rate_limiter_started()
-    RateLimiter.clear_all()
     AvailabilityCache.clear_all()
 
     TestMocks.setup_email_mocks()
@@ -164,8 +161,4 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
     end
   end
 
-  defp ensure_rate_limiter_started do
-    # RateLimit (Hammer ETS) is always started in the supervision tree.
-    RateLimiter.clear_all()
-  end
 end

@@ -15,7 +15,7 @@ defmodule Tymeslot.AuthTestHelpers do
   alias Phoenix.ConnTest
   alias Plug.Conn
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.{PasswordReset, Session}
+  alias Tymeslot.Auth.Session
   alias Tymeslot.Factory
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.Token
@@ -163,15 +163,6 @@ defmodule Tymeslot.AuthTestHelpers do
     for _attempt <- 1..5 do
       Auth.authenticate_user(user.email, "wrong_password")
     end
-  end
-
-  @doc """
-  Generates a valid password reset token for testing.
-  """
-  @spec generate_password_reset_token(term()) :: binary()
-  def generate_password_reset_token(user) do
-    assert {:ok, _status, _message} = PasswordReset.initiate_reset(user.email)
-    Token.generate_token()
   end
 
   @doc """

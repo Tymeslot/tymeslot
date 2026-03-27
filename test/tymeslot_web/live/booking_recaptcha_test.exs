@@ -18,7 +18,6 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
 
   setup tags do
     Mox.set_mox_from_context(tags)
-    ensure_rate_limiter_started()
     RateLimiter.clear_all()
 
     TestMocks.setup_all_mocks()
@@ -347,7 +346,4 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
     refute html =~ "protected by reCAPTCHA"
   end
 
-  defp ensure_rate_limiter_started do
-    RateLimiter.clear_all()
-  end
 end

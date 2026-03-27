@@ -10,17 +10,6 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
 
   @endpoint TymeslotWeb.Endpoint
 
-  alias Tymeslot.Security.RateLimiter
-
-  @doc """
-  Ensures the rate limiter is ready for tests.
-  RateLimit (Hammer ETS) is always started in the supervision tree.
-  """
-  @spec ensure_rate_limiter_started() :: :ok
-  def ensure_rate_limiter_started do
-    RateLimiter.clear_all()
-  end
-
   @doc """
   Helper to fill basic settings form.
   """
