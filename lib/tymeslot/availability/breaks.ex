@@ -193,12 +193,8 @@ defmodule Tymeslot.Availability.Breaks do
         false
 
       {_break_id, break_start, break_end} ->
-        times_overlap?(start_time, end_time, break_start, break_end)
+        TimeRange.overlaps?(start_time, end_time, break_start, break_end)
     end)
-  end
-
-  defp times_overlap?(start1, end1, start2, end2) do
-    TimeRange.overlaps?(start1, end1, start2, end2)
   end
 
   @doc """

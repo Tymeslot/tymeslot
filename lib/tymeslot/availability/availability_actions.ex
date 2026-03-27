@@ -8,6 +8,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   alias Tymeslot.Availability.{Breaks, WeeklySchedule}
   alias Tymeslot.DatabaseQueries.{ProfileQueries, WeeklyAvailabilityQueries}
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Utils.DateTimeUtils
 
   # Schedule Management Actions
 
@@ -60,8 +61,8 @@ defmodule Tymeslot.Availability.AvailabilityActions do
           {:ok, term()} | {:error, atom()}
   def update_day_hours(profile_id, day, start_str, end_str) do
     result =
-      with {:ok, start_time} <- Time.from_iso8601(start_str <> ":00"),
-           {:ok, end_time} <- Time.from_iso8601(end_str <> ":00") do
+      with {:ok, start_time} <- DateTimeUtils.parse_hhmm(start_str),
+           {:ok, end_time} <- DateTimeUtils.parse_hhmm(end_str) do
         WeeklySchedule.upsert_day_availability(profile_id, day, %{
           is_available: true,
           start_time: start_time,
@@ -83,8 +84,8 @@ defmodule Tymeslot.Availability.AvailabilityActions do
           {:ok, term()} | {:error, atom()}
   def add_break(day_availability_id, start_str, end_str, label) do
     result =
-      with {:ok, start_time} <- Time.from_iso8601(start_str <> ":00"),
-           {:ok, end_time} <- Time.from_iso8601(end_str <> ":00") do
+      with {:ok, start_time} <- DateTimeUtils.parse_hhmm(start_str),
+           {:ok, end_time} <- DateTimeUtils.parse_hhmm(end_str) do
         Breaks.add_break(
           day_availability_id,
           start_time,
@@ -104,7 +105,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   @spec add_quick_break(integer(), String.t(), integer()) :: {:ok, term()} | {:error, atom()}
   def add_quick_break(day_availability_id, start_str, duration) do
     result =
-      case Time.from_iso8601(start_str <> ":00") do
+      case DateTimeUtils.parse_hhmm(start_str) do
         {:ok, start_time} ->
           Breaks.add_quick_break(day_availability_id, start_time, duration)
 

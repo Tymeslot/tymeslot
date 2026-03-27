@@ -4,6 +4,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigation do
   Pure functions for determining month and week navigation limits.
   """
 
+  alias Tymeslot.Utils.DateTimeUtils
+
   @doc """
   Checks if previous month navigation should be disabled.
   """
@@ -55,9 +57,6 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigation do
   end
 
   defp today_in_timezone(user_timezone) do
-    case DateTime.now(user_timezone) do
-      {:ok, dt} -> DateTime.to_date(dt)
-      _other -> Date.utc_today()
-    end
+    user_timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
   end
 end

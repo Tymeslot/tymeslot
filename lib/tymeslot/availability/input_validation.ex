@@ -7,6 +7,7 @@ defmodule Tymeslot.Availability.InputValidation do
   """
 
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
+  alias Tymeslot.Utils.DateTimeUtils
 
   @doc """
   Validates time range input for day hours (start and end times).
@@ -210,25 +211,17 @@ defmodule Tymeslot.Availability.InputValidation do
   end
 
   defp validate_time_format(time_str) when is_binary(time_str) do
-    # Validate HH:MM format (24-hour)
-    case Regex.match?(~r/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, time_str) do
-      true ->
-        # Additional validation - parse to ensure it's a valid time
-        case Time.from_iso8601(time_str <> ":00") do
-          {:ok, _time} -> :ok
-          {:error, _reason} -> {:error, "Invalid time value"}
-        end
-
-      false ->
-        {:error, "Time must be in HH:MM format (e.g., 09:30)"}
+    case DateTimeUtils.parse_hhmm(time_str) do
+      {:ok, _time} -> :ok
+      {:error, _reason} -> {:error, "Time must be in HH:MM format (e.g., 09:30)"}
     end
   end
 
   defp validate_time_format(_arg), do: {:error, "Time must be a string"}
 
   defp validate_time_range(start_time, end_time) do
-    with {:ok, start_parsed} <- Time.from_iso8601(start_time <> ":00"),
-         {:ok, end_parsed} <- Time.from_iso8601(end_time <> ":00") do
+    with {:ok, start_parsed} <- DateTimeUtils.parse_hhmm(start_time),
+         {:ok, end_parsed} <- DateTimeUtils.parse_hhmm(end_time) do
       case Time.compare(start_parsed, end_parsed) do
         :lt -> :ok
         _other -> {:error, "End time must be after start time"}

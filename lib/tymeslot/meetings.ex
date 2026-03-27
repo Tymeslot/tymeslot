@@ -12,6 +12,7 @@ defmodule Tymeslot.Meetings do
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Meetings.{Queries, VideoRooms}
   alias Tymeslot.Pagination.CursorPage
+  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Workers.CalendarEventWorker
 
   @doc """
@@ -65,20 +66,7 @@ defmodule Tymeslot.Meetings do
   """
   @spec create_datetime_safe(Date.t(), Time.t(), String.t()) :: DateTime.t()
   def create_datetime_safe(date, time, timezone) do
-    case DateTime.new(date, time, timezone) do
-      {:ok, datetime} ->
-        datetime
-
-      {:error, _reason} ->
-        # Fallback to UTC if timezone is invalid
-        Logger.warning("Failed to create DateTime in timezone, falling back to UTC",
-          timezone: timezone,
-          date: date,
-          time: time
-        )
-
-        DateTime.new!(date, time, "Etc/UTC")
-    end
+    DateTimeUtils.create_datetime_safe(date, time, timezone)
   end
 
   # Private functions

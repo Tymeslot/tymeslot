@@ -4,7 +4,9 @@ defmodule Tymeslot.Availability.Calculate do
   Combines business hours, time slots, and conflict detection.
   """
 
-  alias Tymeslot.Availability.{BusinessHours, Conflicts, Events, TimeSlots, WeeklySchedule}
+  alias Tymeslot.Availability.{BusinessHours, Conflicts, Events, TimeSlots}
+  alias Tymeslot.DatabaseQueries.{AvailabilityOverrideQueries, WeeklyAvailabilityQueries}
+  alias Tymeslot.Utils.DateTimeUtils
 
   @doc """
   Calculates available time slots for a specific date.
@@ -30,38 +32,24 @@ defmodule Tymeslot.Availability.Calculate do
         events,
         config \\ %{}
       ) do
-    # Enforce limits on duration
-    duration_minutes = max(duration_minutes, 1)
-    duration_minutes = min(duration_minutes, 1440)
+    duration_minutes = duration_minutes |> max(1) |> min(1440)
     profile_id = Map.get(config, :profile_id)
 
-    # To handle extreme timezone differences (up to 24 hours), we check the selected date
-    # and its adjacent days in the owner's timezone, as they might bleed into
-    # the attendee's selected date.
-    dates_to_check = [
-      Date.add(date, -1),
-      date,
-      Date.add(date, 1)
-    ]
+    # Prefetch schedule data once for all adjacent-day lookups
+    config = prefetch_schedule_data(config, profile_id, Date.add(date, -1), Date.add(date, 1))
 
-    # Collect all business hour windows across these dates that fall on the user's selected date
+    # Check the selected date and its adjacent days in the owner's timezone,
+    # as they might bleed into the attendee's selected date.
     business_hours_windows =
-      Enum.flat_map(dates_to_check, fn d ->
-        result =
-          if profile_id do
-            BusinessHours.get_business_hours_in_timezone(
-              d,
-              profile_id,
-              owner_timezone,
-              user_timezone
-            )
-          else
-            BusinessHours.get_business_hours_in_timezone(d, owner_timezone, user_timezone)
-          end
-
-        case result do
+      Enum.flat_map([Date.add(date, -1), date, Date.add(date, 1)], fn d ->
+        case BusinessHours.get_business_hours_in_timezone(
+               d,
+               profile_id,
+               owner_timezone,
+               user_timezone,
+               config
+             ) do
           {:ok, %{start_datetime: %DateTime{} = start_dt, end_datetime: %DateTime{} = end_dt}} ->
-            # Only include windows that overlap with the user's selected date
             if DateTime.to_date(start_dt) == date or DateTime.to_date(end_dt) == date do
               [%{start_dt: start_dt, end_dt: end_dt, date: d}]
             else
@@ -76,20 +64,29 @@ defmodule Tymeslot.Availability.Calculate do
     if Enum.empty?(business_hours_windows) do
       {:ok, []}
     else
-      # Convert events to user timezone once
       events_in_user_tz =
         Events.convert_events_to_timezone(events, owner_timezone, user_timezone)
 
       all_available_slots =
-        Enum.flat_map(business_hours_windows, fn window ->
-          generate_and_filter_slots_for_window(
-            window.start_dt,
-            window.end_dt,
-            window.date,
-            date,
+        business_hours_windows
+        |> Enum.flat_map(fn window ->
+          breaks = get_breaks_for_day(window.date, config)
+
+          all_slots =
+            TimeSlots.generate_slots_for_range_with_breaks(
+              window.start_dt,
+              window.end_dt,
+              duration_minutes,
+              date,
+              breaks
+            )
+
+          Conflicts.filter_available_slots(
+            all_slots,
+            events_in_user_tz,
             duration_minutes,
             user_timezone,
-            events_in_user_tz,
+            date,
             config
           )
         end)
@@ -100,51 +97,9 @@ defmodule Tymeslot.Availability.Calculate do
     end
   end
 
-  defp generate_and_filter_slots_for_window(
-         start_dt,
-         end_dt,
-         owner_date,
-         user_date,
-         duration_minutes,
-         user_timezone,
-         events_in_user_tz,
-         config
-       ) do
-    # Get breaks for the owner's date
-    breaks = get_breaks_for_day(owner_date, config)
-
-    # Generate slots based on the datetime range, excluding breaks
-    all_slots =
-      TimeSlots.generate_slots_for_range_with_breaks(
-        start_dt,
-        end_dt,
-        duration_minutes,
-        user_date,
-        breaks
-      )
-
-    # Filter out slots that conflict with existing events
-    Conflicts.filter_available_slots(
-      all_slots,
-      events_in_user_tz,
-      duration_minutes,
-      user_timezone,
-      user_date,
-      config
-    )
-  end
-
   @doc """
   Gets availability status for an arbitrary date range.
   Optimized for calendar display where visible dates may span multiple months.
-
-  ## Parameters
-    - start_date: First date in the range (inclusive)
-    - end_date: Last date in the range (inclusive)
-    - owner_timezone: Timezone of the calendar owner
-    - user_timezone: Timezone of the user viewing availability
-    - events: List of existing events
-    - config: Optional configuration overrides
 
   ## Returns
     Map of date strings to availability boolean
@@ -159,28 +114,24 @@ defmodule Tymeslot.Availability.Calculate do
         events,
         config \\ %{}
       ) do
-    # Get today's date in user timezone
-    today =
-      case DateTime.now(user_timezone) do
-        {:ok, dt} -> DateTime.to_date(dt)
-        _other -> Date.utc_today()
-      end
+    now = DateTimeUtils.now_in_timezone(user_timezone)
+    today = DateTime.to_date(now)
 
-    # Get max booking date
     max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
     max_booking_date = Date.add(today, max_advance_booking_days)
-
-    # Convert events to user timezone once
-    events_in_user_tz = Events.convert_events_to_timezone(events, owner_timezone, user_timezone)
-
-    # Read duration once (if present)
     duration_minutes = Map.get(config, :duration_minutes, 30)
 
-    # Check each date in the range
+    events_in_user_tz = Events.convert_events_to_timezone(events, owner_timezone, user_timezone)
+    profile_id = Map.get(config, :profile_id)
+
+    # Prefetch schedule data once for the entire range (with 1-day padding for adjacent-day checks)
+    config =
+      config
+      |> Map.put(:duration_minutes, duration_minutes)
+      |> prefetch_schedule_data(profile_id, Date.add(start_date, -1), Date.add(end_date, 1))
+
     availability_map =
       Enum.reduce(Date.range(start_date, end_date), %{}, fn date, acc ->
-        date_string = Date.to_string(date)
-
         is_outside_range =
           Date.compare(date, today) == :lt or Date.compare(date, max_booking_date) == :gt
 
@@ -191,10 +142,11 @@ defmodule Tymeslot.Availability.Calculate do
               owner_timezone,
               user_timezone,
               events_in_user_tz,
-              Map.put(config, :duration_minutes, duration_minutes)
+              now,
+              config
             )
 
-        Map.put(acc, date_string, has_slots)
+        Map.put(acc, Date.to_string(date), has_slots)
       end)
 
     {:ok, availability_map}
@@ -258,39 +210,21 @@ defmodule Tymeslot.Availability.Calculate do
       - nil: Use business hours logic only (fast, but not conflict-aware)
       - :loading: Mark all days as loading state
       - %{}: Use real conflict-aware availability from the map
-
-  ## Examples
-
-      # Fast render with business hours only
-      get_calendar_days("America/New_York", 2026, 1, %{profile_id: 1})
-
-      # With real availability data
-      get_calendar_days("America/New_York", 2026, 1, %{profile_id: 1}, %{"2026-01-15" => true})
-
-      # Loading state
-      get_calendar_days("America/New_York", 2026, 1, %{profile_id: 1}, :loading)
   """
   @spec get_calendar_days(String.t(), integer(), integer(), map(), map() | atom() | nil) ::
           list(map())
   def get_calendar_days(user_timezone, year, month, config \\ %{}, availability_map \\ nil) do
-    # Get today and current time in user's timezone
-    {today, now} =
-      case DateTime.now(user_timezone) do
-        {:ok, dt} -> {DateTime.to_date(dt), dt}
-        _other -> {Date.utc_today(), DateTime.utc_now()}
-      end
+    now = DateTimeUtils.now_in_timezone(user_timezone)
+    today = DateTime.to_date(now)
 
-    # Compute the 42-day display window for this month
     {first_display_date, _end_date} = display_range(year, month)
 
-    # Generate 42 days (6 weeks) for consistent calendar display
     Enum.map(0..41, fn offset ->
       date = Date.add(first_display_date, offset)
       date_string = Date.to_string(date)
 
       is_past = Date.compare(date, today) == :lt
 
-      # Determine availability based on availability_map state
       {is_available, is_loading} =
         determine_availability(date, date_string, today, now, availability_map, config)
 
@@ -308,83 +242,64 @@ defmodule Tymeslot.Availability.Calculate do
 
   @doc """
   Validates that both date and time have been selected for booking.
-  Used in booking workflow validation.
   """
-  @spec validate_time_selection(String.t() | nil, String.t() | nil, list()) ::
-          :ok | {:error, String.t()}
-  def validate_time_selection(nil, _time, _slots), do: {:error, "Please select a date"}
-
-  @spec validate_time_selection(String.t(), String.t() | nil, list()) ::
-          :ok | {:error, String.t()}
-  def validate_time_selection("", _time, _slots), do: {:error, "Please select a date"}
-
-  @spec validate_time_selection(String.t(), String.t() | nil, list()) ::
-          :ok | {:error, String.t()}
-  def validate_time_selection(_date, nil, _slots), do: {:error, "Please select a time"}
-  @spec validate_time_selection(String.t(), String.t(), list()) :: :ok | {:error, String.t()}
-  def validate_time_selection(_date, "", _slots), do: {:error, "Please select a time"}
-
-  @spec validate_time_selection(String.t(), String.t(), list()) :: :ok | {:error, String.t()}
-  def validate_time_selection(date, time, slots) when is_list(slots) do
-    if time_slot_available?(date, time, slots) do
-      :ok
-    else
-      {:error, "Selected time is no longer available"}
+  @spec validate_time_selection(term(), term(), term()) :: :ok | {:error, String.t()}
+  def validate_time_selection(date, time, _slots) do
+    cond do
+      date in [nil, ""] -> {:error, "Please select a date"}
+      time in [nil, ""] -> {:error, "Please select a time"}
+      is_binary(date) and is_binary(time) -> :ok
+      true -> {:error, "Please select a date and time"}
     end
   end
 
-  @spec validate_time_selection(term(), term(), term()) :: {:error, String.t()}
-  def validate_time_selection(_date, _time, _slots), do: {:error, "Please select a date and time"}
-
-  @doc """
-  Checks if a specific time slot is available.
-  """
-  @spec time_slot_available?(String.t(), String.t(), list()) :: boolean()
-  def time_slot_available?(date, time, slots)
-      when is_binary(date) and is_binary(time) and is_list(slots) do
-    # For validation, we just need to confirm that selections exist
-    # The actual availability is checked during booking submission
-    true
-  end
-
-  @spec time_slot_available?(term(), term(), term()) :: boolean()
-  def time_slot_available?(_date, _time, _slots), do: false
-
   # Private functions
 
+  # Prefetches weekly schedule and overrides into config to avoid N+1 queries.
+  # When profile_id is nil, returns config unchanged (fallback hours are used).
+  defp prefetch_schedule_data(config, nil, _start_date, _end_date), do: config
+
+  defp prefetch_schedule_data(config, profile_id, start_date, end_date) do
+    config
+    |> Map.put_new_lazy(:weekly_schedule, fn ->
+      WeeklyAvailabilityQueries.get_weekly_schedule_with_breaks(profile_id)
+    end)
+    |> Map.put_new_lazy(:overrides, fn ->
+      AvailabilityOverrideQueries.get_overrides_by_profile_and_date_range(
+        profile_id,
+        start_date,
+        end_date
+      )
+    end)
+  end
+
   defp get_breaks_for_day(date, config) do
-    with profile_id when is_integer(profile_id) <- Map.get(config, :profile_id),
-         day_of_week <- Date.day_of_week(date),
-         %{breaks: breaks} when is_list(breaks) <-
-           WeeklySchedule.get_day_availability(profile_id, day_of_week) do
-      # Convert breaks to the format expected by TimeSlots
-      Enum.map(breaks, fn break ->
-        {break.start_time, break.end_time}
-      end)
-    else
-      _other -> []
+    day_of_week = Date.day_of_week(date)
+    profile_id = Map.get(config, :profile_id)
+
+    case BusinessHours.lookup_day_availability(day_of_week, profile_id, config) do
+      %{breaks: breaks} when is_list(breaks) ->
+        Enum.map(breaks, &{&1.start_time, &1.end_time})
+
+      _other ->
+        []
     end
   end
 
   defp determine_availability(date, date_string, today, now, availability_map, config) do
     cond do
-      # Past dates are never available
       Date.compare(date, today) == :lt ->
         {false, false}
 
-      # Loading state: mark as loading
       availability_map == :loading ->
         {false, true}
 
-      # Real availability data provided: use it
       is_map(availability_map) ->
         {Map.get(availability_map, date_string, false), false}
 
-      # If a custom fallback checker is provided, use it
       is_function(Map.get(config, :fallback_availability_fn), 1) ->
         {config.fallback_availability_fn.(date), false}
 
-      # Default: No availability map, use business hours logic
       true ->
         {fallback_day_available?(date, today, now, config), false}
     end
@@ -394,18 +309,11 @@ defmodule Tymeslot.Availability.Calculate do
     profile_id = Map.get(config, :profile_id)
     max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
 
-    is_business_day =
-      if profile_id do
-        BusinessHours.business_day?(date, profile_id)
-      else
-        BusinessHours.business_day?(date)
-      end
-
+    is_business_day = BusinessHours.business_day?(date, profile_id, config)
     is_future = Date.compare(date, today) == :gt
     is_today = date == today
     is_within_limit = Date.diff(date, today) <= max_advance_booking_days
 
-    # If it's today, we need to check if business hours have already passed
     today_available =
       if is_today and is_business_day do
         check_today_fallback_availability(date, now, config)
@@ -422,24 +330,16 @@ defmodule Tymeslot.Availability.Calculate do
     user_timezone = now.time_zone
 
     result =
-      if profile_id do
-        BusinessHours.get_business_hours_in_timezone(
-          date,
-          profile_id,
-          owner_timezone,
-          user_timezone
-        )
-      else
-        BusinessHours.get_business_hours_in_timezone(
-          date,
-          owner_timezone,
-          user_timezone
-        )
-      end
+      BusinessHours.get_business_hours_in_timezone(
+        date,
+        profile_id,
+        owner_timezone,
+        user_timezone,
+        config
+      )
 
     case result do
       {:ok, %{end_datetime: %DateTime{} = end_dt}} ->
-        # Today is available if current time is before business end time (minus min_advance_hours)
         min_advance_hours = Map.get(config, :min_advance_hours, 0)
         latest_start = DateTime.add(end_dt, -min_advance_hours * 60, :minute)
         DateTime.compare(now, latest_start) != :gt

@@ -8,6 +8,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   alias Tymeslot.DatabaseQueries.UserQueries
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Profiles
+  alias Tymeslot.Utils.DateTimeUtils
 
   @doc """
   Builds appointment details for email notifications.
@@ -227,10 +228,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   end
 
   defp convert_to_timezone(datetime, timezone) do
-    case DateTime.shift_zone(datetime, timezone) do
-      {:ok, shifted} -> shifted
-      {:error, _reason} -> datetime
-    end
+    DateTimeUtils.convert_to_timezone(datetime, timezone)
   end
 
   defp build_organizer_contact_info(meeting) do

@@ -3,16 +3,15 @@ defmodule Tymeslot.Emails.Shared.TimezoneHelper do
   Helper functions for timezone conversions in email templates.
   """
 
+  alias Tymeslot.Utils.DateTimeUtils
+
   @doc """
   Converts a datetime to the specified timezone.
   Returns the original datetime if conversion fails.
   """
   @spec convert_to_timezone(DateTime.t(), String.t()) :: DateTime.t()
   def convert_to_timezone(datetime, timezone) do
-    case DateTime.shift_zone(datetime, timezone) do
-      {:ok, shifted} -> shifted
-      {:error, _reason} -> datetime
-    end
+    DateTimeUtils.convert_to_timezone(datetime, timezone)
   end
 
   @doc """

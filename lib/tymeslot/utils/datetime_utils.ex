@@ -97,16 +97,6 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   defp adjust_hour_for_period(hour, :pm), do: hour + 12
 
   @doc """
-  Parses a slot time string and returns a Time struct.
-
-  Used for parsing time slots from the scheduling interface.
-  """
-  @spec parse_slot_time(String.t()) :: {:ok, Time.t()} | {:error, atom()}
-  def parse_slot_time(slot_string) do
-    parse_time_string(slot_string)
-  end
-
-  @doc """
   Groups time slots by time period (Early Morning, Morning, Afternoon, Evening, Late Night).
 
   Slots within each period are sorted chronologically by their parsed time value,
@@ -184,6 +174,17 @@ defmodule Tymeslot.Utils.DateTimeUtils do
       {:ok, shifted} -> shifted
       # Fallback to original if conversion fails
       {:error, _shift_error} -> datetime
+    end
+  end
+
+  @doc """
+  Returns the current DateTime in the given timezone, falling back to UTC.
+  """
+  @spec now_in_timezone(String.t()) :: DateTime.t()
+  def now_in_timezone(timezone) do
+    case DateTime.now(timezone) do
+      {:ok, dt} -> dt
+      _other -> DateTime.utc_now()
     end
   end
 
@@ -470,19 +471,11 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   end
 
   @doc """
-  Checks if a date is within the allowed booking window.
+  Parses an "HH:MM" string into a Time struct.
   """
-  @spec date_in_booking_window?(Date.t(), String.t(), map()) :: boolean()
-  def date_in_booking_window?(date, timezone, config \\ %{}) do
-    current_date =
-      DateTime.utc_now()
-      |> DateTime.shift_zone!(timezone)
-      |> DateTime.to_date()
-
-    max_advance_days = Map.get(config, :max_advance_booking_days, 90)
-    max_date = Date.add(current_date, max_advance_days)
-
-    Date.compare(date, current_date) != :lt and Date.compare(date, max_date) != :gt
+  @spec parse_hhmm(String.t()) :: {:ok, Time.t()} | {:error, atom()}
+  def parse_hhmm(hhmm) when is_binary(hhmm) do
+    Time.from_iso8601(hhmm <> ":00")
   end
 
   # ========== Display Formatting ==========

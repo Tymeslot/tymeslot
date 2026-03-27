@@ -556,11 +556,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
         user_timezone \\ "Etc/UTC"
       ) do
     if organizer_profile do
-      today =
-        case DateTime.now(user_timezone) do
-          {:ok, dt} -> DateTime.to_date(dt)
-          _other -> Date.utc_today()
-        end
+      today = user_timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
 
       Enum.map(0..6, fn day_offset ->
         date = Date.add(week_start, day_offset)
@@ -693,7 +689,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   """
   @spec parse_slot_time(String.t()) :: DateTime.t()
   def parse_slot_time(slot_string) do
-    case DateTimeUtils.parse_slot_time(slot_string) do
+    case DateTimeUtils.parse_time_string(slot_string) do
       {:ok, time} ->
         {:ok, dt} = DateTime.new(Date.utc_today(), time)
         dt

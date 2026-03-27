@@ -6,6 +6,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   require Logger
   alias Tymeslot.Profiles
+  alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.ReminderUtils
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -250,19 +251,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   end
 
   defp convert_to_timezone(datetime, timezone) do
-    case DateTime.shift_zone(datetime, timezone) do
-      {:ok, shifted} ->
-        shifted
-
-      {:error, reason} ->
-        Logger.error("Timezone conversion failed",
-          timezone: timezone,
-          reason: inspect(reason),
-          datetime: datetime
-        )
-
-        datetime
-    end
+    DateTimeUtils.convert_to_timezone(datetime, timezone)
   end
 
   defp legacy_reminder_label(meeting) do

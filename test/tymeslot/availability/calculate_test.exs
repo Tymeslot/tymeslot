@@ -37,31 +37,13 @@ defmodule Tymeslot.Availability.CalculateTest do
       assert :ok = Calculate.validate_time_selection("2025-06-15", "10:00 AM", [])
     end
 
-    test "handles edge case with non-list slots" do
+    test "returns ok with non-list slots when date and time are valid binaries" do
+      assert :ok = Calculate.validate_time_selection("2025-06-15", "10:00 AM", :not_a_list)
+    end
+
+    test "returns error with non-binary date" do
       assert {:error, "Please select a date and time"} =
-               Calculate.validate_time_selection("2025-06-15", "10:00 AM", :not_a_list)
-    end
-  end
-
-  describe "time_slot_available?/3" do
-    test "returns true for valid date, time, and slots list" do
-      assert Calculate.time_slot_available?("2025-06-15", "10:00 AM", ["10:00 AM", "11:00 AM"])
-    end
-
-    test "returns true for empty slots list with valid strings" do
-      assert Calculate.time_slot_available?("2025-06-15", "10:00 AM", [])
-    end
-
-    test "returns false for invalid date type" do
-      refute Calculate.time_slot_available?(123, "10:00 AM", [])
-    end
-
-    test "returns false for invalid time type" do
-      refute Calculate.time_slot_available?("2025-06-15", 123, [])
-    end
-
-    test "returns false for invalid slots type" do
-      refute Calculate.time_slot_available?("2025-06-15", "10:00 AM", "not a list")
+               Calculate.validate_time_selection(123, "10:00 AM", [])
     end
   end
 

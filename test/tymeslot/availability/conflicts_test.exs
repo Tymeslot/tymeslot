@@ -88,6 +88,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
             # user_tz
             timezone,
             events_in_tz,
+            DateTimeUtils.now_in_timezone(timezone),
             config
           )
 
@@ -302,7 +303,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
     end
   end
 
-  describe "date_has_slots_with_events?/5" do
+  describe "date_has_slots_with_events?/6" do
     test "returns true when no events block the day" do
       # Ensure we use a future weekday (default business hours)
       date = get_future_weekday()
@@ -313,6 +314,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           "Etc/UTC",
           "Etc/UTC",
           [],
+          DateTime.utc_now(),
           %{}
         )
 
@@ -337,6 +339,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           "Etc/UTC",
           "Etc/UTC",
           events,
+          DateTime.utc_now(),
           %{buffer_minutes: 0}
         )
 
@@ -361,6 +364,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           "Etc/UTC",
           "Etc/UTC",
           events,
+          DateTime.utc_now(),
           %{buffer_minutes: 0}
         )
 
@@ -376,6 +380,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           "America/New_York",
           "Europe/London",
           [],
+          DateTimeUtils.now_in_timezone("Europe/London"),
           %{}
         )
 
@@ -400,6 +405,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
           "Etc/UTC",
           "Etc/UTC",
           events,
+          DateTime.utc_now(),
           %{buffer_minutes: 0}
         )
 
@@ -422,6 +428,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
             "Etc/UTC",
             user_tz,
             [],
+            DateTimeUtils.now_in_timezone(user_tz),
             %{min_advance_hours: 0}
           )
 
@@ -438,7 +445,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
 
       # If it's early morning in this timezone, and business hours end at 17:00, it should be true.
       # BUT ONLY if today is a business day!
-      if now_in_tz.hour < 14 and BusinessHours.business_day?(today_in_tz) do
+      if now_in_tz.hour < 14 and BusinessHours.business_day?(today_in_tz, nil) do
         result =
           Conflicts.date_has_slots_with_events?(
             today_in_tz,
@@ -446,6 +453,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
             "Etc/UTC",
             user_tz,
             [],
+            now_in_tz,
             %{min_advance_hours: 0}
           )
 
@@ -588,6 +596,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
             timezone,
             timezone,
             [],
+            DateTimeUtils.now_in_timezone(timezone),
             %{min_advance_hours: 0}
           )
 
@@ -708,6 +717,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
             timezone,
             timezone,
             events,
+            DateTimeUtils.now_in_timezone(timezone),
             config
           )
         end)

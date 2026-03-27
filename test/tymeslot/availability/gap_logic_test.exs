@@ -9,6 +9,7 @@ defmodule Tymeslot.Availability.GapLogicTest do
   use ExUnitProperties
 
   alias Tymeslot.Availability.Conflicts
+  alias Tymeslot.Utils.DateTimeUtils
 
   # Fallback business hours from Tymeslot.Availability.BusinessHours
   @fallback_start ~T[11:00:00]
@@ -167,6 +168,7 @@ defmodule Tymeslot.Availability.GapLogicTest do
       timezone,
       timezone,
       events,
+      DateTimeUtils.now_in_timezone(timezone),
       %{buffer_minutes: buffer, duration_minutes: duration, min_advance_hours: 0}
     )
   end

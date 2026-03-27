@@ -2,7 +2,7 @@ defmodule Tymeslot.Availability.TimeSlots do
   @moduledoc """
   Pure functions for time slot generation and formatting.
   """
-  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
 
   @doc """
   Generates time slots for a date range, handling timezone boundaries.
@@ -166,14 +166,11 @@ defmodule Tymeslot.Availability.TimeSlots do
       slot_start_dt = DateTime.new!(date, slot_time, timezone)
       slot_end_dt = DateTime.add(slot_start_dt, duration_minutes, :minute)
 
-      # Check if this slot overlaps with any break
       not Enum.any?(breaks, fn {break_start_time, break_end_time} ->
         break_start_dt = DateTime.new!(date, break_start_time, timezone)
         break_end_dt = DateTime.new!(date, break_end_time, timezone)
 
-        # Two time ranges overlap if start1 < end2 AND end1 > start2
-        DateTime.compare(slot_start_dt, break_end_dt) == :lt and
-          DateTime.compare(slot_end_dt, break_start_dt) == :gt
+        TimeRange.overlaps?(slot_start_dt, slot_end_dt, break_start_dt, break_end_dt)
       end)
     end)
   end

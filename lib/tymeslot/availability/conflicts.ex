@@ -17,25 +17,22 @@ defmodule Tymeslot.Availability.Conflicts do
     min_advance_hours = Map.get(config, :min_advance_hours, 3)
     max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
 
-    # Get current time in the same timezone as the slots
-    current_time = get_current_time(timezone)
+    current_time = DateTimeUtils.now_in_timezone(timezone)
 
     busy = busy_events(events)
 
     Enum.filter(all_slots, fn slot ->
-      # Parse the slot time and create datetime
       slot_time = TimeSlots.parse_time_slot(slot)
       slot_start = DateTimeUtils.create_datetime_safe(date, slot_time, timezone)
       slot_end = DateTime.add(slot_start, duration_minutes, :minute)
 
-      # Check all booking constraints
       meets_booking_constraints?(
         slot_start,
         current_time,
         min_advance_hours,
         max_advance_booking_days
       ) and
-        no_event_conflict?(slot_start, slot_end, busy, buffer_minutes)
+        not TimeRange.has_conflict_with_events?(slot_start, slot_end, busy, buffer_minutes)
     end)
   end
 
@@ -44,20 +41,27 @@ defmodule Tymeslot.Availability.Conflicts do
       TimeRange.within_booking_window?(slot_start, current_time, max_advance_days)
   end
 
-  defp no_event_conflict?(slot_start, slot_end, events, buffer_minutes) do
-    not TimeRange.has_conflict_with_events?(slot_start, slot_end, events, buffer_minutes)
-  end
-
   @doc """
   Checks if a date has available slots given pre-fetched events.
   Used for efficient month view checking.
+
+  Accepts a pre-computed `now` DateTime to avoid repeated clock calls
+  when checking many dates in a loop.
   """
-  @spec date_has_slots_with_events?(Date.t(), String.t(), String.t(), [map()], map()) :: boolean()
+  @spec date_has_slots_with_events?(
+          Date.t(),
+          String.t(),
+          String.t(),
+          [map()],
+          DateTime.t(),
+          map()
+        ) :: boolean()
   def date_has_slots_with_events?(
         date,
         owner_timezone,
         user_timezone,
         events_in_user_tz,
+        now,
         config \\ %{}
       ) do
     buffer_minutes = Map.get(config, :buffer_minutes, 15)
@@ -65,10 +69,7 @@ defmodule Tymeslot.Availability.Conflicts do
     duration_minutes = Map.get(config, :duration_minutes, 30)
     profile_id = Map.get(config, :profile_id)
 
-    # Get current time in user timezone
-    current_time = get_current_time(user_timezone)
-
-    minimum_booking_time = DateTime.add(current_time, min_advance_hours * 60, :minute)
+    minimum_booking_time = DateTime.add(now, min_advance_hours * 60, :minute)
     relevant_events = events_in_user_tz |> busy_events() |> filter_events_for_date_window(date)
 
     params = %{
@@ -79,18 +80,16 @@ defmodule Tymeslot.Availability.Conflicts do
       min_booking_time: minimum_booking_time,
       events: relevant_events,
       buffer: buffer_minutes,
-      duration_minutes: duration_minutes
+      duration_minutes: duration_minutes,
+      config: config
     }
 
-    # Check the selected date and adjacent days in owner's timezone
     Enum.any?([Date.add(date, -1), date, Date.add(date, 1)], fn d ->
       check_day_for_slots(d, params)
     end)
   end
 
   defp filter_events_for_date_window(events, date) do
-    # Pre-filter events to only those that could potentially overlap with the 3-day window.
-    # We use a +/- 2 day window to be safe with timezone shifts.
     start_date_limit = Date.add(date, -2)
     end_date_limit = Date.add(date, 2)
 
@@ -110,20 +109,18 @@ defmodule Tymeslot.Availability.Conflicts do
   end
 
   defp check_day_for_slots(d, params) do
-    {start_time, end_time} = get_business_hours_range(d, params.profile_id)
+    {start_time, end_time} =
+      BusinessHours.business_hours_range(params.profile_id, Date.day_of_week(d), params.config)
 
     if is_nil(start_time) or is_nil(end_time) do
       false
     else
-      # Create datetime range in owner's timezone for this specific date
       owner_start = DateTimeUtils.create_datetime_safe(d, start_time, params.owner_tz)
       owner_end = DateTimeUtils.create_datetime_safe(d, end_time, params.owner_tz)
 
-      # Convert to user's timezone
       case {DateTime.shift_zone(owner_start, params.user_tz),
             DateTime.shift_zone(owner_end, params.user_tz)} do
         {{:ok, user_start}, {:ok, user_end}} ->
-          # Only proceed if this owner-day's window actually intersects with the user's selected date
           if DateTime.to_date(user_start) == params.target_date or
                DateTime.to_date(user_end) == params.target_date do
             check_window_availability(user_start, user_end, params)
@@ -137,30 +134,15 @@ defmodule Tymeslot.Availability.Conflicts do
     end
   end
 
-  defp get_business_hours_range(d, nil) do
-    if BusinessHours.business_day?(d) do
-      BusinessHours.business_hours_range()
-    else
-      {nil, nil}
-    end
-  end
-
-  defp get_business_hours_range(d, profile_id) do
-    BusinessHours.business_hours_range(profile_id, Date.day_of_week(d))
-  end
-
   defp check_window_availability(user_start, user_end, params) do
-    # Define target date boundaries in user timezone
     target_start =
       DateTimeUtils.create_datetime_safe(params.target_date, ~T[00:00:00], params.user_tz)
 
     target_end =
       DateTimeUtils.create_datetime_safe(params.target_date, ~T[23:59:59.999999], params.user_tz)
 
-    # Earliest possible start: max of business start, target date start, and min booking time
     start_bound = Enum.max([user_start, target_start, params.min_booking_time], DateTime)
 
-    # Latest possible start: min of business end (minus duration) and target date end
     latest_start_allowed_by_business = DateTime.add(user_end, -params.duration_minutes, :minute)
     latest_start = Enum.min([target_end, latest_start_allowed_by_business], DateTime)
 
@@ -181,7 +163,6 @@ defmodule Tymeslot.Availability.Conflicts do
       |> Enum.sort_by(& &1.start_time, DateTime)
 
     if Enum.empty?(relevant_events) do
-      # No events, and we already checked if start_bound <= latest_start
       true
     else
       check_relevant_event_gaps(relevant_events, start_bound, latest_start, params)
@@ -191,18 +172,15 @@ defmodule Tymeslot.Availability.Conflicts do
   defp check_relevant_event_gaps(relevant_events, start_bound, latest_start, params) do
     first_event = List.first(relevant_events)
 
-    # Gap before first event
     if DateTime.diff(first_event.start_time, start_bound) >=
          (params.duration_minutes + params.buffer) * 60 do
       true
     else
-      # Gaps between events
       {last_end, found_gap} = find_gap_between_events(relevant_events, latest_start, params)
 
       if found_gap do
         true
       else
-        # Gap after last event
         gap_start = DateTime.add(last_end, params.buffer, :minute)
         DateTime.compare(gap_start, latest_start) != :gt
       end
@@ -217,7 +195,6 @@ defmodule Tymeslot.Availability.Conflicts do
         gap_start = DateTime.add(prev_end, params.buffer, :minute)
         gap_end = DateTime.add(event.start_time, -params.buffer, :minute)
 
-        # We need a start 't' such that gap_start <= t <= gap_end - duration AND t <= latest_start
         latest_t_in_gap =
           Enum.min(
             [latest_start, DateTime.add(gap_end, -params.duration_minutes, :minute)],
@@ -235,18 +212,9 @@ defmodule Tymeslot.Availability.Conflicts do
   end
 
   # All providers normalise free events to transparency: "transparent".
-  # Google sets it directly; iCal normalises TRANSP:TRANSPARENT at parse time;
-  # Outlook maps showAs: "free" during conversion. None of these should block.
   defp busy_events(events) do
     Enum.reject(events, fn event ->
       Map.get(event, :transparency) == "transparent"
     end)
-  end
-
-  defp get_current_time(timezone) do
-    case DateTime.now(timezone) do
-      {:ok, dt} -> dt
-      _other -> DateTime.shift_zone!(DateTime.utc_now(), "Etc/UTC")
-    end
   end
 end

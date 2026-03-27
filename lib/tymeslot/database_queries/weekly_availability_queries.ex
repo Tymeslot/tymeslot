@@ -259,18 +259,27 @@ defmodule Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries do
       )
     )
 
-    # Create new breaks
-    Enum.each(breaks, fn break ->
-      %AvailabilityBreakSchema{}
-      |> AvailabilityBreakSchema.changeset(%{
-        weekly_availability_id: target_weekly_availability_id,
-        start_time: break.start_time,
-        end_time: break.end_time,
-        label: break.label,
-        sort_order: break.sort_order
-      })
-      |> Repo.insert!()
-    end)
+    # Bulk insert new breaks
+    unless Enum.empty?(breaks) do
+      now = NaiveDateTime.utc_now(:second)
+
+      entries =
+        Enum.map(breaks, fn break ->
+          %{
+            weekly_availability_id: target_weekly_availability_id,
+            start_time: break.start_time,
+            end_time: break.end_time,
+            label: break.label,
+            sort_order: break.sort_order,
+            inserted_at: now,
+            updated_at: now
+          }
+        end)
+
+      Repo.insert_all(AvailabilityBreakSchema, entries)
+    end
+
+    :ok
   end
 
   @doc """
