@@ -70,7 +70,7 @@ jobs:
           mix ecto.migrate
 
       - name: Run tests
-        run: mix coveralls.json || mix test
+        run: mix coveralls.json
 
-      - name: Audit dependencies
-        run: mix deps.audit
+      - name: Security audit
+        run: mix sobelow --config
