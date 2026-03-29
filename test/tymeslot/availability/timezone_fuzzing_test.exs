@@ -39,41 +39,73 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
 
   @timezones Enum.map(Timezones.all_options(), &elem(&1, 1))
 
-  property "month_availability is consistent regardless of user timezone", %{profile: profile} do
+  property "month_availability returns valid map for any timezone pair", %{profile: profile} do
     check all(
-            _year <- integer(2025..2026),
-            _month <- integer(1..12),
-            _owner_tz <- member_of(@timezones),
-            _user_tz <- member_of(@timezones),
+            year <- integer(2026..2027),
+            month <- integer(1..12),
+            owner_tz <- member_of(@timezones),
+            user_tz <- member_of(@timezones),
             duration <- member_of([30, 60])
           ) do
-      # ...
-      _config = %{
+      config = %{
         duration_minutes: duration,
         buffer_minutes: 0,
         min_advance_hours: 0,
         profile_id: profile.id
       }
 
-      # ...
+      {:ok, availability} =
+        Calculate.month_availability(year, month, owner_tz, user_tz, [], config)
+
+      # Result must be a map of date_string => boolean
+      assert is_map(availability)
+
+      for {date_str, available?} <- availability do
+        assert is_binary(date_str), "Expected string date key, got: #{inspect(date_str)}"
+        assert is_boolean(available?)
+
+        {:ok, date} = Date.from_iso8601(date_str)
+        assert date.year == year
+        assert date.month == month
+      end
+
+      # Must cover all days in the month
+      days_in_month = Date.days_in_month(Date.new!(year, month, 1))
+      assert map_size(availability) == days_in_month
     end
   end
 
-  property "available_slots returns consistent results across timezones", %{profile: profile} do
+  property "available_slots returns valid sorted unique strings for any timezone pair", %{
+    profile: profile
+  } do
     check all(
-            _owner_tz <- member_of(@timezones),
-            _user_tz <- member_of(@timezones),
+            owner_tz <- member_of(@timezones),
+            user_tz <- member_of(@timezones),
             duration <- member_of([30, 60])
           ) do
-      # ...
-      _config = %{
+      config = %{
         duration_minutes: duration,
         buffer_minutes: 0,
         min_advance_hours: 0,
         profile_id: profile.id
       }
 
-      # ...
+      date = Date.add(Date.utc_today(), 14)
+
+      {:ok, slots} =
+        Calculate.available_slots(date, duration, owner_tz, user_tz, [], config)
+
+      assert is_list(slots)
+
+      for slot <- slots do
+        assert is_binary(slot), "Expected string slot, got: #{inspect(slot)}"
+      end
+
+      assert slots == Enum.sort(slots),
+             "Slots not sorted for #{owner_tz} -> #{user_tz}: #{inspect(slots)}"
+
+      assert slots == Enum.uniq(slots),
+             "Duplicate slots for #{owner_tz} -> #{user_tz}: #{inspect(slots)}"
     end
   end
 
