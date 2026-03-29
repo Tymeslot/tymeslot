@@ -1,4 +1,5 @@
 {
+  "minimum_coverage": 80,
   "skip_files": [
     "test/support",
     "dev_support",
