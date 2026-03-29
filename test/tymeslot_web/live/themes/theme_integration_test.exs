@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
   describe "theme booking flow" do
     setup tags do
       Mox.set_mox_from_context(tags)
-      TestMocks.setup_all_mocks()
+      TestMocks.setup_calendar_mocks()
 
       # Create a user with meeting types
       user = insert(:user)
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeIntegrationTest do
   describe "theme error handling" do
     setup tags do
       Mox.set_mox_from_context(tags)
-      TestMocks.setup_all_mocks()
+      TestMocks.setup_calendar_mocks()
       :ok
     end
 

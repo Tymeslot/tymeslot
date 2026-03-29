@@ -450,5 +450,4 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
       assert result == params
     end
   end
-
 end

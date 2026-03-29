@@ -559,5 +559,4 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
     first_sunday = if days_to_sunday == 0, do: march_1, else: first_sunday
     Date.add(first_sunday, 7)
   end
-
 end

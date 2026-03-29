@@ -2,19 +2,17 @@ defmodule TymeslotWeb.OAuthControllerTest do
   use TymeslotWeb.ConnCase, async: false
   @moduletag :auth
 
+  import Mox
+
   alias Phoenix.Flash
-  alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
+  alias Tymeslot.Auth.OAuth.HelperMock
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Security.RateLimiter
 
+  setup :verify_on_exit!
+
   setup do
     original_social_auth = Application.get_env(:tymeslot, :social_auth)
-
-    try do
-      :meck.unload(OAuthHelper)
-    rescue
-      _other -> :ok
-    end
 
     try do
       :meck.unload(RateLimiter)
@@ -22,7 +20,6 @@ defmodule TymeslotWeb.OAuthControllerTest do
       _other -> :ok
     end
 
-    :meck.new(OAuthHelper, [:passthrough])
     :meck.new(RateLimiter, [:passthrough])
 
     # Ensure dashboard cache is running for invalidate_integration_status
@@ -32,12 +29,6 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     on_exit(fn ->
-      try do
-        :meck.unload(OAuthHelper)
-      rescue
-        _other -> :ok
-      end
-
       try do
         :meck.unload(RateLimiter)
       rescue
@@ -132,12 +123,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
   describe "GET /auth/:provider/callback" do
     test "successful login: puts success flash and redirects", %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:ok, conn, :github}
       end)
 
@@ -161,12 +152,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
         google_user_id: nil
       }
 
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:registration_required, conn, :github, registration_data}
       end)
 
@@ -181,12 +172,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
 
     test "registration_path query param is ignored; always redirects to /auth/complete-registration",
          %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:registration_required, conn, :github, %{provider: "github", email: "u@e.com"}}
       end)
 
@@ -201,12 +192,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "invalid state: puts security error flash and redirects to login", %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:error, :invalid_state, conn}
       end)
 
@@ -219,12 +210,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "OAuth error: puts provider error flash and redirects to login", %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :google
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :google
+                                                      } ->
         {:error, :oauth_error, :google, conn}
       end)
 
@@ -235,12 +226,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "general error: puts provider error flash and redirects to login", %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:error, :general_error, :github, conn}
       end)
 
@@ -253,12 +244,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "session failed: puts session failure flash and redirects to login", %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:error, :session_failed, :github, conn}
       end)
 
@@ -303,12 +294,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
     test "redirects to login with info flash when registration is disabled for new user", %{
       conn: conn
     } do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:error, :registration_disabled, :github, conn}
       end)
 
@@ -319,12 +310,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "successful generic oauth callback redirects to dashboard", %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :oauth
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :oauth
+                                                      } ->
         {:ok, conn, :oauth}
       end)
 
@@ -335,12 +326,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "respects valid internal success_path", %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:ok, conn, :github}
       end)
 
@@ -355,12 +346,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "rejects URL-encoded open redirect via success_path", %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:ok, conn, :github}
       end)
 
@@ -376,12 +367,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "rejects open redirect via success_path parameter", %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:ok, conn, :github}
       end)
 
@@ -399,12 +390,12 @@ defmodule TymeslotWeb.OAuthControllerTest do
     end
 
     test "rejects protocol-relative redirect via success_path", %{conn: conn} do
-      :meck.expect(OAuthHelper, :handle_oauth_callback, fn conn,
-                                                           %{
-                                                             code: "code",
-                                                             state: "state",
-                                                             provider: :github
-                                                           } ->
+      Mox.stub(HelperMock, :handle_oauth_callback, fn conn,
+                                                      %{
+                                                        code: "code",
+                                                        state: "state",
+                                                        provider: :github
+                                                      } ->
         {:ok, conn, :github}
       end)
 

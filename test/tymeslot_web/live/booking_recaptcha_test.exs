@@ -20,7 +20,8 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
     Mox.set_mox_from_context(tags)
     RateLimiter.clear_all()
 
-    TestMocks.setup_all_mocks()
+    TestMocks.setup_calendar_mocks()
+    TestMocks.setup_email_mocks()
 
     # Save original config and env vars
     old_cfg = Application.get_env(:tymeslot, :recaptcha, [])
@@ -345,5 +346,4 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
     refute html =~ "booking[g-recaptcha-response]"
     refute html =~ "protected by reCAPTCHA"
   end
-
 end

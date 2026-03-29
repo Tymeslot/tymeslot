@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeHookTest do
 
   setup tags do
     Mox.set_mox_from_context(tags)
-    TestMocks.setup_all_mocks()
+    TestMocks.setup_calendar_mocks()
 
     user = insert(:user)
     profile = insert(:profile, user: user, username: "testuser")

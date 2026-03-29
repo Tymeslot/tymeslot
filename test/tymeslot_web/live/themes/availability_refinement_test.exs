@@ -160,5 +160,4 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
       end)
     end
   end
-
 end

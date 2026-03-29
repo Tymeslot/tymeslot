@@ -109,7 +109,7 @@ defmodule TymeslotWeb.SessionController do
         should_auto_login = check_ip_match(user_before_verification, current_ip)
 
         # Now verify the user
-        case Verification.verify_user_token(token) do
+        case verification_module().verify_user_token(token) do
           {:ok, verified_user} ->
             handle_verified_user(
               conn,
@@ -130,6 +130,9 @@ defmodule TymeslotWeb.SessionController do
   end
 
   # Private functions
+
+  defp verification_module,
+    do: Application.get_env(:tymeslot, :verification_module, Verification)
 
   defp get_success_redirect_path do
     Config.success_redirect_path()
