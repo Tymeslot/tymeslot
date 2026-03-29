@@ -128,7 +128,8 @@ exunit_config = [
     backup_tests: true,
     oauth_integration: true,
     calendar_integration: true,
-    e2e: true
+    e2e: true,
+    migrations: true
   ]
 ]
 
