@@ -78,7 +78,9 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :integration_test,
       :umbrella,
       # Browser-based E2E tests — run with E2E=true mix test --only e2e
-      :e2e
+      :e2e,
+      # Destructive migration tests — run with mix test --include migrations
+      :migrations
     ]
   }
 
