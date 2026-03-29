@@ -1,5 +1,5 @@
 defmodule Tymeslot.Workers.VideoRoomRecoveryScanWorkerTest do
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
 
   @moduletag :workers
 

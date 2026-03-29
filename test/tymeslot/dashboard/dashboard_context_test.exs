@@ -3,7 +3,7 @@ defmodule Tymeslot.Dashboard.DashboardContextTest do
   Tests for the DashboardContext module.
   """
 
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
   @moduletag :utils
 
   alias Tymeslot.Dashboard.DashboardContext

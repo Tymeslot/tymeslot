@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.OperationsBookingTest do
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Operations

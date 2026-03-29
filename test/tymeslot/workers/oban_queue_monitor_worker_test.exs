@@ -1,5 +1,5 @@
 defmodule Tymeslot.Workers.ObanQueueMonitorWorkerTest do
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
 
   @moduletag :workers
 

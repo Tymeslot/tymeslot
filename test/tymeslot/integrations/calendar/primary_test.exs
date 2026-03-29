@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries

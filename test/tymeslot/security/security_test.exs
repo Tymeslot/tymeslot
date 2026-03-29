@@ -1,5 +1,5 @@
 defmodule Tymeslot.Security.SecurityTest do
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
 
   @moduletag :security
 

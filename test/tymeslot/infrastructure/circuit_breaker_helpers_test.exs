@@ -1,5 +1,5 @@
 defmodule Tymeslot.Infrastructure.CircuitBreakerHelpersTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   @moduletag :infrastructure
 

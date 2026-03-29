@@ -4,7 +4,7 @@ defmodule Tymeslot.MeetingsContextTest do
   Focuses on user-facing functionality and business rules rather than implementation details.
   """
 
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
   @moduletag :utils
 
   import Mox

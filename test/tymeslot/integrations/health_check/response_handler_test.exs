@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
   use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :integrations
 

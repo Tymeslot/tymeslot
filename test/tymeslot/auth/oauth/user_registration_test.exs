@@ -1,5 +1,5 @@
 defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
   @moduletag :auth
 
   alias Tymeslot.Auth.OAuth.UserRegistration

@@ -1,5 +1,5 @@
 defmodule Tymeslot.Workers.IntegrationHealthWorkerTest do
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
   @moduletag :workers
 
   use Oban.Testing, repo: Tymeslot.Repo

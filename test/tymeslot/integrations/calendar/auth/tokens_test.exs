@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.TokensTest do
-  use Tymeslot.DataCase, async: false
+  use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
   import Tymeslot.Factory
