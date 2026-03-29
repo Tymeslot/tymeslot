@@ -161,7 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderAccountBackfillTest do
 
       # This is the step that failed for the reporting user — verify it succeeds
       # after the backfill has disambiguated the rows.
-      assert {:ok, _} = Repo.query(@create_null_guard_index_sql)
+      assert {:ok, _result} = Repo.query(@create_null_guard_index_sql)
     end
   end
 

@@ -28,7 +28,8 @@
         "dev_support/credo_checks/use_core_inputs.ex",
         "dev_support/credo_checks/use_core_modal.ex",
         "dev_support/credo_checks/use_p_sigil.ex",
-        "dev_support/credo_checks/test_module_tag_required.ex"
+        "dev_support/credo_checks/test_module_tag_required.ex",
+        "dev_support/credo_checks/migration_constraint_safety.ex"
       ],
       strict: false,
       parse_timeout: 5000,
@@ -114,6 +115,7 @@
           # Logger hygiene: violations are :low while being cleared; raise to :high after Phase 3-4
           {CredoChecks.NoStringInterpolationInLogger, [priority: :high]},
           {CredoChecks.NoMapMetadataInLogger, [priority: :high]},
+          {CredoChecks.MigrationConstraintSafety, [priority: :high, enforce_after: "20260329"]},
 
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)
