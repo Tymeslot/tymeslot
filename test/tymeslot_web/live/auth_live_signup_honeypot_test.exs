@@ -91,5 +91,4 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
 
     assert html =~ "Too many email verification attempts. Please try again later."
   end
-
 end

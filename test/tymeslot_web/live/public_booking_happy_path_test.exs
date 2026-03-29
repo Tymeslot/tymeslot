@@ -237,5 +237,4 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
 
     target_date
   end
-
 end

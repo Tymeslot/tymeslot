@@ -33,7 +33,8 @@ defmodule TymeslotWeb.BookingHoneypotTest do
     Application.put_env(:tymeslot, :recaptcha, Keyword.put(old_cfg, :booking_enabled, false))
     on_exit(fn -> Application.put_env(:tymeslot, :recaptcha, old_cfg) end)
 
-    TestMocks.setup_all_mocks()
+    TestMocks.setup_calendar_mocks()
+    TestMocks.setup_email_mocks()
 
     # Create a user with a profile and event type for booking
     user = insert(:user)

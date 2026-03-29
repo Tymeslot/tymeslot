@@ -81,6 +81,9 @@ defmodule TymeslotWeb.OAuthController do
     end
   end
 
+  defp oauth_callback_module,
+    do: Application.get_env(:tymeslot, :oauth_callback_module, OAuthHelper)
+
   defp provider_module(:github), do: GitHub
   defp provider_module(:google), do: Google
   defp provider_module(:oauth), do: GenericOAuth
@@ -158,7 +161,11 @@ defmodule TymeslotWeb.OAuthController do
 
         conn
         |> delete_session(:oauth_intent)
-        |> OAuthHelper.handle_oauth_callback(%{code: code, state: state, provider: provider})
+        |> oauth_callback_module().handle_oauth_callback(%{
+          code: code,
+          state: state,
+          provider: provider
+        })
         |> respond_to_oauth_result(paths)
 
       {:error, :rate_limited, _message} ->

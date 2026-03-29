@@ -87,6 +87,10 @@ Mox.defmock(Tymeslot.Auth.SessionMock,
 
 Mox.defmock(Tymeslot.Media.TranscoderMock, for: Tymeslot.Media.TranscoderBehaviour)
 
+Mox.defmock(Tymeslot.Auth.VerificationMock,
+  for: Tymeslot.Infrastructure.VerificationBehaviour
+)
+
 # Stripe internal mocks for testing the wrapper
 # We use the behaviours defined in Tymeslot.TestMocks
 alias Tymeslot.TestMocks.{

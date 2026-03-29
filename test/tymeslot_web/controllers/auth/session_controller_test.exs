@@ -2,7 +2,11 @@ defmodule TymeslotWeb.SessionControllerTest do
   use TymeslotWeb.ConnCase, async: false
   @moduletag :auth
 
+  import Mox
+
   alias Phoenix.Flash
+  alias Tymeslot.Auth.Verification
+  alias Tymeslot.Auth.VerificationMock
   alias Tymeslot.AuthTestHelpers
   alias Tymeslot.DatabaseQueries.UserQueries
   alias Tymeslot.Factory
@@ -252,7 +256,14 @@ defmodule TymeslotWeb.SessionControllerTest do
   end
 
   describe "GET /auth/verify-complete/:token" do
+    setup :verify_on_exit!
+
     setup do
+      # Stub with real implementation by default; individual tests override as needed
+      Mox.stub(VerificationMock, :verify_user_token, fn token ->
+        Verification.verify_user_token(token)
+      end)
+
       %{token: "valid_token"}
     end
 
@@ -318,22 +329,9 @@ defmodule TymeslotWeb.SessionControllerTest do
     end
 
     test "handles verification failure for existing user", %{conn: conn, token: token} do
-      # Mock Verification.verify_user_token to fail
-      # This requires meck or similar, but Verification is not mocked in this file yet.
-      # Wait, I can just use a token that is valid for get_user_by_verification_token but fails verify_user_token.
-      # But verify_user_token usually fails if the token is not in DB or expired.
-
-      # Let's mock Verification
-      try do
-        :meck.unload(Tymeslot.Auth.Verification)
-      rescue
-        _other -> :ok
-      end
-
-      :meck.new(Tymeslot.Auth.Verification, [:passthrough])
       _unverified_user = insert_unverified_user(token, "127.0.0.1")
 
-      :meck.expect(Tymeslot.Auth.Verification, :verify_user_token, fn ^token ->
+      Mox.expect(VerificationMock, :verify_user_token, fn ^token ->
         {:error, :expired}
       end)
 
@@ -341,8 +339,6 @@ defmodule TymeslotWeb.SessionControllerTest do
 
       assert redirected_to(conn) == "/auth/login"
       assert Flash.get(conn.assigns.flash, :error) =~ "invalid or has expired"
-
-      :meck.unload(Tymeslot.Auth.Verification)
     end
   end
 end
