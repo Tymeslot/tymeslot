@@ -25,6 +25,19 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
 
   defp counter, do: Agent.get(__MODULE__.Counter, & &1)
 
+  defp wait_for_waiters(expected_count, attempts \\ 50) do
+    %{requests: requests} = :sys.get_state(RequestCoalescer)
+    total_waiters = requests |> Map.values() |> Enum.map(&length(&1.waiters)) |> Enum.sum()
+
+    if total_waiters >= expected_count do
+      :ok
+    else
+      if attempts <= 0, do: raise("Timed out waiting for #{expected_count} waiters")
+      Process.sleep(10)
+      wait_for_waiters(expected_count, attempts - 1)
+    end
+  end
+
   test "coalesces identical concurrent requests and shares the result" do
     parent = self()
     ref = make_ref()
@@ -66,6 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
     Enum.each(tasks, fn task -> send(task.pid, {:go, ref}) end)
 
     assert_receive {:fetch_started, ^ref, fetch_pid}, @receive_timeout
+    wait_for_waiters(5)
     send(fetch_pid, {:release_fetch, ref})
 
     results = Task.await_many(tasks, @await_timeout)
@@ -115,6 +129,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescerTest do
     Enum.each(tasks, fn task -> send(task.pid, {:go, ref}) end)
 
     assert_receive {:fetch_started, ^ref, fetch_pid}, @receive_timeout
+    wait_for_waiters(3)
     send(fetch_pid, {:release_fetch, ref})
 
     results = Task.await_many(tasks, @await_timeout)
