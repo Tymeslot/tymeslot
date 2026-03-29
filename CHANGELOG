@@ -1,4 +1,9 @@
 
+[0.99.35]
+* core: Eliminate race condition in RequestCoalescer test
+* core: Exclude migrations tag from default test runs
+* core: Add MigrationConstraintSafety Credo check
+* core: Backfill calendar provider_account_id before creating null-guard index
 [0.99.34]
 * core: Derive display location from meeting fields in AppointmentBuilder
 * core: Remove unreachable pattern in scheduling_handlers with/else
