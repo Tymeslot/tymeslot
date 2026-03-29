@@ -33,6 +33,15 @@ defmodule TymeslotWeb.AccountLiveTest do
     %{conn: log_in_user(conn, user), user: user, profile: profile}
   end
 
+  describe "disconnected mount" do
+    test "account page returns HTML before WebSocket upgrade", %{conn: conn} do
+      conn = get(conn, ~p"/dashboard/account")
+      assert html_response(conn, 200)
+
+      {:ok, _view, _html} = live(conn)
+    end
+  end
+
   describe "Account Security Page" do
     test "renders account security page", %{conn: conn, user: user} do
       {:ok, _view, html} = live(conn, ~p"/dashboard/account")

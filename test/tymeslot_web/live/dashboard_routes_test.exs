@@ -50,6 +50,19 @@ defmodule TymeslotWeb.DashboardRoutesTest do
     end
   end
 
+  describe "disconnected mount" do
+    setup %{conn: conn} do
+      {:ok, setup_authenticated_user(conn)}
+    end
+
+    test "dashboard returns HTML before WebSocket upgrade", %{conn: conn} do
+      conn = get(conn, ~p"/dashboard")
+      assert html_response(conn, 200) =~ "dashboard"
+
+      {:ok, _view, _html} = live(conn)
+    end
+  end
+
   describe "dashboard pages" do
     setup %{conn: conn} do
       {:ok, setup_authenticated_user(conn)}
