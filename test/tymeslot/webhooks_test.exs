@@ -402,7 +402,7 @@ defmodule Tymeslot.WebhooksTest do
   describe "available_events/0" do
     test "returns a non-empty list" do
       events = Webhooks.available_events()
-      assert events != []
+      refute Enum.empty?(events)
     end
 
     test "contains meeting.created event" do
