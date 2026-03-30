@@ -266,4 +266,79 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchemaTest do
       assert length(events) >= 3
     end
   end
+
+  describe "encrypt_token/1" do
+    test "populates bot_token_encrypted when bot_token is provided" do
+      user = insert(:user)
+
+      changeset =
+        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+          name: "Bot",
+          user_id: user.id,
+          bot_mode: "own",
+          bot_token: "test_bot_token_123"
+        })
+
+      assert changeset.valid?
+      assert get_change(changeset, :bot_token_encrypted) != nil
+    end
+
+    test "does not set bot_token_encrypted when bot_token is empty string" do
+      user = insert(:user)
+
+      changeset =
+        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+          name: "Bot",
+          user_id: user.id,
+          bot_mode: "own",
+          bot_token: ""
+        })
+
+      assert get_change(changeset, :bot_token_encrypted) == nil
+    end
+
+    test "does not set bot_token_encrypted when bot_token is not provided" do
+      user = insert(:user)
+
+      changeset =
+        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+          name: "Bot",
+          user_id: user.id,
+          bot_mode: "own"
+        })
+
+      assert get_change(changeset, :bot_token_encrypted) == nil
+    end
+  end
+
+  describe "decrypt_token/1" do
+    test "returns struct unchanged when bot_token_encrypted is nil" do
+      integration = %TelegramIntegrationSchema{bot_token_encrypted: nil, bot_token: nil}
+      result = TelegramIntegrationSchema.decrypt_token(integration)
+
+      assert result.bot_token == nil
+      assert result.bot_token_encrypted == nil
+    end
+
+    test "round-trips encrypt and decrypt correctly" do
+      user = insert(:user)
+      original_token = "test_token_abc"
+
+      changeset =
+        TelegramIntegrationSchema.changeset(%TelegramIntegrationSchema{}, %{
+          name: "Bot",
+          user_id: user.id,
+          bot_mode: "own",
+          bot_token: original_token
+        })
+
+      encrypted = get_change(changeset, :bot_token_encrypted)
+      assert encrypted != nil
+
+      integration = %TelegramIntegrationSchema{bot_token_encrypted: encrypted}
+      result = TelegramIntegrationSchema.decrypt_token(integration)
+
+      assert result.bot_token == original_token
+    end
+  end
 end

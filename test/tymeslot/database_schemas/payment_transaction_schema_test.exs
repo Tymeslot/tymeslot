@@ -204,5 +204,25 @@ defmodule Tymeslot.DatabaseSchemas.PaymentTransactionSchemaTest do
 
       assert "has already been taken" in errors_on(changeset).user_id
     end
+
+    test "allows multiple completed transactions for the same user" do
+      user = insert(:user)
+
+      attrs = %{
+        user_id: user.id,
+        amount: 1000,
+        status: "completed"
+      }
+
+      {:ok, _transaction1} =
+        %PaymentTransactionSchema{}
+        |> PaymentTransactionSchema.changeset(attrs)
+        |> Repo.insert()
+
+      {:ok, _transaction2} =
+        %PaymentTransactionSchema{}
+        |> PaymentTransactionSchema.changeset(%{attrs | amount: 2000})
+        |> Repo.insert()
+    end
   end
 end

@@ -17,6 +17,11 @@ defmodule TymeslotWeb.Plugs.SetLoggerMetadataTest do
   end
 
   describe "call/2" do
+    setup do
+      on_exit(fn -> Logger.metadata(user_id: nil) end)
+      :ok
+    end
+
     test "sets user_id in Logger metadata when current_user is assigned", %{conn: conn} do
       user = Factory.insert(:user)
 

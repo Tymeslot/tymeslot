@@ -18,6 +18,8 @@ defmodule TymeslotWeb.Plugs.RejectStaticPathsPlug do
   def init(opts), do: opts
 
   @impl Plug
+  def call(%{halted: true} = conn, _opts), do: conn
+
   def call(%{path_info: [segment | _rest]} = conn, _opts) do
     if Enum.any?(@static_extensions, &String.ends_with?(segment, &1)) do
       conn

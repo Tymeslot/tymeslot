@@ -25,8 +25,8 @@ defmodule TymeslotWeb.Plugs.ThemePlug do
   defp extract_theme_id(path) do
     cond do
       # Match /scheduling/theme/:theme_id paths
-      path =~ ~r{/scheduling/theme/(\d+)} ->
-        [_first, theme_id] = Regex.run(~r{/scheduling/theme/(\d+)}, path)
+      path =~ ~r{^/scheduling/theme/(\d+)} ->
+        [_first, theme_id] = Regex.run(~r{^/scheduling/theme/(\d+)}, path)
         theme_id
 
       # Match /theme/:theme_id paths (for demo routes)

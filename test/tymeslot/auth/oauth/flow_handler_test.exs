@@ -1,17 +1,18 @@
 # :meck migration scope (assessed 2026-03-29):
-# - This file uses :meck to mock 6 internal modules:
+# - This file uses :meck to mock 6 modules:
 #     Client, State, URLs, UserProcessor, UserRegistration, Session
 # - 54 :meck.expect calls across 10 tests
 # - Modules with existing @behaviour + Mox mock:
 #     Client (ClientBehaviour / Tymeslot.Auth.OAuth.ClientMock)
 #     Session (SessionBehaviour / Tymeslot.Auth.SessionMock)
-# - Modules needing new @behaviour definitions:
+# - Internal modules currently mocked:
 #     State, URLs, UserProcessor, UserRegistration
+#   Per project test philosophy ("mock at system boundaries only"),
+#   these internal module mocks should be removed entirely — not
+#   migrated to Mox. The correct fix is to test FlowHandler through
+#   its real dependencies with a DB-backed test, mocking only the
+#   external HTTP calls (Client) and session storage (Session).
 # - Estimated effort: complex
-#   Requires 4 new behaviour modules, 4 new Mox mocks in test_helper.exs,
-#   and rewriting all 54 :meck.expect calls to Mox.expect/stub.
-#   The helper functions (setup_pre_exchange_mocks, setup_existing_user_flow_mocks)
-#   would need full rewrites to use Mox patterns.
 # - See docs/superpowers/plans/2026-03-29-test-suite-improvements.md Task 18
 defmodule Tymeslot.Auth.OAuth.FlowHandlerTest do
   use Tymeslot.DataCase, async: false

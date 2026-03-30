@@ -48,7 +48,7 @@ jobs:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-mix-${{ env.ELIXIR_VERSION }}-${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}
+          key: ${{ runner.os }}-mix-${{ env.ELIXIR_VERSION }}-${{ env.OTP_VERSION }}-${{ hashFiles('**/mix.exs', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-mix-${{ env.ELIXIR_VERSION }}-${{ env.OTP_VERSION }}-
 
@@ -72,5 +72,8 @@ jobs:
       - name: Run tests
         run: mix coveralls.json
 
+      - name: Dialyzer
+        run: mix dialyzer
+
       - name: Security audit
-        run: mix sobelow --config
+        run: cd apps/tymeslot && mix sobelow --config

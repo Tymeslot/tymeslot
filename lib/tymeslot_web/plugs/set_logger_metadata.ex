@@ -1,11 +1,15 @@
 defmodule TymeslotWeb.Plugs.SetLoggerMetadata do
   @moduledoc false
 
+  @behaviour Plug
+
   require Logger
 
+  @impl Plug
   @spec init(keyword()) :: keyword()
   def init(opts), do: opts
 
+  @impl Plug
   @spec call(Plug.Conn.t(), keyword()) :: Plug.Conn.t()
   def call(conn, _opts) do
     if user = conn.assigns[:current_user] do

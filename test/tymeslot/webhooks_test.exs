@@ -438,6 +438,161 @@ defmodule Tymeslot.WebhooksTest do
   # Headers
   # ============================================================================
 
+  # ============================================================================
+  # Feature Access Denial
+  # ============================================================================
+
+  describe "create_webhook/2 - feature access denied" do
+    setup do
+      setup_config(:tymeslot,
+        feature_access_checker: Tymeslot.WebhooksTest.DenyAccessChecker
+      )
+
+      :ok
+    end
+
+    test "returns :insufficient_plan when feature access is denied" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Blocked Webhook",
+        url: "https://example.com/webhook",
+        events: ["meeting.created"]
+      }
+
+      assert {:error, :insufficient_plan} = Webhooks.create_webhook(user.id, attrs)
+    end
+  end
+
+  # ============================================================================
+  # Enable Webhook
+  # ============================================================================
+
+  describe "enable_webhook/1" do
+    test "re-enables a disabled webhook and resets failure fields" do
+      user = insert(:user)
+
+      webhook =
+        insert(:webhook,
+          user: user,
+          is_active: false,
+          failure_count: 10,
+          disabled_at: DateTime.utc_now(),
+          disabled_reason: "Too many failures"
+        )
+
+      assert {:ok, enabled} = Webhooks.enable_webhook(webhook)
+      assert enabled.is_active == true
+      assert enabled.failure_count == 0
+      assert enabled.disabled_at == nil
+      assert enabled.disabled_reason == nil
+    end
+
+    test "returns :insufficient_plan when feature access is denied" do
+      setup_config(:tymeslot,
+        feature_access_checker: Tymeslot.WebhooksTest.DenyAccessChecker
+      )
+
+      user = insert(:user)
+
+      webhook =
+        insert(:webhook,
+          user: user,
+          is_active: false,
+          failure_count: 10,
+          disabled_at: DateTime.utc_now(),
+          disabled_reason: "Too many failures"
+        )
+
+      assert {:error, :insufficient_plan} = Webhooks.enable_webhook(webhook)
+    end
+  end
+
+  # ============================================================================
+  # Record Failure (WebhookQueries)
+  # ============================================================================
+
+  describe "record_failure/2" do
+    alias Tymeslot.DatabaseQueries.WebhookQueries
+
+    test "increments failure_count by 1" do
+      user = insert(:user)
+      webhook = insert(:webhook, user: user, failure_count: 0)
+
+      assert {:ok, updated} = WebhookQueries.record_failure(webhook, "timeout")
+      assert updated.failure_count == 1
+    end
+
+    test "auto-disables webhook on the 10th failure" do
+      user = insert(:user)
+      webhook = insert(:webhook, user: user, failure_count: 9)
+
+      assert {:ok, updated} = WebhookQueries.record_failure(webhook, "timeout")
+      assert updated.is_active == false
+      assert updated.disabled_at != nil
+      assert updated.disabled_reason =~ "Too many consecutive failures"
+    end
+
+    test "returns {:error, :not_found} for non-existent webhook" do
+      fake_webhook = %Tymeslot.DatabaseSchemas.WebhookSchema{id: -1}
+
+      assert {:error, :not_found} = WebhookQueries.record_failure(fake_webhook, "timeout")
+    end
+  end
+
+  # ============================================================================
+  # Trigger Webhook
+  # ============================================================================
+
+  describe "trigger_webhook/3" do
+    test "schedules delivery for an active webhook subscribed to the event" do
+      user = insert(:user)
+
+      webhook =
+        insert(:webhook,
+          user: user,
+          is_active: true,
+          events: ["meeting.created"]
+        )
+
+      meeting = insert(:meeting, organizer_user: user)
+
+      assert :ok = Webhooks.trigger_webhook(webhook, "meeting.created", meeting)
+    end
+
+    test "returns error for an inactive webhook" do
+      user = insert(:user)
+
+      webhook =
+        insert(:webhook,
+          user: user,
+          is_active: false,
+          events: ["meeting.created"]
+        )
+
+      meeting = insert(:meeting, organizer_user: user)
+
+      assert {:error, :webhook_not_active} =
+               Webhooks.trigger_webhook(webhook, "meeting.created", meeting)
+    end
+
+    test "returns error for an active webhook not subscribed to the event" do
+      user = insert(:user)
+
+      webhook =
+        insert(:webhook,
+          user: user,
+          is_active: true,
+          events: ["meeting.cancelled"]
+        )
+
+      meeting = insert(:meeting, organizer_user: user)
+
+      assert {:error, :webhook_not_active} =
+               Webhooks.trigger_webhook(webhook, "meeting.created", meeting)
+    end
+  end
+
   describe "build_headers/2" do
     test "includes content type and user agent" do
       headers = Webhooks.build_headers(%{}, nil)
@@ -461,4 +616,11 @@ defmodule Tymeslot.WebhooksTest do
       refute Enum.any?(headers, fn {k, _v} -> k == "X-Tymeslot-Token" end)
     end
   end
+end
+
+defmodule Tymeslot.WebhooksTest.DenyAccessChecker do
+  @moduledoc false
+
+  @spec check_access(any(), atom()) :: {:error, :insufficient_plan}
+  def check_access(_user_id, _feature), do: {:error, :insufficient_plan}
 end

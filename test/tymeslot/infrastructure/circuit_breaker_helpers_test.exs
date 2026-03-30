@@ -77,7 +77,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpersTest do
   describe "breaker_exists?/1" do
     test "returns true for registered atom name" do
       # Start a named breaker locally so this test doesn't depend on app-level startup
-      atom_name = :cbh_atom_test_breaker
+      atom_name = :"cbh_atom_test_#{System.unique_integer([:positive])}"
       start_supervised!({CircuitBreaker, name: atom_name, config: %{}}, id: atom_name)
 
       assert CircuitBreakerHelpers.breaker_exists?(atom_name) == true

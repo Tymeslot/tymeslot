@@ -58,7 +58,9 @@ defmodule Tymeslot.OnboardingTest do
       user = insert(:user, onboarding_completed_at: nil)
       {:ok, completed_user} = Onboarding.complete_onboarding(user)
       {:ok, re_completed_user} = Onboarding.complete_onboarding(completed_user)
-      assert re_completed_user.onboarding_completed_at != nil
+
+      assert re_completed_user.onboarding_completed_at ==
+               completed_user.onboarding_completed_at
     end
   end
 

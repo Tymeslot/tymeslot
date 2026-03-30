@@ -54,5 +54,17 @@ defmodule TymeslotWeb.Plugs.RejectStaticPathsPlugTest do
 
       assert conn.resp_body == "Not Found"
     end
+
+    test "does not modify an already-halted conn", %{conn: conn} do
+      halted_conn =
+        conn
+        |> send_resp(401, "Unauthorized")
+        |> halt()
+
+      result = RejectStaticPathsPlug.call(%{halted_conn | path_info: ["app.js"]}, [])
+
+      assert result.status == 401
+      assert result.resp_body == "Unauthorized"
+    end
   end
 end
