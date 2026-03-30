@@ -13,4 +13,15 @@ defmodule Tymeslot.Security.Password do
       when is_binary(password) and is_binary(hashed_password) do
     Bcrypt.verify_pass(password, hashed_password)
   end
+
+  @doc """
+  Simulates a password hash check to prevent timing attacks.
+
+  Call this when a user lookup fails so that the response time is
+  indistinguishable from a real password verification attempt.
+  """
+  @spec no_user_verify() :: false
+  def no_user_verify do
+    Bcrypt.no_user_verify()
+  end
 end

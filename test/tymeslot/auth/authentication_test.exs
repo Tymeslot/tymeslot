@@ -42,6 +42,20 @@ defmodule Tymeslot.Auth.AuthenticationTest do
       assert message1 == message2
     end
 
+    test "non-existent user runs dummy hash to prevent timing-based enumeration" do
+      # When a user is not found, the code must perform a dummy bcrypt hash
+      # so that response time is indistinguishable from a real password check.
+      # Even with log_rounds=4 (test env), bcrypt adds measurable overhead —
+      # this path must not return instantly.
+      {elapsed_us, {:error, :not_found, _msg}} =
+        :timer.tc(fn ->
+          Authentication.authenticate_user("nonexistent@example.com", "SomePassword1!")
+        end)
+
+      assert elapsed_us > 100,
+             "Expected dummy hash overhead, got only #{elapsed_us}µs"
+    end
+
     test "validates input to prevent injection attacks" do
       assert {:error, :invalid_input, _message} = Authentication.authenticate_user("", "pass")
       assert {:error, :invalid_input, _message} = Authentication.authenticate_user("email", "")
