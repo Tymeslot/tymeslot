@@ -4,6 +4,8 @@ defmodule Tymeslot.Bookings.Create do
   Combines validation, policy enforcement, and side effects.
   """
 
+  require Logger
+
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
@@ -184,8 +186,6 @@ defmodule Tymeslot.Bookings.Create do
       {:error, reason} ->
         # Calendar transport/timeout errors - log but don't block booking
         # The booking will succeed and calendar sync will be retried in background
-        require Logger
-
         Logger.warning(
           "Calendar availability check failed, proceeding with booking",
           reason: inspect(reason),
@@ -226,8 +226,6 @@ defmodule Tymeslot.Bookings.Create do
 
           nil ->
             # Task timed out - log and return timeout error
-            require Logger
-
             Logger.warning(
               "Calendar availability check timed out after 5s, proceeding with booking",
               organizer_user_id: organizer_user_id
@@ -361,8 +359,16 @@ defmodule Tymeslot.Bookings.Create do
     alias Tymeslot.Notifications.Events
 
     case Events.meeting_created(meeting) do
-      {:ok, _result} -> :ok
-      {:error, _reason} -> :ok
+      {:ok, _result} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule confirmation emails for meeting",
+          meeting_id: meeting.id,
+          error: inspect(reason)
+        )
+
+        :ok
     end
   end
 

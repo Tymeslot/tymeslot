@@ -58,6 +58,11 @@ defmodule Tymeslot.Auth.Authentication do
   defp authenticate_with_password(email, password, opts) do
     case UserQueries.get_user_by_email(email) do
       {:error, :not_found} ->
+        # Perform a dummy hash check to prevent timing-based email enumeration.
+        # Without this, an attacker can distinguish "user not found" (fast) from
+        # "wrong password" (slow bcrypt verify) by measuring response time.
+        Password.no_user_verify()
+
         AccountLogging.log_operation_failure("authentication", email, :not_found)
 
         SecurityLogger.log_authentication_attempt(email, false, "user_not_found", %{
