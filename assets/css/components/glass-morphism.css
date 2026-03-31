@@ -127,7 +127,7 @@ body {
 }
 
 .glass-input::placeholder {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .glass-input:hover {
@@ -161,7 +161,7 @@ body {
 
 .auth-light-mode input::placeholder,
 .auth-light-mode textarea::placeholder {
-  color: #6b7280 !important;
+  color: var(--color-text-secondary) !important;
 }
 
 .auth-light-mode .text-gray-500 { color: #6b7280 !important; }
@@ -185,9 +185,9 @@ body {
   color: transparent !important;
 }
 
-.auth-light-mode .text-red-600 { color: #dc2626 !important; }
-.auth-light-mode .text-green-600 { color: #16a34a !important; }
-.auth-light-mode .text-blue-600 { color: #2563eb !important; }
+.auth-light-mode .text-red-600 { color: var(--color-error) !important; }
+.auth-light-mode .text-green-600 { color: var(--color-success) !important; }
+.auth-light-mode .text-blue-600 { color: var(--color-info) !important; }
 .auth-light-mode .text-amber-600 { color: #d97706 !important; }
 
 /* White text for better contrast on gradient backgrounds */

@@ -149,21 +149,21 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
                   <div class="absolute right-3 top-1/2 -translate-y-1/2 shrink-0">
                     <%= case @username_available do %>
                       <% true -> %>
-                        <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-wider border border-emerald-100 animate-in zoom-in">
+                        <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-emerald-50 text-emerald-700 text-token-2xs font-black uppercase tracking-wider border border-emerald-100 animate-in zoom-in">
                           <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                           </svg>
                           Available
                         </div>
                       <% false -> %>
-                        <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-red-50 text-red-700 text-[10px] font-black uppercase tracking-wider border border-red-100 animate-in zoom-in">
+                        <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-red-50 text-red-700 text-token-2xs font-black uppercase tracking-wider border border-red-100 animate-in zoom-in">
                           <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
                           </svg>
                           Taken
                         </div>
                       <% {:error, _message} -> %>
-                        <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-wider border border-amber-100 animate-in zoom-in">
+                        <div class="inline-flex items-center px-2 py-0.5 rounded-token-lg bg-amber-50 text-amber-700 text-token-2xs font-black uppercase tracking-wider border border-amber-100 animate-in zoom-in">
                           Invalid
                         </div>
                       <% _ -> %>

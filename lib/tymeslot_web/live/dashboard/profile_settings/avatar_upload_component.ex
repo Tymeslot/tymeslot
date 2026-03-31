@@ -181,7 +181,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
           <button type="submit" id="avatar-submit-btn" class="hidden">Upload</button>
         </form>
 
-        <p class="text-[10px] text-tymeslot-400 font-bold uppercase tracking-widest pt-2">
+        <p class="text-token-2xs text-tymeslot-400 font-bold uppercase tracking-widest pt-2">
           JPG, PNG, GIF or WebP. Max 10MB.
         </p>
 

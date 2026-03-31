@@ -25,14 +25,13 @@ defmodule TymeslotWeb.Components.CoreComponents.Icons do
   attr :class, :string, default: nil
   attr :style, :string, default: nil
 
-  @spec icon(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec icon(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def icon(%{name: "hero-" <> _rest} = assigns) do
     ~H"""
     <span class={[@name, @class]} style={@style} />
     """
   end
 
-  @spec icon(map()) :: Phoenix.LiveView.Rendered.t()
   def icon(%{name: name} = assigns) when is_binary(name) do
     ~H"""
     <span class={@class}>{@name}</span>

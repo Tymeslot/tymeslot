@@ -123,6 +123,7 @@ module.exports = {
         'glass-heavy': 'var(--glass-blur-heavy)',
       },
       fontSize: {
+        'token-2xs': 'var(--font-size-2xs)',
         'token-xs': 'var(--font-size-xs)',
         'token-sm': 'var(--font-size-sm)',
         'token-base': 'var(--font-size-base)',

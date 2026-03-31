@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Brand do
   attr :class, :string, default: nil
   attr :img_class, :string, default: "h-10"
 
-  @spec logo(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec logo(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def logo(assigns) do
     ~H"""
     <div class={["flex items-center", @class]}>

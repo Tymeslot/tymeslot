@@ -16,7 +16,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
     * `:disabled` - Whether the button is disabled. Defaults to false
     * `:class` - Additional CSS classes
   """
-  attr :variant, :atom, default: :primary, values: [:primary, :secondary, :danger, :outline]
+  attr :variant, :atom,
+    default: :primary,
+    values: [:primary, :secondary, :danger, :outline],
+    doc:
+      "controls visual style: :primary (filled), :secondary (outlined), :danger (red), :ghost (text-only)"
+
   attr :type, :string, default: "button"
   attr :form, :string, default: nil
   attr :disabled, :boolean, default: false
@@ -25,7 +30,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
 
   slot :inner_block, required: true
 
-  @spec action_button(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec action_button(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def action_button(assigns) do
     ~H"""
     <button
@@ -59,7 +64,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
 
   slot :inner_block, required: true
 
-  @spec loading_button(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec loading_button(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def loading_button(assigns) do
     ~H"""
     <.action_button

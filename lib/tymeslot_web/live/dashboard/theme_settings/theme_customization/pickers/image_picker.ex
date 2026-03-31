@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ImagePi
             </button>
           </div>
           
-          <p class="text-[10px] font-black text-tymeslot-400 uppercase tracking-[0.2em]">JPG, PNG or WebP. Max 5MB.</p>
+          <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-[0.2em]">JPG, PNG or WebP. Max 5MB.</p>
         </form>
 
         <%= if @customization.background_image_path && @customization.background_value == "custom" do %>

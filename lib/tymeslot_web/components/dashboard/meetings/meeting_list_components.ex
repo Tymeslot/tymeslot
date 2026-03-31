@@ -88,17 +88,15 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           <.empty_state filter={@filter} />
         <% else %>
           <div class="space-y-4" id="meetings" phx-update="stream">
-            <%= for {dom_id, meeting} <- @meetings_stream do %>
-              <div id={dom_id}>
-                <.meeting_card
-                  meeting={meeting}
-                  profile={@profile}
-                  cancelling_meeting={@cancelling_meeting}
-                  sending_reschedule={@sending_reschedule}
-                  target={@target}
-                />
-              </div>
-            <% end %>
+            <div :for={{dom_id, meeting} <- @meetings_stream} id={dom_id}>
+              <.meeting_card
+                meeting={meeting}
+                profile={@profile}
+                cancelling_meeting={@cancelling_meeting}
+                sending_reschedule={@sending_reschedule}
+                target={@target}
+              />
+            </div>
           </div>
         <% end %>
       <% end %>

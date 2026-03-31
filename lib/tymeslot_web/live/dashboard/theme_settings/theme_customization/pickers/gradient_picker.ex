@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.Gradien
         >
           <div class="absolute inset-0 bg-black/0 group-hover/gradient:bg-black/10 transition-colors"></div>
           <div class="absolute bottom-3 left-3 right-3 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-token-xl border border-white shadow-lg">
-            <p class="text-[10px] font-black uppercase tracking-[0.1em] text-tymeslot-900 text-center truncate">{gradient.name}</p>
+            <p class="text-token-2xs font-black uppercase tracking-[0.1em] text-tymeslot-900 text-center truncate">{gradient.name}</p>
           </div>
           
           <%= if @customization.background_value == gradient_id do %>

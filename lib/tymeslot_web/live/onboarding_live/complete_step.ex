@@ -56,7 +56,7 @@ defmodule TymeslotWeb.OnboardingLive.CompleteStep do
 
         <div class="bg-turquoise-50/50 border-2 border-turquoise-100 rounded-2xl p-4 text-center">
           <p class="text-turquoise-800 font-bold text-sm">
-            <span class="bg-turquoise-600 text-white px-2 py-0.5 rounded uppercase text-[10px] font-black mr-2">Tip</span>
+            <span class="bg-turquoise-600 text-white px-2 py-0.5 rounded uppercase text-token-2xs font-black mr-2">Tip</span>
             You can always adjust these settings later from your dashboard.
           </p>
         </div>

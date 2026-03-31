@@ -37,7 +37,6 @@ defmodule TymeslotWeb.Themes.Core.EventBus do
     message = build_message(theme_id, event, payload)
 
     PubSub.broadcast(@pubsub_name, topic, message)
-    PubSub.broadcast(@pubsub_name, global_topic(), message)
 
     :ok
   end
@@ -48,14 +47,6 @@ defmodule TymeslotWeb.Themes.Core.EventBus do
   @spec subscribe_to_theme(theme_id()) :: :ok | {:error, term()}
   def subscribe_to_theme(theme_id) do
     PubSub.subscribe(@pubsub_name, theme_topic(theme_id))
-  end
-
-  @doc """
-  Subscribes to all theme events globally.
-  """
-  @spec subscribe_globally() :: :ok | {:error, term()}
-  def subscribe_globally do
-    PubSub.subscribe(@pubsub_name, global_topic())
   end
 
   @doc """
@@ -132,7 +123,6 @@ defmodule TymeslotWeb.Themes.Core.EventBus do
   # Private functions
 
   defp theme_topic(theme_id), do: "theme:#{theme_id}"
-  defp global_topic, do: "theme:global"
 
   defp build_message(theme_id, event, payload) do
     {:theme_event,

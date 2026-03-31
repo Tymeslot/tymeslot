@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
               <%!-- Time Slots Grid --%>
               <%= for hour <- 6..22 do %>
                 <%= for minute <- [0, 30] do %>
-                  <div class="font-black text-tymeslot-400 text-right py-1 pr-4 text-[10px] sm:text-xs uppercase tracking-tighter">
+                  <div class="font-black text-tymeslot-400 text-right py-1 pr-4 text-token-2xs sm:text-xs uppercase tracking-tighter">
                     {format_time_slot(hour, minute)}
                   </div>
                   <%= for day_num <- 1..7 do %>

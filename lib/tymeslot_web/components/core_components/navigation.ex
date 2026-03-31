@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   attr :label, :string, required: true
   attr :value, :string, required: true
 
-  @spec detail_row(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec detail_row(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def detail_row(assigns) do
     ~H"""
     <div class="flex justify-between">
@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
   attr :to, :string, required: true
   slot :inner_block, required: true
 
-  @spec back_link(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec back_link(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def back_link(assigns) do
     ~H"""
     <.link
@@ -69,7 +69,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Navigation do
     attr :icon, :atom
   end
 
-  @spec tabs(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec tabs(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def tabs(assigns) do
     ~H"""
     <div class="space-y-6">
