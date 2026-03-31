@@ -36,7 +36,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   def perform(
         %Oban.Job{args: %{"action" => action, "meeting_id" => meeting_id}, attempt: attempt} = job
       ) do
-    Logger.metadata(job_id: job.id, attempt: attempt)
+    Logger.metadata(job_id: job.id, attempt: attempt, user_id: nil)
 
     if Application.get_env(:tymeslot, :test_mode, false) do
       # In test mode, run synchronously to avoid SQL sandbox and Mox allowance issues
@@ -356,7 +356,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         Logger.metadata(user_id: meeting.organizer_user_id)
         Logger.info("Updating calendar event", meeting_id: meeting_id, uid: meeting.uid)
         event_data = build_event_data(meeting)
-        update_or_create_calendar_event(meeting_id, meeting.uid, event_data)
+        update_or_create_calendar_event(meeting, event_data)
 
       {:error, :not_found} ->
         {:error, :meeting_not_found}
@@ -377,22 +377,19 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     }
   end
 
-  defp update_or_create_calendar_event(meeting_id, uid, event_data) do
-    # Get the calendar integration ID from the meeting
-    {:ok, meeting} = MeetingQueries.get_meeting(meeting_id)
-
-    case calendar_module().update_event(uid, event_data, meeting) do
+  defp update_or_create_calendar_event(meeting, event_data) do
+    case calendar_module().update_event(meeting.uid, event_data, meeting) do
       :ok ->
-        Logger.info("Calendar event updated successfully", meeting_id: meeting_id)
+        Logger.info("Calendar event updated successfully", meeting_id: meeting.id)
         :ok
 
       {:ok, _result} ->
         # Backward/forward compatibility if update returns tagged tuple
-        Logger.info("Calendar event updated successfully", meeting_id: meeting_id)
+        Logger.info("Calendar event updated successfully", meeting_id: meeting.id)
         :ok
 
       {:error, :not_found} ->
-        handle_missing_event(meeting_id, event_data, meeting)
+        handle_missing_event(meeting.id, event_data, meeting)
 
       error ->
         error
@@ -482,9 +479,11 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     case calendar_module().create_event(event_data, meeting) do
       {:ok, returned_uid} ->
         Logger.info("Calendar event created successfully", meeting_id: meeting_id)
-        # Pass the returned UID to persist it
-        persist_calendar_mapping(meeting, returned_uid)
-        :ok
+
+        case persist_calendar_mapping(meeting, returned_uid) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
 
       {:error, error_type} ->
         handle_create_event_error(error_type, meeting, meeting_id, attempt)
@@ -526,7 +525,19 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
     # Send error notification email to calendar owner only
     # This helps identify persistent CalDAV issues
-    email_service_module().send_calendar_sync_error(meeting, error_reason)
+    case email_service_module().send_calendar_sync_error(meeting, error_reason) do
+      :ok ->
+        :ok
+
+      {:ok, _email} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to send calendar sync error notification",
+          meeting_id: meeting.id,
+          error: inspect(reason)
+        )
+    end
   end
 
   defp email_service_module do

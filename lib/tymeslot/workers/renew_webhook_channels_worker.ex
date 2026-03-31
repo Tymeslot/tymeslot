@@ -78,7 +78,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
     integrations
     |> Enum.with_index()
     |> Enum.reduce(0, fn {integration, index}, renewed ->
-      if index > 0, do: Process.sleep(:rand.uniform(3) * 1_000)
+      if index > 0, do: Process.sleep(Enum.random(0..30) * 1_000)
 
       case register_fn.(integration) do
         {:ok, _updated} ->

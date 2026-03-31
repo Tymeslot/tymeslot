@@ -23,14 +23,12 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
   require Logger
 
-  alias Ecto.Changeset
   alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
-  alias Tymeslot.Repo
 
   @sync_window_past_days 30
   @sync_window_future_days 60
@@ -68,20 +66,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
           event_count: length(events)
         )
 
-        case safe_process_events(integration, events) do
-          :ok ->
-            persist_sync_state(integration, next_sync_token)
-            sync_secondary_calendars(integration)
-            SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
-
-          {:error, reason} ->
-            Logger.error("Google Calendar event processing failed; sync token NOT updated",
-              calendar_integration_id: integration.id,
-              error: inspect(reason)
-            )
-
-            {:error, reason}
-        end
+        process_incremental_sync(integration, events, next_sync_token)
 
       {:error, :gone, _message} ->
         Logger.warning(
@@ -109,6 +94,28 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
             {:error, reason}
         end
 
+      {:error, :no_sync_token} ->
+        Logger.warning(
+          "Google Calendar integration has no sync token; re-registering push channel",
+          calendar_integration_id: integration.id
+        )
+
+        case google_calendar_api().register_push_channel(integration) do
+          {:ok, _updated} ->
+            :ok
+
+          {:error, :webhook_base_url_not_configured} ->
+            Logger.warning(
+              "Webhook base URL not configured; skipping channel re-registration",
+              calendar_integration_id: integration.id
+            )
+
+            :ok
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+
       {:error, :unauthorized, _message} ->
         Logger.warning("Google Calendar sync unauthorised; discarding job",
           calendar_integration_id: integration.id
@@ -133,6 +140,26 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     end
   end
 
+  defp process_incremental_sync(integration, events, next_sync_token) do
+    with :ok <- safe_process_events(integration, events),
+         :ok <- persist_sync_state(integration, next_sync_token),
+         :ok <- sync_secondary_calendars(integration) do
+      SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
+      :ok
+    else
+      {:error, reason} ->
+        Logger.error("Google Calendar event processing failed; sync token NOT updated",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
+
+      other ->
+        other
+    end
+  end
+
   defp sync_secondary_calendars(integration) do
     primary_id = integration.default_booking_calendar_id || "primary"
 
@@ -154,8 +181,10 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       Enum.reduce_while(secondary_ids, :ok, fn calendar_id, _acc ->
         case google_calendar_api().list_events(integration, calendar_id, start_time, end_time) do
           {:ok, events} ->
-            safe_process_events(integration, events)
-            {:cont, :ok}
+            case safe_process_events(integration, events) do
+              :ok -> {:cont, :ok}
+              error -> {:halt, error}
+            end
 
           {:error, :circuit_open} ->
             Logger.warning("Google Calendar circuit breaker open during secondary sync; snoozing",
@@ -186,11 +215,12 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   end
 
   defp safe_process_events(integration, events) do
-    Enum.each(events, fn event ->
-      process_event(integration, event)
+    Enum.reduce_while(events, :ok, fn event, _acc ->
+      case process_event(integration, event) do
+        :ok -> {:cont, :ok}
+        {:error, _reason} = error -> {:halt, error}
+      end
     end)
-
-    :ok
   rescue
     e ->
       {:error, Exception.message(e)}
@@ -202,6 +232,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
     Sync.reconcile(integration.id, provider_event_id, uid, :deleted)
     CalendarEventCacheQueries.delete_by_uid(integration.id, uid)
+    :ok
   end
 
   defp process_event(integration, event) do
@@ -306,12 +337,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     attrs =
       maybe_put_sync_token(%{last_external_sync_at: DateTime.utc_now(:second)}, next_sync_token)
 
-    result =
-      integration
-      |> Changeset.change(attrs)
-      |> Repo.update()
-
-    case result do
+    case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
         :ok
 

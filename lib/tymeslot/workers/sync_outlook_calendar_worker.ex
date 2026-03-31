@@ -19,7 +19,6 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
   require Logger
 
-  alias Ecto.Changeset
   alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.DatabaseQueries.MeetingQueries
@@ -29,7 +28,6 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
-  alias Tymeslot.Repo
 
   @base_url "https://graph.microsoft.com/v1.0"
 
@@ -147,7 +145,10 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
     case http_get(token, path, params, headers) do
       {:ok, %{status: status, body: body}} when status in [200, 201] ->
-        {:ok, Jason.decode!(body)}
+        case Jason.decode(body) do
+          {:ok, event} -> {:ok, event}
+          {:error, _reason} -> {:error, :invalid_json}
+        end
 
       {:ok, %{status: 401}} ->
         {:ok, :unauthorized}
@@ -183,11 +184,22 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   defp handle_event_fetched(integration, graph_resource_id, event) do
     attrs = OutlookCalendarAPI.to_cache_attrs(event, integration.id)
 
-    :ok = CalendarEventCacheQueries.upsert_batch([attrs])
-    SyncBroadcast.broadcast_cache_update(integration.user_id, [attrs.uid])
-    maybe_reconcile_time_change(integration, graph_resource_id, event)
-    update_last_sync_at(integration)
-    :ok
+    case CalendarEventCacheQueries.upsert_batch([attrs]) do
+      {:ok, _count} ->
+        SyncBroadcast.broadcast_cache_update(integration.user_id, [attrs.uid])
+        maybe_reconcile_time_change(integration, graph_resource_id, event)
+        update_last_sync_at(integration)
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to upsert Outlook event into cache",
+          calendar_integration_id: integration.id,
+          graph_resource_id: graph_resource_id,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
+    end
   end
 
   defp maybe_reconcile_time_change(integration, graph_resource_id, event) do
@@ -227,12 +239,9 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   defp parse_outlook_datetime(_unknown), do: nil
 
   defp update_last_sync_at(integration) do
-    result =
-      integration
-      |> Changeset.change(%{last_external_sync_at: DateTime.utc_now(:second)})
-      |> Repo.update()
-
-    case result do
+    case CalendarIntegrationQueries.update_sync_state(integration, %{
+           last_external_sync_at: DateTime.utc_now(:second)
+         }) do
       {:ok, _updated} ->
         :ok
 

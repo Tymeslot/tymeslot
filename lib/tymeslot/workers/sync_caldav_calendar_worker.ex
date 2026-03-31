@@ -51,7 +51,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   require Logger
 
-  alias Ecto.Changeset
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
@@ -60,7 +59,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
-  alias Tymeslot.Repo
 
   # How far back and forward to fetch events on a full sync.
   # 60 days back, 365 days forward covers meeting scheduling windows.
@@ -89,13 +87,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # ---------------------------------------------------------------------------
 
   defp sync_integration(integration) do
-    first_run = is_nil(integration.caldav_sync_tier)
-
-    if first_run do
-      jitter_ms = :rand.uniform(30) * 1_000
-      Process.sleep(jitter_ms)
-    end
-
     client = build_client(integration)
 
     case maybe_detect_tier(integration, client) do
@@ -278,12 +269,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   end
 
   defp parse_sync_collection_response(xml_body) do
-    doc =
-      try do
-        SweetXml.parse(xml_body, namespace_conformant: true)
-      catch
-        :exit, reason -> raise "XML parse failed: #{inspect(reason)}"
-      end
+    doc = SweetXml.parse(xml_body, namespace_conformant: true, dtd: :none)
 
     # Extract the new sync token from the response
     raw_sync_token = xpath(doc, ~x"//*[local-name()='sync-token']/text()"s)
@@ -388,8 +374,14 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   defp fetch_ctag(calendar_url, client) do
     case CalDAVHttp.propfind_ctag(calendar_url, client.username, client.password) do
-      {:ok, %Req.Response{body: body}} ->
+      {:ok, %Req.Response{status: status, body: body}} when status in [200, 207] ->
         parse_ctag_from_response(body)
+
+      {:ok, %Req.Response{status: status}} when status in [401, 403] ->
+        {:error, :unauthorized}
+
+      {:ok, %Req.Response{status: status}} ->
+        {:error, {:http_error, status}}
 
       {:error, :unauthorized} ->
         {:error, :unauthorized}
@@ -400,12 +392,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   end
 
   defp parse_ctag_from_response(xml_body) when is_binary(xml_body) do
-    doc =
-      try do
-        SweetXml.parse(xml_body, namespace_conformant: true)
-      catch
-        :exit, reason -> raise "XML parse failed: #{inspect(reason)}"
-      end
+    doc = SweetXml.parse(xml_body, namespace_conformant: true, dtd: :none)
 
     raw_ctag = xpath(doc, ~x"//*[local-name()='getctag']/text()"s)
     ctag = if raw_ctag == "", do: nil, else: raw_ctag
@@ -493,12 +480,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # ---------------------------------------------------------------------------
 
   defp persist_sync_tier(integration, tier) do
-    result =
-      integration
-      |> Changeset.change(%{caldav_sync_tier: tier})
-      |> Repo.update()
-
-    case result do
+    case CalendarIntegrationQueries.update_sync_state(integration, %{caldav_sync_tier: tier}) do
       {:ok, updated} ->
         updated
 
@@ -521,12 +503,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         token -> Map.put(base_attrs, :caldav_sync_token, token)
       end
 
-    result =
-      integration
-      |> Changeset.change(attrs)
-      |> Repo.update()
-
-    case result do
+    case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
         :ok
 
@@ -585,12 +562,18 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   end
 
   defp safe_process_events(integration, events, deleted_hrefs \\ []) do
-    EventProcessor.process_events(integration, events)
-    if deleted_hrefs != [], do: EventProcessor.process_deletions(integration, deleted_hrefs)
-    :ok
+    with :ok <- EventProcessor.process_events(integration, events) do
+      maybe_process_deletions(integration, deleted_hrefs)
+    end
   rescue
-    e ->
+    e in [RuntimeError, ArgumentError, MatchError] ->
       {:error, Exception.message(e)}
+  end
+
+  defp maybe_process_deletions(_integration, []), do: :ok
+
+  defp maybe_process_deletions(integration, deleted_hrefs) do
+    EventProcessor.process_deletions(integration, deleted_hrefs)
   end
 
   defp xml_escape(string) when is_binary(string) do

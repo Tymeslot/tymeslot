@@ -13,7 +13,10 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
      pruning them proactively keeps the table lean.
   """
 
-  use Oban.Worker, queue: :default, max_attempts: 1, unique: [period: 60]
+  use Oban.Worker,
+    queue: :calendar_integrations,
+    max_attempts: 1,
+    unique: [period: 86_400, states: [:available, :scheduled, :executing, :retryable]]
 
   require Logger
 

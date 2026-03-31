@@ -30,15 +30,14 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
   require Logger
 
-  alias Ecto.Changeset
   alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
-  alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
@@ -53,6 +52,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     3 => 3_600
   }
   @caldav_default_interval 900
+  @max_delta_pages 100
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
@@ -203,10 +203,19 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
       {:ok, {:ok, events, new_delta_link}} ->
         cache_attrs = build_cache_attrs_batch(events, integration.id)
 
-        with :ok <- CalendarEventCacheQueries.upsert_batch(cache_attrs) do
+        with {:ok, _count} <- CalendarEventCacheQueries.upsert_batch(cache_attrs),
+             :ok <- persist_delta_link(integration, new_delta_link) do
           uids = Enum.map(cache_attrs, & &1.uid)
           SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
-          persist_delta_link(integration, new_delta_link)
+          :ok
+        else
+          {:error, reason} ->
+            Logger.warning("Outlook delta upsert/persist failed during fallback sweep",
+              calendar_integration_id: integration.id,
+              error: inspect(reason)
+            )
+
+            :error
         end
 
       {:ok, {:error, :circuit_open}} ->
@@ -241,7 +250,13 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     end
   end
 
-  defp fetch_delta_page(token, url, accumulated) do
+  defp fetch_delta_page(token, url, accumulated, page \\ 0)
+
+  defp fetch_delta_page(_token, _url, _accumulated, page) when page >= @max_delta_pages do
+    {:error, :too_many_pages}
+  end
+
+  defp fetch_delta_page(token, url, accumulated, page) do
     uri = URI.parse(url)
     path = uri.path <> if(uri.query, do: "?#{uri.query}", else: "")
 
@@ -251,8 +266,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
       {"Prefer", "outlook.timezone=\"UTC\""}
     ]
 
-    http_client =
-      Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
+    http_client = Application.get_env(:tymeslot, :http_client_module, HTTPClient)
 
     case http_client.request(:get, "https://graph.microsoft.com" <> path, "", headers, []) do
       {:ok, %{status: status, body: body}} when status in [200, 201] ->
@@ -262,17 +276,17 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
             {:error, :invalid_json}
 
           {:ok, response} ->
-            events = accumulated ++ (response["value"] || [])
+            events = [response["value"] || [] | accumulated]
 
             cond do
               new_delta_link = response["@odata.deltaLink"] ->
-                {:ok, events, new_delta_link}
+                {:ok, List.flatten(events), new_delta_link}
 
               next_link = response["@odata.nextLink"] ->
-                fetch_delta_page(token, next_link, events)
+                fetch_delta_page(token, next_link, events, page + 1)
 
               true ->
-                {:ok, events, nil}
+                {:ok, List.flatten(events), nil}
             end
         end
 
@@ -296,15 +310,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   defp persist_delta_link(_integration, nil), do: :ok
 
   defp persist_delta_link(integration, new_delta_link) do
-    result =
-      integration
-      |> Changeset.change(%{
-        graph_delta_link: new_delta_link,
-        last_external_sync_at: DateTime.utc_now(:second)
-      })
-      |> Repo.update()
-
-    case result do
+    case CalendarIntegrationQueries.update_delta_link(integration, new_delta_link) do
       {:ok, _updated} ->
         :ok
 
@@ -314,7 +320,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
           error: inspect(changeset)
         )
 
-        :error
+        {:error, :delta_link_persistence_failed}
     end
   end
 end

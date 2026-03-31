@@ -13,7 +13,8 @@ defmodule Tymeslot.Workers.DeadChannelAlertWorker do
 
   use Oban.Worker,
     queue: :calendar_integrations,
-    max_attempts: 1
+    max_attempts: 1,
+    unique: [period: 21_600, states: [:available, :scheduled, :executing, :retryable]]
 
   require Logger
 
@@ -24,8 +25,8 @@ defmodule Tymeslot.Workers.DeadChannelAlertWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@silence_threshold_hours * 3600)
-    meeting_since = DateTime.add(DateTime.utc_now(), -@meeting_lookback_hours * 3600)
+    cutoff = DateTime.add(DateTime.utc_now(), -@silence_threshold_hours * 3600, :second)
+    meeting_since = DateTime.add(DateTime.utc_now(), -@meeting_lookback_hours * 3600, :second)
 
     dead_google = CalendarIntegrationQueries.list_silent_google_channels(cutoff, meeting_since)
 
@@ -37,7 +38,7 @@ defmodule Tymeslot.Workers.DeadChannelAlertWorker do
         calendar_integration_id: integration.id,
         provider: integration.provider,
         user_id: integration.user_id,
-        last_notification_at: inspect(notification_timestamp(integration))
+        last_notification_at: format_timestamp(notification_timestamp(integration))
       )
     end)
 
@@ -55,4 +56,7 @@ defmodule Tymeslot.Workers.DeadChannelAlertWorker do
   defp notification_timestamp(%{provider: "google"} = i), do: i.last_google_notification_at
   defp notification_timestamp(%{provider: "outlook"} = i), do: i.last_outlook_notification_at
   defp notification_timestamp(_integration), do: nil
+
+  defp format_timestamp(nil), do: "never"
+  defp format_timestamp(%DateTime{} = dt), do: DateTime.to_iso8601(dt)
 end
