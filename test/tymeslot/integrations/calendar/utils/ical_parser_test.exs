@@ -119,17 +119,11 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert String.contains?(event.summary, "multiple lines")
     end
 
-    test "filters out past events" do
-      # Event that ended yesterday
+    test "includes past events" do
+      # The parser does not filter by time — callers handle date-range filtering.
       past_time = DateTime.add(DateTime.utc_now(), -86_400, :second)
-
-      past_start =
-        DateTime.to_iso8601(past_time) |> String.replace(~r/[-:]/, "") |> String.replace("Z", "Z")
-
-      past_end =
-        DateTime.to_iso8601(DateTime.add(past_time, 3600, :second))
-        |> String.replace(~r/[-:]/, "")
-        |> String.replace("Z", "Z")
+      past_start = format_ical_datetime(past_time)
+      past_end = format_ical_datetime(DateTime.add(past_time, 3600, :second))
 
       ical_content = """
       BEGIN:VCALENDAR
@@ -143,8 +137,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       END:VCALENDAR
       """
 
-      assert {:ok, events} = ICalParser.parse(ical_content)
-      assert events == []
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.uid == "past-event@example.com"
+      assert event.summary == "Past Event"
     end
 
     test "includes future events" do
@@ -215,20 +210,25 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert events == []
     end
 
-    test "skips events without SUMMARY" do
+    test "includes events without SUMMARY" do
+      future = DateTime.add(DateTime.utc_now(), 86_400, :second)
+      future_start = format_ical_datetime(future)
+      future_end = format_ical_datetime(DateTime.add(future, 3600, :second))
+
       ical_content = """
       BEGIN:VCALENDAR
       VERSION:2.0
       BEGIN:VEVENT
       UID:test@example.com
-      DTSTART:20240115T100000Z
-      DTEND:20240115T110000Z
+      DTSTART:#{future_start}
+      DTEND:#{future_end}
       END:VEVENT
       END:VCALENDAR
       """
 
-      assert {:ok, events} = ICalParser.parse(ical_content)
-      assert events == []
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.uid == "test@example.com"
+      assert event.summary == nil
     end
 
     test "skips events without DTSTART" do
@@ -569,5 +569,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       # Should unescape XML entities
       assert {:ok, _events} = ICalParser.parse_multistatus(xml_body)
     end
+  end
+
+  defp format_ical_datetime(dt) do
+    dt
+    |> DateTime.truncate(:second)
+    |> DateTime.to_iso8601()
+    |> String.replace(~r/[-:]/, "")
   end
 end

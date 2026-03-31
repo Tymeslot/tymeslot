@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
 
   alias Tymeslot.Integrations.Calendar.Outlook.Provider
 
+  setup :set_mox_from_context
   setup :verify_on_exit!
 
   describe "validate_oauth_scope/1" do

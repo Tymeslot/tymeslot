@@ -384,6 +384,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
                  })
       after
         Application.put_env(:tymeslot, :test_mode, original_test_mode)
+        Mox.set_mox_private()
       end
     end
   end

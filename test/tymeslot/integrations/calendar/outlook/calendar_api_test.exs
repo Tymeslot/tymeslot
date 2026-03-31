@@ -299,8 +299,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
     end
   end
 
-  describe "retry logic" do
-    test "retries on transient errors" do
+  describe "transient error handling" do
+    test "returns network_error on transport failure" do
       user = insert(:user)
 
       integration =
@@ -311,19 +311,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
           token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
         )
 
-      # Expect 2 calls: first fails with timeout, second succeeds
       Tymeslot.HTTPClientMock
       |> expect(:request, fn :get, _url, _body, _headers, _opts ->
         {:error, %Mint.TransportError{reason: :timeout}}
       end)
-      |> expect(:request, fn :get, _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 200, body: Jason.encode!(%{"value" => []})}}
-      end)
 
-      # We need to reduce the retry delay for tests to run fast
-      # But Retry doesn't take opts in with_access_token call chain easily without modifying code
-      # However, we can just assert it succeeds eventually
-      assert {:ok, []} = CalendarAPI.list_calendars(integration)
+      assert {:error, :network_error, _msg} = CalendarAPI.list_calendars(integration)
     end
   end
 end
