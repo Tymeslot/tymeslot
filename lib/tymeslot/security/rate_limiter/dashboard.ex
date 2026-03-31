@@ -132,8 +132,9 @@ defmodule Tymeslot.Security.RateLimiter.Dashboard do
 
   def check_reschedule(user_id), do: Helpers.invalid_user_id("reschedule request", user_id)
 
-  @spec check_meeting_filter(integer()) :: :ok | {:error, :rate_limited, String.t()}
-  def check_meeting_filter(user_id) do
+  @spec check_meeting_filter(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
+  def check_meeting_filter(user_id) when is_integer(user_id) and user_id > 0 do
     Helpers.check_with_logging(
       "meeting_filter:#{user_id}",
       100,
@@ -142,6 +143,8 @@ defmodule Tymeslot.Security.RateLimiter.Dashboard do
       to_string(user_id)
     )
   end
+
+  def check_meeting_filter(user_id), do: Helpers.invalid_user_id("meeting filter", user_id)
 
   @spec check_theme_customization(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
@@ -158,11 +161,15 @@ defmodule Tymeslot.Security.RateLimiter.Dashboard do
   def check_theme_customization(user_id),
     do: Helpers.invalid_user_id("theme customization", user_id)
 
-  @spec check_payment_initiation(integer()) :: :ok | {:error, :rate_limited}
-  def check_payment_initiation(user_id) do
+  @spec check_payment_initiation(integer() | any()) ::
+          :ok | {:error, :rate_limited} | {:error, :invalid_user_id}
+  def check_payment_initiation(user_id) when is_integer(user_id) and user_id > 0 do
     config = Application.get_env(:tymeslot, :payment_rate_limits, [])
     max_attempts = Keyword.get(config, :max_attempts, 5)
     window_ms = Keyword.get(config, :window_ms, 600_000)
     Helpers.check_rate_limit("payment_initiation:user:#{user_id}", max_attempts, window_ms)
   end
+
+  def check_payment_initiation(user_id),
+    do: Helpers.invalid_user_id("payment initiation", user_id)
 end

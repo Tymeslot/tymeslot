@@ -265,8 +265,8 @@ defmodule Tymeslot.Security.RateLimiter do
   Prevents abuse by limiting how often filter changes can be made.
   Generous limit of 100 filter changes per 5 minutes per user to allow normal browsing.
   """
-  @spec check_meeting_filter_rate_limit(integer()) ::
-          :ok | {:error, :rate_limited, String.t()}
+  @spec check_meeting_filter_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_meeting_filter_rate_limit(user_id), do: Dashboard.check_meeting_filter(user_id)
 
   @doc """
@@ -370,8 +370,8 @@ defmodule Tymeslot.Security.RateLimiter do
   Prevents abuse by limiting how often users can initiate payment or subscription checkouts.
   This protects against API spam and potential DoS attacks via the payment endpoint.
   """
-  @spec check_payment_initiation_rate_limit(integer()) ::
-          :ok | {:error, :rate_limited}
+  @spec check_payment_initiation_rate_limit(integer() | any()) ::
+          :ok | {:error, :rate_limited} | {:error, :invalid_user_id}
   def check_payment_initiation_rate_limit(user_id),
     do: Dashboard.check_payment_initiation(user_id)
 end

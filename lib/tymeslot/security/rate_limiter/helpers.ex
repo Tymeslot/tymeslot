@@ -78,7 +78,7 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
 
   @spec apply_limits(bucket_key(), list(), String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
-  def apply_limits(bucket_base, limits, operation) do
+  defp apply_limits(bucket_base, limits, operation) do
     Enum.reduce_while(limits, :ok, fn {label, limit, window_ms}, _acc ->
       case check_rate_limit("#{bucket_base}:#{label}", limit, window_ms) do
         :ok ->
