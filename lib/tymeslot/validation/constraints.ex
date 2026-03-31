@@ -36,16 +36,32 @@ defmodule Tymeslot.Validation.Constraints do
   # Ecto-ready options (for validate_number/3)
 
   @spec buffer_minutes_opts() :: keyword()
-  def buffer_minutes_opts, do: [greater_than_or_equal_to: 0, less_than_or_equal_to: 120]
+  def buffer_minutes_opts do
+    range = buffer_minutes_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
 
   @spec advance_booking_days_opts() :: keyword()
-  def advance_booking_days_opts, do: [greater_than_or_equal_to: 1, less_than_or_equal_to: 365]
+  def advance_booking_days_opts do
+    range = advance_booking_days_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
 
   @spec min_advance_hours_opts() :: keyword()
-  def min_advance_hours_opts, do: [greater_than_or_equal_to: 0, less_than_or_equal_to: 168]
+  def min_advance_hours_opts do
+    range = min_advance_hours_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
 
   @spec duration_minutes_opts() :: keyword()
-  def duration_minutes_opts, do: [greater_than_or_equal_to: 1, less_than_or_equal_to: 480]
+  def duration_minutes_opts do
+    range = duration_minutes_range()
+    [greater_than_or_equal_to: range.first, less_than_or_equal_to: range.last]
+  end
+
+  @doc "Minimum duration exposed in the meeting type form (step=5, so 1-4 min is impractical)."
+  @spec duration_minutes_form_min() :: pos_integer()
+  def duration_minutes_form_min, do: 5
 
   # Field lengths
 
@@ -62,7 +78,10 @@ defmodule Tymeslot.Validation.Constraints do
   def webhook_name_length_range, do: 1..255
 
   @spec webhook_name_length_opts() :: keyword()
-  def webhook_name_length_opts, do: [min: 1, max: 255]
+  def webhook_name_length_opts do
+    range = webhook_name_length_range()
+    [min: range.first, max: range.last]
+  end
 
   @spec url_max_length() :: pos_integer()
   def url_max_length, do: 2048
@@ -78,4 +97,16 @@ defmodule Tymeslot.Validation.Constraints do
 
   @spec description_max_length() :: pos_integer()
   def description_max_length, do: 500
+
+  @spec name_length_opts() :: keyword()
+  def name_length_opts do
+    range = name_length_range()
+    [min: range.first, max: range.last]
+  end
+
+  @spec break_label_max_length() :: pos_integer()
+  def break_label_max_length, do: 50
+
+  @spec override_reason_max_length() :: pos_integer()
+  def override_reason_max_length, do: 100
 end

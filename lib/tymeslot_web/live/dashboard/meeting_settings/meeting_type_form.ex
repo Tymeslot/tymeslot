@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
   alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import TymeslotWeb.Dashboard.MeetingSettings.Components
@@ -60,7 +61,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
           label="Name"
           value={Map.get(@form_data, "name", if(@type, do: @type.name, else: ""))}
           required
-          maxlength="100"
+          maxlength={Constraints.name_length_opts()[:max]}
           placeholder="e.g., Quick Chat"
           phx-change="validate_meeting_type"
           phx-target={@myself}
@@ -77,8 +78,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
             name="meeting_type[duration]"
             label="Duration (minutes)"
             value={Map.get(@form_data, "duration", if(@type, do: @type.duration_minutes, else: "30"))}
-            min="5"
-            max="480"
+            min={Constraints.duration_minutes_form_min()}
+            max={Constraints.duration_minutes_opts()[:less_than_or_equal_to]}
             step="5"
             required
             placeholder="30"
@@ -91,7 +92,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
             icon="hero-clock"
           />
           <p class="mt-1 text-token-sm text-tymeslot-600">
-            Enter a duration between 5 and 480 minutes
+            Enter a duration between {Constraints.duration_minutes_form_min()} and {Constraints.duration_minutes_opts()[:less_than_or_equal_to]} minutes
           </p>
         </div>
       </div>
@@ -100,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         name="meeting_type[description]"
         label="Description (optional)"
         value={Map.get(@form_data, "description", if(@type, do: @type.description, else: ""))}
-        maxlength="500"
+        maxlength={Constraints.description_max_length()}
         placeholder="Brief description of this meeting type"
         phx-change="validate_meeting_type"
         phx-target={@myself}

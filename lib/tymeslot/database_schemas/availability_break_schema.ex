@@ -8,6 +8,7 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityBreakSchema do
   alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.DatabaseQueries.AvailabilityBreakQueries
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
+  alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -67,6 +68,7 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityBreakSchema do
   end
 
   defp validate_label(changeset) do
-    validate_length(changeset, :label, max: 50, message: "must be 50 characters or less")
+    max = Constraints.break_label_max_length()
+    validate_length(changeset, :label, max: max, message: "must be #{max} characters or less")
   end
 end

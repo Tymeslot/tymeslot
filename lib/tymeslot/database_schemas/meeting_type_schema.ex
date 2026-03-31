@@ -80,8 +80,8 @@ defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchema do
       :reminder_config
     ])
     |> validate_required([:name, :duration_minutes, :user_id])
-    |> validate_length(:name, min: 1, max: 100)
-    |> validate_length(:description, max: 500)
+    |> validate_length(:name, Constraints.name_length_opts())
+    |> validate_length(:description, max: Constraints.description_max_length())
     |> validate_number(:duration_minutes, Constraints.duration_minutes_opts())
     |> validate_number(:sort_order, greater_than_or_equal_to: 0)
     |> validate_inclusion(:icon, @valid_icons, message: "must be one of the available icons")

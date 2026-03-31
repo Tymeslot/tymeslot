@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
 
   alias Phoenix.LiveView.JS
   alias Tymeslot.Telegram
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -119,6 +120,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramFormComponent do
                 value={Map.get(@form_values, "name", "")}
                 phx-blur={JS.push("validate_telegram_field", value: %{"field" => "name"}, target: @parent_component)}
                 placeholder="My Telegram Notifications"
+                maxlength={Constraints.webhook_name_length_opts()[:max]}
                 required
                 errors={FormValidationHelpers.field_errors(@form_errors, :name)}
                 icon="hero-tag"

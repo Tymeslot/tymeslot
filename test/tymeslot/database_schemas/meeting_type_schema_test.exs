@@ -32,7 +32,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchemaTest do
 
       changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
       refute changeset.valid?
-      assert "must be greater than 0" in errors_on(changeset).duration_minutes
+      assert "must be greater than or equal to 1" in errors_on(changeset).duration_minutes
     end
 
     test "prevents duplicate meeting type names per user" do

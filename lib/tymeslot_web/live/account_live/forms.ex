@@ -4,6 +4,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
   Provides reusable form fields and submission buttons.
   """
   use Phoenix.Component
+  alias Tymeslot.Validation.Constraints
   import TymeslotWeb.Components.CoreComponents
 
   @doc """
@@ -68,7 +69,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
         label="New Password"
         placeholder="At least 8 characters"
         errors={Map.get(@errors, :new_password) || []}
-        minlength={8}
+        minlength={Constraints.password_length_range().first}
         required
         icon="hero-lock-closed"
       />
@@ -79,7 +80,7 @@ defmodule TymeslotWeb.AccountLive.Forms do
         label="Confirm New Password"
         placeholder="Confirm your new password"
         errors={Map.get(@errors, :new_password_confirmation) || []}
-        minlength={8}
+        minlength={Constraints.password_length_range().first}
         required
         icon="hero-lock-closed"
       />
