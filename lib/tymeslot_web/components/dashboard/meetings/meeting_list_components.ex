@@ -115,6 +115,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   def meeting_card(assigns) do
     ~H"""
     <div class="card-glass hover:bg-white hover:border-turquoise-100 hover:shadow-2xl hover:shadow-turquoise-500/5 group/card">
+      <.calendar_sync_banner
+        :if={
+          @meeting.calendar_sync_status in ["externally_deleted", "externally_modified"] and
+            is_nil(@meeting.calendar_sync_status_dismissed_at)
+        }
+        meeting={@meeting}
+        target={@target}
+      />
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
         <div class="flex-1">
           <div class="flex items-center gap-3 flex-wrap mb-6">
@@ -239,6 +247,43 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
           <% end %>
         </div>
       </div>
+    </div>
+    """
+  end
+
+  attr :meeting, :map, required: true
+  attr :target, :any, required: true
+
+  defp calendar_sync_banner(assigns) do
+    ~H"""
+    <div class={[
+      "flex items-start justify-between gap-4 rounded-2xl px-5 py-4 mb-6 border-2",
+      if(@meeting.calendar_sync_status == "externally_deleted",
+        do: "bg-red-50 border-red-200 text-red-800",
+        else: "bg-amber-50 border-amber-200 text-amber-800"
+      )
+    ]}>
+      <p class="font-medium text-token-sm">
+        <%= if @meeting.calendar_sync_status == "externally_deleted" do %>
+          This meeting's event was deleted from your external calendar.
+        <% else %>
+          This meeting's event was rescheduled in your external calendar.
+        <% end %>
+      </p>
+      <button
+        phx-click="dismiss_calendar_sync_banner"
+        phx-value-id={@meeting.id}
+        phx-target={@target}
+        class={[
+          "flex-shrink-0 text-token-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-token-lg border transition-colors",
+          if(@meeting.calendar_sync_status == "externally_deleted",
+            do: "border-red-300 hover:bg-red-100",
+            else: "border-amber-300 hover:bg-amber-100"
+          )
+        ]}
+      >
+        Dismiss
+      </button>
     </div>
     """
   end

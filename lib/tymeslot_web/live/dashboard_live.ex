@@ -153,6 +153,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Dashboard.{
     AutomationSettingsComponent,
     BookingsManagementComponent,
+    CalendarGridComponent,
     CalendarSettingsComponent,
     DashboardOverviewComponent,
     ProfileSettingsComponent,
@@ -162,6 +163,7 @@ defmodule TymeslotWeb.DashboardLive do
     VideoSettingsComponent
   }
 
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Live.Dashboard.EmbedSettingsComponent
 
   require Logger
@@ -178,6 +180,19 @@ defmodule TymeslotWeb.DashboardLive do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_params(params, _url, socket) do
     action = socket.assigns.live_action
+
+    socket =
+      if connected?(socket) && action == :calendar &&
+           !socket.assigns[:calendar_pubsub_subscribed] do
+        Phoenix.PubSub.subscribe(
+          Tymeslot.PubSub,
+          "calendar_events:#{socket.assigns.current_user.id}"
+        )
+
+        assign(socket, :calendar_pubsub_subscribed, true)
+      else
+        socket
+      end
 
     socket =
       socket
@@ -207,12 +222,13 @@ defmodule TymeslotWeb.DashboardLive do
       current_action={@live_action}
       integration_status={@integration_status}
       automations_allowed={@automations_allowed}
+      full_width={@live_action == :calendar}
       sidebar_extensions={@sidebar_extensions}
     >
       <.flash_group flash={@flash} id="dashboard-flash-group" />
 
       <%!-- Content --%>
-      <div class="dashboard-content">
+      <div class={if @live_action == :calendar, do: "flex-1 flex flex-col min-h-0", else: "dashboard-content"}>
         <%= if @should_render_feature do %>
           <.live_component
             module={@component_module}
@@ -375,6 +391,112 @@ defmodule TymeslotWeb.DashboardLive do
     {:noreply, socket}
   end
 
+  @spec handle_info(:tick, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info(:tick, socket) do
+    if socket.assigns.live_action == :calendar do
+      Process.send_after(self(), :tick, 60_000)
+
+      send_update(CalendarGridComponent,
+        id: "calendar",
+        current_time: DateTime.utc_now()
+      )
+    end
+
+    {:noreply, socket}
+  end
+
+  @spec handle_info({:calendar_events_updated, any(), any()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket) do
+    if socket.assigns.live_action == :calendar do
+      send_update(CalendarGridComponent,
+        id: "calendar",
+        action: :events_updated
+      )
+    end
+
+    {:noreply, socket}
+  end
+
+  @spec handle_info({:calendar_sync_complete, any(), any()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:calendar_sync_complete, _user_id, _integration_id}, socket) do
+    if socket.assigns.live_action == :calendar do
+      send_update(CalendarGridComponent,
+        id: "calendar",
+        action: :integration_synced
+      )
+    end
+
+    {:noreply, socket}
+  end
+
+  @spec handle_info(
+          {:event_update_result, :ok | {:error, keyword()}},
+          Phoenix.LiveView.Socket.t()
+        ) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:event_update_result, :ok}, socket), do: {:noreply, socket}
+
+  def handle_info({:event_update_result, {:error, payload}}, socket) do
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :revert_event,
+      original_event: payload[:original_event]
+    )
+
+    {:noreply, put_flash(socket, :error, "Failed to update event — changes reverted")}
+  end
+
+  @spec handle_info(:calendar_sync_flash, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info(:calendar_sync_flash, socket) do
+    {:noreply, put_flash(socket, :info, "Calendars refreshed")}
+  end
+
+  @spec handle_info(:reset_calendar_sync, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info(:reset_calendar_sync, socket) do
+    if socket.assigns.live_action == :calendar do
+      send_update(CalendarGridComponent,
+        id: "calendar",
+        action: :refresh_events
+      )
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:event_move_result, {:ok, new_event_info}}, socket) do
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :event_moved,
+      new_event_uid: new_event_info[:uid],
+      new_event_integration_id: new_event_info[:integration_id]
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:event_move_result, {:error, payload}}, socket) do
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :revert_event,
+      original_event: payload[:original_event]
+    )
+
+    {:noreply, put_flash(socket, :error, "Failed to move event")}
+  end
+
+  def handle_info({:execute_create_event, payload}, socket) do
+    EventCrud.execute_create_event(payload, socket)
+  end
+
+  def handle_info({:execute_delete_event, payload}, socket) do
+    EventCrud.execute_delete_event(payload, socket)
+  end
+
   @spec handle_info(any(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_info(_msg, socket) do
@@ -445,7 +567,8 @@ defmodule TymeslotWeb.DashboardLive do
   defp component_for_action(:settings, _components), do: ProfileSettingsComponent
   defp component_for_action(:availability, _components), do: ScheduleSettingsComponent
   defp component_for_action(:meeting_settings, _components), do: ServiceSettingsComponent
-  defp component_for_action(:calendar, _components), do: CalendarSettingsComponent
+  defp component_for_action(:calendar, _components), do: CalendarGridComponent
+  defp component_for_action(:calendar_integration, _components), do: CalendarSettingsComponent
   defp component_for_action(:video, _components), do: VideoSettingsComponent
   defp component_for_action(:automation, _components), do: AutomationSettingsComponent
   defp component_for_action(:theme, _components), do: ThemeSettingsComponent

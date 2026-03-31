@@ -90,4 +90,22 @@
   .btn-tag-selector-tertiary--active {
     @apply bg-blue-50 text-blue-700 border-blue-200 shadow-sm;
   }
+
+  /* Mode Tab Bar */
+  .mode-tab-bar {
+    @apply w-full px-4 py-2 mb-4;
+  }
+
+  .mode-tab {
+    @apply inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200;
+  }
+
+  .mode-tab--active {
+    @apply text-white shadow-lg shadow-turquoise-500/30;
+    background: linear-gradient(to right, var(--mode-tab-active-from), var(--mode-tab-active-to));
+  }
+
+  .mode-tab--inactive {
+    @apply text-slate-500 hover:bg-turquoise-50 hover:text-turquoise-700;
+  }
 }

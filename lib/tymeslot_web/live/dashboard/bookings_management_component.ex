@@ -191,6 +191,16 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     end
   end
 
+  def handle_event("dismiss_calendar_sync_banner", %{"id" => meeting_id}, socket) do
+    case Meetings.dismiss_calendar_sync_status(meeting_id, socket.assigns.current_user.id) do
+      {:ok, updated_meeting} ->
+        {:noreply, LiveView.stream_insert(socket, :meetings, updated_meeting)}
+
+      {:error, _reason} ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("load_more", _params, %{assigns: %{loading_more: true}} = socket) do
     {:noreply, socket}
   end

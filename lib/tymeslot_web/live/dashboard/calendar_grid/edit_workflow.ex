@@ -1,0 +1,316 @@
+defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
+  @moduledoc "Drag, resize, create, and inline-edit workflow functions for CalendarGridComponent."
+
+  import Phoenix.Component, only: [assign: 3]
+
+  alias Tymeslot.CalendarGrid
+  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+
+  @spec default_integration_id(Phoenix.LiveView.Socket.t()) :: integer() | nil
+  def default_integration_id(socket) do
+    case socket.assigns.integrations do
+      [first | _rest] -> first.id
+      [] -> nil
+    end
+  end
+
+  @spec default_calendar_id(list(), integer() | nil) :: String.t() | nil
+  def default_calendar_id(_integrations, nil), do: nil
+
+  def default_calendar_id(integrations, integration_id) do
+    case Enum.find(integrations, &(&1.id == integration_id)) do
+      nil -> nil
+      integration -> default_calendar_id_for(integration)
+    end
+  end
+
+  @spec default_calendar_id_for(map()) :: String.t() | nil
+  def default_calendar_id_for(integration) do
+    integration.default_booking_calendar_id ||
+      find_primary_calendar_id(integration.calendar_list)
+  end
+
+  defp find_primary_calendar_id(nil), do: nil
+  defp find_primary_calendar_id([]), do: nil
+
+  defp find_primary_calendar_id(calendar_list) do
+    primary = Enum.find(calendar_list, &(&1["primary"] || &1[:primary]))
+    selected = primary || Enum.find(calendar_list, &(&1["selected"] || &1[:selected]))
+    cal = selected || List.first(calendar_list)
+    cal["id"] || cal[:id]
+  end
+
+  @spec format_create_time(map()) :: String.t()
+  def format_create_time(creating) do
+    "#{format_time_value(creating.start_hour, creating.start_minute)} \u2013 #{format_time_value(creating.end_hour, creating.end_minute)}"
+  end
+
+  @spec format_time_value(integer(), integer()) :: String.t()
+  def format_time_value(hour, minute) do
+    "#{String.pad_leading("#{hour}", 2, "0")}:#{String.pad_leading("#{minute}", 2, "0")}"
+  end
+
+  @spec with_editable_event(Phoenix.LiveView.Socket.t(), map(), function()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def with_editable_event(socket, params, fun) do
+    event_id = String.to_integer(params["event-id"])
+    event = Enum.find(socket.assigns.events, &(&1.id == event_id))
+
+    cond do
+      is_nil(event) ->
+        {:noreply, socket}
+
+      assert_owns_event(socket, event) == {:error, :unauthorized} ->
+        send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+        {:noreply, socket}
+
+      true ->
+        {:noreply, fun.(event)}
+    end
+  end
+
+  @spec apply_event_change(Phoenix.LiveView.Socket.t(), map(), map(), DateTime.t(), DateTime.t()) ::
+          Phoenix.LiveView.Socket.t()
+  def apply_event_change(socket, event, optimistic_event, new_start, new_end) do
+    original_events = socket.assigns.events
+
+    new_events =
+      Enum.map(original_events, fn e ->
+        if e.id == event.id, do: optimistic_event, else: e
+      end)
+
+    socket =
+      socket
+      |> assign(:events, new_events)
+      |> Helpers.precompute_derived()
+
+    if event.recurring_event_id do
+      prompt = %{
+        event: event,
+        optimistic_event: optimistic_event,
+        new_start: new_start,
+        new_end: new_end,
+        original_event: event
+      }
+
+      assign(socket, :recurrence_prompt, prompt)
+    else
+      update_event_async(socket, event, optimistic_event, new_start, new_end)
+    end
+  end
+
+  @spec assert_owns_event(Phoenix.LiveView.Socket.t(), map()) :: :ok | {:error, :unauthorized}
+  def assert_owns_event(socket, event) do
+    if MapSet.member?(socket.assigns.owned_integration_ids, event.calendar_integration_id) do
+      :ok
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  @spec update_event_async(
+          Phoenix.LiveView.Socket.t(),
+          map(),
+          map(),
+          DateTime.t(),
+          DateTime.t(),
+          keyword()
+        ) ::
+          Phoenix.LiveView.Socket.t()
+  def update_event_async(socket, original_event, optimistic_event, new_start, new_end, opts \\ []) do
+    recurrence_scope = Keyword.get(opts, :recurrence_scope)
+    user_id = socket.assigns.current_user.id
+    lv_pid = self()
+
+    base_event_data = %{
+      summary: optimistic_event.title || "",
+      start_time: new_start,
+      end_time: new_end,
+      description: original_event.description || "",
+      location: original_event.location || "",
+      provider_event_id: original_event.provider_event_id
+    }
+
+    event_data =
+      if recurrence_scope do
+        Map.put(base_event_data, :recurrence_scope, recurrence_scope)
+      else
+        base_event_data
+      end
+
+    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      result =
+        EventOperations.update_event(
+          original_event.uid,
+          event_data,
+          {original_event.calendar_integration_id, user_id}
+        )
+
+      case result do
+        :ok ->
+          CalendarEventCacheQueries.upsert_batch([
+            %{
+              uid: original_event.uid,
+              calendar_integration_id: original_event.calendar_integration_id,
+              provider_event_id: original_event.provider_event_id,
+              title: optimistic_event.title,
+              start_at: new_start,
+              end_at: new_end,
+              all_day: optimistic_event.all_day,
+              location: original_event.location,
+              description: original_event.description,
+              attendees: original_event.attendees || [],
+              status: original_event.status,
+              raw_data: original_event.raw_data,
+              synced_at: DateTime.utc_now(:second)
+            }
+          ])
+
+          send(lv_pid, {:event_update_result, :ok})
+
+        {:error, reason} ->
+          send(
+            lv_pid,
+            {:event_update_result, {:error, original_event: original_event, reason: reason}}
+          )
+      end
+    end)
+
+    socket
+  end
+
+  @spec update_field_async(Phoenix.LiveView.Socket.t(), map(), atom(), String.t()) ::
+          Phoenix.LiveView.Socket.t()
+  def update_field_async(socket, original_event, field, new_value)
+      when field in [:title, :location, :description] do
+    user_id = socket.assigns.current_user.id
+    lv_pid = self()
+    event_data = build_field_event_data(original_event, field, new_value)
+    cache_row = build_field_cache_row(original_event, field, new_value)
+
+    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      result =
+        EventOperations.update_event(
+          original_event.uid,
+          event_data,
+          {original_event.calendar_integration_id, user_id}
+        )
+
+      case result do
+        :ok ->
+          CalendarEventCacheQueries.upsert_batch([cache_row])
+          send(lv_pid, {:event_update_result, :ok})
+
+        {:error, reason} ->
+          send(
+            lv_pid,
+            {:event_update_result, {:error, original_event: original_event, reason: reason}}
+          )
+      end
+    end)
+
+    socket
+  end
+
+  @doc """
+  Moves an event from one integration to another via delete + create.
+  Runs asynchronously; sends `{:event_move_result, ...}` to the LiveView.
+  """
+  @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), integer()) ::
+          Phoenix.LiveView.Socket.t()
+  def move_event_async(socket, event, new_integration_id, opts \\ []) do
+    user_id = socket.assigns.current_user.id
+    lv_pid = self()
+    new_calendar_id = opts[:calendar_id]
+
+    event_attrs = %{
+      summary: event.title || "",
+      start_time: event.start_at,
+      end_time: event.end_at,
+      description: event.description || "",
+      location: event.location || "",
+      all_day: event.all_day || false,
+      calendar_id: new_calendar_id
+    }
+
+    delete_opts =
+      if event.provider_event_id,
+        do: [provider_event_id: event.provider_event_id],
+        else: []
+
+    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      with :ok <-
+             EventOperations.delete_event(
+               event.uid,
+               {event.calendar_integration_id, user_id},
+               delete_opts
+             ),
+           {:ok, created} <-
+             EventOperations.create_event(
+               Map.put(event_attrs, :calendar_integration_id, new_integration_id),
+               {new_integration_id, user_id}
+             ) do
+        CalendarGrid.delete_cached_event(event.calendar_integration_id, event.uid)
+
+        uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
+
+        CalendarGrid.cache_created_event(%{
+          uid: uid,
+          calendar_integration_id: new_integration_id,
+          title: event.title,
+          start_at: event.start_at,
+          end_at: event.end_at,
+          all_day: event.all_day || false
+        })
+
+        send(lv_pid, {:event_move_result, {:ok, uid: uid, integration_id: new_integration_id}})
+      else
+        {:error, reason} ->
+          send(lv_pid, {:event_move_result, {:error, original_event: event, reason: reason}})
+      end
+    end)
+
+    socket
+  end
+
+  defp build_field_event_data(event, field, new_value) do
+    base = %{
+      summary: event.title || "",
+      start_time: event.start_at,
+      end_time: event.end_at,
+      description: event.description || "",
+      location: event.location || "",
+      provider_event_id: event.provider_event_id
+    }
+
+    case field do
+      :title -> %{base | summary: new_value}
+      :location -> %{base | location: new_value}
+      :description -> %{base | description: new_value}
+    end
+  end
+
+  defp build_field_cache_row(event, field, new_value) do
+    Map.put(
+      %{
+        uid: event.uid,
+        calendar_integration_id: event.calendar_integration_id,
+        provider_event_id: event.provider_event_id,
+        title: event.title,
+        start_at: event.start_at,
+        end_at: event.end_at,
+        all_day: event.all_day,
+        location: event.location,
+        description: event.description,
+        attendees: event.attendees || [],
+        status: event.status,
+        raw_data: event.raw_data,
+        synced_at: DateTime.utc_now(:second)
+      },
+      field,
+      new_value
+    )
+  end
+end

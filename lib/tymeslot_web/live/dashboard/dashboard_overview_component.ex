@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
             />
 
             <.action_link
-              patch={~p"/dashboard/calendar"}
+              patch={~p"/dashboard/calendar-integration"}
               icon={:calendar}
               title="Calendar Integration"
               description="Connect your external calendars"
@@ -106,7 +106,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
             />
 
             <.action_link
-              patch={~p"/dashboard/video"}
+              patch={~p"/dashboard/video-integration"}
               icon={:video}
               title="Video Integration"
               description="Set up your conferencing tools"

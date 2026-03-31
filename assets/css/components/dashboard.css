@@ -521,3 +521,18 @@
     animation: none;
   }
 }
+
+/* ===================================
+   CALENDAR GRID RESPONSIVE
+   =================================== */
+
+/* Responsive time-axis width for the calendar grid */
+#calendar-grid {
+  --time-axis: 4rem;
+}
+
+@media (max-width: 640px) {
+  #calendar-grid {
+    --time-axis: 3rem;
+  }
+}

@@ -626,7 +626,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
             <div class="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-token-lg">
               <p class="text-token-sm text-yellow-700">
                 No calendar integrations configured.
-                <a href={~p"/dashboard/calendar"} class="underline hover:text-yellow-800">
+                <a href={~p"/dashboard/calendar-integration"} class="underline hover:text-yellow-800">
                   Connect a calendar
                 </a>
               </p>

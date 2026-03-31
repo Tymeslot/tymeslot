@@ -271,5 +271,33 @@
   --oauth-button-border: rgba(255, 255, 255, 0.18);
   --oauth-button-border-hover: rgba(255, 255, 255, 0.25);
   --oauth-button-text: rgba(255, 255, 255, 0.95);
+
+  /* Calendar Integration Colors
+     8-color palette for distinguishing calendar integrations in the grid.
+     Mapped to Tailwind as bg-calendar-1 … bg-calendar-8. */
+  --color-calendar-1: #14b8a6;   /* turquoise — brand primary */
+  --color-calendar-2: #3b82f6;   /* blue */
+  --color-calendar-3: #a855f7;   /* purple */
+  --color-calendar-4: #0d9488;   /* teal */
+  --color-calendar-5: #06b6d4;   /* cyan — brand secondary */
+  --color-calendar-6: #6366f1;   /* indigo */
+  --color-calendar-7: #f43f5e;   /* rose */
+  --color-calendar-8: #f59e0b;   /* amber */
+  --color-calendar-fallback: #a1a1aa;  /* neutral — unmatched integrations */
+
+  /* Mode Tab Bar */
+  --mode-tab-active-from: #0d9488;
+  --mode-tab-active-to: #0891b2;
+  --mode-tab-inactive-text: #64748b;
+  --mode-tab-hover-bg: rgba(204, 251, 241, 0.5);
+}
+
+/* Dark Mode Overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mode-tab-inactive-text: #94a3b8;
+    --mode-tab-hover-bg: rgba(20, 184, 166, 0.15);
+    --color-calendar-fallback: #71717a;
+  }
 }
 
