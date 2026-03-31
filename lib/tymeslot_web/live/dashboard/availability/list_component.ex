@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
   alias Tymeslot.Availability.{AvailabilityActions, Breaks}
   alias Tymeslot.Availability.InputValidation, as: AvailabilityInputValidation
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Components.Dashboard.Availability.{ClearDayModal, DeleteBreakModal}
   alias TymeslotWeb.Components.Shared.TimeOptions
   alias TymeslotWeb.Dashboard.Availability.Helpers
@@ -617,6 +618,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
                   name="label"
                   label="Label"
                   placeholder="e.g. Lunch"
+                  maxlength={Constraints.break_label_max_length()}
                   errors={FormValidationHelpers.field_errors(@form_errors, :label)}
                 />
               </div>

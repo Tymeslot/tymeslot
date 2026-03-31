@@ -6,6 +6,7 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Validation.Constraints
 
   @type status :: :pending_link | :active | :paused | :auto_disabled
 
@@ -81,7 +82,7 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
     integration
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> validate_length(:name, min: 1, max: 255)
+    |> validate_length(:name, Constraints.webhook_name_length_opts())
     |> validate_inclusion(:bot_mode, @valid_bot_modes)
     |> validate_events()
     |> encrypt_token()

@@ -45,6 +45,8 @@ defmodule Tymeslot.Security.UrlValidation do
     max_length = Keyword.get(opts, :max_length, 2_000)
     disallowed_protocols = Keyword.get(opts, :disallowed_protocols, @disallowed_protocols)
     enforce_https_for_public = Keyword.get(opts, :enforce_https_for_public, false)
+    # Note: enforce_https only rejects HTTP for public hosts — localhost/private
+    # IPs are exempt so that dev/test environments work without HTTPS.
     enforce_https = Keyword.get(opts, :enforce_https, enforce_https_for_public)
     block_private_ips = Keyword.get(opts, :block_private_ips, false)
     extra_checks = Keyword.get(opts, :extra_checks)

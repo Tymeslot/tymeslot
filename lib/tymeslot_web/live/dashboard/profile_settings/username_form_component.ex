@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
   alias Tymeslot.Security.InputProcessor
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
@@ -135,8 +136,8 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
                 value={if @profile, do: @profile.username || "", else: ""}
                 placeholder="yourname"
                 pattern="[a-z0-9][a-z0-9-]{2,29}"
-                minlength="3"
-                maxlength="30"
+                minlength={Constraints.username_length_range().first}
+                maxlength={Constraints.username_length_range().last}
                 phx-debounce="500"
                 errors={FormValidationHelpers.field_errors(@form_errors, :username)}
                 style={input_padding}

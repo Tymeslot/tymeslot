@@ -7,6 +7,7 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema do
 
   alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -61,7 +62,8 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema do
   end
 
   defp validate_reason(changeset) do
-    validate_length(changeset, :reason, max: 100, message: "must be 100 characters or less")
+    max = Constraints.override_reason_max_length()
+    validate_length(changeset, :reason, max: max, message: "must be #{max} characters or less")
   end
 
   @spec override_types() :: [String.t()]
