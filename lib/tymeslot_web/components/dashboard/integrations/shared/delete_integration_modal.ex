@@ -173,8 +173,8 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegration
   defp get_parent_component_module(:calendar), do: CalendarSettingsComponent
   defp get_parent_component_module(:video), do: VideoSettingsComponent
 
-  defp get_parent_component_id(:calendar), do: "calendar"
-  defp get_parent_component_id(:video), do: "video"
+  defp get_parent_component_id(:calendar), do: "calendar_integration"
+  defp get_parent_component_id(:video), do: "video_integration"
 
   defp format_integration_type(:calendar), do: "Calendar"
   defp format_integration_type(:video), do: "Video"

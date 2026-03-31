@@ -92,7 +92,7 @@ defmodule TymeslotWeb.Themes.Quill.Theme do
       :inline_booking -> false
       :step_navigation -> true
       :glassmorphism -> true
-      :calendar_grid -> true
+      :calendar -> true
       _other -> false
     end
   end

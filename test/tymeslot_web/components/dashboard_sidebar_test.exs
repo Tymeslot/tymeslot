@@ -40,8 +40,8 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
       settings: "/dashboard/settings",
       availability: "/dashboard/availability",
       meeting_settings: "/dashboard/meeting-settings",
-      calendar: "/dashboard/calendar",
-      video: "/dashboard/video",
+      calendar_integration: "/dashboard/calendar-integration",
+      video_integration: "/dashboard/video-integration",
       theme: "/dashboard/theme",
       meetings: "/dashboard/meetings"
     }
@@ -150,10 +150,16 @@ defmodule TymeslotWeb.Components.DashboardSidebarTest do
              Floki.find(doc, "a[href='/dashboard/meeting-settings'] .dashboard-nav-notification")
            ) == 1
 
-    assert length(Floki.find(doc, "a[href='/dashboard/calendar'] .dashboard-nav-notification")) ==
-             1
+    assert length(
+             Floki.find(
+               doc,
+               "a[href='/dashboard/calendar-integration'] .dashboard-nav-notification"
+             )
+           ) == 1
 
-    assert length(Floki.find(doc, "a[href='/dashboard/video'] .dashboard-nav-notification")) == 1
+    assert length(
+             Floki.find(doc, "a[href='/dashboard/video-integration'] .dashboard-nav-notification")
+           ) == 1
 
     assert length(Floki.find(doc, ".dashboard-nav-notification")) == 3
     assert html =~ "!"

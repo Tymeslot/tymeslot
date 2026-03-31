@@ -73,8 +73,9 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       {"/dashboard/settings", "Profile Settings"},
       {"/dashboard/availability", "Availability"},
       {"/dashboard/meeting-settings", "Meeting Settings"},
-      {"/dashboard/calendar", "Calendar Integration"},
-      {"/dashboard/video", "Video Integration"},
+      {"/dashboard/calendar", "calendar-grid"},
+      {"/dashboard/calendar-integration", "Calendar Integration"},
+      {"/dashboard/video-integration", "Video Integration"},
       {"/dashboard/theme", "Choose Your Style"},
       {"/dashboard/meetings", "Meetings"},
       {"/dashboard/automation", "Automation"}
@@ -213,7 +214,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       |> element("a.block", "Calendar Integration")
       |> render_click()
 
-      assert_patch(view, ~p"/dashboard/calendar")
+      assert_patch(view, ~p"/dashboard/calendar-integration")
       assert render(view) =~ "Calendar Integration"
     end
 
@@ -224,7 +225,7 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       |> element("a.block", "Video Integration")
       |> render_click()
 
-      assert_patch(view, ~p"/dashboard/video")
+      assert_patch(view, ~p"/dashboard/video-integration")
       assert render(view) =~ "Video Integration"
     end
 
@@ -249,6 +250,48 @@ defmodule TymeslotWeb.DashboardRoutesTest do
       send(view.pid, {:meeting_type_changed})
 
       assert render(view) =~ "Newly Scheduled Meeting"
+    end
+  end
+
+  describe "mode tab bar" do
+    setup %{conn: conn} do
+      {:ok, setup_authenticated_user(conn)}
+    end
+
+    test "renders mode tab bar on scheduling pages", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      assert html =~ "mode-tab-bar"
+    end
+
+    test "renders mode tab bar on calendar page", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar")
+      assert html =~ "mode-tab-bar"
+    end
+
+    test "sidebar is present in scheduling mode", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      assert html =~ "dashboard-sidebar"
+    end
+
+    test "sidebar is absent in calendar mode", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar")
+      refute html =~ "dashboard-sidebar"
+    end
+
+    test "scheduling tab is active on non-calendar pages", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      doc = Floki.parse_document!(html)
+      [scheduling_tab] = Floki.find(doc, "[data-testid='mode-tab-scheduling']")
+      classes = scheduling_tab |> Floki.attribute("class") |> List.first() |> String.split()
+      assert "mode-tab--active" in classes
+    end
+
+    test "calendar tab is active on /dashboard/calendar", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/calendar")
+      doc = Floki.parse_document!(html)
+      [calendar_tab] = Floki.find(doc, "[data-testid='mode-tab-calendar']")
+      classes = calendar_tab |> Floki.attribute("class") |> List.first() |> String.split()
+      assert "mode-tab--active" in classes
     end
   end
 

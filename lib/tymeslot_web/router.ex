@@ -25,6 +25,14 @@ defmodule TymeslotWeb.Router do
     post "/stripe", StripeWebhookController, :webhook
   end
 
+  scope "/webhooks", TymeslotWeb do
+    pipe_through :api
+
+    post "/google-calendar", GoogleCalendarWebhookController, :webhook
+    post "/outlook-calendar", OutlookCalendarWebhookController, :webhook
+    post "/outlook-lifecycle", OutlookLifecycleController, :webhook
+  end
+
   # Telegram bot webhook (unauthenticated, outside :browser pipeline)
   scope "/api/telegram", TymeslotWeb do
     pipe_through :api
@@ -171,7 +179,8 @@ defmodule TymeslotWeb.Router do
       live "/dashboard/account", AccountLive
       live "/dashboard/meeting-settings", DashboardLive, :meeting_settings
       live "/dashboard/calendar", DashboardLive, :calendar
-      live "/dashboard/video", DashboardLive, :video
+      live "/dashboard/calendar-integration", DashboardLive, :calendar_integration
+      live "/dashboard/video-integration", DashboardLive, :video_integration
       live "/dashboard/automation", DashboardLive, :automation
       live "/dashboard/theme", DashboardLive, :theme
       live "/dashboard/theme/customize/:theme_id", DashboardLive, :theme_customization

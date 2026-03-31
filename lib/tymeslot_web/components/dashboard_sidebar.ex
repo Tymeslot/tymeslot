@@ -110,6 +110,7 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
                 <IconComponents.icon name={:clock} class="w-5 h-5" />
                 <span>Meetings</span>
               </.nav_link>
+
             </div>
           </div>
 
@@ -151,9 +152,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
             <div class="dashboard-nav-section-title">Integrations</div>
             <div class="space-y-0">
               <.nav_link
-                patch={~p"/dashboard/calendar"}
+                patch={~p"/dashboard/calendar-integration"}
                 current={@current_action}
-                action={:calendar}
+                action={:calendar_integration}
                 show_notification={not (@integration_status[:has_calendar] || false)}
                 notification_type="info"
               >
@@ -162,9 +163,9 @@ defmodule TymeslotWeb.Components.DashboardSidebar do
               </.nav_link>
 
               <.nav_link
-                patch={~p"/dashboard/video"}
+                patch={~p"/dashboard/video-integration"}
                 current={@current_action}
-                action={:video}
+                action={:video_integration}
                 show_notification={not (@integration_status[:has_video] || false)}
                 notification_type="info"
               >

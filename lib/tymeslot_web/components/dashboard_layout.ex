@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
 
   alias Phoenix.LiveView.JS
   alias TymeslotWeb.Components.DashboardSidebar
+  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Components.UserDropdownComponent
 
   @doc """
@@ -17,41 +18,56 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   attr :current_action, :atom, required: true
   attr :integration_status, :map, default: %{}
   attr :automations_allowed, :boolean, default: true
+  attr :full_width, :boolean, default: false
   attr :sidebar_extensions, :list, default: []
   slot :inner_block, required: true
 
   @spec dashboard_layout(map()) :: Phoenix.LiveView.Rendered.t()
   def dashboard_layout(assigns) do
     ~H"""
-    <div class="h-screen flex flex-col overflow-hidden" id="dashboard-root" phx-hook="ClipboardCopy">
-      <%!-- Top Navigation - Glass box with container --%>
-      <div class="flex-shrink-0">
-        <.top_navigation current_user={@current_user} profile={@profile} />
+    <div
+      class={["flex flex-col", if(@full_width, do: "h-screen overflow-hidden")]}
+      id="dashboard-root"
+      phx-hook="ClipboardCopy"
+    >
+      <%!-- Top Navigation --%>
+      <div class={if @full_width, do: "flex-shrink-0"}>
+        <.top_navigation
+          current_user={@current_user}
+          profile={@profile}
+          show_sidebar_toggle={mode(@current_action) == :scheduling}
+        />
       </div>
 
-      <%!-- Main Layout Area - Sidebar and Content --%>
-      <div class="flex-1 flex overflow-hidden lg:gap-8">
-        <%!-- Left Sidebar - Hidden on mobile/tablet, overlay when open --%>
-        <DashboardSidebar.sidebar
-          current_action={@current_action}
-          integration_status={@integration_status}
-          profile={@profile}
-          automations_allowed={@automations_allowed}
-          sidebar_extensions={@sidebar_extensions}
-        />
+      <%!-- Mode Tab Bar --%>
+      <.mode_tabs current_action={@current_action} />
 
-        <%!-- Main Content Area - Full width on mobile/tablet --%>
+      <%!-- Main Layout Area --%>
+      <div class={["flex lg:gap-8", if(@full_width, do: "flex-1 overflow-hidden")]}>
+        <%= if mode(@current_action) == :scheduling do %>
+          <DashboardSidebar.sidebar
+            current_action={@current_action}
+            integration_status={@integration_status}
+            profile={@profile}
+            automations_allowed={@automations_allowed}
+            sidebar_extensions={@sidebar_extensions}
+          />
+        <% end %>
+
+        <%!-- Main Content Area --%>
         <div
           id="dashboard-content-container"
-          class="flex-1 min-w-0 w-full lg:ml-0 overflow-y-auto"
+          class={["flex-1 min-w-0 w-full lg:ml-0", if(@full_width, do: "flex flex-col overflow-hidden")]}
           phx-hook="ScrollReset"
           data-action={@current_action}
         >
-          <div class="max-w-7xl mx-auto px-4 lg:px-8 pb-8">
-            <main>
-              {render_slot(@inner_block)}
-            </main>
-          </div>
+          <%= if @full_width do %>
+            <main class="flex-1 flex flex-col min-h-0">{render_slot(@inner_block)}</main>
+          <% else %>
+            <div class="max-w-7xl mx-auto px-4 lg:px-8 pb-8">
+              <main>{render_slot(@inner_block)}</main>
+            </div>
+          <% end %>
         </div>
       </div>
     </div>
@@ -63,6 +79,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   """
   attr :current_user, :any, required: true
   attr :profile, :any, required: true
+  attr :show_sidebar_toggle, :boolean, default: true
 
   @spec top_navigation(map()) :: Phoenix.LiveView.Rendered.t()
   def top_navigation(assigns) do
@@ -73,30 +90,32 @@ defmodule TymeslotWeb.Components.DashboardLayout do
           <div class="flex items-center justify-between h-16">
             <%!-- Left side: Logo and Mobile Menu Button --%>
             <div class="flex items-center space-x-4 -ml-2 sm:-ml-4 flex-1 min-w-0">
-              <%!-- Mobile Menu Button --%>
-              <button
-                class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all flex-shrink-0"
-                phx-click={
-                  JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
-                  |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")
-                }
-                aria-label="Toggle sidebar"
-              >
-                <svg
-                  class="w-6 h-6 text-tymeslot-700"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <%= if @show_sidebar_toggle do %>
+                <%!-- Mobile Menu Button --%>
+                <button
+                  class="lg:hidden dashboard-mobile-menu-toggle flex items-center justify-center w-12 h-12 rounded-xl bg-tymeslot-50 border-2 border-tymeslot-100 hover:bg-turquoise-50 hover:border-turquoise-100 transition-all flex-shrink-0"
+                  phx-click={
+                    JS.toggle_class("dashboard-sidebar-open", to: "#dashboard-sidebar")
+                    |> JS.toggle_class("hidden", to: "#dashboard-sidebar-overlay")
+                  }
+                  aria-label="Toggle sidebar"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2.5"
-                    d="M4 6h16M4 12h16M4 18h16"
+                  <svg
+                    class="w-6 h-6 text-tymeslot-700"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                  </path>
-                </svg>
-              </button>
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M4 6h16M4 12h16M4 18h16"
+                    >
+                    </path>
+                  </svg>
+                </button>
+              <% end %>
 
     <%!-- Logo with Icon and Text --%>
               <div class="flex items-center space-x-3 flex-shrink-0">
@@ -122,4 +141,36 @@ defmodule TymeslotWeb.Components.DashboardLayout do
     </div>
     """
   end
+
+  attr :current_action, :atom, required: true
+
+  @spec mode_tabs(map()) :: Phoenix.LiveView.Rendered.t()
+  defp mode_tabs(assigns) do
+    ~H"""
+    <div class="mode-tab-bar" data-testid="mode-tab-bar">
+      <div class="flex items-stretch w-full gap-2">
+        <.link
+          patch={~p"/dashboard"}
+          class={["mode-tab flex-1 justify-center", if(mode(@current_action) == :scheduling, do: "mode-tab--active", else: "mode-tab--inactive")]}
+          data-testid="mode-tab-scheduling"
+        >
+          <IconComponents.icon name={:grid} class="w-4 h-4" />
+          Scheduling
+        </.link>
+
+        <.link
+          patch={~p"/dashboard/calendar"}
+          class={["mode-tab flex-1 justify-center", if(mode(@current_action) == :calendar, do: "mode-tab--active", else: "mode-tab--inactive")]}
+          data-testid="mode-tab-calendar"
+        >
+          <IconComponents.icon name={:calendar} class="w-4 h-4" />
+          Calendar
+        </.link>
+      </div>
+    </div>
+    """
+  end
+
+  defp mode(:calendar), do: :calendar
+  defp mode(_tab), do: :scheduling
 end

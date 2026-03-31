@@ -54,7 +54,9 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
         "/meeting_settings/",
         "/meetings/",
         "/shared/",
-        "/theme_customization/"
+        "/theme_customization/",
+        "/calendar_grid/",
+        "calendar_grid_component"
       ])
   end
 
