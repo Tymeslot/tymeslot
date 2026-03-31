@@ -391,7 +391,11 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
          ) do
       {:ok, sanitized_description} ->
         if String.length(sanitized_description) > Constraints.description_max_length() do
-          {:error, %{description: "Description must be #{Constraints.description_max_length()} characters or less"}}
+          {:error,
+           %{
+             description:
+               "Description must be #{Constraints.description_max_length()} characters or less"
+           }}
         else
           {:ok, String.trim(sanitized_description)}
         end

@@ -19,7 +19,6 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   }
 
   alias Tymeslot.Locales
-  alias Tymeslot.Profiles
   alias Tymeslot.Utils.UrlBuilder
 
   @type discrepancy :: :deleted | :modified
@@ -27,12 +26,15 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   @doc """
   Builds a Swoosh email notifying `organizer_email` that `meeting` was changed
   externally.  `discrepancy` is either `:deleted` or `:modified`.
+
+  `owner_timezone` is the IANA timezone of the meeting organizer, used to
+  convert the start time for display.
   """
-  @spec build_email(Meeting.t(), String.t(), discrepancy()) :: Swoosh.Email.t()
-  def build_email(%Meeting{} = meeting, organizer_email, discrepancy)
+  @spec build_email(Meeting.t(), String.t(), discrepancy(), String.t()) :: Swoosh.Email.t()
+  def build_email(%Meeting{} = meeting, organizer_email, discrepancy, owner_timezone)
       when discrepancy in [:deleted, :modified] do
     locale = organizer_locale()
-    owner_time = owner_start_time(meeting)
+    owner_time = TimezoneHelper.convert_to_timezone(meeting.start_time, owner_timezone)
     date_short = SharedHelpers.format_date_short(owner_time, locale)
 
     html_body = render_html(meeting, owner_time, discrepancy, locale)
@@ -174,16 +176,6 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
-
-  defp owner_start_time(%Meeting{start_time: start_time, organizer_user_id: user_id}) do
-    owner_tz =
-      case user_id do
-        nil -> Profiles.get_default_timezone()
-        id -> Profiles.get_user_timezone(id)
-      end
-
-    TimezoneHelper.convert_to_timezone(start_time, owner_tz)
-  end
 
   # Organizer locale — currently the system default. When per-user locale
   # preferences are added, resolve from the meeting's organizer_user_id.

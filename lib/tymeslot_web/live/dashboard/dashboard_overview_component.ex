@@ -56,20 +56,15 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
             </.link>
           </div>
 
-          <%= if @upcoming_meetings == [] do %>
-            <div class="text-center py-12 bg-tymeslot-50/50 rounded-token-2xl border-2 border-dashed border-tymeslot-100">
-              <div class="w-16 h-16 bg-white rounded-token-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-                <IconComponents.icon name={:calendar} class="w-8 h-8 text-tymeslot-300" />
-              </div>
-              <p class="text-tymeslot-500 font-bold">No upcoming meetings scheduled yet.</p>
+          <div :if={@upcoming_meetings == []} class="text-center py-12 bg-tymeslot-50/50 rounded-token-2xl border-2 border-dashed border-tymeslot-100">
+            <div class="w-16 h-16 bg-white rounded-token-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+              <IconComponents.icon name={:calendar} class="w-8 h-8 text-tymeslot-300" />
             </div>
-          <% else %>
-            <div class="space-y-4">
-              <%= for meeting <- @upcoming_meetings do %>
-                <.meeting_preview meeting={meeting} profile={@profile} />
-              <% end %>
-            </div>
-          <% end %>
+            <p class="text-tymeslot-500 font-bold">No upcoming meetings scheduled yet.</p>
+          </div>
+          <div :if={@upcoming_meetings != []} class="space-y-4">
+            <.meeting_preview :for={meeting <- @upcoming_meetings} meeting={meeting} profile={@profile} />
+          </div>
         </div>
 
     <%!-- Quick Actions --%>

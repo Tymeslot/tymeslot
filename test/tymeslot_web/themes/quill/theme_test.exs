@@ -66,11 +66,11 @@ defmodule TymeslotWeb.Themes.Quill.ThemeTest do
   end
 
   describe "supports_feature?/1" do
-    test "supports glassmorphism and calendar grid features" do
+    test "supports glassmorphism and calendar features" do
       assert Theme.supports_feature?(:duration_selection) == true
       assert Theme.supports_feature?(:step_navigation) == true
       assert Theme.supports_feature?(:glassmorphism) == true
-      assert Theme.supports_feature?(:calendar_grid) == true
+      assert Theme.supports_feature?(:calendar) == true
     end
 
     test "does not support inline booking" do

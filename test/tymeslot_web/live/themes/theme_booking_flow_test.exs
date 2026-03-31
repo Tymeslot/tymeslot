@@ -529,7 +529,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
           view |> element("button[phx-click='next_week']") |> render_click()
         end
 
-      _ ->
+      _date ->
         :ok
     end
   end

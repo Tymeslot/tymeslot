@@ -28,12 +28,14 @@ defmodule Tymeslot.Emails.EmailService do
   }
 
   alias Tymeslot.Emails.Shared.MjmlEmail
+  alias Tymeslot.Profiles
 
   alias Swoosh.Email
 
   @doc """
   Sends an appointment confirmation email to the organizer.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_appointment_confirmation_to_organizer(String.t(), map()) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_confirmation_to_organizer(organizer_email, appointment_details) do
@@ -45,6 +47,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends an appointment confirmation email to the attendee.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_appointment_confirmation_to_attendee(String.t(), map()) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_confirmation_to_attendee(attendee_email, appointment_details) do
@@ -56,6 +59,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends appointment confirmations to both organizer and attendee.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_appointment_confirmations(map()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_appointment_confirmations(appointment_details) do
@@ -86,6 +90,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends an appointment reminder email to the organizer.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_appointment_reminder_to_organizer(String.t(), map()) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_reminder_to_organizer(organizer_email, appointment_details) do
@@ -97,6 +102,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends an appointment reminder email to the attendee.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_appointment_reminder_to_attendee(String.t(), map()) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_reminder_to_attendee(attendee_email, appointment_details) do
@@ -108,6 +114,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends appointment reminders to both organizer and attendee.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_appointment_reminders(map()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_appointment_reminders(appointment_details) do
@@ -121,6 +128,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends appointment reminders to both organizer and attendee.
   Takes a time_until parameter (e.g., "30 minutes", "1 hour", "24 hours").
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_appointment_reminders(map(), String.t()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_appointment_reminders(appointment_details, time_until) do
@@ -155,6 +163,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends a cancellation email. This is the behavior-required function.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_appointment_cancellation(String.t(), map()) :: {:ok, any()} | {:error, any()}
   def send_appointment_cancellation(email, appointment_details) do
     # Determine if this is for organizer or attendee based on email
@@ -212,6 +221,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends cancellation emails to both organizer and attendee.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_cancellation_emails(map()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_cancellation_emails(appointment_details) do
@@ -243,6 +253,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends a calendar sync error notification to the calendar owner.
   This is only sent when calendar event creation fails after all retries.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_calendar_sync_error(map(), any()) :: {:ok, any()} | {:error, any()}
   def send_calendar_sync_error(meeting, error_reason) do
     # Use organizer's email from the meeting, fallback to FROM email if not available
@@ -285,6 +296,7 @@ defmodule Tymeslot.Emails.EmailService do
   `discrepancy` is either `:deleted` (the event was removed from the external calendar)
   or `:modified` (the event was rescheduled in the external calendar).
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_external_booking_change(map(), String.t(), ExternalBookingChange.discrepancy()) ::
           {:ok, any()} | {:error, any()}
   def send_external_booking_change(meeting, organizer_email, discrepancy) do
@@ -294,7 +306,12 @@ defmodule Tymeslot.Emails.EmailService do
       discrepancy: discrepancy
     )
 
-    result = deliver(ExternalBookingChange.build_email(meeting, organizer_email, discrepancy))
+    owner_timezone = resolve_owner_timezone(meeting)
+
+    result =
+      deliver(
+        ExternalBookingChange.build_email(meeting, organizer_email, discrepancy, owner_timezone)
+      )
 
     Logger.info("External booking change notification sent",
       sent: match?({:ok, _}, result),
@@ -307,6 +324,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends an email verification email to a new user.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_email_verification(map(), String.t()) :: {:ok, any()} | {:error, any()}
   def send_email_verification(user, verification_url) do
     Logger.info("Sending email verification", user_id: user.id)
@@ -327,6 +345,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends a password reset email to a user.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_password_reset(map(), String.t()) :: {:ok, any()} | {:error, any()}
   def send_password_reset(user, reset_url) do
     Logger.info("Sending password reset email", user_id: user.id)
@@ -347,6 +366,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends an email change verification email to the NEW email address.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_email_change_verification(map(), String.t(), String.t()) ::
           {:ok, any()} | {:error, any()}
   def send_email_change_verification(user, new_email, verification_url) do
@@ -371,6 +391,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends an email change notification to the OLD email address.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_email_change_notification(map(), String.t()) ::
           {:ok, any()} | {:error, any()}
   def send_email_change_notification(user, new_email) do
@@ -397,6 +418,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends email change confirmation to both OLD and NEW email addresses.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_email_change_confirmations(map(), String.t(), String.t()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_email_change_confirmations(user, old_email, new_email) do
@@ -450,6 +472,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends an integration unhealthy notification to the integration owner.
   Called when an integration has been failing health checks for over 48 hours.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_integration_unhealthy_notification(map(), map(), atom() | String.t()) ::
           {:ok, any()} | {:error, any()}
   def send_integration_unhealthy_notification(user, integration, type) do
@@ -476,6 +499,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends a reschedule request email.
   """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   @spec send_reschedule_request(map()) :: {:ok, any()} | {:error, any()}
   def send_reschedule_request(meeting) do
     Logger.info("Sending reschedule request",
@@ -568,4 +592,8 @@ defmodule Tymeslot.Emails.EmailService do
   end
 
   defp check_text_body(%Swoosh.Email{}), do: :ok
+
+  defp resolve_owner_timezone(%{organizer_user_id: nil}), do: Profiles.get_default_timezone()
+  defp resolve_owner_timezone(%{organizer_user_id: id}), do: Profiles.get_user_timezone(id)
+  defp resolve_owner_timezone(_meeting), do: Profiles.get_default_timezone()
 end

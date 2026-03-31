@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
   alias Plug.Test
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
+
   describe "embed settings component" do
     setup do
       user = insert(:user, onboarding_completed_at: DateTime.utc_now())

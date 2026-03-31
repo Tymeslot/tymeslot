@@ -81,25 +81,19 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   def meetings_list(assigns) do
     ~H"""
     <div>
-      <%= if @loading do %>
-        <.loading_spinner />
-      <% else %>
-        <%= if @is_empty do %>
-          <.empty_state filter={@filter} />
-        <% else %>
-          <div class="space-y-4" id="meetings" phx-update="stream">
-            <div :for={{dom_id, meeting} <- @meetings_stream} id={dom_id}>
-              <.meeting_card
-                meeting={meeting}
-                profile={@profile}
-                cancelling_meeting={@cancelling_meeting}
-                sending_reschedule={@sending_reschedule}
-                target={@target}
-              />
-            </div>
-          </div>
-        <% end %>
-      <% end %>
+      <.loading_spinner :if={@loading} />
+      <.empty_state :if={!@loading and @is_empty} filter={@filter} />
+      <div :if={!@loading and !@is_empty} class="space-y-4" id="meetings" phx-update="stream">
+        <div :for={{dom_id, meeting} <- @meetings_stream} id={dom_id}>
+          <.meeting_card
+            meeting={meeting}
+            profile={@profile}
+            cancelling_meeting={@cancelling_meeting}
+            sending_reschedule={@sending_reschedule}
+            target={@target}
+          />
+        </div>
+      </div>
     </div>
     """
   end
@@ -129,17 +123,13 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             <h4 class="text-token-2xl font-black text-tymeslot-900 tracking-tight group-hover/card:text-turquoise-700 transition-colors">
               {@meeting.attendee_name}
             </h4>
-            <%= if @meeting.attendee_company do %>
-              <span class="text-token-sm font-bold text-tymeslot-400 bg-tymeslot-50 px-3 py-1 rounded-token-lg">
-                {@meeting.attendee_company}
-              </span>
-            <% end %>
+            <span :if={@meeting.attendee_company} class="text-token-sm font-bold text-tymeslot-400 bg-tymeslot-50 px-3 py-1 rounded-token-lg">
+              {@meeting.attendee_company}
+            </span>
             <.status_badges meeting={@meeting} />
-            <%= if @meeting.meeting_url do %>
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-50 text-cyan-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-cyan-100 shadow-sm">
-                <Icons.icon name={:video} class="w-3.5 h-3.5" /> Video Call
-              </span>
-            <% end %>
+            <span :if={@meeting.meeting_url} class="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-50 text-cyan-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-cyan-100 shadow-sm">
+              <Icons.icon name={:video} class="w-3.5 h-3.5" /> Video Call
+            </span>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -184,33 +174,30 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             </div>
           </div>
 
-          <%= if @meeting.description && @meeting.description != "" do %>
-            <div class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50 flex gap-4 items-start">
-              <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0 border border-tymeslot-100">
-                <Icons.icon name={:pencil_square} class="w-4 h-4 text-tymeslot-400" />
-              </div>
-              <div class="flex-1">
-                <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-1">
-                  Meeting Notes
-                </p>
-                <p class="text-tymeslot-600 font-medium leading-relaxed">{@meeting.description}</p>
-              </div>
+          <div :if={@meeting.description && @meeting.description != ""} class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50 flex gap-4 items-start">
+            <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0 border border-tymeslot-100">
+              <Icons.icon name={:pencil_square} class="w-4 h-4 text-tymeslot-400" />
             </div>
-          <% end %>
+            <div class="flex-1">
+              <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mb-1">
+                Meeting Notes
+              </p>
+              <p class="text-tymeslot-600 font-medium leading-relaxed">{@meeting.description}</p>
+            </div>
+          </div>
         </div>
 
         <div class="flex lg:flex-col gap-3 flex-shrink-0 lg:w-[160px]">
-          <%= if @meeting.status != "cancelled" && !Helpers.past_meeting?(@meeting) do %>
-            <%= if @meeting.meeting_url do %>
-              <a
-                href={@meeting.meeting_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="btn-primary py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap"
-              >
-                <Icons.icon name={:video} class="w-4 h-4 mr-2 flex-shrink-0" /> Join Meeting
-              </a>
-            <% end %>
+          <div :if={@meeting.status != "cancelled" && !Helpers.past_meeting?(@meeting)} class="contents">
+            <a
+              :if={@meeting.meeting_url}
+              href={@meeting.meeting_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-primary py-3 px-4 text-token-sm w-full flex items-center justify-center whitespace-nowrap"
+            >
+              <Icons.icon name={:video} class="w-4 h-4 mr-2 flex-shrink-0" /> Join Meeting
+            </a>
 
             <button
               phx-click="show_reschedule_modal"
@@ -236,15 +223,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                 if(!Helpers.can_cancel?(@meeting), do: "opacity-50 cursor-not-allowed", else: "")
               ]}
             >
-              <%= if @cancelling_meeting == @meeting.id do %>
-                <CoreComponents.spinner class="h-4 w-4 mr-2" /> Processing...
-              <% else %>
-                <Icons.icon name={:x_mark} class="w-4 h-4 mr-2 flex-shrink-0" /> Cancel
-              <% end %>
+              <span :if={@cancelling_meeting == @meeting.id}><CoreComponents.spinner class="h-4 w-4 mr-2" /> Processing...</span>
+              <span :if={@cancelling_meeting != @meeting.id}><Icons.icon name={:x_mark} class="w-4 h-4 mr-2 flex-shrink-0" /> Cancel</span>
             </button>
-          <% else %>
-            <div class="hidden lg:block">&nbsp;</div>
-          <% end %>
+          </div>
+          <div :if={@meeting.status == "cancelled" or Helpers.past_meeting?(@meeting)} class="hidden lg:block">&nbsp;</div>
         </div>
       </div>
     </div>
@@ -264,11 +247,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
       )
     ]}>
       <p class="font-medium text-token-sm">
-        <%= if @meeting.calendar_sync_status == "externally_deleted" do %>
-          This meeting's event was deleted from your external calendar.
-        <% else %>
-          This meeting's event was rescheduled in your external calendar.
-        <% end %>
+        <span :if={@meeting.calendar_sync_status == "externally_deleted"}>This meeting's event was deleted from your external calendar.</span>
+        <span :if={@meeting.calendar_sync_status != "externally_deleted"}>This meeting's event was rescheduled in your external calendar.</span>
       </p>
       <button
         phx-click="dismiss_calendar_sync_banner"
@@ -290,27 +270,18 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
 
   defp status_badges(assigns) do
     ~H"""
-    <%= if @meeting.status == "cancelled" do %>
-      <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-red-100 shadow-sm">
-        <Icons.icon name={:x_mark} class="w-3 h-3" /> Cancelled
-      </span>
-    <% else %>
-      <%= if @meeting.status == "reschedule_requested" do %>
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-amber-100 shadow-sm">
-          <Icons.icon name={:clock} class="w-3 h-3" /> Reschedule Requested
-        </span>
-      <% else %>
-        <%= if Helpers.past_meeting?(@meeting) do %>
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-tymeslot-100 text-tymeslot-600 text-token-xs font-black uppercase tracking-wider rounded-full border border-tymeslot-200 shadow-sm">
-            <Icons.icon name={:check} class="w-3 h-3" /> Completed
-          </span>
-        <% else %>
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-emerald-100 shadow-sm">
-            <Icons.icon name={:calendar} class="w-3 h-3" /> Scheduled
-          </span>
-        <% end %>
-      <% end %>
-    <% end %>
+    <span :if={@meeting.status == "cancelled"} class="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-red-100 shadow-sm">
+      <Icons.icon name={:x_mark} class="w-3 h-3" /> Cancelled
+    </span>
+    <span :if={@meeting.status == "reschedule_requested"} class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-amber-100 shadow-sm">
+      <Icons.icon name={:clock} class="w-3 h-3" /> Reschedule Requested
+    </span>
+    <span :if={@meeting.status not in ["cancelled", "reschedule_requested"] and Helpers.past_meeting?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-tymeslot-100 text-tymeslot-600 text-token-xs font-black uppercase tracking-wider rounded-full border border-tymeslot-200 shadow-sm">
+      <Icons.icon name={:check} class="w-3 h-3" /> Completed
+    </span>
+    <span :if={@meeting.status not in ["cancelled", "reschedule_requested"] and !Helpers.past_meeting?(@meeting)} class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-token-xs font-black uppercase tracking-wider rounded-full border border-emerald-100 shadow-sm">
+      <Icons.icon name={:calendar} class="w-3 h-3" /> Scheduled
+    </span>
     """
   end
 
@@ -343,7 +314,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     """
   end
 
-  # No assigns used in this component - purely static HTML
+  @doc "Displays a loading spinner inside a card."
   @spec loading_spinner(map()) :: Phoenix.LiveView.Rendered.t()
   def loading_spinner(assigns) do
     ~H"""
@@ -355,7 +326,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
     """
   end
 
-  # No assigns used in this component - purely static HTML
+  @doc "Displays an informational panel about meeting management features."
   @spec info_panel(map()) :: Phoenix.LiveView.Rendered.t()
   def info_panel(assigns) do
     ~H"""
@@ -401,6 +372,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
             "turquoise" -> "bg-turquoise-50 group-hover/item:bg-turquoise-100 text-turquoise-600"
             "red" -> "bg-red-50 group-hover/item:bg-red-100 text-red-500"
             "blue" -> "bg-blue-50 group-hover/item:bg-blue-100 text-blue-600"
+            _other -> "bg-tymeslot-50 group-hover/item:bg-tymeslot-100 text-tymeslot-600"
           end
         ]}>
           <Icons.icon name={@icon} class="w-5 h-5" />

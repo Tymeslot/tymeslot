@@ -275,22 +275,17 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           target={@myself}
         />
 
-        <%= if @has_more do %>
-          <div class="mt-10 text-center">
-            <button
-              class="btn-secondary px-10 py-4"
-              phx-click="load_more"
-              phx-target={@myself}
-              disabled={@loading_more}
-            >
-              <%= if @loading_more do %>
-                <.spinner class="h-5 w-5 mr-3 inline-block" /> Loading...
-              <% else %>
-                Load more meetings
-              <% end %>
-            </button>
-          </div>
-        <% end %>
+        <div :if={@has_more} class="mt-10 text-center">
+          <button
+            class="btn-secondary px-10 py-4"
+            phx-click="load_more"
+            phx-target={@myself}
+            disabled={@loading_more}
+          >
+            <span :if={@loading_more}><.spinner class="h-5 w-5 mr-3 inline-block" /> Loading...</span>
+            <span :if={!@loading_more}>Load more meetings</span>
+          </button>
+        </div>
 
         <div class="mt-16">
           <MeetingListComponents.info_panel />
