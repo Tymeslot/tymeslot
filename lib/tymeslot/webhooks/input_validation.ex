@@ -9,6 +9,7 @@ defmodule Tymeslot.Webhooks.InputValidation do
   import Ecto.Changeset
 
   alias Ecto.Changeset
+  alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.DatabaseSchemas.WebhookSchema
   alias Tymeslot.Security.{RateLimiter, UniversalSanitizer}
   alias Tymeslot.Validation.Constraints
@@ -142,12 +143,7 @@ defmodule Tymeslot.Webhooks.InputValidation do
   end
 
   defp validate_url_format(changeset) do
-    validate_change(changeset, :url, fn :url, url ->
-      case WebhookSchema.validate_url_format(url) do
-        :ok -> []
-        {:error, msg} -> [{:url, String.capitalize(msg)}]
-      end
-    end)
+    URLValidator.validate_url(changeset, :url, block_private_ips: true, enforce_https: true)
   end
 
   defp validate_events_list(changeset) do

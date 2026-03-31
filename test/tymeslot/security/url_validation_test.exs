@@ -317,4 +317,74 @@ defmodule Tymeslot.Security.UrlValidationTest do
       assert result == :ok or match?({:error, _}, result)
     end
   end
+
+  describe "validate_http_url/2 with block_private_ips option" do
+    @private_ip_opts [block_private_ips: true]
+
+    test "rejects localhost" do
+      assert {:error, "Private or local network addresses are not allowed"} =
+               UrlValidation.validate_http_url("https://localhost/hook", @private_ip_opts)
+
+      assert {:error, "Private or local network addresses are not allowed"} =
+               UrlValidation.validate_http_url("https://127.0.0.1/hook", @private_ip_opts)
+    end
+
+    test "rejects private IPv4 ranges" do
+      for url <- [
+            "https://10.0.0.1/hook",
+            "https://172.16.5.1/hook",
+            "https://172.31.255.1/hook",
+            "https://192.168.1.1/hook",
+            "https://169.254.169.254/hook"
+          ] do
+        assert {:error, "Private or local network addresses are not allowed"} =
+                 UrlValidation.validate_http_url(url, @private_ip_opts),
+               "expected #{url} to be rejected"
+      end
+    end
+
+    test "rejects private IPv6 addresses" do
+      for url <- [
+            "https://[::1]/hook",
+            "https://[fe80::1]/hook",
+            "https://[fc00::1]/hook",
+            "https://[fd00::1]/hook"
+          ] do
+        assert {:error, "Private or local network addresses are not allowed"} =
+                 UrlValidation.validate_http_url(url, @private_ip_opts),
+               "expected #{url} to be rejected"
+      end
+    end
+
+    test "rejects IPv4-mapped IPv6 private addresses" do
+      for url <- [
+            "https://[::ffff:127.0.0.1]/hook",
+            "https://[::ffff:10.0.0.1]/hook",
+            "https://[::ffff:192.168.1.1]/hook",
+            "https://[::ffff:169.254.169.254]/hook"
+          ] do
+        assert {:error, "Private or local network addresses are not allowed"} =
+                 UrlValidation.validate_http_url(url, @private_ip_opts),
+               "expected #{url} to be rejected"
+      end
+    end
+
+    test "allows public URLs" do
+      assert :ok = UrlValidation.validate_http_url("https://example.com/hook", @private_ip_opts)
+      assert :ok = UrlValidation.validate_http_url("https://8.8.8.8/hook", @private_ip_opts)
+    end
+
+    test "does not block private IPs when option is false (default)" do
+      assert :ok = UrlValidation.validate_http_url("https://localhost/hook")
+      assert :ok = UrlValidation.validate_http_url("https://10.0.0.1/hook")
+    end
+
+    test "supports custom error message via :private_ip_error_message" do
+      assert {:error, "No local URLs"} =
+               UrlValidation.validate_http_url("https://localhost/hook",
+                 block_private_ips: true,
+                 private_ip_error_message: "No local URLs"
+               )
+    end
+  end
 end

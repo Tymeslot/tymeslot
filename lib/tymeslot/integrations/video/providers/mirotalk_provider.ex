@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   require Logger
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Security.{RateLimiter, UrlValidation}
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :mirotalk
@@ -71,24 +71,17 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     api_key = Map.get(config, :api_key)
 
     with :ok <- check_rate_limit(ip_address),
-         :ok <- validate_url_format(base_url) do
+         :ok <- validate_base_url(base_url) do
       # Proceed with API connection test
       test_api_connection(base_url, api_key)
     end
   end
 
-  defp validate_url_format(nil), do: {:error, "Base URL is required"}
-  defp validate_url_format(""), do: {:error, "Base URL cannot be empty"}
+  defp validate_base_url(nil), do: {:error, "Base URL is required"}
+  defp validate_base_url(""), do: {:error, "Base URL cannot be empty"}
 
-  defp validate_url_format(url) do
-    case URI.parse(url) do
-      %URI{scheme: scheme, host: host} when scheme in ["http", "https"] and is_binary(host) ->
-        :ok
-
-      _other ->
-        {:error,
-         "Invalid URL format. Please provide a valid URL starting with http:// or https://"}
-    end
+  defp validate_base_url(url) do
+    UrlValidation.validate_http_url(url, block_private_ips: true)
   end
 
   defp test_api_connection(base_url, api_key) do

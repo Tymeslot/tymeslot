@@ -160,7 +160,7 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
         changeset
         |> validate_required([:base_url])
         |> require_credential_if_absent(:api_key, :api_key_encrypted)
-        |> URLValidator.validate_url(:base_url)
+        |> URLValidator.validate_url(:base_url, block_private_ips: true)
 
       "teams" ->
         changeset
@@ -175,7 +175,7 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
       "custom" ->
         changeset
         |> validate_required([:custom_meeting_url])
-        |> URLValidator.validate_url(:custom_meeting_url)
+        |> URLValidator.validate_url(:custom_meeting_url, block_private_ips: true)
 
       _other_provider ->
         changeset

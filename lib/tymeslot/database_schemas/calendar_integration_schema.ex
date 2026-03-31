@@ -103,7 +103,7 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
       :provider,
       ProviderConfig.provider_constraint_list()
     )
-    |> URLValidator.validate_url(:base_url)
+    |> URLValidator.validate_url(:base_url, block_private_ips: true)
     |> encrypt_credentials()
     |> foreign_key_constraint(:user_id)
     |> check_constraint(:provider, name: :calendar_integrations_provider_check)

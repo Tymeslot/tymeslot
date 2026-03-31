@@ -9,6 +9,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.ChangesetValidators.URL, as: URLValidator
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Validation.Constraints
 
@@ -83,7 +84,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookSchema do
       |> validate_required(@required_fields)
       |> validate_length(:name, Constraints.webhook_name_length_opts())
       |> validate_length(:url, min: 1, max: Constraints.url_max_length())
-      |> validate_url()
+      |> URLValidator.validate_url(:url, block_private_ips: true, enforce_https: true)
       |> validate_events()
       |> foreign_key_constraint(:user_id)
 
@@ -138,93 +139,6 @@ defmodule Tymeslot.DatabaseSchemas.WebhookSchema do
 
   # Private functions
 
-  @doc """
-  Validates a webhook URL string.
-  Returns :ok or {:error, message}
-  """
-  @spec validate_url_format(String.t()) :: :ok | {:error, String.t()}
-  def validate_url_format(url) when is_binary(url) do
-    cond do
-      not String.starts_with?(url, "http://") and not String.starts_with?(url, "https://") ->
-        {:error, "must start with http:// or https://"}
-
-      in_production?() and String.starts_with?(url, "http://") ->
-        {:error, "must use HTTPS in production"}
-
-      in_production?() and private_url?(url) ->
-        {:error, "cannot use private or local network addresses in production"}
-
-      not in_production?() and
-          (String.contains?(url, "localhost") or String.contains?(url, "127.0.0.1")) ->
-        # Allow localhost in dev/test
-        :ok
-
-      true ->
-        :ok
-    end
-  end
-
-  defp validate_url(changeset) do
-    case get_change(changeset, :url) do
-      nil ->
-        changeset
-
-      url ->
-        case validate_url_format(url) do
-          :ok -> changeset
-          {:error, msg} -> add_error(changeset, :url, msg)
-        end
-    end
-  end
-
-  @doc """
-  Checks if a URL points to a private or local network address.
-  """
-  @spec private_url?(String.t()) :: boolean()
-  def private_url?(url) do
-    case URI.parse(url).host do
-      nil ->
-        true
-
-      host ->
-        # Check for literal local hostnames
-        if host in ["localhost", "127.0.0.1", "::1"] do
-          true
-        else
-          # Resolve hostname and check IP ranges for both IPv4 and IPv6
-          check_ip_address(host)
-        end
-    end
-  end
-
-  defp check_ip_address(host) do
-    host_charlist = to_charlist(host)
-
-    # Check IPv4
-    ipv4_private =
-      case :inet.getaddr(host_charlist, :inet) do
-        {:ok, {10, _b, _c, _d}} -> true
-        {:ok, {172, x, _c, _d}} when x >= 16 and x <= 31 -> true
-        {:ok, {192, 168, _c, _d}} -> true
-        {:ok, {127, _b, _c, _d}} -> true
-        {:ok, {169, 254, _c, _d}} -> true
-        {:ok, {0, 0, 0, 0}} -> true
-        _other -> false
-      end
-
-    # Check IPv6
-    ipv6_private =
-      case :inet.getaddr(host_charlist, :inet6) do
-        {:ok, {0, 0, 0, 0, 0, 0, 0, 1}} -> true
-        {:ok, {0xFE80, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} -> true
-        {:ok, {0xFC00, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} -> true
-        {:ok, {0xFD00, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} -> true
-        _other -> false
-      end
-
-    ipv4_private or ipv6_private
-  end
-
   defp validate_events(changeset) do
     case get_change(changeset, :events) do
       nil ->
@@ -263,10 +177,6 @@ defmodule Tymeslot.DatabaseSchemas.WebhookSchema do
   @spec generate_secure_token() :: String.t()
   def generate_secure_token do
     "ts_" <> Base.encode64(:crypto.strong_rand_bytes(24), padding: false)
-  end
-
-  defp in_production? do
-    Application.get_env(:tymeslot, :environment) == :prod
   end
 
   defp generate_token(changeset) do
