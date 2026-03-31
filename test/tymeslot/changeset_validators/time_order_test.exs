@@ -2,6 +2,8 @@ defmodule Tymeslot.ChangesetValidators.TimeOrderTest do
   use ExUnit.Case, async: true
 
   alias Tymeslot.ChangesetValidators.TimeOrder
+  alias __MODULE__.DateTimeSlot
+  alias __MODULE__.TimeSlot
 
   @moduletag :unit
 

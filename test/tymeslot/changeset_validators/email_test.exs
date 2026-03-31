@@ -2,6 +2,7 @@ defmodule Tymeslot.ChangesetValidators.EmailTest do
   use ExUnit.Case, async: true
 
   alias Tymeslot.ChangesetValidators.Email
+  alias __MODULE__.EmailHolder
 
   @moduletag :unit
 

@@ -12,13 +12,13 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Profiles.Scheduling
-  alias Tymeslot.Security.FieldValidators.UsernameValidator
-  alias Tymeslot.Validation.Constraints
   alias Tymeslot.Profiles.Timezone
   alias Tymeslot.Profiles.Usernames
+  alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.Security
   alias Tymeslot.Themes.Theme
+  alias Tymeslot.Validation.Constraints
 
   @type user_id :: pos_integer()
   @type username :: String.t()
