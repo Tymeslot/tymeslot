@@ -229,8 +229,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       |> form("#username-form-container form", %{username: "api"})
       |> render_submit()
 
-      # InputProcessor.validate_field catches reserved names before Profiles.update_username
-      # is reached, and surfaces the message "This username is reserved and cannot be used".
+      # Reserved-word check in the schema's validate_username_not_reserved/1 catches this.
       html = render(view)
       assert html =~ "reserved"
     end

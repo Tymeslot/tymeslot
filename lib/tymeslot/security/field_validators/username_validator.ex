@@ -33,12 +33,13 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
   def validate(username, opts) when is_binary(username) do
     min_length = Keyword.get(opts, :min_length, @username_min_length)
     max_length = Keyword.get(opts, :max_length, @username_max_length)
+    reserved_words = Keyword.get(opts, :reserved_words, nil)
 
     trimmed_username = String.trim(username)
 
     with :ok <- validate_length(trimmed_username, min_length, max_length),
          :ok <- validate_format(trimmed_username) do
-      validate_reserved_words(trimmed_username)
+      validate_reserved_words(trimmed_username, reserved_words)
     end
   end
 
@@ -72,38 +73,13 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidator do
     end
   end
 
-  defp validate_reserved_words(username) do
+  defp validate_reserved_words(_username, nil), do: :ok
+
+  defp validate_reserved_words(username, reserved_words) when is_list(reserved_words) do
     lowercase_username = String.downcase(username)
 
-    reserved_words = [
-      "admin",
-      "api",
-      "www",
-      "mail",
-      "ftp",
-      "login",
-      "signup",
-      "auth",
-      "dashboard",
-      "profile",
-      "settings",
-      "help",
-      "support",
-      "contact",
-      "about",
-      "privacy",
-      "terms",
-      "blog",
-      "news",
-      "home",
-      "index",
-      "root",
-      "test",
-      "demo"
-    ]
-
     if lowercase_username in reserved_words do
-      {:error, "This username is reserved and cannot be used"}
+      {:error, "This username is reserved"}
     else
       :ok
     end

@@ -57,13 +57,17 @@ defmodule Tymeslot.Security.FieldValidators.UsernameValidatorTest do
       assert {:error, ^error_msg} = UsernameValidator.validate("-johndoe")
     end
 
-    test "rejects reserved words" do
-      reserved_words = ["admin", "api", "login", "root", "test"]
+    test "rejects reserved words when list is provided" do
+      reserved = ["admin", "api", "login", "root", "test"]
 
-      for word <- reserved_words do
-        assert {:error, "This username is reserved and cannot be used"} =
-                 UsernameValidator.validate(word)
+      for word <- reserved do
+        assert {:error, "This username is reserved"} =
+                 UsernameValidator.validate(word, reserved_words: reserved)
       end
+    end
+
+    test "skips reserved-word check when no list is provided" do
+      assert :ok = UsernameValidator.validate("admin")
     end
 
     test "allows custom min/max length via options" do

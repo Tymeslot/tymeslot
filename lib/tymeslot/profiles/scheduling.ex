@@ -8,6 +8,8 @@ defmodule Tymeslot.Profiles.Scheduling do
   alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.Validation.Constraints
 
+  @min_advance_hours_range Constraints.min_advance_hours_range()
+
   @type profile :: ProfileSchema.t()
   @type result(t) :: {:ok, t} | {:error, any()}
 
@@ -57,7 +59,7 @@ defmodule Tymeslot.Profiles.Scheduling do
   @spec update_min_advance_hours(profile, String.t() | integer()) :: result(profile)
   def update_min_advance_hours(%ProfileSchema{} = profile, hours_str) when is_binary(hours_str) do
     case Integer.parse(hours_str) do
-      {hours, _value} when hours in 0..168 ->
+      {hours, _value} when hours in @min_advance_hours_range ->
         ProfileQueries.update_profile(profile, %{min_advance_hours: hours})
 
       _other ->

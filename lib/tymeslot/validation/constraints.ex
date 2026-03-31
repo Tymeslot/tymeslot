@@ -45,7 +45,7 @@ defmodule Tymeslot.Validation.Constraints do
   def min_advance_hours_opts, do: [greater_than_or_equal_to: 0, less_than_or_equal_to: 168]
 
   @spec duration_minutes_opts() :: keyword()
-  def duration_minutes_opts, do: [greater_than: 0, less_than_or_equal_to: 480]
+  def duration_minutes_opts, do: [greater_than_or_equal_to: 1, less_than_or_equal_to: 480]
 
   # Field lengths
 
@@ -60,6 +60,9 @@ defmodule Tymeslot.Validation.Constraints do
 
   @spec webhook_name_length_range() :: Range.t()
   def webhook_name_length_range, do: 1..255
+
+  @spec webhook_name_length_opts() :: keyword()
+  def webhook_name_length_opts, do: [min: 1, max: 255]
 
   @spec url_max_length() :: pos_integer()
   def url_max_length, do: 2048

@@ -44,7 +44,7 @@ defmodule Tymeslot.Validation.ConstraintsTest do
 
     test "duration_minutes_opts" do
       opts = Constraints.duration_minutes_opts()
-      assert opts[:greater_than] == 0
+      assert opts[:greater_than_or_equal_to] == 1
       assert opts[:less_than_or_equal_to] == 480
     end
   end
@@ -68,6 +68,12 @@ defmodule Tymeslot.Validation.ConstraintsTest do
 
     test "webhook_name_length_range" do
       assert Constraints.webhook_name_length_range() == 1..255
+    end
+
+    test "webhook_name_length_opts" do
+      opts = Constraints.webhook_name_length_opts()
+      assert opts[:min] == 1
+      assert opts[:max] == 255
     end
 
     test "integration_name_length_range" do
