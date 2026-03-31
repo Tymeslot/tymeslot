@@ -11,6 +11,7 @@ defmodule Tymeslot.Meetings do
   alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Meetings.{Queries, VideoRooms}
+  alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Pagination.CursorPage
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Workers.CalendarEventWorker
@@ -102,8 +103,6 @@ defmodule Tymeslot.Meetings do
   """
   @spec schedule_email_notifications(Ecto.Schema.t()) :: :ok | {:error, any()}
   def schedule_email_notifications(meeting) do
-    alias Tymeslot.Notifications.Orchestrator
-
     case Orchestrator.schedule_meeting_notifications(meeting) do
       {:ok, _result} ->
         Logger.info("Meeting notifications scheduled", meeting_id: meeting.id)
@@ -137,11 +136,7 @@ defmodule Tymeslot.Meetings do
     Reschedule.execute(meeting_uid, new_params, form_data)
   end
 
-  @doc """
-  Cancels a calendar event for a meeting asynchronously.
-
-  DEPRECATED: Use cancel_meeting/1 for complete cancellation workflow.
-  """
+  @doc false
   @spec cancel_calendar_event(Ecto.Schema.t()) :: :ok
   def cancel_calendar_event(meeting) do
     Logger.info("Scheduling calendar event cancellation",
@@ -171,7 +166,7 @@ defmodule Tymeslot.Meetings do
     end
   rescue
     error ->
-      Logger.error("Exception while scheduling calendar event cancellation",
+      Logger.warning("Exception while scheduling calendar event cancellation",
         meeting_id: meeting.id,
         error: inspect(error)
       )

@@ -31,7 +31,9 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
 
         tasks =
           Enum.map(all_clients, fn client ->
-            Task.async(fn -> fetch_events_with_fallback(client, start_utc, end_utc) end)
+            Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+              fetch_events_with_fallback(client, start_utc, end_utc)
+            end)
           end)
 
         results = Task.await_many(tasks, Base.task_await_timeout_ms())

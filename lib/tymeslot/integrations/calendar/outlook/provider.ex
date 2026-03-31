@@ -116,7 +116,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
-  @spec call_delete_event(map(), String.t()) :: {:ok, term()} | {:error, atom(), String.t()}
+  @spec call_delete_event(map(), String.t()) :: :ok | {:error, atom(), String.t()}
   def call_delete_event(integration, event_id) do
     # Use the default booking calendar if set
     calendar_id = integration.default_booking_calendar_id

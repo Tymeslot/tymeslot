@@ -62,9 +62,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
   defp process_event(integration, event) do
     attrs = build_cache_attrs(integration.id, event)
 
-    :ok = CalendarEventCacheQueries.upsert_batch([attrs])
-    SyncBroadcast.broadcast_cache_update(integration.user_id, [attrs.uid])
-    maybe_reconcile_time_change(integration, event)
+    case SyncBroadcast.upsert_and_broadcast(integration.user_id, attrs) do
+      :ok -> maybe_reconcile_time_change(integration, event)
+      {:error, _reason} -> :ok
+    end
   end
 
   defp process_deletion(integration, href) do

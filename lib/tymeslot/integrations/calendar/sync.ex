@@ -91,8 +91,8 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
               reason: inspect(reason)
             )
 
-            case MeetingQueries.update_calendar_sync_status(meeting.id, nil) do
-              {:ok, _} ->
+            case MeetingQueries.clear_calendar_sync_status(meeting.id) do
+              {:ok, _meeting} ->
                 :ok
 
               {:error, revert_reason} ->

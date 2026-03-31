@@ -37,8 +37,10 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
           Logger.info("Fetching from calendars in parallel", calendar_count: length(all_clients))
 
           results =
-            all_clients
-            |> Task.async_stream(&fetch_events_from_client/1, timeout: 45_000)
+            Tymeslot.TaskSupervisor
+            |> Task.Supervisor.async_stream(all_clients, &fetch_events_from_client/1,
+              timeout: 45_000
+            )
             |> unwrap_async_results()
 
           {successful_results, failed_results} =
@@ -152,7 +154,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
     # Fetch events from each calendar in parallel
     tasks =
       Enum.map(all_clients, fn client ->
-        Task.async(fn ->
+        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
           fetch_events_for_client_in_range(client, start_datetime, end_datetime)
         end)
       end)

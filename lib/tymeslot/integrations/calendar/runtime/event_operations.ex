@@ -183,17 +183,17 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   end
 
   defp log_context(%MeetingSchema{} = meeting) do
-    %{
+    [
       meeting_id: meeting.id,
       organizer_user_id: meeting.organizer_user_id,
       meeting_type_id: meeting.meeting_type_id
-    }
+    ]
   end
 
   defp log_context(%MeetingTypeSchema{} = meeting_type) do
-    %{meeting_type_id: meeting_type.id, user_id: meeting_type.user_id}
+    [meeting_type_id: meeting_type.id, user_id: meeting_type.user_id]
   end
 
-  defp log_context(user_id) when is_integer(user_id), do: %{user_id: user_id}
-  defp log_context(_arg), do: %{}
+  defp log_context(user_id) when is_integer(user_id), do: [user_id: user_id]
+  defp log_context(_arg), do: []
 end

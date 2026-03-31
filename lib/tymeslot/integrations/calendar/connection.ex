@@ -16,7 +16,10 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   def validate(integration, user_id, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, 10_000)
 
-    task = Task.async(fn -> validate_connection(integration, user_id) end)
+    task =
+      Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+        validate_connection(integration, user_id)
+      end)
 
     case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
       {:ok, result} -> result

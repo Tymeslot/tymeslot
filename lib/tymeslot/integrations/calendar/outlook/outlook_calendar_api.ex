@@ -39,6 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Lists all accessible calendars for the authenticated user.
   """
+  @impl CalendarAPIBehaviour
   @spec list_calendars(CalendarIntegrationSchema.t()) :: {:ok, [map()]} | api_error()
   def list_calendars(%CalendarIntegrationSchema{} = integration) do
     # Select only necessary fields to avoid API issues
@@ -57,6 +58,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Lists events for a specific calendar within a date range.
   """
+  @impl CalendarAPIBehaviour
   @spec list_events(CalendarIntegrationSchema.t(), String.t(), DateTime.t(), DateTime.t()) ::
           {:ok, [calendar_event()]} | api_error()
   def list_events(%CalendarIntegrationSchema{} = integration, calendar_id, start_time, end_time) do
@@ -68,6 +70,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Lists events for the primary calendar within a date range.
   """
+  @impl CalendarAPIBehaviour
   @spec list_primary_events(CalendarIntegrationSchema.t(), DateTime.t(), DateTime.t()) ::
           {:ok, [calendar_event()]} | api_error()
   def list_primary_events(%CalendarIntegrationSchema{} = integration, start_time, end_time) do
@@ -79,6 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Creates a new event in the primary calendar.
   """
+  @impl CalendarAPIBehaviour
   @spec create_event(CalendarIntegrationSchema.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def create_event(%CalendarIntegrationSchema{} = integration, event_data) do
@@ -94,6 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Creates a new event in a specific calendar.
   """
+  @impl CalendarAPIBehaviour
   @spec create_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def create_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_data) do
@@ -110,6 +115,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Updates an existing event in the primary calendar.
   """
+  @impl CalendarAPIBehaviour
   @spec update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def update_event(%CalendarIntegrationSchema{} = integration, event_id, event_data) do
@@ -126,6 +132,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Updates an existing event in a specific calendar.
   """
+  @impl CalendarAPIBehaviour
   @spec update_event(CalendarIntegrationSchema.t(), String.t(), String.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def update_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id, event_data) do
@@ -147,6 +154,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Deletes an event from the primary calendar.
   """
+  @impl CalendarAPIBehaviour
   @spec delete_event(CalendarIntegrationSchema.t(), String.t()) ::
           :ok | api_error()
   def delete_event(%CalendarIntegrationSchema{} = integration, event_id) do
@@ -160,6 +168,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Deletes an event from a specific calendar.
   """
+  @impl CalendarAPIBehaviour
   @spec delete_event(CalendarIntegrationSchema.t(), String.t(), String.t()) ::
           :ok | api_error()
   def delete_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id) do
@@ -174,6 +183,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Refreshes the access token using the refresh token.
   """
+  @impl CalendarAPIBehaviour
   @spec refresh_token(CalendarIntegrationSchema.t()) ::
           {:ok, {String.t(), String.t(), DateTime.t()}} | api_error()
   def refresh_token(%CalendarIntegrationSchema{} = integration) do
@@ -195,17 +205,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
       case TokenFlow.refresh_token(@token_url, body, provider: :outlook) do
         {:ok, response} ->
-          expires_at = DateTime.add(DateTime.utc_now(), response["expires_in"], :second)
+          expires_in = response["expires_in"] || 3600
+          expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
           {:ok,
            {response["access_token"], response["refresh_token"] || integration.refresh_token,
             expires_at}}
 
-        {:error, {:http_error, 400, body}} ->
-          {:error, :unauthorized, "Token refresh failed: #{body}"}
+        {:error, {:http_error, 400, _body}} ->
+          {:error, :unauthorized, "Token refresh failed"}
 
-        {:error, {:http_error, status, body}} ->
-          {:error, :network_error, "HTTP #{status}: #{body}"}
+        {:error, {:http_error, status, _body}} ->
+          {:error, :network_error, "HTTP #{status}"}
 
         {:error, {:network_error, reason}} ->
           {:error, :network_error, "Network error: #{inspect(reason)}"}
@@ -219,6 +230,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @doc """
   Validates if the current token is still valid (not expired).
   """
+  @impl CalendarAPIBehaviour
   @spec token_valid?(CalendarIntegrationSchema.t()) :: boolean()
   def token_valid?(%CalendarIntegrationSchema{} = integration) do
     OAuthToken.valid?(integration, 300)
@@ -232,6 +244,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   Requires `:webhook_base_url` to be configured in the `:tymeslot` application env.
   """
+  @impl CalendarAPIBehaviour
   @spec register_graph_subscription(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()}
           | {:error, :webhook_base_url_not_configured}
@@ -263,7 +276,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
            {:ok, {events, delta_link}} <- fetch_initial_delta(token) do
         cache_attrs = Enum.map(events, &to_cache_attrs(&1, integration.id))
 
-        with :ok <- CalendarEventCacheQueries.upsert_batch(cache_attrs) do
+        with {:ok, _count} <- CalendarEventCacheQueries.upsert_batch(cache_attrs) do
           persist_graph_subscription(
             integration,
             Map.merge(subscription_attrs, %{
@@ -473,7 +486,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   defp handle_response({:ok, %{status: status, body: body}})
        when status in [200, 201, 204] do
-    if body == "", do: {:ok, %{}}, else: {:ok, Jason.decode!(body)}
+    if body == "" do
+      {:ok, %{}}
+    else
+      case Jason.decode(body) do
+        {:ok, decoded} -> {:ok, decoded}
+        {:error, _reason} -> {:error, :network_error, "Malformed JSON response"}
+      end
+    end
   end
 
   defp handle_response({:ok, %{status: 401}}) do
@@ -481,14 +501,19 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   defp handle_response({:ok, %{status: 403, body: body} = resp}) do
-    response = Jason.decode!(body)
-    msg = get_in(response, ["error", "message"]) || "Forbidden"
-    code = String.downcase(to_string(get_in(response, ["error", "code"]) || ""))
+    case Jason.decode(body) do
+      {:ok, response} ->
+        msg = get_in(response, ["error", "message"]) || "Forbidden"
+        code = String.downcase(to_string(get_in(response, ["error", "code"]) || ""))
 
-    reason = classify_outlook_403(msg, code)
-    retry_after = parse_retry_after(resp)
+        reason = classify_outlook_403(msg, code)
+        retry_after = parse_retry_after(resp)
 
-    handle_403_reason(reason, msg, retry_after)
+        handle_403_reason(reason, msg, retry_after)
+
+      {:error, _reason} ->
+        {:error, :network_error, "Forbidden (malformed response)"}
+    end
   end
 
   defp handle_response({:ok, %{status: 404}}) do

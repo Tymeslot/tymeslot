@@ -508,6 +508,26 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
   """
   @valid_sync_statuses ~w(externally_deleted externally_modified)
 
+  @spec clear_calendar_sync_status(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
+  def clear_calendar_sync_status(meeting_id) do
+    {count, _rows} =
+      Meeting
+      |> where([m], m.id == ^meeting_id)
+      |> Repo.update_all(
+        set: [
+          calendar_sync_status: nil,
+          calendar_sync_status_dismissed_at: nil,
+          updated_at: DateTime.utc_now(:second)
+        ]
+      )
+
+    if count > 0 do
+      get_meeting(meeting_id)
+    else
+      {:error, :not_found}
+    end
+  end
+
   @spec update_calendar_sync_status(String.t(), String.t()) ::
           {:ok, Meeting.t()} | {:error, :not_found}
   def update_calendar_sync_status(meeting_id, status) when status in @valid_sync_statuses do

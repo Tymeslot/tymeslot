@@ -34,10 +34,10 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
   On conflict by (calendar_integration_id, uid) all mutable fields are updated.
   The `id` and `inserted_at` columns are never touched.
 
-  Returns `:ok` on success.
+  Returns `{:ok, count}` on success or `{:error, reason}` on failure.
   """
-  @spec upsert_batch([map()]) :: :ok
-  def upsert_batch([]), do: :ok
+  @spec upsert_batch([map()]) :: {:ok, non_neg_integer()} | {:error, term()}
+  def upsert_batch([]), do: {:ok, 0}
 
   def upsert_batch(events_attrs) do
     now = DateTime.utc_now(:second)
@@ -49,14 +49,17 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
         |> Map.put(:updated_at, now)
       end)
 
-    Repo.insert_all(
-      CalendarEventCacheSchema,
-      entries,
-      on_conflict: {:replace, replace_fields()},
-      conflict_target: [:calendar_integration_id, :uid]
-    )
+    {count, _rows} =
+      Repo.insert_all(
+        CalendarEventCacheSchema,
+        entries,
+        on_conflict: {:replace, replace_fields()},
+        conflict_target: [:calendar_integration_id, :uid]
+      )
 
-    :ok
+    {:ok, count}
+  rescue
+    error -> {:error, error}
   end
 
   @doc """
@@ -105,7 +108,8 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
 
   Returns `:ok` on success or `{:error, reason}` on failure.
   """
-  @spec full_refresh_for_integration(integer(), [map()]) :: :ok | {:error, term()}
+  @spec full_refresh_for_integration(integer(), [map()]) ::
+          {:ok, non_neg_integer()} | {:error, term()}
   def full_refresh_for_integration(calendar_integration_id, events_attrs) do
     result =
       Repo.transaction(fn ->
@@ -113,11 +117,14 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
         |> where([e], e.calendar_integration_id == ^calendar_integration_id)
         |> Repo.delete_all()
 
-        upsert_batch(events_attrs)
+        case upsert_batch(events_attrs) do
+          {:ok, count} -> count
+          {:error, reason} -> Repo.rollback(reason)
+        end
       end)
 
     case result do
-      {:ok, :ok} -> :ok
+      {:ok, count} -> {:ok, count}
       {:error, reason} -> {:error, reason}
     end
   end

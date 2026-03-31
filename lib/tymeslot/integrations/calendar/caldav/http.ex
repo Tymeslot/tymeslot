@@ -236,11 +236,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
 
   # Private helpers
 
-  defp build_headers(username, password, additional_headers) do
+  defp build_headers(username, password, additional_headers)
+       when is_binary(username) and is_binary(password) do
     # Base.encode64 here refers to Elixir's standard Base module, not
     # Tymeslot.Integrations.Calendar.CalDAV.Base (which is aliased as CalDAVBase).
     auth_header = {"Authorization", "Basic " <> Base.encode64("#{username}:#{password}")}
     [auth_header | additional_headers]
+  end
+
+  defp build_headers(_username, _password, _additional_headers) do
+    raise ArgumentError, "CalDAV credentials must be non-nil binaries"
   end
 
   defp build_put_event_headers(username, password, opts) do

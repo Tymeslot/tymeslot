@@ -91,24 +91,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   end
 
   defp extract_events(content) do
-    now = DateTime.utc_now()
-    today = Date.utc_today()
-
     content
     |> extract_vevent_blocks()
     |> Enum.map(&parse_event_block/1)
-    |> Enum.filter(fn event ->
-      # Only include valid events that haven't ended in the past
-      event != nil && event.end_time && !past_event?(event, now, today)
-    end)
-  end
-
-  defp past_event?(%{end_time: %DateTime{} = end_time}, now, _today) do
-    DateTime.compare(end_time, now) == :lt
-  end
-
-  defp past_event?(%{end_time: %Date{} = end_time}, _now, today) do
-    Date.compare(end_time, today) == :lt
+    |> Enum.filter(&(&1 != nil))
   end
 
   defp extract_vevent_blocks(content) do
@@ -146,7 +132,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       parse_datetime_property(dtend) ||
         calculate_end_time(start_time, extract_property(lines, "DURATION"))
 
-    if uid && summary && start_time do
+    if uid && start_time do
       %{
         uid: uid,
         summary: summary,
@@ -177,8 +163,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       # Continuation line (starts with space or tab)
       if String.match?(line, ~r/^[\s\t]/) && acc != [] do
         [last | rest] = acc
-        # Add a space between the folded lines
-        [last <> " " <> String.trim_leading(line) | rest]
+        # RFC 5545 §3.1: unfold by removing the leading whitespace, no extra space
+        [last <> String.trim_leading(line) | rest]
       else
         # New line
         [line | acc]
@@ -345,7 +331,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp extract_calendars_from_xml(xml_body) do
     # Pattern to extract calendar data from CalDAV response
-    calendar_data_pattern = ~r/<(?:C:)?calendar-data[^>]*>(.*?)<\/(?:C:)?calendar-data>/s
+    # Namespace prefixes vary by server (C:, cal:, caldav:, etc.)
+    calendar_data_pattern =
+      ~r/<(?:[a-zA-Z]+:)?calendar-data[^>]*>(.*?)<\/(?:[a-zA-Z]+:)?calendar-data>/s
 
     Enum.map(Regex.scan(calendar_data_pattern, xml_body), fn [_match, calendar_data] ->
       # Unescape XML entities

@@ -82,7 +82,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   defp do_fetch_events(client, paths, start_time, end_time) do
     tasks =
       Enum.map(paths, fn path ->
-        Task.async(fn -> Events.fetch_events(client, path, start_time, end_time) end)
+        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+          Events.fetch_events(client, path, start_time, end_time)
+        end)
       end)
 
     results = Task.await_many(tasks, Base.task_await_timeout_ms())

@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar do
   """
 
   alias Tymeslot.Dashboard.DashboardContext
+  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.DatabaseSchemas.MeetingSchema
@@ -669,6 +670,40 @@ defmodule Tymeslot.Integrations.Calendar do
       [] -> "Calendar discovery failed. Please check your credentials and try again."
       errors -> Enum.map_join(errors, ", ", &to_string/1)
     end
+  end
+
+  # ---------------------------
+  # Public API: Webhook helpers
+  # ---------------------------
+
+  @doc """
+  Finds an integration by its Google webhook channel ID.
+  Used by the Google Calendar webhook controller.
+  """
+  @spec get_by_google_channel_id(String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def get_by_google_channel_id(channel_id) do
+    CalendarIntegrationQueries.get_by_google_channel_id(channel_id)
+  end
+
+  @doc """
+  Finds an integration by its Microsoft Graph subscription ID.
+  Used by the Outlook Calendar webhook and lifecycle controllers.
+  """
+  @spec get_by_graph_subscription_id(String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def get_by_graph_subscription_id(subscription_id) do
+    CalendarIntegrationQueries.get_by_graph_subscription_id(subscription_id)
+  end
+
+  @doc """
+  Touches the notification timestamp for the given integration and field.
+  Used by webhook controllers to track the last notification time.
+  """
+  @spec touch_notification_at(CalendarIntegrationSchema.t(), atom()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def touch_notification_at(integration, field) when is_atom(field) do
+    CalendarIntegrationQueries.touch_notification_at(integration, field)
   end
 
   # ---------------------------

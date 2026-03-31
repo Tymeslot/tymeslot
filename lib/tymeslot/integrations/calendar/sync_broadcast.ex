@@ -16,18 +16,20 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcast do
   """
   @spec upsert_and_broadcast(integer(), map()) :: :ok | {:error, any()}
   def upsert_and_broadcast(user_id, attrs) do
-    CalendarEventCacheQueries.upsert_batch([attrs])
-    broadcast_cache_update(user_id, [attrs.uid])
-    :ok
-  rescue
-    e ->
-      Logger.warning("Cache upsert failed, skipping broadcast",
-        user_id: user_id,
-        uid: attrs[:uid],
-        reason: Exception.message(e)
-      )
+    case CalendarEventCacheQueries.upsert_batch([attrs]) do
+      {:ok, _count} ->
+        broadcast_cache_update(user_id, [attrs[:uid]])
+        :ok
 
-      {:error, e}
+      {:error, reason} = error ->
+        Logger.warning("Cache upsert failed, skipping broadcast",
+          user_id: user_id,
+          uid: attrs[:uid],
+          reason: inspect(reason)
+        )
+
+        error
+    end
   end
 
   @doc """
@@ -35,12 +37,17 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcast do
   On failure, logs a warning with the given `log_context`.
   """
   @spec process_cached_event(integer(), map(), keyword(), (-> any())) :: :ok | {:error, any()}
-  def process_cached_event(user_id, attrs, _log_context, on_success) do
+  def process_cached_event(user_id, attrs, log_context, on_success) do
     case upsert_and_broadcast(user_id, attrs) do
       :ok ->
         on_success.()
 
-      {:error, _reason} = error ->
+      {:error, reason} = error ->
+        Logger.warning(
+          "process_cached_event failed",
+          Keyword.merge(log_context, user_id: user_id, uid: attrs[:uid], reason: inspect(reason))
+        )
+
         error
     end
   end

@@ -243,18 +243,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   defp outlook_client_id do
     Application.get_env(:tymeslot, :outlook_oauth)[:client_id] ||
       System.get_env("OUTLOOK_CLIENT_ID") ||
-      raise "Outlook Client ID not configured"
+      raise "Outlook Client ID not configured — set :outlook_oauth :client_id or OUTLOOK_CLIENT_ID"
   end
 
   defp outlook_client_secret do
     Application.get_env(:tymeslot, :outlook_oauth)[:client_secret] ||
       System.get_env("OUTLOOK_CLIENT_SECRET") ||
-      raise "Outlook Client Secret not configured"
+      raise "Outlook Client Secret not configured — set :outlook_oauth :client_secret or OUTLOOK_CLIENT_SECRET"
   end
 
   defp state_secret do
     Application.get_env(:tymeslot, :outlook_oauth)[:state_secret] ||
       System.get_env("OUTLOOK_STATE_SECRET") ||
-      raise "Outlook State Secret not configured"
+      raise "Outlook State Secret not configured — set :outlook_oauth :state_secret or OUTLOOK_STATE_SECRET"
   end
 end

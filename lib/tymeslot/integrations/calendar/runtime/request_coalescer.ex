@@ -157,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.RequestCoalescer do
     parent = self()
 
     {:ok, pid} =
-      Task.start(fn ->
+      Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
         result =
           try do
             fetch_fn.()

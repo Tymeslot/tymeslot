@@ -25,8 +25,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch do
 
       selected ->
         {successes, failures} =
-          selected
-          |> Task.async_stream(
+          Tymeslot.TaskSupervisor
+          |> Task.Supervisor.async_stream(
+            selected,
             fn calendar ->
               calendar_id = calendar[:id] || calendar["id"]
               api_module.list_events(integration, calendar_id, start_time, end_time)
