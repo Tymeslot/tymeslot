@@ -4,7 +4,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
-  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -55,19 +54,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   @spec with_editable_event(Phoenix.LiveView.Socket.t(), map(), function()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def with_editable_event(socket, params, fun) do
-    event_id = String.to_integer(params["event-id"])
-    event = Enum.find(socket.assigns.events, &(&1.id == event_id))
+    case Integer.parse(params["event-id"] || "") do
+      {event_id, ""} ->
+        event = Enum.find(socket.assigns.events, &(&1.id == event_id))
 
-    cond do
-      is_nil(event) ->
+        cond do
+          is_nil(event) ->
+            {:noreply, socket}
+
+          assert_owns_event(socket, event) == {:error, :unauthorized} ->
+            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+            {:noreply, socket}
+
+          true ->
+            {:noreply, fun.(event)}
+        end
+
+      _invalid ->
         {:noreply, socket}
-
-      assert_owns_event(socket, event) == {:error, :unauthorized} ->
-        send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-        {:noreply, socket}
-
-      true ->
-        {:noreply, fun.(event)}
     end
   end
 
@@ -128,8 +132,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       summary: optimistic_event.title || "",
       start_time: new_start,
       end_time: new_end,
-      description: original_event.description || "",
-      location: original_event.location || "",
+      description: optimistic_event.description || original_event.description || "",
+      location: optimistic_event.location || original_event.location || "",
       provider_event_id: original_event.provider_event_id
     }
 
@@ -150,23 +154,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
       case result do
         :ok ->
-          CalendarEventCacheQueries.upsert_batch([
-            %{
-              uid: original_event.uid,
-              calendar_integration_id: original_event.calendar_integration_id,
-              provider_event_id: original_event.provider_event_id,
-              title: optimistic_event.title,
-              start_at: new_start,
-              end_at: new_end,
-              all_day: optimistic_event.all_day,
-              location: original_event.location,
-              description: original_event.description,
-              attendees: original_event.attendees || [],
-              status: original_event.status,
-              raw_data: original_event.raw_data,
-              synced_at: DateTime.utc_now(:second)
-            }
-          ])
+          CalendarGrid.update_cached_event(%{
+            uid: original_event.uid,
+            calendar_integration_id: original_event.calendar_integration_id,
+            provider_event_id: original_event.provider_event_id,
+            title: optimistic_event.title,
+            start_at: new_start,
+            end_at: new_end,
+            all_day: optimistic_event.all_day,
+            location: optimistic_event.location || original_event.location,
+            description: optimistic_event.description || original_event.description,
+            attendees: original_event.attendees || [],
+            status: original_event.status,
+            raw_data: original_event.raw_data,
+            synced_at: DateTime.utc_now(:second)
+          })
 
           send(lv_pid, {:event_update_result, :ok})
 
@@ -200,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
       case result do
         :ok ->
-          CalendarEventCacheQueries.upsert_batch([cache_row])
+          CalendarGrid.update_cached_event(cache_row)
           send(lv_pid, {:event_update_result, :ok})
 
         {:error, reason} ->
@@ -219,6 +221,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   Runs asynchronously; sends `{:event_move_result, ...}` to the LiveView.
   """
   @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), integer()) ::
+          Phoenix.LiveView.Socket.t()
+  @spec move_event_async(Phoenix.LiveView.Socket.t(), map(), integer(), keyword()) ::
           Phoenix.LiveView.Socket.t()
   def move_event_async(socket, event, new_integration_id, opts \\ []) do
     user_id = socket.assigns.current_user.id

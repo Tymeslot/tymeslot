@@ -23,8 +23,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
     |> assign(:integration_colors, colors)
     |> assign(:owned_integration_ids, owned_ids)
     |> assign(:preferences, prefs)
-    |> assign(:hidden_integration_ids, prefs.hidden_integration_ids || [])
-    |> assign(:view, String.to_existing_atom(prefs.default_view || "week"))
+    |> assign(:hidden_integration_ids, prefs.hidden_integration_ids)
+    |> assign(:view, String.to_existing_atom(prefs.default_view))
     |> check_staleness()
   end
 
@@ -229,16 +229,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
     Float.round(1 / total_cols * 100, 2)
   end
 
+  @spec color_class_for_integration(map(), term()) :: String.t()
+  def color_class_for_integration(integration_colors, integration_id) do
+    index = Map.get(integration_colors, integration_id)
+    calendar_color_class(index)
+  end
+
   @spec color_dot(map(), map()) :: String.t()
   def color_dot(assigns, integration) do
-    index = Map.get(assigns.integration_colors, integration.id)
-    calendar_color_class(index)
+    color_class_for_integration(assigns.integration_colors, integration.id)
   end
 
   @spec color_for_event(map(), map()) :: String.t()
   def color_for_event(assigns, event) do
-    index = Map.get(assigns.integration_colors, event.calendar_integration_id)
-    calendar_color_class(index)
+    color_class_for_integration(assigns.integration_colors, event.calendar_integration_id)
   end
 
   defp calendar_color_class(nil), do: "bg-calendar-fallback"

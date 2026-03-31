@@ -18,7 +18,7 @@ defmodule Tymeslot.Security.RateLimiterCalendarEventMoveTest do
     test "allows moves under the burst limit" do
       user_id = 99_001
 
-      for _ <- 1..3 do
+      for _i <- 1..3 do
         assert :ok = RateLimiter.check_calendar_event_move_rate_limit(user_id)
       end
     end
@@ -26,7 +26,7 @@ defmodule Tymeslot.Security.RateLimiterCalendarEventMoveTest do
     test "rejects after 3 moves in the 1-minute window" do
       user_id = 99_002
 
-      for _ <- 1..3 do
+      for _i <- 1..3 do
         assert :ok = RateLimiter.check_calendar_event_move_rate_limit(user_id)
       end
 
@@ -37,11 +37,11 @@ defmodule Tymeslot.Security.RateLimiterCalendarEventMoveTest do
     end
 
     test "different users have independent limits" do
-      for _ <- 1..3 do
+      for _i <- 1..3 do
         assert :ok = RateLimiter.check_calendar_event_move_rate_limit(99_003)
       end
 
-      assert {:error, :rate_limited, _} =
+      assert {:error, :rate_limited, _message} =
                RateLimiter.check_calendar_event_move_rate_limit(99_003)
 
       assert :ok = RateLimiter.check_calendar_event_move_rate_limit(99_004)

@@ -22,7 +22,7 @@ defmodule Tymeslot.Security.RateLimiterCalendarEventEditTest do
     test "rejects after 30 edits in 5 minutes" do
       user_id = 99_002
 
-      for _ <- 1..30 do
+      for _i <- 1..30 do
         assert :ok = RateLimiter.check_calendar_event_edit_rate_limit(user_id)
       end
 
