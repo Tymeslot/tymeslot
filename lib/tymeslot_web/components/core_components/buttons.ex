@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
     default: :primary,
     values: [:primary, :secondary, :danger, :outline],
     doc:
-      "controls visual style: :primary (filled), :secondary (outlined), :danger (red), :ghost (text-only)"
+      "controls visual style: :primary (filled), :secondary (outlined), :danger (red), :outline (ghost/text-only)"
 
   attr :type, :string, default: "button"
   attr :form, :string, default: nil
