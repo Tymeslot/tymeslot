@@ -280,7 +280,7 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
       # Verify delivery was logged with error
       delivery = Repo.one(WebhookDeliverySchema)
       assert delivery, "Expected delivery log to exist"
-      assert delivery.error_message =~ "private or local network"
+      assert delivery.error_message =~ "Private or local network"
       refute delivery.delivered_at
     end
 

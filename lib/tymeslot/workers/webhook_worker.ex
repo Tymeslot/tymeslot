@@ -20,6 +20,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
   alias Tymeslot.DatabaseQueries.{MeetingQueries, WebhookQueries}
   alias Tymeslot.DatabaseSchemas.WebhookSchema
   alias Tymeslot.Features
+  alias Tymeslot.Security.{DnsResolution, UrlValidation}
   alias Tymeslot.Webhooks
   alias Tymeslot.Webhooks.PayloadBuilder
 
@@ -161,7 +162,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   defp deliver_webhook(%WebhookSchema{} = webhook, event_type, meeting, attempt) do
     if WebhookSchema.should_be_active?(webhook) do
-      case WebhookSchema.validate_url_format(webhook.url) do
+      case check_ssrf(webhook.url) do
         :ok ->
           do_deliver_webhook(webhook, event_type, meeting, attempt)
 
@@ -171,6 +172,24 @@ defmodule Tymeslot.Workers.WebhookWorker do
     else
       {:error, :disabled}
     end
+  end
+
+  defp check_ssrf(url) do
+    if production?() do
+      with :ok <-
+             UrlValidation.validate_http_url(url,
+               block_private_ips: true,
+               enforce_https: true
+             ) do
+        DnsResolution.check_private_ip(url)
+      end
+    else
+      UrlValidation.validate_http_url(url)
+    end
+  end
+
+  defp production? do
+    Application.get_env(:tymeslot, :environment) == :prod
   end
 
   @spec check_feature_access(integer(), integer(), String.t(), atom()) ::

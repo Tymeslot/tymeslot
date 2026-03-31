@@ -7,6 +7,7 @@ defmodule Tymeslot.Security.UrlValidation do
   @default_length_error "URL must be 2000 characters or less"
   @default_scheme_error "Only HTTP and HTTPS URLs are allowed"
   @default_https_error "Use HTTPS for non-local servers"
+  @default_private_ip_error "Private or local network addresses are not allowed"
   @disallowed_protocols ["javascript:", "data:", "file:", "ftp:"]
 
   @spec validate_http_url(String.t(), keyword()) :: :ok | {:error, String.t()}
@@ -40,9 +41,14 @@ defmodule Tymeslot.Security.UrlValidation do
       Keyword.get(opts, :disallowed_protocol_error, @default_scheme_error)
 
     https_error_message = Keyword.get(opts, :https_error_message, @default_https_error)
+    private_ip_error = Keyword.get(opts, :private_ip_error_message, @default_private_ip_error)
     max_length = Keyword.get(opts, :max_length, 2_000)
     disallowed_protocols = Keyword.get(opts, :disallowed_protocols, @disallowed_protocols)
     enforce_https_for_public = Keyword.get(opts, :enforce_https_for_public, false)
+    # Note: enforce_https only rejects HTTP for public hosts — localhost/private
+    # IPs are exempt so that dev/test environments work without HTTPS.
+    enforce_https = Keyword.get(opts, :enforce_https, enforce_https_for_public)
+    block_private_ips = Keyword.get(opts, :block_private_ips, false)
     extra_checks = Keyword.get(opts, :extra_checks)
 
     cond do
@@ -52,7 +58,10 @@ defmodule Tymeslot.Security.UrlValidation do
       contains_disallowed_substring?(url, disallowed_protocols) ->
         {:error, disallowed_protocol_error}
 
-      enforce_https_for_public and scheme == "http" and not local_or_private_host?(host) ->
+      block_private_ips and local_or_private_host?(host) ->
+        {:error, private_ip_error}
+
+      enforce_https and scheme == "http" and not local_or_private_host?(host) ->
         {:error, https_error_message}
 
       true ->
