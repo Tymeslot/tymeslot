@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
             <div class="absolute inset-0 flex items-center" aria-hidden="true">
               <div class="w-full border-t border-tymeslot-100"></div>
             </div>
-            <div class="relative flex justify-center text-[10px] font-black uppercase tracking-[0.2em]">
+            <div class="relative flex justify-center text-token-2xs font-black uppercase tracking-[0.2em]">
               <span class="bg-transparent px-4 text-tymeslot-400">or</span>
             </div>
           </div>
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
       </p>
       <%= if email = get_in(assigns, [:form_data, :email]) || get_in(assigns, [:unverified_user, :email]) do %>
         <div class="mt-6 p-4 bg-tymeslot-50/50 border-2 border-tymeslot-100/50 rounded-2xl inline-block">
-          <p class="text-[10px] font-black text-tymeslot-400 uppercase tracking-widest mb-1">Sent to</p>
+          <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-widest mb-1">Sent to</p>
           <p class="text-tymeslot-900 font-bold text-base">{email}</p>
         </div>
       <% end %>

@@ -28,14 +28,18 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
 
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
-  attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
+  attr :prompt, :string, default: nil, doc: "placeholder option shown in select inputs"
   attr :options, :list, doc: "the options to render for select inputs"
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
   attr :required, :boolean, default: false
   attr :placeholder, :string, default: nil
-  attr :icon, :string, default: nil, doc: "name of the heroicon to display"
-  attr :validate_on_blur, :boolean, default: false
+  attr :icon, :string, default: nil, doc: "optional hero icon name rendered inside the input"
+
+  attr :validate_on_blur, :boolean,
+    default: false,
+    doc: "when true, triggers validation on blur rather than on change"
+
   attr :class, :string, default: nil
   attr :rows, :integer, default: 4, doc: "the number of rows for textarea inputs"
 
@@ -55,7 +59,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   slot :leading_icon
   slot :trailing_icon
 
-  @spec input(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec input(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     assigns
     |> assign(field: nil, id: assigns[:id] || field.id)
@@ -232,7 +236,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   attr :for, :any, default: nil
   slot :inner_block, required: true
 
-  @spec label(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec label(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def label(assigns) do
     ~H"""
     <label for={@for} class="label mb-2 block">
@@ -246,7 +250,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   """
   attr :errors, :list, default: []
 
-  @spec field_error(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec field_error(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def field_error(assigns) do
     ~H"""
     <%= if Enum.any?(@errors) do %>
@@ -283,11 +287,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   Renders a list of password requirements.
   """
   attr :class, :string, default: nil
-  @spec password_requirements(map()) :: Phoenix.LiveView.Rendered.t()
+
+  @spec password_requirements(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def password_requirements(assigns) do
     ~H"""
     <div id="password-requirements" class="mt-2 text-xs sm:text-sm space-y-1.5 password-requirements">
-      <p class="text-tymeslot-500 font-bold uppercase tracking-wider text-[10px]">Password must contain:</p>
+      <p class="text-tymeslot-500 font-bold uppercase tracking-wider text-token-2xs">Password must contain:</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-x-4">
         <ul class="space-y-1">
           <li id="req-length" class="flex items-center text-tymeslot-600 font-medium">
@@ -353,7 +358,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   attr :rest, :global, include: ~w(phx-change phx-submit phx-target)
   slot :inner_block, required: true
 
-  @spec form_wrapper(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec form_wrapper(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def form_wrapper(assigns) do
     ~H"""
     <.form

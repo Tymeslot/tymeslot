@@ -141,10 +141,9 @@ defmodule TymeslotWeb.Components.CoreComponents do
   @doc """
   Renders an info/alert box.
   """
-  attr :color_rgb, :string, default: "59, 130, 246"
   attr :variant, :atom, default: :info, values: [:info, :success, :warning, :error]
   slot :inner_block, required: true
-  @spec info_box(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec info_box(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def info_box(assigns), do: Containers.info_box(assigns)
 
   # ========== FORM ELEMENTS ==========

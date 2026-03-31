@@ -104,6 +104,7 @@
   --color-border-glass-dark-strong: rgba(20, 20, 40, 0.6);
   
   /* Typography Scale */
+  --font-size-2xs: 0.625rem;   /* 10px */
   --font-size-xs: 0.75rem;     /* 12px */
   --font-size-sm: 0.875rem;    /* 14px */
   --font-size-base: 1rem;      /* 16px */
@@ -254,7 +255,12 @@
   --glass-gradient-secondary: linear-gradient(135deg, rgba(15, 118, 110, 0.9) 0%, rgba(45, 212, 191, 0.9) 100%);
   --glass-gradient-overlay: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
   --glass-gradient-fallback: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
-  
+
+  /* Notification Badge Gradients */
+  --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --gradient-amber: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --gradient-gray: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+
   /* OAuth/Authentication Button Properties */
   --oauth-button-height: 2.75rem;
   --oauth-button-gap: 0.75rem;

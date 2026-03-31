@@ -273,7 +273,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               <h4 class="text-lg font-black text-tymeslot-900 truncate tracking-tight">
                 {@display_name}
               </h4>
-              <span :if={!@integration.is_active} class="px-2 py-0.5 rounded-full bg-tymeslot-100 text-tymeslot-500 text-[10px] font-black uppercase tracking-widest">
+              <span :if={!@integration.is_active} class="px-2 py-0.5 rounded-full bg-tymeslot-100 text-tymeslot-500 text-token-2xs font-black uppercase tracking-widest">
                 Paused
               </span>
               <UIComponents.health_warning_badge
@@ -331,7 +331,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <%!-- Calendar Selection Grid (full width, active only) --%>
       <div :if={@integration.is_active} class="mt-6">
         <div class="flex items-center gap-2 mb-3">
-          <span class="text-[10px] font-black uppercase tracking-widest text-tymeslot-400">
+          <span class="text-token-2xs font-black uppercase tracking-widest text-tymeslot-400">
             Syncing {(@integration.calendar_list || []) |> Enum.count(&(&1["selected"] || &1[:selected]))} Calendars
           </span>
           <div class="h-px bg-tymeslot-100 flex-1"></div>

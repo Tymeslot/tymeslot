@@ -30,31 +30,37 @@ defmodule TymeslotWeb.OnboardingLive do
       socket = put_flash(socket, :info, "You have already completed onboarding.")
       {:ok, redirect(socket, to: ~p"/dashboard")}
     else
-      {:ok, profile} = Onboarding.get_or_create_profile(user.id)
-
-      # Persist browser-detected timezone only on the connected mount to avoid
-      # a wasted DB write during the static render (connect params are nil then).
+      # Load profile and prefill timezone only on the connected mount to avoid
+      # a double upsert during the static render. The static render assigns nil;
+      # the template guards on @profile being non-nil before rendering steps
+      # that require it.
       profile =
         if connected?(socket) do
-          detected_timezone = get_connect_params(socket)["timezone"]
-          prefilled = Timezone.prefill_timezone(profile.timezone, detected_timezone)
+          {:ok, loaded} = Onboarding.get_or_create_profile(user.id)
 
-          if prefilled != profile.timezone do
-            case Profiles.update_timezone(profile, prefilled) do
+          detected_timezone = get_connect_params(socket)["timezone"]
+          prefilled = Timezone.prefill_timezone(loaded.timezone, detected_timezone)
+
+          if prefilled != loaded.timezone do
+            case Profiles.update_timezone(loaded, prefilled) do
               {:ok, updated} -> updated
-              {:error, _reason} -> Map.put(profile, :timezone, prefilled)
+              {:error, _reason} -> Map.put(loaded, :timezone, prefilled)
             end
           else
-            profile
+            loaded
           end
         else
-          profile
+          nil
         end
 
       socket =
         socket
         |> assign(:profile, profile)
-        |> then(&assign(&1, :form_data, BasicSettingsShared.build_form_data(&1)))
+        |> then(fn s ->
+          if profile,
+            do: assign(s, :form_data, BasicSettingsShared.build_form_data(s)),
+            else: assign(s, :form_data, %{})
+        end)
         |> assign(:current_step, :welcome)
         |> assign(:step_data, %{})
         |> assign(:show_skip_modal, false)

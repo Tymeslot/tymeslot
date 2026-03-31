@@ -559,7 +559,7 @@ defmodule TymeslotWeb.Dashboard.Availability.ListComponent do
                   b when is_list(b) -> b
                   _other -> []
                 end %>
-              <span class="bg-tymeslot-100 text-tymeslot-500 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
+              <span class="bg-tymeslot-100 text-tymeslot-500 text-token-2xs font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
                 {length(breaks)} total
               </span>
             </div>

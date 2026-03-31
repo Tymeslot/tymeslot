@@ -165,7 +165,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
             </button>
           </div>
           
-          <p class="text-[10px] font-black text-tymeslot-400 uppercase tracking-[0.2em]">MP4 or WebM. Max 20MB.</p>
+          <p class="text-token-2xs font-black text-tymeslot-400 uppercase tracking-[0.2em]">MP4 or WebM. Max 20MB.</p>
         </form>
 
         <%= if @customization.background_video_path && @customization.background_value == "custom" do %>

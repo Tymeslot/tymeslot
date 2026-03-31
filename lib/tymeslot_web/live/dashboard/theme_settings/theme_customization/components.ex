@@ -77,7 +77,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
         <% current_scheme = @presets.color_schemes[@customization.color_scheme] %>
         <%= if current_scheme do %>
           <div class="flex items-center gap-3 bg-tymeslot-50 px-4 py-2 rounded-token-2xl border border-tymeslot-100 shadow-inner">
-            <span class="text-[10px] font-black uppercase tracking-widest text-tymeslot-400">Current</span>
+            <span class="text-token-2xs font-black uppercase tracking-widest text-tymeslot-400">Current</span>
             <div class="flex items-center gap-1.5 bg-white p-1 rounded-token-lg border border-tymeslot-100">
               <div class="w-3 h-3 rounded-full" style={"background-color: #{current_scheme.colors.primary}"}>
               </div>

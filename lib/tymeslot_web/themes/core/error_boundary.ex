@@ -19,52 +19,6 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundary do
         }
 
   @doc """
-  Executes a theme function within an error boundary.
-
-  Returns {:ok, result} on success or {:error, error_context} on failure.
-  """
-  @spec call(String.t(), module(), atom(), list()) :: {:ok, term()} | {:error, error_context()}
-  def call(theme_id, module, function, args) do
-    result = apply(module, function, args)
-    {:ok, result}
-  rescue
-    error ->
-      stacktrace = __STACKTRACE__
-      context = build_error_context(theme_id, function, args, error, stacktrace)
-      log_theme_error(context)
-      {:error, context}
-  catch
-    kind, error ->
-      stacktrace = __STACKTRACE__
-      context = build_error_context(theme_id, function, args, {kind, error}, stacktrace)
-      log_theme_error(context)
-      {:error, context}
-  end
-
-  @doc """
-  Executes a theme function with a fallback on error.
-
-  Returns the result on success or the fallback value on failure.
-  """
-  @spec call_with_fallback(String.t(), module(), atom(), list(), (error_context() -> term())) ::
-          term()
-  def call_with_fallback(theme_id, module, function, args, fallback_fn) do
-    apply(module, function, args)
-  rescue
-    error ->
-      stacktrace = __STACKTRACE__
-      context = build_error_context(theme_id, function, args, error, stacktrace)
-      log_theme_error(context)
-      fallback_fn.(context)
-  catch
-    kind, error ->
-      stacktrace = __STACKTRACE__
-      context = build_error_context(theme_id, function, args, {kind, error}, stacktrace)
-      log_theme_error(context)
-      fallback_fn.(context)
-  end
-
-  @doc """
   Wraps a LiveView callback to handle theme errors gracefully.
   """
   @spec wrap_callback(String.t(), module(), :mount, list()) :: {:ok, Phoenix.LiveView.Socket.t()}
@@ -107,6 +61,22 @@ defmodule TymeslotWeb.Themes.Core.ErrorBoundary do
   end
 
   # Private functions
+
+  defp call_with_fallback(theme_id, module, function, args, fallback_fn) do
+    apply(module, function, args)
+  rescue
+    error ->
+      stacktrace = __STACKTRACE__
+      context = build_error_context(theme_id, function, args, error, stacktrace)
+      log_theme_error(context)
+      fallback_fn.(context)
+  catch
+    kind, error ->
+      stacktrace = __STACKTRACE__
+      context = build_error_context(theme_id, function, args, {kind, error}, stacktrace)
+      log_theme_error(context)
+      fallback_fn.(context)
+  end
 
   defp build_error_context(theme_id, function, args, error, stacktrace) do
     %{

@@ -14,11 +14,18 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
   attr :show_steps, :boolean, default: false
   attr :current_step, :integer, default: 1
   attr :slug, :string, default: nil
-  attr :username_context, :string, default: nil
-  attr :theme_customization, :any, default: nil
+
+  attr :username_context, :string,
+    default: nil,
+    doc: "optional username shown in the page header for profile context"
+
+  attr :theme_customization, :any,
+    default: nil,
+    doc: "optional theme customization map applied to the booking page layout"
+
   attr :has_custom_theme, :boolean, default: false
 
-  @spec page_layout(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec page_layout(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def page_layout(assigns) do
     ~H"""
     <div class="flex-1 flex flex-col">
@@ -44,7 +51,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
   Global footer component.
   """
   attr :class, :string, default: nil
-  @spec footer(map()) :: Phoenix.LiveView.Rendered.t()
+
+  @spec footer(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def footer(assigns) do
     ~H"""
     <footer class="footer-gradient text-center">

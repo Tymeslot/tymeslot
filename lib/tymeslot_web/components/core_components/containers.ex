@@ -9,7 +9,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   """
   attr :class, :string, default: ""
   slot :inner_block, required: true
-  @spec brand_card(map()) :: Phoenix.LiveView.Rendered.t()
+
+  @spec brand_card(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def brand_card(assigns) do
     ~H"""
     <div class={["brand-card", @class]}>
@@ -23,7 +24,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   """
   attr :class, :string, default: ""
   slot :inner_block, required: true
-  @spec glass_morphism_card(map()) :: Phoenix.LiveView.Rendered.t()
+
+  @spec glass_morphism_card(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def glass_morphism_card(assigns) do
     ~H"""
     <div class={["glass-morphism-card", @class]}>
@@ -38,7 +40,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   attr :title, :string, default: nil
   attr :class, :string, default: ""
   slot :inner_block, required: true
-  @spec detail_card(map()) :: Phoenix.LiveView.Rendered.t()
+
+  @spec detail_card(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def detail_card(assigns) do
     ~H"""
     <div class={["meeting-details-card", @class]}>
@@ -53,12 +56,11 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   @doc """
   Renders an icon badge with gradient background.
   """
-  attr :color_from, :string, default: "#10b981"
-  attr :color_to, :string, default: "#059669"
   attr :size, :atom, default: :medium, values: [:small, :medium, :large]
   attr :class, :string, default: ""
   slot :inner_block, required: true
-  @spec icon_badge(map()) :: Phoenix.LiveView.Rendered.t()
+
+  @spec icon_badge(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def icon_badge(assigns) do
     size_classes =
       case assigns.size do
@@ -99,7 +101,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   attr :class, :string, default: ""
   slot :inner_block
 
-  @spec section_header(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec section_header(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def section_header(assigns) do
     size_class =
       case assigns.level do
@@ -164,7 +166,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Containers do
   attr :variant, :atom, default: :info, values: [:info, :success, :warning, :error]
   attr :class, :string, default: ""
   slot :inner_block, required: true
-  @spec info_box(map()) :: Phoenix.LiveView.Rendered.t()
+
+  @spec info_box(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def info_box(assigns) do
     classes =
       case assigns.variant do

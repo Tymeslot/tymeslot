@@ -497,19 +497,19 @@ defmodule TymeslotWeb.AuthLive do
     <div id="auth-live" class="brand-container !bg-transparent" data-state={@current_state}>
       <%= case @current_state do %>
         <% :login -> %>
-          {LoginComponent.auth_login(assigns)}
+          <LoginComponent.auth_login {assigns} />
         <% :signup -> %>
-          {SignupComponent.auth_signup(assigns)}
+          <SignupComponent.auth_signup {assigns} />
         <% :verify_email -> %>
-          {VerifyEmailComponent.verify_email_page(assigns)}
+          <VerifyEmailComponent.verify_email_page {assigns} />
         <% :reset_password -> %>
-          {PasswordResetComponent.forgot_password_form(assigns)}
+          <PasswordResetComponent.forgot_password_form {assigns} />
         <% :reset_password_form -> %>
-          {PasswordResetComponent.new_password_form(assigns)}
+          <PasswordResetComponent.new_password_form {assigns} />
         <% :reset_password_sent -> %>
-          {PasswordResetComponent.forgot_password_confirm_page(assigns)}
+          <PasswordResetComponent.forgot_password_confirm_page {assigns} />
         <% :complete_registration -> %>
-          {CompleteRegistrationComponent.complete_registration_form(assigns)}
+          <CompleteRegistrationComponent.complete_registration_form {assigns} />
         <% :password_reset_success -> %>
           <TymeslotWeb.Shared.Auth.LayoutComponents.auth_card_layout
             title="Success!"

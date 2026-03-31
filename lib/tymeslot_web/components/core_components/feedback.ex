@@ -8,7 +8,8 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   Renders a loading spinner.
   """
   attr :class, :string, default: nil
-  @spec spinner(map()) :: Phoenix.LiveView.Rendered.t()
+
+  @spec spinner(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def spinner(assigns) do
     ~H"""
     <svg class="spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -31,7 +32,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Feedback do
   attr :secondary_message, :string, default: nil
   slot :icon, required: true
 
-  @spec empty_state(map()) :: Phoenix.LiveView.Rendered.t()
+  @spec empty_state(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def empty_state(assigns) do
     ~H"""
     <div class="h-full flex items-center justify-center">

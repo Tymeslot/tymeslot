@@ -52,13 +52,14 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   """
   attr :id, :string, required: true
   attr :show, :boolean, default: false
-  attr :on_cancel, JS, default: %JS{}
+  attr :on_cancel, JS, default: %JS{}, doc: "JS command executed when the modal is dismissed"
   attr :size, :atom, default: :medium, values: [:small, :medium, :large, :xlarge, :full]
 
   slot :header, required: false
   slot :inner_block, required: true
   slot :footer, required: false
-  @spec modal(map()) :: Phoenix.LiveView.Rendered.t()
+
+  @spec modal(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
   def modal(assigns) do
     ~H"""
     <div

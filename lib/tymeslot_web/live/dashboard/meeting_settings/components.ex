@@ -657,7 +657,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
                       {integration.name}
                     </span>
                     <%= if not integration.is_active do %>
-                      <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full leading-tight">
+                      <span class="text-token-2xs font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full leading-tight">
                         Reconnect
                       </span>
                     <% end %>
