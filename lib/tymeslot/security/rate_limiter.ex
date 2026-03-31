@@ -3,9 +3,9 @@ defmodule Tymeslot.Security.RateLimiter do
   Rate limiter backed by Hammer (ETS sliding window).
   """
 
-  require Logger
   alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimit
+  alias Tymeslot.Security.RateLimiter.Helpers
 
   @type bucket_key :: String.t()
   @type rate_check_result :: {:allow, pos_integer()} | {:deny, pos_integer()}
@@ -16,7 +16,7 @@ defmodule Tymeslot.Security.RateLimiter do
   """
   @spec check_rate(bucket_key(), pos_integer(), pos_integer()) :: rate_check_result()
   def check_rate(bucket_key, window_ms, limit) do
-    RateLimit.hit(bucket_key, window_ms, limit)
+    Helpers.check_rate(bucket_key, window_ms, limit)
   end
 
   @doc """
@@ -44,10 +44,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_rate_limit(bucket_key(), pos_integer(), pos_integer()) ::
           :ok | {:error, :rate_limited}
   def check_rate_limit(bucket_key, limit, window_ms) do
-    case check_rate(bucket_key, window_ms, limit) do
-      {:allow, _count} -> :ok
-      {:deny, _retry_after} -> {:error, :rate_limited}
-    end
+    Helpers.check_rate_limit(bucket_key, limit, window_ms)
   end
 
   @doc """
@@ -77,7 +74,8 @@ defmodule Tymeslot.Security.RateLimiter do
           :ok | {:error, :rate_limited, String.t()}
   def check_auth_rate_limit(email, ip \\ nil) do
     with :ok <- AccountLockout.check_lockout_status(email),
-         :ok <- check_with_logging("login:#{email}", 10, 1_800_000, "authentication", email),
+         :ok <-
+           Helpers.check_with_logging("login:#{email}", 10, 1_800_000, "authentication", email),
          :ok <- check_auth_ip_bucket(ip) do
       :ok
     else
@@ -91,7 +89,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_auth_ip_bucket(String.t() | :inet.ip_address() | nil | false) ::
           :ok | {:error, :rate_limited, String.t()}
   defp check_auth_ip_bucket(ip) when is_binary(ip) and ip != "" do
-    check_with_logging("login_ip:#{ip}", 50, 1_800_000, "authentication (ip)", ip)
+    Helpers.check_with_logging("login_ip:#{ip}", 50, 1_800_000, "authentication (ip)", ip)
   end
 
   defp check_auth_ip_bucket(_invalid_ip), do: :ok
@@ -119,7 +117,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_signup_rate_limit(String.t(), String.t() | :inet.ip_address() | nil) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_signup_rate_limit(email, ip) do
-    normalized_ip = normalize_ip(ip)
+    normalized_ip = Helpers.normalize_ip(ip)
     downcased_email = String.downcase(email)
 
     buckets = [
@@ -127,7 +125,7 @@ defmodule Tymeslot.Security.RateLimiter do
       {"signup:ip:#{normalized_ip}", @signup_limits, "signup"}
     ]
 
-    check_multi_bucket_limits(buckets)
+    Helpers.check_multi_bucket_limits(buckets)
   end
 
   @verification_limits [
@@ -144,14 +142,14 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_verification_rate_limit(String.t(), String.t() | :inet.ip_address() | nil) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_verification_rate_limit(user_id, ip) do
-    normalized_ip = normalize_ip(ip)
+    normalized_ip = Helpers.normalize_ip(ip)
 
     buckets = [
       {"email_verification:user:#{user_id}", @verification_limits, "email verification"},
       {"email_verification:ip:#{normalized_ip}", @verification_limits, "email verification"}
     ]
 
-    check_multi_bucket_limits(buckets)
+    Helpers.check_multi_bucket_limits(buckets)
   end
 
   @password_reset_limits [
@@ -171,14 +169,14 @@ defmodule Tymeslot.Security.RateLimiter do
         ) :: :ok | {:error, :rate_limited, String.t()}
   def check_password_reset_rate_limit(email, ip) do
     downcased_email = String.downcase(email)
-    normalized_ip = normalize_ip(ip)
+    normalized_ip = Helpers.normalize_ip(ip)
 
     buckets = [
       {"password_reset:email:#{downcased_email}", @password_reset_limits, "password reset"},
       {"password_reset:ip:#{normalized_ip}", @password_reset_limits, "password reset"}
     ]
 
-    check_multi_bucket_limits(buckets)
+    Helpers.check_multi_bucket_limits(buckets)
   end
 
   @doc """
@@ -216,7 +214,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_oauth_initiation_rate_limit(String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_oauth_initiation_rate_limit(ip_address) do
-    check_with_logging(
+    Helpers.check_with_logging(
       "oauth_initiation:#{ip_address}",
       10,
       600_000,
@@ -232,7 +230,13 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_oauth_callback_rate_limit(String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_oauth_callback_rate_limit(ip_address) do
-    check_with_logging("oauth_callback:#{ip_address}", 20, 120_000, "OAuth callback", ip_address)
+    Helpers.check_with_logging(
+      "oauth_callback:#{ip_address}",
+      20,
+      120_000,
+      "OAuth callback",
+      ip_address
+    )
   end
 
   @doc """
@@ -242,7 +246,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_oauth_completion_rate_limit(String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_oauth_completion_rate_limit(ip_address) do
-    check_with_logging(
+    Helpers.check_with_logging(
       "oauth_completion:#{ip_address}",
       6,
       1_200_000,
@@ -258,7 +262,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_oauth_registration_rate_limit(String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_oauth_registration_rate_limit(ip_address) do
-    check_with_logging(
+    Helpers.check_with_logging(
       "oauth_registration:#{ip_address}",
       6,
       1_200_000,
@@ -274,7 +278,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_caldav_connection_rate_limit(String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_caldav_connection_rate_limit(ip_address) do
-    check_with_logging(
+    Helpers.check_with_logging(
       "caldav_connection:#{ip_address}",
       20,
       600_000,
@@ -290,7 +294,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_mirotalk_connection_rate_limit(String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_mirotalk_connection_rate_limit(ip_address) do
-    check_with_logging(
+    Helpers.check_with_logging(
       "mirotalk_connection:#{ip_address}",
       20,
       600_000,
@@ -306,7 +310,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_nextcloud_connection_rate_limit(String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_nextcloud_connection_rate_limit(ip_address) do
-    check_with_logging(
+    Helpers.check_with_logging(
       "nextcloud_connection:#{ip_address}",
       20,
       600_000,
@@ -322,7 +326,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_calendar_discovery_rate_limit(String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_calendar_discovery_rate_limit(ip_address) do
-    check_with_logging(
+    Helpers.check_with_logging(
       "calendar_discovery:#{ip_address}",
       30,
       600_000,
@@ -359,7 +363,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_meeting_cancel_rate_limit(String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_meeting_cancel_rate_limit(client_ip) do
-    check_with_logging(
+    Helpers.check_with_logging(
       "meeting_cancel:#{client_ip}",
       10,
       600_000,
@@ -378,7 +382,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_meeting_keep_rate_limit(String.t()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_meeting_keep_rate_limit(client_ip) do
-    check_with_logging(
+    Helpers.check_with_logging(
       "meeting_keep:#{client_ip}",
       10,
       600_000,
@@ -413,7 +417,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_theme_customization_rate_limit(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_theme_customization_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
-    check_with_logging(
+    Helpers.check_with_logging(
       "theme_customization:#{user_id}",
       150,
       300_000,
@@ -423,7 +427,7 @@ defmodule Tymeslot.Security.RateLimiter do
   end
 
   def check_theme_customization_rate_limit(user_id),
-    do: invalid_user_id("theme customization", user_id)
+    do: Helpers.invalid_user_id("theme customization", user_id)
 
   @doc """
   Rate limit meeting filter changes in dashboard.
@@ -435,7 +439,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_meeting_filter_rate_limit(integer()) ::
           :ok | {:error, :rate_limited, String.t()}
   def check_meeting_filter_rate_limit(user_id) do
-    check_with_logging(
+    Helpers.check_with_logging(
       "meeting_filter:#{user_id}",
       100,
       300_000,
@@ -453,7 +457,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_webhook_write_rate_limit(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_webhook_write_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
-    check_with_logging(
+    Helpers.check_with_logging(
       "webhook_write:#{user_id}",
       30,
       1_800_000,
@@ -462,7 +466,8 @@ defmodule Tymeslot.Security.RateLimiter do
     )
   end
 
-  def check_webhook_write_rate_limit(user_id), do: invalid_user_id("webhook write", user_id)
+  def check_webhook_write_rate_limit(user_id),
+    do: Helpers.invalid_user_id("webhook write", user_id)
 
   @doc """
   Rate limit webhook test-connection operations from the dashboard.
@@ -473,10 +478,16 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_webhook_test_rate_limit(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_webhook_test_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
-    check_with_logging("webhook_test:#{user_id}", 30, 300_000, "webhook test", to_string(user_id))
+    Helpers.check_with_logging(
+      "webhook_test:#{user_id}",
+      30,
+      300_000,
+      "webhook test",
+      to_string(user_id)
+    )
   end
 
-  def check_webhook_test_rate_limit(user_id), do: invalid_user_id("webhook test", user_id)
+  def check_webhook_test_rate_limit(user_id), do: Helpers.invalid_user_id("webhook test", user_id)
 
   @doc """
   Rate limit webhook security token regeneration from the dashboard.
@@ -487,7 +498,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_webhook_token_regen_rate_limit(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_webhook_token_regen_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
-    check_with_logging(
+    Helpers.check_with_logging(
       "webhook_token_regen:#{user_id}",
       10,
       3_600_000,
@@ -497,7 +508,7 @@ defmodule Tymeslot.Security.RateLimiter do
   end
 
   def check_webhook_token_regen_rate_limit(user_id),
-    do: invalid_user_id("webhook token regeneration", user_id)
+    do: Helpers.invalid_user_id("webhook token regeneration", user_id)
 
   @doc """
   Rate limit the "refresh all calendars" operation from the dashboard.
@@ -508,7 +519,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_calendar_refresh_rate_limit(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_calendar_refresh_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
-    check_with_logging(
+    Helpers.check_with_logging(
       "calendar_refresh:#{user_id}",
       10,
       600_000,
@@ -517,7 +528,8 @@ defmodule Tymeslot.Security.RateLimiter do
     )
   end
 
-  def check_calendar_refresh_rate_limit(user_id), do: invalid_user_id("calendar refresh", user_id)
+  def check_calendar_refresh_rate_limit(user_id),
+    do: Helpers.invalid_user_id("calendar refresh", user_id)
 
   @doc """
   Rate limit calendar and video integration write operations (add/toggle) from the dashboard.
@@ -528,7 +540,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_integration_write_rate_limit(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_integration_write_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
-    check_with_logging(
+    Helpers.check_with_logging(
       "integration_write:#{user_id}",
       30,
       1_800_000,
@@ -538,7 +550,7 @@ defmodule Tymeslot.Security.RateLimiter do
   end
 
   def check_integration_write_rate_limit(user_id),
-    do: invalid_user_id("integration write", user_id)
+    do: Helpers.invalid_user_id("integration write", user_id)
 
   @doc """
   Rate limit meeting type write operations (create, update, toggle, delete, reorder) from the dashboard.
@@ -549,7 +561,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_meeting_type_write_rate_limit(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_meeting_type_write_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
-    check_with_logging(
+    Helpers.check_with_logging(
       "meeting_type_write:#{user_id}",
       60,
       1_800_000,
@@ -559,7 +571,7 @@ defmodule Tymeslot.Security.RateLimiter do
   end
 
   def check_meeting_type_write_rate_limit(user_id),
-    do: invalid_user_id("meeting type write", user_id)
+    do: Helpers.invalid_user_id("meeting type write", user_id)
 
   @doc """
   Rate limit avatar upload and delete operations from the dashboard.
@@ -570,7 +582,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_avatar_upload_rate_limit(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_avatar_upload_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
-    check_with_logging(
+    Helpers.check_with_logging(
       "avatar_upload:#{user_id}",
       20,
       3_600_000,
@@ -579,7 +591,8 @@ defmodule Tymeslot.Security.RateLimiter do
     )
   end
 
-  def check_avatar_upload_rate_limit(user_id), do: invalid_user_id("avatar upload", user_id)
+  def check_avatar_upload_rate_limit(user_id),
+    do: Helpers.invalid_user_id("avatar upload", user_id)
 
   @doc """
   Rate limit owner-side meeting cancellation from the dashboard.
@@ -590,7 +603,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_dashboard_cancel_rate_limit(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_dashboard_cancel_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
-    check_with_logging(
+    Helpers.check_with_logging(
       "dashboard_cancel:#{user_id}",
       20,
       600_000,
@@ -600,7 +613,7 @@ defmodule Tymeslot.Security.RateLimiter do
   end
 
   def check_dashboard_cancel_rate_limit(user_id),
-    do: invalid_user_id("meeting cancellation", user_id)
+    do: Helpers.invalid_user_id("meeting cancellation", user_id)
 
   @doc """
   Rate limit owner-side reschedule request sending from the dashboard.
@@ -611,7 +624,7 @@ defmodule Tymeslot.Security.RateLimiter do
   @spec check_dashboard_reschedule_rate_limit(integer() | any()) ::
           :ok | {:error, :rate_limited, String.t()} | {:error, :invalid_user_id}
   def check_dashboard_reschedule_rate_limit(user_id) when is_integer(user_id) and user_id > 0 do
-    check_with_logging(
+    Helpers.check_with_logging(
       "dashboard_reschedule:#{user_id}",
       20,
       600_000,
@@ -621,74 +634,5 @@ defmodule Tymeslot.Security.RateLimiter do
   end
 
   def check_dashboard_reschedule_rate_limit(user_id),
-    do: invalid_user_id("reschedule request", user_id)
-
-  # Private helpers
-
-  @spec invalid_user_id(String.t(), any()) :: {:error, :invalid_user_id}
-  defp invalid_user_id(operation, user_id) do
-    Logger.error("Invalid user_id for rate limit",
-      operation: operation,
-      user_id: inspect(user_id)
-    )
-
-    {:error, :invalid_user_id}
-  end
-
-  @spec check_with_logging(bucket_key(), pos_integer(), pos_integer(), String.t(), String.t()) ::
-          :ok | {:error, :rate_limited, String.t()}
-  defp check_with_logging(bucket_key, limit, window_ms, operation, identifier) do
-    case check_rate_limit(bucket_key, limit, window_ms) do
-      :ok ->
-        :ok
-
-      {:error, :rate_limited} ->
-        window_minutes = div(window_ms, 60_000)
-
-        Logger.warning("Rate limit exceeded",
-          operation: operation,
-          identifier: identifier,
-          bucket: bucket_key,
-          limit: limit,
-          window_minutes: window_minutes
-        )
-
-        message =
-          "You've reached the limit of #{limit} #{operation} actions per #{window_minutes} minutes. " <>
-            "Please wait a few minutes before trying again."
-
-        {:error, :rate_limited, message}
-    end
-  end
-
-  defp normalize_ip(nil), do: "unknown"
-
-  defp normalize_ip(ip) when is_tuple(ip) do
-    ip |> :inet.ntoa() |> to_string()
-  end
-
-  defp normalize_ip(ip) when is_binary(ip), do: ip
-  defp normalize_ip(other), do: to_string(other)
-
-  defp check_multi_bucket_limits(buckets) do
-    Enum.reduce_while(buckets, :ok, fn {bucket_base, limits, operation}, _acc ->
-      case apply_limits(bucket_base, limits, operation) do
-        :ok -> {:cont, :ok}
-        error -> {:halt, error}
-      end
-    end)
-  end
-
-  defp apply_limits(bucket_base, limits, operation) do
-    Enum.reduce_while(limits, :ok, fn {label, limit, window_ms}, _acc ->
-      case check_rate_limit("#{bucket_base}:#{label}", limit, window_ms) do
-        :ok ->
-          {:cont, :ok}
-
-        {:error, :rate_limited} ->
-          {:halt,
-           {:error, :rate_limited, "Too many #{operation} attempts. Please try again later."}}
-      end
-    end)
-  end
+    do: Helpers.invalid_user_id("reschedule request", user_id)
 end
