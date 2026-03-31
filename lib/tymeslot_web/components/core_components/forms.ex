@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   slot :leading_icon
   slot :trailing_icon
 
-  @spec input(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec input(map()) :: Phoenix.LiveView.Rendered.t()
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     assigns
     |> assign(field: nil, id: assigns[:id] || field.id)
@@ -236,7 +236,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   attr :for, :any, default: nil
   slot :inner_block, required: true
 
-  @spec label(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec label(map()) :: Phoenix.LiveView.Rendered.t()
   def label(assigns) do
     ~H"""
     <label for={@for} class="label mb-2 block">
@@ -250,7 +250,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   """
   attr :errors, :list, default: []
 
-  @spec field_error(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec field_error(map()) :: Phoenix.LiveView.Rendered.t()
   def field_error(assigns) do
     ~H"""
     <%= if Enum.any?(@errors) do %>
@@ -288,7 +288,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   """
   attr :class, :string, default: nil
 
-  @spec password_requirements(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec password_requirements(map()) :: Phoenix.LiveView.Rendered.t()
   def password_requirements(assigns) do
     ~H"""
     <div id="password-requirements" class="mt-2 text-xs sm:text-sm space-y-1.5 password-requirements">
@@ -358,7 +358,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   attr :rest, :global, include: ~w(phx-change phx-submit phx-target)
   slot :inner_block, required: true
 
-  @spec form_wrapper(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec form_wrapper(map()) :: Phoenix.LiveView.Rendered.t()
   def form_wrapper(assigns) do
     ~H"""
     <.form

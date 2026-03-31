@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
   attr :rest, :global, doc: "the arbitrary HTML attributes to add to the flash container"
   slot :inner_block, doc: "the optional inner block that renders the flash message"
 
-  @spec flash(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec flash(map()) :: Phoenix.LiveView.Rendered.t()
   def flash(assigns) do
     assigns = assign_new(assigns, :id, fn -> "flash-#{assigns.kind}" end)
 
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Flash do
   attr :flash, :map, required: true, doc: "the map of flash messages"
   attr :id, :string, default: "flash-group", doc: "the optional id of flash container"
 
-  @spec flash_group(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec flash_group(map()) :: Phoenix.LiveView.Rendered.t()
   def flash_group(assigns) do
     ~H"""
     <div id={@id} class="fixed top-4 right-4 z-[10050] flex flex-col gap-3 pointer-events-none">

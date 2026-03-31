@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
 
   slot :inner_block, required: true
 
-  @spec action_button(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec action_button(map()) :: Phoenix.LiveView.Rendered.t()
   def action_button(assigns) do
     ~H"""
     <button
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Buttons do
 
   slot :inner_block, required: true
 
-  @spec loading_button(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec loading_button(map()) :: Phoenix.LiveView.Rendered.t()
   def loading_button(assigns) do
     ~H"""
     <.action_button

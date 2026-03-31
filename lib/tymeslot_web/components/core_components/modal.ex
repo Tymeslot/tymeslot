@@ -59,7 +59,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   slot :inner_block, required: true
   slot :footer, required: false
 
-  @spec modal(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec modal(map()) :: Phoenix.LiveView.Rendered.t()
   def modal(assigns) do
     ~H"""
     <div

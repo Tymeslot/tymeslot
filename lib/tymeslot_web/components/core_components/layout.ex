@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
 
   attr :has_custom_theme, :boolean, default: false
 
-  @spec page_layout(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec page_layout(map()) :: Phoenix.LiveView.Rendered.t()
   def page_layout(assigns) do
     ~H"""
     <div class="flex-1 flex flex-col">
@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Layout do
   """
   attr :class, :string, default: nil
 
-  @spec footer(Phoenix.LiveView.Assigns.t()) :: Phoenix.LiveView.Rendered.t()
+  @spec footer(map()) :: Phoenix.LiveView.Rendered.t()
   def footer(assigns) do
     ~H"""
     <footer class="footer-gradient text-center">
