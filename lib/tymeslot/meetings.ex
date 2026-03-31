@@ -408,4 +408,15 @@ defmodule Tymeslot.Meetings do
   def get_meeting!(id) do
     Queries.get_meeting!(id)
   end
+
+  @doc """
+  Dismisses the calendar sync status banner for a meeting by recording the current timestamp.
+
+  Returns `{:ok, meeting}` on success or `{:error, :not_found}` if the meeting does not exist.
+  """
+  @spec dismiss_calendar_sync_status(String.t(), integer()) ::
+          {:ok, MeetingSchema.t()} | {:error, :not_found}
+  def dismiss_calendar_sync_status(meeting_id, user_id) do
+    MeetingQueries.dismiss_calendar_sync_status(meeting_id, user_id)
+  end
 end

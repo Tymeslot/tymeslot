@@ -3,7 +3,6 @@ defmodule TymeslotWeb.OnboardingLive do
 
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
-  alias Tymeslot.Profiles.Timezone
   alias Tymeslot.Timezones
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.BasicSettingsHandlers
@@ -39,12 +38,12 @@ defmodule TymeslotWeb.OnboardingLive do
           {:ok, loaded} = Onboarding.get_or_create_profile(user.id)
 
           detected_timezone = get_connect_params(socket)["timezone"]
-          prefilled = Timezone.prefill_timezone(loaded.timezone, detected_timezone)
+          prefilled_profile = Profiles.prefill_timezone(loaded, detected_timezone)
 
-          if prefilled != loaded.timezone do
-            case Profiles.update_timezone(loaded, prefilled) do
+          if prefilled_profile.timezone != loaded.timezone do
+            case Profiles.update_timezone(loaded, prefilled_profile.timezone) do
               {:ok, updated} -> updated
-              {:error, _reason} -> Map.put(loaded, :timezone, prefilled)
+              {:error, _reason} -> prefilled_profile
             end
           else
             loaded

@@ -328,8 +328,16 @@ if config_env() == :prod do
          {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
          # Run daily at 03:15 UTC
          {"15 3 * * *", Tymeslot.Workers.ExpiredSessionCleanupWorker},
+         # Run daily at 02:00 UTC to renew expiring webhook channels
+         {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
+         # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
+         {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
          # Run daily at 04:00 UTC for webhook cleanup
-         {"0 4 * * *", Tymeslot.Workers.WebhookCleanupWorker, args: %{retention_days: 60}}
+         {"0 4 * * *", Tymeslot.Workers.WebhookCleanupWorker, args: %{retention_days: 60}},
+         # Run every 6 hours to detect silent/dead webhook channels
+         {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
+         # Run daily at 03:30 UTC to prune old/inactive calendar event cache
+         {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker}
        ]}
     ]
 
@@ -702,3 +710,11 @@ config :tymeslot, :recaptcha,
   booking_min_score: recaptcha_booking_min_score,
   booking_action: recaptcha_booking_action,
   expected_hostnames: recaptcha_expected_hostnames
+
+# Webhook base URL for inbound push notifications from calendar providers.
+# Required to enable Google Calendar push channels and Outlook Graph subscriptions.
+# When unset, push channel registration is silently skipped (integrations still work
+# via polling fallback).
+if webhook_base_url = System.get_env("WEBHOOK_BASE_URL") do
+  config :tymeslot, :webhook_base_url, webhook_base_url
+end

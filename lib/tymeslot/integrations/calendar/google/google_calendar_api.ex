@@ -8,15 +8,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
   require Logger
 
+  alias Ecto.{Changeset, UUID}
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Infrastructure.Retry
   alias Tymeslot.Integrations.Calendar.{EventTimeFormatter, HTTP}
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
+  alias Tymeslot.Repo
 
   @base_url "https://www.googleapis.com/calendar/v3"
   @token_url "https://oauth2.googleapis.com/token"
@@ -127,6 +128,49 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   @doc """
+  Fetches the incremental event list for the integration using the stored sync token.
+
+  Returns `{:ok, %{events: [...], next_sync_token: token}}` on success,
+  `{:error, :gone, message}` when the sync token has expired (HTTP 410),
+  or another error tuple on failure.
+  """
+  @spec list_events_incremental(CalendarIntegrationSchema.t()) ::
+          {:ok, %{events: [map()], next_sync_token: String.t() | nil}}
+          | {:error, :gone, String.t()}
+          | api_error()
+  def list_events_incremental(%CalendarIntegrationSchema{} = integration) do
+    calendar_id = integration.default_booking_calendar_id || "primary"
+    sync_token = integration.google_sync_token
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      result =
+        CalendarCircuitBreaker.call(:google, fn ->
+          make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events", token, %{
+            "syncToken" => sync_token
+          })
+        end)
+
+      case result do
+        {:ok, response} when is_map(response) ->
+          {:ok,
+           %{
+             events: response["items"] || [],
+             next_sync_token: response["nextSyncToken"]
+           }}
+
+        {:ok, error} ->
+          error
+
+        {:error, :circuit_open} = error ->
+          error
+
+        other ->
+          other
+      end
+    end)
+  end
+
+  @doc """
   Refreshes the access token using the refresh token.
   """
   @spec refresh_token(CalendarIntegrationSchema.t()) ::
@@ -166,12 +210,139 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     OAuthToken.valid?(integration, 300)
   end
 
+  @doc """
+  Registers a Google Calendar push notification channel for the integration,
+  fetches an initial sync token, and persists all channel state to the database.
+
+  Returns `{:ok, updated_integration}` on success, or an error tuple on failure.
+
+  Requires `:webhook_base_url` to be configured in the `:tymeslot` application env.
+  """
+  @spec register_push_channel(CalendarIntegrationSchema.t()) ::
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, :webhook_base_url_not_configured}
+          | {:error, :circuit_open}
+          | api_error()
+  def register_push_channel(%CalendarIntegrationSchema{} = integration) do
+    case Application.get_env(:tymeslot, :webhook_base_url) do
+      nil ->
+        {:error, :webhook_base_url_not_configured}
+
+      webhook_base_url ->
+        do_register_push_channel(integration, webhook_base_url)
+    end
+  end
+
   # Private functions
+
+  defp do_register_push_channel(integration, webhook_base_url) do
+    calendar_id = integration.default_booking_calendar_id || "primary"
+    channel_id = UUID.generate()
+    channel_secret = Base.url_encode64(:crypto.strong_rand_bytes(32))
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      with {:ok, channel_attrs} <-
+             subscribe_to_calendar_events(
+               token,
+               calendar_id,
+               channel_id,
+               channel_secret,
+               webhook_base_url
+             ),
+           {:ok, sync_token} <- fetch_initial_sync_token(token, calendar_id) do
+        persist_push_channel(integration, Map.put(channel_attrs, :google_sync_token, sync_token))
+      end
+    end)
+  end
+
+  defp subscribe_to_calendar_events(
+         token,
+         calendar_id,
+         channel_id,
+         channel_secret,
+         webhook_base_url
+       ) do
+    body = %{
+      "id" => channel_id,
+      "token" => channel_secret,
+      "type" => "web_hook",
+      "address" => "#{webhook_base_url}/webhooks/google-calendar"
+    }
+
+    result =
+      CalendarCircuitBreaker.call(:google, fn ->
+        make_request_with_body(
+          :post,
+          "/calendars/#{URI.encode(calendar_id)}/events/watch",
+          token,
+          body
+        )
+      end)
+
+    case result do
+      {:ok, response} when is_map(response) ->
+        resource_id = response["resourceId"]
+        expiration_ms = response["expiration"]
+
+        expires_at =
+          expiration_ms
+          |> to_integer()
+          |> DateTime.from_unix!(:millisecond)
+          |> DateTime.truncate(:second)
+
+        {:ok,
+         %{
+           google_channel_id: channel_id,
+           google_channel_resource_id: resource_id,
+           google_channel_expires_at: expires_at,
+           google_channel_secret: channel_secret
+         }}
+
+      {:ok, error} ->
+        error
+
+      {:error, :circuit_open} = error ->
+        error
+    end
+  end
+
+  defp fetch_initial_sync_token(token, calendar_id) do
+    result =
+      CalendarCircuitBreaker.call(:google, fn ->
+        make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events", token, %{
+          "maxResults" => "1"
+        })
+      end)
+
+    case result do
+      {:ok, response} when is_map(response) ->
+        {:ok, response["nextSyncToken"]}
+
+      {:ok, error} ->
+        error
+
+      {:error, :circuit_open} = error ->
+        error
+    end
+  end
+
+  defp persist_push_channel(integration, attrs) do
+    now = DateTime.utc_now(:second)
+
+    result =
+      integration
+      |> Changeset.change(Map.put(attrs, :last_external_sync_at, now))
+      |> Repo.update()
+
+    case result do
+      {:ok, updated} -> {:ok, updated}
+      {:error, changeset} -> {:error, {:db_error, changeset}}
+    end
+  end
 
   defp make_request(method, path, token, params \\ %{}) do
     HTTP.request(method, @base_url, path, token,
       params: params,
-      request_fun: &request_with_retry/4,
       response_handler: &handle_http_response/1
     )
   end
@@ -241,19 +412,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
   defp make_request_with_body(method, path, token, body) do
     HTTP.request_with_body(method, @base_url, path, token, body,
-      request_fun: &request_with_retry/4,
       response_handler: &handle_http_response/1
     )
-  end
-
-  defp request_with_retry(method, url, body, headers) do
-    Retry.with_backoff(fn ->
-      http_client().request(method, url, body, headers, [])
-    end)
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
   end
 
   defp format_event_data(event_data) do
@@ -305,14 +465,15 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     |> Map.new()
   end
 
-  # Convert a UUID to a Google Calendar compatible event ID (base32hex)
+  # Convert a UID to a Google Calendar compatible event ID.
+  # Google iCalUIDs have the format "{event_id}@google.com" — strip the domain.
+  # UUIDs may contain hyphens — strip those too.
   defp uuid_to_google_event_id(uid) when is_binary(uid) do
-    # Remove hyphens and convert to lowercase
     uid
+    |> String.split("@")
+    |> hd()
     |> String.replace("-", "")
     |> String.downcase()
-    # Use first 32 chars to ensure it's valid base32hex
-    |> String.slice(0, 32)
   end
 
   defp google_client_id do
@@ -326,4 +487,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       System.get_env("GOOGLE_CLIENT_SECRET") ||
       raise "Google Client Secret not configured"
   end
+
+  defp to_integer(v) when is_integer(v), do: v
+  defp to_integer(v) when is_binary(v), do: String.to_integer(v)
 end

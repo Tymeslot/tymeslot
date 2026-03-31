@@ -58,22 +58,17 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
         attempt: attempt,
         args: %{"integration_id" => integration_id}
       }) do
-    Logger.metadata(job_id: job_id, attempt: attempt)
-
     # Single integration refresh (for retry jobs)
     case CalendarIntegrationQueries.get(integration_id) do
       {:error, :not_found} ->
         {:discard, "Integration not found"}
 
       {:ok, integration} ->
-        Logger.metadata(user_id: integration.user_id)
-        refresh_integration_token(integration)
+        refresh_integration_token(integration, job_id: job_id, attempt: attempt)
     end
   end
 
-  def perform(%Oban.Job{id: job_id, attempt: attempt}) do
-    Logger.metadata(job_id: job_id, attempt: attempt)
-
+  def perform(%Oban.Job{}) do
     # Bulk refresh for periodic job
     refresh_expiring_tokens()
   end
@@ -118,7 +113,12 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
 
   # Private functions
 
-  defp refresh_integration_token(%CalendarIntegrationSchema{provider: provider} = integration) do
+  defp refresh_integration_token(
+         %CalendarIntegrationSchema{provider: provider} = integration,
+         job_meta
+       ) do
+    meta = Keyword.merge(job_meta, user_id: integration.user_id)
+
     # Use the centralized Tokens.refresh_oauth_token which includes single-flight locking
     result =
       ErrorHandler.handle_with_logging(
@@ -137,9 +137,9 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
         # Another process is already refreshing this token.
         # We can just return :ok and let the other process finish,
         # or snooze if we want to be sure. Given it's a job, :ok is fine.
-        Logger.info("Token refresh skipped: already in progress",
-          integration_id: integration.id,
-          provider: provider
+        Logger.info(
+          "Token refresh skipped: already in progress",
+          Keyword.merge(meta, integration_id: integration.id, provider: provider)
         )
 
         :ok

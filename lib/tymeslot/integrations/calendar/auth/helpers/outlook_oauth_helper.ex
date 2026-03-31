@@ -8,14 +8,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
 
   @behaviour Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
 
+  require Logger
+
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Common.OAuth.IdToken
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
-
-  require Logger
 
   @calendar_scope "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/User.Read offline_access openid profile email"
   @oauth_base_url "https://login.microsoftonline.com/common/oauth2/v2.0"

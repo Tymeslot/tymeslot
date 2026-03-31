@@ -175,24 +175,31 @@ defmodule Tymeslot.ProfilesContextTest do
       %{profile: insert(:profile)}
     end
 
-    test "update_buffer_minutes validates range", %{profile: profile} do
+    test "update_buffer_minutes accepts valid value", %{profile: profile} do
       assert {:ok, updated} = Profiles.update_buffer_minutes(profile, 30)
       assert updated.buffer_minutes == 30
+    end
+
+    test "update_buffer_minutes rejects out-of-range value", %{profile: profile} do
       assert {:error, :invalid_buffer_minutes} = Profiles.update_buffer_minutes(profile, 200)
     end
 
-    test "update_advance_booking_days validates range", %{profile: profile} do
+    test "update_advance_booking_days accepts valid value", %{profile: profile} do
       assert {:ok, updated} = Profiles.update_advance_booking_days(profile, 60)
       assert updated.advance_booking_days == 60
+    end
 
+    test "update_advance_booking_days rejects out-of-range value", %{profile: profile} do
       assert {:error, :invalid_advance_booking_days} =
                Profiles.update_advance_booking_days(profile, 0)
     end
 
-    test "update_min_advance_hours validates range", %{profile: profile} do
+    test "update_min_advance_hours accepts valid value", %{profile: profile} do
       assert {:ok, updated} = Profiles.update_min_advance_hours(profile, 12)
       assert updated.min_advance_hours == 12
+    end
 
+    test "update_min_advance_hours rejects out-of-range value", %{profile: profile} do
       assert {:error, :invalid_min_advance_hours} =
                Profiles.update_min_advance_hours(profile, 200)
     end
@@ -219,6 +226,7 @@ defmodule Tymeslot.ProfilesContextTest do
       # Create a fake "image" that is just text
       fake_path = "/tmp/fake_image.jpg"
       File.write!(fake_path, "not an image")
+      on_exit(fn -> File.rm(fake_path) end)
 
       entry = %{
         path: fake_path,
@@ -226,7 +234,6 @@ defmodule Tymeslot.ProfilesContextTest do
       }
 
       assert {:error, :invalid_image_format} = Profiles.update_avatar(profile, entry)
-      File.rm!(fake_path)
     end
 
     test "update_avatar accepts valid image content" do
@@ -241,6 +248,12 @@ defmodule Tymeslot.ProfilesContextTest do
 
       fake_path = "/tmp/valid_image.png"
       File.write!(fake_path, png_binary)
+      upload_dir = Application.get_env(:tymeslot, :upload_directory, "uploads")
+
+      on_exit(fn ->
+        File.rm(fake_path)
+        File.rm_rf(Path.join(upload_dir, "avatars/#{profile.id}"))
+      end)
 
       entry = %{
         path: fake_path,
@@ -249,11 +262,6 @@ defmodule Tymeslot.ProfilesContextTest do
 
       assert {:ok, updated_profile} = Profiles.update_avatar(profile, entry)
       assert updated_profile.avatar =~ "_avatar_"
-
-      # Clean up
-      upload_dir = Application.get_env(:tymeslot, :upload_directory, "uploads")
-      File.rm_rf!(Path.join(upload_dir, "avatars/#{profile.id}"))
-      File.rm!(fake_path)
     end
 
     test "delete_avatar removes the avatar from the profile" do
@@ -350,12 +358,12 @@ defmodule Tymeslot.ProfilesContextTest do
       assert Profiles.prefill_timezone(nil, "America/New_York") == nil
     end
 
-    test "uses detected timezone when profile has default timezone" do
+    test "keeps saved timezone even when it matches the default" do
       profile = insert(:profile, timezone: Profiles.get_default_timezone())
       prefilled = Profiles.prefill_timezone(profile, "America/Chicago")
 
-      # Should have adopted the browser-detected timezone
-      assert prefilled.timezone == "America/Chicago"
+      # Saved value is the source of truth — never override with detected
+      assert prefilled.timezone == Profiles.get_default_timezone()
     end
 
     test "does not overwrite an already-customised timezone" do
@@ -370,10 +378,15 @@ defmodule Tymeslot.ProfilesContextTest do
       profile = insert(:profile)
       result = Profiles.prefill_timezone(profile, nil)
 
-      # The profile is inserted with the default timezone, so should_use_detected? returns true.
-      # fallback_default(nil, default) returns the default, which equals profile.timezone.
-      # No crash and the timezone is unchanged from the profile's perspective.
+      # Profile has a saved timezone — detected value is irrelevant.
       assert result.timezone == profile.timezone
+    end
+
+    test "uses detected timezone when profile has no saved timezone" do
+      profile = insert(:profile, timezone: nil)
+      prefilled = Profiles.prefill_timezone(profile, "America/Chicago")
+
+      assert prefilled.timezone == "America/Chicago"
     end
 
     test "keeps custom timezone when detected timezone is nil" do

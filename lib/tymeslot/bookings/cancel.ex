@@ -10,6 +10,7 @@ defmodule Tymeslot.Bookings.Cancel do
   alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.DatabaseSchemas.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings
+  alias Tymeslot.Notifications.Events
 
   @doc """
   Cancels a meeting by its ID.
@@ -64,6 +65,46 @@ defmodule Tymeslot.Bookings.Cancel do
   end
 
   @doc """
+  Cancels a meeting due to external calendar deletion.
+
+  Bypasses policy checks (external deletions may arrive for past meetings)
+  and skips calendar event deletion (the event is already gone). Only
+  proceeds if the meeting is still in an active status.
+
+  Returns {:ok, meeting} or {:error, reason}
+  """
+  @spec execute_external(Meeting.t()) :: {:ok, Meeting.t()} | {:error, atom() | String.t()}
+  def execute_external(%Meeting{status: status} = meeting)
+      when status in ["confirmed", "pending", "reschedule_requested"] do
+    Logger.info("Auto-cancelling externally deleted meeting",
+      meeting_id: meeting.id,
+      uid: meeting.uid
+    )
+
+    with {:ok, updated_meeting} <- update_meeting_status_external(meeting),
+         :ok <- send_cancellation_notifications(updated_meeting) do
+      {:ok, updated_meeting}
+    else
+      {:error, reason} = error ->
+        Logger.error("Failed to auto-cancel externally deleted meeting",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+
+        error
+    end
+  end
+
+  def execute_external(%Meeting{status: status} = meeting) do
+    Logger.info("Skipping auto-cancel for externally deleted meeting",
+      meeting_id: meeting.id,
+      status: status
+    )
+
+    {:ok, meeting}
+  end
+
+  @doc """
   Validates if a meeting can be cancelled.
   Delegates to Policy module for consistent validation.
 
@@ -100,9 +141,32 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
-  defp send_cancellation_notifications(meeting) do
-    alias Tymeslot.Notifications.Events
+  defp update_meeting_status_external(meeting) do
+    attrs = %{
+      status: "cancelled",
+      cancelled_at: DateTime.utc_now(:second),
+      cancellation_reason: "Cancelled externally via calendar sync"
+    }
 
+    case MeetingQueries.update_meeting(meeting, attrs) do
+      {:ok, updated_meeting} ->
+        Logger.info("Meeting auto-cancelled via external calendar deletion",
+          meeting_id: meeting.id
+        )
+
+        {:ok, updated_meeting}
+
+      {:error, changeset} ->
+        Logger.error("Failed to auto-cancel meeting",
+          meeting_id: meeting.id,
+          errors: inspect(changeset.errors)
+        )
+
+        {:error, "Failed to update meeting status"}
+    end
+  end
+
+  defp send_cancellation_notifications(meeting) do
     case Events.meeting_cancelled(meeting) do
       {:ok, _result} ->
         Logger.info("Cancellation emails sent", meeting_id: meeting.id)

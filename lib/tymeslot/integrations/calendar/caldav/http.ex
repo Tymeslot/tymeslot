@@ -40,6 +40,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
     )
   end
 
+  @doc """
+  Performs a PROPFIND request to fetch the CTag property for a calendar.
+  """
+  @spec propfind_ctag(String.t(), String.t(), String.t()) ::
+          {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
+  def propfind_ctag(calendar_url, username, password) do
+    body = XmlHandler.build_propfind_request(properties: [:getctag])
+    propfind(calendar_url, username, password, body: body, depth: "0")
+  end
+
   defp do_propfind(url, username, password, opts) do
     headers = build_propfind_headers(username, password, opts)
     body = Keyword.get(opts, :body, XmlHandler.build_propfind_request())

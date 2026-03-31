@@ -8,6 +8,7 @@ defmodule Tymeslot.Factory do
   alias Ecto.UUID
   alias Tymeslot.DatabaseSchemas.AvailabilityBreakSchema
   alias Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema
+  alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
@@ -157,6 +158,20 @@ defmodule Tymeslot.Factory do
       provider_account_id: sequence(:cal_account_id, &"cal-account-#{&1}"),
       is_active: true,
       user: build(:user)
+    }
+  end
+
+  @spec calendar_event_cache_factory() :: Tymeslot.DatabaseSchemas.CalendarEventCacheSchema.t()
+  def calendar_event_cache_factory do
+    now = DateTime.utc_now(:second)
+
+    %CalendarEventCacheSchema{
+      uid: sequence(:event_uid, &"event-uid-#{&1}"),
+      title: sequence(:event_title, &"Event #{&1}"),
+      start_at: now,
+      end_at: DateTime.add(now, 3600, :second),
+      all_day: false,
+      calendar_integration: build(:calendar_integration)
     }
   end
 

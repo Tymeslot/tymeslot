@@ -132,6 +132,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     summary = extract_property(lines, "SUMMARY")
     description = extract_property(lines, "DESCRIPTION")
     location = extract_property(lines, "LOCATION")
+    attendees = extract_attendees(lines)
+    recurrence_rule = extract_property(lines, "RRULE")
+    recurrence_id = extract_recurrence_id(lines)
 
     # Parse dates with timezone support
     dtstart = extract_datetime_property(lines, "DTSTART")
@@ -149,6 +152,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         summary: summary,
         description: description,
         location: location,
+        attendees: attendees,
+        recurrence_rule: recurrence_rule,
+        recurrence_id: recurrence_id,
         start_time: start_time,
         end_time: end_time,
         transparency: normalize_transp(extract_property(lines, "TRANSP"))
@@ -179,6 +185,48 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
       end
     end)
     |> Enum.reverse()
+  end
+
+  defp extract_attendees(lines) do
+    lines
+    |> Enum.filter(&String.starts_with?(&1, "ATTENDEE"))
+    |> Enum.map(&parse_attendee_line/1)
+    |> Enum.reject(fn a -> is_nil(a["email"]) end)
+  end
+
+  defp parse_attendee_line(line) do
+    email =
+      case Regex.run(~r/:mailto:(.+)$/i, line) do
+        [_match, addr] -> String.trim(addr)
+        nil -> nil
+      end
+
+    name =
+      case Regex.run(~r/(?:^|;)CN=([^;:]+)/i, line) do
+        [_match, cn] -> cn |> String.trim() |> String.trim("\"")
+        nil -> nil
+      end
+
+    status =
+      case Regex.run(~r/(?:^|;)PARTSTAT=([^;:]+)/i, line) do
+        [_match, s] -> s |> String.trim() |> String.downcase()
+        nil -> nil
+      end
+
+    %{"email" => email, "name" => name, "status" => status}
+  end
+
+  defp extract_recurrence_id(lines) do
+    line =
+      Enum.find(lines, fn line ->
+        String.starts_with?(line, "RECURRENCE-ID:") or
+          String.starts_with?(line, "RECURRENCE-ID;")
+      end)
+
+    case line do
+      nil -> nil
+      line -> line |> String.split(":", parts: 2) |> List.last() |> String.trim()
+    end
   end
 
   defp normalize_transp("TRANSPARENT"), do: "transparent"

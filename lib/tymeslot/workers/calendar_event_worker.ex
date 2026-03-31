@@ -95,7 +95,9 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
           timeout_ms: @calendar_timeout_ms
         )
 
-        {:error, "Calendar operation timed out"}
+        # Snooze instead of error to give the server recovery time before
+        # the next attempt, especially important before the final attempt.
+        {:snooze, 300}
     end
   end
 
@@ -532,7 +534,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       Tymeslot.Emails.EmailService
   end
 
-  defp persist_calendar_mapping(meeting, returned_uid) do
+  defp persist_calendar_mapping(meeting, returned_value) do
     # Persist which integration and calendar path were used for creation
     case calendar_module().get_booking_integration_info(meeting) do
       {:ok, %{integration_id: integration_id, calendar_path: calendar_path}} ->
@@ -541,9 +543,24 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
           calendar_path: calendar_path
         }
 
-        # If the provider returned a specific UID, save it to the meeting
+        # If the provider returned a specific UID (string), save it to the meeting
         # so subsequent updates can use it.
-        attrs = if returned_uid, do: Map.put(attrs, :uid, returned_uid), else: attrs
+        attrs =
+          case returned_value do
+            uid when is_binary(uid) ->
+              Map.put(attrs, :uid, uid)
+
+            # Google returns the raw JSON-decoded map with string keys
+            %{"id" => provider_id} when is_binary(provider_id) ->
+              Map.put(attrs, :provider_event_id, provider_id)
+
+            # Outlook returns the common-format map with atom keys
+            %{id: provider_id} when is_binary(provider_id) ->
+              Map.put(attrs, :provider_event_id, provider_id)
+
+            _other ->
+              attrs
+          end
 
         case MeetingQueries.update_meeting(meeting, attrs) do
           {:ok, _updated} ->

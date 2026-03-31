@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
 
   @doc """
@@ -41,7 +42,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
 
       case adapter_client.provider_module.get_events(adapter_client.client) do
         {:ok, events} = result ->
-          Logger.debug("Successfully retrieved events", event_count: length(events))
+          Logger.debug("Successfully retrieved events",
+            provider: adapter_client.provider_type,
+            event_count: length(events)
+          )
+
           result
 
         {:error, type, reason} = error ->
@@ -86,7 +91,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
                end_time
              ) do
           {:ok, events} = result ->
-            Logger.debug("Successfully retrieved events in range", event_count: length(events))
+            Logger.debug("Successfully retrieved events in range",
+              provider: adapter_client.provider_type,
+              event_count: length(events)
+            )
+
             result
 
           {:error, type, reason} = error ->
@@ -198,8 +207,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @doc """
   Deletes an event from the calendar.
   """
-  @spec delete_event(map(), String.t()) :: :ok | {:error, atom(), term()} | {:error, term()}
-  def delete_event(adapter_client, uid) do
+  @spec delete_event(map(), String.t(), keyword()) ::
+          :ok | {:error, atom(), term()} | {:error, term()}
+  def delete_event(adapter_client, uid, opts \\ []) do
     Metrics.time_operation(
       :calendar_delete_event,
       %{provider: adapter_client.provider_type},
@@ -209,7 +219,17 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           uid: uid
         )
 
-        case adapter_client.provider_module.delete_event(adapter_client.client, uid) do
+        # CalDAV providers use the iCalendar UID natively; OAuth providers
+        # (Google, Outlook) need the provider-specific event ID.
+        effective_id =
+          if opts[:provider_event_id] &&
+               !ProviderConfig.caldav_based?(adapter_client.provider_type) do
+            opts[:provider_event_id]
+          else
+            uid
+          end
+
+        case adapter_client.provider_module.delete_event(adapter_client.client, effective_id) do
           :ok ->
             Logger.info("Successfully deleted event", uid: uid)
             :ok

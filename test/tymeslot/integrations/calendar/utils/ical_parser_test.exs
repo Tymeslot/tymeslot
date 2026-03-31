@@ -367,6 +367,140 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert event.transparency == "opaque"
     end
 
+    test "parses ATTENDEE properties into a list of attendee maps" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:attendee-event@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Team Standup
+      ATTENDEE;CN=Alice Smith;PARTSTAT=ACCEPTED:mailto:alice@example.com
+      ATTENDEE;CN=Bob Jones;PARTSTAT=DECLINED:mailto:bob@example.com
+      ATTENDEE:mailto:carol@example.com
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert [alice, bob, carol] = event.attendees
+      assert alice["email"] == "alice@example.com"
+      assert alice["name"] == "Alice Smith"
+      assert alice["status"] == "accepted"
+      assert bob["email"] == "bob@example.com"
+      assert bob["name"] == "Bob Jones"
+      assert bob["status"] == "declined"
+      assert carol["email"] == "carol@example.com"
+      assert is_nil(carol["name"])
+    end
+
+    test "strips surrounding quotes from quoted CN names" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:quoted-cn@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Meeting
+      ATTENDEE;CN="Doe, Jane";PARTSTAT=ACCEPTED:mailto:jane@example.com
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert [jane] = event.attendees
+      assert jane["name"] == "Doe, Jane"
+    end
+
+    test "returns empty attendees list when no ATTENDEE properties are present" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:no-attendees@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Solo Event
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.attendees == []
+    end
+
+    test "parses RRULE property" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:recurring@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Weekly Standup
+      RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.recurrence_rule == "FREQ=WEEKLY;BYDAY=MO,WE,FR"
+    end
+
+    test "returns nil recurrence_rule when RRULE is absent" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:one-off@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:One-off Event
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert is_nil(event.recurrence_rule)
+    end
+
+    test "parses RECURRENCE-ID for a recurring event instance" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:recurring@example.com
+      RECURRENCE-ID:20300115T100000Z
+      DTSTART:20300115T110000Z
+      DTEND:20300115T120000Z
+      SUMMARY:Moved Instance
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.recurrence_id == "20300115T100000Z"
+    end
+
+    test "returns nil recurrence_id when RECURRENCE-ID is absent" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:standalone@example.com
+      DTSTART:20300115T100000Z
+      DTEND:20300115T110000Z
+      SUMMARY:Standalone
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert is_nil(event.recurrence_id)
+    end
+
     test "handles timezone parameter in DTSTART" do
       ical_content = """
       BEGIN:VCALENDAR

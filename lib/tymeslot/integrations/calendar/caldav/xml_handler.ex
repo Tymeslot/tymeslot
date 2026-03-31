@@ -227,26 +227,18 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   # Private helper functions
 
   defp parse_with_security(xml_string) do
-    # Security options to prevent XXE attacks
-    _security_options = [
-      # Disable DTD processing
-      dtd: :none,
-      # Disable entity expansion
-      expand_entities: false
-    ]
-
     # Validate XML size to prevent memory exhaustion
     # 10MB limit
     if byte_size(xml_string) > 10_000_000 do
       raise "XML document too large"
     end
 
-    # Parse with namespace awareness.
+    # Parse with namespace awareness and XXE prevention options.
     # xmerl (SweetXml's backend) signals fatal parse errors via Erlang :exit, not
     # Elixir exceptions. Catch and re-raise as a RuntimeError so the rescue clauses
     # in each public parser function can handle malformed XML uniformly.
     try do
-      SweetXml.parse(xml_string, namespace_conformant: true)
+      SweetXml.parse(xml_string, namespace_conformant: true, dtd: :none)
     catch
       :exit, reason -> raise "XML parse failed: #{inspect(reason)}"
     end
@@ -287,6 +279,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
 
   defp format_caldav_datetime(datetime) do
     datetime
+    |> DateTime.shift_zone!("Etc/UTC")
     |> DateTime.to_iso8601()
     |> String.replace(~r/[-:]/, "")
     |> String.replace(~r/\.\d+/, "")

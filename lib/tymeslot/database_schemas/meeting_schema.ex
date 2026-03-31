@@ -55,6 +55,9 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
           organizer_email_sent: boolean(),
           attendee_email_sent: boolean(),
           reminder_email_sent: boolean(),
+          calendar_sync_status: String.t() | nil,
+          calendar_sync_status_dismissed_at: DateTime.t() | nil,
+          provider_event_id: String.t() | nil,
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -140,6 +143,11 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
     field(:attendee_email_sent, :boolean, default: false)
     field(:reminder_email_sent, :boolean, default: false)
 
+    # External calendar sync
+    field(:calendar_sync_status, :string)
+    field(:calendar_sync_status_dismissed_at, :utc_datetime)
+    field(:provider_event_id, :string)
+
     timestamps(type: :utc_datetime)
   end
 
@@ -190,7 +198,10 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
     :attendee_email_sent,
     :reminder_email_sent,
     :cancelled_at,
-    :cancellation_reason
+    :cancellation_reason,
+    :calendar_sync_status,
+    :calendar_sync_status_dismissed_at,
+    :provider_event_id
   ]
 
   @valid_statuses ["pending", "confirmed", "cancelled", "completed", "reschedule_requested"]

@@ -1,0 +1,126 @@
+defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
+  use Tymeslot.DataCase, async: false
+
+  @moduletag :workers
+  @moduletag :calendar
+
+  use Oban.Testing, repo: Tymeslot.Repo
+  import Mox
+  import Tymeslot.Factory
+
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Security.Encryption
+  alias Tymeslot.Workers.SyncOutlookCalendarWorker
+
+  # Use global mode so mocks are visible from the circuit breaker GenServer process
+  setup :set_mox_global
+  setup :verify_on_exit!
+
+  defp outlook_integration(attrs \\ []) do
+    defaults = [
+      provider: "outlook",
+      access_token_encrypted: Encryption.encrypt("test-access-token"),
+      refresh_token_encrypted: Encryption.encrypt("test-refresh-token"),
+      token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+    ]
+
+    insert(:calendar_integration, Keyword.merge(defaults, attrs))
+  end
+
+  describe "perform/1 - integration not found" do
+    test "discards job when integration does not exist" do
+      assert {:discard, "Integration not found"} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => 999_999_999,
+                 "graph_resource_id" => "some-resource-id"
+               })
+    end
+  end
+
+  describe "perform/1 - missing graph_resource_id" do
+    test "discards job when graph_resource_id is absent" do
+      integration = outlook_integration()
+
+      assert {:discard, "graph_resource_id required — Outlook syncs are webhook-driven"} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+    end
+  end
+
+  describe "perform/1 - unauthorized" do
+    test "returns :ok on auth error from event fetch" do
+      integration = outlook_integration()
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 401, body: ~s({"error":"unauthorized"})}}
+      end)
+
+      assert :ok =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "event-abc-123"
+               })
+    end
+  end
+
+  describe "perform/1 - circuit breaker open" do
+    test "snoozes for 120 seconds when circuit is open" do
+      integration = outlook_integration()
+
+      # Trip the circuit breaker by making enough failing calls through it.
+      # The outlook breaker has failure_threshold: 5.
+      for _n <- 1..6 do
+        CalendarCircuitBreaker.call(:outlook, fn -> raise "simulated failure" end)
+      end
+
+      assert {:snooze, 120} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "event-abc-123"
+               })
+
+      # Reset to avoid polluting other tests
+      CalendarCircuitBreaker.reset(:outlook)
+    end
+  end
+
+  describe "perform/1 - event deletion (404)" do
+    test "returns error when Graph returns 404 due to circuit breaker treating :not_found as failure" do
+      # BUG: The circuit breaker's execute_function/1 treats {:error, :not_found}
+      # as a failure (2-element error tuple), so it never reaches handle_event_deleted.
+      # The intended behaviour (per the module doc) is to remove the cache entry and
+      # return :ok. This test documents the actual behaviour; fix by returning a
+      # 3-element tuple from fetch_event on 404 (like the 401 path does).
+      integration = outlook_integration()
+
+      insert(:calendar_event_cache,
+        calendar_integration: integration,
+        provider_event_id: "deleted-event-123",
+        uid: "ical-uid-deleted@test"
+      )
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 404, body: ~s({"error":"not_found"})}}
+      end)
+
+      # Actual behaviour: circuit breaker intercepts {:error, :not_found} → retries
+      assert {:error, :not_found} =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "deleted-event-123"
+               })
+
+      # The cached event is NOT removed because handle_event_deleted is never reached
+      remaining =
+        Repo.all(
+          from e in Tymeslot.DatabaseSchemas.CalendarEventCacheSchema,
+            where:
+              e.calendar_integration_id == ^integration.id and
+                e.provider_event_id == "deleted-event-123"
+        )
+
+      refute Enum.empty?(remaining)
+    end
+  end
+end

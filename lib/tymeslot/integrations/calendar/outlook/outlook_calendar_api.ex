@@ -8,16 +8,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   require Logger
 
+  alias Ecto.Changeset
+  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
-  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Infrastructure.Retry
   alias Tymeslot.Integrations.Calendar.{EventTimeFormatter, HTTP}
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
+  alias Tymeslot.Repo
 
   @base_url "https://graph.microsoft.com/v1.0"
   @token_url "https://login.microsoftonline.com/common/oauth2/v2.0/token"
@@ -222,7 +224,220 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     OAuthToken.valid?(integration, 300)
   end
 
+  @doc """
+  Registers a Microsoft Graph change notification subscription for the integration,
+  fetches an initial delta snapshot, and persists all subscription state to the database.
+
+  Returns `{:ok, updated_integration}` on success, or an error tuple on failure.
+
+  Requires `:webhook_base_url` to be configured in the `:tymeslot` application env.
+  """
+  @spec register_graph_subscription(CalendarIntegrationSchema.t()) ::
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, :webhook_base_url_not_configured}
+          | {:error, :circuit_open}
+          | api_error()
+  def register_graph_subscription(%CalendarIntegrationSchema{} = integration) do
+    case Application.get_env(:tymeslot, :webhook_base_url) do
+      nil ->
+        {:error, :webhook_base_url_not_configured}
+
+      webhook_base_url ->
+        do_register_graph_subscription(integration, webhook_base_url)
+    end
+  end
+
   # Private functions
+
+  defp do_register_graph_subscription(integration, webhook_base_url) do
+    client_state = Base.url_encode64(:crypto.strong_rand_bytes(32))
+
+    expiration =
+      DateTime.utc_now()
+      |> DateTime.add(2 * 24 * 3600, :second)
+      |> DateTime.to_iso8601()
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      with {:ok, subscription_attrs} <-
+             create_graph_subscription(token, client_state, expiration, webhook_base_url),
+           {:ok, {events, delta_link}} <- fetch_initial_delta(token) do
+        cache_attrs = Enum.map(events, &to_cache_attrs(&1, integration.id))
+
+        with :ok <- CalendarEventCacheQueries.upsert_batch(cache_attrs) do
+          persist_graph_subscription(
+            integration,
+            Map.merge(subscription_attrs, %{
+              graph_delta_link: delta_link,
+              graph_client_state: client_state
+            })
+          )
+        end
+      end
+    end)
+  end
+
+  defp create_graph_subscription(token, client_state, expiration, webhook_base_url) do
+    body = %{
+      "changeType" => "created,updated,deleted",
+      "notificationUrl" => "#{webhook_base_url}/webhooks/outlook-calendar",
+      "lifecycleNotificationUrl" => "#{webhook_base_url}/webhooks/outlook-lifecycle",
+      "resource" => "me/events",
+      "expirationDateTime" => expiration,
+      "clientState" => client_state
+    }
+
+    result =
+      CalendarCircuitBreaker.call(:outlook, fn ->
+        make_request_with_body(:post, "/subscriptions", token, body)
+      end)
+
+    case result do
+      {:ok, response} when is_map(response) ->
+        expires_at = parse_iso8601_datetime(response["expirationDateTime"])
+
+        {:ok,
+         %{
+           graph_subscription_id: response["id"],
+           graph_subscription_expires_at: expires_at
+         }}
+
+      {:ok, error} ->
+        error
+
+      {:error, :circuit_open} = error ->
+        error
+    end
+  end
+
+  defp fetch_initial_delta(token) do
+    params = %{
+      "$select" =>
+        "id,subject,start,end,iCalUId,location,body,attendees,recurrence,seriesMasterId,type,isAllDay,showAs"
+    }
+
+    result =
+      CalendarCircuitBreaker.call(:outlook, fn ->
+        fetch_delta_page(token, "/me/events/delta", params, [])
+      end)
+
+    case result do
+      {:ok, {:ok, events, delta_link}} ->
+        {:ok, {events, delta_link}}
+
+      {:ok, error} ->
+        error
+
+      {:error, :circuit_open} = error ->
+        error
+    end
+  end
+
+  @max_delta_pages 50
+
+  defp fetch_delta_page(token, path, params, accumulated, page \\ 1) do
+    if page > @max_delta_pages do
+      Logger.warning("Outlook delta pagination limit reached", pages: page)
+      {:ok, accumulated, nil}
+    else
+      with {:ok, response} <- make_request(:get, path, token, params) do
+        events = accumulated ++ (response["value"] || [])
+
+        cond do
+          delta_link = response["@odata.deltaLink"] ->
+            {:ok, events, delta_link}
+
+          next_link = response["@odata.nextLink"] ->
+            next_uri = URI.parse(next_link)
+            next_params = URI.decode_query(next_uri.query || "")
+            fetch_delta_page(token, next_uri.path, next_params, events, page + 1)
+
+          true ->
+            {:ok, events, nil}
+        end
+      end
+    end
+  end
+
+  @spec to_cache_attrs(map(), integer()) :: map()
+  def to_cache_attrs(event, calendar_integration_id) do
+    %{
+      uid: event["iCalUId"] || event["id"],
+      calendar_integration_id: calendar_integration_id,
+      provider_event_id: event["id"],
+      title: event["subject"],
+      start_at: parse_outlook_datetime(event["start"]),
+      end_at: parse_outlook_datetime(event["end"]),
+      all_day: event["isAllDay"] || false,
+      location: get_in(event, ["location", "displayName"]),
+      description: get_in(event, ["body", "content"]),
+      attendees: map_attendees(event["attendees"]),
+      recurrence_rule: format_recurrence(event["recurrence"]),
+      recurring_event_id: event["seriesMasterId"],
+      status: if(event["showAs"] == "free", do: "free", else: "confirmed"),
+      raw_data: event,
+      synced_at: DateTime.utc_now(:second)
+    }
+  end
+
+  defp parse_outlook_datetime(nil), do: nil
+
+  defp parse_outlook_datetime(%{"dateTime" => dt_string, "timeZone" => timezone}) do
+    if timezone != "UTC",
+      do: Logger.warning("Unexpected timezone in Graph response", timezone: timezone)
+
+    # Graph API returns ISO8601-like strings without timezone suffix; treat as UTC
+    normalized = String.replace(dt_string, ~r/\.\d+$/, "") <> "Z"
+    parse_iso8601_datetime(normalized)
+  end
+
+  defp parse_outlook_datetime(_unknown), do: nil
+
+  defp map_attendees(nil), do: []
+
+  defp map_attendees(attendees) when is_list(attendees) do
+    Enum.map(attendees, fn attendee ->
+      %{
+        "email" => get_in(attendee, ["emailAddress", "address"]),
+        "name" => get_in(attendee, ["emailAddress", "name"]),
+        "status" => get_in(attendee, ["status", "response"])
+      }
+    end)
+  end
+
+  defp format_recurrence(nil), do: nil
+
+  defp format_recurrence(%{"pattern" => pattern, "range" => range}) do
+    type = Map.get(pattern, "type", "")
+    interval = Map.get(pattern, "interval", 1)
+    range_type = Map.get(range, "type", "")
+
+    "FREQ=#{String.upcase(type)};INTERVAL=#{interval};RANGE_TYPE=#{range_type}"
+  end
+
+  defp format_recurrence(_unknown), do: nil
+
+  defp parse_iso8601_datetime(nil), do: nil
+
+  defp parse_iso8601_datetime(dt_string) do
+    case DateTime.from_iso8601(dt_string) do
+      {:ok, dt, _offset} -> DateTime.truncate(dt, :second)
+      _error -> nil
+    end
+  end
+
+  defp persist_graph_subscription(integration, attrs) do
+    now = DateTime.utc_now(:second)
+
+    result =
+      integration
+      |> Changeset.change(Map.put(attrs, :last_external_sync_at, now))
+      |> Repo.update()
+
+    case result do
+      {:ok, updated} -> {:ok, updated}
+      {:error, changeset} -> {:error, {:db_error, changeset}}
+    end
+  end
 
   defp build_events_query_params(start_time, end_time) do
     %{
@@ -246,13 +461,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   defp make_request(method, path, token, params) do
     headers = [
       {"Content-Type", "application/json"},
-      {"Prefer", "outlook.timezone=\"UTC\""}
+      {"Prefer", "outlook.timezone=\"UTC\", outlook.body-content-type=\"text\""}
     ]
 
     HTTP.request(method, @base_url, path, token,
       params: params,
       headers: headers,
-      request_fun: &request_with_retry/4,
       response_handler: &handle_response/1
     )
   end
@@ -348,19 +562,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   defp make_request_with_body(method, path, token, body) do
     HTTP.request_with_body(method, @base_url, path, token, body,
-      request_fun: &request_with_retry/4,
       response_handler: &handle_response/1
     )
-  end
-
-  defp request_with_retry(method, url, body, headers) do
-    Retry.with_backoff(fn ->
-      http_client().request(method, url, body, headers, [])
-    end)
-  end
-
-  defp http_client do
-    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
   end
 
   defp format_event_data(event_data) do

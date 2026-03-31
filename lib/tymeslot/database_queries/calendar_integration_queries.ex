@@ -303,6 +303,82 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   @doc """
+  Finds an integration by its Google webhook channel ID.
+
+  Intentionally matches inactive integrations to handle in-flight notifications gracefully.
+  Returns `{:ok, integration}` with decrypted OAuth tokens if found,
+  `{:error, :not_found}` otherwise.
+  """
+  @spec get_by_google_channel_id(String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def get_by_google_channel_id(channel_id) do
+    result =
+      CalendarIntegrationSchema
+      |> where([c], c.google_channel_id == ^channel_id)
+      |> limit(1)
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      integration -> {:ok, CalendarIntegrationSchema.decrypt_oauth_tokens(integration)}
+    end
+  end
+
+  @doc """
+  Finds an integration by its Microsoft Graph subscription ID.
+
+  Intentionally matches inactive integrations to handle in-flight notifications gracefully.
+  Returns `{:ok, integration}` with decrypted OAuth tokens if found,
+  `{:error, :not_found}` otherwise.
+  """
+  @spec get_by_graph_subscription_id(String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def get_by_graph_subscription_id(subscription_id) do
+    result =
+      CalendarIntegrationSchema
+      |> where([c], c.graph_subscription_id == ^subscription_id)
+      |> limit(1)
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      integration -> {:ok, CalendarIntegrationSchema.decrypt_oauth_tokens(integration)}
+    end
+  end
+
+  @doc """
+  Lists active Google integrations whose webhook channel expires within `hours_ahead` hours.
+
+  Only integrations that have an active channel (non-nil `google_channel_id`) are returned.
+  Results are ordered soonest-expiring first.
+  """
+  @spec list_expiring_google_channels(non_neg_integer()) :: [CalendarIntegrationSchema.t()]
+  def list_expiring_google_channels(hours_ahead \\ 48) do
+    list_expiring_webhook_integrations(
+      "google",
+      :google_channel_id,
+      :google_channel_expires_at,
+      hours_ahead
+    )
+  end
+
+  @doc """
+  Lists active Outlook integrations whose Graph subscription expires within `hours_ahead` hours.
+
+  Only integrations that have an active subscription (non-nil `graph_subscription_id`) are returned.
+  Results are ordered soonest-expiring first.
+  """
+  @spec list_expiring_outlook_subscriptions(non_neg_integer()) :: [CalendarIntegrationSchema.t()]
+  def list_expiring_outlook_subscriptions(hours_ahead \\ 48) do
+    list_expiring_webhook_integrations(
+      "outlook",
+      :graph_subscription_id,
+      :graph_subscription_expires_at,
+      hours_ahead
+    )
+  end
+
+  @doc """
   Lists Google Calendar integrations with tokens expiring before the given threshold.
   """
   @spec list_expiring_google_tokens(DateTime.t()) :: [CalendarIntegrationSchema.t()]
@@ -377,6 +453,42 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   @doc """
+  Returns active Google integrations where the channel has not sent a notification
+  since `cutoff_dt` (or never) AND the channel is not expired AND there is at least
+  one confirmed meeting linked to the integration since `meeting_since_dt`.
+  """
+  @spec list_silent_google_channels(DateTime.t(), DateTime.t()) :: [CalendarIntegrationSchema.t()]
+  def list_silent_google_channels(cutoff_dt, meeting_since_dt) do
+    list_silent_webhook_integrations(
+      "google",
+      :google_channel_id,
+      :google_channel_expires_at,
+      :last_google_notification_at,
+      cutoff_dt,
+      meeting_since_dt
+    )
+  end
+
+  @doc """
+  Returns active Outlook integrations where the subscription has not sent a notification
+  since `cutoff_dt` (or never) AND the subscription is not expired AND there is at least
+  one confirmed meeting linked to the integration since `meeting_since_dt`.
+  """
+  @spec list_silent_outlook_subscriptions(DateTime.t(), DateTime.t()) :: [
+          CalendarIntegrationSchema.t()
+        ]
+  def list_silent_outlook_subscriptions(cutoff_dt, meeting_since_dt) do
+    list_silent_webhook_integrations(
+      "outlook",
+      :graph_subscription_id,
+      :graph_subscription_expires_at,
+      :last_outlook_notification_at,
+      cutoff_dt,
+      meeting_since_dt
+    )
+  end
+
+  @doc """
   Checks whether the user already has a default booking calendar set.
   """
   @spec user_has_default_booking_calendar?(integer()) :: boolean()
@@ -412,5 +524,81 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
       )
 
     :ok
+  end
+
+  @doc "Touches the notification timestamp for the given integration and field."
+  @spec touch_notification_at(CalendarIntegrationSchema.t(), atom()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def touch_notification_at(integration, field)
+      when field in [:last_google_notification_at, :last_outlook_notification_at] do
+    integration
+    |> Changeset.change(%{field => DateTime.utc_now(:second)})
+    |> Repo.update()
+  end
+
+  @doc "Updates the delta link and last_external_sync_at for an integration."
+  @spec update_delta_link(CalendarIntegrationSchema.t(), String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_delta_link(integration, delta_link) do
+    integration
+    |> Changeset.change(%{
+      graph_delta_link: delta_link,
+      last_external_sync_at: DateTime.utc_now(:second)
+    })
+    |> Repo.update()
+  end
+
+  @doc "Updates the sync state fields for an integration."
+  @spec update_sync_state(CalendarIntegrationSchema.t(), map()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_sync_state(integration, attrs) when is_map(attrs) do
+    integration
+    |> Changeset.change(attrs)
+    |> Repo.update()
+  end
+
+  defp list_expiring_webhook_integrations(provider, id_field, expires_at_field, hours_ahead) do
+    threshold = DateTime.add(DateTime.utc_now(), hours_ahead, :hour)
+
+    CalendarIntegrationSchema
+    |> where([c], c.provider == ^provider)
+    |> where([c], c.is_active == true)
+    |> where([c], not is_nil(field(c, ^id_field)))
+    |> where([c], field(c, ^expires_at_field) < ^threshold)
+    |> order_by([c], asc: field(c, ^expires_at_field))
+    |> Repo.all()
+  end
+
+  defp list_silent_webhook_integrations(
+         provider,
+         sub_id_field,
+         expires_at_field,
+         notification_at_field,
+         cutoff_dt,
+         meeting_since_dt
+       ) do
+    now = DateTime.utc_now()
+
+    meeting_integration_ids =
+      from(m in Tymeslot.DatabaseSchemas.MeetingSchema,
+        where: m.status == "confirmed" and m.start_time >= ^meeting_since_dt,
+        where: not is_nil(m.calendar_integration_id),
+        select: m.calendar_integration_id,
+        distinct: true
+      )
+
+    Repo.all(
+      from(i in CalendarIntegrationSchema,
+        where:
+          i.provider == ^provider and
+            i.is_active == true and
+            not is_nil(field(i, ^sub_id_field)) and
+            not is_nil(field(i, ^expires_at_field)) and
+            field(i, ^expires_at_field) > ^now and
+            (is_nil(field(i, ^notification_at_field)) or
+               field(i, ^notification_at_field) < ^cutoff_dt),
+        where: i.id in subquery(meeting_integration_ids)
+      )
+    )
   end
 end

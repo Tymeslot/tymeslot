@@ -76,8 +76,16 @@ config :tymeslot, Oban,
        {"0 * * * *", Tymeslot.Workers.ObanQueueMonitorWorker},
        # Run daily at 02:45 UTC
        {"45 2 * * *", Tymeslot.Workers.VideoRoomRecoveryScanWorker},
+       # Run daily at 02:00 UTC to renew expiring webhook channels
+       {"0 2 * * *", Tymeslot.Workers.RenewWebhookChannelsWorker},
        # Run daily at 04:00 UTC
-       {"0 4 * * *", Tymeslot.Workers.WebhookCleanupWorker, args: %{retention_days: 60}}
+       {"0 4 * * *", Tymeslot.Workers.WebhookCleanupWorker, args: %{retention_days: 60}},
+       # Run every 6 hours to detect silent/dead webhook channels
+       {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
+       # Run every 15 min; CalDAV tier-aware filtering decides which integrations sync
+       {"*/15 * * * *", Tymeslot.Workers.FallbackSyncSweepWorker},
+       # Run daily at 03:30 UTC to prune old/inactive calendar event cache
+       {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker}
      ]}
   ]
 

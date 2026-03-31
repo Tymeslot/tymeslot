@@ -93,13 +93,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
 
   @spec call_create_event(map(), map()) :: {:ok, map()} | {:error, atom(), String.t()}
   def call_create_event(integration, event_attrs) do
-    # Use the default booking calendar if set
-    calendar_id = integration.default_booking_calendar_id
+    calendar_id = event_attrs[:calendar_id] || integration.default_booking_calendar_id
 
     if calendar_id do
       api_module().create_event(integration, calendar_id, event_attrs)
     else
-      # Fallback to default API method for backward compatibility
       api_module().create_event(integration, event_attrs)
     end
   end
@@ -107,14 +105,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   @spec call_update_event(map(), String.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()}
   def call_update_event(integration, event_id, event_attrs) do
-    # Use the default booking calendar if set
-    calendar_id = integration.default_booking_calendar_id
+    calendar_id = event_attrs[:calendar_id] || integration.default_booking_calendar_id
+    # Prefer the provider-native event ID when available (avoids iCalUID→ID conversion)
+    effective_id = event_attrs[:provider_event_id] || event_id
 
     if calendar_id do
-      api_module().update_event(integration, calendar_id, event_id, event_attrs)
+      api_module().update_event(integration, calendar_id, effective_id, event_attrs)
     else
-      # Fallback to default API method for backward compatibility
-      api_module().update_event(integration, event_id, event_attrs)
+      api_module().update_event(integration, effective_id, event_attrs)
     end
   end
 

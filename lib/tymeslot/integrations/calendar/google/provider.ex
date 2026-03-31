@@ -86,22 +86,25 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   @spec call_create_event(map(), map()) :: {:ok, map()} | {:error, atom(), String.t()}
   def call_create_event(integration, event_attrs) do
-    # Use the default booking calendar if set, otherwise use primary
-    calendar_id = integration.default_booking_calendar_id || "primary"
+    calendar_id =
+      event_attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"
+
     api_module().create_event(integration, calendar_id, event_attrs)
   end
 
   @spec call_update_event(map(), String.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()}
   def call_update_event(integration, event_id, event_attrs) do
-    # Use the default booking calendar if set, otherwise use primary
-    calendar_id = integration.default_booking_calendar_id || "primary"
-    api_module().update_event(integration, calendar_id, event_id, event_attrs)
+    calendar_id =
+      event_attrs[:calendar_id] || integration.default_booking_calendar_id || "primary"
+
+    # Prefer the provider-native event ID when available (avoids iCalUID→ID conversion)
+    effective_id = event_attrs[:provider_event_id] || event_id
+    api_module().update_event(integration, calendar_id, effective_id, event_attrs)
   end
 
   @spec call_delete_event(map(), String.t()) :: {:ok, term()} | {:error, atom(), String.t()}
   def call_delete_event(integration, event_id) do
-    # Use the default booking calendar if set, otherwise use primary
     calendar_id = integration.default_booking_calendar_id || "primary"
     api_module().delete_event(integration, calendar_id, event_id)
   end

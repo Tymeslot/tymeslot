@@ -46,8 +46,10 @@ defmodule Tymeslot.Application do
       Tymeslot.Repo,
       {DNSCluster, query: Application.get_env(:tymeslot, :dns_cluster_query) || :ignore},
       {PubSub, name: Tymeslot.PubSub},
-      # Start the Finch HTTP client (used by Req for all HTTP requests)
-      {Finch, name: Tymeslot.Finch},
+      # Start the Finch HTTP client (used by Req for all HTTP requests).
+      # pool_max_idle_time evicts connections that remote servers silently
+      # close after their keep-alive timeout, preventing "socket closed" errors.
+      {Finch, name: Tymeslot.Finch, pools: %{default: [pool_max_idle_time: 30_000]}},
       # Start token refresh lock manager
       {Lock, []},
       # Task Supervisor for async operations

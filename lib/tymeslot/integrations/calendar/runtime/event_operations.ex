@@ -23,7 +23,12 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   @type integration_id :: pos_integer()
   @type event_uid :: String.t()
   @type event_data :: map()
-  @type context :: user_id() | MeetingSchema.t() | MeetingTypeSchema.t() | nil
+  @type context ::
+          user_id()
+          | {integration_id(), user_id()}
+          | MeetingSchema.t()
+          | MeetingTypeSchema.t()
+          | nil
 
   @doc """
   Creates a new event using the user's booking calendar.
@@ -104,14 +109,14 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   Deletes an event by UID.
   Accepts optional context (MeetingSchema, user_id, or {integration_id, user_id}) to use specific calendar.
   """
-  @spec delete_event(event_uid(), context() | {integration_id(), user_id()}) ::
+  @spec delete_event(event_uid(), context() | {integration_id(), user_id()}, keyword()) ::
           :ok | {:error, term()}
-  def delete_event(uid, context \\ nil) do
+  def delete_event(uid, context \\ nil, opts \\ []) do
     Metrics.time_operation(:delete_event, %{uid: uid}, fn ->
       Logger.info("Deleting calendar event", uid: uid)
 
       with %{} = client <- ClientManager.resolve_client(context),
-           :ok <- ProviderAdapter.delete_event(client, uid) do
+           :ok <- ProviderAdapter.delete_event(client, uid, opts) do
         Logger.info("Successfully deleted calendar event", uid: uid)
         :ok
       else

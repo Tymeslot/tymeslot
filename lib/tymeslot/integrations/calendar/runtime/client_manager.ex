@@ -303,6 +303,14 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   # Private helper to resolve the appropriate booking integration based on context
   defp resolve_booking_integration(nil), do: nil
 
+  defp resolve_booking_integration({integration_id, user_id})
+       when is_integer(integration_id) and is_integer(user_id) do
+    case CalendarIntegrationQueries.get_for_user(integration_id, user_id) do
+      {:ok, integration} when integration.is_active -> integration
+      _not_found_or_inactive -> resolve_booking_integration(user_id)
+    end
+  end
+
   defp resolve_booking_integration(%MeetingSchema{} = meeting) do
     cond do
       is_integer(meeting.calendar_integration_id) ->

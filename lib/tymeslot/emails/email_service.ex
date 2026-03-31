@@ -21,6 +21,7 @@ defmodule Tymeslot.Emails.EmailService do
     EmailChangeNotification,
     EmailChangeVerification,
     EmailVerification,
+    ExternalBookingChange,
     IntegrationUnhealthy,
     PasswordReset,
     RescheduleRequest
@@ -276,6 +277,31 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.text_body(text_body)
 
     deliver(email)
+  end
+
+  @doc """
+  Notifies an organizer that one of their meetings was changed in their external calendar.
+
+  `discrepancy` is either `:deleted` (the event was removed from the external calendar)
+  or `:modified` (the event was rescheduled in the external calendar).
+  """
+  @spec send_external_booking_change(map(), String.t(), ExternalBookingChange.discrepancy()) ::
+          {:ok, any()} | {:error, any()}
+  def send_external_booking_change(meeting, organizer_email, discrepancy) do
+    Logger.info("Sending external booking change notification",
+      meeting_id: meeting.id,
+      organizer_email: organizer_email,
+      discrepancy: discrepancy
+    )
+
+    result = deliver(ExternalBookingChange.build_email(meeting, organizer_email, discrepancy))
+
+    Logger.info("External booking change notification sent",
+      sent: match?({:ok, _}, result),
+      discrepancy: discrepancy
+    )
+
+    result
   end
 
   @doc """

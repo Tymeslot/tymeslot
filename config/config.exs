@@ -105,7 +105,7 @@ config :tymeslot, :oban_queues,
   # Video room creation and management
   video_rooms: 3,
   # Calendar event sync (create, update, delete)
-  calendar_events: 5,
+  calendar_events: 10,
   # Integration health checks
   calendar_integrations: 2,
   # Oban maintenance tasks (cleanup, stuck jobs)
@@ -116,6 +116,7 @@ config :tymeslot, :oban_queues,
   media_processing: 1
 
 # Webhook configuration
+config :tymeslot, :webhook_base_url, nil
 config :tymeslot, :webhook_paths, ["/webhooks/stripe"]
 
 # Webhook idempotency cache TTLs

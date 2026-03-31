@@ -100,7 +100,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       conn =
         get(conn, ~p"/auth/google/calendar/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/calendar"
+      assert redirected_to(conn) == "/dashboard/calendar-integration"
       assert Flash.get(conn.assigns.flash, :info) =~ "Google Calendar connected successfully"
     end
 
@@ -112,28 +112,28 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       conn =
         get(conn, ~p"/auth/outlook/calendar/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/calendar"
+      assert redirected_to(conn) == "/dashboard/calendar-integration"
       assert Flash.get(conn.assigns.flash, :info) =~ "Outlook Calendar connected successfully"
     end
 
     test "google_callback handles error from provider", %{conn: conn} do
       conn = get(conn, ~p"/auth/google/calendar/callback", %{"error" => "access_denied"})
 
-      assert redirected_to(conn) == "/dashboard/calendar"
+      assert redirected_to(conn) == "/dashboard/calendar-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
     end
 
     test "google_callback handles invalid params", %{conn: conn} do
       conn = get(conn, ~p"/auth/google/calendar/callback", %{"invalid" => "params"})
 
-      assert redirected_to(conn) == "/dashboard/calendar"
+      assert redirected_to(conn) == "/dashboard/calendar-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication response"
     end
 
     test "outlook_callback handles error from provider", %{conn: conn} do
       conn = get(conn, ~p"/auth/outlook/calendar/callback", %{"error" => "access_denied"})
 
-      assert redirected_to(conn) == "/dashboard/calendar"
+      assert redirected_to(conn) == "/dashboard/calendar-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
     end
 
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
               "#{code}: The user or administrator has not consented to use the application."
           })
 
-        assert redirected_to(conn) == "/dashboard/calendar"
+        assert redirected_to(conn) == "/dashboard/calendar-integration"
 
         assert Flash.get(conn.assigns.flash, :error) =~
                  "requires admin approval"
@@ -163,7 +163,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       conn =
         get(conn, ~p"/auth/outlook/calendar/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/calendar"
+      assert redirected_to(conn) == "/dashboard/calendar-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Failed to connect Outlook Calendar"
     end
   end
@@ -233,7 +233,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => state})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :info) =~ "Google Meet connected successfully"
     end
 
@@ -243,7 +243,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => state})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication state"
     end
 
@@ -278,7 +278,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => state})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :info) =~ "Microsoft Teams connected successfully"
     end
 
@@ -288,7 +288,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => state})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication state"
     end
   end
@@ -336,7 +336,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :info) =~ "Google Meet connected successfully"
     end
 
@@ -422,7 +422,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :info) =~ "Microsoft Teams connected successfully"
     end
 
@@ -477,14 +477,14 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "invalid"})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication state"
     end
 
     test "google_callback handles provider error", %{conn: conn} do
       conn = get(conn, ~p"/auth/google/video/callback", %{"error" => "access_denied"})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
     end
 
@@ -499,7 +499,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
               "#{code}: The user or administrator has not consented to use the application."
           })
 
-        assert redirected_to(conn) == "/dashboard/video"
+        assert redirected_to(conn) == "/dashboard/video-integration"
 
         assert Flash.get(conn.assigns.flash, :error) =~
                  "requires admin approval"
@@ -513,7 +513,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
           "error_description" => "The user cancelled the authorization."
         })
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
     end
 
@@ -543,7 +543,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Failed to connect Microsoft Teams"
     end
 
@@ -566,7 +566,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
 
       assert Flash.get(conn.assigns.flash, :error) =~
                "Missing required Microsoft Teams information"

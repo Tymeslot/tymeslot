@@ -37,7 +37,24 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
           provider_account_id: String.t() | nil,
           provider_account_email: String.t() | nil,
           sync_error: String.t() | nil,
+          google_channel_id: String.t() | nil,
+          google_channel_resource_id: String.t() | nil,
+          google_channel_expires_at: DateTime.t() | nil,
+          google_channel_secret: String.t() | nil,
+          google_sync_token: String.t() | nil,
+          last_google_notification_at: DateTime.t() | nil,
+          graph_subscription_id: String.t() | nil,
+          graph_subscription_expires_at: DateTime.t() | nil,
+          graph_client_state: String.t() | nil,
+          graph_delta_link: String.t() | nil,
+          last_outlook_notification_at: DateTime.t() | nil,
+          caldav_sync_tier: integer() | nil,
+          caldav_sync_token: String.t() | nil,
+          last_external_sync_at: DateTime.t() | nil,
           user: Tymeslot.DatabaseSchemas.UserSchema.t() | Ecto.Association.NotLoaded.t(),
+          calendar_events:
+            [Tymeslot.DatabaseSchemas.CalendarEventCacheSchema.t()]
+            | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -62,6 +79,32 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
     field(:provider_account_email, :string)
     field(:sync_error, :string)
 
+    # Google webhook channel fields
+    field(:google_channel_id, :string)
+    field(:google_channel_resource_id, :string)
+    field(:google_channel_expires_at, :utc_datetime)
+    # Stored as plaintext: random verification token with no credential reuse risk.
+    # Used solely to verify webhook authenticity. Follow _encrypted pattern if threat model changes.
+    field(:google_channel_secret, :string)
+    field(:google_sync_token, :string)
+    field(:last_google_notification_at, :utc_datetime)
+
+    # Outlook subscription fields
+    field(:graph_subscription_id, :string)
+    field(:graph_subscription_expires_at, :utc_datetime)
+    # Stored as plaintext: random verification token with no credential reuse risk.
+    # Used solely to verify webhook authenticity. Follow _encrypted pattern if threat model changes.
+    field(:graph_client_state, :string)
+    field(:graph_delta_link, :string)
+    field(:last_outlook_notification_at, :utc_datetime)
+
+    # CalDAV sync fields
+    field(:caldav_sync_tier, :integer)
+    field(:caldav_sync_token, :string)
+
+    # Integration sync health
+    field(:last_external_sync_at, :utc_datetime)
+
     # Virtual fields for decrypted values
     field(:username, :string, virtual: true)
     field(:password, :string, virtual: true)
@@ -69,6 +112,10 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
     field(:refresh_token, :string, virtual: true)
 
     belongs_to(:user, Tymeslot.DatabaseSchemas.UserSchema)
+
+    has_many(:calendar_events, Tymeslot.DatabaseSchemas.CalendarEventCacheSchema,
+      foreign_key: :calendar_integration_id
+    )
 
     timestamps()
   end

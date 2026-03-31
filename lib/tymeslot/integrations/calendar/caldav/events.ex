@@ -100,7 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
           :ok | {:error, Base.error_reason()}
   def update_calendar_event(client, calendar_path, uid, event_data, opts \\ []) do
     with_events_breaker(client, opts, fn ->
-      url = UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
+      url = event_url_from_data(client, calendar_path, uid, event_data)
       ical_data = ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
       etag = fetch_current_etag(url, client, opts)
 
@@ -131,6 +131,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
         {:error, reason} -> {:error, reason}
       end
     end)
+  end
+
+  # Use the event's href (provider_event_id) when available — it's the actual
+  # server path. Fall back to UID-based URL construction for Tymeslot-created events.
+  defp event_url_from_data(client, calendar_path, uid, event_data) do
+    case Map.get(event_data, :provider_event_id) do
+      href when is_binary(href) and href != "" ->
+        base = String.trim_trailing(client.base_url, "/")
+        if String.starts_with?(href, "http"), do: href, else: "#{base}#{href}"
+
+      _missing ->
+        UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
+    end
   end
 
   # HEAD → extract ETag for conditional PUT. Short timeout since ETag is optional:

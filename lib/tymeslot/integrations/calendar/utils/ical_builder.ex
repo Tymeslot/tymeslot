@@ -78,20 +78,22 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   """
   @spec build_simple_event(String.t(), map()) :: String.t()
   def build_simple_event(uid, event_data) do
-    """
-    BEGIN:VCALENDAR
-    VERSION:2.0
-    PRODID:-//Tymeslot//CalDAV Client//EN
-    BEGIN:VEVENT
-    UID:#{uid}
-    DTSTART:#{format_datetime(event_data.start_time)}
-    DTEND:#{format_datetime(event_data.end_time)}
-    SUMMARY:#{escape_text(event_data.summary)}
-    DESCRIPTION:#{escape_text(event_data[:description] || "")}
-    LOCATION:#{escape_text(event_data[:location] || "")}
-    END:VEVENT
-    END:VCALENDAR
-    """
+    [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Tymeslot//CalDAV Client//EN",
+      "BEGIN:VEVENT",
+      "UID:#{uid}",
+      "DTSTART:#{format_datetime(event_data.start_time)}",
+      "DTEND:#{format_datetime(event_data.end_time)}",
+      "SUMMARY:#{escape_text(event_data.summary)}",
+      "DESCRIPTION:#{escape_text(event_data[:description] || "")}",
+      "LOCATION:#{escape_text(event_data[:location] || "")}",
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ]
+    |> Enum.join("\r\n")
+    |> Kernel.<>("\r\n")
   end
 
   @doc """

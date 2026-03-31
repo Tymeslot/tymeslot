@@ -31,4 +31,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour do
   @callback refresh_token(CalendarIntegrationSchema.t()) ::
               {:ok, {String.t(), String.t(), DateTime.t()}} | api_error()
   @callback token_valid?(CalendarIntegrationSchema.t()) :: boolean()
+  @callback register_graph_subscription(CalendarIntegrationSchema.t()) ::
+              {:ok, CalendarIntegrationSchema.t()}
+              | {:error, :webhook_base_url_not_configured}
+              | {:error, :circuit_open}
+              | api_error()
 end

@@ -29,4 +29,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
   @callback refresh_token(CalendarIntegrationSchema.t()) ::
               {:ok, {String.t(), String.t(), DateTime.t()}} | api_error()
   @callback token_valid?(CalendarIntegrationSchema.t()) :: boolean()
+  @callback list_events_incremental(CalendarIntegrationSchema.t()) ::
+              {:ok, %{events: [map()], next_sync_token: String.t() | nil}}
+              | {:error, :gone, String.t()}
+              | api_error()
+  @callback register_push_channel(CalendarIntegrationSchema.t()) ::
+              {:ok, CalendarIntegrationSchema.t()}
+              | {:error, :webhook_base_url_not_configured}
+              | {:error, :circuit_open}
+              | api_error()
 end

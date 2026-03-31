@@ -8,7 +8,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
   @behaviour Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
 
+  require Logger
+
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
@@ -43,6 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
     with {:ok, tokens} <- GoogleOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
          {:ok, integration} <-
            create_or_update_calendar_integration(tokens.user_id, tokens, tokens[:integration_id]) do
+      register_push_channel_async(integration)
       {:ok, integration}
     else
       {:error, reason} -> {:error, reason}
@@ -182,6 +186,32 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
       else
         {:ok, updated}
       end
+    end
+  end
+
+  defp register_push_channel_async(integration) do
+    case Application.get_env(:tymeslot, :webhook_base_url) do
+      nil ->
+        Logger.warning(
+          "Google push channel registration skipped: WEBHOOK_BASE_URL not configured",
+          integration_id: integration.id
+        )
+
+      _url ->
+        Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+          case GoogleCalendarAPI.register_push_channel(integration) do
+            {:ok, _updated} ->
+              Logger.info("Google push channel registered",
+                integration_id: integration.id
+              )
+
+            {:error, reason} ->
+              Logger.error("Google push channel registration failed",
+                integration_id: integration.id,
+                reason: inspect(reason)
+              )
+          end
+        end)
     end
   end
 

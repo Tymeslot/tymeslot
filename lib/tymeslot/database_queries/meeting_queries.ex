@@ -453,6 +453,110 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
   end
 
   @doc """
+  Finds a meeting by its external provider event ID and calendar integration.
+
+  Returns `{:ok, meeting}` if found, `{:error, :not_found}` otherwise.
+  """
+  @spec get_by_provider_event_id(integer(), String.t()) ::
+          {:ok, Meeting.t()} | {:error, :not_found}
+  def get_by_provider_event_id(calendar_integration_id, provider_event_id) do
+    result =
+      Meeting
+      |> where(
+        [m],
+        m.calendar_integration_id == ^calendar_integration_id and
+          m.provider_event_id == ^provider_event_id
+      )
+      |> limit(1)
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      meeting -> {:ok, meeting}
+    end
+  end
+
+  @doc """
+  Finds a meeting by its UID and calendar integration.
+
+  Returns `{:ok, meeting}` if found, `{:error, :not_found}` otherwise.
+  """
+  @spec get_by_uid_and_integration(integer(), String.t()) ::
+          {:ok, Meeting.t()} | {:error, :not_found}
+  def get_by_uid_and_integration(calendar_integration_id, uid) do
+    result =
+      Meeting
+      |> where(
+        [m],
+        m.calendar_integration_id == ^calendar_integration_id and m.uid == ^uid
+      )
+      |> limit(1)
+      |> Repo.one()
+
+    case result do
+      nil -> {:error, :not_found}
+      meeting -> {:ok, meeting}
+    end
+  end
+
+  @doc """
+  Updates `calendar_sync_status` on a meeting and clears `calendar_sync_status_dismissed_at`.
+
+  `status` should be one of `"externally_deleted"` or `"externally_modified"`.
+
+  Returns `{:ok, meeting}` on success or `{:error, :not_found}` if no row matched.
+  """
+  @valid_sync_statuses ~w(externally_deleted externally_modified)
+
+  @spec update_calendar_sync_status(String.t(), String.t()) ::
+          {:ok, Meeting.t()} | {:error, :not_found}
+  def update_calendar_sync_status(meeting_id, status) when status in @valid_sync_statuses do
+    {count, _rows} =
+      Meeting
+      |> where([m], m.id == ^meeting_id)
+      |> Repo.update_all(
+        set: [
+          calendar_sync_status: status,
+          calendar_sync_status_dismissed_at: nil,
+          updated_at: DateTime.utc_now(:second)
+        ]
+      )
+
+    if count > 0 do
+      get_meeting(meeting_id)
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Sets `calendar_sync_status_dismissed_at` to the current UTC time for a meeting.
+
+  Returns `{:ok, meeting}` on success or `{:error, :not_found}` if no row matched.
+  """
+  @spec dismiss_calendar_sync_status(String.t(), integer()) ::
+          {:ok, Meeting.t()} | {:error, :not_found}
+  def dismiss_calendar_sync_status(meeting_id, user_id) do
+    now = DateTime.utc_now(:second)
+
+    {count, _rows} =
+      Meeting
+      |> where([m], m.id == ^meeting_id and m.organizer_user_id == ^user_id)
+      |> Repo.update_all(
+        set: [
+          calendar_sync_status_dismissed_at: now,
+          updated_at: now
+        ]
+      )
+
+    if count > 0 do
+      get_meeting(meeting_id)
+    else
+      {:error, :not_found}
+    end
+  end
+
+  @doc """
   Returns upcoming meetings that should have a video room link but do not.
   """
   @spec list_meetings_missing_video_rooms(DateTime.t(), pos_integer()) :: [Meeting.t()]

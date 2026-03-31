@@ -14,8 +14,8 @@ defmodule Tymeslot.Profiles.Timezone do
   detected browser timezone.
 
   Rules:
-  - If the current profile timezone is nil, empty, or equals the business
-    default, use the detected timezone (normalized).
+  - If the current profile timezone is nil or empty, use the detected
+    timezone (normalized).
   - If detected is nil/empty, fall back to the business default.
   - Otherwise, keep the existing profile timezone unchanged.
   """
@@ -32,8 +32,8 @@ defmodule Tymeslot.Profiles.Timezone do
     end
   end
 
-  defp should_use_detected?(current, default) do
-    is_nil(current) or current == "" or current == default
+  defp should_use_detected?(current, _default) do
+    is_nil(current) or current == ""
   end
 
   defp fallback_default(nil, default), do: default

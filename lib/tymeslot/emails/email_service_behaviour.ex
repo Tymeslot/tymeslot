@@ -33,4 +33,6 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
   @callback send_reschedule_request(map()) :: {:ok, any()} | {:error, any()}
   @callback send_integration_unhealthy_notification(map(), map(), atom() | String.t()) ::
               {:ok, any()} | {:error, any()}
+  @callback send_external_booking_change(map(), String.t(), :deleted | :modified) ::
+              {:ok, any()} | {:error, any()}
 end

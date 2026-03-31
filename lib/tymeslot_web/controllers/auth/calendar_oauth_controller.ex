@@ -26,7 +26,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
         GoogleOAuthHelper.handle_callback(code, state, redirect_uri)
       end,
       create_fun: fn result -> {:ok, result} end,
-      redirect_path: ~p"/dashboard/calendar"
+      redirect_path: ~p"/dashboard/calendar-integration"
     )
   end
 
@@ -41,7 +41,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: ~p"/dashboard/calendar")
+    |> redirect(to: ~p"/dashboard/calendar-integration")
   end
 
   def google_callback(conn, params) do
@@ -49,7 +49,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
-    |> redirect(to: ~p"/dashboard/calendar")
+    |> redirect(to: ~p"/dashboard/calendar-integration")
   end
 
   @doc """
@@ -65,14 +65,14 @@ defmodule TymeslotWeb.CalendarOAuthController do
           {:ok, _integration} ->
             conn
             |> put_flash(:info, "Outlook Calendar connected successfully!")
-            |> redirect(to: ~p"/dashboard/calendar")
+            |> redirect(to: ~p"/dashboard/calendar-integration")
 
           {:error, reason} ->
             Logger.error("Outlook Calendar OAuth callback failed", reason: inspect(reason))
 
             conn
             |> put_flash(:error, "Failed to connect Outlook Calendar. Please try again.")
-            |> redirect(to: ~p"/dashboard/calendar")
+            |> redirect(to: ~p"/dashboard/calendar-integration")
         end
 
       {:error, :rate_limited, _message} ->
@@ -80,7 +80,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
         conn
         |> put_flash(:error, "Too many requests. Please try again later.")
-        |> redirect(to: ~p"/dashboard/calendar")
+        |> redirect(to: ~p"/dashboard/calendar-integration")
     end
   end
 
@@ -102,7 +102,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: ~p"/dashboard/calendar")
+    |> redirect(to: ~p"/dashboard/calendar-integration")
   end
 
   def outlook_callback(conn, params) do
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
-    |> redirect(to: ~p"/dashboard/calendar")
+    |> redirect(to: ~p"/dashboard/calendar-integration")
   end
 
   # Microsoft returns an error_description containing an AADSTS code when a tenant's
