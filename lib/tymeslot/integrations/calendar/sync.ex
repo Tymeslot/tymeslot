@@ -38,13 +38,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   def reconcile(integration_id, provider_event_id, uid, signal) do
     case find_meeting(integration_id, provider_event_id, uid) do
       {:ok, meeting} ->
-        new_status = status_for(signal)
-
-        if meeting.calendar_sync_status == new_status do
-          :ok
-        else
-          apply_status_change(meeting, new_status, signal)
-        end
+        apply_status_change(meeting, status_for(signal), signal)
 
       {:error, :not_found} ->
         :ok
@@ -76,8 +70,8 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   @spec apply_status_change(term(), String.t(), signal()) :: :ok | {:error, term()}
   defp apply_status_change(meeting, "externally_deleted", :deleted) do
-    case MeetingQueries.update_calendar_sync_status(meeting.id, "externally_deleted") do
-      {:ok, updated_meeting} ->
+    case MeetingQueries.update_calendar_sync_status_if_changed(meeting.id, "externally_deleted") do
+      {:ok, %{} = updated_meeting} ->
         Logger.info("Calendar sync status updated",
           meeting_id: meeting.id,
           signal: :deleted,
@@ -97,9 +91,22 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
               reason: inspect(reason)
             )
 
-            MeetingQueries.update_calendar_sync_status(meeting.id, nil)
+            case MeetingQueries.update_calendar_sync_status(meeting.id, nil) do
+              {:ok, _} ->
+                :ok
+
+              {:error, revert_reason} ->
+                Logger.error("Failed to revert sync status after cancel failure",
+                  meeting_id: meeting.id,
+                  revert_reason: inspect(revert_reason)
+                )
+            end
+
             {:error, reason}
         end
+
+      {:ok, :already_set} ->
+        :ok
 
       {:error, reason} ->
         Logger.warning("Failed to update calendar sync status",
@@ -113,8 +120,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   end
 
   defp apply_status_change(meeting, new_status, signal) do
-    case MeetingQueries.update_calendar_sync_status(meeting.id, new_status) do
-      {:ok, updated_meeting} ->
+    # Use conditional update to prevent duplicate emails when the same
+    # signal arrives twice (e.g., webhook retry or concurrent reconciliation).
+    case MeetingQueries.update_calendar_sync_status_if_changed(meeting.id, new_status) do
+      {:ok, %{} = updated_meeting} ->
         Logger.info("Calendar sync status updated",
           meeting_id: meeting.id,
           signal: signal,
@@ -122,6 +131,9 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
         )
 
         notify_host(updated_meeting, signal)
+
+      {:ok, :already_set} ->
+        :ok
 
       {:error, reason} ->
         Logger.warning("Failed to update calendar sync status",

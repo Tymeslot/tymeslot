@@ -68,10 +68,20 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
           event_count: length(events)
         )
 
-        process_events(integration, events)
-        persist_sync_state(integration, next_sync_token)
-        sync_secondary_calendars(integration)
-        SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
+        case safe_process_events(integration, events) do
+          :ok ->
+            persist_sync_state(integration, next_sync_token)
+            sync_secondary_calendars(integration)
+            SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
+
+          {:error, reason} ->
+            Logger.error("Google Calendar event processing failed; sync token NOT updated",
+              calendar_integration_id: integration.id,
+              error: inspect(reason)
+            )
+
+            {:error, reason}
+        end
 
       {:error, :gone, _message} ->
         Logger.warning(
@@ -144,7 +154,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       Enum.reduce_while(secondary_ids, :ok, fn calendar_id, _acc ->
         case google_calendar_api().list_events(integration, calendar_id, start_time, end_time) do
           {:ok, events} ->
-            process_events(integration, events)
+            safe_process_events(integration, events)
             {:cont, :ok}
 
           {:error, :circuit_open} ->
@@ -175,10 +185,15 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     end
   end
 
-  defp process_events(integration, events) do
+  defp safe_process_events(integration, events) do
     Enum.each(events, fn event ->
       process_event(integration, event)
     end)
+
+    :ok
+  rescue
+    e ->
+      {:error, Exception.message(e)}
   end
 
   defp process_event(integration, %{"status" => "cancelled"} = event) do

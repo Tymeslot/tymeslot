@@ -190,10 +190,19 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           deleted_count: length(deleted_hrefs)
         )
 
-        EventProcessor.process_events(integration, events)
-        EventProcessor.process_deletions(integration, deleted_hrefs)
-        persist_sync_state(integration, sync_token: new_sync_token)
-        :ok
+        case safe_process_events(integration, events, deleted_hrefs) do
+          :ok ->
+            persist_sync_state(integration, sync_token: new_sync_token)
+            :ok
+
+          {:error, reason} ->
+            Logger.error("CalDAV Tier 1 event processing failed; sync token NOT updated",
+              calendar_integration_id: integration.id,
+              error: inspect(reason)
+            )
+
+            {:error, reason}
+        end
 
       {:error, :sync_token_expired} ->
         # Clear stale token and fall back to full fetch
@@ -448,16 +457,26 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           calendar_path: calendar_path
         )
 
-        EventProcessor.process_events(integration, events)
+        case safe_process_events(integration, events) do
+          :ok ->
+            sync_token_opt =
+              case Keyword.get(opts, :new_ctag) do
+                nil -> []
+                ctag -> [sync_token: ctag]
+              end
 
-        sync_token_opt =
-          case Keyword.get(opts, :new_ctag) do
-            nil -> []
-            ctag -> [sync_token: ctag]
-          end
+            persist_sync_state(integration, sync_token_opt)
+            :ok
 
-        persist_sync_state(integration, sync_token_opt)
-        :ok
+          {:error, reason} ->
+            Logger.error("CalDAV full fetch event processing failed; sync token NOT updated",
+              calendar_integration_id: integration.id,
+              calendar_path: calendar_path,
+              error: inspect(reason)
+            )
+
+            {:error, reason}
+        end
 
       {:error, :unauthorized} ->
         log_auth_error(integration)
@@ -563,6 +582,15 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       phase: phase,
       error: inspect(reason)
     )
+  end
+
+  defp safe_process_events(integration, events, deleted_hrefs \\ []) do
+    EventProcessor.process_events(integration, events)
+    if deleted_hrefs != [], do: EventProcessor.process_deletions(integration, deleted_hrefs)
+    :ok
+  rescue
+    e ->
+      {:error, Exception.message(e)}
   end
 
   defp xml_escape(string) when is_binary(string) do

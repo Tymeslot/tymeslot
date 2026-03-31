@@ -19,6 +19,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
 
   alias Plug.Crypto
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   @doc """
@@ -65,9 +66,18 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
   defp valid_token?(_received, _expected), do: false
 
   defp handle_valid_notification(conn, integration) do
-    enqueue_sync(integration)
-    touch_notification_timestamp(integration)
+    case RateLimiter.check_calendar_webhook_rate_limit(integration.id) do
+      :ok ->
+        enqueue_sync(integration)
+        touch_notification_timestamp(integration)
 
+      {:error, :rate_limited} ->
+        Logger.warning("Google Calendar webhook rate limited",
+          integration_id: integration.id
+        )
+    end
+
+    # Always return 200 to prevent Google from retrying
     conn |> send_resp(200, "") |> halt()
   end
 

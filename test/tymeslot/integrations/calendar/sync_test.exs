@@ -115,6 +115,57 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
       # updated_at should not have advanced (no DB write occurred)
       assert after_second_call.updated_at == meeting.updated_at
     end
+
+    test "does not send duplicate email when :modified signal arrives twice" do
+      integration = insert(:calendar_integration)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "evt-dup-email-1",
+          calendar_sync_status: nil
+        )
+
+      # First call: sets status and sends notification
+      assert :ok = Sync.reconcile(integration.id, "evt-dup-email-1", nil, :modified)
+
+      {:ok, after_first} = MeetingQueries.get_meeting(meeting.id)
+      assert after_first.calendar_sync_status == "externally_modified"
+      first_updated_at = after_first.updated_at
+
+      # Second call: status already matches, should be a no-op
+      assert :ok = Sync.reconcile(integration.id, "evt-dup-email-1", nil, :modified)
+
+      {:ok, after_second} = MeetingQueries.get_meeting(meeting.id)
+      assert after_second.calendar_sync_status == "externally_modified"
+      # updated_at should NOT have changed — no DB write, no email
+      assert after_second.updated_at == first_updated_at
+    end
+
+    test "does not re-cancel when :deleted signal arrives twice" do
+      integration = insert(:calendar_integration)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "evt-dup-cancel-1",
+          calendar_sync_status: nil
+        )
+
+      # First call: sets status and cancels
+      assert :ok = Sync.reconcile(integration.id, "evt-dup-cancel-1", nil, :deleted)
+
+      {:ok, after_first} = MeetingQueries.get_meeting(meeting.id)
+      assert after_first.calendar_sync_status == "externally_deleted"
+      assert after_first.status == "cancelled"
+      first_updated_at = after_first.updated_at
+
+      # Second call: already deleted, should be a no-op
+      assert :ok = Sync.reconcile(integration.id, "evt-dup-cancel-1", nil, :deleted)
+
+      {:ok, after_second} = MeetingQueries.get_meeting(meeting.id)
+      assert after_second.updated_at == first_updated_at
+    end
   end
 
   describe "reconcile/4 UID fallback" do

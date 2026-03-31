@@ -10,6 +10,8 @@ defmodule TymeslotWeb.GoogleCalendarWebhookControllerTest do
 
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Security.RateLimit
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   describe "webhook/2 - valid request" do
@@ -108,6 +110,56 @@ defmodule TymeslotWeb.GoogleCalendarWebhookControllerTest do
 
       assert conn.status == 200
       refute_enqueued(worker: SyncGoogleCalendarWorker)
+    end
+  end
+
+  describe "webhook/2 - rate limiting" do
+    @tag capture_log: true
+    test "stops enqueuing jobs after rate limit is exceeded", %{conn: conn} do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: "channel-rate-limit",
+          google_channel_secret: "secret-rate-limit"
+        )
+
+      # Send 61 requests — limit is 60/min
+      for _i <- 1..61 do
+        conn
+        |> put_req_header("x-goog-channel-id", integration.google_channel_id)
+        |> put_req_header("x-goog-channel-token", integration.google_channel_secret)
+        |> post("/webhooks/google-calendar")
+      end
+
+      # Should have at most 60 enqueued jobs, not 61
+      jobs = all_enqueued(worker: SyncGoogleCalendarWorker)
+      assert length(jobs) <= 60
+    end
+
+    test "always returns 200 even when rate limited", %{conn: conn} do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: "channel-rate-200",
+          google_channel_secret: "secret-rate-200"
+        )
+
+      # Exhaust the rate limit
+      for _i <- 1..60 do
+        RateLimit.hit("calendar_webhook:#{integration.id}", 60_000, 60)
+      end
+
+      # Verify it's actually exhausted
+      assert {:error, :rate_limited} =
+               RateLimiter.check_calendar_webhook_rate_limit(integration.id)
+
+      conn =
+        conn
+        |> put_req_header("x-goog-channel-id", integration.google_channel_id)
+        |> put_req_header("x-goog-channel-token", integration.google_channel_secret)
+        |> post("/webhooks/google-calendar")
+
+      assert conn.status == 200
     end
   end
 

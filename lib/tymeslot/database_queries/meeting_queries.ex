@@ -530,6 +530,36 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
   end
 
   @doc """
+  Atomically updates `calendar_sync_status` only when the current value differs.
+
+  Returns `{:ok, meeting}` if the row was updated, `{:ok, :already_set}` if the
+  status already matched (no email should be sent), or `{:error, :not_found}`.
+  """
+  @spec update_calendar_sync_status_if_changed(String.t(), String.t()) ::
+          {:ok, Meeting.t()} | {:ok, :already_set} | {:error, :not_found}
+  def update_calendar_sync_status_if_changed(meeting_id, status)
+      when status in @valid_sync_statuses do
+    # Only update rows where status differs (or is nil when we want to set it)
+    {count, _rows} =
+      Meeting
+      |> where([m], m.id == ^meeting_id)
+      |> where([m], m.calendar_sync_status != ^status or is_nil(m.calendar_sync_status))
+      |> Repo.update_all(
+        set: [
+          calendar_sync_status: status,
+          calendar_sync_status_dismissed_at: nil,
+          updated_at: DateTime.utc_now(:second)
+        ]
+      )
+
+    cond do
+      count > 0 -> get_meeting(meeting_id)
+      Repo.exists?(where(Meeting, [m], m.id == ^meeting_id)) -> {:ok, :already_set}
+      true -> {:error, :not_found}
+    end
+  end
+
+  @doc """
   Sets `calendar_sync_status_dismissed_at` to the current UTC time for a meeting.
 
   Returns `{:ok, meeting}` on success or `{:error, :not_found}` if no row matched.

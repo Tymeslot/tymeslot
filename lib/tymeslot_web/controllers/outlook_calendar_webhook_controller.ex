@@ -24,7 +24,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
 
   alias Plug.Crypto
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-
+  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncOutlookCalendarWorker
 
   @doc """
@@ -79,9 +79,17 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   defp valid_client_state?(_received, _expected), do: false
 
   defp handle_valid_notification(integration, notification) do
-    graph_resource_id = get_in(notification, ["resourceData", "id"])
-    enqueue_sync(integration, graph_resource_id)
-    touch_notification_timestamp(integration)
+    case RateLimiter.check_calendar_webhook_rate_limit(integration.id) do
+      :ok ->
+        graph_resource_id = get_in(notification, ["resourceData", "id"])
+        enqueue_sync(integration, graph_resource_id)
+        touch_notification_timestamp(integration)
+
+      {:error, :rate_limited} ->
+        Logger.warning("Outlook Calendar webhook rate limited",
+          integration_id: integration.id
+        )
+    end
   end
 
   defp enqueue_sync(integration, graph_resource_id) do

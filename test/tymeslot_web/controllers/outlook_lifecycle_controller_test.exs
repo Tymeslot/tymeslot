@@ -9,6 +9,7 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
+  alias Tymeslot.Workers.ReregisterOutlookSubscriptionWorker
 
   @lifecycle_path "/webhooks/outlook-lifecycle"
 
@@ -45,7 +46,9 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
 
   describe "webhook/2 - reauthorizationRequired" do
     @tag capture_log: true
-    test "returns 202 and enqueues TokenRefreshJob for valid clientState", %{conn: conn} do
+    test "returns 202 and enqueues TokenRefreshJob and ReregisterOutlookSubscriptionWorker", %{
+      conn: conn
+    } do
       integration = insert_outlook_integration()
 
       payload =
@@ -65,12 +68,17 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
         worker: TokenRefreshJob,
         args: %{"integration_id" => integration.id}
       )
+
+      assert_enqueued(
+        worker: ReregisterOutlookSubscriptionWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
     end
   end
 
   describe "webhook/2 - subscriptionRemoved" do
     @tag capture_log: true
-    test "returns 202 for valid clientState", %{conn: conn} do
+    test "returns 202 and enqueues reregistration but not token refresh", %{conn: conn} do
       integration = insert_outlook_integration()
 
       payload =
@@ -86,6 +94,11 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
 
       assert conn.status == 202
       refute_enqueued(worker: TokenRefreshJob)
+
+      assert_enqueued(
+        worker: ReregisterOutlookSubscriptionWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
     end
   end
 
@@ -181,6 +194,35 @@ defmodule TymeslotWeb.OutlookLifecycleControllerTest do
 
       assert conn.status == 202
       refute_enqueued(worker: TokenRefreshJob)
+    end
+  end
+
+  describe "webhook/2 - batch deduplication" do
+    @tag capture_log: true
+    test "deduplicates events by subscriptionId within a single batch", %{conn: conn} do
+      integration = insert_outlook_integration()
+
+      # Same subscription sends 5 reauthorizationRequired events in one batch
+      events =
+        for _i <- 1..5 do
+          build_lifecycle_event(%{
+            "subscriptionId" => integration.graph_subscription_id,
+            "lifecycleEvent" => "reauthorizationRequired",
+            "clientState" => integration.graph_client_state
+          })
+        end
+
+      conn = post_lifecycle(conn, build_lifecycle_payload(events))
+
+      assert conn.status == 202
+
+      # Only 1 TokenRefreshJob should be enqueued, not 5
+      token_jobs = all_enqueued(worker: TokenRefreshJob)
+      assert length(token_jobs) == 1
+
+      # Only 1 reregistration job should be enqueued, not 5
+      rereg_jobs = all_enqueued(worker: ReregisterOutlookSubscriptionWorker)
+      assert length(rereg_jobs) == 1
     end
   end
 

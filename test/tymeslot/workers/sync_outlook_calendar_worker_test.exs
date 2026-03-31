@@ -74,6 +74,13 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
         CalendarCircuitBreaker.call(:outlook, fn -> raise "simulated failure" end)
       end
 
+      # The HTTP call now happens before the circuit breaker check (for 404/401 extraction),
+      # so we need a mock that returns a normal (non-404/401) response. The circuit breaker
+      # will reject the result before it matters.
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: ~s({"id":"event-abc-123","subject":"Test"})}}
+      end)
+
       assert {:snooze, 120} =
                perform_job(SyncOutlookCalendarWorker, %{
                  "calendar_integration_id" => integration.id,
@@ -86,12 +93,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
   end
 
   describe "perform/1 - event deletion (404)" do
-    test "returns error when Graph returns 404 due to circuit breaker treating :not_found as failure" do
-      # BUG: The circuit breaker's execute_function/1 treats {:error, :not_found}
-      # as a failure (2-element error tuple), so it never reaches handle_event_deleted.
-      # The intended behaviour (per the module doc) is to remove the cache entry and
-      # return :ok. This test documents the actual behaviour; fix by returning a
-      # 3-element tuple from fetch_event on 404 (like the 401 path does).
+    test "removes cached event and returns :ok when Graph returns 404" do
       integration = outlook_integration()
 
       insert(:calendar_event_cache,
@@ -104,14 +106,14 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
         {:ok, %{status: 404, body: ~s({"error":"not_found"})}}
       end)
 
-      # Actual behaviour: circuit breaker intercepts {:error, :not_found} → retries
-      assert {:error, :not_found} =
+      # 404 is handled outside the circuit breaker — does not count as failure
+      assert :ok =
                perform_job(SyncOutlookCalendarWorker, %{
                  "calendar_integration_id" => integration.id,
                  "graph_resource_id" => "deleted-event-123"
                })
 
-      # The cached event is NOT removed because handle_event_deleted is never reached
+      # The cached event IS removed because handle_event_deleted is reached
       remaining =
         Repo.all(
           from e in Tymeslot.DatabaseSchemas.CalendarEventCacheSchema,
@@ -120,7 +122,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
                 e.provider_event_id == "deleted-event-123"
         )
 
-      refute Enum.empty?(remaining)
+      assert Enum.empty?(remaining)
     end
   end
 end

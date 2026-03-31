@@ -80,19 +80,33 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   defp sync_event(integration, graph_resource_id) do
     result =
       AccessToken.with_access_token(integration, &OutlookCalendarAPI.refresh_token/1, fn token ->
-        CalendarCircuitBreaker.call(:outlook, fn ->
-          fetch_event(token, integration, graph_resource_id)
-        end)
+        # Check for 404 (deleted event) BEFORE the circuit breaker so that
+        # deleted events don't count as failures and trip the breaker.
+        case fetch_event_raw(token, graph_resource_id) do
+          {:ok, :not_found} ->
+            {:ok, :not_found}
+
+          {:ok, :unauthorized} ->
+            {:error, :unauthorized, "Token expired or invalid"}
+
+          preflight_result ->
+            CalendarCircuitBreaker.call(:outlook, fn ->
+              case preflight_result do
+                {:ok, event} -> {:ok, event}
+                {:error, reason} -> {:error, reason}
+              end
+            end)
+        end
       end)
 
     case result do
       {:ok, {:ok, event}} ->
         handle_event_fetched(integration, graph_resource_id, event)
 
-      {:ok, {:error, :not_found}} ->
+      {:ok, :not_found} ->
         handle_event_deleted(integration, graph_resource_id)
 
-      {:ok, {:error, :unauthorized, _message}} ->
+      {:error, :unauthorized, _message} ->
         Logger.warning("Outlook Calendar sync unauthorised; discarding job",
           calendar_integration_id: integration.id,
           graph_resource_id: graph_resource_id
@@ -108,13 +122,6 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         )
 
         {:error, reason}
-
-      {:error, :unauthorized, _message} ->
-        Logger.warning("Outlook Calendar sync token refresh failed; discarding job",
-          calendar_integration_id: integration.id
-        )
-
-        :ok
 
       {:error, :circuit_open} ->
         Logger.warning("Outlook Calendar circuit breaker open; snoozing",
@@ -133,7 +140,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
     end
   end
 
-  defp fetch_event(token, _integration, graph_resource_id) do
+  defp fetch_event_raw(token, graph_resource_id) do
     path = "/me/events/#{graph_resource_id}"
     params = %{"$select" => @select_fields}
     headers = [{"Prefer", "outlook.timezone=\"UTC\""}]
@@ -143,10 +150,10 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         {:ok, Jason.decode!(body)}
 
       {:ok, %{status: 401}} ->
-        {:error, :unauthorized, "Token expired or invalid"}
+        {:ok, :unauthorized}
 
       {:ok, %{status: 404}} ->
-        {:error, :not_found}
+        {:ok, :not_found}
 
       {:ok, %{status: status, body: body}} ->
         Logger.error("Outlook Graph API unexpected status",

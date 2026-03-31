@@ -22,8 +22,9 @@ defmodule TymeslotWeb.OutlookLifecycleController do
 
   alias Plug.Crypto
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
+  alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Workers.ReregisterOutlookSubscriptionWorker
 
   @doc """
   Receives a Microsoft Graph lifecycle notification.
@@ -32,7 +33,11 @@ defmodule TymeslotWeb.OutlookLifecycleController do
   def webhook(conn, _params) do
     notifications = get_in(conn.body_params, ["value"]) || []
 
-    Enum.each(notifications, &process_lifecycle_notification/1)
+    # Deduplicate by subscription_id within the batch — only process the
+    # first event per subscription to avoid spawning redundant work.
+    notifications
+    |> Enum.uniq_by(fn n -> n["subscriptionId"] end)
+    |> Enum.each(&process_lifecycle_notification/1)
 
     conn |> send_resp(202, "") |> halt()
   end
@@ -52,7 +57,15 @@ defmodule TymeslotWeb.OutlookLifecycleController do
         expected_state = integration.graph_client_state || ""
 
         if valid_client_state?(client_state, expected_state) do
-          handle_lifecycle_event(integration, event_type)
+          case RateLimiter.check_calendar_webhook_rate_limit(integration.id) do
+            :ok ->
+              handle_lifecycle_event(integration, event_type)
+
+            {:error, :rate_limited} ->
+              Logger.warning("Outlook lifecycle webhook rate limited",
+                integration_id: integration.id
+              )
+          end
         else
           Logger.warning("Outlook lifecycle: clientState verification failed",
             subscription_id: subscription_id,
@@ -78,28 +91,8 @@ defmodule TymeslotWeb.OutlookLifecycleController do
       graph_subscription_id: integration.graph_subscription_id
     )
 
-    case %{"integration_id" => integration.id} |> TokenRefreshJob.new() |> Oban.insert() do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to enqueue TokenRefreshJob", reason: inspect(reason))
-    end
-
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-      case OutlookCalendarAPI.register_graph_subscription(integration) do
-        {:ok, _updated} ->
-          Logger.info("Outlook Graph subscription re-authorized",
-            integration_id: integration.id
-          )
-
-        {:error, reason} ->
-          Logger.error("Outlook Graph subscription re-authorization failed",
-            integration_id: integration.id,
-            reason: inspect(reason)
-          )
-      end
-    end)
+    enqueue_token_refresh(integration)
+    enqueue_reregistration(integration)
   end
 
   defp handle_lifecycle_event(integration, "subscriptionRemoved") do
@@ -108,20 +101,7 @@ defmodule TymeslotWeb.OutlookLifecycleController do
       graph_subscription_id: integration.graph_subscription_id
     )
 
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-      case OutlookCalendarAPI.register_graph_subscription(integration) do
-        {:ok, _updated} ->
-          Logger.info("Outlook Graph subscription re-registered",
-            integration_id: integration.id
-          )
-
-        {:error, reason} ->
-          Logger.error("Outlook Graph subscription re-registration failed",
-            integration_id: integration.id,
-            reason: inspect(reason)
-          )
-      end
-    end)
+    enqueue_reregistration(integration)
   end
 
   defp handle_lifecycle_event(integration, event_type) do
@@ -129,5 +109,30 @@ defmodule TymeslotWeb.OutlookLifecycleController do
       integration_id: integration.id,
       lifecycle_event: event_type
     )
+  end
+
+  defp enqueue_token_refresh(integration) do
+    case %{"integration_id" => integration.id} |> TokenRefreshJob.new() |> Oban.insert() do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue TokenRefreshJob", reason: inspect(reason))
+    end
+  end
+
+  defp enqueue_reregistration(integration) do
+    args = %{"calendar_integration_id" => integration.id}
+
+    case args |> ReregisterOutlookSubscriptionWorker.new() |> Oban.insert() do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue ReregisterOutlookSubscriptionWorker",
+          integration_id: integration.id,
+          reason: inspect(reason)
+        )
+    end
   end
 end
