@@ -144,8 +144,9 @@ defmodule TymeslotWeb.GoogleCalendarWebhookControllerTest do
           google_channel_secret: "secret-rate-200"
         )
 
-      # Exhaust the rate limit
-      for _i <- 1..60 do
+      # Exhaust the rate limit (hit beyond the limit to avoid boundary races
+      # in Hammer's sliding window ETS backend)
+      for _i <- 1..61 do
         RateLimit.hit("calendar_webhook:#{integration.id}", 60_000, 60)
       end
 

@@ -18,7 +18,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
   require Logger
 
   alias Plug.Crypto
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar, as: CalendarIntegrations
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
@@ -30,7 +30,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
     channel_id = extract_header(conn, "x-goog-channel-id")
     token = extract_header(conn, "x-goog-channel-token")
 
-    case CalendarIntegrationQueries.get_by_google_channel_id(channel_id) do
+    case CalendarIntegrations.get_by_google_channel_id(channel_id) do
       {:error, :not_found} ->
         conn |> send_resp(200, "") |> halt()
 
@@ -68,8 +68,10 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
   defp handle_valid_notification(conn, integration) do
     case RateLimiter.check_calendar_webhook_rate_limit(integration.id) do
       :ok ->
-        enqueue_sync(integration)
-        touch_notification_timestamp(integration)
+        case enqueue_sync(integration) do
+          :ok -> touch_notification_timestamp(integration)
+          :error -> :ok
+        end
 
       {:error, :rate_limited} ->
         Logger.warning("Google Calendar webhook rate limited",
@@ -93,11 +95,13 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
           integration_id: integration.id,
           reason: inspect(reason)
         )
+
+        :error
     end
   end
 
   defp touch_notification_timestamp(integration) do
-    case CalendarIntegrationQueries.touch_notification_at(
+    case CalendarIntegrations.touch_notification_at(
            integration,
            :last_google_notification_at
          ) do

@@ -21,7 +21,7 @@ defmodule TymeslotWeb.OutlookLifecycleController do
   require Logger
 
   alias Plug.Crypto
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar, as: CalendarIntegrations
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.ReregisterOutlookSubscriptionWorker
@@ -44,12 +44,15 @@ defmodule TymeslotWeb.OutlookLifecycleController do
 
   # Private helpers
 
-  defp process_lifecycle_notification(%{
-         "subscriptionId" => subscription_id,
-         "lifecycleEvent" => event_type,
-         "clientState" => client_state
-       }) do
-    case CalendarIntegrationQueries.get_by_graph_subscription_id(subscription_id) do
+  defp process_lifecycle_notification(
+         %{
+           "subscriptionId" => subscription_id,
+           "lifecycleEvent" => event_type
+         } = notification
+       ) do
+    client_state = notification["clientState"] || ""
+
+    case CalendarIntegrations.get_by_graph_subscription_id(subscription_id) do
       {:error, :not_found} ->
         :ok
 

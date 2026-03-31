@@ -23,7 +23,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   require Logger
 
   alias Plug.Crypto
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar, as: CalendarIntegrations
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncOutlookCalendarWorker
 
@@ -31,15 +31,20 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   Receives a Microsoft Graph change notification or validation challenge.
   """
   @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
-  def webhook(conn, %{"validationToken" => token}) when is_binary(token) and token != "" do
-    conn
-    |> put_resp_content_type("text/plain")
-    |> send_resp(200, token)
-    |> halt()
+  def webhook(conn, %{"validationToken" => token})
+      when is_binary(token) and byte_size(token) > 0 and byte_size(token) <= 256 do
+    if String.printable?(token) do
+      conn
+      |> put_resp_content_type("text/plain")
+      |> send_resp(200, token)
+      |> halt()
+    else
+      conn |> send_resp(400, "") |> halt()
+    end
   end
 
   def webhook(conn, _params) do
-    notifications = get_in(conn.body_params, ["value"]) || []
+    notifications = Enum.take(get_in(conn.body_params, ["value"]) || [], 50)
 
     Enum.each(notifications, &process_notification/1)
 
@@ -49,7 +54,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   # Private helpers
 
   defp process_notification(%{"subscriptionId" => subscription_id} = notification) do
-    case CalendarIntegrationQueries.get_by_graph_subscription_id(subscription_id) do
+    case CalendarIntegrations.get_by_graph_subscription_id(subscription_id) do
       {:error, :not_found} ->
         :ok
 
@@ -81,9 +86,16 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   defp handle_valid_notification(integration, notification) do
     case RateLimiter.check_calendar_webhook_rate_limit(integration.id) do
       :ok ->
-        graph_resource_id = get_in(notification, ["resourceData", "id"])
-        enqueue_sync(integration, graph_resource_id)
-        touch_notification_timestamp(integration)
+        case get_in(notification, ["resourceData", "id"]) do
+          nil ->
+            Logger.warning("Outlook webhook notification missing resourceData",
+              subscription_id: notification["subscriptionId"]
+            )
+
+          graph_resource_id ->
+            enqueue_sync(integration, graph_resource_id)
+            touch_notification_timestamp(integration)
+        end
 
       {:error, :rate_limited} ->
         Logger.warning("Outlook Calendar webhook rate limited",
@@ -113,7 +125,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   end
 
   defp touch_notification_timestamp(integration) do
-    case CalendarIntegrationQueries.touch_notification_at(
+    case CalendarIntegrations.touch_notification_at(
            integration,
            :last_outlook_notification_at
          ) do
