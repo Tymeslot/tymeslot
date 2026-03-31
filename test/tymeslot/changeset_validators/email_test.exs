@@ -1,8 +1,9 @@
 defmodule Tymeslot.ChangesetValidators.EmailTest do
   use ExUnit.Case, async: true
 
-  alias Tymeslot.ChangesetValidators.Email
   alias __MODULE__.EmailHolder
+  alias Ecto.Changeset
+  alias Tymeslot.ChangesetValidators.Email
 
   @moduletag :unit
 
@@ -16,7 +17,7 @@ defmodule Tymeslot.ChangesetValidators.EmailTest do
   end
 
   defp changeset(attrs) do
-    Ecto.Changeset.change(%EmailHolder{}, attrs)
+    Changeset.change(%EmailHolder{}, attrs)
   end
 
   describe "validate_email/3" do
@@ -41,7 +42,7 @@ defmodule Tymeslot.ChangesetValidators.EmailTest do
     end
 
     test "skips validation when field has not changed" do
-      cs = Ecto.Changeset.change(%EmailHolder{email: "old@example.com"}, %{})
+      cs = Changeset.change(%EmailHolder{email: "old@example.com"}, %{})
       result = Email.validate_email(cs, :email)
       assert result.valid?
     end

@@ -1,9 +1,10 @@
 defmodule Tymeslot.ChangesetValidators.TimeOrderTest do
   use ExUnit.Case, async: true
 
-  alias Tymeslot.ChangesetValidators.TimeOrder
   alias __MODULE__.DateTimeSlot
   alias __MODULE__.TimeSlot
+  alias Ecto.Changeset
+  alias Tymeslot.ChangesetValidators.TimeOrder
 
   @moduletag :unit
 
@@ -26,11 +27,11 @@ defmodule Tymeslot.ChangesetValidators.TimeOrderTest do
   end
 
   defp time_changeset(start_time, end_time) do
-    Ecto.Changeset.change(%TimeSlot{}, %{start_time: start_time, end_time: end_time})
+    Changeset.change(%TimeSlot{}, %{start_time: start_time, end_time: end_time})
   end
 
   defp datetime_changeset(start_time, end_time) do
-    Ecto.Changeset.change(%DateTimeSlot{}, %{start_time: start_time, end_time: end_time})
+    Changeset.change(%DateTimeSlot{}, %{start_time: start_time, end_time: end_time})
   end
 
   describe "validate_time_order/3 with Time" do
