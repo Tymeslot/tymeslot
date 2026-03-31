@@ -10,79 +10,6 @@ defmodule Tymeslot.Bookings.Validation do
   alias Tymeslot.Utils.TimeRange
 
   @doc """
-  Validates buffer minutes are within acceptable range.
-
-  ## Examples
-
-      iex> Validation.valid_buffer_minutes?(15)
-      true
-
-      iex> Validation.valid_buffer_minutes?(150)
-      false
-  """
-  @spec valid_buffer_minutes?(any()) :: boolean()
-  def valid_buffer_minutes?(minutes) when is_integer(minutes) do
-    minutes >= 0 and minutes <= 120
-  end
-
-  def valid_buffer_minutes?(_other), do: false
-
-  @doc """
-  Validates booking window days are within acceptable range.
-
-  ## Examples
-
-      iex> Validation.valid_booking_window?(30)
-      true
-
-      iex> Validation.valid_booking_window?(400)
-      false
-  """
-  @spec valid_booking_window?(any()) :: boolean()
-  def valid_booking_window?(days) when is_integer(days) do
-    days >= 1 and days <= 365
-  end
-
-  def valid_booking_window?(_other), do: false
-
-  @doc """
-  Validates minimum notice hours are within acceptable range.
-
-  ## Examples
-
-      iex> Validation.valid_minimum_notice?(2)
-      true
-
-      iex> Validation.valid_minimum_notice?(200)
-      false
-  """
-  @spec valid_minimum_notice?(any()) :: boolean()
-  def valid_minimum_notice?(hours) when is_number(hours) do
-    hours >= 0 and hours <= 168
-  end
-
-  def valid_minimum_notice?(_other), do: false
-
-  @doc """
-  Validates meeting duration is reasonable.
-
-  ## Examples
-
-      iex> Validation.valid_meeting_duration?(30)
-      true
-
-      iex> Validation.valid_meeting_duration?(500)
-      false
-  """
-  @spec valid_meeting_duration?(any()) :: boolean()
-  def valid_meeting_duration?(minutes) when is_integer(minutes) do
-    # 15 minutes to 8 hours
-    minutes >= 15 and minutes <= 480
-  end
-
-  def valid_meeting_duration?(_other), do: false
-
-  @doc """
   Parses and validates meeting time strings into DateTime objects.
 
   ## Examples
@@ -183,24 +110,6 @@ defmodule Tymeslot.Bookings.Validation do
       {:error, "Missing required fields: #{Enum.join(missing_fields, ", ")}"}
     end
   end
-
-  @doc """
-  Validates email format using a simple regex.
-
-  ## Examples
-
-      iex> Validation.valid_email_format?("test@example.com")
-      true
-
-      iex> Validation.valid_email_format?("invalid")
-      false
-  """
-  @spec valid_email_format?(any()) :: boolean()
-  def valid_email_format?(email) when is_binary(email) do
-    email =~ ~r/^[^\s]+@[^\s]+\.[^\s]+$/
-  end
-
-  def valid_email_format?(_other), do: false
 
   @doc """
   Validates booking time from string inputs.

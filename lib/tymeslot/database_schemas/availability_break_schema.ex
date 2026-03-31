@@ -5,6 +5,7 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityBreakSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.DatabaseQueries.AvailabilityBreakQueries
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
 
@@ -37,21 +38,10 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityBreakSchema do
     break
     |> cast(attrs, [:weekly_availability_id, :start_time, :end_time, :label, :sort_order])
     |> validate_required([:weekly_availability_id, :start_time, :end_time])
-    |> validate_time_order()
+    |> TimeOrder.validate_time_order(:start_time, :end_time)
     |> validate_within_work_hours()
     |> validate_label()
     |> foreign_key_constraint(:weekly_availability_id)
-  end
-
-  defp validate_time_order(changeset) do
-    start_time = get_field(changeset, :start_time)
-    end_time = get_field(changeset, :end_time)
-
-    if start_time && end_time && Time.compare(start_time, end_time) != :lt do
-      add_error(changeset, :end_time, "must be after start time")
-    else
-      changeset
-    end
   end
 
   defp validate_within_work_hours(changeset) do

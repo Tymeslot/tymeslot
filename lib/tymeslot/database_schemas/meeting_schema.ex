@@ -7,6 +7,8 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
+  alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.Locales
 
   @type t :: %__MODULE__{
@@ -199,31 +201,20 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
     meeting
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> validate_format(:organizer_email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/)
-    |> validate_format(:attendee_email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/)
+    |> EmailChangeset.validate_email(:organizer_email)
+    |> EmailChangeset.validate_email(:attendee_email)
     |> validate_inclusion(:status, @valid_statuses)
     |> validate_required([:attendee_locale])
     |> validate_inclusion(:attendee_locale, supported_locale_codes(),
       message: "is not a supported locale"
     )
-    |> validate_time_order()
+    |> TimeOrder.validate_time_order(:start_time, :end_time)
     |> calculate_duration()
     |> unique_constraint(:uid)
     |> unique_constraint([:organizer_user_id, :start_time],
       name: :unique_confirmed_meeting_per_organizer_at_time,
       message: "You already have a confirmed meeting at this time."
     )
-  end
-
-  defp validate_time_order(changeset) do
-    start_time = get_field(changeset, :start_time)
-    end_time = get_field(changeset, :end_time)
-
-    if start_time && end_time && DateTime.compare(end_time, start_time) != :gt do
-      add_error(changeset, :end_time, "must be after start time")
-    else
-      changeset
-    end
   end
 
   defp calculate_duration(changeset) do

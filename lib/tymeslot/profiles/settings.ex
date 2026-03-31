@@ -5,7 +5,7 @@ defmodule Tymeslot.Profiles.Settings do
   """
 
   alias Tymeslot.Profiles
-  alias Tymeslot.Profiles.Usernames
+  alias Tymeslot.Security.FieldValidators.UsernameValidator
 
   @doc """
   Updates basic profile settings (name, username, timezone) with input validation.
@@ -32,7 +32,7 @@ defmodule Tymeslot.Profiles.Settings do
 
   defp validate_username_if_changed(profile, new_username) do
     if profile.username != new_username do
-      Usernames.validate_username_format(new_username)
+      UsernameValidator.validate(new_username)
     else
       :ok
     end

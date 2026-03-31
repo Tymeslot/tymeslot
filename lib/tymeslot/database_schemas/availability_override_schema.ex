@@ -5,6 +5,7 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.DatabaseSchemas.ProfileSchema
 
   @type t :: %__MODULE__{
@@ -49,21 +50,11 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema do
 
   defp validate_times(changeset) do
     override_type = get_field(changeset, :override_type)
-    start_time = get_field(changeset, :start_time)
-    end_time = get_field(changeset, :end_time)
 
     if override_type == "custom_hours" do
       changeset
       |> validate_required([:start_time, :end_time], message: "are required for custom hours")
-      |> validate_time_order(start_time, end_time)
-    else
-      changeset
-    end
-  end
-
-  defp validate_time_order(changeset, start_time, end_time) do
-    if start_time && end_time && Time.compare(start_time, end_time) != :lt do
-      add_error(changeset, :end_time, "must be after start time")
+      |> TimeOrder.validate_time_order(:start_time, :end_time)
     else
       changeset
     end

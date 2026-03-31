@@ -7,8 +7,10 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
 
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Profiles
+  alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.Security
   alias Tymeslot.Timezones
+  alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Themes.Core.Registry
 
   @type t :: %__MODULE__{
@@ -79,25 +81,20 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
     |> validate_timezone()
     |> validate_booking_theme()
     |> validate_embed_domains()
-    |> validate_number(:buffer_minutes, greater_than_or_equal_to: 0, less_than_or_equal_to: 120)
-    |> validate_number(:advance_booking_days,
-      greater_than_or_equal_to: 1,
-      less_than_or_equal_to: 365
-    )
-    |> validate_number(:min_advance_hours,
-      greater_than_or_equal_to: 0,
-      less_than_or_equal_to: 168
-    )
+    |> validate_number(:buffer_minutes, Constraints.buffer_minutes_opts())
+    |> validate_number(:advance_booking_days, Constraints.advance_booking_days_opts())
+    |> validate_number(:min_advance_hours, Constraints.min_advance_hours_opts())
     |> unique_constraint(:username)
   end
 
   defp validate_username(changeset) do
     changeset
-    |> validate_format(:username, ~r/^[a-z0-9][a-z0-9_-]{2,29}$/,
-      message:
-        "must be 3-30 characters long, start with a letter or number, and contain only lowercase letters, numbers, underscores, and hyphens"
-    )
-    |> validate_length(:username, min: 3, max: 30)
+    |> validate_change(:username, fn :username, username ->
+      case UsernameValidator.validate(username) do
+        :ok -> []
+        {:error, message} -> [username: message]
+      end
+    end)
     |> validate_username_not_reserved()
   end
 

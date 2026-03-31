@@ -1,31 +1,29 @@
 defmodule Tymeslot.ChangesetValidators.URL do
   @moduledoc """
   Shared Ecto changeset URL validator used across schemas.
-  Ensures HTTP/HTTPS scheme and a non-empty host. Limits length and blocks risky schemes.
+
+  Delegates to `Tymeslot.Security.UrlValidation.validate_http_url/2` so that
+  every changeset-validated URL gets the same SSRF protection, length checks,
+  and protocol blocking. Length limit comes from `Validation.Constraints`.
   """
+
   import Ecto.Changeset
 
-  @max_len 2000
+  alias Tymeslot.Security.UrlValidation
+  alias Tymeslot.Validation.Constraints
 
   @spec validate_url(Ecto.Changeset.t(), atom(), keyword()) :: Ecto.Changeset.t()
-  def validate_url(changeset, field, _validation_opts \\ []) do
+  def validate_url(changeset, field, validation_opts \\ []) do
     validate_change(changeset, field, fn ^field, value ->
-      case URI.parse(value) do
-        %URI{scheme: scheme, host: host}
-        when scheme in ["http", "https"] and is_binary(host) and host != "" ->
-          cond do
-            String.length(value) > @max_len ->
-              [{field, "URL must be #{@max_len} characters or less"}]
+      opts =
+        Keyword.merge(
+          [max_length: Constraints.url_max_length()],
+          validation_opts
+        )
 
-            String.contains?(value, ["javascript:", "data:", "file:", "ftp:"]) ->
-              [{field, "Only HTTP and HTTPS URLs are allowed"}]
-
-            true ->
-              []
-          end
-
-        _invalid ->
-          [{field, "must be a valid HTTP or HTTPS URL"}]
+      case UrlValidation.validate_http_url(value, opts) do
+        :ok -> []
+        {:error, message} -> [{field, message}]
       end
     end)
   end

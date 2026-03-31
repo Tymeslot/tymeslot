@@ -10,6 +10,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookSchema do
   import Ecto.Changeset
 
   alias Tymeslot.Security.Encryption
+  alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -80,8 +81,11 @@ defmodule Tymeslot.DatabaseSchemas.WebhookSchema do
       webhook
       |> cast(attrs, @required_fields ++ @optional_fields)
       |> validate_required(@required_fields)
-      |> validate_length(:name, min: 1, max: 255)
-      |> validate_length(:url, min: 1, max: 2048)
+      |> validate_length(:name,
+        min: Constraints.webhook_name_length_range().first,
+        max: Constraints.webhook_name_length_range().last
+      )
+      |> validate_length(:url, min: 1, max: Constraints.url_max_length())
       |> validate_url()
       |> validate_events()
       |> foreign_key_constraint(:user_id)

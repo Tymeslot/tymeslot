@@ -34,18 +34,18 @@ defmodule Tymeslot.Database.ProfileSchemaUsernameTest do
 
     test "rejects invalid usernames" do
       invalid_usernames = [
-        {"ab", "should be at least 3 character(s)"},
-        {"a" <> String.duplicate("b", 30), "should be at most 30 character(s)"},
+        {"ab", "Username must be at least 3 characters long"},
+        {"a" <> String.duplicate("b", 30), "Username must be at most 30 characters long"},
         {"John123",
-         "must be 3-30 characters long, start with a letter or number, and contain only lowercase letters, numbers, underscores, and hyphens"},
+         "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"},
         {"user@name",
-         "must be 3-30 characters long, start with a letter or number, and contain only lowercase letters, numbers, underscores, and hyphens"},
+         "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"},
         {"-username",
-         "must be 3-30 characters long, start with a letter or number, and contain only lowercase letters, numbers, underscores, and hyphens"},
+         "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"},
         {"user name",
-         "must be 3-30 characters long, start with a letter or number, and contain only lowercase letters, numbers, underscores, and hyphens"},
+         "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"},
         {"user.name",
-         "must be 3-30 characters long, start with a letter or number, and contain only lowercase letters, numbers, underscores, and hyphens"}
+         "Username must start with a letter or number and contain only lowercase letters, numbers, underscores, and hyphens"}
       ]
 
       for {username, expected_error} <- invalid_usernames do

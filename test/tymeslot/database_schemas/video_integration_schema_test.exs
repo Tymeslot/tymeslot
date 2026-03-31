@@ -136,7 +136,7 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchemaTest do
 
       changeset = VideoIntegrationSchema.changeset(%VideoIntegrationSchema{}, attrs)
       refute changeset.valid?
-      assert "must be a valid HTTP or HTTPS URL" in errors_on(changeset).base_url
+      assert Enum.any?(errors_on(changeset).base_url, &String.contains?(&1, "URL"))
     end
   end
 
@@ -199,7 +199,7 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchemaTest do
 
       changeset = VideoIntegrationSchema.changeset(%VideoIntegrationSchema{}, attrs)
       refute changeset.valid?
-      assert "must be a valid HTTP or HTTPS URL" in errors_on(changeset).custom_meeting_url
+      assert Enum.any?(errors_on(changeset).custom_meeting_url, &String.contains?(&1, "URL"))
     end
   end
 

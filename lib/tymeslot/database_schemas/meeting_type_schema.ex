@@ -5,6 +5,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchema do
   use Ecto.Schema
   import Ecto.Changeset
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{
           id: integer() | nil,
@@ -81,7 +82,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchema do
     |> validate_required([:name, :duration_minutes, :user_id])
     |> validate_length(:name, min: 1, max: 100)
     |> validate_length(:description, max: 500)
-    |> validate_number(:duration_minutes, greater_than: 0, less_than_or_equal_to: 480)
+    |> validate_number(:duration_minutes, Constraints.duration_minutes_opts())
     |> validate_number(:sort_order, greater_than_or_equal_to: 0)
     |> validate_inclusion(:icon, @valid_icons, message: "must be one of the available icons")
     |> validate_video_integration()

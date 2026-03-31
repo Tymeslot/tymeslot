@@ -6,13 +6,14 @@ defmodule Tymeslot.Profiles do
   """
 
   alias Ecto.Changeset
-  alias Tymeslot.Bookings.Validation, as: BookingsValidation
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Profiles.Scheduling
+  alias Tymeslot.Security.FieldValidators.UsernameValidator
+  alias Tymeslot.Validation.Constraints
   alias Tymeslot.Profiles.Timezone
   alias Tymeslot.Profiles.Usernames
   alias Tymeslot.Security.RateLimiter
@@ -150,7 +151,7 @@ defmodule Tymeslot.Profiles do
   def update_username(%ProfileSchema{} = profile, username, user_id) do
     with :ok <-
            RateLimiter.check_username_change_rate_limit("user:" <> Integer.to_string(user_id)),
-         :ok <- Usernames.validate_username_format(username),
+         :ok <- UsernameValidator.validate(username),
          {:ok, updated_profile} <- ProfileQueries.update_username(profile, username) do
       {:ok, updated_profile}
     else
@@ -166,7 +167,7 @@ defmodule Tymeslot.Profiles do
   Validates username format.
   """
   @spec validate_username_format(term()) :: :ok | {:error, String.t()}
-  def validate_username_format(username), do: Usernames.validate_username_format(username)
+  def validate_username_format(username), do: UsernameValidator.validate(username)
 
   @doc """
   Returns a list of reserved paths.
@@ -217,21 +218,21 @@ defmodule Tymeslot.Profiles do
   """
   @spec validate_buffer_minutes(integer()) :: boolean()
   def validate_buffer_minutes(minutes),
-    do: BookingsValidation.valid_buffer_minutes?(minutes)
+    do: minutes in Constraints.buffer_minutes_range()
 
   @doc """
   Validates advance booking days value.
   """
   @spec validate_advance_booking_days(integer()) :: boolean()
   def validate_advance_booking_days(days),
-    do: BookingsValidation.valid_booking_window?(days)
+    do: days in Constraints.advance_booking_days_range()
 
   @doc """
   Validates minimum advance hours value.
   """
   @spec validate_min_advance_hours(integer()) :: boolean()
   def validate_min_advance_hours(hours),
-    do: BookingsValidation.valid_minimum_notice?(hours)
+    do: hours in Constraints.min_advance_hours_range()
 
   # --- Avatar Management ---
 

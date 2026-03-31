@@ -5,7 +5,6 @@ defmodule Tymeslot.Profiles.Usernames do
   """
 
   alias Tymeslot.DatabaseQueries.ProfileQueries
-  alias Tymeslot.Profiles.ReservedPaths
 
   @type username :: String.t()
   @type user_id :: pos_integer()
@@ -23,32 +22,6 @@ defmodule Tymeslot.Profiles.Usernames do
       generate_random_username(base, 3)
     end
   end
-
-  @doc """
-  Validates username format and reserved paths.
-  """
-  @spec validate_username_format(term()) :: :ok | {:error, String.t()}
-  def validate_username_format(username) when is_binary(username) do
-    cond do
-      String.length(username) < 3 ->
-        {:error, "Username must be at least 3 characters long"}
-
-      String.length(username) > 30 ->
-        {:error, "Username must be at most 30 characters long"}
-
-      !Regex.match?(~r/^[a-z0-9][a-z0-9_-]{2,29}$/, username) ->
-        {:error,
-         "Username must contain only lowercase letters, numbers, underscores, and hyphens, and start with a letter or number"}
-
-      username in ReservedPaths.list() ->
-        {:error, "This username is reserved"}
-
-      true ->
-        :ok
-    end
-  end
-
-  def validate_username_format(_input), do: {:error, "Username must be a string"}
 
   # Private helpers
 

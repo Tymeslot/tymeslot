@@ -11,7 +11,8 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
     VideoIntegrationSchema
   }
 
-  alias Tymeslot.Security.FieldValidators.EmailValidator
+  alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
+  alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.Password
 
   @type t :: %__MODULE__{
@@ -167,22 +168,12 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
     |> cast(attrs, [:pending_email, :email_change_token_hash])
     |> validate_required([:pending_email, :email_change_token_hash])
     |> update_change(:pending_email, &String.downcase/1)
-    |> validate_length(:pending_email, max: 160)
-    |> validate_pending_email_format()
+    |> EmailChangeset.validate_email(:pending_email)
     |> validate_different_email()
     |> unsafe_validate_unique(:pending_email, Tymeslot.Repo, message: "is already registered")
     |> unique_constraint(:pending_email)
     |> unique_constraint(:email_change_token_hash)
     |> put_change(:email_change_sent_at, DateTime.utc_now(:second))
-  end
-
-  defp validate_pending_email_format(changeset) do
-    validate_change(changeset, :pending_email, fn :pending_email, email ->
-      case EmailValidator.validate(email) do
-        :ok -> []
-        {:error, message} -> [pending_email: message]
-      end
-    end)
   end
 
   @doc """
@@ -217,26 +208,16 @@ defmodule Tymeslot.DatabaseSchemas.UserSchema do
   end
 
   defp validate_email(changeset) do
-    changeset
-    |> validate_length(:email, max: 160)
-    |> validate_change(:email, fn :email, email ->
-      case EmailValidator.validate(email) do
-        :ok -> []
-        {:error, message} -> [email: message]
-      end
-    end)
+    EmailChangeset.validate_email(changeset, :email)
   end
 
   defp validate_password(changeset) do
-    changeset
-    |> validate_length(:password, min: 8, max: 80)
-    |> validate_format(:password, ~r/[a-z]/,
-      message: "must contain at least one lower case character"
-    )
-    |> validate_format(:password, ~r/[A-Z]/,
-      message: "must contain at least one upper case character"
-    )
-    |> validate_format(:password, ~r/[0-9]/, message: "must contain at least one digit")
+    validate_change(changeset, :password, fn :password, password ->
+      case PasswordValidator.validate(password) do
+        :ok -> []
+        {:error, message} -> [password: message]
+      end
+    end)
   end
 
   defp put_password_hash(changeset) do

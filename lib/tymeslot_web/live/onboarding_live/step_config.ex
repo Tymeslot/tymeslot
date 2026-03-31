@@ -12,6 +12,8 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @typedoc "A label/value tuple used for select options."
   @type option :: {String.t(), non_neg_integer()}
 
+  alias Tymeslot.Validation.Constraints
+
   @steps [:welcome, :basic_settings, :scheduling_preferences, :complete]
   @step_index Map.new(Enum.with_index(@steps))
 
@@ -26,8 +28,8 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @buffer_time_values Enum.map(@buffer_time_options, &elem(&1, 1))
 
   @buffer_minutes_constraints %{
-    min: 0,
-    max: 120,
+    min: Constraints.buffer_minutes_range().first,
+    max: Constraints.buffer_minutes_range().last,
     step: 5,
     default_custom: 20,
     unit: "min",
@@ -46,8 +48,8 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @advance_booking_values Enum.map(@advance_booking_options, &elem(&1, 1))
 
   @advance_booking_constraints %{
-    min: 1,
-    max: 365,
+    min: Constraints.advance_booking_days_range().first,
+    max: Constraints.advance_booking_days_range().last,
     step: 1,
     default_custom: 120,
     unit: "days",
@@ -67,8 +69,8 @@ defmodule TymeslotWeb.OnboardingLive.StepConfig do
   @min_advance_values Enum.map(@min_advance_options, &elem(&1, 1))
 
   @min_advance_constraints %{
-    min: 0,
-    max: 168,
+    min: Constraints.min_advance_hours_range().first,
+    max: Constraints.min_advance_hours_range().last,
     step: 1,
     default_custom: 8,
     unit: "hours",

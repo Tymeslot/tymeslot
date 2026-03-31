@@ -4,9 +4,9 @@ defmodule Tymeslot.Profiles.Scheduling do
   Focuses on validation and coordination with ProfileQueries.
   """
 
-  alias Tymeslot.Bookings.Validation
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.Validation.Constraints
 
   @type profile :: ProfileSchema.t()
   @type result(t) :: {:ok, t} | {:error, any()}
@@ -24,7 +24,7 @@ defmodule Tymeslot.Profiles.Scheduling do
 
   def update_buffer_minutes(%ProfileSchema{} = profile, buffer_minutes)
       when is_integer(buffer_minutes) do
-    if Validation.valid_buffer_minutes?(buffer_minutes) do
+    if buffer_minutes in Constraints.buffer_minutes_range() do
       ProfileQueries.update_profile(profile, %{buffer_minutes: buffer_minutes})
     else
       {:error, :invalid_buffer_minutes}
@@ -44,7 +44,7 @@ defmodule Tymeslot.Profiles.Scheduling do
   end
 
   def update_advance_booking_days(%ProfileSchema{} = profile, days) when is_integer(days) do
-    if Validation.valid_booking_window?(days) do
+    if days in Constraints.advance_booking_days_range() do
       ProfileQueries.update_profile(profile, %{advance_booking_days: days})
     else
       {:error, :invalid_advance_booking_days}
@@ -57,7 +57,7 @@ defmodule Tymeslot.Profiles.Scheduling do
   @spec update_min_advance_hours(profile, String.t() | integer()) :: result(profile)
   def update_min_advance_hours(%ProfileSchema{} = profile, hours_str) when is_binary(hours_str) do
     case Integer.parse(hours_str) do
-      {hours, _value} when hours >= 0 and hours <= 168 ->
+      {hours, _value} when hours in 0..168 ->
         ProfileQueries.update_profile(profile, %{min_advance_hours: hours})
 
       _other ->
@@ -66,7 +66,7 @@ defmodule Tymeslot.Profiles.Scheduling do
   end
 
   def update_min_advance_hours(%ProfileSchema{} = profile, hours) when is_integer(hours) do
-    if hours >= 0 and hours <= 168 do
+    if hours in Constraints.min_advance_hours_range() do
       ProfileQueries.update_profile(profile, %{min_advance_hours: hours})
     else
       {:error, :invalid_min_advance_hours}

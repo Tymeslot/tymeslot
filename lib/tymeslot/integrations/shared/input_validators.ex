@@ -7,15 +7,25 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
 
   alias Tymeslot.Security.FieldValidators.IntegrationNameValidator
   alias Tymeslot.Security.{InputProcessor, UniversalSanitizer}
+  alias Tymeslot.Validation.Constraints
 
   @spec validate_integration_name(String.t()) :: {:ok, String.t()} | {:error, %{name: String.t()}}
   def validate_integration_name(name) when is_binary(name) do
     cleaned = String.trim(name)
+    range = Constraints.integration_name_length_range()
 
     cond do
-      cleaned == "" -> {:error, %{name: "Name is required"}}
-      String.length(cleaned) > 120 -> {:error, %{name: "Name must be 120 characters or less"}}
-      true -> {:ok, cleaned}
+      cleaned == "" ->
+        {:error, %{name: "Name is required"}}
+
+      String.length(cleaned) < range.first ->
+        {:error, %{name: "Name must be at least #{range.first} characters"}}
+
+      String.length(cleaned) > range.last ->
+        {:error, %{name: "Name must be #{range.last} characters or less"}}
+
+      true ->
+        {:ok, cleaned}
     end
   end
 

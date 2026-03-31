@@ -9,6 +9,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
   alias Tymeslot.Utils.ReminderUtils
+  alias Tymeslot.Validation.Constraints
 
   @doc """
   Validates meeting type form input (name, duration, description, icon, mode).
@@ -389,7 +390,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
            metadata: metadata
          ) do
       {:ok, sanitized_description} ->
-        if String.length(sanitized_description) > 500 do
+        if String.length(sanitized_description) > Constraints.description_max_length() do
           {:error, %{description: "Description must be 500 characters or less"}}
         else
           {:ok, String.trim(sanitized_description)}

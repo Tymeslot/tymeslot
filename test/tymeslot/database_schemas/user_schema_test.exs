@@ -9,10 +9,11 @@ defmodule Tymeslot.DatabaseSchemas.UserSchemaTest do
   describe "security validations" do
     test "enforces strong password requirements" do
       test_cases = [
-        {"short", "should be at least 8 character(s)"},
-        {"alllowercase", "must contain at least one upper case character"},
-        {"ALLUPPERCASE", "must contain at least one lower case character"},
-        {"NoNumbers!", "must contain at least one digit"}
+        {"short", "Password must be at least 8 characters long"},
+        {"alllowercase1!", "Password must contain at least one uppercase letter"},
+        {"ALLUPPERCASE1!", "Password must contain at least one lowercase letter"},
+        {"NoNumbers!Ab", "Password must contain at least one number"},
+        {"NoSpecial1Ab", "Password must contain at least one special character"}
       ]
 
       for {password, expected_error} <- test_cases do

@@ -5,6 +5,7 @@ defmodule Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.ChangesetValidators.TimeOrder
   alias Tymeslot.DatabaseSchemas.{AvailabilityBreakSchema, ProfileSchema}
 
   @type t :: %__MODULE__{
@@ -48,23 +49,13 @@ defmodule Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema do
 
   defp validate_times(changeset) do
     is_available = get_field(changeset, :is_available)
-    start_time = get_field(changeset, :start_time)
-    end_time = get_field(changeset, :end_time)
 
     if is_available do
       changeset
       |> validate_required([:start_time, :end_time],
         message: "are required when day is available"
       )
-      |> validate_time_order(start_time, end_time)
-    else
-      changeset
-    end
-  end
-
-  defp validate_time_order(changeset, start_time, end_time) do
-    if start_time && end_time && Time.compare(start_time, end_time) != :lt do
-      add_error(changeset, :end_time, "must be after start time")
+      |> TimeOrder.validate_time_order(:start_time, :end_time)
     else
       changeset
     end
