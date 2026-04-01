@@ -21,12 +21,23 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
   alias Tymeslot.Integrations.Calendar, as: CalendarIntegrations
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
+  alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
   Receives a Google Calendar push notification.
   """
   @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def webhook(conn, _params) do
+    case RateLimiter.check_webhook_rate_limit(ClientIP.get(conn)) do
+      :ok ->
+        process_webhook(conn)
+
+      {:error, :rate_limited} ->
+        conn |> send_resp(200, "") |> halt()
+    end
+  end
+
+  defp process_webhook(conn) do
     channel_id = extract_header(conn, "x-goog-channel-id")
     token = extract_header(conn, "x-goog-channel-token")
 
@@ -93,7 +104,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
       {:error, reason} ->
         Logger.error("Failed to enqueue SyncGoogleCalendarWorker",
           integration_id: integration.id,
-          reason: inspect(reason)
+          reason: reason
         )
 
         :error

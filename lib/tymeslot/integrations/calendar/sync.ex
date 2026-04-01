@@ -88,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
           {:error, reason} ->
             Logger.warning("Auto-cancel failed, reverting sync status for retry",
               meeting_id: meeting.id,
-              reason: inspect(reason)
+              reason: reason
             )
 
             case MeetingQueries.clear_calendar_sync_status(meeting.id) do
@@ -98,7 +98,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
               {:error, revert_reason} ->
                 Logger.error("Failed to revert sync status after cancel failure",
                   meeting_id: meeting.id,
-                  revert_reason: inspect(revert_reason)
+                  revert_reason: revert_reason
                 )
             end
 
@@ -112,7 +112,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
         Logger.warning("Failed to update calendar sync status",
           meeting_id: meeting.id,
           signal: :deleted,
-          error: inspect(reason)
+          error: reason
         )
 
         {:error, reason}
@@ -139,7 +139,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
         Logger.warning("Failed to update calendar sync status",
           meeting_id: meeting.id,
           signal: signal,
-          error: inspect(reason)
+          error: reason
         )
 
         {:error, reason}
@@ -155,14 +155,15 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
           signal: signal
         )
 
+        :ok
+
       {:error, reason} ->
         Logger.warning("Failed to send external booking change notification",
           meeting_id: meeting.id,
-          signal: signal,
-          error: inspect(reason)
+          reason: reason
         )
-    end
 
-    :ok
+        :ok
+    end
   end
 end

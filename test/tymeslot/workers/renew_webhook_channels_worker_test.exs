@@ -10,8 +10,6 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
 
   alias Tymeslot.Workers.RenewWebhookChannelsWorker
 
-  setup :verify_on_exit!
-
   describe "perform/1 - no expiring integrations" do
     test "returns :ok when there are no expiring Google channels or Outlook subscriptions" do
       # No integrations inserted - both lists will be empty
@@ -26,17 +24,44 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
         google_channel_expires_at: DateTime.add(DateTime.utc_now(), 72, :hour)
       )
 
-      # No mock expectations — the API must not be called
+      # No jobs should be scheduled
       assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+      refute_enqueued(worker: RenewWebhookChannelsWorker, args: %{"provider" => "google"})
     end
   end
 
   describe "perform/1 - expiring Google channels" do
-    test "renews an expiring Google channel and returns :ok" do
+    test "returns :ok when expiring Google channels exist" do
+      insert(:calendar_integration,
+        provider: "google",
+        google_channel_id: "expiring-channel",
+        google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+      )
+
+      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+    end
+  end
+
+  describe "perform/1 - expiring Outlook subscriptions" do
+    test "returns :ok when expiring Outlook subscriptions exist" do
+      insert(:calendar_integration,
+        provider: "outlook",
+        graph_subscription_id: "expiring-subscription",
+        graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+      )
+
+      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+    end
+  end
+
+  describe "perform/1 - per-integration renewal" do
+    setup :verify_on_exit!
+
+    test "renews a Google channel via the API module" do
       integration =
         insert(:calendar_integration,
           provider: "google",
-          google_channel_id: "expiring-channel",
+          google_channel_id: "renewal-target",
           google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
         )
 
@@ -44,30 +69,18 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
         {:ok, integration}
       end)
 
-      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+      assert :ok =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "google"
+               })
     end
 
-    test "returns :ok and skips gracefully when WEBHOOK_BASE_URL is not configured" do
-      insert(:calendar_integration,
-        provider: "google",
-        google_channel_id: "expiring-no-url",
-        google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
-      )
-
-      expect(GoogleCalendarAPIMock, :register_push_channel, fn _integration ->
-        {:error, :webhook_base_url_not_configured}
-      end)
-
-      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
-    end
-  end
-
-  describe "perform/1 - expiring Outlook subscriptions" do
-    test "renews an expiring Outlook subscription and returns :ok" do
+    test "renews an Outlook subscription via the API module" do
       integration =
         insert(:calendar_integration,
           provider: "outlook",
-          graph_subscription_id: "expiring-subscription",
+          graph_subscription_id: "renewal-target",
           graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
         )
 
@@ -75,21 +88,49 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
         {:ok, integration}
       end)
 
-      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+      assert :ok =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "outlook"
+               })
     end
 
-    test "returns :ok and skips gracefully when WEBHOOK_BASE_URL is not configured for Outlook" do
-      insert(:calendar_integration,
-        provider: "outlook",
-        graph_subscription_id: "expiring-sub-no-url",
-        graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
-      )
+    test "returns :ok when WEBHOOK_BASE_URL is not configured for Google" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: "no-url-channel",
+          google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
+
+      expect(GoogleCalendarAPIMock, :register_push_channel, fn _integration ->
+        {:error, :webhook_base_url_not_configured}
+      end)
+
+      assert :ok =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "google"
+               })
+    end
+
+    test "returns :ok when WEBHOOK_BASE_URL is not configured for Outlook" do
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          graph_subscription_id: "no-url-sub",
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
 
       expect(OutlookCalendarAPIMock, :register_graph_subscription, fn _integration ->
         {:error, :webhook_base_url_not_configured}
       end)
 
-      assert :ok = perform_job(RenewWebhookChannelsWorker, %{})
+      assert :ok =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "outlook"
+               })
     end
   end
 end

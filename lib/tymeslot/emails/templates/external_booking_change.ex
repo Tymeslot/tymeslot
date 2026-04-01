@@ -56,11 +56,12 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     view_url = meeting.view_url || dashboard_url
 
     {alert_type, alert_message, alert_title} = alert_parts(discrepancy, meeting)
+    safe_title = escape_html(meeting.title) || "Meeting"
 
     mjml_content = """
     #{Components.alert_box(alert_type, alert_message, title: alert_title)}
 
-    #{Components.section_title(meeting.title || "Meeting", padding: "24px 0 16px 0")}
+    #{Components.section_title(safe_title, padding: "24px 0 16px 0")}
 
     #{Components.meeting_details_table(%{date: owner_time, start_time: owner_time, duration: meeting.duration, location: meeting.location, location_type: if(meeting.meeting_url, do: :video, else: :custom), meeting_type: meeting.meeting_type},
     locale)}
@@ -82,17 +83,21 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   end
 
   defp alert_parts(:deleted, meeting) do
+    title = escape_html(meeting.title)
+
     {
       "error",
-      "The meeting \"#{meeting.title}\" was deleted from your external calendar. Tymeslot still has this booking on record — please review and cancel it here if the meeting is no longer taking place.",
+      "The meeting \"#{title}\" was deleted from your external calendar. Tymeslot still has this booking on record — please review and cancel it here if the meeting is no longer taking place.",
       "Meeting Deleted in External Calendar"
     }
   end
 
   defp alert_parts(:modified, meeting) do
+    title = escape_html(meeting.title)
+
     {
       "warning",
-      "The meeting \"#{meeting.title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking — please review the details and update or cancel it accordingly.",
+      "The meeting \"#{title}\" was rescheduled in your external calendar. Tymeslot still holds the original booking — please review the details and update or cancel it accordingly.",
       "Meeting Rescheduled in External Calendar"
     }
   end
@@ -186,4 +191,15 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
   defp email_subject(:modified, title, date_short),
     do: "Action required: \"#{title}\" was rescheduled in your external calendar (#{date_short})"
+
+  defp escape_html(text) when is_binary(text) do
+    text
+    |> String.replace("&", "&amp;")
+    |> String.replace("<", "&lt;")
+    |> String.replace(">", "&gt;")
+    |> String.replace("\"", "&quot;")
+    |> String.replace("'", "&#39;")
+  end
+
+  defp escape_html(nil), do: nil
 end

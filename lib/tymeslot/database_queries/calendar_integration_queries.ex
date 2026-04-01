@@ -36,6 +36,34 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   @doc """
+  Streams all active calendar integrations in batches, reducing over them with
+  the given accumulator. Uses `Repo.stream/2` inside a transaction to avoid
+  loading all rows into memory at once.
+
+  `fun` receives each decrypted integration and the current accumulator.
+  Returns the final accumulator value.
+  """
+  @spec stream_all_active(pos_integer(), acc, (CalendarIntegrationSchema.t(), acc -> acc)) :: acc
+        when acc: term()
+  def stream_all_active(max_rows \\ 100, initial_acc, fun) when is_function(fun, 2) do
+    {:ok, result} =
+      Repo.transaction(
+        fn ->
+          CalendarIntegrationSchema
+          |> where([c], c.is_active == true)
+          |> order_by([c], asc: c.id)
+          |> Repo.stream(max_rows: max_rows)
+          |> Enum.reduce(initial_acc, fn row, acc ->
+            fun.(CalendarIntegrationSchema.decrypt_credentials(row), acc)
+          end)
+        end,
+        timeout: :infinity
+      )
+
+    result
+  end
+
+  @doc """
   Gets all calendar integrations for a user (including inactive).
   """
   @spec list_all_for_user(integer()) :: [CalendarIntegrationSchema.t()]
@@ -554,7 +582,7 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   @doc "Updates the delta link and last_external_sync_at for an integration."
-  @spec update_delta_link(CalendarIntegrationSchema.t(), String.t()) ::
+  @spec update_delta_link(CalendarIntegrationSchema.t(), String.t() | nil) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_delta_link(integration, delta_link) do
     integration

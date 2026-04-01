@@ -44,6 +44,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
         {:noreply, socket}
 
       {:error, _changeset} ->
+        send(self(), {:flash, {:error, "Failed to save preference"}})
         {:noreply, socket}
     end
   end
@@ -58,8 +59,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
     view_atom = String.to_existing_atom(value)
 
     case CalendarGrid.save_preferences(user_id, %{default_view: value}) do
-      {:ok, _preferences} -> :ok
-      {:error, _changeset} -> :ok
+      {:ok, _preferences} ->
+        :ok
+
+      {:error, _changeset} ->
+        send(self(), {:flash, {:error, "Failed to save preference"}})
     end
 
     prefs = %{socket.assigns.preferences | default_view: value}
@@ -100,6 +104,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
         {:noreply, socket}
 
       {:error, _changeset} ->
+        send(self(), {:flash, {:error, "Failed to save preference"}})
         {:noreply, socket}
     end
   end

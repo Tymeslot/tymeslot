@@ -39,7 +39,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcast do
       {:error, reason} = error ->
         Logger.warning(
           "Failed to process cached event",
-          Keyword.merge(log_context, reason: inspect(reason))
+          Keyword.merge(log_context, reason: reason)
         )
 
         error
@@ -70,7 +70,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcast do
         :ok
 
       {:error, reason} ->
-        Logger.warning("PubSub broadcast failed", reason: inspect(reason), user_id: user_id)
+        Logger.warning("PubSub broadcast failed", reason: reason, user_id: user_id)
         :ok
     end
   end

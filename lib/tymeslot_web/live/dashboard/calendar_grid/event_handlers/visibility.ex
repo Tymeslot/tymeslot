@@ -61,15 +61,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
         [integration_id | current_hidden]
       end
 
-    case CalendarGrid.save_preferences(user_id, %{hidden_integration_ids: new_hidden}) do
-      {:ok, _preferences} -> :ok
-      {:error, _changeset} -> :ok
-    end
-
     socket =
-      socket
-      |> assign(:hidden_integration_ids, new_hidden)
-      |> Helpers.precompute_derived()
+      case CalendarGrid.save_preferences(user_id, %{hidden_integration_ids: new_hidden}) do
+        {:ok, _preferences} ->
+          socket
+          |> assign(:hidden_integration_ids, new_hidden)
+          |> Helpers.precompute_derived()
+
+        {:error, _changeset} ->
+          send(self(), {:flash, {:error, "Failed to save preference"}})
+          socket
+      end
 
     {:noreply, socket}
   end

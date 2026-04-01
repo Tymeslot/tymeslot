@@ -257,15 +257,11 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
   defp http_get(token, path, params, extra_headers) do
     url =
-      URI.merge(@base_url, path)
-      |> URI.to_string()
-      |> then(fn base ->
-        if map_size(params) > 0 do
-          base <> "?" <> URI.encode_query(params)
-        else
-          base
-        end
-      end)
+      if map_size(params) > 0 do
+        @base_url <> path <> "?" <> URI.encode_query(params)
+      else
+        @base_url <> path
+      end
 
     headers =
       [

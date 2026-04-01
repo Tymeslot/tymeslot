@@ -14,6 +14,7 @@ defmodule TymeslotWeb.VideoOAuthController do
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Helpers.MicrosoftOAuth
 
   @doc """
   Handles Google Meet OAuth callback.
@@ -107,7 +108,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     error_message =
       cond do
-        microsoft_admin_consent_error?(error_description) ->
+        MicrosoftOAuth.microsoft_admin_consent_error?(error_description) ->
           "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
 
         error == "access_denied" ->
@@ -156,16 +157,6 @@ defmodule TymeslotWeb.VideoOAuthController do
     conn
     |> put_flash(:error, message)
     |> redirect(to: ~p"/dashboard/video-integration")
-  end
-
-  # Microsoft returns an error_description containing an AADSTS code when a tenant's
-  # user consent policy requires an IT admin to approve the app before individuals
-  # can authorise it. Detecting these codes lets us show actionable guidance instead
-  # of a generic "access denied" message.
-  @microsoft_admin_consent_codes ~w[AADSTS65001 AADSTS90094 AADSTS90093 AADSTS90095]
-
-  defp microsoft_admin_consent_error?(description) do
-    Enum.any?(@microsoft_admin_consent_codes, &String.contains?(description, &1))
   end
 
   # Private functions

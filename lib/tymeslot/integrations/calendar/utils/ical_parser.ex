@@ -220,7 +220,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   defp normalize_transp(other), do: other
 
   defp extract_property(lines, property_name) do
-    case Enum.find(lines, &String.starts_with?(&1, property_name <> ":")) do
+    line =
+      Enum.find(lines, fn line ->
+        String.starts_with?(line, property_name <> ":") or
+          String.starts_with?(line, property_name <> ";")
+      end)
+
+    case line do
       nil ->
         nil
 

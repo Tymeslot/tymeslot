@@ -353,7 +353,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   defp fetch_delta_page(token, path, params, accumulated, page \\ 1) do
     if page > @max_delta_pages do
       Logger.warning("Outlook delta pagination limit reached", pages: page)
-      {:ok, accumulated, nil}
+      {:error, :pagination_limit_exceeded}
     else
       with {:ok, response} <- make_request(:get, path, token, params) do
         events = accumulated ++ (response["value"] || [])

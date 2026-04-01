@@ -3,6 +3,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
 
   import Phoenix.Component, only: [assign: 3]
 
+  require Logger
+
   alias Tymeslot.CalendarGrid
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -35,7 +37,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
   def handle_set_view(%{"view" => view}, socket) when view in ~w(day week month) do
     view_atom = String.to_existing_atom(view)
     user_id = socket.assigns.current_user.id
-    _result = CalendarGrid.save_preferences(user_id, %{default_view: view})
+
+    case CalendarGrid.save_preferences(user_id, %{default_view: view}) do
+      {:ok, _preferences} -> :ok
+      {:error, reason} -> Logger.warning("Failed to save view preference", error: inspect(reason))
+    end
 
     socket =
       socket

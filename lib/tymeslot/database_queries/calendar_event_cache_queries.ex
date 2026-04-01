@@ -49,17 +49,22 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
         |> Map.put(:updated_at, now)
       end)
 
-    {count, _rows} =
-      Repo.insert_all(
-        CalendarEventCacheSchema,
-        entries,
-        on_conflict: {:replace, replace_fields()},
-        conflict_target: [:calendar_integration_id, :uid]
-      )
+    Repo.transaction(fn ->
+      try do
+        {count, _rows} =
+          Repo.insert_all(
+            CalendarEventCacheSchema,
+            entries,
+            on_conflict: {:replace, replace_fields()},
+            conflict_target: [:calendar_integration_id, :uid]
+          )
 
-    {:ok, count}
-  rescue
-    error -> {:error, error}
+        count
+      rescue
+        error ->
+          Repo.rollback(error)
+      end
+    end)
   end
 
   @doc """
@@ -112,6 +117,8 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
           {:ok, non_neg_integer()} | {:error, term()}
   def full_refresh_for_integration(calendar_integration_id, events_attrs) do
     Repo.transaction(fn ->
+      Repo.query!("SELECT pg_advisory_xact_lock($1)", [calendar_integration_id])
+
       CalendarEventCacheSchema
       |> where([e], e.calendar_integration_id == ^calendar_integration_id)
       |> Repo.delete_all()

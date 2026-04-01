@@ -11,6 +11,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Helpers.MicrosoftOAuth
   alias TymeslotWeb.OAuthCallbackHandler
 
   @doc """
@@ -18,16 +19,26 @@ defmodule TymeslotWeb.CalendarOAuthController do
   """
   @spec google_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def google_callback(conn, %{"code" => code, "state" => state} = params) do
-    redirect_uri = "#{Endpoint.url()}/auth/google/calendar/callback"
+    case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
+      :ok ->
+        redirect_uri = "#{Endpoint.url()}/auth/google/calendar/callback"
 
-    OAuthCallbackHandler.handle_callback(conn, params,
-      service_name: "Google Calendar",
-      exchange_fun: fn _params ->
-        GoogleOAuthHelper.handle_callback(code, state, redirect_uri)
-      end,
-      create_fun: fn result -> {:ok, result} end,
-      redirect_path: ~p"/dashboard/calendar-integration"
-    )
+        OAuthCallbackHandler.handle_callback(conn, params,
+          service_name: "Google Calendar",
+          exchange_fun: fn _params ->
+            GoogleOAuthHelper.handle_callback(code, state, redirect_uri)
+          end,
+          create_fun: fn result -> {:ok, result} end,
+          redirect_path: ~p"/dashboard/calendar-integration"
+        )
+
+      {:error, :rate_limited, _message} ->
+        Logger.warning("Rate limit exceeded for Google Calendar OAuth callback")
+
+        conn
+        |> put_flash(:error, "Too many requests. Please try again later.")
+        |> redirect(to: ~p"/dashboard/calendar-integration")
+    end
   end
 
   def google_callback(conn, %{"error" => error}) do
@@ -90,7 +101,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     error_message =
       cond do
-        microsoft_admin_consent_error?(error_description) ->
+        MicrosoftOAuth.microsoft_admin_consent_error?(error_description) ->
           "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
 
         error == "access_denied" ->
@@ -111,15 +122,5 @@ defmodule TymeslotWeb.CalendarOAuthController do
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
     |> redirect(to: ~p"/dashboard/calendar-integration")
-  end
-
-  # Microsoft returns an error_description containing an AADSTS code when a tenant's
-  # user consent policy requires an IT admin to approve the app before individuals
-  # can authorise it. Detecting these codes lets us show actionable guidance instead
-  # of a generic "access denied" message.
-  @microsoft_admin_consent_codes ~w[AADSTS65001 AADSTS90094 AADSTS90093 AADSTS90095]
-
-  defp microsoft_admin_consent_error?(description) do
-    Enum.any?(@microsoft_admin_consent_codes, &String.contains?(description, &1))
   end
 end

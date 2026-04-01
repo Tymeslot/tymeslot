@@ -53,9 +53,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         tz = socket.assigns.user_timezone
 
         with {:ok, start_date} <- Date.from_iso8601(params["start-date"]),
-             {:ok, start_time} <- Time.from_iso8601(params["start-time"] <> ":00"),
+             {:ok, start_time} <- Time.from_iso8601(normalize_time(params["start-time"])),
              {:ok, end_date} <- Date.from_iso8601(params["end-date"]),
-             {:ok, end_time} <- Time.from_iso8601(params["end-time"] <> ":00"),
+             {:ok, end_time} <- Time.from_iso8601(normalize_time(params["end-time"])),
              :ok <- EditWorkflow.assert_owns_event(socket, event),
              :ok <- Shared.check_edit_rate_limit(socket) do
           new_start = Shared.to_utc(start_date, start_time.hour, start_time.minute, tz)
@@ -166,6 +166,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         end
     end
   end
+
+  defp normalize_time(t) when byte_size(t) == 5, do: t <> ":00"
+  defp normalize_time(t), do: t
 
   defp apply_time_change(socket, event, new_start, raw_end) do
     original_duration = DateTime.diff(event.end_at, event.start_at, :second)

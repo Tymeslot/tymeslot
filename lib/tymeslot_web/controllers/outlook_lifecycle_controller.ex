@@ -25,21 +25,28 @@ defmodule TymeslotWeb.OutlookLifecycleController do
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.ReregisterOutlookSubscriptionWorker
+  alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
   Receives a Microsoft Graph lifecycle notification.
   """
   @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def webhook(conn, _params) do
-    notifications = get_in(conn.body_params, ["value"]) || []
+    case RateLimiter.check_webhook_rate_limit(ClientIP.get(conn)) do
+      :ok ->
+        notifications = Enum.take(get_in(conn.body_params, ["value"]) || [], 50)
 
-    # Deduplicate by subscription_id within the batch — only process the
-    # first event per subscription to avoid spawning redundant work.
-    notifications
-    |> Enum.uniq_by(fn n -> n["subscriptionId"] end)
-    |> Enum.each(&process_lifecycle_notification/1)
+        # Deduplicate by subscription_id within the batch — only process the
+        # first event per subscription to avoid spawning redundant work.
+        notifications
+        |> Enum.uniq_by(fn n -> n["subscriptionId"] end)
+        |> Enum.each(&process_lifecycle_notification/1)
 
-    conn |> send_resp(202, "") |> halt()
+        conn |> send_resp(202, "") |> halt()
+
+      {:error, :rate_limited} ->
+        conn |> send_resp(429, "") |> halt()
+    end
   end
 
   # Private helpers
@@ -120,7 +127,7 @@ defmodule TymeslotWeb.OutlookLifecycleController do
         :ok
 
       {:error, reason} ->
-        Logger.warning("Failed to enqueue TokenRefreshJob", reason: inspect(reason))
+        Logger.warning("Failed to enqueue TokenRefreshJob", reason: reason)
     end
   end
 
@@ -134,7 +141,7 @@ defmodule TymeslotWeb.OutlookLifecycleController do
       {:error, reason} ->
         Logger.warning("Failed to enqueue ReregisterOutlookSubscriptionWorker",
           integration_id: integration.id,
-          reason: inspect(reason)
+          reason: reason
         )
     end
   end

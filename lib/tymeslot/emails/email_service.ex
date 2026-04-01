@@ -549,7 +549,7 @@ defmodule Tymeslot.Emails.EmailService do
         Logger.error("Failed to deliver email",
           to: email.to,
           subject: email.subject,
-          reason: inspect(reason)
+          reason: reason
         )
 
         error

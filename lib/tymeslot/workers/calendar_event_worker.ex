@@ -36,7 +36,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   def perform(
         %Oban.Job{args: %{"action" => action, "meeting_id" => meeting_id}, attempt: attempt} = job
       ) do
-    Logger.metadata(job_id: job.id, attempt: attempt, user_id: nil)
+    Logger.metadata(job_id: job.id, attempt: attempt)
 
     if Application.get_env(:tymeslot, :test_mode, false) do
       # In test mode, run synchronously to avoid SQL sandbox and Mox allowance issues
@@ -116,7 +116,8 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
           # 5 minutes uniqueness window
           period: 300,
           fields: [:args, :queue],
-          keys: [:action, :meeting_id]
+          keys: [:action, :meeting_id],
+          states: [:available, :scheduled, :executing, :retryable]
         ]
       )
       |> Oban.insert()
@@ -157,7 +158,8 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       unique: [
         period: 300,
         fields: [:args, :queue],
-        keys: [:action, :meeting_id]
+        keys: [:action, :meeting_id],
+        states: [:available, :scheduled, :executing, :retryable]
       ]
     )
     |> Oban.insert()
@@ -177,7 +179,8 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       unique: [
         period: 300,
         fields: [:args, :queue],
-        keys: [:action, :meeting_id]
+        keys: [:action, :meeting_id],
+        states: [:available, :scheduled, :executing, :retryable]
       ]
     )
     |> Oban.insert()

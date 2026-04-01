@@ -293,7 +293,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp build_attendees(%{attendees: attendees}) when is_list(attendees) do
     Enum.map_join(attendees, "\r\n", fn email ->
-      "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{email}"
+      "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
     end)
   end
 
@@ -320,4 +320,10 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   defp build_reminder(%{minutes_before: minutes}) do
     build_reminder(%{minutes_before: minutes, type: "DISPLAY"})
   end
+
+  defp sanitize_ical_value(value) when is_binary(value) do
+    String.replace(value, ~r/[\r\n\x00-\x1f]/, "")
+  end
+
+  defp sanitize_ical_value(value), do: value
 end

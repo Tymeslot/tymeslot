@@ -534,6 +534,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   # UUIDs may contain hyphens — strip those too.
   # Google event IDs must be 5-1024 chars of lowercase a-v and 0-9 (base32hex).
   defp uuid_to_google_event_id(uid) when is_binary(uid) do
+    # Strip @domain only for the base32hex fast-path check (Google's own iCalUIDs
+    # use the format "{event_id}@google.com"). The full UID is always used for
+    # the hash fallback so that different UIDs sharing a local-part never collide.
     base =
       uid
       |> String.split("@")
@@ -545,7 +548,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       base
     else
       # Input is not a valid base32hex ID (e.g. arbitrary string UID) —
-      # hash it to produce a deterministic, valid Google event ID.
+      # hash the FULL uid to produce a deterministic, valid Google event ID.
       :crypto.hash(:sha256, uid)
       |> Base.encode32(case: :lower, padding: false)
       |> String.slice(0, 32)

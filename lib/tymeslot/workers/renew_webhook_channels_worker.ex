@@ -21,17 +21,37 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
 
+  # Batch entry point: enumerate expiring integrations and schedule one
+  # per-integration renewal job with a staggered `scheduled_in` delay.
   @impl Oban.Worker
-  def perform(%Oban.Job{}) do
-    google_renewed = renew_google_channels()
-    outlook_renewed = renew_outlook_subscriptions()
+  def perform(%Oban.Job{args: args}) when not is_map_key(args, "calendar_integration_id") do
+    google_ids = schedule_google_renewals()
+    outlook_ids = schedule_outlook_renewals()
 
-    Logger.info("Webhook channel renewal complete",
-      google_channels_renewed: google_renewed,
-      outlook_subscriptions_renewed: outlook_renewed
+    Logger.info("Webhook channel renewal jobs scheduled",
+      google_channels_scheduled: length(google_ids),
+      outlook_subscriptions_scheduled: length(outlook_ids)
     )
 
     :ok
+  end
+
+  # Per-integration renewal: renew a single integration's webhook channel.
+  def perform(%Oban.Job{
+        args: %{"calendar_integration_id" => integration_id, "provider" => provider}
+      }) do
+    case CalendarIntegrationQueries.get(integration_id) do
+      {:ok, integration} ->
+        integration = CalendarIntegrationSchema.decrypt_oauth_tokens(integration)
+        renew_single(integration, provider)
+
+      {:error, :not_found} ->
+        Logger.warning("Integration not found for webhook renewal; discarding",
+          calendar_integration_id: integration_id
+        )
+
+        {:discard, "Integration not found"}
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -46,52 +66,78 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
     Application.get_env(:tymeslot, :outlook_calendar_api_module, OutlookCalendarAPI)
   end
 
-  defp renew_google_channels do
-    integrations =
-      48
-      |> CalendarIntegrationQueries.list_expiring_google_channels()
-      |> Enum.map(&CalendarIntegrationSchema.decrypt_oauth_tokens/1)
-
-    renew_integrations(
-      integrations,
-      fn integration -> google_calendar_api().register_push_channel(integration) end,
-      "Webhook base URL not configured; skipping Google push channel renewal",
-      "Failed to renew Google Calendar push channel"
-    )
+  defp schedule_google_renewals do
+    48
+    |> CalendarIntegrationQueries.list_expiring_google_channels()
+    |> schedule_renewal_jobs("google")
   end
 
-  defp renew_outlook_subscriptions do
-    integrations =
-      48
-      |> CalendarIntegrationQueries.list_expiring_outlook_subscriptions()
-      |> Enum.map(&CalendarIntegrationSchema.decrypt_oauth_tokens/1)
-
-    renew_integrations(
-      integrations,
-      fn integration -> outlook_calendar_api().register_graph_subscription(integration) end,
-      "Webhook base URL not configured; skipping Outlook Graph subscription renewal",
-      "Failed to renew Outlook Graph subscription"
-    )
+  defp schedule_outlook_renewals do
+    48
+    |> CalendarIntegrationQueries.list_expiring_outlook_subscriptions()
+    |> schedule_renewal_jobs("outlook")
   end
 
-  defp renew_integrations(integrations, register_fn, skip_log, error_log) do
+  defp schedule_renewal_jobs(integrations, provider) do
     integrations
     |> Enum.with_index()
-    |> Enum.reduce(0, fn {integration, index}, renewed ->
-      if index > 0, do: Process.sleep(Enum.random(0..30) * 1_000)
+    |> Enum.map(fn {integration, index} ->
+      stagger = index * Enum.random(5..30)
 
-      case register_fn.(integration) do
-        {:ok, _updated} ->
-          renewed + 1
+      %{
+        "calendar_integration_id" => integration.id,
+        "provider" => provider
+      }
+      |> new(scheduled_in: stagger)
+      |> Oban.insert()
 
-        {:error, :webhook_base_url_not_configured} ->
-          Logger.warning(skip_log, calendar_integration_id: integration.id)
-          renewed
-
-        {:error, reason} ->
-          Logger.error(error_log, calendar_integration_id: integration.id, error: inspect(reason))
-          renewed
-      end
+      integration.id
     end)
+  end
+
+  defp renew_single(integration, "google") do
+    case google_calendar_api().register_push_channel(integration) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, :webhook_base_url_not_configured} ->
+        Logger.warning(
+          "Webhook base URL not configured; skipping Google push channel renewal",
+          calendar_integration_id: integration.id
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to renew Google Calendar push channel",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
+    end
+  end
+
+  defp renew_single(integration, "outlook") do
+    case outlook_calendar_api().register_graph_subscription(integration) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, :webhook_base_url_not_configured} ->
+        Logger.warning(
+          "Webhook base URL not configured; skipping Outlook Graph subscription renewal",
+          calendar_integration_id: integration.id
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to renew Outlook Graph subscription",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
+    end
   end
 end

@@ -56,11 +56,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    # NOTE: Loads all active integrations into memory. Acceptable for current scale;
-    # paginate if integration count grows significantly.
-    integrations = CalendarIntegrationQueries.list_all_active()
-
-    by_provider = Enum.group_by(integrations, & &1.provider)
+    by_provider = collect_integrations_by_provider()
 
     google_count = enqueue_batched(Map.get(by_provider, "google", []), SyncGoogleCalendarWorker)
 
@@ -83,6 +79,19 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     )
 
     :ok
+  end
+
+  # ---------------------------------------------------------------------------
+  # Integration loading (streamed to avoid unbounded memory)
+  # ---------------------------------------------------------------------------
+
+  # Streams all active integrations via a database cursor and groups them by
+  # provider. Only the final grouped map is kept in memory — rows are fetched
+  # in batches of @batch_size and accumulated incrementally.
+  defp collect_integrations_by_provider do
+    CalendarIntegrationQueries.stream_all_active(@batch_size, %{}, fn integration, acc ->
+      Map.update(acc, integration.provider, [integration], &[integration | &1])
+    end)
   end
 
   # ---------------------------------------------------------------------------
@@ -121,9 +130,9 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
         {:error, reason} ->
           Logger.warning("Failed to enqueue worker in fallback sweep",
-            worker: inspect(worker_module),
+            worker: worker_module,
             calendar_integration_id: integration.id,
-            error: inspect(reason)
+            error: reason
           )
 
           :error
@@ -180,7 +189,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
         Logger.warning(
           "Failed to re-register Outlook Graph subscription in fallback sweep",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: reason
         )
 
         :error
@@ -213,7 +222,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
       {:ok, {:error, reason}} ->
         Logger.warning("Outlook delta fetch failed during fallback sweep",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: reason
         )
 
         :error
@@ -228,7 +237,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
       {:error, reason} ->
         Logger.warning("Outlook token refresh failed during fallback sweep",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: reason
         )
 
         :error
@@ -258,7 +267,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
       {:error, reason} ->
         Logger.warning("Outlook delta upsert/persist failed during fallback sweep",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: reason
         )
 
         :error
@@ -321,8 +330,6 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
       OutlookCalendarAPI.to_cache_attrs(event, calendar_integration_id)
     end)
   end
-
-  defp persist_delta_link(_integration, nil), do: :ok
 
   defp persist_delta_link(integration, new_delta_link) do
     case CalendarIntegrationQueries.update_delta_link(integration, new_delta_link) do

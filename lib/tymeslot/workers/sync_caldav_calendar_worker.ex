@@ -498,9 +498,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     base_attrs = %{last_external_sync_at: DateTime.utc_now(:second)}
 
     attrs =
-      case Keyword.get(opts, :sync_token) do
-        nil -> base_attrs
-        token -> Map.put(base_attrs, :caldav_sync_token, token)
+      case Keyword.fetch(opts, :sync_token) do
+        {:ok, token} -> Map.put(base_attrs, :caldav_sync_token, token)
+        :error -> base_attrs
       end
 
     case CalendarIntegrationQueries.update_sync_state(integration, attrs) do

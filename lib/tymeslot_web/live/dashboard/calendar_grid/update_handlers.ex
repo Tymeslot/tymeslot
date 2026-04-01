@@ -194,13 +194,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     if socket.assigns.stale_integrations != [] do
       user_id = socket.assigns.current_user.id
 
-      {:ok, result} = CalendarGrid.refresh_events(user_id)
-      Process.send_after(self(), :reset_calendar_sync, 30_000)
+      result = CalendarGrid.refresh_events(user_id)
 
-      socket
-      |> assign(:syncing, true)
-      |> assign(:sync_total, result.enqueued + result.skipped)
-      |> assign(:sync_completed, result.skipped)
+      case result do
+        {:ok, %{enqueued: enqueued, skipped: skipped}} ->
+          Process.send_after(self(), :reset_calendar_sync, 30_000)
+
+          socket
+          |> assign(:syncing, true)
+          |> assign(:sync_total, enqueued + skipped)
+          |> assign(:sync_completed, skipped)
+
+        _error ->
+          socket
+      end
     else
       socket
     end
