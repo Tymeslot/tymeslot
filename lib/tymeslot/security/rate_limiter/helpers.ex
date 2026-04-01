@@ -11,6 +11,13 @@ defmodule Tymeslot.Security.RateLimiter.Helpers do
   @spec check_rate(bucket_key(), pos_integer(), pos_integer()) :: rate_check_result()
   def check_rate(bucket_key, window_ms, limit) do
     RateLimit.hit(bucket_key, window_ms, limit)
+  rescue
+    # Hammer 7.2.0 has a TOCTOU race in SlidingWindow.hit/4: when count exceeds
+    # the limit, it calls get_earliest_expiry/3 which uses Enum.min/1 on an ETS
+    # select result. If the table is cleared concurrently (e.g. in tests), the
+    # select returns [] and Enum.min/1 raises Enum.EmptyError. Treat this as a
+    # deny — the bucket was already over limit at the moment the race occurred.
+    Enum.EmptyError -> {:deny, 0}
   end
 
   @spec check_rate_limit(bucket_key(), pos_integer(), pos_integer()) ::
