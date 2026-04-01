@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigation do
         Date.new!(current_year, current_month + 1, 1)
       end
 
-    Date.compare(next_month_first_day, max_booking_date) == :gt
+    Date.compare(next_month_first_day, max_booking_date) != :lt
   end
 
   @doc """
