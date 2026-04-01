@@ -180,7 +180,10 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   defp maybe_set_as_primary(integration) do
     user_id = integration.user_id
 
-    # Count existing integrations before this one
+    # Acquire an advisory lock scoped to this user to prevent two concurrent
+    # first-integration inserts from both seeing count == 1.
+    Repo.query!("SELECT pg_advisory_xact_lock($1)", [user_id])
+
     existing_count = count_for_user(user_id)
 
     need_primary =
@@ -344,6 +347,20 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
       nil -> {:error, :not_found}
       integration -> {:ok, CalendarIntegrationSchema.decrypt_oauth_tokens(integration)}
     end
+  end
+
+  @doc """
+  Fetches all integrations matching the given Graph subscription IDs in a single query.
+  Returns a list of integrations with decrypted OAuth tokens.
+  """
+  @spec get_by_graph_subscription_ids([String.t()]) :: [CalendarIntegrationSchema.t()]
+  def get_by_graph_subscription_ids([]), do: []
+
+  def get_by_graph_subscription_ids(subscription_ids) do
+    CalendarIntegrationSchema
+    |> where([c], c.graph_subscription_id in ^subscription_ids)
+    |> Repo.all()
+    |> Enum.map(&CalendarIntegrationSchema.decrypt_oauth_tokens/1)
   end
 
   @doc """

@@ -490,7 +490,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           error: inspect(changeset)
         )
 
-        integration
+        %{integration | caldav_sync_tier: tier}
     end
   end
 
@@ -566,7 +566,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       maybe_process_deletions(integration, deleted_hrefs)
     end
   rescue
-    e in [RuntimeError, ArgumentError, MatchError] ->
+    e ->
       {:error, Exception.message(e)}
   end
 

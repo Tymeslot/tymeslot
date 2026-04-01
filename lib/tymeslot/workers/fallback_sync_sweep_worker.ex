@@ -201,22 +201,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
     case result do
       {:ok, {:ok, events, new_delta_link}} ->
-        cache_attrs = build_cache_attrs_batch(events, integration.id)
-
-        with {:ok, _count} <- CalendarEventCacheQueries.upsert_batch(cache_attrs),
-             :ok <- persist_delta_link(integration, new_delta_link) do
-          uids = Enum.map(cache_attrs, & &1.uid)
-          SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
-          :ok
-        else
-          {:error, reason} ->
-            Logger.warning("Outlook delta upsert/persist failed during fallback sweep",
-              calendar_integration_id: integration.id,
-              error: inspect(reason)
-            )
-
-            :error
-        end
+        apply_outlook_delta(integration, events, new_delta_link)
 
       {:ok, {:error, :circuit_open}} ->
         Logger.warning("Outlook circuit breaker open during fallback sweep delta fetch",
@@ -242,6 +227,36 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
       {:error, reason} ->
         Logger.warning("Outlook token refresh failed during fallback sweep",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        :error
+    end
+  end
+
+  defp apply_outlook_delta(integration, events, new_delta_link) do
+    {removed, changed} = Enum.split_with(events, &Map.has_key?(&1, "@removed"))
+    cache_attrs = build_cache_attrs_batch(changed, integration.id)
+
+    removed_uids =
+      Enum.flat_map(removed, fn event ->
+        if uid = event["id"] do
+          CalendarEventCacheQueries.delete_by_uid(integration.id, uid)
+          [uid]
+        else
+          []
+        end
+      end)
+
+    with {:ok, _count} <- CalendarEventCacheQueries.upsert_batch(cache_attrs),
+         :ok <- persist_delta_link(integration, new_delta_link) do
+      uids = Enum.map(cache_attrs, & &1.uid) ++ removed_uids
+      SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
+      :ok
+    else
+      {:error, reason} ->
+        Logger.warning("Outlook delta upsert/persist failed during fallback sweep",
           calendar_integration_id: integration.id,
           error: inspect(reason)
         )

@@ -697,6 +697,15 @@ defmodule Tymeslot.Integrations.Calendar do
   end
 
   @doc """
+  Fetches all integrations matching the given Graph subscription IDs in a single query.
+  Used by the Outlook webhook controller for batch notification processing.
+  """
+  @spec get_by_graph_subscription_ids([String.t()]) :: [CalendarIntegrationSchema.t()]
+  def get_by_graph_subscription_ids(subscription_ids) do
+    CalendarIntegrationQueries.get_by_graph_subscription_ids(subscription_ids)
+  end
+
+  @doc """
   Touches the notification timestamp for the given integration and field.
   Used by webhook controllers to track the last notification time.
   """
@@ -706,16 +715,10 @@ defmodule Tymeslot.Integrations.Calendar do
     CalendarIntegrationQueries.touch_notification_at(integration, field)
   end
 
-  # ---------------------------
-  # Internal helpers (legacy) — moved to dedicated modules
-  # ---------------------------
-
-  @doc false
   @spec fetch_events_for_booking_window(user_id()) :: {:ok, list()} | {:error, term()}
   defp fetch_events_for_booking_window(user_id) do
     {start_date, end_date} = calculate_booking_window_range(user_id)
 
-    # We check if profile exists, if not we fallback to list_events for legacy compatibility
     case ProfileQueries.get_by_user_id(user_id) do
       {:ok, _profile} ->
         get_events_for_range_fresh(user_id, start_date, end_date)

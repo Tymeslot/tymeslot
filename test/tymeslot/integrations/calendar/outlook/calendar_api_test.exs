@@ -311,8 +311,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
           token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
         )
 
-      Tymeslot.HTTPClientMock
-      |> expect(:request, fn :get, _url, _body, _headers, _opts ->
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
         {:error, %Mint.TransportError{reason: :timeout}}
       end)
 

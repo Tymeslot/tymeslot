@@ -27,6 +27,8 @@ defmodule Tymeslot.Security.RateLimiter do
 
   @doc """
   Clear rate limit data for a specific bucket key.
+
+  Test-only — bypasses Hammer's internal state management.
   """
   @spec clear_bucket(bucket_key()) :: :ok
   def clear_bucket(bucket_key) do
@@ -36,6 +38,8 @@ defmodule Tymeslot.Security.RateLimiter do
 
   @doc """
   Clear all rate limit data.
+
+  Test-only — bypasses Hammer's internal state management.
   """
   @spec clear_all() :: :ok
   def clear_all do

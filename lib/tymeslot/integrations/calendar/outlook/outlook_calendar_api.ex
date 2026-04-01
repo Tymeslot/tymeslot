@@ -159,8 +159,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           :ok | api_error()
   def delete_event(%CalendarIntegrationSchema{} = integration, event_id) do
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, _response} <- make_request(:delete, "/me/events/#{event_id}", token, %{}) do
-        :ok
+      case make_request(:delete, "/me/events/#{event_id}", token, %{}) do
+        {:ok, _response} -> :ok
+        {:error, :not_found, _msg} -> :ok
+        error -> error
       end
     end)
   end
@@ -173,9 +175,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
           :ok | api_error()
   def delete_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id) do
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, _response} <-
-             make_request(:delete, "/me/calendars/#{calendar_id}/events/#{event_id}", token, %{}) do
-        :ok
+      case make_request(:delete, "/me/calendars/#{calendar_id}/events/#{event_id}", token, %{}) do
+        {:ok, _response} -> :ok
+        {:error, :not_found, _msg} -> :ok
+        error -> error
       end
     end)
   end
@@ -396,7 +399,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   defp parse_outlook_datetime(%{"dateTime" => dt_string, "timeZone" => timezone}) do
     if timezone != "UTC",
-      do: Logger.warning("Unexpected timezone in Graph response", timezone: timezone)
+      do: Logger.debug("Non-UTC timezone in Graph response", timezone: timezone)
 
     # Graph API returns ISO8601-like strings without timezone suffix; treat as UTC
     normalized = String.replace(dt_string, ~r/\.\d+$/, "") <> "Z"

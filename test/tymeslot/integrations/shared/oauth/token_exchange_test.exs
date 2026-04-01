@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange

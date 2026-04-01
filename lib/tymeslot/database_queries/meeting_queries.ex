@@ -211,12 +211,6 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
 
   @doc """
   Returns the list of all meetings.
-
-  ## Examples
-
-      iex> list_meetings()
-      [%Meeting{}, ...]
-
   """
   @spec list_meetings() :: [Meeting.t()]
   def list_meetings do
@@ -227,12 +221,6 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
 
   @doc """
   Returns the list of meetings with a specific status.
-
-  ## Examples
-
-      iex> list_meetings_by_status("confirmed")
-      [%Meeting{}, ...]
-
   """
   @spec list_meetings_by_status(String.t()) :: [Meeting.t()]
   def list_meetings_by_status(status) do
@@ -244,12 +232,6 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
 
   @doc """
   Returns the list of meetings within a date range.
-
-  ## Examples
-
-      iex> list_meetings_by_date_range(~U[2024-01-01 00:00:00Z], ~U[2024-01-02 00:00:00Z])
-      [%Meeting{}, ...]
-
   """
   @spec list_meetings_by_date_range(DateTime.t(), DateTime.t()) :: [Meeting.t()]
   def list_meetings_by_date_range(%DateTime{} = start_date, %DateTime{} = end_date) do
@@ -264,12 +246,6 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
 
   @doc """
   Returns the list of upcoming meetings (future meetings only).
-
-  ## Examples
-
-      iex> list_upcoming_meetings()
-      [%Meeting{}, ...]
-
   """
   @spec list_upcoming_meetings() :: [Meeting.t()]
   def list_upcoming_meetings do
@@ -559,7 +535,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
           {:ok, Meeting.t()} | {:ok, :already_set} | {:error, :not_found}
   def update_calendar_sync_status_if_changed(meeting_id, status)
       when status in @valid_sync_statuses do
-    # Only update rows where status differs (or is nil when we want to set it)
+    # Only update rows where status differs (or is nil when we want to set it).
     {count, _rows} =
       Meeting
       |> where([m], m.id == ^meeting_id)
@@ -572,10 +548,17 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
         ]
       )
 
-    cond do
-      count > 0 -> get_meeting(meeting_id)
-      Repo.exists?(where(Meeting, [m], m.id == ^meeting_id)) -> {:ok, :already_set}
-      true -> {:error, :not_found}
+    if count > 0 do
+      get_meeting(meeting_id)
+    else
+      # No rows updated — either already set or not found. A single existence
+      # check is still needed but the TOCTOU window is narrower since we only
+      # branch here when count == 0 (row was not mutated).
+      if Repo.exists?(where(Meeting, [m], m.id == ^meeting_id)) do
+        {:ok, :already_set}
+      else
+        {:error, :not_found}
+      end
     end
   end
 

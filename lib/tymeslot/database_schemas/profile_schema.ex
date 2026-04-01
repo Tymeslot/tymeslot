@@ -18,7 +18,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
           user_id: integer() | nil,
           username: String.t() | nil,
           full_name: String.t() | nil,
-          timezone: String.t(),
+          timezone: String.t() | nil,
           buffer_minutes: integer(),
           advance_booking_days: integer(),
           min_advance_hours: integer(),

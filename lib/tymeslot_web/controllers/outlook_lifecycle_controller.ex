@@ -95,7 +95,7 @@ defmodule TymeslotWeb.OutlookLifecycleController do
     )
 
     enqueue_token_refresh(integration)
-    enqueue_reregistration(integration)
+    enqueue_reregistration(integration, schedule_in: 30)
   end
 
   defp handle_lifecycle_event(integration, "subscriptionRemoved") do
@@ -124,10 +124,10 @@ defmodule TymeslotWeb.OutlookLifecycleController do
     end
   end
 
-  defp enqueue_reregistration(integration) do
+  defp enqueue_reregistration(integration, opts \\ []) do
     args = %{"calendar_integration_id" => integration.id}
 
-    case args |> ReregisterOutlookSubscriptionWorker.new() |> Oban.insert() do
+    case args |> ReregisterOutlookSubscriptionWorker.new(opts) |> Oban.insert() do
       {:ok, _job} ->
         :ok
 

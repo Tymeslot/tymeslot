@@ -113,7 +113,7 @@ defmodule Tymeslot.Profiles do
   def get_user_timezone(user_id) do
     case ProfileQueries.get_by_user_id(user_id) do
       {:error, :not_found} -> get_default_timezone()
-      {:ok, profile} -> profile.timezone
+      {:ok, profile} -> profile.timezone || get_default_timezone()
     end
   end
 

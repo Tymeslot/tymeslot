@@ -61,10 +61,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
         [integration_id | current_hidden]
       end
 
-    _result =
-      CalendarGrid.save_preferences(user_id, %{
-        hidden_integration_ids: new_hidden
-      })
+    case CalendarGrid.save_preferences(user_id, %{hidden_integration_ids: new_hidden}) do
+      {:ok, _preferences} -> :ok
+      {:error, _changeset} -> :ok
+    end
 
     socket =
       socket

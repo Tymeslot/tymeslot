@@ -64,7 +64,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       with {:ok, response} <-
-             make_request(:get, "/calendars/#{calendar_id}/events", token, params) do
+             make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events", token, params) do
         {:ok, response["items"] || []}
       end
     end)

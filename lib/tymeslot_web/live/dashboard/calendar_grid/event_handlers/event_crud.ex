@@ -139,9 +139,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   end
 
   @doc false
-  @spec execute_create_event(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def execute_create_event(payload, socket) do
+  @spec run_create_event(map()) :: {:ok, map()} | {:error, term()}
+  def run_create_event(payload) do
     %{creating: creating, user_id: user_id, start_at: start_at, end_at: end_at} = payload
 
     result =
@@ -160,31 +159,44 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
     case result do
       {:ok, created} ->
         uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
+        {:ok, %{uid: uid, creating: creating, start_at: start_at, end_at: end_at}}
 
-        CalendarGrid.cache_created_event(%{
-          uid: uid,
-          calendar_integration_id: creating.integration_id,
-          title: creating.title,
-          start_at: start_at,
-          end_at: end_at,
-          all_day: false
-        })
-
-        send_update(CalendarGridComponent,
-          id: "calendar",
-          action: :event_created
-        )
-
-        {:noreply, socket}
-
-      {:error, _reason} ->
-        send_update(CalendarGridComponent,
-          id: "calendar",
-          action: :event_create_failed
-        )
-
-        {:noreply, put_flash(socket, :error, "Failed to create event")}
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  @doc false
+  @spec handle_create_result({:ok, map()} | {:error, term()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_create_result(
+        {:ok, %{uid: uid, creating: creating, start_at: start_at, end_at: end_at}},
+        socket
+      ) do
+    CalendarGrid.cache_created_event(%{
+      uid: uid,
+      calendar_integration_id: creating.integration_id,
+      title: creating.title,
+      start_at: start_at,
+      end_at: end_at,
+      all_day: false
+    })
+
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :event_created
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_create_result({:error, _reason}, socket) do
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :event_create_failed
+    )
+
+    {:noreply, put_flash(socket, :error, "Failed to create event")}
   end
 
   @spec handle_request_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
@@ -242,33 +254,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   end
 
   @doc false
-  @spec execute_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def execute_delete_event(payload, socket) do
+  @spec run_delete_event(map()) :: {:ok, map()} | {:error, term()}
+  def run_delete_event(payload) do
     %{uid: uid, calendar_integration_id: integration_id, user_id: user_id} = payload
 
     opts =
       if payload[:provider_event_id], do: [provider_event_id: payload.provider_event_id], else: []
 
     case EventOperations.delete_event(uid, {integration_id, user_id}, opts) do
-      :ok ->
-        CalendarGrid.delete_cached_event(integration_id, uid)
-
-        send_update(CalendarGridComponent,
-          id: "calendar",
-          action: :event_deleted
-        )
-
-        {:noreply, socket}
-
-      {:error, _reason} ->
-        send_update(CalendarGridComponent,
-          id: "calendar",
-          action: :event_delete_failed
-        )
-
-        {:noreply, put_flash(socket, :error, "Failed to delete event")}
+      :ok -> {:ok, %{uid: uid, integration_id: integration_id}}
+      {:error, reason} -> {:error, reason}
     end
+  end
+
+  @doc false
+  @spec handle_delete_result({:ok, map()} | {:error, term()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_delete_result({:ok, %{uid: uid, integration_id: integration_id}}, socket) do
+    CalendarGrid.delete_cached_event(integration_id, uid)
+
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :event_deleted
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_delete_result({:error, _reason}, socket) do
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :event_delete_failed
+    )
+
+    {:noreply, put_flash(socket, :error, "Failed to delete event")}
   end
 
   @spec handle_cancel_delete_event(map(), Phoenix.LiveView.Socket.t()) ::

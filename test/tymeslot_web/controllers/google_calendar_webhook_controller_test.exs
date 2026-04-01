@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.GoogleCalendarWebhookControllerTest do
-  use TymeslotWeb.ConnCase, async: true
+  use TymeslotWeb.ConnCase, async: false
 
   @moduletag :controllers
   @moduletag :calendar

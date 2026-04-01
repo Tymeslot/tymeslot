@@ -214,13 +214,12 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     end
   end
 
+  # Best-effort: process all events even if individual upserts fail.
+  # process_cached_event already logs per-event failures, so we don't halt
+  # the batch on the first error — remaining events still get synced.
   defp safe_process_events(integration, events) do
-    Enum.reduce_while(events, :ok, fn event, _acc ->
-      case process_event(integration, event) do
-        :ok -> {:cont, :ok}
-        {:error, _reason} = error -> {:halt, error}
-      end
-    end)
+    Enum.each(events, fn event -> process_event(integration, event) end)
+    :ok
   rescue
     e ->
       {:error, Exception.message(e)}

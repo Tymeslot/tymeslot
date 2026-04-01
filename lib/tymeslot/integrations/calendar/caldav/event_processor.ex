@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
   `SyncCalDavCalendarWorker`.
   """
 
+  require Logger
+
   alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
   alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Integrations.Calendar.ICalParser
@@ -63,8 +65,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
     attrs = build_cache_attrs(integration.id, event)
 
     case SyncBroadcast.upsert_and_broadcast(integration.user_id, attrs) do
-      :ok -> maybe_reconcile_time_change(integration, event)
-      {:error, _reason} -> :ok
+      :ok ->
+        maybe_reconcile_time_change(integration, event)
+
+      {:error, reason} ->
+        Logger.warning("Failed to upsert calendar event cache",
+          integration_id: integration.id,
+          uid: event[:uid],
+          reason: inspect(reason)
+        )
     end
   end
 

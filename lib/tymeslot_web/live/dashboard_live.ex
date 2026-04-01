@@ -490,11 +490,31 @@ defmodule TymeslotWeb.DashboardLive do
   end
 
   def handle_info({:execute_create_event, payload}, socket) do
-    EventCrud.execute_create_event(payload, socket)
+    lv_pid = self()
+
+    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      send(lv_pid, {:create_event_result, EventCrud.run_create_event(payload)})
+    end)
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:create_event_result, result}, socket) do
+    EventCrud.handle_create_result(result, socket)
   end
 
   def handle_info({:execute_delete_event, payload}, socket) do
-    EventCrud.execute_delete_event(payload, socket)
+    lv_pid = self()
+
+    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      send(lv_pid, {:delete_event_result, EventCrud.run_delete_event(payload)})
+    end)
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:delete_event_result, result}, socket) do
+    EventCrud.handle_delete_result(result, socket)
   end
 
   @spec handle_info(any(), Phoenix.LiveView.Socket.t()) ::

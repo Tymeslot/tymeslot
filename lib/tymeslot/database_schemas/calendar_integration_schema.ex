@@ -145,7 +145,8 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
       :sync_error
     ])
     |> update_change(:base_url, &PathUtils.ensure_scheme/1)
-    |> validate_required([:name, :provider, :base_url, :user_id])
+    |> validate_required([:name, :provider, :user_id])
+    |> validate_base_url_for_caldav()
     |> validate_inclusion(
       :provider,
       ProviderConfig.provider_constraint_list()
@@ -162,6 +163,18 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
       name: :unique_active_calendar_null_account_per_user,
       message: "an integration for this provider already exists"
     )
+  end
+
+  @caldav_based_providers ~w(caldav radicale nextcloud zimbra)
+
+  defp validate_base_url_for_caldav(changeset) do
+    provider = get_field(changeset, :provider)
+
+    if provider in @caldav_based_providers do
+      validate_required(changeset, [:base_url])
+    else
+      changeset
+    end
   end
 
   @doc """

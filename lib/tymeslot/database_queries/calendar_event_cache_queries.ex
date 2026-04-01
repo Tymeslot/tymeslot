@@ -111,22 +111,16 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
   @spec full_refresh_for_integration(integer(), [map()]) ::
           {:ok, non_neg_integer()} | {:error, term()}
   def full_refresh_for_integration(calendar_integration_id, events_attrs) do
-    result =
-      Repo.transaction(fn ->
-        CalendarEventCacheSchema
-        |> where([e], e.calendar_integration_id == ^calendar_integration_id)
-        |> Repo.delete_all()
+    Repo.transaction(fn ->
+      CalendarEventCacheSchema
+      |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+      |> Repo.delete_all()
 
-        case upsert_batch(events_attrs) do
-          {:ok, count} -> count
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
-
-    case result do
-      {:ok, count} -> {:ok, count}
-      {:error, reason} -> {:error, reason}
-    end
+      case upsert_batch(events_attrs) do
+        {:ok, count} -> count
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   @doc """

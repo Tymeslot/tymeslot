@@ -40,8 +40,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDetector do
   @doc false
   @spec xml_contains_sync_token?(binary() | any()) :: boolean()
   def xml_contains_sync_token?(xml_body) when is_binary(xml_body) do
-    String.contains?(xml_body, "sync-token") or
-      String.contains?(xml_body, "sync-collection")
+    Regex.match?(~r/<[^>]*sync-token[^>]*>/i, xml_body) or
+      Regex.match?(~r/<[^>]*sync-collection[^>]*>/i, xml_body)
   end
 
   def xml_contains_sync_token?(_other), do: false

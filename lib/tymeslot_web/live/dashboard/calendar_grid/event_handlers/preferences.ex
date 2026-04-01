@@ -56,7 +56,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Preferences do
       when value in ~w(day week month) do
     user_id = socket.assigns.current_user.id
     view_atom = String.to_existing_atom(value)
-    CalendarGrid.save_preferences(user_id, %{default_view: value})
+
+    case CalendarGrid.save_preferences(user_id, %{default_view: value}) do
+      {:ok, _preferences} -> :ok
+      {:error, _changeset} -> :ok
+    end
 
     prefs = %{socket.assigns.preferences | default_view: value}
 

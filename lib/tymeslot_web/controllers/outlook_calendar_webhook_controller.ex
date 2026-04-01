@@ -33,29 +33,59 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   @spec webhook(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def webhook(conn, %{"validationToken" => token})
       when is_binary(token) and byte_size(token) > 0 and byte_size(token) <= 256 do
-    if String.printable?(token) do
-      conn
-      |> put_resp_content_type("text/plain")
-      |> send_resp(200, token)
-      |> halt()
-    else
-      conn |> send_resp(400, "") |> halt()
+    client_ip = to_string(:inet_parse.ntoa(conn.remote_ip))
+
+    case RateLimiter.check_webhook_rate_limit(client_ip) do
+      :ok ->
+        if String.printable?(token) do
+          conn
+          |> put_resp_content_type("text/plain")
+          |> send_resp(200, token)
+          |> halt()
+        else
+          conn |> send_resp(400, "") |> halt()
+        end
+
+      {:error, :rate_limited} ->
+        conn |> send_resp(429, "") |> halt()
     end
   end
 
   def webhook(conn, _params) do
     notifications = Enum.take(get_in(conn.body_params, ["value"]) || [], 50)
 
-    Enum.each(notifications, &process_notification/1)
+    process_notifications_batch(notifications)
 
     conn |> send_resp(202, "") |> halt()
   end
 
   # Private helpers
 
-  defp process_notification(%{"subscriptionId" => subscription_id} = notification) do
-    case CalendarIntegrations.get_by_graph_subscription_id(subscription_id) do
-      {:error, :not_found} ->
+  defp process_notifications_batch([]), do: :ok
+
+  defp process_notifications_batch(notifications) do
+    subscription_ids =
+      notifications
+      |> Enum.map(& &1["subscriptionId"])
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    integrations_by_sub_id =
+      subscription_ids
+      |> CalendarIntegrations.get_by_graph_subscription_ids()
+      |> Map.new(fn integration -> {integration.graph_subscription_id, integration} end)
+
+    Enum.each(notifications, fn notification ->
+      process_notification(notification, integrations_by_sub_id)
+    end)
+  end
+
+  defp process_notification(
+         %{"subscriptionId" => subscription_id} = notification,
+         integrations_by_sub_id
+       ) do
+    case Map.fetch(integrations_by_sub_id, subscription_id) do
+      :error ->
         :ok
 
       {:ok, integration} ->
@@ -73,7 +103,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
     end
   end
 
-  defp process_notification(_notification), do: :ok
+  defp process_notification(_notification, _integrations_by_sub_id), do: :ok
 
   defp valid_client_state?(received, expected)
        when is_binary(received) and is_binary(expected) and byte_size(received) > 0 and

@@ -304,10 +304,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
       |> Regex.split(text, include_captures: true)
       |> Enum.map_join(fn part ->
         if Regex.match?(~r{^https?://}, part) do
-          escaped = part |> HTML.html_escape() |> HTML.safe_to_string()
+          display = part |> HTML.html_escape() |> HTML.safe_to_string()
+          href = part |> HTML.html_escape() |> HTML.safe_to_string()
 
-          ~s(<a href="#{escaped}" target="_blank" rel="noopener noreferrer" ) <>
-            ~s(class="text-turquoise-600 underline break-all hover:text-turquoise-800">#{escaped}</a>)
+          ~s(<a href="#{href}" target="_blank" rel="noopener noreferrer" ) <>
+            ~s(class="text-turquoise-600 underline break-all hover:text-turquoise-800">#{display}</a>)
         else
           part |> HTML.html_escape() |> HTML.safe_to_string()
         end
