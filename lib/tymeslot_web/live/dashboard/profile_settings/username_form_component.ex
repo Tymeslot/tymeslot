@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.UsernameFormComponent do
         assign(socket, username_check: username, username_available: :current)
 
       true ->
-        case InputProcessor.validate_field(username, :username) do
+        case InputProcessor.validate_field(username, :username, reserved_words: Profiles.reserved_paths()) do
           {:ok, sanitized_username} ->
             available = Profiles.username_available?(sanitized_username)
             assign(socket, username_check: sanitized_username, username_available: available)

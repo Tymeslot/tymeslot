@@ -151,7 +151,7 @@ defmodule Tymeslot.Profiles do
   def update_username(%ProfileSchema{} = profile, username, user_id) do
     with :ok <-
            RateLimiter.check_username_change_rate_limit("user:" <> Integer.to_string(user_id)),
-         :ok <- UsernameValidator.validate(username),
+         :ok <- UsernameValidator.validate(username, reserved_words: ReservedPaths.list()),
          {:ok, updated_profile} <- ProfileQueries.update_username(profile, username) do
       {:ok, updated_profile}
     else
@@ -167,7 +167,8 @@ defmodule Tymeslot.Profiles do
   Validates username format.
   """
   @spec validate_username_format(term()) :: :ok | {:error, String.t()}
-  def validate_username_format(username), do: UsernameValidator.validate(username)
+  def validate_username_format(username),
+    do: UsernameValidator.validate(username, reserved_words: ReservedPaths.list())
 
   @doc """
   Returns a list of reserved paths.
