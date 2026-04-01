@@ -49,6 +49,24 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarNavigationTest do
                365
              )
     end
+
+    test "disables navigation when max booking date equals first of next month" do
+      today = Date.utc_today()
+      # Calculate days until the first of next month
+      next_month_first =
+        if today.month == 12,
+          do: Date.new!(today.year + 1, 1, 1),
+          else: Date.new!(today.year, today.month + 1, 1)
+
+      days_until = Date.diff(next_month_first, today)
+
+      assert CalendarNavigation.next_month_disabled?(
+               today.year,
+               today.month,
+               "Etc/UTC",
+               days_until
+             )
+    end
   end
 
   describe "next_week_disabled?/3" do

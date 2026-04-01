@@ -17,7 +17,6 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
   setup do
     # Clear idempotency cache before each test
     IdempotencyCache.clear_all()
-    stub(Tymeslot.Payments.StripeMock, :verify_session, fn _session_id -> {:ok, %{}} end)
     :ok
   end
 

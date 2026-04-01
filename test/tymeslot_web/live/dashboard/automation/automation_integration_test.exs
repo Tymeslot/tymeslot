@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
 
       # The errors are returned from WebhookInputProcessor via AutomationSettingsComponent
       assert render(view) =~ "Name cannot be empty"
-      assert render(view) =~ "Must start with http:// or https://"
+      assert render(view) =~ "Only HTTP and HTTPS URLs are allowed"
     end
   end
 

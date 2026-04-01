@@ -90,19 +90,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
         target_date = next_business_day(Date.utc_today())
         date_str = Date.to_string(target_date)
 
-        # For Rhythm theme, we might need to navigate to the next week if the target date is not in the current view
-        if unquote(meta.name) == "rhythm" do
-          today = Date.utc_today()
-          week_start = Date.beginning_of_week(today, :monday)
-          week_end = Date.add(week_start, 6)
-
-          if Date.compare(target_date, week_end) == :gt do
-            # Click next week
-            view
-            |> element("button[phx-click='next_week']")
-            |> render_click()
-          end
-        end
+        navigate_calendar_to_date(view, unquote(meta.name), target_date)
 
         wait_until(fn ->
           has_element?(
@@ -311,19 +299,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
         target_date = next_business_day(Date.utc_today())
         date_str = Date.to_string(target_date)
 
-        # For Rhythm theme, we might need to navigate to the next week if the target date is not in the current view
-        if unquote(meta.name) == "rhythm" do
-          today = Date.utc_today()
-          week_start = Date.beginning_of_week(today, :monday)
-          week_end = Date.add(week_start, 6)
-
-          if Date.compare(target_date, week_end) == :gt do
-            # Click next week
-            view
-            |> element("button[phx-click='next_week']")
-            |> render_click()
-          end
-        end
+        navigate_calendar_to_date(view, unquote(meta.name), target_date)
 
         wait_until(fn ->
           has_element?(
@@ -532,6 +508,29 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
 
       slot ->
         slot
+    end
+  end
+
+  defp navigate_calendar_to_date(view, theme_name, target_date) do
+    today = Date.utc_today()
+
+    case theme_name do
+      "quill" ->
+        if target_date.year > today.year ||
+             (target_date.year == today.year && target_date.month > today.month) do
+          view |> element("button[phx-click='next_month']") |> render_click()
+        end
+
+      "rhythm" ->
+        week_start = Date.beginning_of_week(today, :monday)
+        week_end = Date.add(week_start, 6)
+
+        if Date.compare(target_date, week_end) == :gt do
+          view |> element("button[phx-click='next_week']") |> render_click()
+        end
+
+      _ ->
+        :ok
     end
   end
 

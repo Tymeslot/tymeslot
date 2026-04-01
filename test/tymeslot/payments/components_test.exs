@@ -134,8 +134,9 @@ defmodule Tymeslot.Payments.ComponentsTest do
 
   describe "PendingTransactions checkout session expiry" do
     setup do
+      original = Application.get_env(:tymeslot, :stripe_provider)
       Application.put_env(:tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock)
-      on_exit(fn -> Application.delete_env(:tymeslot, :stripe_provider) end)
+      on_exit(fn -> Application.put_env(:tymeslot, :stripe_provider, original) end)
       :ok
     end
 

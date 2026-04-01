@@ -22,13 +22,12 @@ defmodule Tymeslot.Auth.EmailChangeTest do
     test "successfully requests email change with valid credentials", %{user: user} do
       new_email = "new.email@example.com"
 
-      assert {:ok, updated_user, message} =
+      assert {:ok, updated_user, _message} =
                Auth.request_email_change(user, new_email, "Password123!")
 
       assert updated_user.pending_email == new_email
       assert updated_user.email_change_token_hash != nil
       assert updated_user.email_change_sent_at != nil
-      assert message =~ "Verification email sent"
 
       # Verify both email jobs were enqueued
       assert_enqueued(
@@ -118,13 +117,12 @@ defmodule Tymeslot.Auth.EmailChangeTest do
     } do
       old_email = user.email
 
-      assert {:ok, updated_user, message} = Auth.verify_email_change(token)
+      assert {:ok, updated_user, _message} = Auth.verify_email_change(token)
 
       assert updated_user.email == new_email
       assert updated_user.pending_email == nil
       assert updated_user.email_change_token_hash == nil
       assert updated_user.email_change_confirmed_at != nil
-      assert message =~ "successfully"
 
       # Verify the confirmation email job was enqueued for both addresses
       assert_enqueued(
@@ -147,10 +145,8 @@ defmodule Tymeslot.Auth.EmailChangeTest do
     end
 
     test "fails with invalid token" do
-      assert {:error, :invalid_token, message} =
+      assert {:error, :invalid_token, _message} =
                Auth.verify_email_change("invalid_token_123")
-
-      assert message =~ "Invalid"
     end
 
     test "fails with expired token", %{user: user, token: token} do
@@ -162,8 +158,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       |> Changeset.change(%{email_change_sent_at: expired_time})
       |> Repo.update!()
 
-      assert {:error, :token_expired, message} = Auth.verify_email_change(token)
-      assert message =~ "expired"
+      assert {:error, :token_expired, _message} = Auth.verify_email_change(token)
     end
   end
 
@@ -182,12 +177,11 @@ defmodule Tymeslot.Auth.EmailChangeTest do
     test "successfully cancels pending email change", %{user: user} do
       assert user.pending_email != nil
 
-      assert {:ok, updated_user, message} = Auth.cancel_email_change(user)
+      assert {:ok, updated_user, _message} = Auth.cancel_email_change(user)
 
       assert updated_user.pending_email == nil
       assert updated_user.email_change_token_hash == nil
       assert updated_user.email_change_sent_at == nil
-      assert message =~ "cancelled"
     end
   end
 

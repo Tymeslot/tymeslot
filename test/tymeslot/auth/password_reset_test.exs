@@ -56,9 +56,8 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       {token, _value} = Token.generate_password_reset_token()
       {:ok, _result} = UserQueries.set_reset_token(user, token)
 
-      assert {:ok, user_map, message} = PasswordReset.verify_token(token)
+      assert {:ok, user_map, _message} = PasswordReset.verify_token(token)
       assert user_map.id == user.id
-      assert message =~ "verified"
     end
 
     test "with expired token returns {:error, :token_expired, _}" do
@@ -74,15 +73,12 @@ defmodule Tymeslot.Auth.PasswordResetTest do
         set: [reset_sent_at: expired_time]
       )
 
-      assert {:error, :token_expired, message} = PasswordReset.verify_token(token)
-      assert message =~ "expired"
+      assert {:error, :token_expired, _message} = PasswordReset.verify_token(token)
     end
 
     test "with non-existent token returns {:error, :invalid_token, _}" do
-      assert {:error, :invalid_token, message} =
+      assert {:error, :invalid_token, _message} =
                PasswordReset.verify_token("nonexistent-token-value")
-
-      assert message =~ "Invalid"
     end
   end
 

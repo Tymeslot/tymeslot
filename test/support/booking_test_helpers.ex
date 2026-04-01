@@ -48,6 +48,11 @@ defmodule Tymeslot.BookingTestHelpers do
     target_date = Date.add(today, 1)
     date_str = Date.to_string(target_date)
 
+    # Navigate to next month if tomorrow falls outside the currently displayed month
+    if target_date.month != today.month || target_date.year != today.year do
+      view |> element("button[phx-click='next_month']") |> render_click()
+    end
+
     wait_until(fn ->
       has_element?(view, "button.calendar-day[phx-value-date='#{date_str}']:not([disabled])")
     end)

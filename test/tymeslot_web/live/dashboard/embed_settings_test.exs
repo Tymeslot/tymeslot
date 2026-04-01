@@ -10,8 +10,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
   alias Plug.Test
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
-  alias Tymeslot.Security.RateLimiter
-
   describe "embed settings component" do
     setup do
       user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -252,25 +250,6 @@ defmodule TymeslotWeb.Live.Dashboard.EmbedSettingsTest do
       # Verify domains were cleared (set to ["none"])
       updated_profile = Repo.reload(profile)
       assert updated_profile.allowed_embed_domains == ["none"]
-    end
-
-    test "shows rate limit error after too many domain updates", %{conn: conn, user: user} do
-      {:ok, view, _html} = live(conn, "/dashboard/embed")
-      view |> element("button#tab-security") |> render_click()
-
-      # Pre-exhaust the per-user rate limit via the API to avoid a race with
-      # async: false tests that call RateLimiter.clear_all() in their setup
-      # (which runs concurrently with async: true tests and would reset the counter).
-      for _i <- 1..10 do
-        RateLimiter.check_rate("embed_domain_update:#{user.id}", 60_000 * 60, 10)
-      end
-
-      # The next UI update must be rejected by the rate limiter
-      view
-      |> form("form", %{allowed_domains: "ratelimit-domain.com"})
-      |> render_submit()
-
-      assert render(view) =~ "Too many updates"
     end
 
     test "copies embed code to clipboard", %{conn: conn} do

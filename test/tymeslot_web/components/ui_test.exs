@@ -5,11 +5,11 @@ defmodule TymeslotWeb.Components.UITest do
 
   import Phoenix.LiveViewTest
   import Phoenix.Component
+  alias TymeslotWeb.Components.CoreComponents.Buttons
   alias TymeslotWeb.Components.UI.CloseButton
   alias TymeslotWeb.Components.UI.StatusSwitch
   alias TymeslotWeb.Components.UI.Toggle
   alias TymeslotWeb.Components.UI.ToggleGroup
-  alias TymeslotWeb.Components.UIComponents
 
   describe "CloseButton" do
     test "renders correctly with default attributes" do
@@ -165,7 +165,7 @@ defmodule TymeslotWeb.Components.UITest do
     end
   end
 
-  describe "UIComponents" do
+  describe "Buttons" do
     test "action_button renders with variant and slots" do
       assigns = %{}
 
@@ -178,7 +178,7 @@ defmodule TymeslotWeb.Components.UITest do
         inner_block: inner_block
       }
 
-      html = render_component(&UIComponents.action_button/1, component_assigns)
+      html = render_component(&Buttons.action_button/1, component_assigns)
       assert html =~ "action-button--danger"
       assert html =~ "Click Me"
     end
@@ -196,31 +196,10 @@ defmodule TymeslotWeb.Components.UITest do
         inner_block: inner_block
       }
 
-      html = render_component(&UIComponents.loading_button/1, component_assigns)
+      html = render_component(&Buttons.loading_button/1, component_assigns)
       assert html =~ "spinner"
       assert html =~ "Sending..."
       refute html =~ "Submit"
-    end
-
-    test "calendar_day renders with various states" do
-      day = %{day: 15, today: false, is_today: false}
-
-      # Selected
-      assigns = %{day: day, selected: true, available: true}
-      html = render_component(&UIComponents.calendar_day/1, assigns)
-      assert html =~ "calendar-day--selected"
-
-      # Unavailable
-      assigns = %{day: day, selected: false, available: false}
-      html = render_component(&UIComponents.calendar_day/1, assigns)
-      assert html =~ "calendar-day--unavailable"
-      assert html =~ "disabled"
-
-      # Today
-      day_today = %{day: 15, today: true, is_today: true}
-      assigns = %{day: day_today, selected: false, available: true}
-      html = render_component(&UIComponents.calendar_day/1, assigns)
-      assert html =~ "calendar-day--today"
     end
   end
 end

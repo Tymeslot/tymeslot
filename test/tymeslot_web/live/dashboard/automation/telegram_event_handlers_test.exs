@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.TestFixtures
   import Tymeslot.Factory
+  import Tymeslot.TestHelpers.Eventually
 
   alias Tymeslot.ConfigTestHelpers
   alias Tymeslot.DatabaseQueries.UserQueries
@@ -300,10 +301,12 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       [stub] = Telegram.list_integrations(user.id)
 
       send(view.pid, {:telegram_link_expired, stub.id})
-      html = render(view)
 
-      assert html =~ "Link Expired"
-      assert html =~ "Generate New Link"
+      eventually(fn ->
+        html = render(view)
+        assert html =~ "Link Expired"
+        assert html =~ "Generate New Link"
+      end)
     end
 
     test "advances the wizard to step 2 when the Telegram account is linked", %{
@@ -317,10 +320,12 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
       [stub] = Telegram.list_integrations(user.id)
 
       send(view.pid, {:telegram_linked, stub.id, "987654321"})
-      html = render(view)
 
-      assert html =~ "Integration Details"
-      refute html =~ "Connect Telegram"
+      eventually(fn ->
+        html = render(view)
+        refute html =~ "Connect Telegram"
+        assert html =~ "Integration Details"
+      end)
     end
   end
 end
