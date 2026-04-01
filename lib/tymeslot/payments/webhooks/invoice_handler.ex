@@ -2,7 +2,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandler do
   @moduledoc """
   Handler for invoice.* webhook events.
   """
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
   alias Tymeslot.Payments.DatabaseOperations

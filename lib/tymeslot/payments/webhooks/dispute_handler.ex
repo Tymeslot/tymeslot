@@ -11,7 +11,7 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   - charge.dispute.closed: Dispute resolved (won or lost)
   """
 
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 

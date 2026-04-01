@@ -2,7 +2,7 @@ defmodule Tymeslot.Payments.Webhooks.PaymentMethodHandler do
   @moduledoc """
   Handler for payment_method.* webhook events.
   """
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 

@@ -11,7 +11,7 @@ defmodule Tymeslot.Payments.Webhooks.TrialWillEndHandler do
   - Broadcast event for real-time dashboard updates
   """
 
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 

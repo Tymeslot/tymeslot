@@ -2,7 +2,7 @@ defmodule Tymeslot.Payments.Webhooks.SetupIntentHandler do
   @moduledoc """
   Handler for setup_intent.* webhook events.
   """
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 

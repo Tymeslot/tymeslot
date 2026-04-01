@@ -22,7 +22,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   - charge.refund.updated: Refund status changed
   """
 
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 

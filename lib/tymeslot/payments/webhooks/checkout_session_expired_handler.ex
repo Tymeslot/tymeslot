@@ -2,7 +2,7 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionExpiredHandler do
   @moduledoc """
   Handler for checkout.session.expired webhook events.
   """
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
   alias Tymeslot.Payments

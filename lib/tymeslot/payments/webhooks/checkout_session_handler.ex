@@ -2,7 +2,7 @@ defmodule Tymeslot.Payments.Webhooks.CheckoutSessionHandler do
   @moduledoc """
   Handler for checkout.session.completed webhook events.
   """
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
   alias DBConnection.ConnectionError

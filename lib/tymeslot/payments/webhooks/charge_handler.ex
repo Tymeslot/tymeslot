@@ -3,7 +3,7 @@ defmodule Tymeslot.Payments.Webhooks.ChargeHandler do
   Handler for charge.succeeded and charge.failed webhook events.
   """
 
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 

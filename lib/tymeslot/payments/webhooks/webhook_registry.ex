@@ -101,25 +101,12 @@ defmodule Tymeslot.Payments.Webhooks.WebhookRegistry do
   @spec validate(String.t(), map()) :: :ok | {:error, atom(), String.t()}
   def validate(event_type, object) do
     with {:ok, handler} <- find_handler(event_type),
-         :ok <- apply_validation(handler, event_type, object) do
+         :ok <- handler.validate(event_type, object) do
       :ok
     else
       {:error, reason, message} -> {:error, reason, message}
       # No validation if no handler
       {:error, :no_handler} -> :ok
-    end
-  end
-
-  defp apply_validation(handler, event_type, object) do
-    cond do
-      function_exported?(handler, :validate, 2) ->
-        handler.validate(event_type, object)
-
-      function_exported?(handler, :validate, 1) ->
-        handler.validate(object)
-
-      true ->
-        :ok
     end
   end
 end

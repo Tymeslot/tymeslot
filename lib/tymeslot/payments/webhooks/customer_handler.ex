@@ -3,7 +3,7 @@ defmodule Tymeslot.Payments.Webhooks.CustomerHandler do
   Handler for customer webhook events.
   """
 
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
 

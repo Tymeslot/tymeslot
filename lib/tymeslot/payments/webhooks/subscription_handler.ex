@@ -2,7 +2,7 @@ defmodule Tymeslot.Payments.Webhooks.SubscriptionHandler do
   @moduledoc """
   Handler for customer.subscription.* webhook events.
   """
-  @behaviour Tymeslot.Payments.Behaviours.WebhookHandler
+  use Tymeslot.Payments.Behaviours.WebhookHandler
 
   require Logger
   alias Tymeslot.Payments.PubSub
