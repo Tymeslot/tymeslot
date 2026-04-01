@@ -83,7 +83,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
       assert profile.full_name == "Test User"
       assert profile.username == "testuser123"
-      # Without connect_params, timezone stays at default
+      # Without connect_params, timezone falls back to business default
       assert profile.timezone == "Europe/Tallinn"
       # Scheduling defaults are preserved when not changed
       assert profile.buffer_minutes == 15

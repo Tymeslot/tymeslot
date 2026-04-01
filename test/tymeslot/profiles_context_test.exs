@@ -45,7 +45,7 @@ defmodule Tymeslot.ProfilesContextTest do
 
       assert {:ok, profile} = Profiles.get_or_create_profile(user.id)
       assert profile.user_id == user.id
-      assert profile.timezone == Profiles.get_default_timezone()
+      assert is_nil(profile.timezone)
     end
 
     test "get_profile_by_username returns profile when username exists" do

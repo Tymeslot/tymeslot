@@ -42,7 +42,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
   schema "profiles" do
     field(:username, :string)
     field(:full_name, :string)
-    field(:timezone, :string, default: "Europe/Tallinn")
+    field(:timezone, :string)
     field(:buffer_minutes, :integer, default: 15)
     field(:advance_booking_days, :integer, default: 90)
     field(:min_advance_hours, :integer, default: 3)
@@ -76,7 +76,7 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
       :allowed_embed_domains,
       :primary_calendar_integration_id
     ])
-    |> validate_required([:user_id, :timezone])
+    |> validate_required([:user_id])
     |> validate_username()
     |> validate_timezone()
     |> validate_booking_theme()

@@ -569,7 +569,7 @@ defmodule TymeslotWeb.DashboardLive do
   defp component_for_action(:meeting_settings, _components), do: ServiceSettingsComponent
   defp component_for_action(:calendar, _components), do: CalendarGridComponent
   defp component_for_action(:calendar_integration, _components), do: CalendarSettingsComponent
-  defp component_for_action(:video, _components), do: VideoSettingsComponent
+  defp component_for_action(:video_integration, _components), do: VideoSettingsComponent
   defp component_for_action(:automation, _components), do: AutomationSettingsComponent
   defp component_for_action(:theme, _components), do: ThemeSettingsComponent
   defp component_for_action(:theme_customization, _components), do: ThemeSettingsComponent

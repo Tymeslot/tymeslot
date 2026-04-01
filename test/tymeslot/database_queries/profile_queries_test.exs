@@ -13,7 +13,7 @@ defmodule Tymeslot.DatabaseQueries.ProfileQueriesTest do
       assert {:ok, profile} = ProfileQueries.get_or_create_by_user_id(user.id)
 
       # These are business rules, not framework behavior
-      assert profile.timezone == "Europe/Tallinn"
+      assert is_nil(profile.timezone)
       assert profile.buffer_minutes == 15
       assert profile.advance_booking_days == 90
       assert profile.min_advance_hours == 3

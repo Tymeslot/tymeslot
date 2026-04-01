@@ -379,7 +379,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :info) =~ "Google Meet connected successfully"
     end
 
@@ -468,7 +468,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})
 
-      assert redirected_to(conn) == "/dashboard/video"
+      assert redirected_to(conn) == "/dashboard/video-integration"
       assert Flash.get(conn.assigns.flash, :info) =~ "Microsoft Teams connected successfully"
     end
 

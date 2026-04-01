@@ -155,7 +155,7 @@ defmodule TymeslotWeb.VideoOAuthController do
 
     conn
     |> put_flash(:error, message)
-    |> redirect(to: ~p"/dashboard/video")
+    |> redirect(to: ~p"/dashboard/video-integration")
   end
 
   # Microsoft returns an error_description containing an AADSTS code when a tenant's
