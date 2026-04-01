@@ -144,7 +144,13 @@ defmodule Tymeslot.Webhooks do
   """
   @spec test_webhook_connection(String.t(), String.t() | nil) :: :ok | {:error, String.t()}
   def test_webhook_connection(url, token \\ nil) do
-    with :ok <- UrlValidation.validate_http_url(url, block_private_ips: true, enforce_https: true) do
+    strict? = Application.get_env(:tymeslot, :environment, :prod) == :prod
+
+    with :ok <-
+           UrlValidation.validate_http_url(url,
+             block_private_ips: strict?,
+             enforce_https: strict?
+           ) do
       payload = PayloadBuilder.build_test_payload()
       headers = build_headers(payload, token)
 
@@ -170,7 +176,12 @@ defmodule Tymeslot.Webhooks do
   """
   @spec validate_webhook_url(String.t()) :: :ok | {:error, String.t()}
   def validate_webhook_url(url) do
-    UrlValidation.validate_http_url(url, block_private_ips: true, enforce_https: true)
+    strict? = Application.get_env(:tymeslot, :environment, :prod) == :prod
+
+    UrlValidation.validate_http_url(url,
+      block_private_ips: strict?,
+      enforce_https: strict?
+    )
   end
 
   # ============================================================================
