@@ -63,15 +63,34 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
   @doc """
   Returns UIDs of cached events for the given integration within a time window,
   filtered to events synced before the given cutoff.
+
+  When `calendar_path` is provided, only events whose `provider_event_id` starts
+  with that path are returned. This scopes deletion detection to a single calendar
+  within a multi-calendar integration.
   """
-  @spec list_uids_in_range(integer(), DateTime.t(), DateTime.t(), DateTime.t()) :: [String.t()]
-  def list_uids_in_range(calendar_integration_id, start_at, end_at, synced_before) do
+  @spec list_uids_in_range(integer(), DateTime.t(), DateTime.t(), DateTime.t(), String.t() | nil) ::
+          [String.t()]
+  def list_uids_in_range(
+        calendar_integration_id,
+        start_at,
+        end_at,
+        synced_before,
+        calendar_path \\ nil
+      ) do
     CalendarEventCacheSchema
     |> where([e], e.calendar_integration_id == ^calendar_integration_id)
     |> where([e], e.start_at < ^end_at and e.end_at > ^start_at)
     |> where([e], e.synced_at < ^synced_before)
+    |> maybe_filter_calendar_path(calendar_path)
     |> select([e], e.uid)
     |> Repo.all()
+  end
+
+  defp maybe_filter_calendar_path(query, nil), do: query
+
+  defp maybe_filter_calendar_path(query, calendar_path) do
+    prefix = calendar_path <> "%"
+    where(query, [e], like(e.provider_event_id, ^prefix))
   end
 
   @doc """

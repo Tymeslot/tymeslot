@@ -448,7 +448,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
         case safe_process_events(integration, events) do
           :ok ->
-            detect_deletions(integration, events, start_time, end_time, range_now)
+            detect_deletions(integration, events, start_time, end_time, range_now, calendar_path)
 
             sync_token_opt =
               case Keyword.get(opts, :new_ctag) do
@@ -580,7 +580,14 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     EventProcessor.process_deletions(integration, deleted_hrefs)
   end
 
-  defp detect_deletions(integration, fetched_events, start_time, end_time, sync_started_at) do
+  defp detect_deletions(
+         integration,
+         fetched_events,
+         start_time,
+         end_time,
+         sync_started_at,
+         calendar_path
+       ) do
     fetched_uids = MapSet.new(fetched_events, &Map.get(&1, :uid))
 
     cached_uids =
@@ -588,7 +595,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         integration.id,
         start_time,
         end_time,
-        sync_started_at
+        sync_started_at,
+        calendar_path
       )
 
     missing_uids = Enum.reject(cached_uids, &MapSet.member?(fetched_uids, &1))
