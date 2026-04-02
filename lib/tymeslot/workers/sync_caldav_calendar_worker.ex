@@ -59,13 +59,14 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalDAV.TierDetector
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
 
   # How far back and forward to fetch events on a full sync.
-  # 60 days back, 365 days forward covers meeting scheduling windows.
-  @sync_window_past_days 60
-  @sync_window_future_days 365
+  # Centralised in ProviderConfig so all providers use the same window.
+  @sync_window_past_days ProviderConfig.sync_window_past_days()
+  @sync_window_future_days ProviderConfig.sync_window_future_days()
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do

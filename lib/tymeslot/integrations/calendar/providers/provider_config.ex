@@ -10,6 +10,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
 
+  # How far back and forward sync workers fetch events from providers.
+  # Shared across all providers so the dashboard calendar shows a consistent range.
+  @sync_window_past_days 365
+  @sync_window_future_days 365
+
   @providers [:caldav, :radicale, :nextcloud, :zimbra, :google, :outlook, :demo]
   @oauth_providers [:google, :outlook]
   @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra]
@@ -115,6 +120,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   """
   @spec caldav_based_providers() :: list(atom())
   def caldav_based_providers, do: @caldav_based_providers
+
+  @doc "Number of days in the past to fetch events during sync."
+  @spec sync_window_past_days() :: pos_integer()
+  def sync_window_past_days, do: @sync_window_past_days
+
+  @doc "Number of days in the future to fetch events during sync."
+  @spec sync_window_future_days() :: pos_integer()
+  def sync_window_future_days, do: @sync_window_future_days
 
   @doc """
   Checks if a provider is valid.
