@@ -37,7 +37,7 @@ defmodule Tymeslot.Bookings.Cancel do
       uid: meeting.uid
     )
 
-    {:ok, meeting}
+    {:error, "Meeting is already cancelled"}
   end
 
   def execute(%Meeting{} = meeting) do

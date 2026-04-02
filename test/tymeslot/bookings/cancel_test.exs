@@ -35,14 +35,13 @@ defmodule Tymeslot.Bookings.CancelTest do
       assert {:error, :meeting_not_found} = Cancel.execute("non-existent-uid")
     end
 
-    test "returns ok when meeting is already cancelled" do
+    test "returns error when meeting is already cancelled" do
       %{user: user} = create_user_with_profile()
 
       meeting =
         insert_meeting_for_user(user, %{status: "cancelled", start_offset: 3600, duration: 3600})
 
-      assert {:ok, returned_meeting} = Cancel.execute(meeting.uid)
-      assert returned_meeting.status == "cancelled"
+      assert {:error, "Meeting is already cancelled"} = Cancel.execute(meeting.uid)
     end
 
     test "returns error when meeting is completed" do
@@ -98,7 +97,7 @@ defmodule Tymeslot.Bookings.CancelTest do
       assert cancelled_meeting.cancelled_at != nil
     end
 
-    test "returns ok without side effects when meeting is already cancelled" do
+    test "returns error when meeting is already cancelled" do
       %{user: user} = create_user_with_profile()
 
       meeting =
@@ -110,8 +109,7 @@ defmodule Tymeslot.Bookings.CancelTest do
 
       {:ok, loaded_meeting} = MeetingQueries.get_meeting_by_uid(meeting.uid)
 
-      assert {:ok, returned_meeting} = Cancel.execute(loaded_meeting)
-      assert returned_meeting.status == "cancelled"
+      assert {:error, "Meeting is already cancelled"} = Cancel.execute(loaded_meeting)
     end
 
     test "allows cancellation of meeting starting soon" do
