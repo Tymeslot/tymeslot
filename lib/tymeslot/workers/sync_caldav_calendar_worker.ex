@@ -58,8 +58,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
   alias Tymeslot.Integrations.Calendar.CalDAV.TierDetector
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
-  alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
 
