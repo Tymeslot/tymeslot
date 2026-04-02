@@ -215,9 +215,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
           |> assign(:syncing, true)
           |> assign(:sync_total, enqueued + skipped)
           |> assign(:sync_completed, skipped)
-
-        _error ->
-          socket
       end
     else
       socket

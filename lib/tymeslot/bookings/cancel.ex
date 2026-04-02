@@ -27,7 +27,6 @@ defmodule Tymeslot.Bookings.Cancel do
     case MeetingQueries.get_meeting_by_uid(meeting_id) do
       {:ok, meeting} -> execute(meeting)
       {:error, :not_found} -> {:error, :meeting_not_found}
-      {:error, _reason} -> {:error, :meeting_not_found}
     end
   end
 

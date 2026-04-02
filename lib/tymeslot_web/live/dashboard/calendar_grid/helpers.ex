@@ -383,7 +383,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   @valid_views %{"week" => :week, "day" => :day, "month" => :month}
   defp safe_view_atom(view) when is_binary(view), do: Map.get(@valid_views, view, :week)
-  defp safe_view_atom(_other), do: :week
 
   defp weekend?(date), do: Date.day_of_week(date) in [6, 7]
 
