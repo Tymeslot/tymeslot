@@ -61,6 +61,20 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
   end
 
   @doc """
+  Returns UIDs of cached events for the given integration within a time window,
+  filtered to events synced before the given cutoff.
+  """
+  @spec list_uids_in_range(integer(), DateTime.t(), DateTime.t(), DateTime.t()) :: [String.t()]
+  def list_uids_in_range(calendar_integration_id, start_at, end_at, synced_before) do
+    CalendarEventCacheSchema
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where([e], e.start_at < ^end_at and e.end_at > ^start_at)
+    |> where([e], e.synced_at < ^synced_before)
+    |> select([e], e.uid)
+    |> Repo.all()
+  end
+
+  @doc """
   Deletes a single event identified by its integration and uid.
 
   Returns `{:ok, :deleted}` if a row was removed, `{:ok, :not_found}` if nothing matched.

@@ -174,8 +174,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   @spec day_events(map(), Date.t()) :: list()
   def day_events(assigns, date) do
+    tz = assigns.user_timezone
+
     Enum.filter(visible_events(assigns), fn e ->
-      not e.all_day and Date.compare(DateTime.to_date(e.start_at), date) == :eq
+      not e.all_day and event_spans_day?(e, date, tz)
     end)
   end
 
@@ -259,6 +261,36 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
     end
   end
 
+  @doc """
+  Formats the time range using the original (unclamped) times when available.
+  Multi-day events include a short date (e.g. "10:30 Apr 1 – 11:00 Apr 2")
+  so the label isn't misleading about duration.
+  """
+  @spec format_display_time_range(map(), String.t(), String.t()) :: String.t()
+  def format_display_time_range(event, fmt \\ "12h", timezone \\ "Etc/UTC") do
+    start_at = Map.get(event, :display_start_at, event.start_at)
+    end_at = Map.get(event, :display_end_at, event.end_at)
+
+    if event.all_day do
+      "All day"
+    else
+      start_local = DateTime.shift_zone!(start_at, timezone)
+      end_local = DateTime.shift_zone!(end_at, timezone)
+      start_date = DateTime.to_date(start_local)
+      end_date = DateTime.to_date(end_local)
+
+      if Date.compare(start_date, end_date) == :eq do
+        start_str = format_datetime(start_local, fmt)
+        end_str = format_datetime(end_local, fmt)
+        "#{start_str} \u2013 #{end_str}"
+      else
+        start_str = format_datetime_with_date(start_local, fmt)
+        end_str = format_datetime_with_date(end_local, fmt)
+        "#{start_str} \u2013 #{end_str}"
+      end
+    end
+  end
+
   @spec format_time_range_in_tz(map(), String.t(), String.t()) :: String.t()
   def format_time_range_in_tz(event, timezone, fmt \\ "12h") do
     if event.all_day do
@@ -274,6 +306,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   defp format_datetime(dt, "24h"), do: Calendar.strftime(dt, "%H:%M")
   defp format_datetime(dt, _fmt), do: Calendar.strftime(dt, "%-I:%M %p")
+
+  defp format_datetime_with_date(dt, "24h"), do: Calendar.strftime(dt, "%H:%M %b %-d")
+  defp format_datetime_with_date(dt, _fmt), do: Calendar.strftime(dt, "%-I:%M %p %b %-d")
 
   @spec tz_abbr(String.t()) :: String.t()
   def tz_abbr(timezone) do
@@ -379,15 +414,49 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   @spec positioned_events_for_day(map(), Date.t()) :: list()
   def positioned_events_for_day(assigns, date) do
+    tz = assigns.user_timezone
+
     events =
       visible_events(assigns)
       |> Enum.filter(fn e ->
-        not e.all_day and
-          Date.compare(DateTime.to_date(e.start_at), date) == :eq
+        not e.all_day and event_spans_day?(e, date, tz)
       end)
+      |> Enum.map(&clamp_event_to_day(&1, date, tz))
       |> Enum.sort_by(& &1.start_at)
 
     overlap_layout(events)
+  end
+
+  defp day_boundary_utc(date, tz) do
+    day_start = DateTime.shift_zone!(DateTime.new!(date, ~T[00:00:00], tz), "Etc/UTC")
+    day_end = DateTime.shift_zone!(DateTime.new!(Date.add(date, 1), ~T[00:00:00], tz), "Etc/UTC")
+    {day_start, day_end}
+  end
+
+  # Does this event overlap with the given calendar day (in the user's timezone)?
+  defp event_spans_day?(event, date, tz) do
+    {day_start, day_end} = day_boundary_utc(date, tz)
+
+    DateTime.compare(event.start_at, day_end) == :lt and
+      DateTime.compare(event.end_at, day_start) == :gt
+  end
+
+  # Clamp an event's display start/end to the boundaries of a single calendar day.
+  # Preserves original times in :display_start_at / :display_end_at for the time label.
+  defp clamp_event_to_day(event, date, tz) do
+    {day_start, day_end} = day_boundary_utc(date, tz)
+
+    clamped_start =
+      if DateTime.compare(event.start_at, day_start) == :lt, do: day_start, else: event.start_at
+
+    clamped_end =
+      if DateTime.compare(event.end_at, day_end) == :gt, do: day_end, else: event.end_at
+
+    event
+    |> Map.put(:display_start_at, event.start_at)
+    |> Map.put(:display_end_at, event.end_at)
+    |> Map.put(:start_at, clamped_start)
+    |> Map.put(:end_at, clamped_end)
   end
 
   @spec overlap_layout(list()) :: list()

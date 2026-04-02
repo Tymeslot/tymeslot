@@ -47,8 +47,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
         <form phx-change="update_create_time" phx-target={@myself} class="flex flex-wrap items-center gap-1 text-token-sm text-tymeslot-600">
           <input
             type="date"
-            id="create-event-date"
-            name="date"
+            id="create-event-start-date"
+            name="start-date"
             value={@creating_event.date}
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
@@ -60,6 +60,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
             class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
           />
           <span class="text-tymeslot-400">&ndash;</span>
+          <input
+            type="date"
+            id="create-event-end-date"
+            name="end-date"
+            value={@creating_event.end_date}
+            class="bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-700 font-medium px-0 py-0 transition-colors cursor-text"
+          />
           <input
             type="time"
             id="create-event-end-time"
@@ -473,6 +480,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
 
   attr :event, :map, required: true
   attr :deleting, :boolean, default: false
+  attr :linked_to_booking, :boolean, default: false
   attr :myself, :any, required: true
 
   @spec confirm_delete_modal(map()) :: Phoenix.LiveView.Rendered.t()
@@ -490,6 +498,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
         Are you sure you want to delete
         <span class="font-medium text-tymeslot-700"><%= @event.title || "(No title)" %></span>?
         This will also remove it from your calendar provider.
+      </p>
+      <p :if={@linked_to_booking} class="mt-2 text-token-sm text-amber-600">
+        This event is linked to a booking. The attendee will be notified of the cancellation.
       </p>
 
       <:footer>

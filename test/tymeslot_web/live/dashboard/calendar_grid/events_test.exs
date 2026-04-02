@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Profiles
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -50,19 +51,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
     test "opens event detail modal on click", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
+      start_utc = DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC")
+      end_utc = DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC")
+
       event =
         insert_event(integration, %{
           title: "Clickable Event",
-          start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
-          end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
+          start_at: start_utc,
+          end_at: end_utc,
           all_day: false
         })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
-      # Modal appears with event title and time range
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      tz = Profiles.get_user_timezone(user.id)
+      start_local = DateTime.shift_zone!(start_utc, tz)
+      expected_time = Calendar.strftime(start_local, "%-I:%M %p")
+
       assert html =~ "Clickable Event"
-      assert html =~ "2:00 PM" or html =~ "14:00"
+      assert html =~ expected_time
     end
 
     test "event detail modal shows location", %{conn: conn, user: user} do
@@ -78,7 +86,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
         })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
       assert html =~ "Downtown Conference Center"
     end
 
@@ -95,7 +103,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
         })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
       assert html =~ "Discuss Q2 roadmap and priorities"
     end
 
@@ -115,7 +123,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
         })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
       assert html =~ "Alice Smith"
       assert html =~ "Bob Jones"
     end
@@ -138,7 +146,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
         })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
       assert html =~ "unknown@example.com"
     end
 
@@ -154,7 +162,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
         })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       # Dismiss via the close_event_detail event rather than targeting a specific button
       lv |> element("#calendar-grid") |> render_hook("close_event_detail", %{})
@@ -322,6 +330,100 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
       html = lv |> element("#create-event-modal button", "Cancel") |> render_click()
       refute html =~ "New Event"
     end
+
+    test "shows separate start and end date fields", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      today_iso = Date.to_iso8601(Date.utc_today())
+
+      html =
+        lv
+        |> element("#calendar-create-zone")
+        |> render_hook("show_create_form", %{
+          "date" => today_iso,
+          "start-hour" => "10",
+          "start-minute" => "0",
+          "end-hour" => "11",
+          "end-minute" => "0"
+        })
+
+      assert html =~ ~s(id="create-event-start-date")
+      assert html =~ ~s(id="create-event-end-date")
+    end
+
+    test "defaults end-date to start date when not provided", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      today_iso = Date.to_iso8601(Date.utc_today())
+
+      html =
+        lv
+        |> element("#calendar-create-zone")
+        |> render_hook("show_create_form", %{
+          "date" => today_iso,
+          "start-hour" => "14",
+          "start-minute" => "0",
+          "end-hour" => "15",
+          "end-minute" => "0"
+        })
+
+      # Both date fields should show today's date
+      assert html =~ ~s(name="start-date" value="#{today_iso}")
+      assert html =~ ~s(name="end-date" value="#{today_iso}")
+    end
+
+    test "accepts separate end-date from cross-day drag", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      today = Date.utc_today()
+      tomorrow = Date.add(today, 1)
+      today_iso = Date.to_iso8601(today)
+      tomorrow_iso = Date.to_iso8601(tomorrow)
+
+      html =
+        lv
+        |> element("#calendar-create-zone")
+        |> render_hook("show_create_form", %{
+          "date" => today_iso,
+          "end-date" => tomorrow_iso,
+          "start-hour" => "14",
+          "start-minute" => "0",
+          "end-hour" => "10",
+          "end-minute" => "0"
+        })
+
+      assert html =~ ~s(name="start-date" value="#{today_iso}")
+      assert html =~ ~s(name="end-date" value="#{tomorrow_iso}")
+    end
+
+    test "updates start-date and end-date independently via form change", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      today = Date.utc_today()
+      tomorrow = Date.add(today, 1)
+      today_iso = Date.to_iso8601(today)
+      tomorrow_iso = Date.to_iso8601(tomorrow)
+
+      lv
+      |> element("#calendar-create-zone")
+      |> render_hook("show_create_form", %{
+        "date" => today_iso,
+        "start-hour" => "10",
+        "start-minute" => "0",
+        "end-hour" => "11",
+        "end-minute" => "0"
+      })
+
+      # Change only the end-date
+      html =
+        lv
+        |> element("#create-event-modal form")
+        |> render_change(%{
+          "start-date" => today_iso,
+          "end-date" => tomorrow_iso,
+          "start-time" => "10:00",
+          "end-time" => "11:00"
+        })
+
+      assert html =~ ~s(name="start-date" value="#{today_iso}")
+      assert html =~ ~s(name="end-date" value="#{tomorrow_iso}")
+    end
   end
 
   describe "PubSub live updates" do
@@ -441,7 +543,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       # Open the event detail modal — nil description must not crash
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
       assert html =~ "No Description Event"
     end
 
@@ -459,7 +561,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       # Open the event detail modal — empty attendees list must not crash
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
       assert html =~ "Solo Meeting"
     end
   end

@@ -21,8 +21,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
          {:ok, end_minute} <- Shared.parse_int(params["end-minute"]) do
       default_int_id = EditWorkflow.default_integration_id(socket)
 
+      end_date = params["end-date"] || params["date"]
+
       creating = %{
         date: params["date"],
+        end_date: end_date,
         start_hour: start_hour,
         start_minute: start_minute,
         end_hour: end_hour,
@@ -73,7 +76,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
       creating ->
         updated =
           creating
-          |> maybe_update_date(params["date"])
+          |> maybe_update_date(params["start-date"], :date)
+          |> maybe_update_date(params["end-date"], :end_date)
           |> maybe_update_time(params["start-time"], :start_hour, :start_minute)
           |> maybe_update_time(params["end-time"], :end_hour, :end_minute)
 
@@ -125,21 +129,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
     else
       tz = socket.assigns.user_timezone
 
-      case Date.from_iso8601(creating.date) do
-        {:ok, date} ->
+      with {:ok, start_date} <- Date.from_iso8601(creating.date),
+           {:ok, end_date} <- Date.from_iso8601(creating.end_date) do
+        start_at = Shared.to_utc(start_date, creating.start_hour, creating.start_minute, tz)
+        end_at = Shared.to_utc(end_date, creating.end_hour, creating.end_minute, tz)
+
+        if DateTime.compare(end_at, start_at) != :gt do
+          send(self(), {:flash, {:error, "End time must be after start time"}})
+          {:noreply, socket}
+        else
           send(
             self(),
             {:execute_create_event,
              %{
                creating: creating,
                user_id: socket.assigns.current_user.id,
-               start_at: Shared.to_utc(date, creating.start_hour, creating.start_minute, tz),
-               end_at: Shared.to_utc(date, creating.end_hour, creating.end_minute, tz)
+               start_at: start_at,
+               end_at: end_at
              }}
           )
 
           {:noreply, assign(socket, :saving_event, true)}
-
+        end
+      else
         {:error, _reason} ->
           send(self(), {:flash, {:error, "Invalid date"}})
           {:noreply, socket}
@@ -218,10 +230,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
       event ->
         case EditWorkflow.assert_owns_event(socket, event) do
           :ok ->
+            linked_to_booking =
+              EventOperations.event_linked_to_booking?(
+                event.calendar_integration_id,
+                event.provider_event_id,
+                event.uid
+              )
+
             socket =
               socket
               |> assign(:selected_event, nil)
               |> assign(:confirm_delete_event, event)
+              |> assign(:confirm_delete_linked_to_booking, linked_to_booking)
 
             {:noreply, socket}
 
@@ -270,22 +290,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
     opts =
       if payload[:provider_event_id], do: [provider_event_id: payload.provider_event_id], else: []
 
-    case EventOperations.delete_event(uid, {integration_id, user_id}, opts) do
-      :ok -> {:ok, %{uid: uid, integration_id: integration_id}}
-      {:error, reason} -> {:error, reason}
-    end
+    EventOperations.delete_event_and_reconcile(
+      uid,
+      payload[:provider_event_id],
+      {integration_id, user_id},
+      opts
+    )
   end
 
   @doc false
   @spec handle_delete_result({:ok, map()} | {:error, term()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_delete_result({:ok, %{uid: uid, integration_id: integration_id}}, socket) do
+  def handle_delete_result({:ok, %{uid: uid, integration_id: integration_id} = result}, socket) do
     CalendarGrid.delete_cached_event(integration_id, uid)
 
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :event_deleted
     )
+
+    socket =
+      case result do
+        %{reconcile_result: :ok, meeting_attendee_email: _email_ok} ->
+          put_flash(socket, :info, "Event and linked meeting cancelled.")
+
+        %{reconcile_result: {:error, _reason}, meeting_attendee_email: _email_err} ->
+          put_flash(
+            socket,
+            :error,
+            "Event deleted, but meeting cancellation failed. The attendee may not be notified."
+          )
+
+        _no_meeting ->
+          socket
+      end
 
     {:noreply, socket}
   end
@@ -302,7 +340,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   @spec handle_cancel_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_cancel_delete_event(_params, socket) do
-    {:noreply, assign(socket, :confirm_delete_event, nil)}
+    {:noreply,
+     socket
+     |> assign(:confirm_delete_event, nil)
+     |> assign(:confirm_delete_linked_to_booking, false)}
   end
 
   @spec handle_confirm_recurrence_scope(map(), Phoenix.LiveView.Socket.t()) ::
@@ -352,14 +393,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
     end
   end
 
-  defp maybe_update_date(creating, date_str) when is_binary(date_str) and date_str != "" do
+  defp maybe_update_date(creating, date_str, key)
+       when is_binary(date_str) and date_str != "" do
     case Date.from_iso8601(date_str) do
-      {:ok, _date} -> Map.put(creating, :date, date_str)
+      {:ok, _date} -> Map.put(creating, key, date_str)
       {:error, _reason} -> creating
     end
   end
 
-  defp maybe_update_date(creating, _date_str), do: creating
+  defp maybe_update_date(creating, _date_str, _key), do: creating
 
   defp maybe_update_time(creating, time_str, hour_key, minute_key)
        when is_binary(time_str) and time_str != "" do

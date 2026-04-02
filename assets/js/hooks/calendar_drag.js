@@ -259,10 +259,12 @@ export const CalendarCreate = {
     const snappedStart = Math.max(0, snapToGrid(rawMinutes))
 
     this._creating = {
-      dayCol: colEl.dataset.dayCol,
+      startDayCol: colEl.dataset.dayCol,
+      endDayCol: colEl.dataset.dayCol,
       startMinutes: snappedStart,
       endMinutes: Math.min(24 * 60, snappedStart + 30),
       colEl,
+      currentColEl: colEl,
     }
 
     // Create visual selection overlay
@@ -276,31 +278,59 @@ export const CalendarCreate = {
   _handleMouseMove(e) {
     if (!this._creating || !this._selectionEl) return
 
-    const colRect = this._creating.colEl.getBoundingClientRect()
+    // Check if the cursor has moved to a different day column
+    const hoveredCol = this._findDayColAt(e.clientX, e.clientY)
+    if (hoveredCol && hoveredCol.dataset.dayCol !== this._creating.currentColEl.dataset.dayCol) {
+      // Move the selection overlay to the new column
+      this._selectionEl.remove()
+      hoveredCol.appendChild(this._selectionEl)
+      this._creating.currentColEl = hoveredCol
+      this._creating.endDayCol = hoveredCol.dataset.dayCol
+    }
+
+    const colRect = this._creating.currentColEl.getBoundingClientRect()
     const relY = e.clientY - colRect.top
     const rawEnd = minutesFromY(relY)
-    const snappedEnd = Math.max(this._creating.startMinutes + 15, snapToGrid(rawEnd))
+
+    // When dragging to a different day, allow any end time (even earlier than start)
+    const isSameDay = this._creating.startDayCol === this._creating.endDayCol
+    const minEnd = isSameDay ? this._creating.startMinutes + 15 : 15
+    const snappedEnd = Math.max(minEnd, snapToGrid(rawEnd))
 
     this._creating.endMinutes = snappedEnd
-    const topPx = (this._creating.startMinutes / 60) * HOUR_HEIGHT_PX
-    const heightPx = ((snappedEnd - this._creating.startMinutes) / 60) * HOUR_HEIGHT_PX
-    this._selectionEl.style.top = `${topPx}px`
-    this._selectionEl.style.height = `${heightPx}px`
+
+    if (isSameDay) {
+      const topPx = (this._creating.startMinutes / 60) * HOUR_HEIGHT_PX
+      const heightPx = ((snappedEnd - this._creating.startMinutes) / 60) * HOUR_HEIGHT_PX
+      this._selectionEl.style.top = `${topPx}px`
+      this._selectionEl.style.height = `${heightPx}px`
+    } else {
+      // On a different day, show selection from top of column to the cursor position
+      const heightPx = (snappedEnd / 60) * HOUR_HEIGHT_PX
+      this._selectionEl.style.top = '0px'
+      this._selectionEl.style.height = `${heightPx}px`
+    }
   },
 
   _handleMouseUp(e) {
     if (!this._creating) return
 
-    const { startMinutes, endMinutes, dayCol } = this._creating
+    const { startMinutes, endMinutes, startDayCol, endDayCol } = this._creating
 
-    if (endMinutes > startMinutes) {
-      this.pushEventTo(this.el, 'show_create_form', {
-        'date': dayCol,
+    if (endMinutes > 0) {
+      const payload = {
+        'date': startDayCol,
         'start-hour': String(Math.floor(startMinutes / 60)),
         'start-minute': String(startMinutes % 60),
         'end-hour': String(Math.floor(endMinutes / 60)),
         'end-minute': String(endMinutes % 60),
-      })
+      }
+
+      if (endDayCol !== startDayCol) {
+        payload['end-date'] = endDayCol
+      }
+
+      this.pushEventTo(this.el, 'show_create_form', payload)
     }
 
     if (this._selectionEl) {
@@ -308,6 +338,13 @@ export const CalendarCreate = {
       this._selectionEl = null
     }
     this._creating = null
+  },
+
+  _findDayColAt(x, y) {
+    if (this._selectionEl) this._selectionEl.style.pointerEvents = 'none'
+    const el = document.elementFromPoint(x, y)
+    if (this._selectionEl) this._selectionEl.style.pointerEvents = ''
+    return el?.closest('[data-day-col]') || null
   }
 }
 

@@ -5,10 +5,13 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
 
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Mox
   import Tymeslot.Factory
 
   alias Ecto.UUID
   alias Tymeslot.Workers.EmailWorker
+
+  setup :verify_on_exit!
 
   describe "schedule_confirmation_emails/1" do
     test "creates high priority job with uniqueness constraint" do
@@ -47,6 +50,52 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       meeting = insert(:meeting, organizer_user: user)
 
       assert :ok = EmailWorker.schedule_confirmation_emails(meeting.id)
+
+      job = List.first(all_enqueued(worker: EmailWorker))
+      assert job.queue == "emails"
+    end
+  end
+
+  describe "schedule_cancellation_emails/1" do
+    test "creates high priority job with uniqueness constraint" do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user: user)
+
+      assert :ok = EmailWorker.schedule_cancellation_emails(meeting.id)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_cancellation_emails",
+          "meeting_id" => meeting.id
+        }
+      )
+
+      job = List.first(all_enqueued(worker: EmailWorker))
+      assert job.priority == 0
+    end
+
+    test "prevents duplicate jobs within 5 minute window" do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user: user)
+
+      assert :ok = EmailWorker.schedule_cancellation_emails(meeting.id)
+      assert :ok = EmailWorker.schedule_cancellation_emails(meeting.id)
+
+      jobs =
+        all_enqueued(
+          worker: EmailWorker,
+          args: %{"action" => "send_cancellation_emails", "meeting_id" => meeting.id}
+        )
+
+      assert length(jobs) == 1
+    end
+
+    test "uses emails queue" do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user: user)
+
+      assert :ok = EmailWorker.schedule_cancellation_emails(meeting.id)
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.queue == "emails"
@@ -162,6 +211,72 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.priority == 0
+    end
+  end
+
+  describe "perform/1 send_cancellation_emails" do
+    test "discards job when meeting is not found" do
+      assert {:discard, "Meeting not found"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_cancellation_emails",
+                 "meeting_id" => UUID.generate()
+               })
+    end
+
+    test "discards job when meeting is not cancelled" do
+      profile = insert(:profile)
+      meeting = insert(:meeting, organizer_user: profile.user)
+
+      assert {:discard, "Meeting not cancelled"} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_cancellation_emails",
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "sends cancellation emails for a cancelled meeting" do
+      profile = insert(:profile)
+      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+
+      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _details ->
+        {{:ok, :sent}, {:ok, :sent}}
+      end)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_cancellation_emails",
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "discards job on partial failure to avoid duplicate sends" do
+      profile = insert(:profile)
+      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+
+      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _details ->
+        {{:ok, :sent}, {:error, :delivery_failed}}
+      end)
+
+      assert {:discard, _reason} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_cancellation_emails",
+                 "meeting_id" => meeting.id
+               })
+    end
+
+    test "returns error on total failure so job is retried" do
+      profile = insert(:profile)
+      meeting = insert(:meeting, organizer_user: profile.user, status: "cancelled")
+
+      Mox.expect(Tymeslot.EmailServiceMock, :send_cancellation_emails, fn _details ->
+        {{:error, :delivery_failed}, {:error, :delivery_failed}}
+      end)
+
+      assert {:error, _reason} =
+               perform_job(EmailWorker, %{
+                 "action" => "send_cancellation_emails",
+                 "meeting_id" => meeting.id
+               })
     end
   end
 

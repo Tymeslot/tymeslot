@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
+  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.Utils.EventValidator
 
   @type user_id :: pos_integer()
@@ -146,6 +147,60 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
           error
       end
     end)
+  end
+
+  @doc """
+  Deletes a calendar event and reconciles any linked meeting.
+
+  Combines `delete_event/3` with `Sync.reconcile/4` and meeting lookup into a
+  single domain operation. Returns a result map containing the reconciliation
+  outcome and linked meeting info (if any).
+  """
+  @spec delete_event_and_reconcile(
+          event_uid(),
+          String.t() | nil,
+          {integration_id(), user_id()},
+          keyword()
+        ) :: {:ok, map()} | {:error, term()}
+  def delete_event_and_reconcile(
+        uid,
+        provider_event_id,
+        {integration_id, _user_id} = context,
+        opts \\ []
+      ) do
+    # Look up linked meeting before deletion for caller context
+    meeting_info =
+      case Sync.find_meeting(integration_id, provider_event_id, uid) do
+        {:ok, meeting} -> %{attendee_email: meeting.attendee_email}
+        {:error, :not_found} -> nil
+      end
+
+    case delete_event(uid, context, opts) do
+      :ok ->
+        reconcile_result = Sync.reconcile(integration_id, provider_event_id, uid, :deleted)
+
+        result = %{uid: uid, integration_id: integration_id, reconcile_result: reconcile_result}
+
+        result =
+          case meeting_info do
+            %{attendee_email: email} -> Map.put(result, :meeting_attendee_email, email)
+            nil -> result
+          end
+
+        {:ok, result}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Checks whether a calendar event is linked to a Tymeslot meeting.
+  """
+  @spec event_linked_to_booking?(integration_id(), String.t() | nil, String.t() | nil) ::
+          boolean()
+  def event_linked_to_booking?(integration_id, provider_event_id, uid) do
+    match?({:ok, _}, Sync.find_meeting(integration_id, provider_event_id, uid))
   end
 
   @doc """

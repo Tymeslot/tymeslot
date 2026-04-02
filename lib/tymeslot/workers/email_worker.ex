@@ -98,6 +98,48 @@ defmodule Tymeslot.Workers.EmailWorker do
   end
 
   @doc """
+  Schedules cancellation emails to be sent immediately with high priority.
+  """
+  @spec schedule_cancellation_emails(term()) :: :ok | {:error, String.t()}
+  def schedule_cancellation_emails(meeting_id) do
+    result =
+      %{"action" => "send_cancellation_emails", "meeting_id" => meeting_id}
+      |> new(
+        queue: :emails,
+        # Highest priority for cancellations
+        priority: 0,
+        unique: [
+          # 5 minutes uniqueness window
+          period: 300,
+          fields: [:args, :queue],
+          keys: [:action, :meeting_id]
+        ]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        Logger.info("Cancellation email job scheduled", meeting_id: meeting_id)
+        :ok
+
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
+        Logger.info("Cancellation email job already exists, skipping duplicate",
+          meeting_id: meeting_id
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule cancellation emails",
+          meeting_id: meeting_id,
+          error: format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
+  @doc """
   Schedules user email verification immediately with high priority.
   """
   @spec schedule_email_verification(term(), String.t()) :: :ok | {:error, String.t()}
@@ -470,6 +512,9 @@ defmodule Tymeslot.Workers.EmailWorker do
   defp required_fields_for_action(action) do
     case action do
       "send_confirmation_emails" ->
+        ["meeting_id"]
+
+      "send_cancellation_emails" ->
         ["meeting_id"]
 
       "send_reminder_emails" ->

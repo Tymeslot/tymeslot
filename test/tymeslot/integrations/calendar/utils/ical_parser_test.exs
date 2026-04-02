@@ -314,6 +314,61 @@ defmodule Tymeslot.Integrations.Calendar.ICalParserTest do
       assert %Date{} = event.start_time
     end
 
+    test "handles multi-day all-day events (DATE format spanning several days)" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      PRODID:Zimbra-Calendar-Provider
+      VERSION:2.0
+      METHOD:PUBLISH
+      BEGIN:VEVENT
+      UID:52482753-b5f0-4162-8c8f-64aab3a69c27
+      SUMMARY:Congés
+      DESCRIPTION:\\n
+      ORGANIZER;CN=Daniel Berteaud:mailto:dani@lapiole.org
+      DTSTART;VALUE=DATE:20260407
+      DTEND;VALUE=DATE:20260411
+      STATUS:CONFIRMED
+      CLASS:PUBLIC
+      X-MICROSOFT-CDO-ALLDAYEVENT:TRUE
+      X-MICROSOFT-CDO-INTENDEDSTATUS:FREE
+      TRANSP:TRANSPARENT
+      LAST-MODIFIED:20260401T212004Z
+      DTSTAMP:20260401T212004Z
+      SEQUENCE:2
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.summary == "Congés"
+      assert %Date{} = event.start_time
+      assert %Date{} = event.end_time
+      assert event.start_time == ~D[2026-04-07]
+      assert event.end_time == ~D[2026-04-11]
+      assert event.transparency == "transparent"
+    end
+
+    test "calculates end date from DURATION when DTEND missing on all-day event" do
+      ical_content = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:allday-duration@example.com
+      DTSTART;VALUE=DATE:20300115
+      DURATION:P3D
+      SUMMARY:Three Day Event
+      END:VEVENT
+      END:VCALENDAR
+      """
+
+      assert {:ok, [event]} = ICalParser.parse(ical_content)
+      assert event.summary == "Three Day Event"
+      assert %Date{} = event.start_time
+      assert %Date{} = event.end_time
+      assert event.start_time == ~D[2030-01-15]
+      assert event.end_time == ~D[2030-01-18]
+    end
+
     test "sets transparency to nil when TRANSP property is absent" do
       ical_content = """
       BEGIN:VCALENDAR

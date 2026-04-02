@@ -93,18 +93,20 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
-  Sends cancellation notifications immediately.
+  Schedules cancellation notifications via EmailWorker.
   """
   @spec send_cancellation_notifications(map()) ::
-          {:ok, atom()} | {:ok, :partial_success} | {:error, term()}
+          {:ok, atom()} | {:error, term()}
   def send_cancellation_notifications(meeting) do
     recipients = Recipients.determine_recipients(meeting, :cancellation)
-    content = ContentBuilder.build_cancellation_details(meeting)
 
-    with :ok <- Recipients.validate_recipients(recipients),
-         :ok <- ContentBuilder.validate_content(content) do
-      # Send immediately via EmailService
-      send_immediate_notifications(:cancellation, content)
+    with :ok <- Recipients.validate_recipients(recipients) do
+      worker_module = get_email_worker_module()
+
+      case worker_module.schedule_cancellation_emails(meeting.id) do
+        :ok -> {:ok, :cancellation_scheduled}
+        {:error, reason} -> {:error, reason}
+      end
     end
   end
 
@@ -197,20 +199,6 @@ defmodule Tymeslot.Notifications.Orchestrator do
     email_service = get_email_service_module()
 
     case notification_type do
-      :cancellation ->
-        case email_service.send_cancellation_emails(content) do
-          {{:ok, result}, {:ok, result}} ->
-            {:ok, :emails_sent}
-
-          {organizer_result, attendee_result} ->
-            Logger.warning("Some cancellation emails may have failed",
-              organizer_result: inspect(organizer_result),
-              attendee_result: inspect(attendee_result)
-            )
-
-            {:ok, :partial_success}
-        end
-
       :reschedule ->
         email_service.send_appointment_confirmations(content)
 

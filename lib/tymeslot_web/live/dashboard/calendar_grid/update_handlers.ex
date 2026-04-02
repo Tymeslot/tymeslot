@@ -112,6 +112,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       socket
       |> assign(Map.drop(assigns, [:action]))
       |> assign(:confirm_delete_event, nil)
+      |> assign(:confirm_delete_linked_to_booking, false)
       |> assign(:deleting_event, false)
       |> assign(:selected_event, nil)
       |> Helpers.load_events()
@@ -126,6 +127,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       socket
       |> assign(Map.drop(assigns, [:action]))
       |> assign(:confirm_delete_event, nil)
+      |> assign(:confirm_delete_linked_to_booking, false)
       |> assign(:deleting_event, false)
 
     {:ok, socket}

@@ -22,6 +22,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Repo
 
   @base_url "https://graph.microsoft.com/v1.0"
+  @silent_event_headers [
+    {"Prefer", "outlook.calendar-update.disableNotifications"}
+  ]
   @token_url "https://login.microsoftonline.com/common/oauth2/v2.0/token"
 
   @type calendar_event :: %{
@@ -89,7 +92,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     body = format_event_data(event_data)
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      with {:ok, response} <- make_request_with_body(:post, "/me/events", token, body) do
+      with {:ok, response} <-
+             make_request_with_body(:post, "/me/events", token, body,
+               headers: @silent_event_headers
+             ) do
         {:ok, List.first(convert_to_common_format([response]))}
       end
     end)
@@ -106,7 +112,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       with {:ok, response} <-
-             make_request_with_body(:post, "/me/calendars/#{calendar_id}/events", token, body) do
+             make_request_with_body(:post, "/me/calendars/#{calendar_id}/events", token, body,
+               headers: @silent_event_headers
+             ) do
         {:ok, List.first(convert_to_common_format([response]))}
       end
     end)
@@ -123,7 +131,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       with {:ok, response} <-
-             make_request_with_body(:patch, "/me/events/#{event_id}", token, body) do
+             make_request_with_body(:patch, "/me/events/#{event_id}", token, body,
+               headers: @silent_event_headers
+             ) do
         {:ok, List.first(convert_to_common_format([response]))}
       end
     end)
@@ -144,7 +154,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
                :patch,
                "/me/calendars/#{calendar_id}/events/#{event_id}",
                token,
-               body
+               body,
+               headers: @silent_event_headers
              ) do
         {:ok, List.first(convert_to_common_format([response]))}
       end
@@ -588,9 +599,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   defp handle_403_reason(:unauthorized, msg, _retry_after), do: {:error, :unauthorized, msg}
   defp handle_403_reason(_other_reason, msg, _retry_after), do: {:error, :network_error, msg}
 
-  defp make_request_with_body(method, path, token, body) do
-    HTTP.request_with_body(method, @base_url, path, token, body,
-      response_handler: &handle_response/1
+  defp make_request_with_body(method, path, token, body, opts \\ []) do
+    HTTP.request_with_body(
+      method,
+      @base_url,
+      path,
+      token,
+      body,
+      Keyword.merge([response_handler: &handle_response/1], opts)
     )
   end
 
@@ -601,10 +617,27 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       "location" => build_event_location(event_data),
       "start" => build_event_datetime(event_data, :start_time, "start_time"),
       "end" => build_event_datetime(event_data, :end_time, "end_time"),
-      "showAs" => "busy"
+      "showAs" => "busy",
+      "attendees" => build_attendees(event_data)
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
     |> Map.new()
+  end
+
+  defp build_attendees(event_data) do
+    email = extract_field(event_data, :attendee_email, "attendee_email")
+    name = extract_field(event_data, :attendee_name, "attendee_name")
+
+    if email do
+      [
+        %{
+          "emailAddress" => %{"address" => email, "name" => name || email},
+          "type" => "required"
+        }
+      ]
+    else
+      []
+    end
   end
 
   defp extract_field(event_data, atom_key, string_key) do

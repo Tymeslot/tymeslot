@@ -127,7 +127,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
       }
 
       expect(Tymeslot.HTTPClientMock, :request, fn :post, url, body, _headers, _opts ->
-        assert url == "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+        assert url ==
+                 "https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=none"
+
         decoded_body = Jason.decode!(body)
         assert decoded_body["summary"] == "New Meeting"
 

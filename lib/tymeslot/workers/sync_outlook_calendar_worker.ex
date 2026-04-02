@@ -98,11 +98,11 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
       end)
 
     case result do
-      {:ok, {:ok, event}} ->
-        handle_event_fetched(integration, graph_resource_id, event)
-
       {:ok, :not_found} ->
         handle_event_deleted(integration, graph_resource_id)
+
+      {:ok, event} when is_map(event) ->
+        handle_event_fetched(integration, graph_resource_id, event)
 
       {:error, :unauthorized, _message} ->
         Logger.warning("Outlook Calendar sync unauthorised; discarding job",
@@ -111,15 +111,6 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         )
 
         :ok
-
-      {:ok, {:error, reason}} ->
-        Logger.error("Outlook Calendar event fetch failed",
-          calendar_integration_id: integration.id,
-          graph_resource_id: graph_resource_id,
-          error: inspect(reason)
-        )
-
-        {:error, reason}
 
       {:error, :circuit_open} ->
         Logger.warning("Outlook Calendar circuit breaker open; snoozing",

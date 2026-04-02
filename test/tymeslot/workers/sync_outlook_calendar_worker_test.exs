@@ -92,6 +92,47 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
     end
   end
 
+  describe "perform/1 - all-day events" do
+    test "caches multi-day all-day event with all_day: true and UTC-midnight timestamps" do
+      integration = outlook_integration()
+
+      graph_event_json =
+        Jason.encode!(%{
+          "id" => "outlook-allday-1",
+          "iCalUId" => "allday-uid@outlook.com",
+          "subject" => "Holiday",
+          "isAllDay" => true,
+          "start" => %{"dateTime" => "2026-04-07T00:00:00.0000000", "timeZone" => "UTC"},
+          "end" => %{"dateTime" => "2026-04-11T00:00:00.0000000", "timeZone" => "UTC"},
+          "showAs" => "free",
+          "attendees" => [],
+          "type" => "singleInstance"
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: graph_event_json}}
+      end)
+
+      assert :ok =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "outlook-allday-1"
+               })
+
+      cached =
+        Repo.get_by(
+          Tymeslot.DatabaseSchemas.CalendarEventCacheSchema,
+          provider_event_id: "outlook-allday-1"
+        )
+
+      assert cached.all_day == true
+      assert cached.title == "Holiday"
+      assert cached.start_at == ~U[2026-04-07 00:00:00Z]
+      assert cached.end_at == ~U[2026-04-11 00:00:00Z]
+      assert cached.status == "free"
+    end
+  end
+
   describe "perform/1 - event deletion (404)" do
     test "removes cached event and returns :ok when Graph returns 404" do
       integration = outlook_integration()

@@ -33,6 +33,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       "send_confirmation_emails" ->
         handle_confirmation_emails(args)
 
+      "send_cancellation_emails" ->
+        handle_cancellation_emails(args)
+
       "send_reminder_emails" ->
         handle_reminder_emails(args)
 
@@ -128,6 +131,55 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
         )
 
         {:discard, "Meeting not found"}
+    end
+  end
+
+  defp handle_cancellation_emails(%{"meeting_id" => meeting_id}) do
+    case MeetingQueries.get_meeting(meeting_id) do
+      {:ok, meeting} ->
+        if meeting.status == "cancelled" do
+          send_cancellation_emails_for_meeting(meeting)
+        else
+          Logger.info("Skipping cancellation emails - meeting is not cancelled",
+            meeting_id: meeting_id,
+            status: meeting.status
+          )
+
+          {:discard, "Meeting not cancelled"}
+        end
+
+      {:error, :not_found} ->
+        Logger.warning("Attempted to send cancellation emails for non-existent meeting",
+          meeting_id: meeting_id
+        )
+
+        {:discard, "Meeting not found"}
+    end
+  end
+
+  defp send_cancellation_emails_for_meeting(meeting) do
+    Logger.info("Sending cancellation emails", meeting_id: meeting.id, uid: meeting.uid)
+
+    appointment_details = AppointmentBuilder.from_meeting(meeting)
+
+    case email_service_module().send_cancellation_emails(appointment_details) do
+      {{:ok, _organizer}, {:ok, _attendee}} ->
+        Logger.info("Cancellation emails sent successfully", meeting_id: meeting.id)
+        :ok
+
+      {organizer_result, attendee_result} ->
+        Logger.warning("Some cancellation emails may have failed",
+          meeting_id: meeting.id,
+          organizer_result: inspect(organizer_result),
+          attendee_result: inspect(attendee_result)
+        )
+
+        if match?({:ok, _}, organizer_result) or match?({:ok, _}, attendee_result) do
+          {:discard,
+           "Partial cancellation email failure: one email succeeded, retry would duplicate"}
+        else
+          {:error, "Failed to send cancellation emails"}
+        end
     end
   end
 

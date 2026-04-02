@@ -32,6 +32,15 @@ defmodule Tymeslot.Bookings.Cancel do
   end
 
   @spec execute(Meeting.t()) :: {:ok, Meeting.t()} | {:error, atom() | String.t()}
+  def execute(%Meeting{status: "cancelled"} = meeting) do
+    Logger.info("Skipping cancellation for already-cancelled meeting",
+      meeting_id: meeting.id,
+      uid: meeting.uid
+    )
+
+    {:ok, meeting}
+  end
+
   def execute(%Meeting{} = meeting) do
     # Validate using Policy module (includes time checks)
     case Policy.can_cancel_meeting?(meeting) do

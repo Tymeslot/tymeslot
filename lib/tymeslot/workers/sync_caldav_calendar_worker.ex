@@ -51,6 +51,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   require Logger
 
+  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
@@ -58,6 +59,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalDAV.TierDetector
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
+  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
 
   # How far back and forward to fetch events on a full sync.
@@ -432,9 +434,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # ---------------------------------------------------------------------------
 
   defp do_full_fetch(integration, client, calendar_path, opts) do
-    now = DateTime.utc_now()
-    start_time = DateTime.add(now, -@sync_window_past_days, :day)
-    end_time = DateTime.add(now, @sync_window_future_days, :day)
+    range_now = DateTime.utc_now()
+    start_time = DateTime.add(range_now, -@sync_window_past_days, :day)
+    end_time = DateTime.add(range_now, @sync_window_future_days, :day)
 
     case CalDAVEvents.fetch_events(client, calendar_path, start_time, end_time) do
       {:ok, events} ->
@@ -446,6 +448,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
         case safe_process_events(integration, events) do
           :ok ->
+            detect_deletions(integration, events, start_time, end_time, range_now)
+
             sync_token_opt =
               case Keyword.get(opts, :new_ctag) do
                 nil -> []
@@ -574,6 +578,43 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   defp maybe_process_deletions(integration, deleted_hrefs) do
     EventProcessor.process_deletions(integration, deleted_hrefs)
+  end
+
+  defp detect_deletions(integration, fetched_events, start_time, end_time, sync_started_at) do
+    fetched_uids = MapSet.new(fetched_events, &Map.get(&1, :uid))
+
+    cached_uids =
+      CalendarEventCacheQueries.list_uids_in_range(
+        integration.id,
+        start_time,
+        end_time,
+        sync_started_at
+      )
+
+    missing_uids = Enum.reject(cached_uids, &MapSet.member?(fetched_uids, &1))
+
+    if missing_uids != [] do
+      Logger.info("CalDAV full fetch detected missing events",
+        calendar_integration_id: integration.id,
+        missing_count: length(missing_uids)
+      )
+
+      Enum.each(missing_uids, fn uid ->
+        CalendarEventCacheQueries.delete_by_uid(integration.id, uid)
+
+        case Sync.reconcile(integration.id, nil, uid, :deleted) do
+          :ok ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning("Reconcile failed for deleted event",
+              uid: uid,
+              integration_id: integration.id,
+              reason: inspect(reason)
+            )
+        end
+      end)
+    end
   end
 
   defp xml_escape(string) when is_binary(string) do

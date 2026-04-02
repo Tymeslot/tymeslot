@@ -37,6 +37,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
+  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
@@ -250,11 +251,26 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
     removed_uids =
       Enum.flat_map(removed, fn event ->
-        uid = event["iCalUId"] || event["id"]
+        graph_id = event["id"]
+        ical_uid = event["iCalUId"]
+        uid_for_cache = ical_uid || graph_id
 
-        if uid do
-          CalendarEventCacheQueries.delete_by_uid(integration.id, uid)
-          [uid]
+        if uid_for_cache do
+          CalendarEventCacheQueries.delete_by_uid(integration.id, uid_for_cache)
+
+          case Sync.reconcile(integration.id, graph_id, ical_uid, :deleted) do
+            :ok ->
+              :ok
+
+            {:error, reason} ->
+              Logger.warning("Reconcile failed for deleted event",
+                uid: uid_for_cache,
+                integration_id: integration.id,
+                reason: inspect(reason)
+              )
+          end
+
+          [uid_for_cache]
         else
           []
         end

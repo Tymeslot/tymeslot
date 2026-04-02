@@ -45,13 +45,15 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Private helpers
-  # ---------------------------------------------------------------------------
+  @doc """
+  Looks up a meeting linked to a calendar event by provider event ID or UID.
 
+  Returns `{:ok, meeting}` if a linked meeting is found, `{:error, :not_found}`
+  otherwise. Tries `provider_event_id` first, falls back to `uid`.
+  """
   @spec find_meeting(integration_id(), String.t() | nil, String.t() | nil) ::
           {:ok, term()} | {:error, :not_found}
-  defp find_meeting(integration_id, provider_event_id, uid) do
+  def find_meeting(integration_id, provider_event_id, uid) do
     cond do
       not is_nil(provider_event_id) ->
         MeetingQueries.get_by_provider_event_id(integration_id, provider_event_id)

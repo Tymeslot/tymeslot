@@ -90,7 +90,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     body = format_event_data(event_data)
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
-      make_request_with_body(:post, "/calendars/#{calendar_id}/events", token, body)
+      make_request_with_body(:post, "/calendars/#{calendar_id}/events", token, body,
+        params: %{"sendUpdates" => "none"}
+      )
     end)
   end
 
@@ -110,7 +112,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
         :put,
         "/calendars/#{calendar_id}/events/#{google_event_id}",
         token,
-        body
+        body,
+        params: %{"sendUpdates" => "none"}
       )
     end)
   end
@@ -471,9 +474,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       Enum.any?(reason_strings, &String.contains?(&1, "insufficientpermissions"))
   end
 
-  defp make_request_with_body(method, path, token, body) do
-    HTTP.request_with_body(method, @base_url, path, token, body,
-      response_handler: &handle_http_response/1
+  defp make_request_with_body(method, path, token, body, opts \\ []) do
+    HTTP.request_with_body(
+      method,
+      @base_url,
+      path,
+      token,
+      body,
+      Keyword.merge([response_handler: &handle_http_response/1], opts)
     )
   end
 
@@ -502,8 +510,20 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
           get_field_value(event_data, :end_time),
           timezone
         ),
-      "status" => get_field_value(event_data, :status) || "confirmed"
+      "status" => get_field_value(event_data, :status) || "confirmed",
+      "attendees" => build_attendees(event_data)
     }
+  end
+
+  defp build_attendees(event_data) do
+    email = get_field_value(event_data, :attendee_email)
+    name = get_field_value(event_data, :attendee_name)
+
+    if email do
+      [remove_nil_values(%{"email" => email, "displayName" => name})]
+    else
+      nil
+    end
   end
 
   # Add Google event ID if uid is provided

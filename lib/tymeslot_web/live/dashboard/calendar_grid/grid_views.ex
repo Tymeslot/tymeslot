@@ -98,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
             <%!-- Events --%>
             <div
               :for={{event, col_idx, total_cols} <- Helpers.positioned_events_for_day(assigns, day)}
-              id={"event-#{event.id}"}
+              id={"event-#{event.id}-#{day}"}
               class={"absolute rounded px-1 py-0.5 #{if @view == :day, do: "text-token-sm", else: "text-token-xs"} font-medium text-white overflow-hidden cursor-pointer hover:brightness-90 group #{Helpers.color_for_event(assigns, event)}"}
               style={"top: #{Helpers.top_rem(event.start_at, @user_timezone)}rem; height: #{Helpers.height_rem(event.start_at, event.end_at)}rem; left: #{Helpers.left_pct(col_idx, total_cols)}%; width: calc(#{Helpers.width_pct(total_cols)}% - 2px);"}
               phx-click="show_event"
@@ -106,12 +106,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
               phx-target={@myself}
               data-draggable="true"
               data-event-id={event.id}
-              data-event-date={Date.to_iso8601(DateTime.to_date(event.start_at))}
+              data-event-date={Date.to_iso8601(day)}
               data-start-minutes={DateTime.shift_zone!(event.start_at, @user_timezone) |> then(&(&1.hour * 60 + &1.minute))}
-              data-duration-minutes={max(15, round(DateTime.diff(event.end_at, event.start_at, :second) / 60))}
+              data-duration-minutes={max(15, round(DateTime.diff(Map.get(event, :display_end_at, event.end_at), Map.get(event, :display_start_at, event.start_at), :second) / 60))}
             >
               <div class="truncate font-semibold"><%= event.title || "(No title)" %></div>
-              <div class="opacity-80"><%= Helpers.format_time_range(event, Helpers.time_format(assigns)) %></div>
+              <div class="opacity-80"><%= Helpers.format_display_time_range(event, Helpers.time_format(assigns), @user_timezone) %></div>
               <div data-resize-handle class="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize opacity-0 group-hover:opacity-100 bg-black/10 rounded-b"></div>
             </div>
             <%!-- Current time indicator --%>
@@ -140,6 +140,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
   attr :integration_colors, :map, required: true
   attr :hidden_integration_ids, :list, required: true
   attr :date, :any, required: true
+  attr :user_timezone, :string, required: true
   attr :preferences, :any
   attr :myself, :any, required: true
 

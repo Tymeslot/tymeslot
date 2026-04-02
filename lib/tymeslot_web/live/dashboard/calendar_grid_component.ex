@@ -48,6 +48,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
       |> assign(:creating_event, nil)
       |> assign(:recurrence_prompt, nil)
       |> assign(:confirm_delete_event, nil)
+      |> assign(:confirm_delete_linked_to_booking, false)
       |> assign(:saving_event, false)
       |> assign(:deleting_event, false)
       |> assign(:owned_integration_ids, MapSet.new())
@@ -312,6 +313,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
         integration_colors={@integration_colors}
         hidden_integration_ids={@hidden_integration_ids}
         date={@date}
+        user_timezone={@user_timezone}
         preferences={@preferences}
         myself={@myself}
       />
@@ -348,6 +350,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
         :if={@confirm_delete_event}
         event={@confirm_delete_event}
         deleting={@deleting_event}
+        linked_to_booking={@confirm_delete_linked_to_booking}
         myself={@myself}
       />
     </div>

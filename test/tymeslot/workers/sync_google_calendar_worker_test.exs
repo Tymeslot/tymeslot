@@ -237,6 +237,40 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
     end
   end
 
+  describe "perform/1 - all-day events" do
+    test "caches multi-day all-day event with all_day: true and UTC-midnight timestamps" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: "valid-token"
+        )
+
+      event = %{
+        "id" => "google-allday-1",
+        "iCalUID" => "allday-uid@google.com",
+        "summary" => "Holiday",
+        "status" => "confirmed",
+        "start" => %{"date" => "2026-04-07"},
+        "end" => %{"date" => "2026-04-11"}
+      }
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:ok, %{events: [event], next_sync_token: "new-token"}}
+      end)
+
+      assert :ok =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      cached = Repo.get_by(CalendarEventCacheSchema, provider_event_id: "google-allday-1")
+      assert cached.all_day == true
+      assert cached.title == "Holiday"
+      assert cached.start_at == ~U[2026-04-07 00:00:00Z]
+      assert cached.end_at == ~U[2026-04-11 00:00:00Z]
+    end
+  end
+
   describe "perform/1 - sync token expired (HTTP 410)" do
     test "re-registers push channel and returns :ok on token expiry" do
       integration =

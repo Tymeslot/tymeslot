@@ -36,7 +36,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "shows editable title input for owned events", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       assert html =~ "event-title-input"
       assert html =~ ~s(name="value")
@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "saves title on blur", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       html =
         lv
@@ -57,7 +57,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "does not save when title is unchanged", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       html =
         lv
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "sanitises malicious input in title", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       html =
         lv
@@ -83,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "rejects title exceeding max length", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       long_title = String.duplicate("a", 501)
 
@@ -113,7 +113,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "shows editable location input for owned events", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       assert html =~ "event-location-input"
       assert html =~ "Room 101"
@@ -121,7 +121,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "saves location on blur", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       html =
         lv
@@ -133,7 +133,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "does not save when location is unchanged", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       html =
         lv
@@ -156,14 +156,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
         })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       assert html =~ "Add location"
     end
 
     test "rejects location exceeding max length", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       long_location = String.duplicate("a", 1001)
 
@@ -193,7 +193,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "shows editable description textarea for owned events", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       assert html =~ "event-description-input"
       assert html =~ "Original notes"
@@ -201,7 +201,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "saves description on blur", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       html =
         lv
@@ -213,7 +213,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "does not save when description is unchanged", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       html =
         lv
@@ -236,14 +236,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
         })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       assert html =~ "Add description"
     end
 
     test "rejects description exceeding max length", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       long_desc = String.duplicate("a", 5001)
 
@@ -272,7 +272,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "shows editable date and time inputs for owned events", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("#event-#{event.id}") |> render_click()
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       assert html =~ "event-start-date"
       assert html =~ "event-start-time"
@@ -282,7 +282,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "updates event time on form change", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
       today_iso = Date.to_iso8601(Date.utc_today())
 
       html =
@@ -302,7 +302,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "auto-adjusts end when start moves past end", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
       today_iso = Date.to_iso8601(Date.utc_today())
 
       # Original: 10:00-11:00 (1 hour). Move start to 23:00 with end still at 11:00
@@ -324,7 +324,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
     test "skips save when times are unchanged", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
       today_iso = Date.to_iso8601(Date.utc_today())
 
       html =
@@ -353,7 +353,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
         })
 
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("#event-#{event.id}") |> render_click()
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
       today_iso = Date.to_iso8601(Date.utc_today())
 
       html =

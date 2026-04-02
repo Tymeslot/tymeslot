@@ -56,6 +56,22 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
     EventOperations.delete_event(uid, context, opts)
   end
 
+  @spec delete_event_and_reconcile(
+          String.t(),
+          String.t() | nil,
+          {integer(), integer()},
+          keyword()
+        ) ::
+          {:ok, map()} | {:error, term()}
+  def delete_event_and_reconcile(uid, provider_event_id, context, opts \\ []) do
+    EventOperations.delete_event_and_reconcile(uid, provider_event_id, context, opts)
+  end
+
+  @spec event_linked_to_booking?(integer(), String.t() | nil, String.t() | nil) :: boolean()
+  def event_linked_to_booking?(integration_id, provider_event_id, uid) do
+    EventOperations.event_linked_to_booking?(integration_id, provider_event_id, uid)
+  end
+
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_booking_integration_info(context) do
     ClientManager.get_booking_integration_info(context)
