@@ -50,6 +50,7 @@ Open [http://localhost:4000](http://localhost:4000) — your scheduling platform
 ### Scheduling
 
 - **No double-bookings** — every connected calendar is checked at the moment of booking, not on a schedule; one conflict anywhere blocks the slot everywhere
+- **Dashboard calendar** — unified day/week/month view across all connected accounts; drag-and-drop rescheduling and per-calendar visibility toggles
 - **Availability that reflects reality** — working hours per day, date-specific overrides for holidays, and vacation blocks without touching a calendar
 - **Buffer time** — pad before, after, or both, per meeting type (0–120 min)
 - **Booking window** — nobody schedules six months out without your permission (1–365 days)
