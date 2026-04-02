@@ -60,7 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
             all_events =
               successful_results
               |> Enum.flat_map(&extract_events/1)
-              |> Enum.uniq_by(& &1.uid)
+              |> Enum.uniq_by(&{&1.uid, &1.start_time})
 
             Logger.info("Total events found across all calendars",
               event_count: length(all_events)
@@ -178,7 +178,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventQueries do
       all_events =
         successful
         |> Enum.flat_map(fn {:ok, events, _path} -> events end)
-        |> Enum.uniq_by(& &1.uid)
+        |> Enum.uniq_by(&{&1.uid, &1.start_time})
 
       Logger.info("Total fresh events found across all calendars",
         event_count: length(all_events)

@@ -58,6 +58,37 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommonRecurrenceTest do
       assert expanded == []
     end
 
+    test "expanded occurrences survive {uid, start_time} deduplication" do
+      # Regression: Enum.uniq_by(&1.uid) was collapsing all occurrences of a
+      # recurring event into the first one. The dedup key must include start_time.
+      events = [
+        %{
+          uid: "weekly-dedup",
+          summary: "Weekly",
+          start_time: ~U[2026-04-03 09:00:00Z],
+          end_time: ~U[2026-04-03 10:00:00Z],
+          recurrence_rule: "FREQ=WEEKLY;INTERVAL=1",
+          exdates: []
+        }
+      ]
+
+      range_start = ~U[2026-04-01 00:00:00Z]
+      range_end = ~U[2026-04-30 23:59:59Z]
+
+      expanded = CaldavCommon.expand_recurring_events(events, range_start, range_end)
+
+      # Should have 4 Fridays in April (3, 10, 17, 24)
+      assert length(expanded) == 4
+
+      # Simulate the dedup that happens in event_queries.ex / events_read.ex
+      deduped = Enum.uniq_by(expanded, &{&1.uid, &1.start_time})
+      assert length(deduped) == 4
+
+      # This was the old bug — uid-only dedup collapsed all occurrences to one
+      bad_dedup = Enum.uniq_by(expanded, & &1.uid)
+      assert length(bad_dedup) == 1
+    end
+
     test "handles events without exdates key" do
       events = [
         %{

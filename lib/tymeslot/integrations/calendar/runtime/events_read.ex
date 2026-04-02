@@ -45,7 +45,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
             _result -> false
           end)
           |> Enum.flat_map(fn {:ok, events, _path} -> events end)
-          |> Enum.uniq_by(& &1.uid)
+          |> Enum.uniq_by(&{&1.uid, &1.start_time})
 
         Logger.info("Total events found across all calendars", event_count: length(all_events))
         {:ok, all_events}
