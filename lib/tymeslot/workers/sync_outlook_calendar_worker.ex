@@ -184,22 +184,11 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   defp handle_event_fetched(integration, graph_resource_id, event) do
     attrs = OutlookCalendarAPI.to_cache_attrs(event, integration.id)
 
-    case CalendarEventCacheQueries.upsert_batch([attrs]) do
-      {:ok, _count} ->
-        SyncBroadcast.broadcast_cache_update(integration.user_id, [attrs.uid])
-        maybe_reconcile_time_change(integration, graph_resource_id, event)
-        update_last_sync_at(integration)
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to upsert Outlook event into cache",
-          calendar_integration_id: integration.id,
-          graph_resource_id: graph_resource_id,
-          error: inspect(reason)
-        )
-
-        {:error, reason}
-    end
+    {:ok, _count} = CalendarEventCacheQueries.upsert_batch([attrs])
+    SyncBroadcast.broadcast_cache_update(integration.user_id, [attrs.uid])
+    maybe_reconcile_time_change(integration, graph_resource_id, event)
+    update_last_sync_at(integration)
+    :ok
   end
 
   defp maybe_reconcile_time_change(integration, graph_resource_id, event) do

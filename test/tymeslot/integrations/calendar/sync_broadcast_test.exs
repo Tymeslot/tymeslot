@@ -76,7 +76,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
       assert uid == attrs.uid
     end
 
-    test "returns error when upsert fails" do
+    test "raises when upsert hits a constraint violation" do
       user = insert(:user)
 
       # Missing calendar_integration_id — will fail foreign key
@@ -88,7 +88,9 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
         title: "Bad Event"
       }
 
-      assert {:error, _reason} = SyncBroadcast.upsert_and_broadcast(user.id, attrs)
+      assert_raise Postgrex.Error, fn ->
+        SyncBroadcast.upsert_and_broadcast(user.id, attrs)
+      end
     end
   end
 
@@ -125,13 +127,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
         title: "Bad Event"
       }
 
-      assert {:error, _reason} =
-               SyncBroadcast.process_cached_event(
-                 user.id,
-                 attrs,
-                 [provider: "caldav"],
-                 on_success
-               )
+      assert_raise Postgrex.Error, fn ->
+        SyncBroadcast.process_cached_event(
+          user.id,
+          attrs,
+          [provider: "caldav"],
+          on_success
+        )
+      end
 
       refute_receive :callback_called
     end

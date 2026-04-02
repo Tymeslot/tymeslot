@@ -108,6 +108,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_save_event(_params, socket) do
     creating = socket.assigns.creating_event
+
+    if is_nil(creating) do
+      {:noreply, socket}
+    else
+      handle_save_event_with(creating, socket)
+    end
+  end
+
+  defp handle_save_event_with(creating, socket) do
     integration = Enum.find(socket.assigns.integrations, &(&1.id == creating.integration_id))
 
     if is_nil(integration) do

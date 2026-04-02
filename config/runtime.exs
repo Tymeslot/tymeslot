@@ -191,12 +191,11 @@ if config_env() == :prod do
   port = String.to_integer(System.get_env("PORT") || "4000")
 
   # Allowed origins for LiveView WebSocket (align with CSP 'connect-src' and site origin)
-  # Cloudron: disable origin check — Cloudron's reverse proxy handles CORS
-  # Docker: build an allow-list from the host or WS_ALLOWED_ORIGINS
+  # Both Cloudron and Docker build an allow-list from the host
   check_origin_config =
     case deployment_type do
       "cloudron" ->
-        false
+        ["https://#{host}", "http://#{host}"]
 
       "docker" ->
         case System.get_env("WS_ALLOWED_ORIGINS") do

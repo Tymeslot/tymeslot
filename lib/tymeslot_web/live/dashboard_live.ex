@@ -198,7 +198,8 @@ defmodule TymeslotWeb.DashboardLive do
       socket
       |> assign(:page_title, PageTitles.dashboard_title(action))
       |> assign(:params, params)
-      |> load_dashboard_data()
+
+    socket = if connected?(socket), do: load_dashboard_data(socket), else: socket
 
     {:noreply, socket}
   end

@@ -36,7 +36,7 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
 
   Returns `{:ok, count}` on success or `{:error, reason}` on failure.
   """
-  @spec upsert_batch([map()]) :: {:ok, non_neg_integer()} | {:error, term()}
+  @spec upsert_batch([map()]) :: {:ok, non_neg_integer()}
   def upsert_batch([]), do: {:ok, 0}
 
   def upsert_batch(events_attrs) do
@@ -49,22 +49,15 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
         |> Map.put(:updated_at, now)
       end)
 
-    Repo.transaction(fn ->
-      try do
-        {count, _rows} =
-          Repo.insert_all(
-            CalendarEventCacheSchema,
-            entries,
-            on_conflict: {:replace, replace_fields()},
-            conflict_target: [:calendar_integration_id, :uid]
-          )
+    {count, _rows} =
+      Repo.insert_all(
+        CalendarEventCacheSchema,
+        entries,
+        on_conflict: {:replace, replace_fields()},
+        conflict_target: [:calendar_integration_id, :uid]
+      )
 
-        count
-      rescue
-        error ->
-          Repo.rollback(error)
-      end
-    end)
+    {:ok, count}
   end
 
   @doc """
@@ -117,16 +110,14 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
           {:ok, non_neg_integer()} | {:error, term()}
   def full_refresh_for_integration(calendar_integration_id, events_attrs) do
     Repo.transaction(fn ->
-      Repo.query!("SELECT pg_advisory_xact_lock($1)", [calendar_integration_id])
+      Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [2, calendar_integration_id])
 
       CalendarEventCacheSchema
       |> where([e], e.calendar_integration_id == ^calendar_integration_id)
       |> Repo.delete_all()
 
-      case upsert_batch(events_attrs) do
-        {:ok, count} -> count
-        {:error, reason} -> Repo.rollback(reason)
-      end
+      {:ok, count} = upsert_batch(events_attrs)
+      count
     end)
   end
 

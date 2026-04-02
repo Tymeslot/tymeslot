@@ -250,7 +250,9 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
     removed_uids =
       Enum.flat_map(removed, fn event ->
-        if uid = event["id"] do
+        uid = event["iCalUId"] || event["id"]
+
+        if uid do
           CalendarEventCacheQueries.delete_by_uid(integration.id, uid)
           [uid]
         else

@@ -137,12 +137,10 @@ defmodule Tymeslot.CalendarGrid do
   Accepts a map with `:uid`, `:calendar_integration_id`, `:title`,
   `:start_at`, `:end_at`, and optionally `:all_day`.
   """
-  @spec cache_created_event(map()) :: :ok | {:error, term()}
+  @spec cache_created_event(map()) :: :ok
   def cache_created_event(attrs) do
-    case CalendarEventCacheQueries.upsert_batch([attrs]) do
-      {:ok, _count} -> :ok
-      {:error, _reason} = error -> error
-    end
+    {:ok, _count} = CalendarEventCacheQueries.upsert_batch([attrs])
+    :ok
   end
 
   @doc """
@@ -150,12 +148,10 @@ defmodule Tymeslot.CalendarGrid do
 
   Accepts a map with at least `:uid` and `:calendar_integration_id`.
   """
-  @spec update_cached_event(map()) :: :ok | {:error, term()}
+  @spec update_cached_event(map()) :: :ok
   def update_cached_event(attrs) do
-    case CalendarEventCacheQueries.upsert_batch([attrs]) do
-      {:ok, _count} -> :ok
-      {:error, _reason} = error -> error
-    end
+    {:ok, _count} = CalendarEventCacheQueries.upsert_batch([attrs])
+    :ok
   end
 
   @doc """

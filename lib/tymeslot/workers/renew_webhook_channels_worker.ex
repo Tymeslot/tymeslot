@@ -37,6 +37,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   end
 
   # Per-integration renewal: renew a single integration's webhook channel.
+  @impl Oban.Worker
   def perform(%Oban.Job{
         args: %{"calendar_integration_id" => integration_id, "provider" => provider}
       }) do
@@ -81,17 +82,27 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   defp schedule_renewal_jobs(integrations, provider) do
     integrations
     |> Enum.with_index()
-    |> Enum.map(fn {integration, index} ->
+    |> Enum.flat_map(fn {integration, index} ->
       stagger = index * Enum.random(5..30)
 
-      %{
-        "calendar_integration_id" => integration.id,
-        "provider" => provider
-      }
-      |> new(scheduled_in: stagger)
-      |> Oban.insert()
+      case %{
+             "calendar_integration_id" => integration.id,
+             "provider" => provider
+           }
+           |> new(scheduled_in: stagger)
+           |> Oban.insert() do
+        {:ok, _job} ->
+          [integration.id]
 
-      integration.id
+        {:error, reason} ->
+          Logger.warning("Failed to enqueue webhook renewal job",
+            calendar_integration_id: integration.id,
+            provider: provider,
+            error: inspect(reason)
+          )
+
+          []
+      end
     end)
   end
 

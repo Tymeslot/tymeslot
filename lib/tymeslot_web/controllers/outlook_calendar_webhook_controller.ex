@@ -52,9 +52,15 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   end
 
   def webhook(conn, _params) do
-    notifications = Enum.take(get_in(conn.body_params, ["value"]) || [], 50)
+    case get_in(conn.body_params, ["value"]) do
+      nil ->
+        Logger.warning("Outlook webhook received request with no notification value")
 
-    process_notifications_batch(notifications)
+      notifications when is_list(notifications) ->
+        notifications
+        |> Enum.take(50)
+        |> process_notifications_batch()
+    end
 
     conn |> send_resp(202, "") |> halt()
   end

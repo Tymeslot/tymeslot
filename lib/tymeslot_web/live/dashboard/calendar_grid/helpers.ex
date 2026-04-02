@@ -24,7 +24,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
     |> assign(:owned_integration_ids, owned_ids)
     |> assign(:preferences, prefs)
     |> assign(:hidden_integration_ids, prefs.hidden_integration_ids)
-    |> assign(:view, String.to_existing_atom(prefs.default_view))
+    |> assign(:view, safe_view_atom(prefs.default_view))
     |> check_staleness()
   end
 
@@ -345,6 +345,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   @spec time_format(map()) :: String.t()
   def time_format(%{preferences: %{time_format: fmt}}), do: fmt
   def time_format(_assigns), do: "12h"
+
+  @valid_views %{"week" => :week, "day" => :day, "month" => :month}
+  defp safe_view_atom(view) when is_binary(view), do: Map.get(@valid_views, view, :week)
+  defp safe_view_atom(_other), do: :week
 
   defp weekend?(date), do: Date.day_of_week(date) in [6, 7]
 

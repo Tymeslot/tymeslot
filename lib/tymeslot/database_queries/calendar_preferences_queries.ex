@@ -10,7 +10,8 @@ defmodule Tymeslot.DatabaseQueries.CalendarPreferencesQueries do
     :week_start_day,
     :time_format,
     :show_week_numbers,
-    :show_weekends
+    :show_weekends,
+    :updated_at
   ]
 
   @doc "Returns preferences for user, or a new empty struct if none exist."

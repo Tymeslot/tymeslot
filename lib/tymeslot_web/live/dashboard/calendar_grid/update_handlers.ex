@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   @moduledoc "Update action handlers for CalendarGridComponent."
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
+  import Phoenix.LiveView, only: [connected?: 1]
 
   alias Tymeslot.CalendarGrid
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -175,16 +176,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     socket = assign(socket, assigns)
 
     socket =
-      if Map.get(socket.assigns, :_initialized) do
-        socket
-      else
-        Process.send_after(self(), :tick, 60_000)
+      cond do
+        Map.get(socket.assigns, :_initialized) ->
+          socket
 
-        socket
-        |> assign(:_initialized, true)
-        |> Helpers.load_integrations()
-        |> Helpers.load_events()
-        |> maybe_auto_refresh()
+        not connected?(socket) ->
+          socket
+
+        true ->
+          Process.send_after(self(), :tick, 60_000)
+
+          socket
+          |> assign(:_initialized, true)
+          |> Helpers.load_integrations()
+          |> Helpers.load_events()
+          |> maybe_auto_refresh()
       end
 
     {:ok, socket}
@@ -197,6 +203,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       result = CalendarGrid.refresh_events(user_id)
 
       case result do
+        {:ok, %{enqueued: 0}} ->
+          socket
+
         {:ok, %{enqueued: enqueued, skipped: skipped}} ->
           Process.send_after(self(), :reset_calendar_sync, 30_000)
 
