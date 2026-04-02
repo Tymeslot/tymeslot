@@ -1,0 +1,282 @@
+defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
+  @moduledoc """
+  Expands recurring calendar events (RRULE) into individual occurrences
+  within a given date range.
+
+  CalDAV servers return master events with RRULE strings and the original
+  start/end times. This module generates concrete occurrences so the
+  availability layer can detect conflicts on future dates.
+
+  Google Calendar handles this server-side with `singleEvents=true`;
+  this module provides the equivalent for CalDAV providers.
+  """
+
+  @day_atoms %{
+    "MO" => :monday,
+    "TU" => :tuesday,
+    "WE" => :wednesday,
+    "TH" => :thursday,
+    "FR" => :friday,
+    "SA" => :saturday,
+    "SU" => :sunday
+  }
+
+  @day_numbers %{
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+    sunday: 7
+  }
+
+  # Safety cap — never generate more than this many occurrences per event,
+  # regardless of RRULE or date range. Prevents runaway expansion from
+  # malformed rules like FREQ=SECONDLY with no COUNT/UNTIL.
+  @max_occurrences 500
+
+  @doc """
+  Expands a single event into its occurrences within `[range_start, range_end]`.
+
+  Non-recurring events (nil recurrence_rule) are returned as a single-element list.
+  Events with an unparseable RRULE are also returned as-is (fail-open: better to
+  show the master event than silently drop it).
+
+  ## Options
+
+    * `:exdates` - list of `DateTime` values to exclude (cancelled occurrences)
+
+  """
+  @spec expand(map(), DateTime.t(), DateTime.t(), keyword()) :: [map()]
+  def expand(event, range_start, range_end, opts \\ [])
+
+  def expand(%{recurrence_rule: nil} = event, _range_start, _range_end, _opts), do: [event]
+  def expand(%{recurrence_rule: ""} = event, _range_start, _range_end, _opts), do: [event]
+
+  def expand(%{recurrence_rule: rrule} = event, range_start, range_end, opts)
+      when is_binary(rrule) do
+    exdates = Keyword.get(opts, :exdates, [])
+
+    case parse_rrule(rrule) do
+      {:ok, rule} ->
+        generate_occurrences(event, rule, range_start, range_end, exdates)
+
+      :error ->
+        # Fail-open: return the original event rather than silently dropping it
+        [event]
+    end
+  end
+
+  def expand(event, _range_start, _range_end, _opts), do: [event]
+
+  @doc """
+  Parses an RRULE string into a structured map.
+
+  Supported properties: FREQ, INTERVAL, UNTIL, COUNT, BYDAY.
+  Returns `{:ok, map()}` or `:error`.
+  """
+  @spec parse_rrule(String.t() | nil) :: {:ok, map()} | :error
+  def parse_rrule(nil), do: :error
+  def parse_rrule(""), do: :error
+
+  def parse_rrule(rrule) when is_binary(rrule) do
+    # Strip "RRULE:" prefix if present (some parsers include it, some don't)
+    rule_str = String.replace_prefix(rrule, "RRULE:", "")
+
+    parts =
+      rule_str
+      |> String.split(";")
+      |> Enum.reduce(%{}, fn part, acc ->
+        case String.split(part, "=", parts: 2) do
+          [key, value] -> Map.put(acc, String.upcase(key), value)
+          _other -> acc
+        end
+      end)
+
+    case parse_freq(parts["FREQ"]) do
+      {:ok, freq} ->
+        {:ok,
+         %{
+           freq: freq,
+           interval: parse_int(parts["INTERVAL"], 1),
+           until: parse_until(parts["UNTIL"]),
+           count: parse_int(parts["COUNT"], nil),
+           by_day: parse_byday(parts["BYDAY"])
+         }}
+
+      :error ->
+        :error
+    end
+  end
+
+  # --- Private: RRULE field parsers ---
+
+  defp parse_freq("DAILY"), do: {:ok, :daily}
+  defp parse_freq("WEEKLY"), do: {:ok, :weekly}
+  defp parse_freq("MONTHLY"), do: {:ok, :monthly}
+  defp parse_freq("YEARLY"), do: {:ok, :yearly}
+  defp parse_freq(_other), do: :error
+
+  defp parse_int(nil, default), do: default
+
+  defp parse_int(str, default) do
+    case Integer.parse(str) do
+      {n, ""} -> n
+      _other -> default
+    end
+  end
+
+  defp parse_until(nil), do: nil
+
+  defp parse_until(str) do
+    case DateTime.from_iso8601(format_ical_datetime(str)) do
+      {:ok, dt, _offset} -> dt
+      _error -> nil
+    end
+  end
+
+  # RFC 5545 UNTIL values without a trailing "Z" represent local/floating time,
+  # but we have no timezone context here. Treat bare datetimes as UTC — this is
+  # a lossy but safe default for CalDAV, where most servers emit Z-suffixed values.
+  defp format_ical_datetime(
+         <<y::binary-size(4), mo::binary-size(2), d::binary-size(2), "T", h::binary-size(2),
+           mi::binary-size(2), s::binary-size(2), _rest::binary>>
+       ) do
+    "#{y}-#{mo}-#{d}T#{h}:#{mi}:#{s}Z"
+  end
+
+  defp format_ical_datetime(other), do: other
+
+  defp parse_byday(nil), do: nil
+
+  defp parse_byday(str) do
+    days =
+      str
+      |> String.split(",")
+      |> Enum.map(fn day_str ->
+        day_code = String.replace(day_str, ~r/^-?\d+/, "")
+        Map.get(@day_atoms, String.upcase(day_code))
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    if days == [], do: nil, else: days
+  end
+
+  # --- Private: Occurrence generation ---
+
+  defp generate_occurrences(event, rule, range_start, range_end, exdates) do
+    duration = DateTime.diff(event.end_time, event.start_time, :second)
+    safety_cap = min(@max_occurrences, rule.count || @max_occurrences)
+
+    event.start_time
+    |> Stream.iterate(&advance(&1, rule))
+    |> Stream.take(safety_cap)
+    |> Stream.take_while(&before_end?(&1, rule, range_end))
+    |> Stream.filter(&in_range?(&1, range_start, range_end))
+    |> Stream.filter(&matches_byday?(&1, rule))
+    |> Stream.reject(&excluded?(&1, exdates))
+    |> Enum.map(fn occ_start ->
+      Map.merge(event, %{
+        start_time: occ_start,
+        end_time: DateTime.add(occ_start, duration, :second)
+      })
+    end)
+  end
+
+  defp advance(dt, %{freq: :daily, interval: interval}) do
+    DateTime.add(dt, interval, :day)
+  end
+
+  defp advance(dt, %{freq: :weekly, interval: interval, by_day: nil}) do
+    DateTime.add(dt, 7 * interval, :day)
+  end
+
+  defp advance(dt, %{freq: :weekly, by_day: by_day} = rule) do
+    advance_to_next_byday(dt, by_day, rule.interval)
+  end
+
+  defp advance(dt, %{freq: :monthly, interval: interval}) do
+    date = DateTime.to_date(dt)
+    time = DateTime.to_time(dt)
+    new_date = shift_months(date, interval)
+    DateTime.new!(new_date, time, "Etc/UTC")
+  end
+
+  defp advance(dt, %{freq: :yearly, interval: interval}) do
+    date = DateTime.to_date(dt)
+    time = DateTime.to_time(dt)
+    new_date = shift_months(date, 12 * interval)
+    DateTime.new!(new_date, time, "Etc/UTC")
+  end
+
+  defp advance_to_next_byday(dt, by_day, interval) do
+    current_dow = day_of_week_atom(dt)
+    day_numbers = by_day |> Enum.map(&@day_numbers[&1]) |> Enum.sort()
+    current_number = @day_numbers[current_dow]
+
+    case Enum.find(day_numbers, &(&1 > current_number)) do
+      nil ->
+        first_day = List.first(day_numbers)
+        days_to_end_of_week = 7 - current_number
+        days_from_start = first_day
+        skip_weeks = interval - 1
+        days_ahead = days_to_end_of_week + days_from_start + skip_weeks * 7
+        DateTime.add(dt, days_ahead, :day)
+
+      next_number ->
+        DateTime.add(dt, next_number - current_number, :day)
+    end
+  end
+
+  defp shift_months(date, months) do
+    total_months = date.year * 12 + (date.month - 1) + months
+    year = div(total_months, 12)
+    month = rem(total_months, 12) + 1
+    day = min(date.day, Date.days_in_month(Date.new!(year, month, 1)))
+    Date.new!(year, month, day)
+  end
+
+  defp before_end?(dt, rule, range_end) do
+    within_range = DateTime.compare(dt, range_end) != :gt
+
+    within_until =
+      case rule[:until] do
+        nil -> true
+        until -> DateTime.compare(dt, until) != :gt
+      end
+
+    within_range and within_until
+  end
+
+  defp in_range?(dt, range_start, range_end) do
+    DateTime.compare(dt, range_start) != :lt and
+      DateTime.compare(dt, range_end) != :gt
+  end
+
+  defp matches_byday?(_dt, %{by_day: nil}), do: true
+
+  defp matches_byday?(dt, %{by_day: by_day}) do
+    day_of_week_atom(dt) in by_day
+  end
+
+  defp excluded?(_dt, []), do: false
+
+  defp excluded?(dt, exdates) do
+    Enum.any?(exdates, fn exdate ->
+      DateTime.compare(DateTime.truncate(dt, :second), DateTime.truncate(exdate, :second)) == :eq
+    end)
+  end
+
+  defp day_of_week_atom(dt) do
+    case Date.day_of_week(DateTime.to_date(dt)) do
+      1 -> :monday
+      2 -> :tuesday
+      3 -> :wednesday
+      4 -> :thursday
+      5 -> :friday
+      6 -> :saturday
+      7 -> :sunday
+    end
+  end
+end

@@ -121,6 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     attendees = extract_attendees(lines)
     recurrence_rule = extract_property(lines, "RRULE")
     recurrence_id = extract_recurrence_id(lines)
+    exdates = extract_exdates(lines)
 
     # Parse dates with timezone support
     dtstart = extract_datetime_property(lines, "DTSTART")
@@ -141,6 +142,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         attendees: attendees,
         recurrence_rule: recurrence_rule,
         recurrence_id: recurrence_id,
+        exdates: exdates,
         start_time: start_time,
         end_time: end_time,
         transparency: normalize_transp(extract_property(lines, "TRANSP"))
@@ -334,6 +336,25 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         Date.add(start_time, 1)
     end
   end
+
+  defp extract_exdates(lines) do
+    lines
+    |> Enum.filter(fn line ->
+      String.starts_with?(line, "EXDATE:") or String.starts_with?(line, "EXDATE;")
+    end)
+    |> Enum.flat_map(fn line ->
+      timezone = extract_timezone_param(line)
+      value = line |> String.split(":", parts: 2) |> List.last() |> String.trim()
+
+      value
+      |> String.split(",")
+      |> Enum.map(fn str ->
+        parse_datetime_property(%{value: String.trim(str), timezone: timezone})
+      end)
+      |> Enum.reject(&is_nil/1)
+    end)
+  end
+
 
   defp extract_calendars_from_xml(xml_body) do
     # Pattern to extract calendar data from CalDAV response
