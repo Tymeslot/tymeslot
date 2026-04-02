@@ -1,4 +1,40 @@
 
+[0.99.36]
+* core: Preserve expanded recurring event occurrences in dedup
+* core: Expand CalDAV recurring events for availability checking
+* core: Rename calendar sync migration timestamps to avoid collisions
+* core: Centralise sync window and widen to 365 days back
+* core: Scope detect_deletions to calendar path in multi-calendar CalDAV sync
+* core: Add missing 3-arity update_subscription callback to StripeProvider
+* core: Return error when cancelling an already-cancelled meeting
+* core: Remove unreachable pattern match clauses flagged by Dialyzer
+* core: Address deep review findings across calendar sync, emails, and UI
+* core: Address deep review findings across calendar sync feature
+* core: Address code review findings across calendar sync feature
+* core: Harden calendar sync against webhook abuse, circuit breaker misfire, and duplicate notifications
+* core: Disable next month when max booking date equals month boundary
+* core: Pass reserved paths to username validation
+* core: Handle Hammer TOCTOU race in rate limiter
+* core: Align webhook URL validation and default to strict mode
+* core: Address review findings in URL validation consolidation
+* core: Address review findings in validation consolidation
+* core: Replace non-existent Phoenix.LiveView.Assigns.t() with map() in component specs
+* core: Correct action_button doc and info_box spec
+* core: Prevent timing-based email enumeration and log notification failures
+* core: Replace != [] with Enum.empty? to fix Dialyzer typing violation
+* core: Address code review findings for test suite improvements
+* core: Fix CI workflow — remove unsafe test fallback and invalid audit task
+* core: Restore property-based tests removed during mocking refactor
+* core: Harden calendar sync with batch webhooks, async CRUD, and race fixes
+* core: Make profile timezone optional and rename video integration route
+* core: Update booking, meeting list, and email UI
+* core: Calendar grid inline editing and event management
+* core: Update calendar webhook controllers
+* core: Improve calendar sync workers
+* core: Calendar API and backend sync improvements
+* core: Add calendar grid UI with inline title editing
+* core: Add calendar event sync engine
+* core: Rename integration routes and add scheduling/calendar mode tab bar
 [0.99.35]
 * core: Eliminate race condition in RequestCoalescer test
 * core: Exclude migrations tag from default test runs
