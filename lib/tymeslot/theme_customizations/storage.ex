@@ -8,6 +8,8 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   alias Tymeslot.Utils.MediaValidator
   alias TymeslotWeb.Helpers.UploadHandler
 
+  @type file_upload :: %{required(:path) => Path.t(), required(:filename) => String.t()}
+
   @doc """
   Builds an absolute file system path from a stored relative path.
   """
@@ -61,7 +63,7 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   @doc """
   Stores a background image file and returns {:ok, relative_path}.
   """
-  @spec store_background_image(integer(), String.t(), map()) ::
+  @spec store_background_image(integer(), String.t(), file_upload()) ::
           {:ok, String.t()} | {:error, term()}
   def store_background_image(profile_id, theme_id, %{path: temp_path, filename: filename}) do
     if MediaValidator.valid_image_file?(temp_path) do
@@ -86,7 +88,7 @@ defmodule Tymeslot.ThemeCustomizations.Storage do
   @doc """
   Stores a background video file and returns {:ok, relative_path}.
   """
-  @spec store_background_video(integer(), String.t(), map()) ::
+  @spec store_background_video(integer(), String.t(), file_upload()) ::
           {:ok, String.t()} | {:error, term()}
   def store_background_video(profile_id, theme_id, %{path: temp_path, filename: filename}) do
     if MediaValidator.valid_video_file?(temp_path) do

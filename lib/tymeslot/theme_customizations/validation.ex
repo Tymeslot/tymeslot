@@ -20,11 +20,20 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
           required(:filename) => String.t(),
           optional(atom()) => term()
         }
+  @type presets_map :: %{
+          optional(:gradients) => %{String.t() => term()},
+          optional(:images) => %{String.t() => term()},
+          optional(:videos) => %{String.t() => term()}
+        }
+  @type customization_changes :: %{
+          optional(:color_scheme) => scheme_id(),
+          optional(:background_type) => background_type()
+        }
 
   @doc """
   Validates a color scheme selection.
   """
-  @spec validate_color_scheme(scheme_id(), map()) :: validation_result()
+  @spec validate_color_scheme(scheme_id(), %{String.t() => term()}) :: validation_result()
   def validate_color_scheme(scheme_id, available_schemes) do
     if Map.has_key?(available_schemes, scheme_id) do
       :ok
@@ -55,7 +64,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   @doc """
   Validates a background value based on its type.
   """
-  @spec validate_background_value(background_type(), background_value(), map()) ::
+  @spec validate_background_value(background_type(), background_value(), presets_map()) ::
           validation_result()
   def validate_background_value("gradient", value, presets) do
     gradients = Map.get(presets, :gradients, %{})
@@ -102,7 +111,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   @doc """
   Validates a complete background selection (type + value).
   """
-  @spec validate_background_selection(background_type(), background_value(), map()) ::
+  @spec validate_background_selection(background_type(), background_value(), presets_map()) ::
           validation_result()
   def validate_background_selection(type, value, presets) do
     with :ok <- validate_background_type(type) do
@@ -113,7 +122,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   @doc """
   Validates customization change attributes.
   """
-  @spec validate_customization_changes(map()) :: :ok | {:error, field_errors()}
+  @spec validate_customization_changes(customization_changes()) :: :ok | {:error, field_errors()}
   def validate_customization_changes(changes) do
     errors = []
 
