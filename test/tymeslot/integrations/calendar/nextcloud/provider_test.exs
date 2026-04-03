@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
-  use ExUnit.Case, async: true
+  use Tymeslot.MockCase, async: true
   @moduletag :integrations
 
   import ExUnit.CaptureLog

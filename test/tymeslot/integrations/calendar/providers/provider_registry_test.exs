@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistryTest do
-  use ExUnit.Case, async: true
+  use Tymeslot.MockCase, async: true
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry

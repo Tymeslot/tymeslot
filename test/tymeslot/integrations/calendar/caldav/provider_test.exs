@@ -1,8 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
-  use ExUnit.Case, async: true
+  use Tymeslot.MockCase, async: true
   @moduletag :integrations
-
-  import Mox
   import ExUnit.CaptureLog
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider
