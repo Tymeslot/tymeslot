@@ -8,6 +8,9 @@ defmodule Tymeslot.Security.InputProcessor do
 
   alias Tymeslot.Security.{FieldValidators, SecurityLogger, UniversalSanitizer}
 
+  @type form_params :: %{String.t() => term()}
+  @type form_errors :: %{atom() => [String.t()]}
+
   @doc """
   Validates a form with universal sanitization and field-specific validation.
 
@@ -39,7 +42,8 @@ defmodule Tymeslot.Security.InputProcessor do
       # or
       {:error, %{email: "Email format is invalid", name: "Name is required"}}
   """
-  @spec validate_form(map(), list(), keyword()) :: {:ok, map()} | {:error, map()}
+  @spec validate_form(form_params(), list(), keyword()) ::
+          {:ok, form_params()} | {:error, form_errors()}
   def validate_form(params, field_specs, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
     universal_opts = Keyword.get(opts, :universal_opts, [])

@@ -17,7 +17,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  @spec cancellation_email_attendee(String.t(), map()) :: Swoosh.Email.t()
+  @spec cancellation_email_attendee(
+          String.t(),
+          Tymeslot.Emails.EmailService.appointment_details()
+        ) :: Swoosh.Email.t()
   def cancellation_email_attendee(attendee_email, appointment_details) do
     locale = Map.get(appointment_details, :attendee_locale, "en")
 
@@ -57,7 +60,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     end)
   end
 
-  @spec cancellation_email_organizer(String.t(), map()) :: Swoosh.Email.t()
+  @spec cancellation_email_organizer(
+          String.t(),
+          Tymeslot.Emails.EmailService.appointment_details()
+        ) :: Swoosh.Email.t()
   def cancellation_email_organizer(organizer_email, appointment_details) do
     Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(), fn ->
       mjml_content = """

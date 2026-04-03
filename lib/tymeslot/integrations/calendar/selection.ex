@@ -46,7 +46,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   def discover_with_selection(integration) do
     case Calendar.discover_calendars_for_integration(integration) do
       {:ok, calendars} ->
-        {:ok, unify_discovered_with_existing(calendars, integration.calendar_list || [])}
+        {:ok, unify_discovered_with_existing(calendars, integration.calendar_list)}
 
       error ->
         error

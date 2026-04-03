@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   Business logic for connection validation with timeout semantics and provider checks.
   """
 
+  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.DiscoveryService
   alias Tymeslot.Integrations.Calendar.Tokens
@@ -12,7 +13,8 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   @doc """
   Validate an integration's connection with a timeout.
   """
-  @spec validate(map(), user_id(), keyword()) :: {:ok, map()} | {:error, term()}
+  @spec validate(CalendarIntegrationSchema.t(), user_id(), keyword()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, term()}
   def validate(integration, user_id, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, 10_000)
 
@@ -27,7 +29,8 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
     end
   end
 
-  @spec validate_connection(map(), user_id()) :: {:ok, map()} | {:error, term()}
+  @spec validate_connection(CalendarIntegrationSchema.t(), user_id()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, term()}
   def validate_connection(%{provider: provider} = integration, user_id)
       when provider in ["google", "outlook"] do
     with {:ok, updated} <- Tokens.ensure_valid_token(integration, user_id),
@@ -69,7 +72,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   @doc """
   Test provider connectivity via registry.
   """
-  @spec test_connection(map()) :: {:ok, String.t()} | {:error, term()}
+  @spec test_connection(CalendarIntegrationSchema.t()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(%{provider: provider} = integration) do
     provider_atom =
       try do

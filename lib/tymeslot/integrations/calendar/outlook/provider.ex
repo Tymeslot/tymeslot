@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     display_name: "Outlook Calendar",
     base_url: "https://graph.microsoft.com/v1.0"
 
+  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, MultiCalendarFetch, ProviderCommon}
 
@@ -80,7 +81,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   @spec get_calendar_api_module() :: module()
   def get_calendar_api_module, do: api_module()
 
-  @spec call_list_events(map(), DateTime.t(), DateTime.t()) ::
+  @spec call_list_events(CalendarIntegrationSchema.t(), DateTime.t(), DateTime.t()) ::
           {:ok, list(map())} | {:error, atom(), String.t()}
   def call_list_events(integration, start_time, end_time) do
     MultiCalendarFetch.list_events_with_selection(
@@ -91,7 +92,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     )
   end
 
-  @spec call_create_event(map(), map()) :: {:ok, map()} | {:error, atom(), String.t()}
+  @spec call_create_event(CalendarIntegrationSchema.t(), map()) ::
+          {:ok, map()} | {:error, atom(), String.t()}
   def call_create_event(integration, event_attrs) do
     calendar_id = event_attrs[:calendar_id] || integration.default_booking_calendar_id
 
@@ -102,7 +104,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
-  @spec call_update_event(map(), String.t(), map()) ::
+  @spec call_update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, map()} | {:error, atom(), String.t()}
   def call_update_event(integration, event_id, event_attrs) do
     calendar_id = event_attrs[:calendar_id] || integration.default_booking_calendar_id
@@ -116,7 +118,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
-  @spec call_delete_event(map(), String.t()) :: :ok | {:error, atom(), String.t()}
+  @spec call_delete_event(CalendarIntegrationSchema.t(), String.t()) ::
+          :ok | {:error, atom(), String.t()}
   def call_delete_event(integration, event_id) do
     # Use the default booking calendar if set
     calendar_id = integration.default_booking_calendar_id
@@ -132,7 +135,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   @doc """
   Discovers all available calendars for the authenticated Outlook account.
   """
-  @spec discover_calendars(map()) :: {:ok, list(map())} | {:error, term()}
+  @spec discover_calendars(CalendarIntegrationSchema.t()) ::
+          {:ok, list(map())} | {:error, term()}
   def discover_calendars(integration) do
     ProviderCommon.discover_calendars(
       integration,
@@ -145,7 +149,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   Tests the connection to Microsoft Graph API.
   Makes a simple API call to verify OAuth token validity and API accessibility.
   """
-  @spec test_connection(map()) :: {:ok, String.t()} | {:error, term()}
+  @spec test_connection(CalendarIntegrationSchema.t()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(integration) do
     case api_module().list_primary_events(
            integration,

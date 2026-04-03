@@ -9,6 +9,12 @@ defmodule Tymeslot.Bookings.Orchestrator do
   alias Tymeslot.Bookings.{Create, Validation}
   alias Tymeslot.Meetings
 
+  @typedoc "Parameters for `submit_booking/2`."
+  @type booking_submission_params :: %{
+          optional(:form_data) => %{String.t() => term()},
+          optional(:meeting_params) => map()
+        }
+
   @doc """
   Orchestrates the complete booking submission flow including:
   - Form validation
@@ -17,7 +23,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
 
   Returns {:ok, meeting} or {:error, reason}
   """
-  @spec submit_booking(map(), keyword()) :: {:ok, term()} | {:error, term()}
+  @spec submit_booking(booking_submission_params(), keyword()) :: {:ok, term()} | {:error, term()}
   def submit_booking(params, opts \\ []) do
     %{
       form_data: form_data,

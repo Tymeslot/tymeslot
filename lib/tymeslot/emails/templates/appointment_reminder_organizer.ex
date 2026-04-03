@@ -18,7 +18,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderOrganizer do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  @spec reminder_email(String.t(), map()) :: Swoosh.Email.t()
+  @spec reminder_email(
+          String.t(),
+          Tymeslot.Emails.EmailService.appointment_details()
+        ) :: Swoosh.Email.t()
   def reminder_email(organizer_email, appointment_details) do
     Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(), fn ->
       mjml_content = """

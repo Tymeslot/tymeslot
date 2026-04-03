@@ -6,9 +6,15 @@ defmodule Tymeslot.Auth.Registration do
   require Logger
   alias Tymeslot.Auth.{ErrorFormatter, Helpers.AccountLogging}
   alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.Infrastructure.{Config, PubSub}
+  alias Tymeslot.Repo
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.Helpers.ClientIP
+  import Ecto.Query
+
+  @type signup_params :: Tymeslot.Auth.Validation.signup_params()
+
   # Use function instead of compile-time module attribute to allow test-time mocking
   defp verification_module,
     do: Application.get_env(:auth, :verification_module, Tymeslot.Auth.Verification)
@@ -27,7 +33,7 @@ defmodule Tymeslot.Auth.Registration do
     - {:ok, user, message} on success
     - {:error, reason, message} on failure with appropriate flash message
   """
-  @spec register_user(map(), Phoenix.LiveView.Socket.t() | Plug.Conn.t(), Keyword.t()) ::
+  @spec register_user(signup_params(), Phoenix.LiveView.Socket.t() | Plug.Conn.t(), Keyword.t()) ::
           {:ok, term(), String.t()} | {:error, atom(), String.t()} | {:error, :input, map()}
   def register_user(params, socket_or_conn, opts \\ []) do
     with {:ok, validated_params} <- validate_input(params),
@@ -111,10 +117,6 @@ defmodule Tymeslot.Auth.Registration do
   end
 
   defp check_email_uniqueness(email) do
-    alias Tymeslot.DatabaseSchemas.UserSchema
-    alias Tymeslot.Repo
-    import Ecto.Query
-
     # Case-insensitive email check
     case UserSchema
          |> where([u], fragment("LOWER(?) = LOWER(?)", u.email, ^email))

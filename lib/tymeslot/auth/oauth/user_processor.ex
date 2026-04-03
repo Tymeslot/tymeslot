@@ -8,11 +8,20 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   alias Tymeslot.Auth.OAuth.Client
 
   @type provider :: :github | :google | :oauth
+  @type normalized_user :: %{
+          required(:email) => String.t() | nil,
+          required(:name) => String.t() | nil,
+          required(:is_verified) => boolean(),
+          required(:email_from_provider) => boolean(),
+          optional(:github_user_id) => String.t() | integer(),
+          optional(:google_user_id) => String.t(),
+          optional(:provider_uid) => String.t()
+        }
 
   @doc """
   Processes the raw user info from the provider into a normalized user map.
   """
-  @spec process_user(provider, map()) :: {:ok, map()} | {:error, :invalid_user_info}
+  @spec process_user(provider(), map()) :: {:ok, normalized_user()} | {:error, :invalid_user_info}
   def process_user(:github, %{"id" => github_user_id} = user_info) do
     email = extract_email(user_info)
     email_from_provider = email != nil and String.trim(email) != ""
@@ -76,7 +85,7 @@ defmodule Tymeslot.Auth.OAuth.UserProcessor do
   @doc """
   Enhances user data with additional information (e.g., fetching GitHub emails).
   """
-  @spec enhance_user_data(provider, map(), OAuth2.Client.t()) :: map()
+  @spec enhance_user_data(provider(), normalized_user(), OAuth2.Client.t()) :: normalized_user()
   def enhance_user_data(:github, %{email: email} = user, client)
       when is_nil(email) or email == "" do
     case get_github_user_emails(client) do

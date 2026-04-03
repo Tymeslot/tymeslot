@@ -163,7 +163,17 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   @doc """
   Generates calendar links for various providers.
   """
-  @spec calendar_links(map()) :: map()
+  @spec calendar_links(%{
+          required(:title) => String.t(),
+          required(:start_time) => DateTime.t(),
+          required(:end_time) => DateTime.t(),
+          required(:description) => String.t(),
+          required(:location) => String.t()
+        }) :: %{
+          required(:google) => String.t(),
+          required(:outlook) => String.t(),
+          required(:yahoo) => String.t()
+        }
   def calendar_links(%{
         title: title,
         start_time: start_time,
@@ -233,7 +243,11 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   Must be called within a `Gettext.with_locale` block to produce the correct locale.
   Falls back to the raw location string, or a translated default if nil.
   """
-  @spec format_location(map()) :: String.t()
+  @spec format_location(%{
+          optional(:location_type) => atom() | nil,
+          optional(:location) => String.t() | nil,
+          optional(atom()) => term()
+        }) :: String.t()
   def format_location(%{location_type: :video}), do: dgettext("emails", "Video Call")
   def format_location(%{location_type: :phone}), do: dgettext("emails", "Phone Call")
   def format_location(details), do: details[:location] || dgettext("emails", "TBD")

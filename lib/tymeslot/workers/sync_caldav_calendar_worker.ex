@@ -150,7 +150,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # ---------------------------------------------------------------------------
 
   defp sync_tier1(integration, client) do
-    case client.calendar_paths || [] do
+    case client.calendar_paths do
       [] ->
         Logger.warning("No calendar path configured; skipping Tier 1 sync",
           calendar_integration_id: integration.id
@@ -320,7 +320,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # ---------------------------------------------------------------------------
 
   defp sync_tier2(integration, client) do
-    case client.calendar_paths || [] do
+    case client.calendar_paths do
       [] ->
         Logger.warning("No calendar path configured; skipping Tier 2 sync",
           calendar_integration_id: integration.id
@@ -412,7 +412,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # ---------------------------------------------------------------------------
 
   defp sync_tier3(integration, client) do
-    paths = client.calendar_paths || []
+    paths = client.calendar_paths
 
     if Enum.empty?(paths) do
       Logger.warning("No calendar paths configured for CalDAV sync",

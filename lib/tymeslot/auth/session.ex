@@ -12,13 +12,20 @@ defmodule Tymeslot.Auth.Session do
 
   @user_token_key :user_token
 
+  @type user_minimal :: %{required(:id) => pos_integer(), optional(atom()) => term()}
+  @type unverified_user_session :: %{
+          required(:id) => pos_integer(),
+          required(:email) => String.t(),
+          required(:timestamp) => integer()
+        }
+
   @doc """
   Creates a session for the given user, stores the session token in the database.
   For Plug.Conn: also stores in the connection session.
   For LiveView sockets: stores in socket assigns.
   Returns {:ok, conn_or_socket, token} on success, or {:error, reason, details} on failure.
   """
-  @spec create_session(Conn.t() | Phoenix.LiveView.Socket.t(), map()) ::
+  @spec create_session(Conn.t() | Phoenix.LiveView.Socket.t(), user_minimal()) ::
           {:ok, Conn.t() | Phoenix.LiveView.Socket.t(), String.t()} | {:error, atom(), any()}
   def create_session(conn_or_socket, user) do
     token = Token.generate_session_token()
@@ -118,7 +125,7 @@ defmodule Tymeslot.Auth.Session do
   Get unverified user from session data.
   Used during email verification flow to track incomplete registrations.
   """
-  @spec get_unverified_user_from_session(map()) :: map() | nil
+  @spec get_unverified_user_from_session(map()) :: unverified_user_session() | nil
   def get_unverified_user_from_session(session) do
     # Check if session has unverified user data and it's not expired (30 min)
     with user_id when is_integer(user_id) <- session["unverified_user_id"],

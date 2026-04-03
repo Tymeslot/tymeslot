@@ -8,6 +8,13 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
 
   require Logger
 
+  @type logging_context :: %{optional(atom()) => term()}
+  @type user_entity :: %{
+          required(:id) => integer(),
+          required(:email) => String.t(),
+          optional(atom()) => term()
+        }
+
   @doc """
   Logs successful account operations.
 
@@ -19,7 +26,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   ## Examples
       log_operation_success("authentication", "user@example.com", %{user_id: 123})
   """
-  @spec log_operation_success(String.t(), String.t() | integer(), map()) :: :ok
+  @spec log_operation_success(String.t(), String.t() | integer(), logging_context()) :: :ok
   def log_operation_success(operation, identifier, context \\ %{}) do
     Logger.info(
       "Account operation successful",
@@ -46,8 +53,12 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   ## Examples
       log_operation_failure("authentication", "user@example.com", :invalid_password)
   """
-  @spec log_operation_failure(String.t(), String.t() | integer(), atom() | String.t(), map()) ::
-          :ok
+  @spec log_operation_failure(
+          String.t(),
+          String.t() | integer(),
+          atom() | String.t(),
+          logging_context()
+        ) :: :ok
   def log_operation_failure(operation, identifier, reason, context \\ %{}) do
     Logger.warning(
       "Account operation failed",
@@ -74,7 +85,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   ## Examples
       log_rate_limit_exceeded("signup", "user@example.com")
   """
-  @spec log_rate_limit_exceeded(String.t(), String.t() | integer(), map()) :: :ok
+  @spec log_rate_limit_exceeded(String.t(), String.t() | integer(), logging_context()) :: :ok
   def log_rate_limit_exceeded(operation, identifier, context \\ %{}) do
     Logger.warning(
       "Rate limit exceeded",
@@ -101,7 +112,12 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   ## Examples
       log_validation_failure("signup", "user@example.com", %{email: ["invalid format"]})
   """
-  @spec log_validation_failure(String.t(), String.t() | integer(), map() | list(), map()) :: :ok
+  @spec log_validation_failure(
+          String.t(),
+          String.t() | integer(),
+          map() | list(),
+          logging_context()
+        ) :: :ok
   def log_validation_failure(operation, identifier, errors, context \\ %{}) do
     Logger.warning(
       "Account input validation failed",
@@ -127,7 +143,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   ## Examples
       log_user_created(%{id: 123, email: "user@example.com"})
   """
-  @spec log_user_created(map(), map()) :: :ok
+  @spec log_user_created(user_entity(), logging_context()) :: :ok
   def log_user_created(user, context \\ %{}) do
     Logger.info(
       "User created successfully",
@@ -153,7 +169,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   ## Examples
       log_user_verified(%{id: 123, email: "user@example.com"}, "email")
   """
-  @spec log_user_verified(map(), String.t(), map()) :: :ok
+  @spec log_user_verified(user_entity(), String.t(), logging_context()) :: :ok
   def log_user_verified(user, verification_type, context \\ %{}) do
     Logger.info(
       "User verification successful",
@@ -180,7 +196,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   ## Examples
       log_session_created(%{id: 123, email: "user@example.com"})
   """
-  @spec log_session_created(map(), map(), map()) :: :ok
+  @spec log_session_created(user_entity(), logging_context(), logging_context()) :: :ok
   def log_session_created(user, session_info \\ %{}, context \\ %{}) do
     Logger.info(
       "Session created successfully",
@@ -206,7 +222,7 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   ## Examples
       log_password_reset(%{id: 123, email: "user@example.com"}, "initiated")
   """
-  @spec log_password_reset(map(), String.t(), map()) :: :ok
+  @spec log_password_reset(user_entity(), String.t(), logging_context()) :: :ok
   def log_password_reset(user, stage, context \\ %{}) do
     Logger.info(
       "Password reset",
@@ -234,7 +250,8 @@ defmodule Tymeslot.Auth.Helpers.AccountLogging do
   ## Examples
       log_security_event("suspicious_login", "user@example.com", "Multiple failed attempts")
   """
-  @spec log_security_event(String.t(), String.t() | integer(), String.t(), map()) :: :ok
+  @spec log_security_event(String.t(), String.t() | integer(), String.t(), logging_context()) ::
+          :ok
   def log_security_event(event_type, identifier, details, context \\ %{}) do
     Logger.warning(
       "Security event",

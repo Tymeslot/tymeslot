@@ -10,13 +10,14 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   @doc """
   Formats basic meeting details for text body.
   """
-  @spec format_meeting_details(map()) :: String.t()
+  @spec format_meeting_details(Tymeslot.Emails.EmailService.appointment_details()) :: String.t()
   def format_meeting_details(appointment_details) do
     locale = Map.get(appointment_details, :attendee_locale, "en")
     format_meeting_details(appointment_details, locale)
   end
 
-  @spec format_meeting_details(map(), String.t()) :: String.t()
+  @spec format_meeting_details(Tymeslot.Emails.EmailService.appointment_details(), String.t()) ::
+          String.t()
   def format_meeting_details(appointment_details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       details = [
@@ -54,7 +55,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   @doc """
   Formats action links for text body.
   """
-  @spec format_action_links(map()) :: String.t()
+  @spec format_action_links(Tymeslot.Emails.EmailService.appointment_details()) :: String.t()
   def format_action_links(appointment_details),
     do:
       format_action_links(
@@ -62,7 +63,8 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
         Map.get(appointment_details, :attendee_locale, "en")
       )
 
-  @spec format_action_links(map(), String.t()) :: String.t()
+  @spec format_action_links(Tymeslot.Emails.EmailService.appointment_details(), String.t()) ::
+          String.t()
   def format_action_links(appointment_details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       links = []
@@ -96,7 +98,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   @doc """
   Formats attendee information for text body.
   """
-  @spec format_attendee_info(map()) :: String.t()
+  @spec format_attendee_info(Tymeslot.Emails.EmailService.appointment_details()) :: String.t()
   def format_attendee_info(appointment_details),
     do:
       format_attendee_info(
@@ -104,7 +106,8 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
         Map.get(appointment_details, :attendee_locale, "en")
       )
 
-  @spec format_attendee_info(map(), String.t()) :: String.t()
+  @spec format_attendee_info(Tymeslot.Emails.EmailService.appointment_details(), String.t()) ::
+          String.t()
   def format_attendee_info(appointment_details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       info = [

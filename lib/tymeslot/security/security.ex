@@ -13,7 +13,7 @@ defmodule Tymeslot.Security.Security do
   @doc """
   Validates URL parameters to prevent injection attacks.
   """
-  @spec validate_url_params(map()) :: boolean()
+  @spec validate_url_params(%{String.t() => String.t() | nil}) :: boolean()
   def validate_url_params(params) do
     dangerous_patterns = [
       ~r/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi,
@@ -252,7 +252,7 @@ defmodule Tymeslot.Security.Security do
   @doc """
   Logs security events for monitoring.
   """
-  @spec log_security_event(String.t(), map(), term()) :: :ok
+  @spec log_security_event(String.t(), %{optional(atom()) => term()}, term()) :: :ok
   def log_security_event(event_type, details, _unused_socket_or_conn) do
     Logger.warning("Security event", event: event_type, details: details)
   end

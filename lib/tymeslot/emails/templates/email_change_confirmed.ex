@@ -5,7 +5,13 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
   """
   alias Tymeslot.Emails.Shared.{Components, SharedHelpers, Styles, TemplateHelper}
 
-  @spec render(map(), String.t(), String.t(), DateTime.t() | nil, boolean()) :: String.t()
+  @spec render(
+          Tymeslot.Emails.EmailService.user_map(),
+          String.t(),
+          String.t(),
+          DateTime.t() | nil,
+          boolean()
+        ) :: String.t()
   def render(user, old_email, new_email, confirmed_time, is_old_email \\ false) do
     recipient_notice =
       if is_old_email do
@@ -92,7 +98,13 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
     TemplateHelper.compile_system_template(mjml_content, "Account Update")
   end
 
-  @spec render_text(map(), String.t(), String.t(), DateTime.t() | nil, boolean()) :: String.t()
+  @spec render_text(
+          Tymeslot.Emails.EmailService.user_map(),
+          String.t(),
+          String.t(),
+          DateTime.t() | nil,
+          boolean()
+        ) :: String.t()
   def render_text(user, old_email, new_email, confirmed_time, is_old_email \\ false) do
     name = user.name || new_email
 

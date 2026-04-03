@@ -9,11 +9,22 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   alias Tymeslot.Infrastructure.PubSub
 
   @type provider :: :github | :google | :oauth
+  @type oauth_registration_data :: %{
+          required(:email) => String.t() | nil,
+          optional(:github_user_id) => String.t() | integer(),
+          optional(:google_user_id) => String.t(),
+          optional(:provider_uid) => String.t(),
+          optional(:is_verified) => boolean(),
+          optional(:email_from_provider) => boolean(),
+          optional(atom()) => term()
+        }
+  @type oauth_profile_params :: TransactionalUserCreation.oauth_profile_params()
 
   @doc """
   Finds an existing user in the database by OAuth provider information.
   """
-  @spec find_existing_user(provider, map()) :: {:ok, map()} | {:error, :not_found}
+  @spec find_existing_user(provider(), oauth_registration_data()) ::
+          {:ok, map()} | {:error, :not_found}
   def find_existing_user(:github, %{email: email, github_user_id: github_id} = user) do
     user_queries = Config.user_queries_module()
     github_id_int = normalize_github_id(github_id)
@@ -61,7 +72,13 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   @doc """
   Creates a new user from OAuth provider information.
   """
-  @spec create_oauth_user(provider, map(), map(), keyword()) :: {:ok, map()} | {:error, any()}
+  @spec create_oauth_user(
+          provider(),
+          oauth_registration_data(),
+          oauth_profile_params(),
+          keyword()
+        ) ::
+          {:ok, map()} | {:error, any()}
   def create_oauth_user(provider, oauth_user, profile_params \\ %{}, opts \\ []) do
     email_verified = determine_email_verification_status(oauth_user)
     metadata = Keyword.get(opts, :metadata, %{})
@@ -96,7 +113,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   @doc """
   Checks if the registration is complete for the given provider and user.
   """
-  @spec registration_complete?(provider, map()) :: boolean()
+  @spec registration_complete?(provider(), oauth_registration_data()) :: boolean()
   def registration_complete?(:github, %{email: email, github_user_id: id})
       when is_binary(email) and email != "" and is_binary(id) and id != "",
       do: true
@@ -114,7 +131,8 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   @doc """
   Determines what information is missing for OAuth registration completion.
   """
-  @spec check_oauth_requirements(provider, map()) :: {:missing, list(atom())} | :complete
+  @spec check_oauth_requirements(provider(), oauth_registration_data()) ::
+          {:missing, list(atom())} | :complete
   def check_oauth_requirements(_provider, user) do
     missing = []
 

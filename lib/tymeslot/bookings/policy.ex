@@ -48,11 +48,72 @@ defmodule Tymeslot.Bookings.Policy do
     }
   end
 
+  @typedoc "Parameters passed to `build_meeting_attributes/1`."
+  @type meeting_build_params :: %{
+          required(:meeting_uid) => String.t(),
+          required(:form_data) => %{String.t() => term()},
+          required(:start_datetime) => DateTime.t(),
+          required(:end_datetime) => DateTime.t(),
+          required(:duration_minutes) => integer(),
+          required(:user_timezone) => String.t() | nil,
+          optional(:organizer_user_id) => integer() | nil,
+          optional(:meeting_type_id) => integer() | nil,
+          optional(:video_integration_id) => integer() | String.t() | nil,
+          optional(:attendee_locale) => String.t() | nil,
+          optional(atom()) => term()
+        }
+
+  @typedoc "A single reminder entry with a numeric value and a unit string (e.g. \"minutes\")."
+  @type reminder :: %{required(:value) => integer(), required(:unit) => String.t()}
+
+  @typedoc "Complete set of meeting attributes built for persistence or email."
+  @type meeting_attributes :: %{
+          required(:uid) => String.t(),
+          required(:title) => String.t(),
+          required(:summary) => String.t(),
+          required(:description) => String.t(),
+          required(:start_time) => DateTime.t(),
+          required(:end_time) => DateTime.t(),
+          required(:duration) => integer(),
+          required(:location) => String.t(),
+          required(:meeting_type) => String.t(),
+          required(:meeting_type_id) => integer() | nil,
+          required(:organizer_name) => String.t(),
+          required(:organizer_email) => String.t(),
+          required(:organizer_title) => String.t() | nil,
+          required(:organizer_user_id) => integer() | nil,
+          required(:calendar_integration_id) => integer() | nil,
+          required(:calendar_path) => String.t() | nil,
+          required(:video_integration_id) => integer() | nil,
+          required(:attendee_name) => String.t(),
+          required(:attendee_email) => String.t(),
+          required(:attendee_message) => String.t() | nil,
+          required(:attendee_phone) => String.t() | nil,
+          required(:attendee_company) => String.t() | nil,
+          required(:attendee_timezone) => String.t(),
+          required(:attendee_locale) => String.t(),
+          required(:status) => String.t(),
+          required(:reminders) => [reminder()],
+          required(:view_url) => String.t(),
+          required(:reschedule_url) => String.t(),
+          required(:cancel_url) => String.t(),
+          required(:meeting_url) => String.t() | nil
+        }
+
+  @typedoc "A meeting record with the fields required by the policy checks."
+  @type meeting_record :: %{
+          required(:status) => String.t(),
+          required(:uid) => String.t(),
+          required(:start_time) => DateTime.t(),
+          required(:end_time) => DateTime.t(),
+          optional(atom()) => term()
+        }
+
   @doc """
   Builds meeting attributes from parameters and form data.
   Pure transformation function.
   """
-  @spec build_meeting_attributes(map()) :: map()
+  @spec build_meeting_attributes(meeting_build_params()) :: meeting_attributes()
   def build_meeting_attributes(params) do
     meeting_uid = params.meeting_uid
     organizer_user_id = Map.get(params, :organizer_user_id)
@@ -196,7 +257,7 @@ defmodule Tymeslot.Bookings.Policy do
   Determines if a meeting can be cancelled.
   Checks both status and time constraints.
   """
-  @spec can_cancel_meeting?(map()) :: :ok | {:error, String.t()}
+  @spec can_cancel_meeting?(meeting_record()) :: :ok | {:error, String.t()}
   def can_cancel_meeting?(meeting) do
     cond do
       meeting.status == "cancelled" ->
@@ -228,7 +289,7 @@ defmodule Tymeslot.Bookings.Policy do
   Determines if a meeting can be rescheduled.
   Checks both status and time constraints.
   """
-  @spec can_reschedule_meeting?(map()) :: :ok | {:error, String.t()}
+  @spec can_reschedule_meeting?(meeting_record()) :: :ok | {:error, String.t()}
   def can_reschedule_meeting?(meeting) do
     cond do
       meeting.status == "cancelled" ->
@@ -256,7 +317,8 @@ defmodule Tymeslot.Bookings.Policy do
   """
   @spec meeting_is_current?(%{
           required(:start_time) => DateTime.t(),
-          required(:end_time) => DateTime.t()
+          required(:end_time) => DateTime.t(),
+          optional(atom()) => term()
         }) :: boolean()
   def meeting_is_current?(%{start_time: start_time, end_time: end_time}) do
     now = DateTime.utc_now()
@@ -267,7 +329,8 @@ defmodule Tymeslot.Bookings.Policy do
   Checks if a meeting is in the past.
   Pure function that compares meeting end time with current UTC time.
   """
-  @spec meeting_is_past?(map()) :: boolean()
+  @spec meeting_is_past?(%{required(:end_time) => DateTime.t(), optional(atom()) => term()}) ::
+          boolean()
   def meeting_is_past?(%{end_time: end_time}) do
     DateTime.compare(end_time, DateTime.utc_now()) == :lt
   end

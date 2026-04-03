@@ -7,7 +7,15 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
   alias Tymeslot.Emails.Shared.{Components, TemplateHelper}
   alias Tymeslot.Utils.UrlBuilder
 
-  @spec render(map(), map(), atom() | String.t()) :: String.t()
+  @spec render(
+          %{
+            required(:name) => String.t(),
+            required(:email) => String.t(),
+            optional(atom()) => term()
+          },
+          %{required(:provider) => atom(), optional(atom()) => term()},
+          atom() | String.t()
+        ) :: String.t()
   def render(_user, integration, type) do
     {type_label, provider_label, settings_url} = labels(integration, type)
 
@@ -61,7 +69,15 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
     )
   end
 
-  @spec render_text(map(), map(), atom() | String.t()) :: String.t()
+  @spec render_text(
+          %{
+            required(:name) => String.t(),
+            required(:email) => String.t(),
+            optional(atom()) => term()
+          },
+          %{required(:provider) => atom(), optional(atom()) => term()},
+          atom() | String.t()
+        ) :: String.t()
   def render_text(_user, integration, type) do
     {type_label, provider_label, settings_url} = labels(integration, type)
 

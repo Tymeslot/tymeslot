@@ -101,7 +101,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
          {:ok, merged} <- Selection.discover_with_selection(refreshed_integration) do
       # If discovery returned empty but we had existing selection, preserve it
       # to prevent accidental data loss from transient provider issues
-      existing_calendar_list = refreshed_integration.calendar_list || []
+      existing_calendar_list = refreshed_integration.calendar_list
       had_existing_selection = existing_calendar_list != []
 
       final_calendar_list =

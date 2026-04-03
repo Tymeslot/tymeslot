@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuth do
   OAuth helper functions for calendar providers (Google, Outlook).
   """
 
+  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Google.OAuthHelper, as: GoogleOAuthHelper
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
@@ -59,7 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuth do
   @doc """
   Check if a Google integration needs scope upgrade.
   """
-  @spec needs_scope_upgrade?(map()) :: boolean()
+  @spec needs_scope_upgrade?(CalendarIntegrationSchema.t()) :: boolean()
   def needs_scope_upgrade?(integration) do
     integration.provider == "google" && GoogleProvider.needs_scope_upgrade?(integration)
   end

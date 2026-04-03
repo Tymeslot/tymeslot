@@ -27,6 +27,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
 
       meeting_details = %{
         date: attendee_time,
+        start_time: attendee_time,
         start_time_attendee_tz: attendee_time,
         duration: meeting.duration,
         location: meeting.location,

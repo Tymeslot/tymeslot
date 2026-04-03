@@ -9,6 +9,9 @@ defmodule Tymeslot.Bookings.CalendarJobs do
 
   alias Tymeslot.Workers.CalendarEventWorker
 
+  @typedoc "Any map or struct that exposes a UUID `:id` field."
+  @type identifiable :: %{required(:id) => String.t(), optional(atom()) => term()}
+
   @doc """
   Schedules a calendar event job for a meeting.
 
@@ -24,7 +27,7 @@ defmodule Tymeslot.Bookings.CalendarJobs do
   - {:ok, :already_scheduled} if a job with the same parameters already exists
   - {:error, changeset} if job insertion fails for other reasons
   """
-  @spec schedule_job(map(), String.t()) :: {:ok, atom()} | {:error, any()}
+  @spec schedule_job(identifiable(), String.t()) :: {:ok, atom()} | {:error, any()}
   def schedule_job(meeting, action) when is_binary(action) do
     priority = priority_for_action(action)
 

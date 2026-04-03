@@ -31,6 +31,16 @@ defmodule Tymeslot.Integrations.Calendar do
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
+  @type integration :: CalendarIntegrationSchema.t()
+  @type create_context :: user_id() | MeetingSchema.t() | MeetingTypeSchema.t() | nil
+  @type calendar_event_data :: %{
+          required(:summary) => String.t(),
+          required(:start_time) => DateTime.t(),
+          required(:end_time) => DateTime.t(),
+          optional(:location) => String.t(),
+          optional(atom()) => term()
+        }
+  @type calendar_selection_params :: %{required(:selected_calendars) => [String.t()]}
 
   # ---------------------------
   # Public API: Listing/CRUD
@@ -61,11 +71,9 @@ defmodule Tymeslot.Integrations.Calendar do
     end)
   end
 
-  @doc """
-  Gets a calendar integration by ID for a user.
-  """
+  @doc "Gets a calendar integration by ID for a user."
   @spec get_integration(integration_id(), user_id()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+          {:ok, integration()} | {:error, :not_found}
   def get_integration(id, user_id) when is_integer(id) and is_integer(user_id) do
     CalendarManagement.get_calendar_integration(id, user_id)
   end
@@ -74,7 +82,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Creates a new calendar integration, with provider-specific parsing and optional pre-validation.
   """
   @spec create_integration(map(), user_id()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | any()}
+          {:ok, integration()} | {:error, Ecto.Changeset.t() | any()}
   def create_integration(params, user_id) when is_map(params) and is_integer(user_id) do
     with {:ok, attrs} <- Creation.prepare_attrs(params, user_id),
          {:ok, attrs} <- Creation.prevalidate_config(attrs) do
@@ -82,11 +90,9 @@ defmodule Tymeslot.Integrations.Calendar do
     end
   end
 
-  @doc """
-  Updates an existing calendar integration.
-  """
-  @spec update_integration(CalendarIntegrationSchema.t(), map()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  @doc "Updates an existing calendar integration."
+  @spec update_integration(integration(), map()) ::
+          {:ok, integration()} | {:error, Ecto.Changeset.t()}
   def update_integration(integration, attrs) do
     CalendarManagement.update_calendar_integration(integration, attrs)
   end
@@ -95,8 +101,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Toggles active status of an integration by ID for a user.
   Ensures primary reassignment is handled atomically.
   """
-  @spec toggle_integration(integration_id(), user_id()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, any()}
+  @spec toggle_integration(integration_id(), user_id()) :: {:ok, integration()} | {:error, any()}
   def toggle_integration(id, user_id) do
     with {:ok, integration} <- CalendarManagement.get_calendar_integration(id, user_id) do
       CalendarManagement.toggle_with_primary_rebalance(integration)
@@ -116,8 +121,7 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Sets the primary calendar integration for a user.
   """
-  @spec set_primary(user_id(), integration_id()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, any()}
+  @spec set_primary(user_id(), integration_id()) :: {:ok, integration()} | {:error, any()}
   def set_primary(user_id, integration_id),
     do: CalendarPrimary.set_primary_calendar_integration(user_id, integration_id)
 
@@ -137,7 +141,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Discovers calendars for the given integration using provider-specific logic.
   Returns {:ok, calendars} with standardized calendar entries.
   """
-  @spec discover_calendars_for_integration(map()) :: {:ok, list()} | {:error, any()}
+  @spec discover_calendars_for_integration(integration()) :: {:ok, list()} | {:error, any()}
   def discover_calendars_for_integration(integration) do
     Discovery.discover_calendars_for_integration(integration)
   end
@@ -145,8 +149,7 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Updates the calendar selection for an integration, optionally setting explicit default.
   """
-  @spec update_calendar_selection(CalendarIntegrationSchema.t(), map()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, any()}
+  @spec update_calendar_selection(integration(), map()) :: {:ok, integration()} | {:error, any()}
   def update_calendar_selection(integration, params) do
     Selection.update_calendar_selection(integration, params)
   end
@@ -154,8 +157,8 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Toggles a single calendar's selection state within an integration.
   """
-  @spec toggle_calendar_selection(CalendarIntegrationSchema.t(), String.t() | integer()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, any()}
+  @spec toggle_calendar_selection(integration(), String.t() | integer()) ::
+          {:ok, integration()} | {:error, any()}
   def toggle_calendar_selection(integration, calendar_id) do
     current_selection =
       Enum.reduce(integration.calendar_list || [], [], fn cal, acc ->
@@ -179,8 +182,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Validates that an integration can connect to its provider.
   Returns {:ok, integration} or {:error, reason}.
   """
-  @spec validate_connection(CalendarIntegrationSchema.t(), user_id()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, any()}
+  @spec validate_connection(integration(), user_id()) :: {:ok, integration()} | {:error, any()}
   def validate_connection(integration, user_id) do
     Connection.validate_connection(integration, user_id)
   end
@@ -189,7 +191,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Tests the connection and returns display-friendly message.
   Delegates to Connection.test_connection/1 to centralize provider resolution.
   """
-  @spec test_connection(CalendarIntegrationSchema.t()) :: {:ok, String.t()} | {:error, any()}
+  @spec test_connection(integration()) :: {:ok, String.t()} | {:error, any()}
   def test_connection(integration) do
     start_time = System.monotonic_time(:millisecond)
 
@@ -214,7 +216,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Validates and creates an integration through the creation pipeline.
   """
   @spec create_integration_with_validation(user_id(), map(), keyword()) ::
-          {:ok, CalendarIntegrationSchema.t()}
+          {:ok, integration()}
           | {:error, {:form_errors, map()} | {:changeset, Ecto.Changeset.t()} | any()}
   def create_integration_with_validation(user_id, params, opts \\ []) do
     Creation.create_with_validation(user_id, params, opts)
@@ -231,7 +233,7 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Discover calendars and merge with existing selection state for an integration.
   """
-  @spec discover_calendars_with_selection(map()) :: {:ok, list()} | {:error, any()}
+  @spec discover_calendars_with_selection(integration()) :: {:ok, list()} | {:error, any()}
   def discover_calendars_with_selection(integration) do
     Selection.discover_with_selection(integration)
   end
@@ -239,8 +241,8 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Validate a connection with a timeout wrapper.
   """
-  @spec validate_connection_with_timeout(CalendarIntegrationSchema.t(), user_id(), keyword()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, any()}
+  @spec validate_connection_with_timeout(integration(), user_id(), keyword()) ::
+          {:ok, integration()} | {:error, any()}
   def validate_connection_with_timeout(integration, user_id, opts \\ []) do
     Connection.validate(integration, user_id, opts)
   end
@@ -320,7 +322,7 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Formats token expiry info into a human-readable string.
   """
-  @spec format_token_expiry(map()) :: String.t()
+  @spec format_token_expiry(integration()) :: String.t()
   def format_token_expiry(integration) do
     case TokenUtils.format_token_expiry(integration) do
       {_status, message} -> message
@@ -330,7 +332,7 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Checks if a Google integration needs scope upgrade.
   """
-  @spec needs_scope_upgrade?(map()) :: boolean()
+  @spec needs_scope_upgrade?(integration()) :: boolean()
   def needs_scope_upgrade?(integration) do
     OAuth.needs_scope_upgrade?(integration)
   end
@@ -435,8 +437,7 @@ defmodule Tymeslot.Integrations.Calendar do
   If a Meeting or MeetingType is provided, uses their configured calendar integration.
   Falls back to the user's primary calendar if not specified.
   """
-  @spec create_event(map(), user_id() | MeetingSchema.t() | MeetingTypeSchema.t() | nil) ::
-          {:ok, map()} | {:error, term()}
+  @spec create_event(calendar_event_data(), create_context()) :: {:ok, map()} | {:error, term()}
   def create_event(event_data, context \\ nil) do
     case context do
       id when is_integer(id) and id > 0 ->
@@ -541,8 +542,8 @@ defmodule Tymeslot.Integrations.Calendar do
   Preserves existing selection state if discovery returns empty but integration
   previously had calendars selected, to prevent accidental data loss.
   """
-  @spec update_integration_with_discovery(map()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, term()}
+  @spec update_integration_with_discovery(integration()) ::
+          {:ok, integration()} | {:error, term()}
   def update_integration_with_discovery(integration) do
     Workflows.update_integration_with_discovery(integration)
   end
@@ -681,7 +682,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Used by the Google Calendar webhook controller.
   """
   @spec get_by_google_channel_id(String.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+          {:ok, integration()} | {:error, :not_found}
   def get_by_google_channel_id(channel_id) do
     CalendarIntegrationQueries.get_by_google_channel_id(channel_id)
   end
@@ -691,7 +692,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Used by the Outlook Calendar webhook and lifecycle controllers.
   """
   @spec get_by_graph_subscription_id(String.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+          {:ok, integration()} | {:error, :not_found}
   def get_by_graph_subscription_id(subscription_id) do
     CalendarIntegrationQueries.get_by_graph_subscription_id(subscription_id)
   end
@@ -700,7 +701,7 @@ defmodule Tymeslot.Integrations.Calendar do
   Fetches all integrations matching the given Graph subscription IDs in a single query.
   Used by the Outlook webhook controller for batch notification processing.
   """
-  @spec get_by_graph_subscription_ids([String.t()]) :: [CalendarIntegrationSchema.t()]
+  @spec get_by_graph_subscription_ids([String.t()]) :: [integration()]
   def get_by_graph_subscription_ids(subscription_ids) do
     CalendarIntegrationQueries.get_by_graph_subscription_ids(subscription_ids)
   end
@@ -709,8 +710,8 @@ defmodule Tymeslot.Integrations.Calendar do
   Touches the notification timestamp for the given integration and field.
   Used by webhook controllers to track the last notification time.
   """
-  @spec touch_notification_at(CalendarIntegrationSchema.t(), atom()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  @spec touch_notification_at(integration(), atom()) ::
+          {:ok, integration()} | {:error, Ecto.Changeset.t()}
   def touch_notification_at(integration, field) when is_atom(field) do
     CalendarIntegrationQueries.touch_notification_at(integration, field)
   end

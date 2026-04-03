@@ -11,13 +11,19 @@ defmodule Tymeslot.Emails.Shared.ContentComponents do
   alias Tymeslot.Emails.Shared.{SharedHelpers, Styles}
   alias Tymeslot.Security.UniversalSanitizer
 
+  @type contact_row :: %{
+          required(:label) => String.t(),
+          required(:value) => String.t() | {:safe, String.t()},
+          optional(:safe_html) => boolean()
+        }
+
   @doc """
   Generates a contact details card for administrative emails.
 
   The `row.value` is sanitized by default. To allow HTML (e.g., mailto links),
   pass `{:safe, html_string}` as the value, or include `safe_html: true` in the row map.
   """
-  @spec contact_details_card(String.t(), String.t(), list(map())) :: String.t()
+  @spec contact_details_card(String.t(), String.t(), list(contact_row())) :: String.t()
   def contact_details_card(title, _email, rows) do
     safe_title = SharedHelpers.sanitize_for_email(title)
 

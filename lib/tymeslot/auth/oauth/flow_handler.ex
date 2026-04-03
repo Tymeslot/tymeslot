@@ -22,6 +22,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
 
   @type provider :: :github | :google | :oauth
   @type flow_result :: HelperBehaviour.flow_result()
+  @type oauth_callback_params :: HelperBehaviour.oauth_callback_params()
 
   @doc """
   Handles the complete OAuth callback flow.
@@ -39,7 +40,7 @@ defmodule Tymeslot.Auth.OAuth.FlowHandler do
   - `{:error, :session_failed, provider, conn}` — OAuth succeeded but session
     creation failed.
   """
-  @spec handle_oauth_callback(Plug.Conn.t(), map()) :: flow_result()
+  @spec handle_oauth_callback(Plug.Conn.t(), oauth_callback_params()) :: flow_result()
   def handle_oauth_callback(conn, %{code: code, state: state, provider: provider}) do
     with {:ok, conn} <- validate_oauth_state(conn, state),
          {:ok, conn, user} <- process_oauth_response(conn, code, provider) do

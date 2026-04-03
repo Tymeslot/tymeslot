@@ -24,6 +24,18 @@ defmodule Tymeslot.Security.CredentialManager do
           tag: binary()
         }
 
+  @type client_config :: %{
+          optional(:username) => String.t() | nil,
+          optional(:password) => String.t() | nil,
+          optional(atom()) => term()
+        }
+
+  @type encrypted_client_config :: %{
+          optional(:username_encrypted) => encrypted_credential() | nil,
+          optional(:password_encrypted) => encrypted_credential() | nil,
+          optional(atom()) => term()
+        }
+
   @doc """
   Encrypts a credential string for secure storage in memory.
 
@@ -118,7 +130,8 @@ defmodule Tymeslot.Security.CredentialManager do
       iex> is_map(encrypted_client.password)
       true
   """
-  @spec encrypt_client_credentials(map()) :: {:ok, map()} | {:error, String.t()}
+  @spec encrypt_client_credentials(client_config()) ::
+          {:ok, encrypted_client_config()} | {:error, String.t()}
   def encrypt_client_credentials(client) when is_map(client) do
     with {:ok, encrypted_username} <- encrypt_credential(Map.get(client, :username)),
          {:ok, encrypted_password} <- encrypt_credential(Map.get(client, :password)) do
@@ -143,7 +156,8 @@ defmodule Tymeslot.Security.CredentialManager do
       iex> decrypted_client.username
       "user"
   """
-  @spec decrypt_client_credentials(map()) :: {:ok, map()} | {:error, String.t()}
+  @spec decrypt_client_credentials(encrypted_client_config()) ::
+          {:ok, client_config()} | {:error, String.t()}
   def decrypt_client_credentials(client) when is_map(client) do
     with {:ok, username} <- decrypt_credential(Map.get(client, :username_encrypted)),
          {:ok, password} <- decrypt_credential(Map.get(client, :password_encrypted)) do
@@ -172,18 +186,11 @@ defmodule Tymeslot.Security.CredentialManager do
       ...> end)
       {:ok, "result"}
   """
-  @spec with_decrypted_credentials(map(), (map() -> any())) :: any()
+  @spec with_decrypted_credentials(encrypted_client_config(), (client_config() -> any())) :: any()
   def with_decrypted_credentials(encrypted_client, fun) when is_function(fun, 1) do
     case decrypt_client_credentials(encrypted_client) do
       {:ok, decrypted_client} ->
-        try do
-          fun.(decrypted_client)
-        rescue
-          error ->
-            require Logger
-            Logger.error("Error in with_decrypted_credentials", error: inspect(error))
-            {:error, :decryption_operation_failed}
-        end
+        fun.(decrypted_client)
 
       {:error, _reason} = error ->
         error

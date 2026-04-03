@@ -17,7 +17,7 @@ defmodule Tymeslot.Security.AccountLockout do
   end
 
   @impl GenServer
-  @spec init(any()) :: {:ok, map()}
+  @spec init(any()) :: {:ok, %{}}
   def init(_state) do
     Logger.info("Starting AccountLockout with ETS table", table: @lockout_table)
     :ets.new(@lockout_table, [:named_table, :public, :set])
@@ -105,8 +105,8 @@ defmodule Tymeslot.Security.AccountLockout do
   end
 
   @impl GenServer
-  @spec handle_call({:record_failed_attempt, String.t()}, GenServer.from(), map()) ::
-          {:reply, :ok, map()}
+  @spec handle_call({:record_failed_attempt, String.t()}, GenServer.from(), %{}) ::
+          {:reply, :ok, %{}}
   def handle_call({:record_failed_attempt, identifier}, _from, state) do
     do_record_failed_attempt(identifier)
     {:reply, :ok, state}
@@ -139,10 +139,8 @@ defmodule Tymeslot.Security.AccountLockout do
     end
   end
 
-  defp calculate_lockout_duration(attempt_count) do
-    base_minutes = 30
-    # Cap at 8x for maximum of 4 hours
-    multiplier = min(attempt_count - 8, 8)
-    base_minutes * multiplier
+  defp calculate_lockout_duration(_attempt_count) do
+    # Flat 4-hour lockout for accounts reaching 20+ failed attempts
+    30 * 8
   end
 end

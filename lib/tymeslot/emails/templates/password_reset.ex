@@ -4,7 +4,7 @@ defmodule Tymeslot.Emails.Templates.PasswordReset do
   """
   alias Tymeslot.Emails.Shared.{Components, SharedHelpers, TemplateHelper}
 
-  @spec render(map(), String.t()) :: String.t()
+  @spec render(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render(user, reset_url) do
     user_display_name = SharedHelpers.sanitize_for_email(user.name || user.email)
 
@@ -33,7 +33,7 @@ defmodule Tymeslot.Emails.Templates.PasswordReset do
     )
   end
 
-  @spec render_text(map(), String.t()) :: String.t()
+  @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render_text(user, reset_url) do
     name = user.name || user.email
 

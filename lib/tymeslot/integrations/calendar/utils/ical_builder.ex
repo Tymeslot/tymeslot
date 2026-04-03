@@ -13,6 +13,30 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   - Alarm/reminder support
   """
 
+  @type ical_event_data :: %{
+          required(:summary) => String.t(),
+          required(:start_time) => DateTime.t(),
+          required(:end_time) => DateTime.t(),
+          optional(:uid) => String.t(),
+          optional(:location) => String.t(),
+          optional(:attendees) => [String.t()],
+          optional(:organizer) => String.t(),
+          optional(:status) => String.t(),
+          optional(:transparency) => String.t(),
+          optional(:categories) => [String.t()],
+          optional(:url) => String.t(),
+          optional(:recurrence) => String.t(),
+          optional(:reminders) => [map()]
+        }
+
+  @type simple_event_data :: %{
+          required(:start_time) => DateTime.t(),
+          required(:end_time) => DateTime.t(),
+          required(:summary) => String.t(),
+          optional(:description) => String.t(),
+          optional(:location) => String.t()
+        }
+
   @doc """
   Builds a complete iCalendar document for an event.
 
@@ -43,7 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
       ...> })
       "BEGIN:VCALENDAR\\r\\nVERSION:2.0..."
   """
-  @spec build_event(map()) :: String.t()
+  @spec build_event(ical_event_data()) :: String.t()
   def build_event(event_data) do
     uid = Map.get(event_data, :uid, generate_uid())
 
@@ -76,7 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   Used for simple events without complex properties.
   """
-  @spec build_simple_event(String.t(), map()) :: String.t()
+  @spec build_simple_event(String.t(), simple_event_data() | map()) :: String.t()
   def build_simple_event(uid, event_data) do
     [
       "BEGIN:VCALENDAR",

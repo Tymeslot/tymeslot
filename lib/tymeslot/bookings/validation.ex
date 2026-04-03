@@ -9,6 +9,23 @@ defmodule Tymeslot.Bookings.Validation do
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Utils.TimeRange
 
+  @typedoc "A calendar event with start and optional end time, used for conflict checking."
+  @type calendar_event :: %{
+          required(:start_time) => DateTime.t(),
+          required(:end_time) => DateTime.t() | nil
+        }
+
+  @typedoc "String-keyed form submission params (e.g. from a booking form)."
+  @type form_params :: %{String.t() => term()}
+
+  @typedoc "Optional scheduling configuration for booking time validation."
+  @type scheduling_config :: %{
+          optional(:min_advance_hours) => non_neg_integer(),
+          optional(:max_advance_booking_days) => non_neg_integer(),
+          optional(:buffer_minutes) => non_neg_integer(),
+          optional(atom()) => term()
+        }
+
   @doc """
   Parses and validates meeting time strings into DateTime objects.
 
@@ -39,7 +56,7 @@ defmodule Tymeslot.Bookings.Validation do
 
   Pure validation based on time calculations only.
   """
-  @spec validate_booking_time(DateTime.t(), String.t() | DateTime.t(), map()) ::
+  @spec validate_booking_time(DateTime.t(), String.t() | DateTime.t(), scheduling_config()) ::
           :ok | {:error, String.t()}
   def validate_booking_time(start_datetime, timezone_or_end, config \\ %{})
 
@@ -72,7 +89,7 @@ defmodule Tymeslot.Bookings.Validation do
   This is a pure function that takes events as a parameter rather than
   fetching them from the database.
   """
-  @spec check_slot_availability(DateTime.t(), DateTime.t(), [map()], non_neg_integer()) ::
+  @spec check_slot_availability(DateTime.t(), DateTime.t(), [calendar_event()], non_neg_integer()) ::
           :ok | {:error, :slot_unavailable}
   def check_slot_availability(start_datetime, end_datetime, events, buffer_minutes \\ 0) do
     # Normalize events to ensure they have end times
@@ -98,7 +115,8 @@ defmodule Tymeslot.Bookings.Validation do
 
   Pure validation of required fields and formats.
   """
-  @spec validate_booking_form_structure(map()) :: {:ok, map()} | {:error, String.t()}
+  @spec validate_booking_form_structure(form_params()) ::
+          {:ok, form_params()} | {:error, String.t()}
   def validate_booking_form_structure(params) do
     required_fields = ["name", "email", "date", "time"]
 
@@ -133,7 +151,7 @@ defmodule Tymeslot.Bookings.Validation do
 
   Takes calendar events and checks for overlaps.
   """
-  @spec validate_no_conflicts(DateTime.t(), DateTime.t(), [map()], map()) ::
+  @spec validate_no_conflicts(DateTime.t(), DateTime.t(), [calendar_event()], scheduling_config()) ::
           :ok | {:error, :slot_unavailable}
   def validate_no_conflicts(start_datetime, end_datetime, events, config \\ %{}) do
     buffer_minutes = Map.get(config, :buffer_minutes, 15)

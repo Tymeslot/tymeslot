@@ -76,7 +76,16 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   - Improved dark mode compatibility
   - Professional header with larger avatar
   """
-  @spec base_mjml_template(String.t(), map() | nil) :: String.t()
+  @spec base_mjml_template(
+          String.t(),
+          %{
+            optional(:name) => String.t() | nil,
+            optional(:avatar_url) => String.t() | nil,
+            optional(:title) => String.t() | nil,
+            optional(atom()) => term()
+          }
+          | nil
+        ) :: String.t()
   def base_mjml_template(content, organizer_details \\ nil) do
     # Use provided organizer details or fall back to defaults
     organizer_name =

@@ -5,7 +5,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
   """
   alias Tymeslot.Emails.Shared.{Components, SharedHelpers, Styles, TemplateHelper}
 
-  @spec render(map(), String.t(), String.t()) :: String.t()
+  @spec render(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
   def render(user, new_email, verification_url) do
     mjml_content = """
     #{Components.title_section("Verify Your New Email Address")}
@@ -45,7 +45,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
     TemplateHelper.compile_system_template(mjml_content, "Email Change Verification")
   end
 
-  @spec render_text(map(), String.t(), String.t()) :: String.t()
+  @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
   def render_text(user, new_email, verification_url) do
     name = user.name || user.email
 
