@@ -400,6 +400,29 @@ defmodule Tymeslot.TestMocks do
   end
 
   @doc """
+  Sets up HTTP client mocks with a sensible default (network error).
+
+  This provides a safe fallback for any code path that reaches the HTTP client
+  (e.g., CalDAV `validate_config` → `test_connection`). Tests that need specific
+  HTTP responses should use `expect/4` to override this stub.
+
+  ## Default Behaviour
+
+  Returns `{:error, %Mint.TransportError{reason: :timeout}}` for all HTTP methods,
+  which maps to `{:error, :timeout}` in the CalDAV layer.
+  """
+  @spec setup_http_client_mocks() :: term()
+  def setup_http_client_mocks do
+    stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+      {:error, %Mint.TransportError{reason: :timeout}}
+    end)
+
+    stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      {:error, %Mint.TransportError{reason: :timeout}}
+    end)
+  end
+
+  @doc """
   Sets up all standard mocks for a typical successful flow.
 
   This is the most commonly used mock setup function. It configures all external
@@ -411,6 +434,7 @@ defmodule Tymeslot.TestMocks do
   - **Calendar**: Empty calendar (no conflicts), OAuth URLs configured
   - **Email**: All notifications deliver successfully
   - **Subscription**: Branding displayed by default
+  - **HTTP Client**: Safe timeout fallback for CalDAV and other HTTP calls
 
   ## Example
 
@@ -447,6 +471,7 @@ defmodule Tymeslot.TestMocks do
     setup_calendar_mocks()
     setup_email_mocks()
     setup_subscription_mocks()
+    setup_http_client_mocks()
   end
 
   # Internal Stripe behaviours for testing the Stripe wrapper.

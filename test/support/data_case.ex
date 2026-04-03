@@ -38,6 +38,17 @@ defmodule Tymeslot.DataCase do
 
   setup tags do
     setup_sandbox(tags)
+    Mox.set_mox_from_context(tags)
+
+    # Safe HTTP client fallback so CalDAV validation paths don't crash
+    # with Mox.UnexpectedCallError. Tests override with expect/4 as needed.
+    Mox.stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+      {:error, %Mint.TransportError{reason: :timeout}}
+    end)
+
+    Mox.stub(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+      {:error, %Mint.TransportError{reason: :timeout}}
+    end)
 
     # Reset stateful components to ensure test isolation
     reset_stateful_components()
