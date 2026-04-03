@@ -1,4 +1,7 @@
 
+[0.99.37]
+* core: Handle all-day events in recurrence expander
+* core: Remove circular deps symlink breaking standalone builds
 [0.99.36]
 * core: Preserve expanded recurring event occurrences in dedup
 * core: Expand CalDAV recurring events for availability checking

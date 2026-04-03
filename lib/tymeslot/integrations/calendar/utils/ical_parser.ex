@@ -355,7 +355,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     end)
   end
 
-
   defp extract_calendars_from_xml(xml_body) do
     # Pattern to extract calendar data from CalDAV response
     # Namespace prefixes vary by server (C:, cal:, caldav:, etc.)
