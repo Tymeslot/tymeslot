@@ -297,7 +297,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   # Private helper functions for external monitoring
 
   defp send_to_monitoring_service(metadata) do
-    Task.start(fn ->
+    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       case Application.get_env(:tymeslot, :security_monitoring_webhook) do
         nil ->
           Logger.debug("Security monitoring webhook not configured")
