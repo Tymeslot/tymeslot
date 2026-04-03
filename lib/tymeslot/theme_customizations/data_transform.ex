@@ -158,7 +158,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
   @doc """
   Converts string keys to atom keys for internal processing.
   """
-  @spec atomize_keys(%{String.t() => term()}) :: %{atom() => term()}
+  @spec atomize_keys(%{String.t() => term()}) :: %{(atom() | String.t()) => term()}
   def atomize_keys(map) when is_map(map) do
     Enum.reduce(map, %{}, fn {key, value}, acc ->
       atom_key =
@@ -278,7 +278,6 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
 
   # Private helper functions
 
-  @spec clean_attribute_value(String.t() | atom(), term()) :: term() | nil
   defp clean_attribute_value(key, value)
        when key in ["color_scheme", "background_type", "background_value"] and is_binary(value) do
     trimmed = String.trim(value)

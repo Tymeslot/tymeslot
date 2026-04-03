@@ -12,10 +12,26 @@ defmodule Tymeslot.Emails.Shared.CalendarComponents do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  @type attendee_info :: %{
+          required(:name) => String.t(),
+          required(:email) => String.t(),
+          optional(:phone) => String.t() | nil,
+          optional(:company) => String.t() | nil,
+          optional(:timezone) => String.t() | nil,
+          optional(atom()) => term()
+        }
+
   @doc """
   Generates calendar integration links section.
   """
-  @spec calendar_links_section(map()) :: String.t()
+  @spec calendar_links_section(%{
+          required(:title) => String.t(),
+          required(:start_time) => DateTime.t(),
+          required(:end_time) => DateTime.t(),
+          required(:description) => String.t(),
+          required(:location) => String.t(),
+          optional(atom()) => term()
+        }) :: String.t()
   def calendar_links_section(meeting_details) do
     links = SharedHelpers.calendar_links(meeting_details)
 
@@ -88,7 +104,7 @@ defmodule Tymeslot.Emails.Shared.CalendarComponents do
   @doc """
   Generates attendee information section.
   """
-  @spec attendee_info_section(map()) :: String.t()
+  @spec attendee_info_section(attendee_info()) :: String.t()
   def attendee_info_section(attendee) do
     safe_name = SharedHelpers.sanitize_for_email(attendee.name)
     safe_email = SharedHelpers.sanitize_for_email(attendee.email)

@@ -13,6 +13,14 @@ defmodule Tymeslot.Bookings.Reschedule do
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
 
+  @typedoc "Parameters for rescheduling a meeting to a new time slot."
+  @type reschedule_params :: %{
+          required(:date) => String.t(),
+          required(:time) => String.t(),
+          required(:duration) => integer() | String.t(),
+          required(:user_timezone) => String.t()
+        }
+
   @doc """
   Reschedules an existing meeting.
 
@@ -25,7 +33,8 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   Returns {:ok, meeting} or {:error, reason}
   """
-  @spec execute(String.t(), map(), any()) :: {:ok, map()} | {:error, term()}
+  @spec execute(String.t(), reschedule_params(), any()) ::
+          {:ok, Ecto.Schema.t()} | {:error, term()}
   def execute(meeting_uid, new_params, _form_data) when is_binary(meeting_uid) do
     with {:ok, original_meeting} <- MeetingQueries.get_meeting_by_uid(meeting_uid),
          :ok <- validate_can_reschedule(original_meeting),

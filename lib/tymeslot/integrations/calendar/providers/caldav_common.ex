@@ -9,7 +9,18 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events}
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
 
-  @spec normalize_url(String.t()) :: String.t()
+  @type caldav_client :: %{
+          required(:base_url) => String.t(),
+          required(:username) => String.t() | nil,
+          required(:password) => String.t() | nil,
+          required(:calendar_paths) => [String.t()],
+          required(:verify_ssl) => boolean(),
+          required(:provider) => atom()
+        }
+
+  @spec normalize_url(String.t() | nil) :: String.t()
+  def normalize_url(nil), do: ""
+
   def normalize_url(url) when is_binary(url) do
     url
     |> String.trim()
@@ -21,7 +32,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   Expects keys: :base_url, :username, :password, :calendar_paths, :verify_ssl
   Options: provider: atom()
   """
-  @spec build_client(map(), keyword()) :: map()
+  @spec build_client(map(), keyword()) :: caldav_client()
   def build_client(config, opts) when is_map(config) do
     provider = Keyword.fetch!(opts, :provider)
 
@@ -39,7 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   Tests a connection using `Discovery.test_connection/2`.
   Returns `{:ok, message}` or `{:error, reason}` (reason is passed through).
   """
-  @spec test_connection(map(), keyword()) :: {:ok, String.t()} | {:error, term()}
+  @spec test_connection(caldav_client(), keyword()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(client, opts \\ []) do
     case Discovery.test_connection(client, opts) do
       {:ok, _result} -> {:ok, success_message(client.provider)}
@@ -50,7 +61,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @doc """
   Discovers available calendars via `Discovery.discover_calendars/2`.
   """
-  @spec discover_calendars(map(), keyword()) :: {:ok, list(map())} | {:error, term()}
+  @spec discover_calendars(caldav_client(), keyword()) ::
+          {:ok, list(map())} | {:error, term()}
   def discover_calendars(client, opts \\ []) do
     Discovery.discover_calendars(client, opts)
   end
@@ -58,7 +70,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @doc """
   Fetch events for default current month.
   """
-  @spec get_events(map()) :: {:ok, list()} | {:error, term()}
+  @spec get_events(caldav_client()) :: {:ok, list()} | {:error, term()}
   def get_events(client) do
     now = DateTime.utc_now()
     {:ok, start_time} = DateTime.new(Date.beginning_of_month(now), ~T[00:00:00], "Etc/UTC")
@@ -69,7 +81,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @doc """
   Fetch events for a given time window across all configured calendars in parallel.
   """
-  @spec get_events(map(), DateTime.t(), DateTime.t()) :: {:ok, list()} | {:error, term()}
+  @spec get_events(caldav_client(), DateTime.t(), DateTime.t()) ::
+          {:ok, list()} | {:error, term()}
   def get_events(client, start_time, end_time) do
     paths = get_calendar_paths(client)
 
@@ -102,7 +115,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @doc """
   Create an event in the first configured calendar.
   """
-  @spec create_event(map(), map()) :: {:ok, any()} | {:error, term()}
+  @spec create_event(caldav_client(), map()) :: {:ok, any()} | {:error, term()}
   def create_event(client, event_data) do
     case primary_calendar_path(client) do
       nil -> {:error, "No calendar configured for creating events"}
@@ -113,7 +126,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @doc """
   Update an event by UID in the primary configured calendar.
   """
-  @spec update_event(map(), String.t(), map()) :: :ok | {:error, term()}
+  @spec update_event(caldav_client(), String.t(), map()) :: :ok | {:error, term()}
   def update_event(client, uid, event_data) do
     case primary_calendar_path(client) do
       nil -> {:error, "Event not found"}
@@ -124,7 +137,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @doc """
   Delete an event by UID in the primary configured calendar.
   """
-  @spec delete_event(map(), String.t()) :: :ok | {:error, term()}
+  @spec delete_event(caldav_client(), String.t()) :: :ok | {:error, term()}
   def delete_event(client, uid) do
     case primary_calendar_path(client) do
       nil -> :ok

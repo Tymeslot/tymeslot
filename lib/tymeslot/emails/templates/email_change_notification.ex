@@ -5,7 +5,8 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotification do
   """
   alias Tymeslot.Emails.Shared.{Components, SharedHelpers, Styles, TemplateHelper}
 
-  @spec render(map(), String.t(), DateTime.t() | nil) :: String.t()
+  @spec render(Tymeslot.Emails.EmailService.user_map(), String.t(), DateTime.t() | nil) ::
+          String.t()
   def render(user, new_email, request_time) do
     mjml_content = """
     #{Components.title_section("Email Change Request Notification")}
@@ -79,7 +80,8 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotification do
     TemplateHelper.compile_system_template(mjml_content, "Security Alert")
   end
 
-  @spec render_text(map(), String.t(), DateTime.t() | nil) :: String.t()
+  @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t(), DateTime.t() | nil) ::
+          String.t()
   def render_text(user, new_email, request_time) do
     name = user.name || user.email
 

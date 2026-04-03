@@ -14,6 +14,12 @@ defmodule Tymeslot.Auth.OAuth.HelperBehaviour do
   @callback get_callback_url(atom()) :: String.t()
   @callback get_full_callback_url_from_conn(Plug.Conn.t(), String.t()) :: String.t()
 
+  @type oauth_callback_params :: %{
+          required(:code) => String.t(),
+          required(:state) => String.t(),
+          required(:provider) => atom()
+        }
+
   @type flow_result ::
           {:ok, Plug.Conn.t(), atom()}
           | {:registration_required, Plug.Conn.t(), atom(), map()}
@@ -23,7 +29,7 @@ defmodule Tymeslot.Auth.OAuth.HelperBehaviour do
           | {:error, :session_failed, atom(), Plug.Conn.t()}
           | {:error, :registration_disabled, atom(), Plug.Conn.t()}
 
-  @callback handle_oauth_callback(Plug.Conn.t(), map()) :: flow_result()
+  @callback handle_oauth_callback(Plug.Conn.t(), oauth_callback_params()) :: flow_result()
 end
 
 defmodule Tymeslot.Auth.OAuth.ProviderBehaviour do

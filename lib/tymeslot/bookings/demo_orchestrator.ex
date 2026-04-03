@@ -18,15 +18,26 @@ defmodule Tymeslot.Bookings.DemoOrchestrator do
 
   @typedoc """
   Minimal meeting map returned by the demo orchestrator.
+
+  This is intentionally untyped because it is a simulated Ecto struct literal
+  (`%{__struct__: Tymeslot.Bookings.Meeting, ...}`) whose shape mirrors the real
+  schema at runtime rather than being a proper struct type.
   """
   @type meeting :: map()
+
+  @typedoc "Parameters for `submit_booking/2`."
+  @type booking_submission_params :: %{
+          optional(:form_data) => %{String.t() => term()},
+          optional(:meeting_params) => map()
+        }
 
   @doc """
   Simulates booking submission for demo mode.
 
   Returns a mock meeting struct that looks real but isn't persisted.
   """
-  @spec submit_booking(map(), keyword()) :: {:ok, meeting()} | {:error, term()}
+  @spec submit_booking(booking_submission_params(), keyword()) ::
+          {:ok, meeting()} | {:error, term()}
   def submit_booking(params, opts \\ []) do
     Logger.info("Demo mode: Simulating booking submission")
 

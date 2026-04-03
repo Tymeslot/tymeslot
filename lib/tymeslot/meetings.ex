@@ -32,8 +32,8 @@ defmodule Tymeslot.Meetings do
     - {:error, :slot_unavailable} if slot is no longer available
     - {:error, reason} on other failures
   """
-  @spec create_appointment_with_validation(map(), map()) ::
-          {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
+  @spec create_appointment_with_validation(Create.meeting_params(), map()) ::
+          {:ok, Ecto.Schema.t()} | {:error, String.t()}
   def create_appointment_with_validation(meeting_params, validated_form_data) do
     Create.execute(meeting_params, validated_form_data)
   end
@@ -56,8 +56,8 @@ defmodule Tymeslot.Meetings do
 
   DEPRECATED: Use create_appointment_with_validation/2 for new bookings.
   """
-  @spec create_appointment(map(), map()) ::
-          {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
+  @spec create_appointment(Create.meeting_params(), map()) ::
+          {:ok, Ecto.Schema.t()} | {:error, String.t()}
   def create_appointment(meeting_params, validated_form_data) do
     Create.execute(meeting_params, validated_form_data, skip_calendar_check: true)
   end
@@ -130,8 +130,8 @@ defmodule Tymeslot.Meetings do
 
   Delegates to Bookings.Reschedule module.
   """
-  @spec reschedule_meeting(String.t(), map(), map()) ::
-          {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
+  @spec reschedule_meeting(String.t(), Reschedule.reschedule_params(), map()) ::
+          {:ok, Ecto.Schema.t()} | {:error, term()}
   def reschedule_meeting(meeting_uid, new_params, form_data) do
     Reschedule.execute(meeting_uid, new_params, form_data)
   end
@@ -183,8 +183,8 @@ defmodule Tymeslot.Meetings do
 
   This is the enhanced version of create_appointment that includes video room creation.
   """
-  @spec create_appointment_with_video_room(map(), map()) ::
-          {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
+  @spec create_appointment_with_video_room(Create.meeting_params(), map()) ::
+          {:ok, Ecto.Schema.t()} | {:error, String.t()}
   def create_appointment_with_video_room(meeting_params, validated_form_data) do
     Create.execute_with_video_room(meeting_params, validated_form_data)
   end

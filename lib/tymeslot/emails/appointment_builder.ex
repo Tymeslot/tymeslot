@@ -13,7 +13,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
 
   @default_timezone Profiles.get_default_timezone()
 
-  @spec from_meeting(map(), map() | nil) :: map()
+  @spec from_meeting(map(), map() | nil) :: Tymeslot.Emails.EmailService.appointment_details()
   def from_meeting(meeting, reminder_interval \\ nil) do
     attendee_locale = Map.get(meeting, :attendee_locale, "en")
 

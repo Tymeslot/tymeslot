@@ -13,6 +13,8 @@ defmodule Tymeslot.Auth.AuthActions do
 
   require Logger
 
+  @type signup_params :: Tymeslot.Auth.Validation.signup_params()
+
   @registration_disabled_message "Registration is currently disabled."
   @password_auth_disabled_message "Password authentication is currently disabled."
 
@@ -33,7 +35,7 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Handles user registration with email verification.
   """
-  @spec register_user(map(), Phoenix.LiveView.Socket.t()) ::
+  @spec register_user(signup_params(), Phoenix.LiveView.Socket.t()) ::
           {:ok, atom(), String.t()} | {:error, String.t()} | {:error, :field_errors, map()}
   def register_user(user_params, socket) do
     cond do

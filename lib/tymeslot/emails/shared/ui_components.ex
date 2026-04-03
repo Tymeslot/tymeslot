@@ -23,6 +23,21 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  @type button_spec :: %{
+          required(:text) => String.t(),
+          required(:url) => String.t(),
+          optional(:opts) => keyword(),
+          optional(atom()) => term()
+        }
+
+  @type info_item :: %{required(:label) => String.t(), required(:value) => String.t()}
+
+  @type action_item :: %{
+          required(:text) => String.t(),
+          required(:url) => String.t(),
+          optional(:color) => atom()
+        }
+
   @doc """
   Generates a centered logo header for system emails.
   """
@@ -67,7 +82,7 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
   @doc """
   Generates a group of action buttons.
   """
-  @spec action_button_group(list(map())) :: String.t()
+  @spec action_button_group(list(button_spec())) :: String.t()
   def action_button_group(buttons) do
     button_html =
       Enum.map_join(buttons, "\n", fn button ->
@@ -315,7 +330,7 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
 
   Both label and value are sanitized for safe HTML output.
   """
-  @spec quick_info_grid(list(map())) :: String.t()
+  @spec quick_info_grid(list(info_item())) :: String.t()
   def quick_info_grid([_head | _tail] = items) do
     columns =
       Enum.map_join(items, "\n", fn item ->
@@ -418,7 +433,7 @@ defmodule Tymeslot.Emails.Shared.UiComponents do
   @doc """
   Generates footer actions section with action links.
   """
-  @spec footer_actions(list(map())) :: String.t()
+  @spec footer_actions(list(action_item())) :: String.t()
   def footer_actions([_head | _tail] = actions) do
     action_links =
       Enum.map_join(actions, " | ", fn action ->

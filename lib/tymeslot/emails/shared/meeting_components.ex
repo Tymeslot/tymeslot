@@ -20,17 +20,35 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
+  @type meeting_details :: %{
+          required(:date) => Date.t() | DateTime.t(),
+          required(:start_time) => DateTime.t(),
+          required(:duration) => integer(),
+          optional(:location) => String.t() | nil,
+          optional(:location_type) => atom() | nil,
+          optional(:meeting_type) => String.t() | nil,
+          optional(:timezone) => String.t() | nil,
+          optional(atom()) => term()
+        }
+
+  @type button_spec :: %{
+          required(:text) => String.t(),
+          required(:url) => String.t(),
+          optional(:style) => atom(),
+          optional(:opts) => keyword()
+        }
+
   @doc """
   Generates a polished meeting details card with modern 2026 styling.
   Features refined typography, icon-label pairs, and responsive two-column grid.
   """
-  @spec meeting_details_table(map()) :: String.t()
+  @spec meeting_details_table(meeting_details()) :: String.t()
   def meeting_details_table(details), do: meeting_details_table(details, "en")
 
   @doc """
   Generates a locale-aware meeting details card.
   """
-  @spec meeting_details_table(map(), String.t()) :: String.t()
+  @spec meeting_details_table(meeting_details(), String.t()) :: String.t()
   def meeting_details_table(details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       """
@@ -173,7 +191,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   Generates a properly aligned meeting actions bar using MJML best practices.
   Each action should have :text, :url, and optional :style (:primary, :secondary, :danger)
   """
-  @spec meeting_actions_bar(list(map())) :: String.t()
+  @spec meeting_actions_bar(list(button_spec())) :: String.t()
   def meeting_actions_bar(actions) when is_list(actions) do
     case length(actions) do
       1 -> single_button_layout(actions)
@@ -185,13 +203,13 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   @doc """
   Formats meeting time with timezone information.
   """
-  @spec format_meeting_time(map()) :: String.t()
+  @spec format_meeting_time(meeting_details()) :: String.t()
   def format_meeting_time(details), do: format_meeting_time(details, "en")
 
   @doc """
   Formats meeting time with timezone information, locale-aware.
   """
-  @spec format_meeting_time(map(), String.t()) :: String.t()
+  @spec format_meeting_time(meeting_details(), String.t()) :: String.t()
   def format_meeting_time(details, locale) do
     case details do
       %{start_time: %DateTime{} = start_time, timezone: timezone} ->
@@ -211,7 +229,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
 
   # Private helper functions
 
-  @spec single_button_layout(list(map())) :: String.t()
+  @spec single_button_layout(list(button_spec())) :: String.t()
   defp single_button_layout([action]) do
     render_button(action,
       section_padding: "12px 0",
@@ -220,7 +238,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
     )
   end
 
-  @spec two_button_layout(list(map())) :: String.t()
+  @spec two_button_layout(list(button_spec())) :: String.t()
   defp two_button_layout([primary_action, secondary_action]) do
     """
     <mj-section padding="12px 0">
@@ -236,14 +254,14 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
     """
   end
 
-  @spec multi_button_layout(list(map())) :: String.t()
+  @spec multi_button_layout(list(button_spec())) :: String.t()
   defp multi_button_layout(actions) when length(actions) > 2 do
     Enum.map_join(actions, "\n", fn action ->
       render_button(action, section_padding: "8px 0")
     end)
   end
 
-  @spec render_button(map(), keyword()) :: String.t()
+  @spec render_button(button_spec(), keyword()) :: String.t()
   defp render_button(action, opts) do
     wrap_in_section = Keyword.get(opts, :wrap_in_section, true)
     section_padding = Keyword.get(opts, :section_padding, "0")
@@ -287,7 +305,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
     end
   end
 
-  @spec get_action_button_colors(map()) :: {String.t(), String.t(), String.t()}
+  @spec get_action_button_colors(button_spec()) :: {String.t(), String.t(), String.t()}
   defp get_action_button_colors(action) do
     style = Map.get(action, :style, :primary)
 

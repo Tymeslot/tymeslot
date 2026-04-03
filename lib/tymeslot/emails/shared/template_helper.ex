@@ -5,10 +5,18 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
 
   alias Tymeslot.Emails.Shared.{AvatarHelper, Layouts, MjmlEmail}
 
+  @type organizer_details :: %{
+          required(:name) => String.t(),
+          required(:email) => String.t(),
+          required(:avatar_url) => String.t(),
+          required(:title) => String.t()
+        }
+
   @doc """
   Standardized function to create organizer details for email templates.
   """
-  @spec build_organizer_details(map()) :: map()
+  @spec build_organizer_details(Tymeslot.Emails.EmailService.appointment_details()) ::
+          organizer_details()
   def build_organizer_details(appointment_details) do
     %{
       name: appointment_details.organizer_name,
@@ -21,7 +29,11 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
   @doc """
   Standardized function to create system organizer details for system emails.
   """
-  @spec build_system_organizer_details(String.t()) :: map()
+  @spec build_system_organizer_details(String.t()) :: %{
+          required(:name) => String.t(),
+          required(:email) => String.t() | nil,
+          required(:title) => String.t()
+        }
   def build_system_organizer_details(title \\ "Tymeslot") do
     %{
       name: "Tymeslot",
@@ -33,7 +45,7 @@ defmodule Tymeslot.Emails.Shared.TemplateHelper do
   @doc """
   Compiles MJML content with organizer details into HTML.
   """
-  @spec compile_template(String.t(), map()) :: String.t()
+  @spec compile_template(String.t(), organizer_details() | map()) :: String.t()
   def compile_template(mjml_content, organizer_details) do
     mjml_content
     |> Layouts.transactional_layout(organizer_details)

@@ -16,12 +16,14 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
 
   @type integration_type :: :calendar | :video
   @type check_result :: {:ok, any()} | {:error, any()}
+  @type integration ::
+          CalendarIntegrationSchema.t() | VideoIntegrationSchema.t()
 
   @doc """
   Performs a health check for an integration and records telemetry.
   Returns the result and duration.
   """
-  @spec assess(integration_type(), map()) :: {check_result(), non_neg_integer()}
+  @spec assess(integration_type(), integration()) :: {check_result(), non_neg_integer()}
   def assess(type, integration) do
     start_time = System.monotonic_time(:millisecond)
     result = test_integration(type, integration)
@@ -35,7 +37,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
   @doc """
   Tests the health of an integration by attempting a connection.
   """
-  @spec test_integration(integration_type(), map()) :: check_result()
+  @spec test_integration(integration_type(), integration()) :: check_result()
   def test_integration(:calendar, integration) do
     decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
     Calendar.test_connection(decrypted)

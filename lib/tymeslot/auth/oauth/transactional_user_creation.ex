@@ -14,6 +14,9 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.Repo
 
+  @type oauth_auth_params :: %{String.t() => term()}
+  @type oauth_profile_params :: %{optional(:full_name) => String.t() | nil}
+
   @doc """
   Finds or creates an OAuth user within a transaction.
 
@@ -28,7 +31,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   - {:ok, %{user: user, created: boolean}} where created indicates if user was newly created
   - {:error, reason} on failure
   """
-  @spec find_or_create_oauth_user(atom(), map(), map(), keyword()) ::
+  @spec find_or_create_oauth_user(atom(), oauth_auth_params(), oauth_profile_params(), keyword()) ::
           {:ok, %{user: UserSchema.t(), created: boolean()}}
           | {:error, any()}
   def find_or_create_oauth_user(provider, auth_params, profile_params \\ %{}, _opts \\ []) do

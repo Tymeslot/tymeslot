@@ -9,7 +9,14 @@ defmodule Tymeslot.Emails.Shared.AvatarHelper do
   Generates an avatar URL for an organizer.
   Uses the provided avatar URL if available, otherwise generates a default SVG avatar based on the organizer name.
   """
-  @spec generate_avatar_url(map() | keyword()) :: String.t()
+  @spec generate_avatar_url(
+          %{
+            optional(:organizer_avatar_url) => String.t() | nil,
+            optional(:organizer_name) => String.t() | nil,
+            optional(atom()) => term()
+          }
+          | keyword()
+        ) :: String.t()
   def generate_avatar_url(appointment_details) do
     details =
       if is_list(appointment_details), do: Map.new(appointment_details), else: appointment_details

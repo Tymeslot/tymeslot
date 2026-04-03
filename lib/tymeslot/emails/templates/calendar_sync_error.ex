@@ -10,7 +10,15 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   Returns `{html_body, text_body}`, computing the owner's local start time only once.
   Prefer this over calling `render/2` and `render_text/2` separately when both bodies are needed.
   """
-  @spec render_both(map(), any()) :: {String.t(), String.t()}
+  @type meeting_map :: %{
+          required(:start_time) => DateTime.t(),
+          required(:duration) => integer(),
+          required(:location) => String.t() | nil,
+          optional(:organizer_user_id) => term(),
+          optional(atom()) => term()
+        }
+
+  @spec render_both(meeting_map(), any()) :: {String.t(), String.t()}
   def render_both(meeting, error_reason) do
     error_details = TemplateHelper.format_error_reason(error_reason)
     owner_start_time = owner_start_time(meeting)
@@ -19,13 +27,13 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
      do_render_text(error_details, owner_start_time, meeting)}
   end
 
-  @spec render(map(), any()) :: String.t()
+  @spec render(meeting_map(), any()) :: String.t()
   def render(meeting, error_reason) do
     error_details = TemplateHelper.format_error_reason(error_reason)
     do_render_html(error_details, owner_start_time(meeting), meeting)
   end
 
-  @spec render_text(map(), any()) :: String.t()
+  @spec render_text(meeting_map(), any()) :: String.t()
   def render_text(meeting, error_reason) do
     error_details = TemplateHelper.format_error_reason(error_reason)
     do_render_text(error_details, owner_start_time(meeting), meeting)

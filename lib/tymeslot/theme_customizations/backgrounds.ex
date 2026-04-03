@@ -307,10 +307,11 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   @doc """
   Checks if the current background is a custom upload.
   """
-  @spec custom_background?(term()) :: boolean() | binary() | nil
+  @spec custom_background?(term()) :: boolean()
   def custom_background?(customization) do
-    customization.background_value == "custom" &&
-      (customization.background_image_path || customization.background_video_path)
+    customization.background_value == "custom" and
+      (is_binary(customization.background_image_path) or
+         is_binary(customization.background_video_path))
   end
 
   @doc """

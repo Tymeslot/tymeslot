@@ -10,6 +10,11 @@ defmodule Tymeslot.Auth.Validation do
   alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.InputProcessor
 
+  @type login_params :: %{String.t() => term()}
+  @type signup_params :: %{String.t() => term()}
+  @type password_reset_request :: %{String.t() => term()}
+  @type password_reset_new :: %{String.t() => term()}
+
   @doc """
   Validates user login input, sanitizing the email via InputProcessor.
 
@@ -20,7 +25,8 @@ defmodule Tymeslot.Auth.Validation do
   - {:ok, sanitized_params} if validation passes
   - {:error, errors} if validation fails
   """
-  @spec validate_login_input(map()) :: {:ok, map()} | {:error, map()}
+  @spec validate_login_input(login_params()) ::
+          {:ok, login_params()} | {:error, %{atom() => String.t()}}
   def validate_login_input(params) do
     {email_errors, sanitized_email} =
       case InputProcessor.validate_field(params["email"], :email) do
@@ -57,7 +63,8 @@ defmodule Tymeslot.Auth.Validation do
   - {:ok, params} if validation passes
   - {:error, errors} if validation fails
   """
-  @spec validate_signup_input(map()) :: {:ok, map()} | {:error, map()}
+  @spec validate_signup_input(signup_params()) ::
+          {:ok, signup_params()} | {:error, %{atom() => [String.t()]}}
   def validate_signup_input(params) do
     InputProcessor.validate_form(params, [
       {"email", :email},
@@ -76,7 +83,9 @@ defmodule Tymeslot.Auth.Validation do
   - {:ok, params} if validation passes
   - {:error, errors} if validation fails
   """
-  @spec validate_password_reset_input(map()) :: {:ok, map()} | {:error, map()}
+  @spec validate_password_reset_input(password_reset_request() | password_reset_new()) ::
+          {:ok, password_reset_request() | password_reset_new()}
+          | {:error, %{atom() => [String.t()]}}
   def validate_password_reset_input(params) do
     InputProcessor.validate_form(params, [{"email", :email}])
   end
@@ -91,7 +100,8 @@ defmodule Tymeslot.Auth.Validation do
   - {:ok, sanitized_params} if validation passes
   - {:error, errors} if validation fails
   """
-  @spec validate_new_password_input(map()) :: {:ok, map()} | {:error, map()}
+  @spec validate_new_password_input(password_reset_new()) ::
+          {:ok, password_reset_new()} | {:error, %{atom() => String.t() | [String.t()]}}
   def validate_new_password_input(params) do
     with {:ok, sanitized} <-
            InputProcessor.validate_form(params, [

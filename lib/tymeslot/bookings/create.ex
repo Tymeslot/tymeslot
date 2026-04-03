@@ -15,8 +15,14 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Workers.VideoRoomWorker
   alias UUID
 
-  @type meeting_params :: map()
-  @type form_data :: map()
+  @type meeting_params :: %{
+          required(:date) => Date.t() | String.t(),
+          required(:time) => String.t(),
+          required(:duration) => integer() | String.t(),
+          required(:user_timezone) => String.t(),
+          optional(atom()) => term()
+        }
+  @type form_data :: %{optional(String.t()) => term()}
   @type booking_data :: map()
 
   @type error_reason :: String.t() | atom() | {:validation_error, any()}
@@ -40,7 +46,7 @@ defmodule Tymeslot.Bookings.Create do
     - :with_video_room - Create with video room integration
   """
   @spec execute(meeting_params(), form_data(), keyword()) ::
-          {:ok, map()} | {:error, error_reason()}
+          {:ok, map()} | {:error, String.t()}
   def execute(meeting_params, form_data, opts \\ []) do
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
          {:ok, :validated} <- validate_booking(booking_data, opts) do
@@ -57,7 +63,7 @@ defmodule Tymeslot.Bookings.Create do
   Same options as execute/3 plus video room is automatically enabled.
   """
   @spec execute_with_video_room(meeting_params(), form_data(), keyword()) ::
-          {:ok, map()} | {:error, error_reason()}
+          {:ok, map()} | {:error, String.t()}
   def execute_with_video_room(meeting_params, form_data, opts \\ []) do
     opts = Keyword.put(opts, :with_video_room, true)
 
@@ -85,8 +91,6 @@ defmodule Tymeslot.Bookings.Create do
 
   # Private functions
 
-  @spec prepare_booking_data(meeting_params(), form_data()) ::
-          {:ok, booking_data()} | {:error, String.t()}
   defp prepare_booking_data(meeting_params, form_data) do
     with {:ok, date_string} <- normalize_date_input(meeting_params.date),
          {:ok, {start_datetime, end_datetime}} <-
@@ -129,8 +133,6 @@ defmodule Tymeslot.Bookings.Create do
   defp normalize_date_input(date) when is_binary(date), do: {:ok, date}
   defp normalize_date_input(_arg), do: {:error, :invalid_date_input}
 
-  @spec validate_booking(booking_data(), keyword()) ::
-          {:ok, :validated} | {:error, error_reason()}
   defp validate_booking(booking_data, opts) do
     # Get organizer user_id from booking data - now required
     organizer_user_id = Map.get(booking_data, :organizer_user_id)
@@ -208,7 +210,7 @@ defmodule Tymeslot.Bookings.Create do
         # Availability was already validated when slots were displayed, so we don't
         # want to block the user if calendar is slow. If it times out, we proceed anyway.
         check_task =
-          Task.async(fn ->
+          Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
             calendar_module().get_events_for_range_fresh(organizer_user_id, date, date)
           end)
 
@@ -246,8 +248,6 @@ defmodule Tymeslot.Bookings.Create do
     end
   end
 
-  @spec create_meeting_and_all_side_effects_atomically(booking_data(), keyword()) ::
-          {:ok, map()} | {:error, String.t()}
   defp create_meeting_and_all_side_effects_atomically(booking_data, opts) do
     meeting_attrs = Policy.build_meeting_attributes(booking_data)
 

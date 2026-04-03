@@ -12,7 +12,16 @@ defmodule Tymeslot.Emails.Shared.Layouts do
   The standard transactional layout for meeting-related emails.
   Includes the organizer's avatar and name as the sender identity.
   """
-  @spec transactional_layout(String.t(), map() | keyword()) :: String.t()
+  @spec transactional_layout(
+          String.t(),
+          %{
+            optional(:name) => String.t() | nil,
+            optional(:avatar_url) => String.t() | nil,
+            optional(:title) => String.t() | nil,
+            optional(atom()) => term()
+          }
+          | keyword()
+        ) :: String.t()
   def transactional_layout(content, opts \\ []) do
     organizer_details =
       case opts do

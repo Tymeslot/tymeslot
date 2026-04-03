@@ -7,6 +7,33 @@ defmodule Tymeslot.Emails.EmailService do
 
   require Logger
 
+  @type appointment_details :: %{
+          required(:attendee_name) => String.t(),
+          required(:attendee_email) => String.t(),
+          required(:organizer_name) => String.t(),
+          required(:organizer_email) => String.t(),
+          required(:date) => Date.t(),
+          required(:start_time) => DateTime.t(),
+          required(:duration) => integer(),
+          required(:location) => String.t(),
+          required(:location_type) => atom(),
+          required(:meeting_type) => String.t(),
+          optional(:attendee_locale) => String.t(),
+          optional(:start_time_attendee_tz) => DateTime.t(),
+          optional(:start_time_owner_tz) => DateTime.t(),
+          optional(:reschedule_url) => String.t(),
+          optional(:cancel_url) => String.t(),
+          optional(:meeting_url) => String.t(),
+          optional(atom()) => term()
+        }
+
+  @type user_map :: %{
+          required(:email) => String.t(),
+          optional(:name) => String.t() | nil,
+          optional(:id) => term(),
+          optional(atom()) => term()
+        }
+
   alias Tymeslot.Infrastructure.{AdminAlerts, CircuitBreaker, Retry}
   alias Tymeslot.Mailer
 
@@ -36,7 +63,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends an appointment confirmation email to the organizer.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_appointment_confirmation_to_organizer(String.t(), map()) ::
+  @spec send_appointment_confirmation_to_organizer(String.t(), appointment_details()) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_confirmation_to_organizer(organizer_email, appointment_details) do
     organizer_email
@@ -48,7 +75,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends an appointment confirmation email to the attendee.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_appointment_confirmation_to_attendee(String.t(), map()) ::
+  @spec send_appointment_confirmation_to_attendee(String.t(), appointment_details()) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_confirmation_to_attendee(attendee_email, appointment_details) do
     attendee_email
@@ -60,7 +87,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends appointment confirmations to both organizer and attendee.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_appointment_confirmations(map()) ::
+  @spec send_appointment_confirmations(appointment_details()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_appointment_confirmations(appointment_details) do
     Logger.info("Sending appointment confirmations",
@@ -91,7 +118,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends an appointment reminder email to the organizer.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_appointment_reminder_to_organizer(String.t(), map()) ::
+  @spec send_appointment_reminder_to_organizer(String.t(), appointment_details()) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_reminder_to_organizer(organizer_email, appointment_details) do
     organizer_email
@@ -103,7 +130,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends an appointment reminder email to the attendee.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_appointment_reminder_to_attendee(String.t(), map()) ::
+  @spec send_appointment_reminder_to_attendee(String.t(), appointment_details()) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_reminder_to_attendee(attendee_email, appointment_details) do
     attendee_email
@@ -115,7 +142,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends appointment reminders to both organizer and attendee.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_appointment_reminders(map()) ::
+  @spec send_appointment_reminders(appointment_details()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_appointment_reminders(appointment_details) do
     time_until =
@@ -129,7 +156,7 @@ defmodule Tymeslot.Emails.EmailService do
   Takes a time_until parameter (e.g., "30 minutes", "1 hour", "24 hours").
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_appointment_reminders(map(), String.t()) ::
+  @spec send_appointment_reminders(appointment_details(), String.t()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_appointment_reminders(appointment_details, time_until) do
     Logger.info("Sending appointment reminders",
@@ -164,7 +191,8 @@ defmodule Tymeslot.Emails.EmailService do
   Sends a cancellation email. This is the behavior-required function.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_appointment_cancellation(String.t(), map()) :: {:ok, any()} | {:error, any()}
+  @spec send_appointment_cancellation(String.t(), appointment_details()) ::
+          {:ok, any()} | {:error, any()}
   def send_appointment_cancellation(email, appointment_details) do
     # Determine if this is for organizer or attendee based on email
     if email == appointment_details.organizer_email do
@@ -177,7 +205,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends a cancellation email to the attendee.
   """
-  @spec send_cancellation_email_to_attendee(String.t(), map()) ::
+  @spec send_cancellation_email_to_attendee(String.t(), appointment_details()) ::
           {:ok, any()} | {:error, any()}
   def send_cancellation_email_to_attendee(attendee_email, appointment_details) do
     Logger.info("Sending appointment cancellation to attendee",
@@ -199,7 +227,7 @@ defmodule Tymeslot.Emails.EmailService do
   @doc """
   Sends a cancellation email to the organizer.
   """
-  @spec send_cancellation_email_to_organizer(String.t(), map()) ::
+  @spec send_cancellation_email_to_organizer(String.t(), appointment_details()) ::
           {:ok, any()} | {:error, any()}
   def send_cancellation_email_to_organizer(organizer_email, appointment_details) do
     Logger.info("Sending appointment cancellation to organizer",
@@ -222,7 +250,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends cancellation emails to both organizer and attendee.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_cancellation_emails(map()) ::
+  @spec send_cancellation_emails(appointment_details()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_cancellation_emails(appointment_details) do
     Logger.info("Sending appointment cancellations",
@@ -325,7 +353,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends an email verification email to a new user.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_email_verification(map(), String.t()) :: {:ok, any()} | {:error, any()}
+  @spec send_email_verification(user_map(), String.t()) :: {:ok, any()} | {:error, any()}
   def send_email_verification(user, verification_url) do
     Logger.info("Sending email verification", user_id: user.id)
 
@@ -346,7 +374,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends a password reset email to a user.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_password_reset(map(), String.t()) :: {:ok, any()} | {:error, any()}
+  @spec send_password_reset(user_map(), String.t()) :: {:ok, any()} | {:error, any()}
   def send_password_reset(user, reset_url) do
     Logger.info("Sending password reset email", user_id: user.id)
 
@@ -367,7 +395,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends an email change verification email to the NEW email address.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_email_change_verification(map(), String.t(), String.t()) ::
+  @spec send_email_change_verification(user_map(), String.t(), String.t()) ::
           {:ok, any()} | {:error, any()}
   def send_email_change_verification(user, new_email, verification_url) do
     Logger.info("Sending email change verification",
@@ -392,7 +420,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends an email change notification to the OLD email address.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_email_change_notification(map(), String.t()) ::
+  @spec send_email_change_notification(user_map(), String.t()) ::
           {:ok, any()} | {:error, any()}
   def send_email_change_notification(user, new_email) do
     Logger.info("Sending email change notification",
@@ -419,7 +447,7 @@ defmodule Tymeslot.Emails.EmailService do
   Sends email change confirmation to both OLD and NEW email addresses.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_email_change_confirmations(map(), String.t(), String.t()) ::
+  @spec send_email_change_confirmations(user_map(), String.t(), String.t()) ::
           {{:ok, any()} | {:error, any()}, {:ok, any()} | {:error, any()}}
   def send_email_change_confirmations(user, old_email, new_email) do
     Logger.info("Sending email change confirmations",
@@ -473,7 +501,11 @@ defmodule Tymeslot.Emails.EmailService do
   Called when an integration has been failing health checks for over 48 hours.
   """
   @impl Tymeslot.Emails.EmailServiceBehaviour
-  @spec send_integration_unhealthy_notification(map(), map(), atom() | String.t()) ::
+  @spec send_integration_unhealthy_notification(
+          user_map(),
+          %{required(:provider) => atom(), optional(atom()) => term()},
+          atom() | String.t()
+        ) ::
           {:ok, any()} | {:error, any()}
   def send_integration_unhealthy_notification(user, integration, type) do
     Logger.info("Sending integration unhealthy notification",
@@ -486,9 +518,11 @@ defmodule Tymeslot.Emails.EmailService do
     text_body = IntegrationUnhealthy.render_text(user, integration, type)
     type_label = if type == :video, do: "video", else: "calendar"
 
+    display_name = Map.get(user, :name) || user.email
+
     email =
       MjmlEmail.base_email()
-      |> Email.to({user.name || user.email, user.email})
+      |> Email.to({display_name, user.email})
       |> Email.subject("Your #{type_label} integration may need attention")
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
