@@ -20,11 +20,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
           required(:filename) => String.t(),
           optional(atom()) => term()
         }
-  @type presets_map :: %{
-          optional(:gradients) => %{String.t() => term()},
-          optional(:images) => %{String.t() => term()},
-          optional(:videos) => %{String.t() => term()}
-        }
+  @type presets_map :: Presets.all_presets()
   @type customization_changes :: %{
           optional(:color_scheme) => scheme_id(),
           optional(:background_type) => background_type()
