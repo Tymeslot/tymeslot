@@ -57,6 +57,7 @@ defmodule CredoChecks.TestModuleTagRequired do
 
   alias Credo.Code
   alias Credo.IssueMeta
+  alias Tymeslot.Test.TagTaxonomy
 
   @doc false
   @impl Credo.Check
@@ -64,7 +65,7 @@ defmodule CredoChecks.TestModuleTagRequired do
   def run(%Credo.SourceFile{} = source_file, params) do
     if test_file?(source_file.filename) do
       issue_meta = IssueMeta.for(source_file, params)
-      allowed_tags = Keyword.get(params, :allowed_tags, Tymeslot.Test.TagTaxonomy.all())
+      allowed_tags = Keyword.get(params, :allowed_tags, TagTaxonomy.all())
       Code.prewalk(source_file, &traverse(&1, &2, issue_meta, allowed_tags))
     else
       []
@@ -94,7 +95,7 @@ defmodule CredoChecks.TestModuleTagRequired do
 
   # Multi-expression module body — only check modules whose name ends in "Test"
   defp traverse(
-         {:defmodule, meta, [name, [do: {:__block__, _, body}]]} = ast,
+         {:defmodule, meta, [name, [do: {:__block__, _meta, body}]]} = ast,
          issues,
          issue_meta,
          allowed_tags
