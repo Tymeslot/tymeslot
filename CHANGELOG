@@ -1,4 +1,13 @@
 
+[0.99.39]
+* core: Add central Mox setup for HTTP client in calendar tests
+* saas: Correct Dialyzer type specs in email testing helpers
+* core: Supervise security monitoring webhook task
+* core: Correct Dialyzer type specs in security logger
+* core: Correct Dialyzer type specs across auth, bookings, emails, integrations, and security modules
+* core: Correct Dialyzer type specs for theme customisation presets
+* core: Inline changelog text in CloudronVersions.json entries
+* core: Resolve Credo config path doubling when run from child app
 [0.99.38]
 * Skip pre-push hook on sync-core.sh internal pushes
 * Handle empty cherry-picks and wire up core sync in pre-push hook
