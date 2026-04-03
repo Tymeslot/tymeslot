@@ -1,4 +1,7 @@
 
+[0.99.38]
+* Skip pre-push hook on sync-core.sh internal pushes
+* Handle empty cherry-picks and wire up core sync in pre-push hook
 [0.99.37]
 * core: Handle all-day events in recurrence expander
 * core: Remove circular deps symlink breaking standalone builds

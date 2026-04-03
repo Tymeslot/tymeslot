@@ -6,6 +6,29 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
 
   alias Tymeslot.ThemeCustomizations.Validation
 
+  @type presets_map :: %{
+          optional(:gradients) => %{String.t() => term()},
+          optional(:images) => %{String.t() => term()},
+          optional(:videos) => %{String.t() => term()}
+        }
+  @type cleanup_file ::
+          %{required(:background_image_path) => String.t()}
+          | %{required(:background_video_path) => String.t()}
+  @type preview_data ::
+          %{required(:css) => String.t()}
+          | %{
+              required(:url) => String.t(),
+              required(:kind) => :custom | :preset,
+              required(:name) => String.t() | nil
+            }
+          | %{
+              required(:thumbnail_url) => String.t() | nil,
+              required(:video_url) => String.t(),
+              required(:kind) => :custom | :preset,
+              required(:name) => String.t() | nil
+            }
+          | %{}
+
   @doc """
   Applies a background selection to a customization, updating type and value.
   """
@@ -52,7 +75,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   Determines which files need cleanup when changing backgrounds.
   Returns a list of file paths that should be removed.
   """
-  @spec determine_cleanup_files(term(), term()) :: list(map())
+  @spec determine_cleanup_files(term(), term()) :: [cleanup_file()]
   def determine_cleanup_files(old_customization, new_customization) do
     cleanup_files = []
 
@@ -78,7 +101,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   @doc """
   Generates a description of the current background configuration.
   """
-  @spec generate_background_description(term(), map()) :: String.t()
+  @spec generate_background_description(term(), presets_map()) :: String.t()
   def generate_background_description(customization, presets) do
     case customization.background_type do
       "gradient" -> describe_gradient(customization, presets)
@@ -143,7 +166,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   @doc """
   Gets CSS value for a background configuration.
   """
-  @spec get_background_css(term(), map()) :: String.t() | nil
+  @spec get_background_css(term(), presets_map()) :: String.t() | nil
   def get_background_css(customization, presets) do
     case customization.background_type do
       "gradient" -> get_gradient_css(customization, presets)
@@ -196,7 +219,8 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   - {:video, %{thumbnail_url: String.t() | nil, video_url: String.t() | nil, kind: :custom | :preset, name: String.t() | nil}}
   - {:none, %{}}
   """
-  @spec resolve_preview_source(term(), map()) :: {atom(), map()}
+  @spec resolve_preview_source(term(), presets_map()) ::
+          {:gradient | :color | :image | :video | :none, preview_data()}
   def resolve_preview_source(customization, presets) do
     case customization.background_type do
       "gradient" -> resolve_gradient(customization, presets)
@@ -296,7 +320,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
   @doc """
   Gets the file path for a background asset.
   """
-  @spec get_background_file_path(term(), map()) :: String.t() | nil
+  @spec get_background_file_path(term(), presets_map()) :: String.t() | nil
   def get_background_file_path(customization, presets) do
     case {customization.background_type, customization.background_value} do
       {"image", "custom"} -> customization.background_image_path

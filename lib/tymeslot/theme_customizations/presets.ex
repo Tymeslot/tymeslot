@@ -6,10 +6,47 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
 
   alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
 
+  @type color_scheme_preset :: %{
+          required(:name) => String.t(),
+          required(:colors) => %{String.t() => String.t()}
+        }
+  @type gradient_preset :: %{required(:name) => String.t(), required(:value) => String.t()}
+  @type image_preset :: %{
+          required(:name) => String.t(),
+          required(:file) => String.t(),
+          required(:thumbnail) => String.t(),
+          required(:description) => String.t()
+        }
+  @type video_preset :: %{
+          required(:name) => String.t(),
+          required(:file) => String.t(),
+          required(:thumbnail) => String.t(),
+          required(:poster) => String.t(),
+          required(:description) => String.t()
+        }
+  @type preset :: color_scheme_preset() | gradient_preset() | image_preset() | video_preset()
+  @type preset_metadata :: %{
+          required(:name) => String.t() | nil,
+          required(:description) => String.t() | nil,
+          required(:id) => String.t(),
+          required(:type) => :color_scheme | :gradient | :video | :image
+        }
+  @type theme_recommendations :: %{
+          required(:gradients) => [String.t()],
+          required(:videos) => [String.t()],
+          required(:images) => [String.t()]
+        }
+  @type all_presets :: %{
+          required(:color_schemes) => %{String.t() => color_scheme_preset()},
+          required(:gradients) => %{String.t() => gradient_preset()},
+          required(:videos) => %{String.t() => video_preset()},
+          required(:images) => %{String.t() => image_preset()}
+        }
+
   @doc """
   Gets all color scheme definitions.
   """
-  @spec get_color_schemes() :: map()
+  @spec get_color_schemes() :: %{String.t() => color_scheme_preset()}
   def get_color_schemes do
     ThemeCustomizationSchema.color_scheme_definitions()
   end
@@ -17,7 +54,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
   @doc """
   Gets all gradient preset definitions.
   """
-  @spec get_gradient_presets() :: map()
+  @spec get_gradient_presets() :: %{String.t() => gradient_preset()}
   def get_gradient_presets do
     ThemeCustomizationSchema.gradient_presets()
   end
@@ -25,7 +62,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
   @doc """
   Gets all video preset definitions.
   """
-  @spec get_video_presets() :: map()
+  @spec get_video_presets() :: %{String.t() => video_preset()}
   def get_video_presets do
     ThemeCustomizationSchema.video_presets()
   end
@@ -33,7 +70,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
   @doc """
   Gets all image preset definitions.
   """
-  @spec get_image_presets() :: map()
+  @spec get_image_presets() :: %{String.t() => image_preset()}
   def get_image_presets do
     ThemeCustomizationSchema.image_presets()
   end
@@ -41,12 +78,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
   @doc """
   Gets all presets organized by type.
   """
-  @spec get_all_presets() :: %{
-          required(:color_schemes) => map(),
-          required(:gradients) => map(),
-          required(:videos) => map(),
-          required(:images) => map()
-        }
+  @spec get_all_presets() :: all_presets()
   def get_all_presets do
     %{
       color_schemes: get_color_schemes(),
@@ -59,7 +91,8 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
   @doc """
   Finds a specific preset by type and ID.
   """
-  @spec find_preset_by_id(:color_scheme | :gradient | :video | :image, String.t()) :: map() | nil
+  @spec find_preset_by_id(:color_scheme | :gradient | :video | :image, String.t()) ::
+          preset() | nil
   def find_preset_by_id(preset_type, preset_id) do
     case preset_type do
       :color_scheme -> Map.get(get_color_schemes(), preset_id)
@@ -85,7 +118,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
   @doc """
   Gets preset by background type and value.
   """
-  @spec get_preset_by_background(String.t(), String.t() | nil) :: map() | nil
+  @spec get_preset_by_background(String.t(), String.t() | nil) :: preset() | nil
   def get_preset_by_background(background_type, background_value) do
     case background_type do
       "gradient" ->
@@ -128,7 +161,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
   Gets preset metadata (name, description) without the full data.
   """
   @spec get_preset_metadata(:color_scheme | :gradient | :video | :image, String.t()) ::
-          map() | nil
+          preset_metadata() | nil
   def get_preset_metadata(preset_type, preset_id) do
     case find_preset_by_id(preset_type, preset_id) do
       nil ->
@@ -183,7 +216,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
   @doc """
   Gets recommended presets for a theme.
   """
-  @spec get_recommended_presets_for_theme(String.t()) :: map()
+  @spec get_recommended_presets_for_theme(String.t()) :: theme_recommendations()
   def get_recommended_presets_for_theme(theme_id) do
     case theme_id do
       "1" ->

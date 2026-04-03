@@ -20,6 +20,8 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
           label: String.t(),
           description: String.t() | nil
         }
+  @type customization_attrs :: %{String.t() => term()}
+  @type capability_defaults :: %{String.t() => String.t() | nil}
 
   @doc """
   Gets available customization options for a theme based on its capabilities.
@@ -40,7 +42,8 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
   @doc """
   Validates customization values against theme capabilities.
   """
-  @spec validate_customization(String.t(), map()) :: {:ok, map()} | {:error, [String.t()]}
+  @spec validate_customization(String.t(), customization_attrs()) ::
+          {:ok, customization_attrs()} | {:error, [String.t()]}
   def validate_customization(theme_id, customization_attrs) do
     case Registry.get_theme_by_id(theme_id) do
       {:ok, theme} ->
@@ -54,7 +57,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
   @doc """
   Gets default customization values based on theme capabilities.
   """
-  @spec get_capability_defaults(String.t()) :: map()
+  @spec get_capability_defaults(String.t()) :: capability_defaults()
   def get_capability_defaults(theme_id) do
     case Registry.get_theme_by_id(theme_id) do
       {:ok, theme} ->
@@ -82,7 +85,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
   @doc """
   Generates CSS from customizations based on theme capabilities.
   """
-  @spec generate_css(String.t(), map()) :: String.t()
+  @spec generate_css(String.t(), customization_attrs()) :: String.t()
   def generate_css(theme_id, customizations) do
     case Registry.get_theme_by_id(theme_id) do
       {:ok, theme} ->

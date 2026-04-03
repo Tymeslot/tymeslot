@@ -8,7 +8,13 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
 
   @type background_type :: :gradient | :color | :image | :video | String.t()
   @type customization_struct :: ThemeCustomizationSchema.t()
-  @type customization_map :: map()
+  @type customization_map :: %{
+          optional(:color_scheme) => String.t() | nil,
+          optional(:background_type) => String.t() | nil,
+          optional(:background_value) => String.t() | nil,
+          optional(:background_image_path) => String.t() | nil,
+          optional(:background_video_path) => String.t() | nil
+        }
   @type save_attributes_map :: %{
           optional(String.t()) => String.t() | nil
         }
@@ -152,7 +158,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
   @doc """
   Converts string keys to atom keys for internal processing.
   """
-  @spec atomize_keys(map()) :: map()
+  @spec atomize_keys(%{String.t() => term()}) :: %{atom() => term()}
   def atomize_keys(map) when is_map(map) do
     Enum.reduce(map, %{}, fn {key, value}, acc ->
       atom_key =
