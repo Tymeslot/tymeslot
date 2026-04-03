@@ -8,7 +8,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
 
   @type color_scheme_preset :: %{
           required(:name) => String.t(),
-          required(:colors) => %{String.t() => String.t()}
+          required(:colors) => %{atom() => String.t()}
         }
   @type gradient_preset :: %{required(:name) => String.t(), required(:value) => String.t()}
   @type image_preset :: %{

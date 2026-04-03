@@ -6,11 +6,7 @@ defmodule Tymeslot.ThemeCustomizations.Backgrounds do
 
   alias Tymeslot.ThemeCustomizations.Validation
 
-  @type presets_map :: %{
-          optional(:gradients) => %{String.t() => term()},
-          optional(:images) => %{String.t() => term()},
-          optional(:videos) => %{String.t() => term()}
-        }
+  @type presets_map :: Tymeslot.ThemeCustomizations.Presets.all_presets()
   @type cleanup_file ::
           %{required(:background_image_path) => String.t()}
           | %{required(:background_video_path) => String.t()}

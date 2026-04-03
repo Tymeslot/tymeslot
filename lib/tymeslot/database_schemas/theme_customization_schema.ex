@@ -201,7 +201,6 @@ defmodule Tymeslot.DatabaseSchemas.ThemeCustomizationSchema do
   @doc """
   Gradient background presets.
   """
-  @spec gradient_presets() :: map()
   @spec gradient_presets() :: %{optional(String.t()) => %{name: String.t(), value: String.t()}}
   def gradient_presets do
     %{
