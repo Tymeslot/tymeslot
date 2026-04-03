@@ -13,7 +13,7 @@
           "test/",
           "dev_support/"
         ],
-        excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
+        excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/", ~r"/dev_support/credo_checks/"]
       },
       plugins: [],
       requires: [

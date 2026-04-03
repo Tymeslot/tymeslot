@@ -46,7 +46,7 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
   alias Credo.IssueMeta
 
   @doc false
-  @impl true
+  @impl Credo.Check
   def run(%Credo.SourceFile{} = source_file, params) do
     issue_meta = IssueMeta.for(source_file, params)
 
@@ -116,15 +116,10 @@ defmodule CredoChecks.Phoenix.RequireComponentAttrs do
           uses_assigns = component_uses_assigns?(func_body)
 
           # Skip if component doesn't use assigns (static HTML only)
-          if not uses_assigns do
-            acc
-            # Check if it has attr declarations before it
+          if uses_assigns and not has_attr_before?(body, index) do
+            [create_issue(issue_meta, meta, func_name) | acc]
           else
-            if has_attr_before?(body, index) do
-              acc
-            else
-              [create_issue(issue_meta, meta, func_name) | acc]
-            end
+            acc
           end
 
         _other ->

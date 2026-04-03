@@ -81,7 +81,8 @@ defmodule CredoChecks.NoStringInterpolationInLogger do
   # A single-expression body has the form {:fn, _, [{:->, _, [[], expr]}]}.
   # A multi-expression body has the form {:fn, _, [{:->, _, [[], {:__block__, _, exprs}]}]}.
   defp interpolated_message?({:fn, _, [{:->, _, [[], body]}]}) do
-    body_expressions(body)
+    body
+    |> body_expressions()
     |> Enum.any?(&interpolated_binary?/1)
   end
 
