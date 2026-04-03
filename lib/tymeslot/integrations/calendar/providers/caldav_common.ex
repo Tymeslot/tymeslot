@@ -140,7 +140,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   the availability layer receives concrete occurrences instead of master
   events with recurrence rules.
   """
-  @spec expand_recurring_events([map()], DateTime.t(), DateTime.t()) :: [map()]
+  @spec expand_recurring_events([map()], DateTime.t() | Date.t(), DateTime.t() | Date.t()) ::
+          [map()]
   def expand_recurring_events(events, range_start, range_end) do
     Enum.flat_map(events, fn event ->
       exdates = Map.get(event, :exdates, [])

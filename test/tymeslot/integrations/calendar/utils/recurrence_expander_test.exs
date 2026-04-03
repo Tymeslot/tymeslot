@@ -352,6 +352,88 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderTest do
     end
   end
 
+  describe "expand/4 with all-day events (Date structs)" do
+    test "expands weekly all-day event" do
+      event = %{
+        uid: "allday-weekly-1",
+        summary: "Team Lunch",
+        start_time: ~D[2026-04-03],
+        end_time: ~D[2026-04-04],
+        recurrence_rule: "FREQ=WEEKLY;INTERVAL=1"
+      }
+
+      range_start = ~U[2026-04-01 00:00:00Z]
+      range_end = ~U[2026-04-30 23:59:59Z]
+
+      occurrences = RecurrenceExpander.expand(event, range_start, range_end)
+      starts = Enum.map(occurrences, & &1.start_time)
+
+      assert ~D[2026-04-03] in starts
+      assert ~D[2026-04-10] in starts
+      assert ~D[2026-04-17] in starts
+      assert ~D[2026-04-24] in starts
+      assert length(occurrences) == 4
+    end
+
+    test "preserves Date structs in expanded occurrences" do
+      event = %{
+        uid: "allday-daily-1",
+        summary: "Daily Reminder",
+        start_time: ~D[2026-04-01],
+        end_time: ~D[2026-04-02],
+        recurrence_rule: "FREQ=DAILY;COUNT=3"
+      }
+
+      range_start = ~U[2026-04-01 00:00:00Z]
+      range_end = ~U[2026-04-30 23:59:59Z]
+
+      occurrences = RecurrenceExpander.expand(event, range_start, range_end)
+
+      assert [
+               %{start_time: ~D[2026-04-01], end_time: ~D[2026-04-02]},
+               %{start_time: ~D[2026-04-02], end_time: ~D[2026-04-03]},
+               %{start_time: ~D[2026-04-03], end_time: ~D[2026-04-04]}
+             ] = occurrences
+    end
+
+    test "expands multi-day all-day event preserving duration" do
+      event = %{
+        uid: "allday-multi-1",
+        summary: "Conference",
+        start_time: ~D[2026-04-06],
+        end_time: ~D[2026-04-08],
+        recurrence_rule: "FREQ=MONTHLY;INTERVAL=1;COUNT=2"
+      }
+
+      range_start = ~U[2026-04-01 00:00:00Z]
+      range_end = ~U[2026-06-30 23:59:59Z]
+
+      occurrences = RecurrenceExpander.expand(event, range_start, range_end)
+
+      assert [
+               %{start_time: ~D[2026-04-06], end_time: ~D[2026-04-08]},
+               %{start_time: ~D[2026-05-06], end_time: ~D[2026-05-08]}
+             ] = occurrences
+    end
+
+    test "handles range_start and range_end as Date structs" do
+      event = %{
+        uid: "allday-range-1",
+        summary: "All-day",
+        start_time: ~D[2026-04-03],
+        end_time: ~D[2026-04-04],
+        recurrence_rule: "FREQ=WEEKLY;COUNT=3"
+      }
+
+      range_start = ~D[2026-04-01]
+      range_end = ~D[2026-04-30]
+
+      occurrences = RecurrenceExpander.expand(event, range_start, range_end)
+
+      assert length(occurrences) == 3
+    end
+  end
+
   describe "expand/4 preserves event fields" do
     test "copies all original fields to each occurrence" do
       event = %{

@@ -48,7 +48,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
     * `:exdates` - list of `DateTime` values to exclude (cancelled occurrences)
 
   """
-  @spec expand(map(), DateTime.t(), DateTime.t(), keyword()) :: [map()]
+  @spec expand(map(), DateTime.t() | Date.t(), DateTime.t() | Date.t(), keyword()) :: [map()]
   def expand(event, range_start, range_end, opts \\ [])
 
   def expand(%{recurrence_rule: nil} = event, _range_start, _range_end, _opts), do: [event]
@@ -166,23 +166,41 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   # --- Private: Occurrence generation ---
 
   defp generate_occurrences(event, rule, range_start, range_end, exdates) do
-    duration = DateTime.diff(event.end_time, event.start_time, :second)
+    # All-day events store Date structs; normalise to DateTime for uniform arithmetic
+    all_day? = is_struct(event.start_time, Date) and not is_struct(event.start_time, DateTime)
+    start_dt = to_datetime(event.start_time)
+    end_dt = to_datetime(event.end_time)
+    duration = DateTime.diff(end_dt, start_dt, :second)
     safety_cap = min(@max_occurrences, rule.count || @max_occurrences)
+    range_start_dt = to_datetime(range_start)
+    range_end_dt = to_datetime(range_end)
 
-    event.start_time
+    start_dt
     |> Stream.iterate(&advance(&1, rule))
     |> Stream.take(safety_cap)
-    |> Stream.take_while(&before_end?(&1, rule, range_end))
-    |> Stream.filter(&in_range?(&1, range_start, range_end))
+    |> Stream.take_while(&before_end?(&1, rule, range_end_dt))
+    |> Stream.filter(&in_range?(&1, range_start_dt, range_end_dt))
     |> Stream.filter(&matches_byday?(&1, rule))
     |> Stream.reject(&excluded?(&1, exdates))
-    |> Enum.map(fn occ_start ->
-      Map.merge(event, %{
-        start_time: occ_start,
-        end_time: DateTime.add(occ_start, duration, :second)
-      })
-    end)
+    |> Enum.map(&build_occurrence(event, &1, duration, all_day?))
   end
+
+  defp build_occurrence(event, occ_start, duration, true = _all_day?) do
+    Map.merge(event, %{
+      start_time: DateTime.to_date(occ_start),
+      end_time: DateTime.to_date(DateTime.add(occ_start, duration, :second))
+    })
+  end
+
+  defp build_occurrence(event, occ_start, duration, false = _all_day?) do
+    Map.merge(event, %{
+      start_time: occ_start,
+      end_time: DateTime.add(occ_start, duration, :second)
+    })
+  end
+
+  defp to_datetime(%DateTime{} = dt), do: dt
+  defp to_datetime(%Date{} = date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
 
   defp advance(dt, %{freq: :daily, interval: interval}) do
     DateTime.add(dt, interval, :day)
