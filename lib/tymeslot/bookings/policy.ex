@@ -5,7 +5,7 @@ defmodule Tymeslot.Bookings.Policy do
   """
   alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
-  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Locales
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
@@ -367,7 +367,7 @@ defmodule Tymeslot.Bookings.Policy do
   defp get_calendar_integration_info(nil), do: {nil, nil}
 
   defp get_calendar_integration_info(context) do
-    case Calendar.get_booking_integration_info(context) do
+    case CalendarEvents.get_booking_integration_info(context) do
       {:ok, %{integration_id: integration_id, calendar_path: calendar_path}} ->
         {integration_id, calendar_path}
 

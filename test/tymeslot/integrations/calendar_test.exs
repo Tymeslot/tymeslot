@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
   import Mox
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
 
   setup :verify_on_exit!
 
@@ -129,7 +130,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
       # We don't need to mock Operations because we just want to see if it's called
       # If it falls back to Operations, it will try to call Operations.get_event.
       # Since no integrations are set up in this test context, it should return an error.
-      assert {:error, _reason} = Calendar.get_event("some-uid")
+      assert {:error, _reason} = CalendarEvents.get_event("some-uid")
     end
   end
 
@@ -142,7 +143,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
         {:ok, [%{"id" => "event1", "summary" => "Test Event"}]}
       end)
 
-      assert {:ok, events} = Calendar.list_events(user.id)
+      assert {:ok, events} = CalendarEvents.list_events(user.id)
       assert length(events) == 1
       assert Enum.at(events, 0).uid == "event1"
     end

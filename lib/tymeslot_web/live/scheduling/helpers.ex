@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   alias Tymeslot.Availability.{BusinessHours, Calculate, TimeSlots}
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.AvailabilityCache
-  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Profiles
   alias Tymeslot.Security.InputProcessor
   alias Tymeslot.Timezones
@@ -196,7 +196,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
         else
           # Regular flow for real users
           with {:ok, events} <-
-                 Calendar.get_calendar_events_from_context(
+                 CalendarEvents.get_calendar_events_from_context(
                    date,
                    organizer_user_id,
                    context
@@ -290,7 +290,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
 
           AvailabilityCache.get_or_compute(cache_key, fn ->
             with {:ok, events} <-
-                   Calendar.get_calendar_events_from_context(
+                   CalendarEvents.get_calendar_events_from_context(
                      start_date,
                      user_id,
                      context

@@ -32,7 +32,7 @@ defmodule Tymeslot.Bookings.Create do
     Application.get_env(
       :tymeslot,
       :calendar_module,
-      Tymeslot.Integrations.Calendar
+      Tymeslot.Integrations.Calendar.Operations
     )
   end
 

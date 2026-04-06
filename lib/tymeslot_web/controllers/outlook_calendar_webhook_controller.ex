@@ -23,7 +23,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   require Logger
 
   alias Plug.Crypto
-  alias Tymeslot.Integrations.Calendar, as: CalendarIntegrations
+  alias Tymeslot.Integrations.Calendar.Webhooks, as: CalendarWebhooks
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncOutlookCalendarWorker
 
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
 
     integrations_by_sub_id =
       subscription_ids
-      |> CalendarIntegrations.get_by_graph_subscription_ids()
+      |> CalendarWebhooks.get_by_graph_subscription_ids()
       |> Map.new(fn integration -> {integration.graph_subscription_id, integration} end)
 
     Enum.each(notifications, fn notification ->
@@ -161,7 +161,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookController do
   end
 
   defp touch_notification_timestamp(integration) do
-    case CalendarIntegrations.touch_notification_at(
+    case CalendarWebhooks.touch_notification_at(
            integration,
            :last_outlook_notification_at
          ) do

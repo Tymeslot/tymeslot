@@ -18,7 +18,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
   require Logger
 
   alias Plug.Crypto
-  alias Tymeslot.Integrations.Calendar, as: CalendarIntegrations
+  alias Tymeslot.Integrations.Calendar.Webhooks, as: CalendarWebhooks
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
   alias TymeslotWeb.Helpers.ClientIP
@@ -41,7 +41,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
     channel_id = extract_header(conn, "x-goog-channel-id")
     token = extract_header(conn, "x-goog-channel-token")
 
-    case CalendarIntegrations.get_by_google_channel_id(channel_id) do
+    case CalendarWebhooks.get_by_google_channel_id(channel_id) do
       {:error, :not_found} ->
         conn |> send_resp(200, "") |> halt()
 
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookController do
   end
 
   defp touch_notification_timestamp(integration) do
-    case CalendarIntegrations.touch_notification_at(
+    case CalendarWebhooks.touch_notification_at(
            integration,
            :last_google_notification_at
          ) do
