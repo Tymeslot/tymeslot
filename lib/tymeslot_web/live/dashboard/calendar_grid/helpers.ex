@@ -30,7 +30,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
     |> assign(:owned_integration_ids, owned_ids)
     |> assign(:preferences, prefs)
     |> assign(:hidden_integration_ids, prefs.hidden_integration_ids)
-    |> assign(:view, safe_view_atom(prefs.default_view))
     |> assign(:video_integrations, video_integrations)
     |> check_staleness()
   end
@@ -389,7 +388,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   def time_format(_assigns), do: "12h"
 
   @valid_views %{"week" => :week, "day" => :day, "month" => :month}
-  defp safe_view_atom(view) when is_binary(view), do: Map.get(@valid_views, view, :week)
+
+  @spec safe_view_atom(String.t()) :: :week | :day | :month
+  def safe_view_atom(view) when is_binary(view), do: Map.get(@valid_views, view, :week)
+  def safe_view_atom(_view), do: :week
+
+  @spec assign_view_from_preferences(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def assign_view_from_preferences(socket) do
+    assign(socket, :view, safe_view_atom(socket.assigns.preferences.default_view))
+  end
 
   defp weekend?(date), do: Date.day_of_week(date) in [6, 7]
 

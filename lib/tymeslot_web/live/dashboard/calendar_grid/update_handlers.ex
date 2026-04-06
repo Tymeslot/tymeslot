@@ -171,8 +171,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
   @spec handle_integration_synced(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_integration_synced(assigns, socket) do
-    completed = socket.assigns.sync_completed + 1
     total = socket.assigns.sync_total
+    completed = socket.assigns.sync_completed + 1
 
     socket =
       socket
@@ -180,17 +180,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
       |> assign(:sync_completed, completed)
 
     socket =
-      if completed >= total do
-        send(self(), :calendar_sync_flash)
+      cond do
+        # User-initiated sync completed: reload everything and show flash.
+        total > 0 and completed >= total ->
+          send(self(), :calendar_sync_flash)
 
-        socket
-        |> assign(:syncing, false)
-        |> assign(:sync_total, 0)
-        |> assign(:sync_completed, 0)
-        |> Helpers.load_integrations()
-        |> Helpers.load_events()
-      else
-        socket
+          socket
+          |> assign(:syncing, false)
+          |> assign(:sync_total, 0)
+          |> assign(:sync_completed, 0)
+          |> Helpers.load_integrations()
+          |> Helpers.load_events()
+
+        # Background sync (sweep worker): silently refresh events only.
+        total == 0 ->
+          socket
+          |> assign(:sync_completed, 0)
+          |> Helpers.load_events()
+
+        # User-initiated sync still in progress.
+        true ->
+          socket
       end
 
     {:ok, socket}
@@ -215,6 +225,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
           socket
           |> assign(:_initialized, true)
           |> Helpers.load_integrations()
+          |> Helpers.assign_view_from_preferences()
           |> Helpers.load_events()
           |> maybe_auto_refresh()
       end
