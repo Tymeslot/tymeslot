@@ -1,0 +1,117 @@
+defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
+  use TymeslotWeb.ConnCase, async: true
+
+  @moduletag :components
+
+  import Phoenix.LiveViewTest
+
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal
+
+  @integration %{
+    id: 1,
+    provider: :google,
+    name: "Work Calendar",
+    default_booking_calendar_id: nil,
+    calendar_list: [
+      %{"id" => "primary", "selected" => true, "primary" => true, "summary" => "Work"}
+    ]
+  }
+
+  @creating_event %{
+    title: "Team Standup",
+    date: "2026-04-06",
+    end_date: "2026-04-06",
+    start_hour: 9,
+    start_minute: 0,
+    end_hour: 9,
+    end_minute: 30,
+    integration_id: 1,
+    calendar_id: "primary",
+    attendees: [],
+    attendee_input: "",
+    video_integration_id: nil
+  }
+
+  defp base_assigns(overrides \\ %{}) do
+    Map.merge(
+      %{
+        creating_event: @creating_event,
+        integrations: [@integration],
+        integration_colors: %{1 => "bg-turquoise-500"},
+        saving: false,
+        user_timezone: "Europe/Berlin",
+        myself: %Phoenix.LiveComponent.CID{cid: 1},
+        video_integrations: []
+      },
+      overrides
+    )
+  end
+
+  test "renders modal with event title" do
+    html = render_component(&CreateEventModal.create_event_modal/1, base_assigns())
+
+    assert html =~ "New Event"
+    assert html =~ "Team Standup"
+    assert html =~ "Create"
+    assert html =~ "Cancel"
+  end
+
+  test "renders date and time inputs" do
+    html = render_component(&CreateEventModal.create_event_modal/1, base_assigns())
+
+    assert html =~ "2026-04-06"
+    assert html =~ "09:00"
+    assert html =~ "09:30"
+  end
+
+  test "renders attendee section" do
+    html = render_component(&CreateEventModal.create_event_modal/1, base_assigns())
+
+    assert html =~ "Invite attendees"
+    assert html =~ "attendee@example.com"
+  end
+
+  test "renders existing attendees as tags" do
+    assigns =
+      base_assigns(%{
+        creating_event:
+          Map.put(@creating_event, :attendees, ["alice@example.com", "bob@example.com"])
+      })
+
+    html = render_component(&CreateEventModal.create_event_modal/1, assigns)
+
+    assert html =~ "alice@example.com"
+    assert html =~ "bob@example.com"
+  end
+
+  test "shows video integration picker when attendees present and video integrations available" do
+    assigns =
+      base_assigns(%{
+        creating_event: Map.put(@creating_event, :attendees, ["alice@example.com"]),
+        video_integrations: [%{id: 10, name: "Zoom"}]
+      })
+
+    html = render_component(&CreateEventModal.create_event_modal/1, assigns)
+
+    assert html =~ "Video"
+    assert html =~ "Zoom"
+  end
+
+  test "hides video picker when no attendees" do
+    html = render_component(&CreateEventModal.create_event_modal/1, base_assigns())
+
+    refute html =~ ~r/select.*video_integration_id/s
+  end
+
+  test "shows loading state when saving" do
+    html = render_component(&CreateEventModal.create_event_modal/1, base_assigns(%{saving: true}))
+
+    assert html =~ "Creating..."
+  end
+
+  test "renders calendar picker with integration" do
+    html = render_component(&CreateEventModal.create_event_modal/1, base_assigns())
+
+    assert html =~ "Work"
+  end
+end

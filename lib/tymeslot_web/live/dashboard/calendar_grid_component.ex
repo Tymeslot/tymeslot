@@ -26,7 +26,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.GridViews
   alias TymeslotWeb.Dashboard.CalendarGrid.Header
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-  alias TymeslotWeb.Dashboard.CalendarGrid.Modals
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal
   alias TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers
 
   @impl Phoenix.LiveComponent
@@ -368,7 +373,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           preferences={@preferences}
           myself={@myself}
         />
-        <Modals.create_event_modal
+        <CreateEventModal.create_event_modal
           :if={@creating_event}
           creating_event={@creating_event}
           integrations={@integrations}
@@ -378,17 +383,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           myself={@myself}
           video_integrations={@video_integrations}
         />
-        <Modals.recurrence_prompt_modal
+        <RecurrencePromptModal.recurrence_prompt_modal
           :if={@recurrence_prompt}
           recurrence_prompt={@recurrence_prompt}
           myself={@myself}
         />
-        <Modals.settings_modal
+        <SettingsModal.settings_modal
           :if={@show_settings}
           preferences={@preferences}
           myself={@myself}
         />
-        <Modals.event_detail_modal
+        <EventDetailModal.event_detail_modal
           :if={@selected_event}
           selected_event={@selected_event}
           integrations={@integrations}
@@ -399,14 +404,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           editable={MapSet.member?(@owned_integration_ids, @selected_event.calendar_integration_id)}
           attendee_input={@attendee_input}
         />
-        <Modals.confirm_delete_modal
+        <ConfirmDeleteModal.confirm_delete_modal
           :if={@confirm_delete_event}
           event={@confirm_delete_event}
           deleting={@deleting_event}
           linked_to_booking={@confirm_delete_linked_to_booking}
           myself={@myself}
         />
-        <Modals.confirm_remove_attendee_modal
+        <ConfirmRemoveAttendeeModal.confirm_remove_attendee_modal
           :if={@confirm_remove_attendee}
           confirm_remove_attendee={@confirm_remove_attendee}
           myself={@myself}
