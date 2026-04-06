@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Live.OAuthHandler do
   """
 
   alias Phoenix.Component
-  alias TymeslotWeb.Helpers.IntegrationProviders
+  alias Tymeslot.Integrations.Providers.Directory, as: ProviderDirectory
 
   @doc """
   Handle OAuth redirect for different providers and integration types
@@ -13,7 +13,7 @@ defmodule TymeslotWeb.Live.OAuthHandler do
   @spec handle_oauth_redirect(Phoenix.LiveView.Socket.t(), String.t(), atom()) ::
           Phoenix.LiveView.Socket.t()
   def handle_oauth_redirect(socket, provider, integration_type) do
-    if IntegrationProviders.oauth_provider?(integration_type, provider) do
+    if ProviderDirectory.oauth?(integration_type, provider) == true do
       # Send event to parent for redirect handling
       send(self(), {:oauth_redirect, provider, integration_type})
       Component.assign(socket, :show_provider_modal, false)

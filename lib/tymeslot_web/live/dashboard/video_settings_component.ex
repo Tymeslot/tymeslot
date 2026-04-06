@@ -303,7 +303,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
             <.section_header
               level={2}
               icon={:video}
-              title={"Setup #{IntegrationProviders.format_provider_name(:video, @config_provider)}"}
+              title={"Setup #{Directory.format_provider_name(:video, @config_provider)}"}
             />
           </div>
 

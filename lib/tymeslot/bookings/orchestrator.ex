@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.Orchestrator do
   """
 
   alias Tymeslot.Bookings.{Create, Validation}
+  alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Meetings
 
   @typedoc "Parameters for `submit_booking/2`."
@@ -54,17 +55,24 @@ defmodule Tymeslot.Bookings.Orchestrator do
   Used for pre-submission validation in the UI.
   """
   @spec validate_booking_time(String.t(), String.t(), String.t()) ::
-          {:ok, DateTime.t()} | {:error, String.t()}
+          :ok | {:error, String.t()}
   def validate_booking_time(date_str, time_str, timezone) do
     Validation.validate_booking_time_from_strings(date_str, time_str, timezone)
   end
 
   @doc """
-  Gets a meeting for rescheduling validation.
+  Fetches a meeting by UID and validates it is eligible for rescheduling.
   """
-  @spec get_meeting_for_reschedule(String.t()) :: {:ok, term()} | {:error, String.t()}
+  @spec get_meeting_for_reschedule(String.t()) ::
+          {:ok, Ecto.Schema.t()} | {:error, String.t()}
   def get_meeting_for_reschedule(meeting_uid) do
-    Validation.get_meeting_for_reschedule(meeting_uid)
+    with {:ok, meeting} <- MeetingQueries.get_meeting_by_uid(meeting_uid),
+         {:ok, meeting} <- Validation.validate_meeting_for_reschedule(meeting) do
+      {:ok, meeting}
+    else
+      {:error, :not_found} -> {:error, "Meeting not found"}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   # Private functions

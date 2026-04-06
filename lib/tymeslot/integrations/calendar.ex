@@ -25,7 +25,6 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
-  alias TymeslotWeb.Helpers.IntegrationProviders
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -392,7 +391,7 @@ defmodule Tymeslot.Integrations.Calendar do
   """
   @spec format_provider_display_name(String.t()) :: String.t()
   def format_provider_display_name(provider) do
-    IntegrationProviders.format_provider_name(:calendar, provider)
+    Directory.format_provider_name(:calendar, provider)
   end
 
   @doc """

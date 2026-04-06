@@ -55,11 +55,37 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   @doc """
   Indicates whether a provider uses OAuth.
   """
-  @spec oauth?(domain(), atom()) :: boolean() | {:error, :unknown_provider}
-  def oauth?(domain, type) do
-    case get(domain, type) do
-      %Descriptor{oauth: oauth} -> oauth
-      _other -> {:error, :unknown_provider}
+  @spec oauth?(domain(), atom() | String.t()) :: boolean() | {:error, :unknown_provider}
+  def oauth?(domain, type) when domain in [:calendar, :video] do
+    case resolve_type(domain, type) do
+      nil ->
+        {:error, :unknown_provider}
+
+      atom_type ->
+        case get(domain, atom_type) do
+          %Descriptor{oauth: oauth} -> oauth
+          _other -> {:error, :unknown_provider}
+        end
+    end
+  end
+
+  @doc """
+  Returns the display name for a provider, with a fallback for unknown providers.
+  Accepts provider as atom or string.
+  """
+  @spec format_provider_name(domain(), atom() | String.t()) :: String.t()
+  def format_provider_name(domain, provider) when domain in [:calendar, :video] do
+    atom_type = resolve_type(domain, provider)
+
+    case atom_type && get(domain, atom_type) do
+      %Descriptor{display_name: name} ->
+        name
+
+      _other ->
+        provider
+        |> to_string()
+        |> String.replace("_", " ")
+        |> String.capitalize()
     end
   end
 
@@ -243,4 +269,15 @@ defmodule Tymeslot.Integrations.Providers.Directory do
   defp description_for(_domain, type, provider_config) do
     provider_config.description(type)
   end
+
+  @spec resolve_type(domain(), atom() | String.t() | any()) :: atom() | nil
+  defp resolve_type(_domain, provider) when is_atom(provider), do: provider
+
+  defp resolve_type(domain, provider) when is_binary(provider) do
+    Enum.find(domain_provider_types(domain), fn type ->
+      Atom.to_string(type) == provider
+    end)
+  end
+
+  defp resolve_type(_domain, _provider), do: nil
 end

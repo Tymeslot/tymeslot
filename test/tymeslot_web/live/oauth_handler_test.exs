@@ -9,8 +9,7 @@ defmodule TymeslotWeb.Live.OAuthHandlerTest do
   describe "handle_oauth_redirect/3" do
     test "sends message and closes modal for OAuth provider" do
       socket = %Socket{assigns: %{__changed__: %{}, show_provider_modal: true}}
-      # IntegrationProviders.oauth_provider? is used here.
-      # "google" + :calendar is an OAuth provider.
+      # Directory.oauth?/2 is consulted here; "google" + :calendar is an OAuth provider.
 
       updated = OAuthHandler.handle_oauth_redirect(socket, "google", :calendar)
       assert updated.assigns.show_provider_modal == false

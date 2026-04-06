@@ -4,10 +4,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
   """
   use TymeslotWeb, :html
 
+  alias Tymeslot.Integrations.Providers.Directory, as: ProviderDirectory
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Components.UI.StatusSwitch
-  alias TymeslotWeb.Helpers.IntegrationProviders
 
   attr :integration, :map, required: true
   attr :testing_connection, :any, default: nil
@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.VideoRow do
   @spec video_row(map()) :: Phoenix.LiveView.Rendered.t()
   def video_row(assigns) do
     provider_display_name =
-      IntegrationProviders.format_provider_name(:video, assigns.integration.provider)
+      ProviderDirectory.format_provider_name(:video, assigns.integration.provider)
 
     assigns = assign(assigns, :provider_display_name, provider_display_name)
 

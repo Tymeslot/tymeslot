@@ -159,18 +159,18 @@ defmodule Tymeslot.Bookings.Validation do
   end
 
   @doc """
-  Gets a meeting for rescheduling by UID.
+  Validates that a meeting is eligible for rescheduling.
 
-  This function delegates to the appropriate database query module.
+  Returns `{:ok, meeting}` if the meeting can be rescheduled,
+  or `{:error, reason}` if it cannot (e.g. cancelled or completed).
   """
-  @spec get_meeting_for_reschedule(String.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, :not_found | String.t()}
-  def get_meeting_for_reschedule(meeting_uid) do
-    alias Tymeslot.DatabaseQueries.MeetingQueries
-
-    case MeetingQueries.get_meeting_by_uid(meeting_uid) do
-      {:error, :not_found} -> {:error, :not_found}
-      {:ok, meeting} -> validate_meeting_for_reschedule(meeting)
+  @spec validate_meeting_for_reschedule(Ecto.Schema.t()) ::
+          {:ok, Ecto.Schema.t()} | {:error, String.t()}
+  def validate_meeting_for_reschedule(meeting) do
+    cond do
+      meeting.status == "cancelled" -> {:error, "Cannot reschedule a cancelled meeting"}
+      meeting.status == "completed" -> {:error, "Cannot reschedule a completed meeting"}
+      true -> {:ok, meeting}
     end
   end
 
@@ -201,14 +201,6 @@ defmodule Tymeslot.Bookings.Validation do
   end
 
   defp parse_duration(_invalid), do: {:error, :invalid_duration}
-
-  defp validate_meeting_for_reschedule(meeting) do
-    cond do
-      meeting.status == "cancelled" -> {:error, "Cannot reschedule a cancelled meeting"}
-      meeting.status == "completed" -> {:error, "Cannot reschedule a completed meeting"}
-      true -> {:ok, meeting}
-    end
-  end
 
   defp validate_booking_time_with_defaults(start_datetime, config, overrides) do
     defaults = %{

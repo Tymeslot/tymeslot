@@ -5,7 +5,7 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   This module keeps domain logic in the core so LiveViews only orchestrate UI state.
   """
 
-  alias Tymeslot.Bookings.Validation
+  alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.Demo
   alias Tymeslot.MeetingTypes
 
@@ -24,7 +24,7 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
   def build_booking_form_data(nil), do: default_booking_form_data()
 
   def build_booking_form_data(reschedule_uid) when is_binary(reschedule_uid) do
-    case Validation.get_meeting_for_reschedule(reschedule_uid) do
+    case Orchestrator.get_meeting_for_reschedule(reschedule_uid) do
       {:ok, meeting} ->
         %{
           "name" => meeting.attendee_name,
