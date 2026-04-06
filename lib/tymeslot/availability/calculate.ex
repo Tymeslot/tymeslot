@@ -6,7 +6,27 @@ defmodule Tymeslot.Availability.Calculate do
 
   alias Tymeslot.Availability.{BusinessHours, Conflicts, Events, TimeSlots}
   alias Tymeslot.DatabaseQueries.{AvailabilityOverrideQueries, WeeklyAvailabilityQueries}
+  alias Tymeslot.DatabaseSchemas.{AvailabilityOverrideSchema, WeeklyAvailabilitySchema}
   alias Tymeslot.Utils.DateTimeUtils
+
+  @typedoc """
+  Configuration map for availability calculations.
+
+  Preloaded collections (`:weekly_schedule`, `:overrides`) avoid per-date
+  database queries.  All keys are optional; sensible defaults apply.
+  """
+  @type availability_config :: %{
+          optional(:profile_id) => integer() | nil,
+          optional(:duration_minutes) => pos_integer(),
+          optional(:buffer_minutes) => non_neg_integer(),
+          optional(:min_advance_hours) => non_neg_integer(),
+          optional(:max_advance_booking_days) => pos_integer(),
+          optional(:owner_timezone) => String.t(),
+          optional(:weekly_schedule) => [WeeklyAvailabilitySchema.t()],
+          optional(:overrides) => [AvailabilityOverrideSchema.t()],
+          optional(:fallback_availability_fn) => (Date.t() -> boolean()),
+          optional(atom()) => term()
+        }
 
   @doc """
   Calculates available time slots for a specific date.
@@ -22,8 +42,14 @@ defmodule Tymeslot.Availability.Calculate do
   ## Returns
     List of available time slot strings
   """
-  @spec available_slots(Date.t(), integer(), String.t(), String.t(), [map()], map()) ::
-          {:ok, [String.t()]} | {:error, any()}
+  @spec available_slots(
+          Date.t(),
+          integer(),
+          String.t(),
+          String.t(),
+          [Events.calendar_event()],
+          availability_config()
+        ) :: {:ok, [String.t()]} | {:error, any()}
   def available_slots(
         date,
         duration_minutes,
@@ -104,8 +130,14 @@ defmodule Tymeslot.Availability.Calculate do
   ## Returns
     Map of date strings to availability boolean
   """
-  @spec range_availability(Date.t(), Date.t(), String.t(), String.t(), [map()], map()) ::
-          {:ok, map()}
+  @spec range_availability(
+          Date.t(),
+          Date.t(),
+          String.t(),
+          String.t(),
+          [Events.calendar_event()],
+          availability_config()
+        ) :: {:ok, %{String.t() => boolean()}}
   def range_availability(
         start_date,
         end_date,
@@ -161,8 +193,14 @@ defmodule Tymeslot.Availability.Calculate do
   ## Returns
     Map of date strings to availability boolean
   """
-  @spec month_availability(integer(), integer(), String.t(), String.t(), [map()], map()) ::
-          {:ok, map()}
+  @spec month_availability(
+          integer(),
+          integer(),
+          String.t(),
+          String.t(),
+          [Events.calendar_event()],
+          availability_config()
+        ) :: {:ok, %{String.t() => boolean()}}
   def month_availability(
         year,
         month,
@@ -211,8 +249,24 @@ defmodule Tymeslot.Availability.Calculate do
       - :loading: Mark all days as loading state
       - %{}: Use real conflict-aware availability from the map
   """
-  @spec get_calendar_days(String.t(), integer(), integer(), map(), map() | atom() | nil) ::
-          list(map())
+  @typedoc "A single calendar day as used for UI rendering."
+  @type calendar_day :: %{
+          required(:date) => String.t(),
+          required(:day) => pos_integer(),
+          required(:available) => boolean(),
+          required(:loading) => boolean(),
+          required(:past) => boolean(),
+          required(:today) => boolean(),
+          required(:current_month) => boolean()
+        }
+
+  @spec get_calendar_days(
+          String.t(),
+          integer(),
+          integer(),
+          availability_config(),
+          %{String.t() => boolean()} | atom() | nil
+        ) :: [calendar_day()]
   def get_calendar_days(user_timezone, year, month, config \\ %{}, availability_map \\ nil) do
     now = DateTimeUtils.now_in_timezone(user_timezone)
     today = DateTime.to_date(now)

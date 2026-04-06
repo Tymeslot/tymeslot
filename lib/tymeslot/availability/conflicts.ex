@@ -3,15 +3,33 @@ defmodule Tymeslot.Availability.Conflicts do
   Pure functions for conflict detection and slot filtering.
   """
 
-  alias Tymeslot.Availability.{BusinessHours, TimeSlots}
+  alias Tymeslot.Availability.{BusinessHours, Events, TimeSlots}
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
+
+  @typedoc """
+  Configuration options controlling conflict detection and booking constraints.
+  All keys are optional; sensible defaults are applied when absent.
+  """
+  @type availability_config :: %{
+          optional(:buffer_minutes) => non_neg_integer(),
+          optional(:min_advance_hours) => non_neg_integer(),
+          optional(:max_advance_booking_days) => pos_integer(),
+          optional(:duration_minutes) => pos_integer(),
+          optional(:profile_id) => integer() | nil,
+          optional(atom()) => term()
+        }
 
   @doc """
   Filters available slots based on conflicts and booking rules.
   """
-  @spec filter_available_slots([String.t()], [map()], integer(), String.t(), Date.t(), map()) :: [
-          String.t()
-        ]
+  @spec filter_available_slots(
+          [String.t()],
+          [Events.converted_event()],
+          integer(),
+          String.t(),
+          Date.t(),
+          availability_config()
+        ) :: [String.t()]
   def filter_available_slots(all_slots, events, duration_minutes, timezone, date, config \\ %{}) do
     buffer_minutes = Map.get(config, :buffer_minutes, 15)
     min_advance_hours = Map.get(config, :min_advance_hours, 3)
@@ -52,9 +70,9 @@ defmodule Tymeslot.Availability.Conflicts do
           Date.t(),
           String.t(),
           String.t(),
-          [map()],
+          [Events.converted_event()],
           DateTime.t(),
-          map()
+          availability_config()
         ) :: boolean()
   def date_has_slots_with_events?(
         date,

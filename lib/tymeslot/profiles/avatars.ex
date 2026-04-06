@@ -12,7 +12,11 @@ defmodule Tymeslot.Profiles.Avatars do
   alias TymeslotWeb.Helpers.UploadHandler
 
   @type profile :: ProfileSchema.t()
-  @type uploaded_entry :: map()
+  @type uploaded_entry :: %{
+          required(:client_name) => String.t(),
+          required(:path) => String.t(),
+          atom() => term()
+        }
   @type result(t) :: {:ok, t} | {:error, any()}
 
   @accepted_extensions ~w(.jpg .jpeg .png .gif .webp)

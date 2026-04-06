@@ -26,7 +26,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   `{:discard, reason}` for fatal errors that shouldn't be retried,
   or `{:snooze, seconds}` if the job should be delayed.
   """
-  @spec execute_email_action(String.t(), map()) ::
+  @spec execute_email_action(String.t(), %{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()} | {:snooze, integer()}
   def execute_email_action(action, args) do
     case action do

@@ -9,6 +9,12 @@ defmodule Tymeslot.Availability.InputValidation do
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
   alias Tymeslot.Utils.DateTimeUtils
 
+  @typedoc "String-keyed params map for a time-range input (start/end as HH:MM strings)."
+  @type time_range_params :: %{optional(String.t()) => String.t()}
+
+  @typedoc "Validation error map with atom keys and human-readable error message values."
+  @type validation_errors :: %{atom() => String.t()}
+
   @doc """
   Validates time range input for day hours (start and end times).
 
@@ -19,7 +25,9 @@ defmodule Tymeslot.Availability.InputValidation do
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
   """
-  @spec validate_day_hours(map(), keyword()) :: {:ok, map()} | {:error, map()}
+  @spec validate_day_hours(time_range_params(), keyword()) ::
+          {:ok, %{String.t() => String.t()}}
+          | {:error, validation_errors()}
   def validate_day_hours(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
 
@@ -42,7 +50,9 @@ defmodule Tymeslot.Availability.InputValidation do
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
   """
-  @spec validate_break_input(map(), keyword()) :: {:ok, map()} | {:error, map()}
+  @spec validate_break_input(time_range_params(), keyword()) ::
+          {:ok, %{String.t() => String.t()}}
+          | {:error, validation_errors()}
   def validate_break_input(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
 
@@ -69,7 +79,9 @@ defmodule Tymeslot.Availability.InputValidation do
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
   """
-  @spec validate_quick_break_input(map(), keyword()) :: {:ok, map()} | {:error, map()}
+  @spec validate_quick_break_input(time_range_params(), keyword()) ::
+          {:ok, %{String.t() => String.t()}}
+          | {:error, validation_errors()}
   def validate_quick_break_input(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
 

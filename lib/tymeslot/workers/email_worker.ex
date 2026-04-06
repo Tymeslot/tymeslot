@@ -21,6 +21,9 @@ defmodule Tymeslot.Workers.EmailWorker do
   alias Ecto.Changeset
   alias Oban.Job
   alias Tymeslot.DatabaseQueries.MeetingQueries
+  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorkerHandlers
@@ -305,8 +308,11 @@ defmodule Tymeslot.Workers.EmailWorker do
   The ResponseHandler also tracks `notification_sent_at` in the DB for the same
   reason; the Oban uniqueness is a belt-and-suspenders safeguard.
   """
-  @spec schedule_integration_unhealthy_notification(map(), map(), atom() | String.t()) ::
-          :ok | {:error, String.t()}
+  @spec schedule_integration_unhealthy_notification(
+          UserSchema.t(),
+          CalendarIntegrationSchema.t() | VideoIntegrationSchema.t(),
+          atom() | String.t()
+        ) :: :ok | {:error, String.t()}
   def schedule_integration_unhealthy_notification(user, integration, type) do
     result =
       %{
