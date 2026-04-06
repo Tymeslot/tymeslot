@@ -49,7 +49,12 @@ defmodule Tymeslot.Integrations.Video do
   # ---------------
   # Create
   # ---------------
-  @spec create_integration(pos_integer(), provider(), map()) :: {:ok, any()} | {:error, any()}
+  @spec create_integration(
+          pos_integer(),
+          provider(),
+          %{(String.t() | atom()) => term()}
+        ) ::
+          {:ok, any()} | {:error, any()}
   def create_integration(user_id, provider, attrs) when is_integer(user_id) and is_map(attrs) do
     provider = normalize_provider(provider)
 
@@ -131,7 +136,8 @@ defmodule Tymeslot.Integrations.Video do
   # ---------------
   # Update
   # ---------------
-  @spec update_integration(pos_integer(), pos_integer(), map()) :: {:ok, any()} | {:error, any()}
+  @spec update_integration(pos_integer(), pos_integer(), %{atom() => term()}) ::
+          {:ok, any()} | {:error, any()}
   def update_integration(user_id, id, attrs) when is_integer(user_id) and is_integer(id) do
     with {:ok, integration} <- VideoIntegrationQueries.get_for_user(id, user_id) do
       VideoIntegrationQueries.update(integration, attrs)

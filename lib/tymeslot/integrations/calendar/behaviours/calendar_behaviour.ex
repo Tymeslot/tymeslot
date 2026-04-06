@@ -35,5 +35,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
             ) ::
               :ok | {:error, any()}
   @callback get_booking_integration_info(pos_integer() | MeetingTypeSchema.t()) ::
-              {:ok, map()} | {:error, any()}
+              {:ok,
+               %{
+                 required(:integration_id) => pos_integer(),
+                 required(:calendar_path) => String.t()
+               }}
+              | {:error, any()}
 end

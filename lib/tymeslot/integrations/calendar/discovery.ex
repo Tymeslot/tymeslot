@@ -10,6 +10,12 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.{DiscoveryService, ErrorHandler}
 
+  @type discovery_credentials :: %{
+          required(:url) => String.t(),
+          required(:username) => String.t(),
+          required(:password) => String.t()
+        }
+
   @doc """
   Discover calendars for an existing integration using provider-specific logic.
   Returns {:ok, calendars} with standardized entries.
@@ -95,7 +101,8 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
           String.t(),
           keyword()
         ) ::
-          {:ok, %{calendars: list(), discovery_credentials: map()}} | {:error, String.t()}
+          {:ok, %{calendars: list(), discovery_credentials: discovery_credentials()}}
+          | {:error, String.t()}
   def discover_calendars_for_credentials(provider, url, username, password, opts \\ []) do
     force_refresh = Keyword.get(opts, :force_refresh, false)
 

@@ -3,12 +3,13 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   Utilities shared across calendar provider implementations.
   """
 
+  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
 
   @doc """
   Ensures all required fields are present in the config map.
   """
-  @spec validate_required_fields(map(), list(atom())) :: :ok | {:error, String.t()}
+  @spec validate_required_fields(%{atom() => term()}, list(atom())) :: :ok | {:error, String.t()}
   def validate_required_fields(config, required_fields) do
     missing_fields = required_fields -- Map.keys(config)
 
@@ -33,7 +34,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   @doc """
   Runs a CalDAV connection test and normalizes error responses.
   """
-  @spec test_caldav_connection(map(), keyword()) :: :ok | {:error, String.t()}
+  @spec test_caldav_connection(CaldavCommon.caldav_client(), keyword()) ::
+          :ok | {:error, String.t()}
   def test_caldav_connection(client, opts \\ []) do
     error_formatter = Keyword.get(opts, :error_formatter, &default_caldav_error/1)
     test_opts = Keyword.get(opts, :test_opts, [])
@@ -47,7 +49,11 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   @doc """
   Helper for providers to format calendars returned from their API.
   """
-  @spec discover_calendars(map(), (map() -> {:ok, [map()]} | {:error, term()}), (map() -> map())) ::
+  @spec discover_calendars(
+          CalendarIntegrationSchema.t(),
+          (CalendarIntegrationSchema.t() -> {:ok, [map()]} | {:error, term()}),
+          (map() -> map())
+        ) ::
           {:ok, [map()]} | {:error, term()}
   def discover_calendars(integration, list_fun, mapper) do
     case list_fun.(integration) do
@@ -69,7 +75,16 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
     * `:not_found_message` - Message to return when server not found
     * `:error_formatter` - Function to format other errors (receives reason, returns string)
   """
-  @spec test_caldav_provider_connection(map(), keyword()) ::
+  @spec test_caldav_provider_connection(
+          %{
+            required(:base_url) => String.t(),
+            required(:username) => String.t() | nil,
+            required(:password) => String.t() | nil,
+            required(:calendar_paths) => [String.t()] | nil,
+            required(:provider) => atom()
+          },
+          keyword()
+        ) ::
           {:ok, String.t()} | {:error, String.t()}
   def test_caldav_provider_connection(integration, opts \\ []) do
     ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"

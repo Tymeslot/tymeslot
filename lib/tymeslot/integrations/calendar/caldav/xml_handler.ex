@@ -14,6 +14,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   import SweetXml
   require Logger
 
+  @typedoc "A parsed CalDAV event returned by `parse_calendar_query/1`."
+  @type parsed_event :: %{
+          required(:uid) => String.t(),
+          required(:href) => String.t(),
+          required(:etag) => String.t() | nil,
+          required(:summary) => String.t() | nil,
+          required(:description) => String.t() | nil,
+          required(:location) => String.t() | nil,
+          required(:attendees) => list(%{String.t() => String.t() | nil}),
+          required(:recurrence_rule) => String.t() | nil,
+          required(:recurrence_id) => String.t() | nil,
+          required(:exdates) => list(),
+          required(:start_time) => DateTime.t() | Date.t(),
+          required(:end_time) => DateTime.t() | Date.t() | nil,
+          required(:transparency) => String.t() | nil
+        }
+
   @doc """
   Builds a PROPFIND request for calendar discovery.
   """
@@ -65,7 +82,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   Returns a list of calendars with their properties.
   """
   @spec parse_calendar_discovery(String.t(), keyword()) ::
-          {:ok, list(map())} | {:error, String.t()}
+          {:ok,
+           list(%{
+             required(:id) => String.t(),
+             required(:name) => String.t(),
+             required(:href) => String.t(),
+             required(:color) => String.t(),
+             required(:selected) => boolean()
+           })}
+          | {:error, String.t()}
   def parse_calendar_discovery(xml_body, opts \\ []) do
     # Parse with security limits
     doc = parse_with_security(xml_body)
@@ -106,7 +131,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   @doc """
   Parses a calendar-query response containing events.
   """
-  @spec parse_calendar_query(String.t()) :: {:ok, list(map())} | {:error, String.t()}
+  @spec parse_calendar_query(String.t()) :: {:ok, list(parsed_event())} | {:error, String.t()}
   def parse_calendar_query(xml_body) do
     doc = parse_with_security(xml_body)
 
@@ -199,7 +224,15 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
   @doc """
   Parses server capabilities from a OPTIONS or PROPFIND response.
   """
-  @spec parse_server_capabilities(String.t()) :: {:ok, map()} | {:error, String.t()}
+  @spec parse_server_capabilities(String.t()) ::
+          {:ok,
+           %{
+             required(:calendar_access) => boolean(),
+             required(:calendar_schedule) => boolean(),
+             required(:calendar_auto_schedule) => boolean(),
+             required(:supported_reports) => list(atom())
+           }}
+          | {:error, String.t()}
   def parse_server_capabilities(xml_body) do
     doc = parse_with_security(xml_body)
 

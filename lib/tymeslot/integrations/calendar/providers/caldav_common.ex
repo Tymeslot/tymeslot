@@ -32,7 +32,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   Expects keys: :base_url, :username, :password, :calendar_paths, :verify_ssl
   Options: provider: atom()
   """
-  @spec build_client(map(), keyword()) :: caldav_client()
+  @spec build_client(%{atom() => term()}, keyword()) :: caldav_client()
   def build_client(config, opts) when is_map(config) do
     provider = Keyword.fetch!(opts, :provider)
 

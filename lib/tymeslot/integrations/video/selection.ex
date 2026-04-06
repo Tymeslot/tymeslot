@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.Video.Selection do
   def providers_with_capability(capability),
     do: ProviderRegistry.providers_with_capability(capability)
 
-  @spec recommend_provider(map()) :: atom()
+  @spec recommend_provider(%{atom() => term()}) :: atom()
   def recommend_provider(requirements \\ %{}),
     do: ProviderRegistry.recommend_provider(requirements)
 end

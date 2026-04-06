@@ -25,9 +25,10 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     {:error, {:changeset, %Ecto.Changeset{}}}
     {:error, term()}
   """
-  @spec create_with_validation(user_id(), map(), keyword()) ::
-          {:ok, map()}
-          | {:error, {:form_errors, map()} | {:changeset, Ecto.Changeset.t()} | term()}
+  @spec create_with_validation(user_id(), %{String.t() => term()}, keyword()) ::
+          {:ok, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()}
+          | {:error,
+             {:form_errors, %{String.t() => term()}} | {:changeset, Ecto.Changeset.t()} | term()}
   def create_with_validation(user_id, params, opts \\ [])
       when is_integer(user_id) and is_map(params) do
     metadata = Keyword.get(opts, :metadata, %{})
@@ -93,7 +94,20 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   @doc """
   Prepare attributes for creating an integration from UI params.
   """
-  @spec prepare_attrs(map(), user_id()) :: {:ok, map()}
+  @spec prepare_attrs(%{String.t() => term()}, user_id()) ::
+          {:ok,
+           %{
+             required(:user_id) => user_id(),
+             required(:name) => String.t(),
+             required(:provider) => String.t(),
+             required(:base_url) => String.t(),
+             required(:username) => String.t(),
+             required(:password) => String.t(),
+             required(:calendar_paths) => [String.t()],
+             required(:provider_account_id) => String.t() | nil,
+             required(:is_active) => boolean(),
+             optional(:calendar_list) => [%{String.t() => term()}]
+           }}
   def prepare_attrs(params, user_id) when is_map(params) and is_integer(user_id) do
     %{
       "name" => name,
@@ -248,7 +262,9 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   - Uses ProviderRegistry for provider validation/lookup
   - Uses Shared.ErrorHandler to sanitize provider-specific error messages
   """
-  @spec prevalidate_config(map()) :: {:ok, map()} | {:error, Ecto.Changeset.t()}
+  @spec prevalidate_config(%{required(:provider) => String.t(), optional(atom()) => term()}) ::
+          {:ok, %{required(:provider) => String.t(), optional(atom()) => term()}}
+          | {:error, Ecto.Changeset.t()}
   def prevalidate_config(%{provider: provider} = attrs)
       when provider in ["caldav", "nextcloud", "radicale", "zimbra"] do
     config = %{

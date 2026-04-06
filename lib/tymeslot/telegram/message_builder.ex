@@ -6,7 +6,7 @@ defmodule Tymeslot.Telegram.MessageBuilder do
 
   alias Phoenix.HTML
 
-  @spec build_message(String.t(), map()) :: String.t()
+  @spec build_message(String.t(), %{atom() => term()}) :: String.t()
   def build_message("meeting.created", meeting) do
     String.trim("""
     #{emoji(:calendar)} <b>New Meeting</b>

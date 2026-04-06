@@ -6,6 +6,7 @@ defmodule Tymeslot.Telegram do
   require Logger
 
   alias Tymeslot.DatabaseQueries.TelegramQueries
+  alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
   alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Features
   alias Tymeslot.Telegram.{API, MessageBuilder}
@@ -138,7 +139,7 @@ defmodule Tymeslot.Telegram do
   # Delivery
   # ============================================================================
 
-  @spec trigger_integrations_for_event(integer(), String.t(), map()) :: :ok
+  @spec trigger_integrations_for_event(integer(), String.t(), %{atom() => term()}) :: :ok
   def trigger_integrations_for_event(user_id, event_type, meeting) do
     if telegram_enabled?() do
       case Features.check_access(user_id, :automations_allowed) do
@@ -160,7 +161,7 @@ defmodule Tymeslot.Telegram do
     :ok
   end
 
-  @spec trigger_integration(TelegramIntegrationSchema.t(), String.t(), map()) ::
+  @spec trigger_integration(TelegramIntegrationSchema.t(), String.t(), %{atom() => term()}) ::
           :ok | {:error, term()}
   def trigger_integration(integration, event_type, meeting) do
     if TelegramIntegrationSchema.should_be_active?(integration) and
@@ -260,12 +261,18 @@ defmodule Tymeslot.Telegram do
   # Delivery Logs
   # ============================================================================
 
-  @spec list_deliveries(integer(), keyword()) :: [map()]
+  @spec list_deliveries(integer(), keyword()) :: [TelegramDeliverySchema.t()]
   def list_deliveries(integration_id, opts \\ []) do
     TelegramQueries.list_deliveries(integration_id, opts)
   end
 
-  @spec get_delivery_stats(integer(), keyword()) :: map()
+  @spec get_delivery_stats(integer(), keyword()) :: %{
+          required(:total) => non_neg_integer(),
+          required(:successful) => non_neg_integer(),
+          required(:failed) => non_neg_integer(),
+          required(:success_rate) => float(),
+          required(:period_days) => non_neg_integer()
+        }
   def get_delivery_stats(integration_id, opts \\ []) do
     TelegramQueries.get_delivery_stats(integration_id, opts)
   end
@@ -274,7 +281,13 @@ defmodule Tymeslot.Telegram do
   # Events & Feature Checks
   # ============================================================================
 
-  @spec available_events() :: [map()]
+  @spec available_events() :: [
+          %{
+            required(:value) => String.t(),
+            required(:label) => String.t(),
+            required(:description) => String.t()
+          }
+        ]
   def available_events do
     [
       %{

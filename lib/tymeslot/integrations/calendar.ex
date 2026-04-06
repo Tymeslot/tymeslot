@@ -39,7 +39,7 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Lists calendar integrations for a user and annotates the primary one.
   """
-  @spec list_integrations(user_id()) :: [map()]
+  @spec list_integrations(user_id()) :: [integration()]
   def list_integrations(user_id) when is_integer(user_id) do
     integrations = CalendarManagement.list_calendar_integrations(user_id)
 
@@ -71,7 +71,7 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Creates a new calendar integration, with provider-specific parsing and optional pre-validation.
   """
-  @spec create_integration(map(), user_id()) ::
+  @spec create_integration(%{String.t() => term()}, user_id()) ::
           {:ok, integration()} | {:error, Ecto.Changeset.t() | any()}
   def create_integration(params, user_id) when is_map(params) and is_integer(user_id) do
     with {:ok, attrs} <- Creation.prepare_attrs(params, user_id),
@@ -81,7 +81,7 @@ defmodule Tymeslot.Integrations.Calendar do
   end
 
   @doc "Updates an existing calendar integration."
-  @spec update_integration(integration(), map()) ::
+  @spec update_integration(integration(), %{optional(atom()) => term()}) ::
           {:ok, integration()} | {:error, Ecto.Changeset.t()}
   def update_integration(integration, attrs) do
     CalendarManagement.update_calendar_integration(integration, attrs)
@@ -139,7 +139,8 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Updates the calendar selection for an integration, optionally setting explicit default.
   """
-  @spec update_calendar_selection(integration(), map()) :: {:ok, integration()} | {:error, any()}
+  @spec update_calendar_selection(integration(), %{String.t() => term()}) ::
+          {:ok, integration()} | {:error, any()}
   def update_calendar_selection(integration, params) do
     Selection.update_calendar_selection(integration, params)
   end
@@ -205,9 +206,10 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Validates and creates an integration through the creation pipeline.
   """
-  @spec create_integration_with_validation(user_id(), map(), keyword()) ::
+  @spec create_integration_with_validation(user_id(), %{String.t() => term()}, keyword()) ::
           {:ok, integration()}
-          | {:error, {:form_errors, map()} | {:changeset, Ecto.Changeset.t()} | any()}
+          | {:error,
+             {:form_errors, %{String.t() => term()}} | {:changeset, Ecto.Changeset.t()} | any()}
   def create_integration_with_validation(user_id, params, opts \\ []) do
     Creation.create_with_validation(user_id, params, opts)
   end
@@ -215,7 +217,8 @@ defmodule Tymeslot.Integrations.Calendar do
   @doc """
   Prepare selection params from selected paths and discovered calendars.
   """
-  @spec prepare_selection_params([String.t()], list()) :: map()
+  @spec prepare_selection_params([String.t()], list()) ::
+          %{required(String.t()) => [String.t()] | [%{String.t() => term()}]}
   def prepare_selection_params(selected_paths, discovered) do
     Selection.prepare_selected_params(selected_paths, discovered)
   end
@@ -363,7 +366,8 @@ defmodule Tymeslot.Integrations.Calendar do
           String.t(),
           keyword()
         ) ::
-          {:ok, %{calendars: list(), discovery_credentials: map()}} | {:error, String.t()}
+          {:ok, %{calendars: list(), discovery_credentials: Discovery.discovery_credentials()}}
+          | {:error, String.t()}
   def discover_calendars_for_credentials(provider, url, username, password, opts \\ []) do
     Discovery.discover_calendars_for_credentials(provider, url, username, password, opts)
   end
@@ -395,7 +399,11 @@ defmodule Tymeslot.Integrations.Calendar do
   Helper to extract a friendly display name from a calendar.
   Handles the case where Radicale calendars may have UUIDs as names.
   """
-  @spec extract_calendar_display_name(map()) :: String.t()
+  @spec extract_calendar_display_name(%{
+          optional(String.t()) => term(),
+          optional(atom()) => term()
+        }) ::
+          String.t()
   def extract_calendar_display_name(calendar) do
     raw_name = calendar["name"] || calendar[:name]
     path = calendar["path"] || calendar[:path] || calendar["href"] || calendar[:href]
@@ -456,7 +464,8 @@ defmodule Tymeslot.Integrations.Calendar do
   Discovers calendars for raw credentials and filters them for valid paths.
   """
   @spec discover_and_filter_calendars(atom() | String.t(), String.t(), String.t(), String.t()) ::
-          {:ok, %{calendars: list(), discovery_credentials: map()}} | {:error, any()}
+          {:ok, %{calendars: list(), discovery_credentials: Discovery.discovery_credentials()}}
+          | {:error, any()}
   def discover_and_filter_calendars(provider, url, username, password) do
     Workflows.discover_and_filter_calendars(provider, url, username, password)
   end

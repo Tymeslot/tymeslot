@@ -119,7 +119,7 @@ defmodule Tymeslot.Integrations.Common.ErrorHandler do
 
   Returns a tuple with the error atom/message and a user-friendly translation.
   """
-  @spec handle_integration_error(any(), String.t(), map()) :: {:error, any(), any()}
+  @spec handle_integration_error(any(), String.t(), %{atom() => term()}) :: {:error, any(), any()}
   def handle_integration_error(error, provider, context \\ %{}) do
     translated = ErrorTranslator.translate_error(error, provider, context)
 

@@ -14,7 +14,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @doc """
   Schedules all notifications for a newly created meeting.
   """
-  @spec schedule_meeting_notifications(map()) :: {:ok, atom()} | {:error, term()}
+  @spec schedule_meeting_notifications(%{atom() => term()}) :: {:ok, atom()} | {:error, term()}
   def schedule_meeting_notifications(meeting) do
     Logger.info("Scheduling notifications for meeting", meeting_id: meeting.id)
 
@@ -39,7 +39,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @doc """
   Schedules confirmation notifications for a meeting.
   """
-  @spec schedule_confirmation_notifications(map()) :: :ok | {:error, term()}
+  @spec schedule_confirmation_notifications(%{atom() => term()}) :: :ok | {:error, term()}
   def schedule_confirmation_notifications(meeting) do
     recipients = Recipients.determine_recipients(meeting, :confirmation)
     content = ContentBuilder.build_appointment_details(meeting)
@@ -59,7 +59,8 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @doc """
   Schedules reminder notifications for a meeting.
   """
-  @spec schedule_reminder_notifications(map()) :: :ok | {:ok, atom()} | {:error, term()}
+  @spec schedule_reminder_notifications(%{atom() => term()}) ::
+          :ok | {:ok, atom()} | {:error, term()}
   def schedule_reminder_notifications(meeting) do
     reminders =
       case Map.get(meeting, :reminders) do
@@ -95,7 +96,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @doc """
   Schedules cancellation notifications via EmailWorker.
   """
-  @spec send_cancellation_notifications(map()) ::
+  @spec send_cancellation_notifications(%{atom() => term()}) ::
           {:ok, atom()} | {:error, term()}
   def send_cancellation_notifications(meeting) do
     recipients = Recipients.determine_recipients(meeting, :cancellation)
@@ -113,7 +114,8 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @doc """
   Sends reschedule notifications immediately.
   """
-  @spec send_reschedule_notifications(map(), map()) :: {:ok, atom()} | {:error, term()}
+  @spec send_reschedule_notifications(%{atom() => term()}, %{atom() => term()}) ::
+          {:ok, atom()} | {:error, term()}
   def send_reschedule_notifications(updated_meeting, original_meeting) do
     recipients = Recipients.determine_recipients(updated_meeting, :reschedule)
     content = ContentBuilder.build_reschedule_details(updated_meeting, original_meeting)
@@ -128,7 +130,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @doc """
   Handles video room notifications.
   """
-  @spec handle_video_room_notifications(map(), :created | :failed) ::
+  @spec handle_video_room_notifications(%{atom() => term()}, :created | :failed) ::
           {:ok, atom()} | :ok | {:error, term()}
   def handle_video_room_notifications(meeting, video_room_status) do
     notification_type =
@@ -157,7 +159,12 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @doc """
   Gets notification status for a meeting.
   """
-  @spec get_notification_status(map()) :: map()
+  @spec get_notification_status(%{atom() => term()}) :: %{
+          required(:confirmation_sent) => boolean() | nil,
+          required(:reminder_scheduled) => boolean(),
+          required(:reminder_sent) => boolean() | nil,
+          required(:last_notification) => DateTime.t() | nil
+        }
   def get_notification_status(meeting) do
     %{
       confirmation_sent: meeting.organizer_email_sent || meeting.attendee_email_sent,

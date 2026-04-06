@@ -4,10 +4,18 @@ defmodule Tymeslot.Notifications.SchedulingRules do
   Pure functions that determine notification timing and delivery rules.
   """
 
+  @typep email_timing :: %{
+           required(:timing) => :immediate | {:before_meeting, pos_integer()},
+           required(:priority) => non_neg_integer(),
+           required(:uniqueness_window) => non_neg_integer(),
+           required(:max_attempts) => pos_integer(),
+           required(:backoff_strategy) => [pos_integer()]
+         }
+
   @doc """
   Returns the timing configuration for confirmation emails.
   """
-  @spec confirmation_email_timing() :: map()
+  @spec confirmation_email_timing() :: email_timing()
   def confirmation_email_timing do
     %{
       timing: :immediate,
@@ -22,7 +30,7 @@ defmodule Tymeslot.Notifications.SchedulingRules do
   @doc """
   Returns the timing configuration for reminder emails.
   """
-  @spec reminder_email_timing() :: map()
+  @spec reminder_email_timing() :: email_timing()
   def reminder_email_timing do
     %{
       timing: {:before_meeting, reminder_minutes()},
@@ -37,7 +45,7 @@ defmodule Tymeslot.Notifications.SchedulingRules do
   @doc """
   Returns the timing configuration for cancellation emails.
   """
-  @spec cancellation_email_timing() :: map()
+  @spec cancellation_email_timing() :: email_timing()
   def cancellation_email_timing do
     %{
       timing: :immediate,
@@ -52,7 +60,7 @@ defmodule Tymeslot.Notifications.SchedulingRules do
   @doc """
   Returns the timing configuration for reschedule emails.
   """
-  @spec reschedule_email_timing() :: map()
+  @spec reschedule_email_timing() :: email_timing()
   def reschedule_email_timing do
     %{
       timing: :immediate,
@@ -67,7 +75,7 @@ defmodule Tymeslot.Notifications.SchedulingRules do
   @doc """
   Returns the timing configuration for video room notification emails.
   """
-  @spec video_room_email_timing() :: map()
+  @spec video_room_email_timing() :: email_timing()
   def video_room_email_timing do
     %{
       timing: :immediate,
@@ -120,7 +128,13 @@ defmodule Tymeslot.Notifications.SchedulingRules do
   @doc """
   Returns priority levels for different notification types.
   """
-  @spec priority_levels() :: map()
+  @spec priority_levels() :: %{
+          required(:confirmation) => non_neg_integer(),
+          required(:cancellation) => non_neg_integer(),
+          required(:reschedule) => non_neg_integer(),
+          required(:video_room) => non_neg_integer(),
+          required(:reminder) => non_neg_integer()
+        }
   def priority_levels do
     %{
       # Highest priority

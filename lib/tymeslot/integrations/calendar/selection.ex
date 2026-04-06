@@ -17,7 +17,8 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   Returns a map suitable for merging into creation/update params:
     %{calendar_paths: ["a", "b", "c"], calendar_list: [%{"id" => ..., ...}]}
   """
-  @spec prepare_selected_params([String.t()], list()) :: map()
+  @spec prepare_selected_params([String.t()], list()) ::
+          %{required(String.t()) => [String.t()] | [%{String.t() => term()}]}
   def prepare_selected_params(selected_paths, discovered) when is_list(selected_paths) do
     calendar_paths = selected_paths
 
@@ -42,7 +43,8 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   state (integration.calendar_list), returning a unified list where each item
   includes a boolean "selected" field.
   """
-  @spec discover_with_selection(map()) :: {:ok, list()} | {:error, term()}
+  @spec discover_with_selection(Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()) ::
+          {:ok, list()} | {:error, term()}
   def discover_with_selection(integration) do
     case Calendar.discover_calendars_for_integration(integration) do
       {:ok, calendars} ->
@@ -141,7 +143,10 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   @doc """
   Update calendar selection for an integration.
   """
-  @spec update_calendar_selection(map(), map()) :: {:ok, any()} | {:error, any()}
+  @spec update_calendar_selection(
+          Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t(),
+          %{String.t() => term()}
+        ) :: {:ok, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()} | {:error, any()}
   def update_calendar_selection(integration, params) do
     selected_calendar_ids = params["selected_calendars"] || []
 

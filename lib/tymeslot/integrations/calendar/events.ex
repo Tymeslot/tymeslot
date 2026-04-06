@@ -70,7 +70,15 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   @doc """
   Compatibility: context-aware variant that extracts a debug calendar module and organizer profile if present.
   """
-  @spec get_calendar_events_from_context(any(), user_id(), map() | nil) ::
+  @spec get_calendar_events_from_context(
+          any(),
+          user_id(),
+          %{
+            optional(:debug_calendar_module) => module() | nil,
+            optional(:organizer_profile) => map() | nil
+          }
+          | nil
+        ) ::
           {:ok, list()} | {:error, term()}
   def get_calendar_events_from_context(date, organizer_user_id, context) do
     debug_module =

@@ -19,7 +19,8 @@ defmodule Tymeslot.Integrations.Video.InputValidation do
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
   """
-  @spec validate_video_integration_form(map(), keyword()) :: {:ok, map()} | {:error, map()}
+  @spec validate_video_integration_form(%{String.t() => term()}, keyword()) ::
+          {:ok, %{String.t() => term()}} | {:error, %{atom() => String.t()}}
   def validate_video_integration_form(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
     provider = params["provider"]

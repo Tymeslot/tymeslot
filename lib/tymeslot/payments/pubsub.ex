@@ -84,7 +84,11 @@ defmodule Tymeslot.Payments.PubSub do
   Broadcasts a subscription event.
   Used for events like :subscription_created, :subscription_canceled, :subscription_updated.
   """
-  @spec broadcast_subscription_event(map()) :: :ok
+  @spec broadcast_subscription_event(%{
+          required(:event) => atom(),
+          required(:user_id) => integer(),
+          optional(atom()) => term()
+        }) :: :ok
   def broadcast_subscription_event(event_data) do
     topic = "payment_events:tymeslot"
 

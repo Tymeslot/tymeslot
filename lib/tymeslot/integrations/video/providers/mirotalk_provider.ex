@@ -61,6 +61,10 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   @doc """
   Tests the connection to the MiroTalk API.
   """
+  @spec test_connection(
+          %{required(:api_key) => String.t(), required(:base_url) => String.t()},
+          keyword()
+        ) :: {:ok, String.t()} | {:error, term()}
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def test_connection(config, opts \\ []) do
     # Extract IP address for rate limiting
@@ -182,6 +186,10 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   Returns {:ok, meeting_url} on success or {:error, reason} on failure.
   """
+  @spec create_meeting_room(%{
+          required(:api_key) => String.t(),
+          required(:base_url) => String.t()
+        }) :: {:ok, map()} | {:error, term()}
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def create_meeting_room(config) do
     base_url = Map.get(config, :base_url)
@@ -261,7 +269,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   Creates a join URL by calling the MiroTalk /api/v1/join endpoint.
   """
   @spec create_join_url_via_api(
-          map(),
+          %{required(:api_key) => String.t(), required(:base_url) => String.t()},
           String.t(),
           String.t(),
           String.t(),
@@ -304,8 +312,12 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
   end
 
   # Keep the old function for backward compatibility
-  @spec create_join_url_legacy(map(), String.t(), String.t(), String.t()) ::
-          {:ok, String.t()} | {:error, term()}
+  @spec create_join_url_legacy(
+          %{required(:api_key) => String.t(), required(:base_url) => String.t()},
+          String.t(),
+          String.t(),
+          String.t()
+        ) :: {:ok, String.t()} | {:error, term()}
   def create_join_url_legacy(config, room_id, participant_name, _participant_email)
       when room_id != "" and participant_name != "" do
     base_url = Map.get(config, :base_url)
@@ -346,7 +358,11 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
           {:error, :missing_room_id | :missing_participant_name}
   def create_join_url(_room_id, "", _participant_email), do: {:error, :missing_participant_name}
 
-  @spec create_direct_join_url(map(), String.t(), String.t()) :: String.t()
+  @spec create_direct_join_url(
+          %{required(:api_key) => String.t(), required(:base_url) => String.t()},
+          String.t(),
+          String.t()
+        ) :: String.t()
   def create_direct_join_url(config, room_id, participant_name) do
     base_url = "#{Map.get(config, :base_url)}/join"
 
@@ -367,8 +383,13 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     "#{base_url}?#{query_string}"
   end
 
-  @spec create_secure_direct_join_url(map(), String.t(), String.t(), String.t(), DateTime.t()) ::
-          String.t()
+  @spec create_secure_direct_join_url(
+          %{required(:api_key) => String.t(), required(:base_url) => String.t()},
+          String.t(),
+          String.t(),
+          String.t(),
+          DateTime.t()
+        ) :: String.t()
   def create_secure_direct_join_url(config, room_id, participant_name, role, meeting_time) do
     base_url = "#{Map.get(config, :base_url)}/join"
 
@@ -402,8 +423,13 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     "#{base_url}?#{query_string}"
   end
 
-  @spec generate_secure_token(map(), String.t(), String.t(), String.t(), DateTime.t()) ::
-          String.t()
+  @spec generate_secure_token(
+          %{required(:api_key) => String.t(), required(:base_url) => String.t()},
+          String.t(),
+          String.t(),
+          String.t(),
+          DateTime.t()
+        ) :: String.t()
   def generate_secure_token(config, room_id, user_name, role, meeting_time) do
     secret = Map.get(config, :api_key)
 

@@ -58,7 +58,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   @doc """
   Fetches events for the given client with a fallback to full list filtering when needed.
   """
-  @spec fetch_events_with_fallback(map(), DateTime.t(), DateTime.t()) ::
+  @spec fetch_events_with_fallback(ProviderAdapter.adapter_client(), DateTime.t(), DateTime.t()) ::
           {:ok, list(map()), String.t()} | {:error, term(), String.t()}
   def fetch_events_with_fallback(client, start_utc, end_utc) do
     case ProviderAdapter.get_events(client, start_utc, end_utc) do
@@ -111,7 +111,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   @doc """
   Fetches events without a time range for the given client.
   """
-  @spec fetch_events_without_range(map()) ::
+  @spec fetch_events_without_range(ProviderAdapter.adapter_client()) ::
           {:ok, list(map()), String.t()} | {:error, term(), String.t()}
   def fetch_events_without_range(client) do
     case ProviderAdapter.get_events(client) do
@@ -156,6 +156,18 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
     )
 
     {:error, error, path}
+  end
+
+  defp wrap_events_result(client, {:error, type, reason}, _log_level) do
+    path = get_calendar_path(client)
+
+    Logger.error("Failed to fetch from calendar",
+      calendar_path: path,
+      error_type: type,
+      error: Redactor.redact(reason)
+    )
+
+    {:error, {type, reason}, path}
   end
 
   defp get_calendar_path(client) do

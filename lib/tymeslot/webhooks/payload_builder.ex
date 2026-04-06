@@ -11,7 +11,12 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   @doc """
   Builds a webhook payload for a meeting event.
   """
-  @spec build_payload(String.t(), MeetingSchema.t(), String.t()) :: map()
+  @spec build_payload(String.t(), MeetingSchema.t(), String.t()) :: %{
+          required(:event) => String.t(),
+          required(:timestamp) => String.t(),
+          required(:webhook_id) => String.t(),
+          required(:data) => %{required(:meeting) => term()}
+        }
   def build_payload(event_type, meeting, webhook_id) do
     %{
       event: event_type,
@@ -26,7 +31,12 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   @doc """
   Builds a test payload for connection testing.
   """
-  @spec build_test_payload() :: map()
+  @spec build_test_payload() :: %{
+          required(:event) => String.t(),
+          required(:timestamp) => String.t(),
+          required(:webhook_id) => String.t(),
+          required(:data) => %{required(:message) => String.t(), required(:test) => boolean()}
+        }
   def build_test_payload do
     %{
       event: "webhook.test",
