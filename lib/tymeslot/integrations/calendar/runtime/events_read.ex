@@ -173,7 +173,6 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   defp get_calendar_path(client) do
     case client do
       %{client: %{calendar_path: path}} -> path
-      %{calendar_path: path} -> path
       _other -> "unknown"
     end
   end
