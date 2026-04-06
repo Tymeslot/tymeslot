@@ -5,20 +5,26 @@ defmodule Tymeslot.DatabaseSchemas.IntegrationHealthStateSchemaTest do
   @moduletag :schema
 
   import Ecto.Changeset
+  import Tymeslot.TestFixtures
 
   alias Tymeslot.DatabaseSchemas.IntegrationHealthStateSchema
 
-  @valid_attrs %{
-    integration_type: "calendar",
-    integration_id: 1,
-    user_id: 1,
-    status: "healthy"
-  }
+  setup do
+    user = create_user_fixture()
+    %{user: user}
+  end
 
   describe "changeset/2" do
-    test "valid with required fields" do
+    test "valid with required fields", %{user: user} do
+      attrs = %{
+        integration_type: "calendar",
+        integration_id: 1,
+        user_id: user.id,
+        status: "healthy"
+      }
+
       changeset =
-        IntegrationHealthStateSchema.changeset(%IntegrationHealthStateSchema{}, @valid_attrs)
+        IntegrationHealthStateSchema.changeset(%IntegrationHealthStateSchema{}, attrs)
 
       assert changeset.valid?
     end
@@ -34,12 +40,12 @@ defmodule Tymeslot.DatabaseSchemas.IntegrationHealthStateSchemaTest do
              } = errors_on(changeset)
     end
 
-    test "applies default values" do
+    test "applies default values", %{user: user} do
       changeset =
         IntegrationHealthStateSchema.changeset(%IntegrationHealthStateSchema{}, %{
           integration_type: "calendar",
           integration_id: 1,
-          user_id: 1
+          user_id: user.id
         })
 
       assert get_field(changeset, :status) == "healthy"
@@ -48,15 +54,22 @@ defmodule Tymeslot.DatabaseSchemas.IntegrationHealthStateSchemaTest do
       assert get_field(changeset, :backoff_ms) == 1_800_000
     end
 
-    test "unique constraint on integration_type and integration_id" do
+    test "unique constraint on integration_type and integration_id", %{user: user} do
+      attrs = %{
+        integration_type: "calendar",
+        integration_id: 1,
+        user_id: user.id,
+        status: "healthy"
+      }
+
       {:ok, _state} =
         %IntegrationHealthStateSchema{}
-        |> IntegrationHealthStateSchema.changeset(@valid_attrs)
+        |> IntegrationHealthStateSchema.changeset(attrs)
         |> Repo.insert()
 
       {:error, changeset} =
         %IntegrationHealthStateSchema{}
-        |> IntegrationHealthStateSchema.changeset(@valid_attrs)
+        |> IntegrationHealthStateSchema.changeset(attrs)
         |> Repo.insert()
 
       assert "has already been taken" in errors_on(changeset).integration_type
