@@ -4,14 +4,21 @@ defmodule Tymeslot.Availability.Conflicts do
   """
 
   alias Tymeslot.Availability.{BusinessHours, TimeSlots}
+  alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.Events
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
 
   @doc """
   Filters available slots based on conflicts and booking rules.
   """
-  @spec filter_available_slots([String.t()], [map()], integer(), String.t(), Date.t(), map()) :: [
-          String.t()
-        ]
+  @spec filter_available_slots(
+          [String.t()],
+          [Events.calendar_event()],
+          integer(),
+          String.t(),
+          Date.t(),
+          Calculate.availability_config()
+        ) :: [String.t()]
   def filter_available_slots(all_slots, events, duration_minutes, timezone, date, config \\ %{}) do
     buffer_minutes = Map.get(config, :buffer_minutes, 15)
     min_advance_hours = Map.get(config, :min_advance_hours, 3)
@@ -52,9 +59,9 @@ defmodule Tymeslot.Availability.Conflicts do
           Date.t(),
           String.t(),
           String.t(),
-          [map()],
+          [Events.calendar_event()],
           DateTime.t(),
-          map()
+          Calculate.availability_config()
         ) :: boolean()
   def date_has_slots_with_events?(
         date,

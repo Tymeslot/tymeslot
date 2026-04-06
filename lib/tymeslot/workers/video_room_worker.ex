@@ -19,6 +19,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
 
   alias Ecto.Changeset
   alias Tymeslot.DatabaseQueries.{MeetingQueries, MeetingTypeQueries}
+  alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Meetings
   alias Tymeslot.Utils.ReminderUtils
   require Logger
@@ -392,7 +393,7 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
   Calculates a dynamic snooze interval for recovery attempts for a meeting.
   Distributes attempts evenly between now and the reminder cutoff.
   """
-  @spec calculate_recovery_snooze(map(), pos_integer(), pos_integer()) ::
+  @spec calculate_recovery_snooze(MeetingSchema.t(), pos_integer(), pos_integer()) ::
           {:ok, pos_integer()} | {:error, :deadline_passed}
   def calculate_recovery_snooze(meeting, recovery_attempt, recovery_max_attempts) do
     now = DateTime.utc_now()

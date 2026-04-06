@@ -5,11 +5,20 @@ defmodule Tymeslot.Availability.Events do
 
   alias Tymeslot.Utils.DateTimeUtils
 
+  @type calendar_event :: %{
+          required(:start_time) => DateTime.t() | Date.t(),
+          required(:end_time) => DateTime.t() | Date.t(),
+          optional(:transparency) => String.t() | nil,
+          optional(atom()) => term()
+        }
+
   @doc """
   Converts a list of events to a specific timezone.
   Handles both DateTime (normal) and Date (all-day) events.
   """
-  @spec convert_events_to_timezone(list(map()), String.t(), String.t()) :: list(map())
+  @spec convert_events_to_timezone([calendar_event()], String.t(), String.t()) :: [
+          calendar_event()
+        ]
   def convert_events_to_timezone(events, owner_timezone, target_timezone) do
     events
     |> Enum.map(fn event ->

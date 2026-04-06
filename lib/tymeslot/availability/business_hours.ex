@@ -5,6 +5,7 @@ defmodule Tymeslot.Availability.BusinessHours do
   Uses dynamic weekly availability from user profiles.
   """
 
+  alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.DatabaseQueries.AvailabilityOverrideQueries
   alias Tymeslot.Utils.DateTimeUtils
@@ -15,6 +16,22 @@ defmodule Tymeslot.Availability.BusinessHours do
   # Monday to Friday
   @fallback_working_days 1..5
 
+  @typedoc "Availability for a single day of the week from a weekly schedule entry."
+  @type day_availability :: %{
+          required(:is_available) => boolean(),
+          required(:day_of_week) => non_neg_integer(),
+          optional(:start_time) => Time.t() | nil,
+          optional(:end_time) => Time.t() | nil,
+          optional(:breaks) => list(term())
+        }
+
+  @typedoc "Business hours window for a specific date, with datetimes in the attendee's timezone."
+  @type business_hours_result :: %{
+          required(:start_datetime) => DateTime.t() | nil,
+          required(:end_datetime) => DateTime.t() | nil,
+          required(:selected_date) => Date.t()
+        }
+
   @doc """
   Gets the business hours for a date in the user's timezone.
 
@@ -24,8 +41,13 @@ defmodule Tymeslot.Availability.BusinessHours do
   Returns a map with start_datetime, end_datetime, and selected_date.
   For unavailable days, returns nil for start and end datetimes.
   """
-  @spec get_business_hours_in_timezone(Date.t(), integer() | nil, String.t(), String.t(), map()) ::
-          {:ok, map()} | {:error, String.t()}
+  @spec get_business_hours_in_timezone(
+          Date.t(),
+          integer() | nil,
+          String.t(),
+          String.t(),
+          Calculate.availability_config()
+        ) :: {:ok, business_hours_result()} | {:error, String.t()}
   def get_business_hours_in_timezone(
         date,
         profile_id,
@@ -80,7 +102,8 @@ defmodule Tymeslot.Availability.BusinessHours do
   Fallback for profiles without explicit business hours configuration.
   Uses default hardcoded hours when profile_id is not provided.
   """
-  @spec get_business_hours_in_timezone_fallback(Date.t(), String.t(), String.t()) :: {:ok, map()}
+  @spec get_business_hours_in_timezone_fallback(Date.t(), String.t(), String.t()) ::
+          {:ok, business_hours_result()}
   def get_business_hours_in_timezone_fallback(date, owner_timezone, user_timezone) do
     case Date.day_of_week(date) do
       day when day in @fallback_working_days ->
@@ -102,7 +125,7 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   Accepts preloaded data via `config` to avoid per-date DB queries.
   """
-  @spec business_day?(Date.t(), integer() | nil, map()) :: boolean()
+  @spec business_day?(Date.t(), integer() | nil, Calculate.availability_config()) :: boolean()
   def business_day?(date, profile_id, config \\ %{})
 
   def business_day?(date, nil, _config) do
@@ -132,7 +155,7 @@ defmodule Tymeslot.Availability.BusinessHours do
 
   Accepts preloaded data via `config` to avoid per-date DB queries.
   """
-  @spec business_hours_range(integer() | nil, integer(), map()) ::
+  @spec business_hours_range(integer() | nil, integer(), Calculate.availability_config()) ::
           {Time.t() | nil, Time.t() | nil}
   def business_hours_range(profile_id, day_of_week, config \\ %{})
 
@@ -163,7 +186,13 @@ defmodule Tymeslot.Availability.BusinessHours do
   @doc """
   Determines if month navigation should be disabled.
   """
-  @spec month_navigation_disabled?(atom(), integer(), integer(), String.t(), map()) :: boolean()
+  @spec month_navigation_disabled?(
+          atom(),
+          integer(),
+          integer(),
+          String.t(),
+          Calculate.availability_config()
+        ) :: boolean()
   def month_navigation_disabled?(type, year, month, timezone, config \\ %{}) do
     current_date = timezone |> DateTimeUtils.now_in_timezone() |> DateTime.to_date()
     max_advance_booking_days = Map.get(config, :max_advance_booking_days, 90)
@@ -191,7 +220,8 @@ defmodule Tymeslot.Availability.BusinessHours do
   end
 
   @doc false
-  @spec lookup_day_availability(integer(), integer() | nil, map()) :: map() | nil
+  @spec lookup_day_availability(integer(), integer() | nil, Calculate.availability_config()) ::
+          day_availability() | nil
   def lookup_day_availability(_day_of_week, nil, _config), do: nil
 
   def lookup_day_availability(day_of_week, _profile_id, %{weekly_schedule: schedule})

@@ -26,6 +26,8 @@ defmodule Tymeslot.Workers.EmailWorker do
   alias Tymeslot.Workers.EmailWorkerHandlers
   require Logger
 
+  @type entity_with_id :: %{required(:id) => pos_integer(), optional(atom()) => term()}
+
   # Configuration
   # 30 seconds
   @email_timeout_ms 30_000
@@ -305,8 +307,11 @@ defmodule Tymeslot.Workers.EmailWorker do
   The ResponseHandler also tracks `notification_sent_at` in the DB for the same
   reason; the Oban uniqueness is a belt-and-suspenders safeguard.
   """
-  @spec schedule_integration_unhealthy_notification(map(), map(), atom() | String.t()) ::
-          :ok | {:error, String.t()}
+  @spec schedule_integration_unhealthy_notification(
+          entity_with_id(),
+          entity_with_id(),
+          atom() | String.t()
+        ) :: :ok | {:error, String.t()}
   def schedule_integration_unhealthy_notification(user, integration, type) do
     result =
       %{

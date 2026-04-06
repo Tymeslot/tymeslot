@@ -4,13 +4,15 @@ defmodule Tymeslot.Profiles.Settings do
   This module coordinates updates across multiple profile aspects.
   """
 
+  alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Security.FieldValidators.UsernameValidator
 
   @doc """
   Updates basic profile settings (name, username, timezone) with input validation.
   """
-  @spec update_basic_settings(term(), map(), keyword()) :: {:ok, term()} | {:error, term()}
+  @spec update_basic_settings(ProfileSchema.t(), %{String.t() => term()}, keyword()) ::
+          {:ok, ProfileSchema.t()} | {:error, term()}
   def update_basic_settings(profile, params, opts \\ []) do
     dev_mode = Keyword.get(opts, :dev_mode, false)
 
@@ -62,8 +64,8 @@ defmodule Tymeslot.Profiles.Settings do
   @doc """
   Updates scheduling preferences (buffer time, booking window, advance notice).
   """
-  @spec update_scheduling_preferences(term(), map(), keyword()) ::
-          {:ok, term()} | {:error, term()}
+  @spec update_scheduling_preferences(ProfileSchema.t(), %{String.t() => term()}, keyword()) ::
+          {:ok, ProfileSchema.t()} | {:error, term()}
   def update_scheduling_preferences(profile, params, opts \\ []) do
     dev_mode = Keyword.get(opts, :dev_mode, false)
 

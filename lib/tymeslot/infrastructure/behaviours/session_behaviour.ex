@@ -7,7 +7,9 @@ defmodule Tymeslot.Infrastructure.SessionBehaviour do
   Creates a session for the given user, stores the session token in the database and Plug.Conn session.
   Returns {:ok, conn, token} on success, or {:error, reason, details} on failure.
   """
-  @callback create_session(Plug.Conn.t(), map()) ::
+  @type user_with_id :: %{required(:id) => pos_integer(), optional(atom()) => term()}
+
+  @callback create_session(Plug.Conn.t(), user_with_id()) ::
               {:ok, Plug.Conn.t(), String.t()} | {:error, atom(), any()}
 
   @doc """
