@@ -41,13 +41,7 @@ defmodule Tymeslot.Profiles.Settings do
   end
 
   defp perform_basic_update(profile, full_name, username, timezone, true) do
-    updated_profile =
-      Map.merge(profile, %{
-        full_name: full_name,
-        username: username,
-        timezone: timezone
-      })
-
+    updated_profile = %{profile | full_name: full_name, username: username, timezone: timezone}
     {:ok, updated_profile}
   end
 
@@ -100,7 +94,8 @@ defmodule Tymeslot.Profiles.Settings do
   @doc """
   Updates profile timezone.
   """
-  @spec update_timezone(term(), String.t(), keyword()) :: {:ok, term()} | {:error, term()}
+  @spec update_timezone(ProfileSchema.t(), String.t(), keyword()) ::
+          {:ok, ProfileSchema.t()} | {:error, term()}
   def update_timezone(profile, timezone, opts \\ []) do
     dev_mode = Keyword.get(opts, :dev_mode, false)
 

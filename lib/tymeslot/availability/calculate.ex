@@ -20,12 +20,6 @@ defmodule Tymeslot.Availability.Calculate do
           optional(:min_advance_hours) => non_neg_integer()
         }
 
-  @type business_hours_window :: %{
-          required(:start_datetime) => DateTime.t(),
-          required(:end_datetime) => DateTime.t(),
-          required(:date) => Date.t()
-        }
-
   @type calendar_day :: %{
           required(:date) => String.t(),
           required(:day) => integer(),
