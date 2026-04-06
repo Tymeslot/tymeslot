@@ -294,6 +294,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
   end
 
   describe "event creation form" do
+    setup %{user: user} do
+      _integration = insert(:calendar_integration, user: user, is_active: true)
+      :ok
+    end
+
     test "shows create form on show_create_form hook event", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       today_iso = Date.to_iso8601(Date.utc_today())
