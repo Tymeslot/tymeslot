@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
   attr :saving, :boolean, default: false
   attr :user_timezone, :string, required: true
   attr :myself, :any, required: true
+  attr :video_integrations, :list, default: []
 
   @spec create_event_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def create_event_modal(assigns) do
@@ -86,6 +87,73 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
         myself={@myself}
         event_name="update_create_integration"
       />
+
+      <%!-- Attendee section --%>
+      <div class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">
+        <p class="text-token-xs font-medium text-tymeslot-400">
+          Invite attendee (optional)
+        </p>
+        <div>
+          <label
+            for="attendee_email"
+            class="block text-token-xs font-medium text-tymeslot-600 mb-1"
+          >
+            Email
+          </label>
+          <input
+            type="email"
+            id="attendee_email"
+            name="attendee_email"
+            value={@creating_event[:attendee_email] || ""}
+            phx-blur="update_create_attendee"
+            phx-target={@myself}
+            placeholder="attendee@example.com"
+            class="w-full rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
+          />
+        </div>
+        <div :if={(@creating_event[:attendee_email] || "") != ""}>
+          <label
+            for="attendee_name"
+            class="block text-token-xs font-medium text-tymeslot-600 mb-1"
+          >
+            Name
+          </label>
+          <input
+            type="text"
+            id="attendee_name"
+            name="attendee_name"
+            value={@creating_event[:attendee_name] || ""}
+            phx-blur="update_create_attendee"
+            phx-target={@myself}
+            placeholder="Jane Doe"
+            class="w-full rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
+          />
+        </div>
+        <div :if={(@creating_event[:attendee_email] || "") != "" and @video_integrations != []}>
+          <label
+            for="video_integration_id"
+            class="block text-token-xs font-medium text-tymeslot-600 mb-1"
+          >
+            Video
+          </label>
+          <select
+            id="video_integration_id"
+            name="video_integration_id"
+            phx-change="update_create_attendee"
+            phx-target={@myself}
+            class="w-full rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
+          >
+            <option value="">None</option>
+            <option
+              :for={vi <- @video_integrations}
+              value={vi.id}
+              selected={to_string(vi.id) == to_string(@creating_event[:video_integration_id])}
+            >
+              {vi.name}
+            </option>
+          </select>
+        </div>
+      </div>
 
       <:footer>
         <div class="flex gap-2">

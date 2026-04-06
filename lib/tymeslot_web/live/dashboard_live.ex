@@ -504,6 +504,34 @@ defmodule TymeslotWeb.DashboardLive do
     EventCrud.handle_create_result(result, socket)
   end
 
+  def handle_info({:execute_create_ad_hoc_meeting, params}, socket) do
+    lv_pid = self()
+
+    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      send(lv_pid, {:create_ad_hoc_meeting_result, EventCrud.run_create_ad_hoc_meeting(params)})
+    end)
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:create_ad_hoc_meeting_result, {:ok, _result}}, socket) do
+    send_update(TymeslotWeb.Dashboard.CalendarGridComponent,
+      id: "calendar",
+      action: :ad_hoc_meeting_created
+    )
+
+    {:noreply, put_flash(socket, :info, "Meeting created and invitation sent")}
+  end
+
+  def handle_info({:create_ad_hoc_meeting_result, {:error, reason}}, socket) do
+    send_update(TymeslotWeb.Dashboard.CalendarGridComponent,
+      id: "calendar",
+      action: :ad_hoc_meeting_failed
+    )
+
+    {:noreply, put_flash(socket, :error, reason)}
+  end
+
   def handle_info({:execute_delete_event, payload}, socket) do
     lv_pid = self()
 
