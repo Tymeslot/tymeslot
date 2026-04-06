@@ -62,6 +62,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok, socket}
   end
 
+  @spec handle_ad_hoc_meeting_created(map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def handle_ad_hoc_meeting_created(assigns, socket) do
+    socket =
+      socket
+      |> assign(Map.drop(assigns, [:action]))
+      |> assign(:creating_event, nil)
+      |> assign(:saving_event, false)
+      |> Helpers.load_events()
+
+    {:ok, socket}
+  end
+
+  @spec handle_ad_hoc_meeting_failed(map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def handle_ad_hoc_meeting_failed(assigns, socket) do
+    socket =
+      socket
+      |> assign(Map.drop(assigns, [:action]))
+      |> assign(:saving_event, false)
+
+    {:ok, socket}
+  end
+
   @spec handle_event_created(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_event_created(assigns, socket) do

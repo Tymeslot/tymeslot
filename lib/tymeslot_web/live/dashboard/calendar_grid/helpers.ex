@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
   alias Phoenix.HTML
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Timezones
 
   # Data loading (socket transformers)
@@ -18,6 +19,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
 
     owned_ids = MapSet.new(integrations, & &1.id)
 
+    video_integrations =
+      user_id
+      |> Video.list_integrations()
+      |> Enum.filter(& &1.is_active)
+
     socket
     |> assign(:integrations, integrations)
     |> assign(:integration_colors, colors)
@@ -25,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
     |> assign(:preferences, prefs)
     |> assign(:hidden_integration_ids, prefs.hidden_integration_ids)
     |> assign(:view, safe_view_atom(prefs.default_view))
+    |> assign(:video_integrations, video_integrations)
     |> check_staleness()
   end
 

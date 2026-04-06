@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
+  alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Security.UniversalSanitizer
@@ -32,7 +33,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
         end_minute: end_minute,
         title: "",
         integration_id: default_int_id,
-        calendar_id: EditWorkflow.default_calendar_id(socket.assigns.integrations, default_int_id)
+        calendar_id:
+          EditWorkflow.default_calendar_id(socket.assigns.integrations, default_int_id),
+        attendee_email: "",
+        attendee_name: "",
+        video_integration_id: nil
       }
 
       {:noreply, assign(socket, :creating_event, creating)}
@@ -108,6 +113,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
     end
   end
 
+  @spec handle_update_create_attendee(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_attendee(params, socket) do
+    creating = socket.assigns.creating_event
+
+    if is_nil(creating) do
+      {:noreply, socket}
+    else
+      updated =
+        creating
+        |> maybe_put_trimmed(:attendee_email, params["attendee_email"])
+        |> maybe_put_trimmed(:attendee_name, params["attendee_name"])
+        |> maybe_put_int(:video_integration_id, params["video_integration_id"])
+
+      {:noreply, assign(socket, :creating_event, updated)}
+    end
+  end
+
   @spec handle_save_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_save_event(_params, socket) do
@@ -138,16 +161,37 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
           send(self(), {:flash, {:error, "End time must be after start time"}})
           {:noreply, socket}
         else
-          send(
-            self(),
-            {:execute_create_event,
-             %{
-               creating: creating,
-               user_id: socket.assigns.current_user.id,
-               start_at: start_at,
-               end_at: end_at
-             }}
-          )
+          attendee_email = String.trim(creating[:attendee_email] || "")
+
+          if attendee_email != "" do
+            send(
+              self(),
+              {:execute_create_ad_hoc_meeting,
+               %{
+                 title: creating.title,
+                 start_time: start_at,
+                 end_time: end_at,
+                 attendee_name: String.trim(creating[:attendee_name] || ""),
+                 attendee_email: attendee_email,
+                 attendee_timezone: tz,
+                 organizer_user_id: socket.assigns.current_user.id,
+                 calendar_integration_id: creating.integration_id,
+                 calendar_id: creating[:calendar_id],
+                 video_integration_id: creating[:video_integration_id]
+               }}
+            )
+          else
+            send(
+              self(),
+              {:execute_create_event,
+               %{
+                 creating: creating,
+                 user_id: socket.assigns.current_user.id,
+                 start_at: start_at,
+                 end_at: end_at
+               }}
+            )
+          end
 
           {:noreply, assign(socket, :saving_event, true)}
         end
@@ -181,6 +225,31 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
       {:ok, created} ->
         uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
         {:ok, %{uid: uid, creating: creating, start_at: start_at, end_at: end_at}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc false
+  @spec run_create_ad_hoc_meeting(map()) :: {:ok, map()} | {:error, term()}
+  def run_create_ad_hoc_meeting(params) do
+    ad_hoc_params = %{
+      title: params.title,
+      start_time: params.start_time,
+      end_time: params.end_time,
+      attendee_name: params.attendee_name,
+      attendee_email: params.attendee_email,
+      attendee_timezone: params[:attendee_timezone] || "Etc/UTC",
+      organizer_user_id: params.organizer_user_id,
+      calendar_integration_id: params[:calendar_integration_id],
+      calendar_path: params[:calendar_id],
+      video_integration_id: params[:video_integration_id]
+    }
+
+    case CreateAdHoc.execute(ad_hoc_params) do
+      {:ok, meeting} ->
+        {:ok, %{meeting_id: meeting.id, start_at: params.start_time, end_at: params.end_time}}
 
       {:error, reason} ->
         {:error, reason}
@@ -422,4 +491,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   end
 
   defp maybe_update_time(creating, _time_str, _hour_key, _minute_key), do: creating
+
+  defp maybe_put_trimmed(map, _key, nil), do: map
+
+  defp maybe_put_trimmed(map, key, val) when is_binary(val),
+    do: Map.put(map, key, String.trim(val))
+
+  defp maybe_put_int(map, _key, nil), do: map
+  defp maybe_put_int(map, key, ""), do: Map.put(map, key, nil)
+
+  defp maybe_put_int(map, key, val) when is_binary(val) do
+    case Integer.parse(val) do
+      {int, ""} -> Map.put(map, key, int)
+      _other -> map
+    end
+  end
 end

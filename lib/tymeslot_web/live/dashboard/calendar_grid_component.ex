@@ -52,6 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
       |> assign(:confirm_delete_linked_to_booking, false)
       |> assign(:saving_event, false)
       |> assign(:deleting_event, false)
+      |> assign(:video_integrations, [])
       |> assign(:owned_integration_ids, MapSet.new())
       |> assign(:visible_events, [])
       |> assign(:visible_days, [])
@@ -81,6 +82,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def update(%{action: :reload_events} = assigns, socket),
     do: UpdateHandlers.handle_reload_events(assigns, socket)
+
+  @impl Phoenix.LiveComponent
+  def update(%{action: :ad_hoc_meeting_created} = assigns, socket),
+    do: UpdateHandlers.handle_ad_hoc_meeting_created(assigns, socket)
+
+  @impl Phoenix.LiveComponent
+  def update(%{action: :ad_hoc_meeting_failed} = assigns, socket),
+    do: UpdateHandlers.handle_ad_hoc_meeting_failed(assigns, socket)
 
   @impl Phoenix.LiveComponent
   def update(%{action: :event_created} = assigns, socket),
@@ -209,6 +218,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: EventCrud.handle_update_create_integration(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("update_create_attendee", params, socket),
+    do: EventCrud.handle_update_create_attendee(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("save_event", params, socket),
     do: EventCrud.handle_save_event(params, socket)
 
@@ -329,6 +342,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           saving={@saving_event}
           user_timezone={@user_timezone}
           myself={@myself}
+          video_integrations={@video_integrations}
         />
         <Modals.recurrence_prompt_modal
           :if={@recurrence_prompt}
