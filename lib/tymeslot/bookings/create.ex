@@ -9,6 +9,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Repo
@@ -26,15 +27,6 @@ defmodule Tymeslot.Bookings.Create do
   @type booking_data :: map()
 
   @type error_reason :: String.t() | atom() | {:validation_error, any()}
-
-  # Get Calendar module dynamically to allow mocking in tests
-  defp calendar_module do
-    Application.get_env(
-      :tymeslot,
-      :calendar_module,
-      Tymeslot.Integrations.Calendar.Operations
-    )
-  end
 
   @doc """
   Creates a booking with fresh calendar validation.
@@ -211,7 +203,7 @@ defmodule Tymeslot.Bookings.Create do
         # want to block the user if calendar is slow. If it times out, we proceed anyway.
         check_task =
           Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-            calendar_module().get_events_for_range_fresh(organizer_user_id, date, date)
+            CalendarEvents.get_events_for_range_fresh(organizer_user_id, date, date)
           end)
 
         case Task.yield(check_task, 5_000) || Task.shutdown(check_task) do
