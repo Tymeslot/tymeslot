@@ -596,6 +596,6 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
 
   defp calendar_module do
     Application.get_env(:tymeslot, :calendar_module) ||
-      Tymeslot.Integrations.Calendar
+      Tymeslot.Integrations.Calendar.Events
   end
 end
