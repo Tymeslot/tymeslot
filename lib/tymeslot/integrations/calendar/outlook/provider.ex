@@ -15,6 +15,29 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, MultiCalendarFetch, ProviderCommon}
 
+  @typep converted_event :: %{
+           required(:uid) => String.t() | nil,
+           required(:summary) => String.t() | nil,
+           required(:description) => String.t() | nil,
+           required(:location) => String.t() | nil,
+           required(:start_time) => DateTime.t() | Date.t() | nil,
+           required(:end_time) => DateTime.t() | Date.t() | nil,
+           required(:status) => String.t() | nil,
+           required(:show_as) => String.t() | nil,
+           required(:response_status) => String.t() | nil,
+           required(:transparency) => String.t()
+         }
+
+  @typep calendar_entry :: %{
+           required(:id) => String.t() | nil,
+           required(:name) => String.t() | nil,
+           required(:color) => String.t() | nil,
+           required(:primary) => boolean(),
+           required(:selected) => boolean(),
+           required(:can_edit) => boolean() | nil,
+           required(:owner) => String.t()
+         }
+
   # Required callbacks for OAuth base
 
   @spec validate_oauth_scope(map()) :: :ok | {:error, String.t()}
@@ -40,7 +63,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     end
   end
 
-  @spec convert_events(list(map())) :: list(map())
+  @spec convert_events(list(map())) :: list(converted_event())
   def convert_events(outlook_events) do
     outlook_events
     |> Enum.filter(&busy_event?/1)
@@ -59,7 +82,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     status != "cancelled" and response_status != "declined"
   end
 
-  @spec convert_event(map()) :: map()
+  @spec convert_event(map()) :: converted_event()
   def convert_event(outlook_event) do
     start_time = parse_datetime(outlook_event[:start], outlook_event[:is_all_day])
     end_time = parse_datetime(outlook_event[:end], outlook_event[:is_all_day])
@@ -136,7 +159,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   Discovers all available calendars for the authenticated Outlook account.
   """
   @spec discover_calendars(CalendarIntegrationSchema.t()) ::
-          {:ok, list(map())} | {:error, term()}
+          {:ok, list(calendar_entry())} | {:error, term()}
   def discover_calendars(integration) do
     ProviderCommon.discover_calendars(
       integration,

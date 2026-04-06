@@ -48,7 +48,7 @@ defmodule Tymeslot.Integrations.Shared.ProviderConfigHelper do
   - `:ok` if all required fields are present
   - `{:error, String.t()}` with missing fields if validation fails
   """
-  @spec validate_required_fields(map(), list(atom())) :: :ok | {:error, String.t()}
+  @spec validate_required_fields(%{atom() => term()}, list(atom())) :: :ok | {:error, String.t()}
   def validate_required_fields(config, required_fields) do
     missing_fields = required_fields -- Map.keys(config)
 

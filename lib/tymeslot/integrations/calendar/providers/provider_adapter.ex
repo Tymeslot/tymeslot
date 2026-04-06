@@ -11,13 +11,19 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
 
+  @type adapter_client :: %{
+          required(:provider_type) => atom(),
+          required(:client) => term(),
+          required(:provider_module) => module()
+        }
+
   @doc """
   Creates a new client using the specified provider.
 
   ## Options
   - `skip_validation`: Skip config validation for operational client creation (default: false)
   """
-  @spec new_client(atom(), map() | term(), keyword()) :: map() | {:error, term()}
+  @spec new_client(atom(), map() | term(), keyword()) :: adapter_client() | {:error, term()}
   def new_client(provider_type, config, opts \\ []) do
     case ProviderRegistry.create_client(provider_type, config, opts) do
       {:ok, client} ->
@@ -35,7 +41,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @doc """
   Lists all events from the calendar.
   """
-  @spec get_events(map()) :: {:ok, list()} | {:error, atom(), term()} | {:error, term()}
+  @spec get_events(adapter_client()) ::
+          {:ok, list()} | {:error, atom(), term()} | {:error, term()}
   def get_events(adapter_client) do
     Metrics.time_operation(:calendar_get_events, %{provider: adapter_client.provider_type}, fn ->
       Logger.debug("Getting events from calendar", provider: adapter_client.provider_type)
@@ -72,7 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @doc """
   Lists events within a specific date range.
   """
-  @spec get_events(map(), DateTime.t(), DateTime.t()) ::
+  @spec get_events(adapter_client(), DateTime.t(), DateTime.t()) ::
           {:ok, list()} | {:error, atom(), term()} | {:error, term()}
   def get_events(adapter_client, start_time, end_time) do
     Metrics.time_operation(
@@ -122,7 +129,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @doc """
   Creates a new event in the calendar.
   """
-  @spec create_event(map(), map()) :: {:ok, term()} | {:error, atom(), term()} | {:error, term()}
+  @spec create_event(adapter_client(), map()) ::
+          {:ok, term()} | {:error, atom(), term()} | {:error, term()}
   def create_event(adapter_client, event_data) do
     Metrics.time_operation(
       :calendar_create_event,
@@ -159,7 +167,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @doc """
   Updates an existing event in the calendar.
   """
-  @spec update_event(map(), String.t(), map()) ::
+  @spec update_event(adapter_client(), String.t(), map()) ::
           :ok | {:error, atom(), term()} | {:error, term()}
   def update_event(adapter_client, uid, event_data) do
     Metrics.time_operation(
@@ -207,7 +215,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   @doc """
   Deletes an event from the calendar.
   """
-  @spec delete_event(map(), String.t(), keyword()) ::
+  @spec delete_event(adapter_client(), String.t(), keyword()) ::
           :ok | {:error, atom(), term()} | {:error, term()}
   def delete_event(adapter_client, uid, opts \\ []) do
     Metrics.time_operation(

@@ -10,7 +10,11 @@ defmodule Tymeslot.Integrations.Common.OAuth.AccountMatch do
   Verifies that the account from a new OAuth callback matches the existing integration.
   Allows the update when either side has a nil account ID (migration path).
   """
-  @spec verify_account_match(map(), String.t() | nil, (-> result)) :: result
+  @spec verify_account_match(
+          map(),
+          String.t() | nil,
+          (-> result)
+        ) :: result
         when result: {:ok, any()} | {:error, any()}
   def verify_account_match(existing, new_account_id, update_fn) do
     cond do

@@ -16,6 +16,27 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch
 
+  @typep converted_event :: %{
+           required(:uid) => String.t() | nil,
+           required(:summary) => String.t() | nil,
+           required(:description) => String.t() | nil,
+           required(:location) => String.t() | nil,
+           required(:start_time) => DateTime.t() | Date.t() | nil,
+           required(:end_time) => DateTime.t() | Date.t() | nil,
+           required(:status) => String.t() | nil,
+           required(:transparency) => String.t() | nil
+         }
+
+  @typep calendar_entry :: %{
+           required(:id) => String.t() | nil,
+           required(:name) => String.t() | nil,
+           required(:description) => String.t() | nil,
+           required(:primary) => boolean(),
+           required(:selected) => boolean(),
+           required(:access_role) => String.t() | nil,
+           required(:color) => String.t() | nil
+         }
+
   @doc """
   Checks if a Google Calendar integration needs a scope upgrade.
   Returns true if the integration only has basic auth scope without calendar permissions.
@@ -51,12 +72,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     end
   end
 
-  @spec convert_events(list(map())) :: list(map())
+  @spec convert_events(list(map())) :: list(converted_event())
   def convert_events(google_events) do
     Enum.map(google_events, &convert_event/1)
   end
 
-  @spec convert_event(map()) :: map()
+  @spec convert_event(map()) :: converted_event()
   def convert_event(google_event) do
     %{
       uid: google_event["id"],
@@ -114,7 +135,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   @doc """
   Discovers all available calendars for the authenticated Google account.
   """
-  @spec discover_calendars(CalendarIntegrationSchema.t()) :: {:ok, list(map())} | {:error, term()}
+  @spec discover_calendars(CalendarIntegrationSchema.t()) ::
+          {:ok, list(calendar_entry())} | {:error, term()}
   def discover_calendars(integration) do
     ProviderCommon.discover_calendars(
       integration,

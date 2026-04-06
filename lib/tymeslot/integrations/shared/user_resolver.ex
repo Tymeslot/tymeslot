@@ -101,8 +101,18 @@ defmodule Tymeslot.Integrations.Common.UserResolver do
         scope: "https://www.googleapis.com/auth/calendar"
       })
   """
-  @spec create_oauth_integration(integer(), integration_type(), String.t(), map(), map()) ::
-          integration_result()
+  @spec create_oauth_integration(
+          integer(),
+          integration_type(),
+          String.t(),
+          %{atom() => term()},
+          %{
+            required(:access_token) => String.t(),
+            required(:refresh_token) => String.t(),
+            required(:expires_at) => DateTime.t(),
+            required(:scope) => String.t()
+          }
+        ) :: integration_result()
   def create_oauth_integration(user_id, integration_type, provider_name, provider_config, tokens)
       when is_integer(user_id) and integration_type in [:calendar, :video] and
              is_binary(provider_name) and

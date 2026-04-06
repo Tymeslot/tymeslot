@@ -183,7 +183,8 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
   @doc """
   Validates if a token is still valid or needs refresh.
   """
-  @spec validate_token(map()) :: {:ok, :valid | :needs_refresh} | {:error, String.t()}
+  @spec validate_token(%{optional(:token_expires_at) => DateTime.t()}) ::
+          {:ok, :valid | :needs_refresh} | {:error, String.t()}
   def validate_token(config) do
     case Map.get(config, :token_expires_at) do
       nil ->

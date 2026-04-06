@@ -6,10 +6,32 @@ defmodule Tymeslot.Notifications.Recipients do
 
   alias Tymeslot.Profiles
 
+  @typep participant :: %{
+           required(:email) => String.t() | nil,
+           required(:name) => String.t() | nil,
+           required(:timezone) => String.t()
+         }
+
+  @typep notification_context :: %{
+           required(:meeting_id) => term(),
+           required(:meeting_uid) => String.t() | nil,
+           required(:organizer_email) => String.t() | nil,
+           required(:attendee_email) => String.t() | nil,
+           required(:meeting_status) => atom() | nil,
+           required(:has_video_room) => boolean() | nil,
+           required(:meeting_start) => DateTime.t() | nil,
+           required(:meeting_end) => DateTime.t() | nil
+         }
+
   @doc """
   Determines the recipients for a given notification type and meeting.
   """
-  @spec determine_recipients(term(), atom()) :: {atom(), map()}
+  @spec determine_recipients(term(), atom()) ::
+          {atom(),
+           %{
+             required(:organizer) => participant(),
+             required(:attendee) => participant()
+           }}
   def determine_recipients(meeting, notification_type) do
     base_recipients = %{
       organizer: %{
@@ -51,7 +73,7 @@ defmodule Tymeslot.Notifications.Recipients do
   @doc """
   Gets the notification context for a meeting.
   """
-  @spec get_notification_context(term()) :: map()
+  @spec get_notification_context(term()) :: notification_context()
   def get_notification_context(meeting) do
     %{
       meeting_id: meeting.id,
@@ -126,7 +148,20 @@ defmodule Tymeslot.Notifications.Recipients do
   @doc """
   Builds recipient-specific context for email templates.
   """
-  @spec build_recipient_context(term(), atom()) :: map()
+  @spec build_recipient_context(term(), atom()) :: %{
+          required(:meeting_id) => term(),
+          required(:meeting_uid) => String.t() | nil,
+          required(:organizer_email) => String.t() | nil,
+          required(:attendee_email) => String.t() | nil,
+          required(:meeting_status) => atom() | nil,
+          required(:has_video_room) => boolean() | nil,
+          required(:meeting_start) => DateTime.t() | nil,
+          required(:meeting_end) => DateTime.t() | nil,
+          required(:recipient_name) => String.t() | nil,
+          required(:recipient_email) => String.t() | nil,
+          required(:recipient_timezone) => String.t(),
+          required(:recipient_type) => atom()
+        }
   def build_recipient_context(meeting, recipient_type) do
     base_context = get_notification_context(meeting)
 

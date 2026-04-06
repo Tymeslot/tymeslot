@@ -43,7 +43,16 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   - `{:ok, calendars}` - List of discovered calendars
   - `{:error, reason}` - Error if discovery fails
   """
-  @spec discover_calendars(atom(), map(), keyword()) :: {:ok, list(map())} | {:error, String.t()}
+  @spec discover_calendars(
+          atom(),
+          %{
+            required(:base_url) => String.t(),
+            required(:username) => String.t(),
+            required(:password) => String.t(),
+            optional(:calendar_paths) => list(String.t())
+          },
+          keyword()
+        ) :: {:ok, list(map())} | {:error, String.t()}
   def discover_calendars(provider, config, opts \\ []) do
     force_refresh = Keyword.get(opts, :force_refresh, false)
     cache_key = build_cache_key(provider, config)
@@ -78,7 +87,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   - `{:ok, calendars}` - List of discovered calendars
   - `{:error, reason}` - Error if discovery fails
   """
-  @spec discover_for_integration(map(), keyword()) :: {:ok, list(map())} | {:error, String.t()}
+  @spec discover_for_integration(
+          Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t(),
+          keyword()
+        ) :: {:ok, list(map())} | {:error, String.t()}
   def discover_for_integration(integration, opts \\ []) do
     provider =
       try do

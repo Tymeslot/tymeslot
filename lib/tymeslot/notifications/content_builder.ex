@@ -13,7 +13,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   @doc """
   Builds appointment details for email notifications.
   """
-  @spec build_appointment_details(map()) :: map()
+  @spec build_appointment_details(%{atom() => term()}) :: %{atom() => term()}
   def build_appointment_details(meeting) do
     organizer_timezone = Recipients.get_organizer_timezone(meeting)
     # Get attendee timezone - should always be present
@@ -79,7 +79,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   @doc """
   Builds cancellation details for email notifications.
   """
-  @spec build_cancellation_details(map()) :: map()
+  @spec build_cancellation_details(%{atom() => term()}) :: %{atom() => term()}
   def build_cancellation_details(meeting) do
     organizer_timezone = Recipients.get_organizer_timezone(meeting)
 
@@ -115,7 +115,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   @doc """
   Builds reschedule details for email notifications.
   """
-  @spec build_reschedule_details(map(), map()) :: map()
+  @spec build_reschedule_details(%{atom() => term()}, %{atom() => term()}) :: %{atom() => term()}
   def build_reschedule_details(updated_meeting, original_meeting) do
     organizer_timezone = Recipients.get_organizer_timezone(updated_meeting)
 
@@ -138,7 +138,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   @doc """
   Builds video room notification details.
   """
-  @spec build_video_room_details(map(), atom()) :: map()
+  @spec build_video_room_details(%{atom() => term()}, atom()) :: %{atom() => term()}
   def build_video_room_details(meeting, video_room_status) do
     base_details = build_appointment_details(meeting)
 
@@ -152,7 +152,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   @doc """
   Builds reminder notification details.
   """
-  @spec build_reminder_details(map()) :: map()
+  @spec build_reminder_details(%{atom() => term()}) :: %{atom() => term()}
   def build_reminder_details(meeting) do
     base_details = build_appointment_details(meeting)
 
@@ -168,7 +168,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   @doc """
   Builds email subject line for notification type.
   """
-  @spec build_subject(atom(), map()) :: String.t()
+  @spec build_subject(atom(), %{atom() => term()}) :: String.t()
   def build_subject(notification_type, meeting) do
     case notification_type do
       :confirmation ->
@@ -197,7 +197,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   @doc """
   Validates that notification content is complete.
   """
-  @spec validate_content(map()) :: :ok | {:error, String.t()}
+  @spec validate_content(%{atom() => term()}) :: :ok | {:error, String.t()}
   def validate_content(content) do
     required_fields = [
       :uid,

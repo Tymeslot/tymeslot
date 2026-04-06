@@ -89,7 +89,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   ## Returns
   - User-friendly error message string
   """
-  @spec format_provider_error(any(), provider(), map()) :: String.t()
+  @spec format_provider_error(any(), provider(), %{atom() => term()}) :: String.t()
   def format_provider_error(error, provider, context \\ %{}) do
     category = categorize_error(error)
     base_message = get_user_friendly_message(category, provider)
@@ -280,7 +280,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   ## Returns
   - Pseudo-changeset error structure
   """
-  @spec create_validation_error(String.t(), atom() | nil) :: map()
+  @spec create_validation_error(String.t(), atom() | nil) :: Ecto.Changeset.t()
   def create_validation_error(message, field \\ nil) do
     error_field = field || detect_error_field(message)
 
@@ -301,7 +301,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
   ## Returns
   - `{:ok, result}` or `{:error, formatted_message}`
   """
-  @spec with_error_handling(provider(), function(), map()) :: {:ok, any()} | {:error, String.t()}
+  @spec with_error_handling(provider(), function(), %{atom() => term()}) ::
+          {:ok, any()} | {:error, String.t()}
   def with_error_handling(provider, operation, context \\ %{}) do
     case operation.() do
       {:ok, result} ->

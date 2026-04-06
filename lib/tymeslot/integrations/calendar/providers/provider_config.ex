@@ -75,7 +75,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   # Read provider settings from config
   @doc false
-  @spec provider_settings() :: map()
+  @spec provider_settings() :: %{atom() => term()}
   def provider_settings do
     Config.calendar_provider_settings()
   end
@@ -164,7 +164,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   Returns a map with icon, description, button_text, click_event, and circuit_breaker_enabled fields.
   """
-  @spec metadata(atom()) :: map()
+  @spec metadata(atom()) :: %{
+          required(:icon) => String.t(),
+          required(:description) => String.t(),
+          required(:button_text) => String.t(),
+          required(:click_event) => String.t() | nil,
+          required(:circuit_breaker_enabled) => boolean()
+        }
   def metadata(provider) when is_atom(provider) do
     Map.get(@provider_metadata, provider, %{
       icon: Atom.to_string(provider),

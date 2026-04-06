@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   require Logger
 
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
@@ -41,7 +42,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec handle_callback(String.t(), String.t(), String.t()) ::
-          {:ok, map()} | {:error, String.t()}
+          {:ok, CalendarIntegrationSchema.t()} | {:error, String.t()}
   def handle_callback(code, state, redirect_uri) do
     with {:ok, tokens} <- GoogleOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
          {:ok, integration} <-

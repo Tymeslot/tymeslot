@@ -105,7 +105,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   This handles the common pattern of checking if an integration exists and either
   creating or updating it accordingly.
   """
-  @spec create_or_update_integration(integer(), String.t(), map(), oauth_tokens()) ::
+  @spec create_or_update_integration(integer(), String.t(), %{atom() => term()}, oauth_tokens()) ::
           {:ok, any()} | {:error, any()}
   def create_or_update_integration(user_id, provider_name, provider_config, tokens) do
     alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries

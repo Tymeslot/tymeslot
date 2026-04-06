@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
 
   alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
   alias Tymeslot.DatabaseQueries.MeetingQueries
+  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
@@ -18,7 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
   Upserts a list of events into the calendar event cache and triggers
   time-change reconciliation for any event linked to a meeting.
   """
-  @spec process_events(integration :: map(), events :: [map()]) :: :ok
+  @spec process_events(integration :: CalendarIntegrationSchema.t(), events :: [map()]) :: :ok
   def process_events(integration, events) do
     Enum.each(events, fn event -> process_event(integration, event) end)
   end
@@ -27,7 +28,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
   Deletes cached events by their server-relative `href` and notifies the sync
   reconciler of each deletion.
   """
-  @spec process_deletions(integration :: map(), hrefs :: [String.t()]) :: :ok
+  @spec process_deletions(
+          integration :: CalendarIntegrationSchema.t(),
+          hrefs :: [String.t()]
+        ) :: :ok
   def process_deletions(integration, hrefs) do
     Enum.each(hrefs, fn href -> process_deletion(integration, href) end)
   end
@@ -36,7 +40,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
   Parses a raw iCalendar string and returns the first event found.
   """
   @spec parse_ical_from_string(String.t() | term()) ::
-          {:ok, map()} | {:error, :no_events | :empty_data | term()}
+          {:ok,
+           %{
+             required(:uid) => String.t(),
+             required(:summary) => String.t() | nil,
+             required(:description) => String.t() | nil,
+             required(:location) => String.t() | nil,
+             required(:attendees) => list(%{String.t() => String.t() | nil}),
+             required(:recurrence_rule) => String.t() | nil,
+             required(:recurrence_id) => String.t() | nil,
+             required(:exdates) => list(),
+             required(:start_time) => DateTime.t() | Date.t(),
+             required(:end_time) => DateTime.t() | Date.t() | nil,
+             required(:transparency) => String.t() | nil
+           }}
+          | {:error, :no_events | :empty_data | term()}
   def parse_ical_from_string(ical_string) when is_binary(ical_string) and ical_string != "" do
     case ICalParser.parse(ical_string) do
       {:ok, [event | _rest]} -> {:ok, event}

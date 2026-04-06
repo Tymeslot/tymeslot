@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.Shared.ProviderToggle do
   ## Options
     * `:default_enabled` - fallback when a provider has no explicit entry (default: true)
   """
-  @spec enabled?(map(), atom(), keyword()) :: boolean()
+  @spec enabled?(%{atom() => term()}, atom(), keyword()) :: boolean()
   def enabled?(settings, type, opts \\ []) when is_atom(type) and is_map(settings) do
     default_enabled = Keyword.get(opts, :default_enabled, true)
 

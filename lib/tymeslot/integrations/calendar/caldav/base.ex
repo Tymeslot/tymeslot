@@ -137,7 +137,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
   @doc """
   Discovers available calendars on the CalDAV server with circuit breaker protection.
   """
-  @spec discover_calendars(client(), keyword()) :: {:ok, list(map())} | {:error, error_reason()}
+  @spec discover_calendars(client(), keyword()) ::
+          {:ok,
+           list(%{
+             required(:id) => String.t(),
+             required(:name) => String.t(),
+             required(:href) => String.t(),
+             required(:color) => String.t(),
+             required(:selected) => boolean()
+           })}
+          | {:error, error_reason()}
   def discover_calendars(client, opts \\ []) do
     ip_address = Keyword.get(opts, :ip_address, "127.0.0.1")
 

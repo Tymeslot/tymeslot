@@ -12,7 +12,7 @@ defmodule Tymeslot.Webhooks do
   require Logger
 
   alias Tymeslot.DatabaseQueries.WebhookQueries
-  alias Tymeslot.DatabaseSchemas.{WebhookDeliverySchema, WebhookSchema}
+  alias Tymeslot.DatabaseSchemas.{MeetingSchema, WebhookDeliverySchema, WebhookSchema}
   alias Tymeslot.Features
   alias Tymeslot.Security.UrlValidation
   alias Tymeslot.Webhooks.PayloadBuilder
@@ -191,7 +191,8 @@ defmodule Tymeslot.Webhooks do
   @doc """
   Triggers a webhook delivery by scheduling it via Oban.
   """
-  @spec trigger_webhook(WebhookSchema.t(), String.t(), map()) :: :ok | {:error, term()}
+  @spec trigger_webhook(WebhookSchema.t(), String.t(), MeetingSchema.t()) ::
+          :ok | {:error, term()}
   def trigger_webhook(webhook, event_type, meeting) do
     if WebhookSchema.should_be_active?(webhook) and
          WebhookSchema.subscribed_to?(webhook, event_type) do
@@ -205,7 +206,7 @@ defmodule Tymeslot.Webhooks do
   Triggers all webhooks for a user and event type.
   Checks feature access before triggering webhooks.
   """
-  @spec trigger_webhooks_for_event(integer(), String.t(), map()) :: :ok
+  @spec trigger_webhooks_for_event(integer(), String.t(), MeetingSchema.t()) :: :ok
   def trigger_webhooks_for_event(user_id, event_type, meeting) do
     # Check if user has access to automation features
     case Features.check_access(user_id, :automations_allowed) do
@@ -260,7 +261,13 @@ defmodule Tymeslot.Webhooks do
   @doc """
   Gets delivery statistics for a webhook.
   """
-  @spec get_delivery_stats(integer(), keyword()) :: map()
+  @spec get_delivery_stats(integer(), keyword()) :: %{
+          required(:total) => non_neg_integer(),
+          required(:successful) => non_neg_integer(),
+          required(:failed) => non_neg_integer(),
+          required(:success_rate) => float(),
+          required(:period_days) => non_neg_integer()
+        }
   def get_delivery_stats(webhook_id, opts \\ []) do
     WebhookQueries.get_delivery_stats(webhook_id, opts)
   end
@@ -272,7 +279,13 @@ defmodule Tymeslot.Webhooks do
   @doc """
   Returns all available event types.
   """
-  @spec available_events() :: [map()]
+  @spec available_events() :: [
+          %{
+            required(:value) => String.t(),
+            required(:label) => String.t(),
+            required(:description) => String.t()
+          }
+        ]
   def available_events do
     [
       %{

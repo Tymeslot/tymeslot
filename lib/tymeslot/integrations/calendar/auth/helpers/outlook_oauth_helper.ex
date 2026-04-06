@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   require Logger
 
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Common.OAuth.IdToken
@@ -52,7 +53,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec handle_callback(String.t(), String.t(), String.t()) ::
-          {:ok, map()} | {:error, String.t()}
+          {:ok, CalendarIntegrationSchema.t()} | {:error, String.t()}
   def handle_callback(code, state, redirect_uri) do
     with {:ok, %{user_id: user_id, integration_id: integration_id}} <- verify_state(state),
          {:ok, tokens} <- exchange_code_for_tokens(code, redirect_uri),

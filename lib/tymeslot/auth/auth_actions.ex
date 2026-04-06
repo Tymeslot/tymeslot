@@ -131,7 +131,8 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Validates signup form input.
   """
-  @spec validate_signup_input(map()) :: {:ok, map()} | {:error, map()}
+  @spec validate_signup_input(%{String.t() => term()}) ::
+          {:ok, %{String.t() => term()}} | {:error, %{atom() => [String.t()]}}
   def validate_signup_input(params) do
     Validation.validate_signup_input(params)
   end
@@ -139,7 +140,8 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Validates login form input.
   """
-  @spec validate_login_input(map()) :: {:ok, map()} | {:error, map()}
+  @spec validate_login_input(%{String.t() => term()}) ::
+          {:ok, %{String.t() => term()}} | {:error, %{atom() => String.t()}}
   def validate_login_input(params) do
     Validation.validate_login_input(params)
   end
@@ -147,7 +149,8 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Validates password reset form input.
   """
-  @spec validate_password_reset_input(map()) :: {:ok, map()} | {:error, map()}
+  @spec validate_password_reset_input(%{String.t() => term()}) ::
+          {:ok, %{String.t() => term()}} | {:error, %{atom() => [String.t()]}}
   def validate_password_reset_input(%{"email" => _email} = params) do
     Validation.validate_password_reset_input(params)
   end
@@ -173,7 +176,8 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Updates socket with error state.
   """
-  @spec set_errors(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  @spec set_errors(Phoenix.LiveView.Socket.t(), %{atom() => String.t()}) ::
+          Phoenix.LiveView.Socket.t()
   def set_errors(socket, errors) do
     socket
     |> assign(:errors, errors)
@@ -183,7 +187,8 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Updates socket with form data.
   """
-  @spec set_form_data(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
+  @spec set_form_data(Phoenix.LiveView.Socket.t(), %{String.t() => term()}) ::
+          Phoenix.LiveView.Socket.t()
   def set_form_data(socket, form_data) do
     assign(socket, :form_data, form_data)
   end
@@ -202,7 +207,7 @@ defmodule Tymeslot.Auth.AuthActions do
   @doc """
   Converts terms_accepted string to boolean.
   """
-  @spec convert_terms_accepted(map()) :: map()
+  @spec convert_terms_accepted(%{String.t() => term()}) :: %{String.t() => term()}
   def convert_terms_accepted(user_params) do
     Map.update(user_params, "terms_accepted", false, fn
       "true" -> true

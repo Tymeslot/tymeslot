@@ -27,7 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   Returns parsed event maps with domain fields (`uid`, `summary`, etc.).
   """
   @spec fetch_events(Base.client(), String.t(), DateTime.t(), DateTime.t(), keyword()) ::
-          {:ok, list(map())} | {:error, Base.error_reason()}
+          {:ok, list(XmlHandler.parsed_event())} | {:error, Base.error_reason()}
   def fetch_events(client, calendar_path, start_time, end_time, opts \\ []) do
     with_events_breaker(client, opts, fn ->
       url = UrlBuilder.build_calendar_url(client.base_url, calendar_path)
