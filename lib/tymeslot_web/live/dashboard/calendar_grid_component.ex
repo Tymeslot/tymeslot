@@ -16,6 +16,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   """
   use TymeslotWeb, :live_component
 
+  alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.DragDrop
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit
@@ -62,6 +63,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
       |> assign(:sync_completed, 0)
       |> assign(:stale_integrations, [])
       |> assign(:oldest_sync_at, nil)
+      |> assign(:_initialized, false)
 
     {:ok, socket}
   end
@@ -272,87 +274,141 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   def render(assigns) do
     ~H"""
     <div id="calendar-grid" class="flex flex-col h-full relative" phx-hook="CalendarMobile" phx-target={@myself}>
-      <Header.toolbar
-        view={@view}
-        date={@date}
-        integrations={@integrations}
-        integration_colors={@integration_colors}
-        hidden_integration_ids={@hidden_integration_ids}
-        show_calendar_list={@show_calendar_list}
-        show_view_menu={@show_view_menu}
-        syncing={@syncing}
-        timezone_display={@timezone_display}
-        timezone_country_code={@timezone_country_code}
-        preferences={@preferences}
-        myself={@myself}
-      />
-      <GridViews.week_day_view
-        view={@view}
-        visible_days={@visible_days}
-        visible_events={@visible_events}
-        events={@events}
-        integrations={@integrations}
-        integration_colors={@integration_colors}
-        hidden_integration_ids={@hidden_integration_ids}
-        current_time={@current_time}
-        user_timezone={@user_timezone}
-        preferences={@preferences}
-        stale_integrations={@stale_integrations}
-        oldest_sync_at={@oldest_sync_at}
-        syncing={@syncing}
-        sync_total={@sync_total}
-        sync_completed={@sync_completed}
-        date={@date}
-        myself={@myself}
-      />
-      <GridViews.month_view
-        view={@view}
-        visible_days={@visible_days}
-        visible_events={@visible_events}
-        integrations={@integrations}
-        integration_colors={@integration_colors}
-        hidden_integration_ids={@hidden_integration_ids}
-        date={@date}
-        user_timezone={@user_timezone}
-        preferences={@preferences}
-        myself={@myself}
-      />
-      <Modals.create_event_modal
-        :if={@creating_event}
-        creating_event={@creating_event}
-        integrations={@integrations}
-        integration_colors={@integration_colors}
-        saving={@saving_event}
-        user_timezone={@user_timezone}
-        myself={@myself}
-      />
-      <Modals.recurrence_prompt_modal
-        :if={@recurrence_prompt}
-        recurrence_prompt={@recurrence_prompt}
-        myself={@myself}
-      />
-      <Modals.settings_modal
-        :if={@show_settings}
-        preferences={@preferences}
-        myself={@myself}
-      />
-      <Modals.event_detail_modal
-        :if={@selected_event}
-        selected_event={@selected_event}
-        integrations={@integrations}
-        integration_colors={@integration_colors}
-        user_timezone={@user_timezone}
-        time_format={Helpers.time_format(assigns)}
-        myself={@myself}
-        editable={MapSet.member?(@owned_integration_ids, @selected_event.calendar_integration_id)}
-      />
-      <Modals.confirm_delete_modal
-        :if={@confirm_delete_event}
-        event={@confirm_delete_event}
-        deleting={@deleting_event}
-        linked_to_booking={@confirm_delete_linked_to_booking}
-        myself={@myself}
-      />
+      <.no_calendars_banner :if={@_initialized && @integrations == []} />
+      <div :if={@_initialized && @integrations != []}>
+        <Header.toolbar
+          view={@view}
+          date={@date}
+          integrations={@integrations}
+          integration_colors={@integration_colors}
+          hidden_integration_ids={@hidden_integration_ids}
+          show_calendar_list={@show_calendar_list}
+          show_view_menu={@show_view_menu}
+          syncing={@syncing}
+          timezone_display={@timezone_display}
+          timezone_country_code={@timezone_country_code}
+          preferences={@preferences}
+          myself={@myself}
+        />
+        <GridViews.week_day_view
+          view={@view}
+          visible_days={@visible_days}
+          visible_events={@visible_events}
+          events={@events}
+          integrations={@integrations}
+          integration_colors={@integration_colors}
+          hidden_integration_ids={@hidden_integration_ids}
+          current_time={@current_time}
+          user_timezone={@user_timezone}
+          preferences={@preferences}
+          stale_integrations={@stale_integrations}
+          oldest_sync_at={@oldest_sync_at}
+          syncing={@syncing}
+          sync_total={@sync_total}
+          sync_completed={@sync_completed}
+          date={@date}
+          myself={@myself}
+        />
+        <GridViews.month_view
+          view={@view}
+          visible_days={@visible_days}
+          visible_events={@visible_events}
+          integrations={@integrations}
+          integration_colors={@integration_colors}
+          hidden_integration_ids={@hidden_integration_ids}
+          date={@date}
+          user_timezone={@user_timezone}
+          preferences={@preferences}
+          myself={@myself}
+        />
+        <Modals.create_event_modal
+          :if={@creating_event}
+          creating_event={@creating_event}
+          integrations={@integrations}
+          integration_colors={@integration_colors}
+          saving={@saving_event}
+          user_timezone={@user_timezone}
+          myself={@myself}
+        />
+        <Modals.recurrence_prompt_modal
+          :if={@recurrence_prompt}
+          recurrence_prompt={@recurrence_prompt}
+          myself={@myself}
+        />
+        <Modals.settings_modal
+          :if={@show_settings}
+          preferences={@preferences}
+          myself={@myself}
+        />
+        <Modals.event_detail_modal
+          :if={@selected_event}
+          selected_event={@selected_event}
+          integrations={@integrations}
+          integration_colors={@integration_colors}
+          user_timezone={@user_timezone}
+          time_format={Helpers.time_format(assigns)}
+          myself={@myself}
+          editable={MapSet.member?(@owned_integration_ids, @selected_event.calendar_integration_id)}
+        />
+        <Modals.confirm_delete_modal
+          :if={@confirm_delete_event}
+          event={@confirm_delete_event}
+          deleting={@deleting_event}
+          linked_to_booking={@confirm_delete_linked_to_booking}
+          myself={@myself}
+        />
+      </div>
+    </div>
+    """
+  end
+
+  defp no_calendars_banner(assigns) do
+    hours = Enum.to_list(6..20)
+    days = ~w(Mon Tue Wed Thu Fri Sat Sun)
+    assigns = assign(assigns, hours: hours, days: days)
+
+    ~H"""
+    <div class="relative flex-1 min-h-0 overflow-hidden">
+      <%!-- Blurred calendar grid background --%>
+      <div class="absolute inset-0 select-none" aria-hidden="true">
+        <div class="h-full flex flex-col blur-[1px] opacity-60">
+          <%!-- Day headers --%>
+          <div class="grid grid-cols-8 border-b border-tymeslot-200">
+            <div class="py-3 px-2"></div>
+            <div :for={day <- @days} class="py-3 px-2 text-center border-l border-tymeslot-200">
+              <span class="text-token-xs font-bold text-tymeslot-300">{day}</span>
+            </div>
+          </div>
+          <%!-- Time rows --%>
+          <div class="flex-1 overflow-hidden">
+            <div :for={hour <- @hours} class="grid grid-cols-8 border-b border-tymeslot-200">
+              <div class="py-4 px-2 text-right">
+                <span class="text-token-xs text-tymeslot-300/50">{rem(hour, 12) |> then(&if(&1 == 0, do: 12, else: &1))} {if(hour < 12, do: "AM", else: "PM")}</span>
+              </div>
+              <div :for={_day <- @days} class="py-4 border-l border-tymeslot-200"></div>
+            </div>
+          </div>
+        </div>
+        <%!-- Gradient fade overlay --%>
+        <div class="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-white/50"></div>
+      </div>
+      <%!-- Centred content --%>
+      <div class="absolute inset-0 flex flex-col items-center justify-center px-6">
+        <div class="w-20 h-20 bg-white/90 backdrop-blur rounded-token-2xl flex items-center justify-center mb-6 shadow-sm border-2 border-dashed border-tymeslot-100">
+          <IconComponents.icon name={:calendar} class="w-10 h-10 text-tymeslot-300" />
+        </div>
+        <h2 class="text-token-xl font-bold text-tymeslot-800 mb-2">Nothing to see here</h2>
+        <p class="text-token-base text-tymeslot-500 text-center max-w-md mb-8">
+          Connect at least one calendar to see your events here.
+        </p>
+        <.link
+          patch={~p"/dashboard/calendar-integration"}
+          class="inline-flex items-center gap-2 px-6 py-3 bg-turquoise-600 hover:bg-turquoise-700 text-white font-bold rounded-token-xl transition-colors shadow-lg shadow-turquoise-500/20"
+        >
+          <.icon name="hero-plus" class="w-5 h-5" />
+          Connect a calendar
+        </.link>
+      </div>
     </div>
     """
   end

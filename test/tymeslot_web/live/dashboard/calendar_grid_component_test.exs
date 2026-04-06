@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
     _profile = insert(:profile, user: user)
+    _integration = insert(:calendar_integration, user: user)
     conn = conn |> Test.init_test_session(%{}) |> fetch_session()
     conn = log_in_user(conn, user)
     {:ok, conn: conn, user: user}
@@ -125,6 +126,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
 
       new_label = extract_period_label(render(lv))
       refute new_label == original_label
+    end
+  end
+
+  describe "empty state" do
+    setup %{conn: conn} do
+      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      _profile = insert(:profile, user: user)
+      conn = conn |> Test.init_test_session(%{}) |> fetch_session()
+      conn = log_in_user(conn, user)
+      {:ok, conn: conn, user: user}
+    end
+
+    test "shows empty state with connect link when no calendars are connected", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
+      assert html =~ "Nothing to see here"
+      assert html =~ "Connect at least one calendar"
+      assert html =~ "Connect a calendar"
+      assert html =~ ~p"/dashboard/calendar-integration"
     end
   end
 
