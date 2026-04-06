@@ -91,45 +91,55 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
       <%!-- Attendee section --%>
       <div class="space-y-3 border-t border-tymeslot-200 pt-3 mt-3">
         <p class="text-token-xs font-medium text-tymeslot-400">
-          Invite attendee (optional)
+          Invite attendees (optional)
         </p>
         <div>
-          <label
-            for="attendee_email"
-            class="block text-token-xs font-medium text-tymeslot-600 mb-1"
+          <div
+            :if={@creating_event[:attendees] != []}
+            class="flex flex-wrap gap-1.5 mb-2"
           >
-            Email
-          </label>
-          <input
-            type="email"
-            id="attendee_email"
-            name="attendee_email"
-            value={@creating_event[:attendee_email] || ""}
-            phx-blur="update_create_attendee"
-            phx-target={@myself}
-            placeholder="attendee@example.com"
-            class="w-full rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
-          />
+            <span
+              :for={email <- @creating_event[:attendees] || []}
+              class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
+            >
+              {email}
+              <button
+                type="button"
+                phx-click="remove_create_attendee"
+                phx-value-email={email}
+                phx-target={@myself}
+                class="w-4 h-4 rounded-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
+                aria-label={"Remove #{email}"}
+              >
+                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          </div>
+          <form phx-submit="add_create_attendee" phx-target={@myself} class="flex gap-2">
+            <input
+              type="email"
+              id="create-attendee-email"
+              name="email"
+              value={@creating_event[:attendee_input] || ""}
+              phx-change="update_create_attendee_input"
+              phx-target={@myself}
+              placeholder="attendee@example.com"
+              class="flex-1 rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
+            />
+            <button
+              type="submit"
+              class="px-3 py-1.5 rounded-md border border-tymeslot-300 text-token-xs text-tymeslot-600 hover:bg-tymeslot-50 transition-colors"
+            >
+              Add
+            </button>
+          </form>
+          <p class="text-token-xs text-tymeslot-400 mt-1">
+            Each person will receive an invitation from your calendar provider.
+          </p>
         </div>
-        <div :if={(@creating_event[:attendee_email] || "") != ""}>
-          <label
-            for="attendee_name"
-            class="block text-token-xs font-medium text-tymeslot-600 mb-1"
-          >
-            Name
-          </label>
-          <input
-            type="text"
-            id="attendee_name"
-            name="attendee_name"
-            value={@creating_event[:attendee_name] || ""}
-            phx-blur="update_create_attendee"
-            phx-target={@myself}
-            placeholder="Jane Doe"
-            class="w-full rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
-          />
-        </div>
-        <div :if={(@creating_event[:attendee_email] || "") != "" and @video_integrations != []}>
+        <div :if={(@creating_event[:attendees] || []) != [] and @video_integrations != []}>
           <label
             for="video_integration_id"
             class="block text-token-xs font-medium text-tymeslot-600 mb-1"
@@ -139,7 +149,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
           <select
             id="video_integration_id"
             name="video_integration_id"
-            phx-change="update_create_attendee"
+            phx-change="update_create_video"
             phx-target={@myself}
             class="w-full rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
           >
@@ -342,6 +352,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
   attr :time_format, :string, default: "12h"
   attr :myself, :any, required: true
   attr :editable, :boolean, default: false
+  attr :attendee_input, :string, default: ""
 
   @spec event_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def event_detail_modal(assigns) do
@@ -501,16 +512,66 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
       </div>
 
       <%!-- Attendees --%>
-      <div :if={not Enum.empty?(@selected_event.attendees || [])} class="flex items-start gap-3">
+      <div :if={@editable or not Enum.empty?(@selected_event.attendees || [])} class="flex items-start gap-3 mb-3">
         <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Attendees">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <div class="flex-1">
-          <div :for={attendee <- Enum.take(@selected_event.attendees, 5)} class="text-token-sm text-tymeslot-700 leading-snug">
-            <%= attendee["name"] || attendee["email"] %>
-            <span :if={attendee["name"] && attendee["email"] && attendee["name"] != attendee["email"]} class="text-token-xs text-tymeslot-400 ml-1"><%= attendee["email"] %></span>
+          <%!-- Editable attendee tags --%>
+          <div :if={@editable}>
+            <div
+              :if={(@selected_event.attendees || []) != []}
+              class="flex flex-wrap gap-1.5 mb-2"
+            >
+              <span
+                :for={attendee <- @selected_event.attendees || []}
+                class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
+              >
+                {attendee["name"] || attendee["email"] || attendee[:email]}
+                <button
+                  type="button"
+                  phx-click="request_remove_attendee"
+                  phx-value-email={attendee["email"] || attendee[:email]}
+                  phx-target={@myself}
+                  class="w-4 h-4 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors"
+                  aria-label={"Remove #{attendee["email"] || attendee[:email]}"}
+                >
+                  <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            </div>
+            <form phx-submit="add_event_attendee" phx-target={@myself} class="flex gap-2">
+              <input
+                type="email"
+                id="edit-attendee-email"
+                name="email"
+                value={@attendee_input}
+                phx-change="update_attendee_input"
+                phx-target={@myself}
+                placeholder="attendee@example.com"
+                class="flex-1 bg-transparent border-0 border-b border-transparent hover:border-tymeslot-300 focus:border-turquoise-500 focus:ring-0 text-token-sm text-tymeslot-600 px-0 py-0 placeholder:text-tymeslot-400 transition-colors cursor-text"
+              />
+              <button
+                type="submit"
+                class="px-2 py-0.5 rounded-md border border-tymeslot-200 text-token-xs text-tymeslot-500 hover:bg-tymeslot-50 transition-colors"
+              >
+                Add
+              </button>
+            </form>
+            <p class="text-token-xs text-tymeslot-400 mt-1">
+              Each person will receive an invitation from your calendar provider.
+            </p>
           </div>
-          <p :if={length(@selected_event.attendees) > 5} class="text-token-xs text-tymeslot-400 mt-1">+<%= length(@selected_event.attendees) - 5 %> more</p>
+          <%!-- Read-only attendee display --%>
+          <div :if={!@editable}>
+            <div :for={attendee <- Enum.take(@selected_event.attendees || [], 5)} class="text-token-sm text-tymeslot-700 leading-snug">
+              <%= attendee["name"] || attendee["email"] %>
+              <span :if={attendee["name"] && attendee["email"] && attendee["name"] != attendee["email"]} class="text-token-xs text-tymeslot-400 ml-1"><%= attendee["email"] %></span>
+            </div>
+            <p :if={length(@selected_event.attendees || []) > 5} class="text-token-xs text-tymeslot-400 mt-1">+<%= length(@selected_event.attendees || []) - 5 %> more</p>
+          </div>
         </div>
       </div>
 
@@ -586,6 +647,49 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals do
             variant={:secondary}
             disabled={@deleting}
             phx-click={JS.push("cancel_delete_event", target: @myself)}
+          >
+            Cancel
+          </.action_button>
+        </div>
+      </:footer>
+    </.modal>
+    """
+  end
+
+  attr :confirm_remove_attendee, :map, required: true
+  attr :myself, :any, required: true
+
+  @spec confirm_remove_attendee_modal(map()) :: Phoenix.LiveView.Rendered.t()
+  def confirm_remove_attendee_modal(assigns) do
+    ~H"""
+    <.modal
+      id="confirm-remove-attendee-modal"
+      show={true}
+      on_cancel={JS.push("cancel_remove_attendee", target: @myself)}
+      size={:small}
+    >
+      <:header>Remove attendee</:header>
+
+      <p class="text-token-sm text-tymeslot-500">
+        Remove
+        <span class="font-medium text-tymeslot-700"><%= @confirm_remove_attendee.email %></span>?
+      </p>
+      <p class="mt-2 text-token-sm text-amber-600">
+        This person will receive a cancellation from your calendar provider.
+      </p>
+
+      <:footer>
+        <div class="flex gap-2">
+          <.action_button
+            variant={:danger}
+            phx-click="confirm_remove_attendee"
+            phx-target={@myself}
+          >
+            Remove
+          </.action_button>
+          <.action_button
+            variant={:secondary}
+            phx-click={JS.push("cancel_remove_attendee", target: @myself)}
           >
             Cancel
           </.action_button>

@@ -625,18 +625,37 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   defp build_attendees(event_data) do
-    email = extract_field(event_data, :attendee_email, "attendee_email")
-    name = extract_field(event_data, :attendee_name, "attendee_name")
+    attendees = extract_field(event_data, :attendees, "attendees")
 
-    if email do
-      [
-        %{
-          "emailAddress" => %{"address" => email, "name" => name || email},
-          "type" => "required"
-        }
-      ]
+    if is_list(attendees) and attendees != [] do
+      attendees
+      |> Enum.map(fn attendee ->
+        email = attendee["email"] || attendee[:email]
+        name = attendee["name"] || attendee[:name]
+
+        if email do
+          %{
+            "emailAddress" => %{"address" => email, "name" => name || email},
+            "type" => "required"
+          }
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
     else
-      []
+      # Legacy single-attendee path (ad-hoc meetings)
+      email = extract_field(event_data, :attendee_email, "attendee_email")
+      name = extract_field(event_data, :attendee_name, "attendee_name")
+
+      if email do
+        [
+          %{
+            "emailAddress" => %{"address" => email, "name" => name || email},
+            "type" => "required"
+          }
+        ]
+      else
+        []
+      end
     end
   end
 

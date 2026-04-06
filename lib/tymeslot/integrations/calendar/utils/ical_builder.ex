@@ -316,8 +316,15 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   defp maybe_add_property(properties, _key, _value), do: properties
 
   defp build_attendees(%{attendees: attendees}) when is_list(attendees) do
-    Enum.map_join(attendees, "\r\n", fn email ->
-      "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+    Enum.map_join(attendees, "\r\n", fn
+      %{"email" => email} ->
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+
+      %{email: email} ->
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+
+      email when is_binary(email) ->
+        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
     end)
   end
 

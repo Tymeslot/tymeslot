@@ -35,8 +35,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
         integration_id: default_int_id,
         calendar_id:
           EditWorkflow.default_calendar_id(socket.assigns.integrations, default_int_id),
-        attendee_email: "",
-        attendee_name: "",
+        attendees: [],
+        attendee_input: "",
         video_integration_id: nil
       }
 
@@ -113,20 +113,63 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
     end
   end
 
-  @spec handle_update_create_attendee(map(), Phoenix.LiveView.Socket.t()) ::
+  @spec handle_add_create_attendee(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_update_create_attendee(params, socket) do
+  def handle_add_create_attendee(%{"email" => raw_email}, socket) do
     creating = socket.assigns.creating_event
 
     if is_nil(creating) do
       {:noreply, socket}
     else
-      updated =
-        creating
-        |> maybe_put_trimmed(:attendee_email, params["attendee_email"])
-        |> maybe_put_trimmed(:attendee_name, params["attendee_name"])
-        |> maybe_put_int(:video_integration_id, params["video_integration_id"])
+      email = raw_email |> String.trim() |> String.downcase()
 
+      if Shared.valid_email?(email) and email not in creating.attendees do
+        updated =
+          creating
+          |> Map.put(:attendees, creating.attendees ++ [email])
+          |> Map.put(:attendee_input, "")
+
+        {:noreply, assign(socket, :creating_event, updated)}
+      else
+        {:noreply, socket}
+      end
+    end
+  end
+
+  @spec handle_remove_create_attendee(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_remove_create_attendee(%{"email" => email}, socket) do
+    creating = socket.assigns.creating_event
+
+    if is_nil(creating) do
+      {:noreply, socket}
+    else
+      updated = Map.put(creating, :attendees, List.delete(creating.attendees, email))
+      {:noreply, assign(socket, :creating_event, updated)}
+    end
+  end
+
+  @spec handle_update_create_attendee_input(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_attendee_input(%{"email" => value}, socket) do
+    creating = socket.assigns.creating_event
+
+    if is_nil(creating) do
+      {:noreply, socket}
+    else
+      {:noreply, assign(socket, :creating_event, Map.put(creating, :attendee_input, value))}
+    end
+  end
+
+  @spec handle_update_create_video(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_create_video(params, socket) do
+    creating = socket.assigns.creating_event
+
+    if is_nil(creating) do
+      {:noreply, socket}
+    else
+      updated = maybe_put_int(creating, :video_integration_id, params["video_integration_id"])
       {:noreply, assign(socket, :creating_event, updated)}
     end
   end
@@ -161,37 +204,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
           send(self(), {:flash, {:error, "End time must be after start time"}})
           {:noreply, socket}
         else
-          attendee_email = String.trim(creating[:attendee_email] || "")
-
-          if attendee_email != "" do
-            send(
-              self(),
-              {:execute_create_ad_hoc_meeting,
-               %{
-                 title: creating.title,
-                 start_time: start_at,
-                 end_time: end_at,
-                 attendee_name: String.trim(creating[:attendee_name] || ""),
-                 attendee_email: attendee_email,
-                 attendee_timezone: tz,
-                 organizer_user_id: socket.assigns.current_user.id,
-                 calendar_integration_id: creating.integration_id,
-                 calendar_id: creating[:calendar_id],
-                 video_integration_id: creating[:video_integration_id]
-               }}
-            )
-          else
-            send(
-              self(),
-              {:execute_create_event,
-               %{
-                 creating: creating,
-                 user_id: socket.assigns.current_user.id,
-                 start_at: start_at,
-                 end_at: end_at
-               }}
-            )
-          end
+          send(
+            self(),
+            {:execute_create_event,
+             %{
+               creating: creating,
+               user_id: socket.assigns.current_user.id,
+               start_at: start_at,
+               end_at: end_at
+             }}
+          )
 
           {:noreply, assign(socket, :saving_event, true)}
         end
@@ -208,18 +230,21 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   def run_create_event(payload) do
     %{creating: creating, user_id: user_id, start_at: start_at, end_at: end_at} = payload
 
-    result =
-      EventOperations.create_event(
-        %{
-          summary: creating.title,
-          start_time: start_at,
-          end_time: end_at,
-          all_day: false,
-          calendar_integration_id: creating.integration_id,
-          calendar_id: creating[:calendar_id]
-        },
-        {creating.integration_id, user_id}
-      )
+    attendees = Enum.map(creating[:attendees] || [], fn email -> %{"email" => email} end)
+
+    base_data = %{
+      summary: creating.title,
+      start_time: start_at,
+      end_time: end_at,
+      all_day: false,
+      calendar_integration_id: creating.integration_id,
+      calendar_id: creating[:calendar_id]
+    }
+
+    event_data =
+      if attendees != [], do: Map.put(base_data, :attendees, attendees), else: base_data
+
+    result = EventOperations.create_event(event_data, {creating.integration_id, user_id})
 
     case result do
       {:ok, created} ->
@@ -491,11 +516,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   end
 
   defp maybe_update_time(creating, _time_str, _hour_key, _minute_key), do: creating
-
-  defp maybe_put_trimmed(map, _key, nil), do: map
-
-  defp maybe_put_trimmed(map, key, val) when is_binary(val),
-    do: Map.put(map, key, String.trim(val))
 
   defp maybe_put_int(map, _key, nil), do: map
   defp maybe_put_int(map, key, ""), do: Map.put(map, key, nil)

@@ -52,4 +52,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
       {:error, :rate_limited, message} -> {:error, :rate_limited, message}
     end
   end
+
+  @spec valid_email?(binary()) :: boolean()
+  @spec valid_email?(term()) :: false
+  def valid_email?(email) when is_binary(email) do
+    Regex.match?(~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/, email)
+  end
+
+  def valid_email?(_other), do: false
 end

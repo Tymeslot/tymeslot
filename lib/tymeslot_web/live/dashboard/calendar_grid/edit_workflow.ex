@@ -279,6 +279,62 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     socket
   end
 
+  @spec update_attendees_async(Phoenix.LiveView.Socket.t(), map(), [map()]) ::
+          Phoenix.LiveView.Socket.t()
+  def update_attendees_async(socket, event, attendees) do
+    user_id = socket.assigns.current_user.id
+    lv_pid = self()
+
+    event_data = %{
+      summary: event.title || "",
+      start_time: event.start_at,
+      end_time: event.end_at,
+      description: event.description || "",
+      location: event.location || "",
+      provider_event_id: event.provider_event_id,
+      attendees: attendees
+    }
+
+    cache_row = %{
+      uid: event.uid,
+      calendar_integration_id: event.calendar_integration_id,
+      provider_event_id: event.provider_event_id,
+      title: event.title,
+      start_at: event.start_at,
+      end_at: event.end_at,
+      all_day: event.all_day,
+      location: event.location,
+      description: event.description,
+      attendees: attendees,
+      status: event.status,
+      raw_data: event.raw_data,
+      synced_at: DateTime.utc_now(:second)
+    }
+
+    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      result =
+        EventOperations.update_event(
+          event.uid,
+          event_data,
+          {event.calendar_integration_id, user_id}
+        )
+
+      case result do
+        :ok ->
+          CalendarGrid.update_cached_event(cache_row)
+          send(lv_pid, {:event_update_result, :ok})
+
+        {:error, reason} ->
+          send(
+            lv_pid,
+            {:event_update_result, {:error, original_event: event, reason: reason}}
+          )
+      end
+    end)
+
+    socket
+  end
+
   defp build_field_event_data(event, field, new_value) do
     base = %{
       summary: event.title || "",

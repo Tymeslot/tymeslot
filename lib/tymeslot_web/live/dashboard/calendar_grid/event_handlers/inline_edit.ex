@@ -122,6 +122,129 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     end
   end
 
+  @spec handle_add_event_attendee(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_add_event_attendee(%{"email" => raw_email}, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        email = raw_email |> String.trim() |> String.downcase()
+        existing = event.attendees || []
+        already_present = Enum.any?(existing, &((&1["email"] || &1[:email]) == email))
+
+        with true <- Shared.valid_email?(email),
+             false <- already_present,
+             :ok <- EditWorkflow.assert_owns_event(socket, event),
+             :ok <- Shared.check_edit_rate_limit(socket) do
+          new_attendees = existing ++ [%{"email" => email}]
+          updated_event = %{event | attendees: new_attendees}
+
+          updated_events =
+            Enum.map(socket.assigns.events, fn e ->
+              if e.id == event.id, do: updated_event, else: e
+            end)
+
+          socket =
+            socket
+            |> assign(:selected_event, updated_event)
+            |> assign(:events, updated_events)
+            |> assign(:attendee_input, "")
+            |> Helpers.precompute_derived()
+            |> EditWorkflow.update_attendees_async(event, new_attendees)
+
+          {:noreply, socket}
+        else
+          {:error, :unauthorized} ->
+            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+            {:noreply, socket}
+
+          {:error, :rate_limited, _message} ->
+            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+            {:noreply, socket}
+
+          _invalid ->
+            {:noreply, socket}
+        end
+    end
+  end
+
+  @spec handle_request_remove_attendee(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_request_remove_attendee(%{"email" => email}, socket) do
+    case socket.assigns.selected_event do
+      nil ->
+        {:noreply, socket}
+
+      event ->
+        case EditWorkflow.assert_owns_event(socket, event) do
+          :ok ->
+            {:noreply,
+             assign(socket, :confirm_remove_attendee, %{email: email, event_id: event.id})}
+
+          {:error, :unauthorized} ->
+            send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
+            {:noreply, socket}
+        end
+    end
+  end
+
+  @spec handle_confirm_remove_attendee(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_confirm_remove_attendee(_params, socket) do
+    case {socket.assigns.confirm_remove_attendee, socket.assigns.selected_event} do
+      {nil, _event} ->
+        {:noreply, socket}
+
+      {%{email: _email}, nil} ->
+        {:noreply, assign(socket, :confirm_remove_attendee, nil)}
+
+      {%{email: email, event_id: event_id}, %{id: event_id} = event} ->
+        case Shared.check_edit_rate_limit(socket) do
+          :ok ->
+            new_attendees =
+              Enum.reject(event.attendees || [], &((&1["email"] || &1[:email]) == email))
+
+            updated_event = %{event | attendees: new_attendees}
+
+            updated_events =
+              Enum.map(socket.assigns.events, fn e ->
+                if e.id == event.id, do: updated_event, else: e
+              end)
+
+            socket =
+              socket
+              |> assign(:selected_event, updated_event)
+              |> assign(:events, updated_events)
+              |> assign(:confirm_remove_attendee, nil)
+              |> Helpers.precompute_derived()
+              |> EditWorkflow.update_attendees_async(event, new_attendees)
+
+            {:noreply, socket}
+
+          {:error, :rate_limited, _message} ->
+            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+            {:noreply, assign(socket, :confirm_remove_attendee, nil)}
+        end
+
+      {%{email: _email, event_id: _stored_id}, _mismatched_event} ->
+        {:noreply, assign(socket, :confirm_remove_attendee, nil)}
+    end
+  end
+
+  @spec handle_cancel_remove_attendee(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_cancel_remove_attendee(_params, socket) do
+    {:noreply, assign(socket, :confirm_remove_attendee, nil)}
+  end
+
+  @spec handle_update_attendee_input(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_update_attendee_input(%{"email" => value}, socket) do
+    {:noreply, assign(socket, :attendee_input, value)}
+  end
+
   defp handle_update_event_field(field, max_length, new_value, socket) do
     case socket.assigns.selected_event do
       nil ->

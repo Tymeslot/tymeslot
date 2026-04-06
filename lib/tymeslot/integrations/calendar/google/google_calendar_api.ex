@@ -516,13 +516,25 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   end
 
   defp build_attendees(event_data) do
-    email = get_field_value(event_data, :attendee_email)
-    name = get_field_value(event_data, :attendee_name)
+    attendees = get_field_value(event_data, :attendees)
 
-    if email do
-      [remove_nil_values(%{"email" => email, "displayName" => name})]
+    if is_list(attendees) and attendees != [] do
+      Enum.map(attendees, fn attendee ->
+        remove_nil_values(%{
+          "email" => attendee["email"] || attendee[:email],
+          "displayName" => attendee["name"] || attendee[:name]
+        })
+      end)
     else
-      nil
+      # Legacy single-attendee path (ad-hoc meetings)
+      email = get_field_value(event_data, :attendee_email)
+      name = get_field_value(event_data, :attendee_name)
+
+      if email do
+        [remove_nil_values(%{"email" => email, "displayName" => name})]
+      else
+        nil
+      end
     end
   end
 

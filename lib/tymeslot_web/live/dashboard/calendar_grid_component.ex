@@ -53,6 +53,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
       |> assign(:saving_event, false)
       |> assign(:deleting_event, false)
       |> assign(:video_integrations, [])
+      |> assign(:confirm_remove_attendee, nil)
+      |> assign(:attendee_input, "")
       |> assign(:owned_integration_ids, MapSet.new())
       |> assign(:visible_events, [])
       |> assign(:visible_days, [])
@@ -218,8 +220,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: EventCrud.handle_update_create_integration(params, socket)
 
   @impl Phoenix.LiveComponent
-  def handle_event("update_create_attendee", params, socket),
-    do: EventCrud.handle_update_create_attendee(params, socket)
+  def handle_event("add_create_attendee", params, socket),
+    do: EventCrud.handle_add_create_attendee(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_create_attendee", params, socket),
+    do: EventCrud.handle_remove_create_attendee(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_attendee_input", params, socket),
+    do: EventCrud.handle_update_create_attendee_input(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_create_video", params, socket),
+    do: EventCrud.handle_update_create_video(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("add_event_attendee", params, socket),
+    do: InlineEdit.handle_add_event_attendee(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("request_remove_attendee", params, socket),
+    do: InlineEdit.handle_request_remove_attendee(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("confirm_remove_attendee", params, socket),
+    do: InlineEdit.handle_confirm_remove_attendee(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("cancel_remove_attendee", params, socket),
+    do: InlineEdit.handle_cancel_remove_attendee(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_attendee_input", params, socket),
+    do: InlineEdit.handle_update_attendee_input(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("save_event", params, socket),
@@ -363,12 +397,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           time_format={Helpers.time_format(assigns)}
           myself={@myself}
           editable={MapSet.member?(@owned_integration_ids, @selected_event.calendar_integration_id)}
+          attendee_input={@attendee_input}
         />
         <Modals.confirm_delete_modal
           :if={@confirm_delete_event}
           event={@confirm_delete_event}
           deleting={@deleting_event}
           linked_to_booking={@confirm_delete_linked_to_booking}
+          myself={@myself}
+        />
+        <Modals.confirm_remove_attendee_modal
+          :if={@confirm_remove_attendee}
+          confirm_remove_attendee={@confirm_remove_attendee}
           myself={@myself}
         />
       </div>
