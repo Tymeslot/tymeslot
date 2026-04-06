@@ -288,7 +288,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     ~H"""
     <div id="calendar-grid" class="flex flex-col h-full relative" phx-hook="CalendarMobile" phx-target={@myself}>
       <.no_calendars_banner :if={@_initialized && @integrations == []} />
-      <div :if={@_initialized && @integrations != []}>
+      <div :if={@_initialized && @integrations != []} class="flex-1 flex flex-col min-h-0">
         <Header.toolbar
           view={@view}
           date={@date}
