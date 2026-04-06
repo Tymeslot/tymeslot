@@ -23,8 +23,8 @@ defmodule Tymeslot.Profiles.Settings do
   @doc """
   Updates basic profile settings (name, username, timezone) with input validation.
   """
-  @spec update_basic_settings(profile(), basic_settings_params(), keyword()) ::
-          {:ok, profile()} | {:error, term()}
+  @spec update_basic_settings(ProfileSchema.t(), %{String.t() => term()}, keyword()) ::
+          {:ok, ProfileSchema.t()} | {:error, term()}
   def update_basic_settings(profile, params, opts \\ []) do
     dev_mode = Keyword.get(opts, :dev_mode, false)
 
@@ -70,8 +70,8 @@ defmodule Tymeslot.Profiles.Settings do
   @doc """
   Updates scheduling preferences (buffer time, booking window, advance notice).
   """
-  @spec update_scheduling_preferences(profile(), scheduling_params(), keyword()) ::
-          {:ok, profile()} | {:error, term()}
+  @spec update_scheduling_preferences(ProfileSchema.t(), %{String.t() => term()}, keyword()) ::
+          {:ok, ProfileSchema.t()} | {:error, term()}
   def update_scheduling_preferences(profile, params, opts \\ []) do
     dev_mode = Keyword.get(opts, :dev_mode, false)
 
@@ -106,7 +106,8 @@ defmodule Tymeslot.Profiles.Settings do
   @doc """
   Updates profile timezone.
   """
-  @spec update_timezone(profile(), String.t(), keyword()) :: {:ok, profile()} | {:error, term()}
+  @spec update_timezone(ProfileSchema.t(), String.t(), keyword()) ::
+          {:ok, ProfileSchema.t()} | {:error, term()}
   def update_timezone(profile, timezone, opts \\ []) do
     dev_mode = Keyword.get(opts, :dev_mode, false)
 

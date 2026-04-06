@@ -25,9 +25,8 @@ defmodule Tymeslot.Availability.InputValidation do
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
   """
-  @spec validate_day_hours(time_range_params(), keyword()) ::
-          {:ok, %{String.t() => String.t()}}
-          | {:error, validation_errors()}
+  @spec validate_day_hours(%{String.t() => term()}, keyword()) ::
+          {:ok, %{String.t() => term()}} | {:error, %{atom() => String.t()}}
   def validate_day_hours(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
 
@@ -50,9 +49,8 @@ defmodule Tymeslot.Availability.InputValidation do
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
   """
-  @spec validate_break_input(time_range_params(), keyword()) ::
-          {:ok, %{String.t() => String.t()}}
-          | {:error, validation_errors()}
+  @spec validate_break_input(%{String.t() => term()}, keyword()) ::
+          {:ok, %{String.t() => term()}} | {:error, %{atom() => String.t()}}
   def validate_break_input(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
 
@@ -79,9 +77,8 @@ defmodule Tymeslot.Availability.InputValidation do
   ## Returns
   - `{:ok, sanitized_params}` | `{:error, validation_errors}`
   """
-  @spec validate_quick_break_input(time_range_params(), keyword()) ::
-          {:ok, %{String.t() => String.t()}}
-          | {:error, validation_errors()}
+  @spec validate_quick_break_input(%{String.t() => term()}, keyword()) ::
+          {:ok, %{String.t() => term()}} | {:error, %{atom() => String.t()}}
   def validate_quick_break_input(params, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
 

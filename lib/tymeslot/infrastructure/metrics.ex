@@ -170,6 +170,39 @@ defmodule Tymeslot.Infrastructure.Metrics do
     :ok
   end
 
+  # Telemetry measurement and metadata types
+
+  @typep calendar_measurements :: %{optional(:duration) => number()}
+  @typep calendar_metadata :: %{optional(:status) => atom(), optional(:error) => String.t()}
+
+  @typep http_measurements :: %{optional(:duration) => number()}
+  @typep http_metadata :: %{
+           optional(:status_code) => integer(),
+           optional(:method) => String.t(),
+           optional(:url) => String.t()
+         }
+
+  @typep circuit_breaker_measurements :: %{}
+  @typep circuit_breaker_metadata :: %{
+           optional(:breaker) => any(),
+           optional(:old_state) => atom(),
+           optional(:new_state) => atom()
+         }
+
+  @typep pool_measurements :: %{
+           optional(:queue) => non_neg_integer(),
+           optional(:free) => non_neg_integer(),
+           optional(:in_use) => non_neg_integer()
+         }
+  @typep pool_metadata :: %{optional(:pool) => atom()}
+
+  @typep parser_measurements :: %{
+           optional(:duration) => number(),
+           optional(:size) => integer(),
+           optional(:event_count) => integer()
+         }
+  @typep parser_metadata :: %{optional(:parser) => atom()}
+
   # Private functions
 
   defp sanitize_url(url) when is_binary(url) do
@@ -191,7 +224,8 @@ defmodule Tymeslot.Infrastructure.Metrics do
 
   # Telemetry handlers
 
-  @spec handle_calendar_event(list(atom()), map(), map(), term()) :: :ok
+  @spec handle_calendar_event(list(atom()), calendar_measurements(), calendar_metadata(), term()) ::
+          :ok
   def handle_calendar_event(event_name, measurements, metadata, _config) do
     operation = List.last(event_name)
 
@@ -209,7 +243,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
     end
   end
 
-  @spec handle_http_event(list(atom()), map(), map(), term()) :: :ok
+  @spec handle_http_event(list(atom()), http_measurements(), http_metadata(), term()) :: :ok
   def handle_http_event(_event_name, measurements, metadata, _config) do
     # Only log errors or slow requests
     if metadata[:status_code] >= 400 or measurements[:duration] > 5000 do
@@ -222,7 +256,12 @@ defmodule Tymeslot.Infrastructure.Metrics do
     end
   end
 
-  @spec handle_circuit_breaker_event(list(atom()), map(), map(), term()) :: :ok
+  @spec handle_circuit_breaker_event(
+          list(atom()),
+          circuit_breaker_measurements(),
+          circuit_breaker_metadata(),
+          term()
+        ) :: :ok
   def handle_circuit_breaker_event(_event_name, _measurements, metadata, _config) do
     Logger.warning("Circuit breaker state changed",
       breaker: metadata[:breaker],
@@ -231,7 +270,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
     )
   end
 
-  @spec handle_pool_event(list(atom()), map(), map(), term()) :: :ok
+  @spec handle_pool_event(list(atom()), pool_measurements(), pool_metadata(), term()) :: :ok
   def handle_pool_event(_event_name, measurements, metadata, _config) do
     # Only log when pool is under stress
     if measurements[:queue] > 0 or measurements[:free] == 0 do
@@ -244,7 +283,7 @@ defmodule Tymeslot.Infrastructure.Metrics do
     end
   end
 
-  @spec handle_parser_event(list(atom()), map(), map(), term()) :: :ok
+  @spec handle_parser_event(list(atom()), parser_measurements(), parser_metadata(), term()) :: :ok
   def handle_parser_event(_event_name, measurements, metadata, _config) do
     # Only log slow parsing operations (>1000ms)
     if measurements[:duration] > 1000 do

@@ -124,7 +124,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
     Application.get_env(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
   end
 
-  @spec maybe_put_remote_ip(map(), binary()) :: map()
+  @spec maybe_put_remote_ip(%{String.t() => term()}, binary()) :: %{String.t() => term()}
   def maybe_put_remote_ip(params, remote_ip) when is_binary(remote_ip) do
     # Reject extremely long strings to prevent memory pressure during validation
     if byte_size(remote_ip) > 100 do
@@ -150,7 +150,7 @@ defmodule Tymeslot.Infrastructure.Security.Recaptcha do
     end
   end
 
-  @spec maybe_put_remote_ip(map(), any()) :: map()
+  @spec maybe_put_remote_ip(%{String.t() => term()}, any()) :: %{String.t() => term()}
   def maybe_put_remote_ip(params, _other), do: params
 
   # Validates that a string is a valid IPv4 or IPv6 address.

@@ -15,7 +15,7 @@ defmodule Tymeslot.Profiles.Avatars do
   @type uploaded_entry :: %{
           required(:client_name) => String.t(),
           required(:path) => String.t(),
-          atom() => term()
+          optional(atom()) => term()
         }
   @type result(t) :: {:ok, t} | {:error, any()}
 

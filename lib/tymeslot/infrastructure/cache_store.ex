@@ -6,6 +6,12 @@ defmodule Tymeslot.Infrastructure.CacheStore do
 
   require Logger
 
+  @type pending_entry :: %{
+          required(:waiters) => [GenServer.from()],
+          required(:ref) => reference()
+        }
+  @type state :: %{required(:pending) => %{term() => pending_entry()}}
+
   defmacro __using__(opts) do
     quote do
       use GenServer
@@ -114,7 +120,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   # Helpers to reduce quote block size
 
   @doc false
-  @spec init_cache(atom(), integer()) :: {:ok, map()}
+  @spec init_cache(atom(), integer()) :: {:ok, state()}
   def init_cache(table_name, cleanup_interval) do
     :ets.new(table_name, [
       :named_table,
@@ -128,8 +134,8 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   @doc false
-  @spec handle_compute_coalesced(atom(), any(), (-> any()), integer(), GenServer.from(), map()) ::
-          {:reply, any(), map()} | {:noreply, map()}
+  @spec handle_compute_coalesced(atom(), any(), (-> any()), integer(), GenServer.from(), state()) ::
+          {:reply, any(), state()} | {:noreply, state()}
   def handle_compute_coalesced(table_name, key, fun, ttl, from, state) do
     case lookup(table_name, key) do
       {:ok, value} ->
@@ -165,7 +171,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   @doc false
-  @spec handle_computation_done(atom(), any(), any(), integer(), map()) :: {:noreply, map()}
+  @spec handle_computation_done(atom(), any(), any(), integer(), state()) :: {:noreply, state()}
   def handle_computation_done(table_name, key, value, ttl, state) do
     case Map.pop(state.pending, key) do
       {nil, _value} ->
@@ -186,7 +192,7 @@ defmodule Tymeslot.Infrastructure.CacheStore do
   end
 
   @doc false
-  @spec handle_task_down(map(), reference()) :: {:noreply, map()}
+  @spec handle_task_down(state(), reference()) :: {:noreply, state()}
   def handle_task_down(state, ref) do
     entry = Enum.find(state.pending, fn {_key, val} -> val.ref == ref end)
 

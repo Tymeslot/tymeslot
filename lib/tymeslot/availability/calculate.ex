@@ -6,26 +6,28 @@ defmodule Tymeslot.Availability.Calculate do
 
   alias Tymeslot.Availability.{BusinessHours, Conflicts, Events, TimeSlots}
   alias Tymeslot.DatabaseQueries.{AvailabilityOverrideQueries, WeeklyAvailabilityQueries}
-  alias Tymeslot.DatabaseSchemas.{AvailabilityOverrideSchema, WeeklyAvailabilitySchema}
   alias Tymeslot.Utils.DateTimeUtils
 
-  @typedoc """
-  Configuration map for availability calculations.
-
-  Preloaded collections (`:weekly_schedule`, `:overrides`) avoid per-date
-  database queries.  All keys are optional; sensible defaults apply.
-  """
   @type availability_config :: %{
-          optional(:profile_id) => integer() | nil,
+          optional(:profile_id) => pos_integer(),
+          optional(:max_advance_booking_days) => pos_integer(),
           optional(:duration_minutes) => pos_integer(),
           optional(:buffer_minutes) => non_neg_integer(),
-          optional(:min_advance_hours) => non_neg_integer(),
-          optional(:max_advance_booking_days) => pos_integer(),
+          optional(:weekly_schedule) => list(term()),
+          optional(:overrides) => list(term()),
+          optional(:fallback_availability_fn) => (Date.t() -> term()) | nil,
           optional(:owner_timezone) => String.t(),
-          optional(:weekly_schedule) => [WeeklyAvailabilitySchema.t()],
-          optional(:overrides) => [AvailabilityOverrideSchema.t()],
-          optional(:fallback_availability_fn) => (Date.t() -> boolean()),
-          optional(atom()) => term()
+          optional(:min_advance_hours) => non_neg_integer()
+        }
+
+  @type calendar_day :: %{
+          required(:date) => String.t(),
+          required(:day) => integer(),
+          required(:available) => boolean(),
+          required(:loading) => boolean(),
+          required(:past) => boolean(),
+          required(:today) => boolean(),
+          required(:current_month) => boolean()
         }
 
   @doc """
@@ -249,17 +251,6 @@ defmodule Tymeslot.Availability.Calculate do
       - :loading: Mark all days as loading state
       - %{}: Use real conflict-aware availability from the map
   """
-  @typedoc "A single calendar day as used for UI rendering."
-  @type calendar_day :: %{
-          required(:date) => String.t(),
-          required(:day) => pos_integer(),
-          required(:available) => boolean(),
-          required(:loading) => boolean(),
-          required(:past) => boolean(),
-          required(:today) => boolean(),
-          required(:current_month) => boolean()
-        }
-
   @spec get_calendar_days(
           String.t(),
           integer(),

@@ -21,13 +21,12 @@ defmodule Tymeslot.Workers.EmailWorker do
   alias Ecto.Changeset
   alias Oban.Job
   alias Tymeslot.DatabaseQueries.MeetingQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.UserSchema
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorkerHandlers
   require Logger
+
+  @type entity_with_id :: %{required(:id) => pos_integer(), optional(atom()) => term()}
 
   # Configuration
   # 30 seconds
@@ -309,8 +308,8 @@ defmodule Tymeslot.Workers.EmailWorker do
   reason; the Oban uniqueness is a belt-and-suspenders safeguard.
   """
   @spec schedule_integration_unhealthy_notification(
-          UserSchema.t(),
-          CalendarIntegrationSchema.t() | VideoIntegrationSchema.t(),
+          entity_with_id(),
+          entity_with_id(),
           atom() | String.t()
         ) :: :ok | {:error, String.t()}
   def schedule_integration_unhealthy_notification(user, integration, type) do

@@ -3,7 +3,9 @@ defmodule Tymeslot.Availability.Conflicts do
   Pure functions for conflict detection and slot filtering.
   """
 
-  alias Tymeslot.Availability.{BusinessHours, Events, TimeSlots}
+  alias Tymeslot.Availability.{BusinessHours, TimeSlots}
+  alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.Events
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
 
   @typedoc """
@@ -24,11 +26,11 @@ defmodule Tymeslot.Availability.Conflicts do
   """
   @spec filter_available_slots(
           [String.t()],
-          [Events.converted_event()],
+          [Events.calendar_event()],
           integer(),
           String.t(),
           Date.t(),
-          availability_config()
+          Calculate.availability_config()
         ) :: [String.t()]
   def filter_available_slots(all_slots, events, duration_minutes, timezone, date, config \\ %{}) do
     buffer_minutes = Map.get(config, :buffer_minutes, 15)
@@ -70,9 +72,9 @@ defmodule Tymeslot.Availability.Conflicts do
           Date.t(),
           String.t(),
           String.t(),
-          [Events.converted_event()],
+          [Events.calendar_event()],
           DateTime.t(),
-          availability_config()
+          Calculate.availability_config()
         ) :: boolean()
   def date_has_slots_with_events?(
         date,
