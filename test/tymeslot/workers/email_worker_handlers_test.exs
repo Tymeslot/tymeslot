@@ -178,6 +178,60 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
       assert %{"value" => 1, "unit" => "hours"} in updated.reminders_sent
       assert updated.reminder_email_sent == true
     end
+
+    test "marks reminder sent and succeeds when organizer sent but attendee fails" do
+      meeting = insert(:meeting)
+
+      expect(EmailServiceMock, :send_appointment_reminders, fn _details, _time ->
+        {{:ok, "sent"}, {:error, "inactive recipient"}}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+                 "meeting_id" => meeting.id,
+                 "reminder_value" => 30,
+                 "reminder_unit" => "minutes"
+               })
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert %{"value" => 30, "unit" => "minutes"} in updated.reminders_sent
+    end
+
+    test "marks reminder sent and succeeds when attendee sent but organizer fails" do
+      meeting = insert(:meeting)
+
+      expect(EmailServiceMock, :send_appointment_reminders, fn _details, _time ->
+        {{:error, "delivery failed"}, {:ok, "sent"}}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+                 "meeting_id" => meeting.id,
+                 "reminder_value" => 30,
+                 "reminder_unit" => "minutes"
+               })
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert %{"value" => 30, "unit" => "minutes"} in updated.reminders_sent
+    end
+
+    test "returns error when both organizer and attendee emails fail" do
+      meeting = insert(:meeting)
+
+      expect(EmailServiceMock, :send_appointment_reminders, fn _details, _time ->
+        {{:error, "delivery failed"}, {:error, "delivery failed"}}
+      end)
+
+      assert {:error, _reason} =
+               EmailWorkerHandlers.execute_email_action("send_reminder_emails", %{
+                 "meeting_id" => meeting.id,
+                 "reminder_value" => 30,
+                 "reminder_unit" => "minutes"
+               })
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      refute %{"value" => 30, "unit" => "minutes"} in List.wrap(updated.reminders_sent)
+    end
   end
 
   describe "handle_email_change_verification/1" do

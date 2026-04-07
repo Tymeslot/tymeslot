@@ -329,7 +329,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
           :ok ->
             log_email_results(meeting, email_type, organizer_success, attendee_success)
 
-            if organizer_success && attendee_success do
+            if organizer_success || attendee_success do
               :ok
             else
               {:error, "Failed to send all emails"}
@@ -371,7 +371,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
          organizer_success,
          attendee_success
        ) do
-    if organizer_success && attendee_success do
+    if organizer_success || attendee_success do
       case MeetingQueries.append_reminder_sent(meeting, reminder_value, reminder_unit) do
         {:ok, _updated_meeting} ->
           :ok
