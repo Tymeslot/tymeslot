@@ -42,7 +42,8 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   def authorization_url(user_id, redirect_uri, scopes, options \\ []) do
     integration_id = Keyword.get(options, :integration_id)
     login_hint = Keyword.get(options, :login_hint)
-    state = generate_state(user_id, integration_id)
+    return_to = Keyword.get(options, :return_to)
+    state = generate_state(user_id, integration_id, return_to: return_to)
 
     # Always include openid and email for account identification
     all_scopes = Enum.uniq([:openid, :email | scopes])
@@ -221,9 +222,9 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
   @doc """
   Generates a secure state parameter for OAuth flow.
   """
-  @spec generate_state(integer(), pos_integer() | nil) :: String.t()
-  def generate_state(user_id, integration_id \\ nil) do
-    State.generate(user_id, state_secret(), integration_id)
+  @spec generate_state(integer(), pos_integer() | nil, keyword()) :: String.t()
+  def generate_state(user_id, integration_id \\ nil, opts \\ []) do
+    State.generate(user_id, state_secret(), integration_id, opts)
   end
 
   @doc """

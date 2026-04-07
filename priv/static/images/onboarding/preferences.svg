@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" fill="none">
+  <defs>
+    <!-- Diagonal line pattern for minimum notice overlay -->
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#e2e8f0" stroke-width="1.5"/>
+    </pattern>
+
+    <!-- Fade gradient for booking window end -->
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    /* Marching ants on dashed connector lines */
+    .connector {
+      animation: march 1.2s linear infinite;
+    }
+    @keyframes march {
+      from { stroke-dashoffset: 0; }
+      to { stroke-dashoffset: -12; }
+    }
+
+    /* Buffer block gentle opacity pulse */
+    .buffer-block {
+      animation: pulse-buffer 3s ease-in-out infinite;
+    }
+    @keyframes pulse-buffer {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 0.55; }
+    }
+
+    /* Buffer dashes follow the block opacity */
+    .buffer-dash {
+      animation: pulse-dash 3s ease-in-out infinite;
+    }
+    @keyframes pulse-dash {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+
+  <!-- Day view card -->
+  <rect x="130" y="30" width="340" height="440" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+
+  <!-- Time slot rows (10 rows, each 40px tall, starting at y=50) -->
+  <!-- Row 1 -->
+  <rect x="131" y="50" width="338" height="40" fill="#f1f5f9"/>
+  <line x1="131" y1="90" x2="469" y2="90" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Row 2 -->
+  <rect x="131" y="90" width="338" height="40" fill="#f1f5f9"/>
+  <line x1="131" y1="130" x2="469" y2="130" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Row 3 -->
+  <rect x="131" y="130" width="338" height="40" fill="#f1f5f9"/>
+  <line x1="131" y1="170" x2="469" y2="170" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Minimum notice hatch overlay on rows 1-3 -->
+  <rect x="131" y="50" width="338" height="120" fill="url(#hatch)" rx="0"/>
+
+  <!-- Row 4 (available) -->
+  <rect x="131" y="170" width="338" height="40" fill="#f1f5f9"/>
+  <line x1="131" y1="210" x2="469" y2="210" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Row 5: Meeting block -->
+  <rect x="145" y="215" width="310" height="44" rx="8" fill="#14b8a6"/>
+
+  <!-- Row 5 divider -->
+  <line x1="131" y1="250" x2="469" y2="250" stroke="#e2e8f0" stroke-width="1" opacity="0.4"/>
+
+  <!-- Row 6: Buffer block -->
+  <rect class="buffer-block" x="145" y="265" width="200" height="30" rx="6" fill="#22d3ee"/>
+  <!-- Buffer dashes -->
+  <line class="buffer-dash" x1="155" y1="280" x2="175" y2="280" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <line class="buffer-dash" x1="185" y1="280" x2="205" y2="280" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <line class="buffer-dash" x1="215" y1="280" x2="235" y2="280" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Row 6 divider -->
+  <line x1="131" y1="290" x2="469" y2="290" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Row 7 (available) -->
+  <rect x="131" y="290" width="338" height="40" fill="#f1f5f9"/>
+  <line x1="131" y1="330" x2="469" y2="330" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Row 8 (fading: opacity 1.0) -->
+  <rect x="131" y="330" width="338" height="40" fill="#f1f5f9" opacity="1.0"/>
+  <line x1="131" y1="370" x2="469" y2="370" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Row 9 (fading: opacity 0.6) -->
+  <rect x="131" y="370" width="338" height="40" fill="#f1f5f9" opacity="0.6"/>
+  <line x1="131" y1="410" x2="469" y2="410" stroke="#e2e8f0" stroke-width="1" opacity="0.6"/>
+
+  <!-- Row 10 (fading: opacity 0.3) -->
+  <rect x="131" y="410" width="338" height="40" fill="#f1f5f9" opacity="0.3"/>
+
+  <!-- Fade overlay on rows 8-10 -->
+  <rect x="131" y="340" width="338" height="120" fill="url(#fade)" rx="0"/>
+
+  <!-- === Left margin indicator icons === -->
+
+  <!-- Clock icon (minimum notice) near top rows -->
+  <g transform="translate(75, 105)">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+    <!-- Hour hand (static) -->
+    <line x1="0" y1="-8" x2="0" y2="1" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+    <!-- Minute hand (animated rotation) -->
+    <line x1="0" y1="1" x2="6" y2="5" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round">
+      <animateTransform attributeName="transform" type="rotate" from="0 0 1" to="360 0 1" dur="8s" repeatCount="indefinite"/>
+    </line>
+    <!-- Small tick marks -->
+    <line x1="0" y1="-13" x2="0" y2="-11" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="13" y1="0" x2="11" y2="0" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="0" y1="13" x2="0" y2="11" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="-13" y1="0" x2="-11" y2="0" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Connector line from clock to hatched area -->
+  <line class="connector" x1="93" y1="105" x2="128" y2="105" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Pause/buffer icon near buffer block -->
+  <g transform="translate(75, 280)">
+    <circle cx="0" cy="0" r="16" fill="none" stroke="#22d3ee" stroke-width="2"/>
+    <rect x="-6" y="-7" width="4" height="14" rx="1" fill="#22d3ee"/>
+    <rect x="2" y="-7" width="4" height="14" rx="1" fill="#22d3ee"/>
+  </g>
+
+  <!-- Connector line from pause to buffer block -->
+  <line class="connector" x1="93" y1="280" x2="128" y2="280" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Calendar-end icon near fading rows -->
+  <g transform="translate(75, 390)">
+    <!-- Calendar body -->
+    <rect x="-13" y="-10" width="26" height="22" rx="3" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+    <!-- Calendar top bar -->
+    <line x1="-13" y1="-4" x2="13" y2="-4" stroke="#cbd5e1" stroke-width="2"/>
+    <!-- Calendar hooks -->
+    <line x1="-6" y1="-14" x2="-6" y2="-8" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+    <line x1="6" y1="-14" x2="6" y2="-8" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+    <!-- X mark for "end" -->
+    <line x1="-4" y1="1" x2="4" y2="9" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+    <line x1="4" y1="1" x2="-4" y2="9" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Connector line from calendar-end to fading area -->
+  <line class="connector" x1="93" y1="390" x2="128" y2="390" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Right-side accent dots for visual balance -->
+  <circle cx="500" cy="110" r="4" fill="#e2e8f0"/>
+  <circle cx="500" cy="240" r="4" fill="#14b8a6" opacity="0.4"/>
+  <circle cx="500" cy="280" r="4" fill="#22d3ee" opacity="0.4"/>
+  <circle cx="500" cy="390" r="4" fill="#e2e8f0" opacity="0.4"/>
+</svg>

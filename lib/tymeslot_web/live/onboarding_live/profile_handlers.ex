@@ -1,6 +1,6 @@
-defmodule TymeslotWeb.OnboardingLive.BasicSettingsHandlers do
+defmodule TymeslotWeb.OnboardingLive.ProfileHandlers do
   @moduledoc """
-  Basic settings event handlers for the onboarding flow.
+  Profile step event handlers for the onboarding flow.
 
   Handles validation and updates for basic user profile settings
   including full name and username.

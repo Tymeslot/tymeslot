@@ -25,6 +25,7 @@
 @import "./components/dashboard.css";
 @import "./components/theme-customization.css";
 @import "./components/embed-cards.css";
+@import "./components/onboarding.css";
 @import "./modal.css";
 
 /* Import glass morphism components */

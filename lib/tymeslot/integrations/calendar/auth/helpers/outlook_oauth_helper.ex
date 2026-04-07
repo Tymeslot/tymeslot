@@ -30,7 +30,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   def authorization_url(user_id, redirect_uri, options \\ []) do
     integration_id = Keyword.get(options, :integration_id)
     login_hint = Keyword.get(options, :login_hint)
-    state = State.generate(user_id, state_secret(), integration_id)
+    return_to = Keyword.get(options, :return_to)
+    state = State.generate(user_id, state_secret(), integration_id, return_to: return_to)
 
     params = %{
       client_id: outlook_client_id(),

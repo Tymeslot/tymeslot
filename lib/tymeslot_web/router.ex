@@ -50,6 +50,19 @@ defmodule TymeslotWeb.Router do
 
       get "/embed-test", EmbedTestController, :index
     end
+
+    scope "/dev", TymeslotWeb do
+      pipe_through [:browser, :require_authenticated_user]
+
+      live_session :dev_onboarding,
+        on_mount: [
+          {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+          TymeslotWeb.Hooks.ClientInfoHook
+        ] do
+        live "/onboarding", OnboardingLive, :debug_welcome
+        live "/onboarding/:step", OnboardingLive, :debug_step
+      end
+    end
   end
 
   # =============================================================================

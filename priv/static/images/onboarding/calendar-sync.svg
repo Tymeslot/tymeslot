@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" fill="none">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#14b8a6"/>
+    </marker>
+
+    <!-- Motion path matching the sync arrow curve -->
+    <path id="syncPath" d="M 260 250 C 290 180, 310 180, 340 250"/>
+  </defs>
+
+  <style>
+    /* Sync dots sequential pulse */
+    @keyframes dotPulse {
+      0%, 30% { opacity: 0.2; }
+      15% { opacity: 0.9; }
+    }
+
+    .sync-dot-1 { animation: dotPulse 3s ease-in-out infinite; }
+    .sync-dot-2 { animation: dotPulse 3s ease-in-out 0.3s infinite; }
+    .sync-dot-3 { animation: dotPulse 3s ease-in-out 0.6s infinite; }
+
+    /* Travelling slot block fade in/out */
+    @keyframes slotFade {
+      0%, 5% { opacity: 0; }
+      15% { opacity: 0.9; }
+      75% { opacity: 0.9; }
+      90%, 100% { opacity: 0; }
+    }
+
+    .travelling-slot {
+      animation: slotFade 3s ease-in-out infinite;
+    }
+
+    /* Checkmark pulse */
+    @keyframes checkPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .checkmark-group {
+      transform-origin: 548px 408px;
+      animation: checkPulse 3s ease-in-out infinite;
+    }
+  </style>
+
+  <!-- Left card -->
+  <rect x="40" y="80" width="210" height="340" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+
+  <!-- Left card header bar -->
+  <rect x="40" y="80" width="210" height="40" rx="8" fill="#f1f5f9"/>
+  <rect x="40" y="112" width="210" height="8" fill="#f1f5f9"/>
+
+  <!-- Left card header dots (calendar icon hint) -->
+  <circle cx="70" cy="100" r="4" fill="#cbd5e1"/>
+  <circle cx="85" cy="100" r="4" fill="#cbd5e1"/>
+  <circle cx="100" cy="100" r="4" fill="#cbd5e1"/>
+
+  <!-- Left card time slot rows -->
+  <!-- Row 1: meeting (cyan-400) -->
+  <rect x="60" y="140" width="170" height="28" rx="6" fill="#22d3ee" opacity="0.85"/>
+
+  <!-- Row 2: empty -->
+  <rect x="60" y="178" width="170" height="28" rx="6" fill="#f1f5f9"/>
+
+  <!-- Row 3: empty -->
+  <rect x="60" y="216" width="170" height="28" rx="6" fill="#f1f5f9"/>
+
+  <!-- Row 4: meeting (cyan-400) -->
+  <rect x="60" y="254" width="170" height="28" rx="6" fill="#22d3ee" opacity="0.85"/>
+
+  <!-- Row 5: empty -->
+  <rect x="60" y="292" width="170" height="28" rx="6" fill="#f1f5f9"/>
+
+  <!-- Row 6: meeting (cyan-400) -->
+  <rect x="60" y="330" width="170" height="28" rx="6" fill="#22d3ee" opacity="0.85"/>
+
+  <!-- Row 7: empty -->
+  <rect x="60" y="368" width="170" height="28" rx="6" fill="#f1f5f9"/>
+
+  <!-- Left card time indicators -->
+  <rect x="60" y="148" width="24" height="4" rx="2" fill="#ffffff" opacity="0.5"/>
+  <rect x="60" y="158" width="40" height="4" rx="2" fill="#ffffff" opacity="0.35"/>
+
+  <rect x="60" y="262" width="24" height="4" rx="2" fill="#ffffff" opacity="0.5"/>
+  <rect x="60" y="272" width="40" height="4" rx="2" fill="#ffffff" opacity="0.35"/>
+
+  <rect x="60" y="338" width="24" height="4" rx="2" fill="#ffffff" opacity="0.5"/>
+  <rect x="60" y="348" width="40" height="4" rx="2" fill="#ffffff" opacity="0.35"/>
+
+  <!-- Curved sync arrow -->
+  <path d="M 260 250 C 290 180, 310 180, 340 250" stroke="#14b8a6" stroke-width="2.5" fill="none" marker-end="url(#arrowhead)" stroke-linecap="round"/>
+
+  <!-- Small sync dots on the arrow path -->
+  <circle cx="275" cy="222" r="3" fill="#14b8a6" class="sync-dot-1"/>
+  <circle cx="300" cy="200" r="3" fill="#14b8a6" class="sync-dot-2"/>
+  <circle cx="325" cy="222" r="3" fill="#14b8a6" class="sync-dot-3"/>
+
+  <!-- Travelling time slot block along the sync arrow -->
+  <g class="travelling-slot">
+    <rect x="-16" y="-7" width="32" height="14" rx="4" fill="#22d3ee" opacity="0.85"/>
+    <animateMotion dur="3s" repeatCount="indefinite" rotate="auto">
+      <mpath href="#syncPath"/>
+    </animateMotion>
+  </g>
+
+  <!-- Right card -->
+  <rect x="350" y="80" width="210" height="340" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+
+  <!-- Right card header bar -->
+  <rect x="350" y="80" width="210" height="40" rx="8" fill="#f1f5f9"/>
+  <rect x="350" y="112" width="210" height="8" fill="#f1f5f9"/>
+
+  <!-- Right card header dots -->
+  <circle cx="380" cy="100" r="4" fill="#cbd5e1"/>
+  <circle cx="395" cy="100" r="4" fill="#cbd5e1"/>
+  <circle cx="410" cy="100" r="4" fill="#cbd5e1"/>
+
+  <!-- Right card time slot rows -->
+  <!-- Row 1: blocked (neutral-200) — matches left meeting -->
+  <rect x="370" y="140" width="170" height="28" rx="6" fill="#e2e8f0"/>
+
+  <!-- Row 2: available (turquoise-500) -->
+  <rect x="370" y="178" width="170" height="28" rx="6" fill="#14b8a6" opacity="0.85"/>
+
+  <!-- Row 3: available (turquoise-500) -->
+  <rect x="370" y="216" width="170" height="28" rx="6" fill="#14b8a6" opacity="0.85"/>
+
+  <!-- Row 4: blocked (neutral-200) — matches left meeting -->
+  <rect x="370" y="254" width="170" height="28" rx="6" fill="#e2e8f0"/>
+
+  <!-- Row 5: available (turquoise-500) -->
+  <rect x="370" y="292" width="170" height="28" rx="6" fill="#14b8a6" opacity="0.85"/>
+
+  <!-- Row 6: blocked (neutral-200) — matches left meeting -->
+  <rect x="370" y="330" width="170" height="28" rx="6" fill="#e2e8f0"/>
+
+  <!-- Row 7: available (turquoise-500) -->
+  <rect x="370" y="368" width="170" height="28" rx="6" fill="#14b8a6" opacity="0.85"/>
+
+  <!-- Blocked row indicators (strikethrough lines) -->
+  <line x1="380" y1="154" x2="420" y2="154" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+  <line x1="380" y1="268" x2="420" y2="268" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+  <line x1="380" y1="344" x2="420" y2="344" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Available row indicators -->
+  <rect x="370" y="186" width="24" height="4" rx="2" fill="#ffffff" opacity="0.5"/>
+  <rect x="370" y="196" width="40" height="4" rx="2" fill="#ffffff" opacity="0.35"/>
+
+  <rect x="370" y="224" width="24" height="4" rx="2" fill="#ffffff" opacity="0.5"/>
+  <rect x="370" y="234" width="40" height="4" rx="2" fill="#ffffff" opacity="0.35"/>
+
+  <rect x="370" y="300" width="24" height="4" rx="2" fill="#ffffff" opacity="0.5"/>
+  <rect x="370" y="310" width="40" height="4" rx="2" fill="#ffffff" opacity="0.35"/>
+
+  <rect x="370" y="376" width="24" height="4" rx="2" fill="#ffffff" opacity="0.5"/>
+  <rect x="370" y="386" width="40" height="4" rx="2" fill="#ffffff" opacity="0.35"/>
+
+  <!-- Checkmark circle (bottom-right of right card) -->
+  <g class="checkmark-group">
+    <circle cx="548" cy="408" r="18" fill="#10b981"/>
+    <path d="M 538 408 L 545 415 L 558 401" stroke="#ffffff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

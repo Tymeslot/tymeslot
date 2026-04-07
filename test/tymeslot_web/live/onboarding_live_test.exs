@@ -32,48 +32,56 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Test User"})
 
       # Should start at welcome step
-      assert has_element?(view, ".onboarding-title")
+      assert has_element?(view, ".onboarding-step-title")
 
-      # Step 1: Welcome -> Continue to Profile Setup
+      # Step 1: Welcome -> Profile
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
 
-      # Should now be at basic settings step
-      assert has_element?(view, "#basic-settings-form")
+      # Should now be at profile step
+      assert has_element?(view, "#profile-form")
 
-      # Fill in basic settings by triggering form change
+      # Fill in profile form
       view
-      |> form("form#basic-settings-form", %{
+      |> form("form#profile-form", %{
         "full_name" => "Test User",
         "username" => "testuser123"
       })
       |> render_change()
 
-      # Step 2: Profile Setup -> Continue to Preferences
+      # Step 2: Profile -> Connect Calendar
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
 
-      # Should now be at scheduling preferences step
+      # Should now be at connect_calendar step
+      assert has_element?(view, ".onboarding-provider-cards")
+
+      # Step 3: Connect Calendar -> Buffer Time
+      view
+      |> element("button[phx-click='next_step']")
+      |> render_click()
+
+      # Should now be at buffer_time step
       assert has_element?(view, "button[phx-value-buffer_minutes]")
 
-      # Step 3: Preferences -> Continue to Complete
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      # Steps 4-6: Buffer Time -> Booking Window -> Minimum Notice -> Ready
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
 
-      # Should now be at complete step
+      # Should now be at ready step
       html = render(view)
-      assert html =~ "All Set"
+      assert html =~ "all set"
 
-      # Step 4: Complete -> Get Started (complete onboarding)
+      # Step 7: Ready -> Complete onboarding
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
 
-      # Should redirect to dashboard
-      assert_redirect(view, ~p"/dashboard")
+      # Should redirect to event types page
+      assert_redirect(view, ~p"/dashboard/event-types")
 
       # Verify onboarding_completed_at is set
       user = Repo.reload!(user)
@@ -97,27 +105,25 @@ defmodule TymeslotWeb.OnboardingLiveTest do
           connect_params: %{"timezone" => "Europe/Paris"}
         )
 
-      # Navigate to basic settings
+      # Navigate to profile step
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
 
-      # Fill in all basic settings
+      # Fill in profile form
       view
-      |> form("form#basic-settings-form", %{
+      |> form("form#profile-form", %{
         "full_name" => "Jane Doe Updated",
         "username" => "janedoe2024"
       })
       |> render_change()
 
-      # Continue through to complete
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      # Continue through connect_calendar, buffer_time, booking_window, minimum_notice, ready
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
 
       # Complete onboarding
       view
@@ -145,48 +151,51 @@ defmodule TymeslotWeb.OnboardingLiveTest do
     test "onboarding with custom scheduling preference values", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn, %{name: "Custom User"})
 
-      # Navigate to basic settings
+      # Navigate to profile step
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
 
-      # Fill in basic settings
+      # Fill in profile form
       view
-      |> form("form#basic-settings-form", %{
+      |> form("form#profile-form", %{
         "full_name" => "Custom User",
         "username" => "customuser#{System.unique_integer([:positive])}"
       })
       |> render_change()
 
-      # Navigate to scheduling preferences
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      # Navigate through connect_calendar to buffer_time
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
 
-      # Click custom for all three settings (uses default custom values)
+      # Buffer time step — click custom
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
       |> render_click()
 
+      # Continue to booking_window
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      # Booking window step — click custom
       view
       |> element(
         "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
       )
       |> render_click()
 
+      # Continue to minimum_notice
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      # Minimum notice step — click custom
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='min_advance_hours']")
       |> render_click()
 
-      # Continue to complete
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      # Continue to ready
+      view |> element("button[phx-click='next_step']") |> render_click()
 
       # Complete onboarding
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify custom values were persisted (defaults from step_config.ex: 20, 120, 8)
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
@@ -199,10 +208,10 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       assert user.onboarding_completed_at != nil
     end
 
-    test "user name is pre-filled in basic settings", %{conn: conn} do
+    test "user name is pre-filled in profile step", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "Pre Filled Name"})
 
-      # Navigate to basic settings
+      # Navigate to profile step
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
@@ -293,7 +302,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/onboarding")
 
-      # Navigate to basic settings
+      # Navigate to profile step
       view
       |> element("button[phx-click='next_step']")
       |> render_click()

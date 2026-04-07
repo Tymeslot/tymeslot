@@ -30,11 +30,22 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
   @doc """
   Generates the OAuth authorization URL for Google Calendar with specific scopes.
+
+  Accepts a keyword list as the third argument. When a list of atoms/strings is
+  given it is treated as scopes (backward compatible). When a keyword list is
+  given, `:scopes` defaults to `[:calendar]` and other keys (e.g. `:return_to`)
+  are forwarded to the shared helper.
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
-  @spec authorization_url(pos_integer(), String.t(), list(atom() | String.t())) :: String.t()
-  def authorization_url(user_id, redirect_uri, scopes) do
-    GoogleOAuthHelper.authorization_url(user_id, redirect_uri, scopes)
+  @spec authorization_url(pos_integer(), String.t(), list(atom() | String.t()) | keyword()) ::
+          String.t()
+  def authorization_url(user_id, redirect_uri, opts) when is_list(opts) do
+    if Keyword.keyword?(opts) do
+      scopes = Keyword.get(opts, :scopes, [:calendar])
+      GoogleOAuthHelper.authorization_url(user_id, redirect_uri, scopes, opts)
+    else
+      GoogleOAuthHelper.authorization_url(user_id, redirect_uri, opts)
+    end
   end
 
   @doc """

@@ -9,23 +9,37 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
   @type user_id :: pos_integer()
   @type state :: String.t()
   @type secret :: iodata()
-  @type validated :: %{user_id: user_id(), integration_id: pos_integer() | nil}
+  @type validated :: %{
+          user_id: user_id(),
+          integration_id: pos_integer() | nil,
+          return_to: String.t() | nil
+        }
 
   @default_ttl_seconds 3600
 
   @doc """
   Generates a compact, signed state parameter embedding the user id, timestamp,
-  and optionally an integration_id for re-authorization.
+  and optionally an integration_id for re-authorization and a return_to path.
+
+  ## Options
+    - `:return_to` — a relative path (starting with `/`) to redirect to after
+      the OAuth callback. Embedded after a `|` separator in the signed data.
   """
-  @spec generate(user_id(), secret(), pos_integer() | nil) :: state()
-  def generate(user_id, secret, integration_id \\ nil)
+  @spec generate(user_id(), secret(), pos_integer() | nil, keyword()) :: state()
+  def generate(user_id, secret, integration_id \\ nil, opts \\ [])
       when is_integer(user_id) and user_id > 0 do
     timestamp = System.system_time(:second)
+    return_to = Keyword.get(opts, :return_to)
 
-    data =
+    core =
       if integration_id,
         do: "#{user_id}:#{timestamp}:#{integration_id}",
         else: "#{user_id}:#{timestamp}"
+
+    data =
+      if valid_return_to?(return_to),
+        do: "#{core}|#{return_to}",
+        else: core
 
     signature = :crypto.mac(:hmac, :sha256, secret, data)
     encoded_data = Base.url_encode64(data)
@@ -63,32 +77,58 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
     end
   end
 
+  @doc """
+  Extracts the `return_to` path from a state string without full validation.
+
+  Only use this after `validate/3` has already confirmed the state is authentic.
+  Returns `nil` when no `return_to` was embedded.
+  """
+  @spec peek_return_to(state()) :: String.t() | nil
+  def peek_return_to(state) when is_binary(state) do
+    with [encoded_data, _sig] <- String.split(state, ".", parts: 2),
+         {:ok, data} <- Base.url_decode64(encoded_data),
+         [_core, return_to] <- String.split(data, "|", parts: 2) do
+      if valid_return_to?(return_to), do: return_to
+    else
+      _other -> nil
+    end
+  end
+
+  def peek_return_to(_other), do: nil
+
   # Private helpers
 
   defp secure_equals(a, b) when byte_size(a) == byte_size(b), do: :crypto.hash_equals(a, b)
   defp secure_equals(_a, _b), do: false
 
   defp extract_state_data(data, ttl_seconds) do
-    parts = String.split(data, ":")
+    {core, return_to} =
+      case String.split(data, "|", parts: 2) do
+        [core, return_to] -> {core, return_to}
+        [core] -> {core, nil}
+      end
+
+    parts = String.split(core, ":")
 
     case parts do
       [user_id_str, timestamp_str] ->
-        parse_state_parts(user_id_str, timestamp_str, nil, ttl_seconds)
+        parse_state_parts(user_id_str, timestamp_str, nil, return_to, ttl_seconds)
 
       [user_id_str, timestamp_str, integration_id_str] ->
-        parse_state_parts(user_id_str, timestamp_str, integration_id_str, ttl_seconds)
+        parse_state_parts(user_id_str, timestamp_str, integration_id_str, return_to, ttl_seconds)
 
       _other ->
         {:error, "Invalid state format"}
     end
   end
 
-  defp parse_state_parts(user_id_str, timestamp_str, integration_id_str, ttl_seconds) do
+  defp parse_state_parts(user_id_str, timestamp_str, integration_id_str, return_to, ttl_seconds) do
     with {user_id, ""} <- Integer.parse(user_id_str),
          {timestamp, ""} <- Integer.parse(timestamp_str),
          true <- within_ttl?(timestamp, ttl_seconds),
          {:ok, integration_id} <- parse_optional_integration_id(integration_id_str) do
-      {:ok, %{user_id: user_id, integration_id: integration_id}}
+      validated_return_to = if valid_return_to?(return_to), do: return_to
+      {:ok, %{user_id: user_id, integration_id: integration_id, return_to: validated_return_to}}
     else
       _error -> {:error, "Invalid or expired state"}
     end
@@ -102,6 +142,12 @@ defmodule Tymeslot.Integrations.Common.OAuth.State do
       _other -> {:error, "Invalid integration_id"}
     end
   end
+
+  defp valid_return_to?(path) when is_binary(path) do
+    String.starts_with?(path, "/") and not String.starts_with?(path, "//")
+  end
+
+  defp valid_return_to?(_other), do: false
 
   defp within_ttl?(timestamp, ttl_seconds) do
     now = System.system_time(:second)

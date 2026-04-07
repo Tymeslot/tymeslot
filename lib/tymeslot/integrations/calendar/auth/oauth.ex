@@ -14,12 +14,17 @@ defmodule Tymeslot.Integrations.Calendar.OAuth do
 
   @doc """
   Initiate Google Calendar OAuth flow and return authorization URL.
+
+  ## Options
+    - `:return_to` — relative path to redirect to after the OAuth callback
   """
-  @spec initiate_google_oauth(user_id()) :: {:ok, String.t()} | {:error, String.t()}
-  def initiate_google_oauth(user_id) when is_integer(user_id) do
+  @spec initiate_google_oauth(user_id(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
+  def initiate_google_oauth(user_id, opts \\ []) when is_integer(user_id) do
     redirect_uri = "#{Endpoint.url()}/auth/google/calendar/callback"
 
-    authorization_url = google_oauth_helper().authorization_url(user_id, redirect_uri)
+    authorization_url =
+      google_oauth_helper().authorization_url(user_id, redirect_uri, opts)
+
     {:ok, authorization_url}
   rescue
     error -> {:error, format_oauth_error(error, "Google")}
@@ -27,12 +32,17 @@ defmodule Tymeslot.Integrations.Calendar.OAuth do
 
   @doc """
   Initiate Outlook Calendar OAuth flow and return authorization URL.
+
+  ## Options
+    - `:return_to` — relative path to redirect to after the OAuth callback
   """
-  @spec initiate_outlook_oauth(user_id()) :: {:ok, String.t()} | {:error, String.t()}
-  def initiate_outlook_oauth(user_id) when is_integer(user_id) do
+  @spec initiate_outlook_oauth(user_id(), keyword()) :: {:ok, String.t()} | {:error, String.t()}
+  def initiate_outlook_oauth(user_id, opts \\ []) when is_integer(user_id) do
     redirect_uri = "#{Endpoint.url()}/auth/outlook/calendar/callback"
 
-    authorization_url = outlook_oauth_helper().authorization_url(user_id, redirect_uri)
+    authorization_url =
+      outlook_oauth_helper().authorization_url(user_id, redirect_uri, opts)
+
     {:ok, authorization_url}
   rescue
     error -> {:error, format_oauth_error(error, "Outlook")}

@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" fill="none">
+  <style>
+    /* Time slot buttons highlight in sequence, left to right */
+    .slot { opacity: 1; }
+    .slot-1 { animation: slot-highlight 5s ease-in-out infinite; }
+    .slot-2 { animation: slot-highlight 5s ease-in-out 1s infinite; }
+    .slot-3 { animation: slot-highlight 5s ease-in-out 2s infinite; }
+    .slot-4 { animation: slot-highlight 5s ease-in-out 3s infinite; }
+    .slot-5 { animation: slot-highlight 5s ease-in-out 4s infinite; }
+
+    @keyframes slot-highlight {
+      0%, 12%, 100% { opacity: 1; }
+      6% { opacity: 0.55; }
+    }
+
+    /* Selected slot gentle scale pulse */
+    .slot-selected-bg {
+      animation: selected-pulse 3s ease-in-out infinite;
+    }
+    .slot-selected-ring {
+      animation: selected-ring-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes selected-pulse {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 0.35; }
+    }
+    @keyframes selected-ring-pulse {
+      0%, 100% { stroke-width: 2; }
+      50% { stroke-width: 3; }
+    }
+
+    /* Confirm button gentle glow */
+    .confirm-btn {
+      animation: confirm-glow 3.5s ease-in-out infinite;
+    }
+
+    @keyframes confirm-glow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.82; }
+    }
+  </style>
+
+  <!-- Shadow behind main card -->
+  <rect x="74" y="24" width="460" height="460" rx="14" fill="#e2e8f0" opacity="0.6"/>
+
+  <!-- Main card -->
+  <rect x="70" y="18" width="460" height="460" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+
+  <!-- === Top section: avatar + name/title === -->
+  <!-- Avatar circle -->
+  <circle cx="300" cy="72" r="24" fill="#e2e8f0"/>
+
+  <!-- Name line (wider) -->
+  <rect x="248" y="108" width="104" height="10" rx="5" fill="#cbd5e1"/>
+
+  <!-- Title/subtitle line (narrower) -->
+  <rect x="264" y="126" width="72" height="8" rx="4" fill="#cbd5e1"/>
+
+  <!-- Divider -->
+  <rect x="110" y="150" width="380" height="1" rx="0.5" fill="#e2e8f0"/>
+
+  <!-- === Meeting type card 1 === -->
+  <!-- Card background -->
+  <rect x="110" y="168" width="380" height="72" rx="8" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Turquoise left border accent -->
+  <rect x="110" y="168" width="4" height="72" rx="2" fill="#14b8a6"/>
+
+  <!-- Text placeholder lines -->
+  <rect x="130" y="186" width="120" height="8" rx="4" fill="#cbd5e1"/>
+  <rect x="130" y="202" width="80" height="6" rx="3" fill="#cbd5e1"/>
+
+  <!-- Duration badge -->
+  <rect x="420" y="190" width="52" height="22" rx="11" fill="#22d3ee" opacity="0.9"/>
+
+  <!-- === Meeting type card 2 === -->
+  <!-- Card background -->
+  <rect x="110" y="256" width="380" height="72" rx="8" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Turquoise left border accent -->
+  <rect x="110" y="256" width="4" height="72" rx="2" fill="#14b8a6"/>
+
+  <!-- Text placeholder lines -->
+  <rect x="130" y="274" width="140" height="8" rx="4" fill="#cbd5e1"/>
+  <rect x="130" y="290" width="96" height="6" rx="3" fill="#cbd5e1"/>
+
+  <!-- Duration badge -->
+  <rect x="420" y="278" width="52" height="22" rx="11" fill="#22d3ee" opacity="0.9"/>
+
+  <!-- Divider -->
+  <rect x="110" y="348" width="380" height="1" rx="0.5" fill="#e2e8f0"/>
+
+  <!-- === Bottom section: time slot buttons === -->
+  <!-- Slot 1 -->
+  <rect class="slot slot-1" x="110" y="368" width="68" height="36" rx="8" fill="#14b8a6"/>
+
+  <!-- Slot 2 (selected state - lighter with ring) -->
+  <rect class="slot-selected-bg" x="188" y="368" width="68" height="36" rx="8" fill="#14b8a6" opacity="0.2"/>
+  <rect class="slot-selected-ring" x="188" y="368" width="68" height="36" rx="8" fill="none" stroke="#14b8a6" stroke-width="2"/>
+
+  <!-- Slot 3 -->
+  <rect class="slot slot-3" x="266" y="368" width="68" height="36" rx="8" fill="#14b8a6"/>
+
+  <!-- Slot 4 -->
+  <rect class="slot slot-4" x="344" y="368" width="68" height="36" rx="8" fill="#14b8a6"/>
+
+  <!-- Slot 5 -->
+  <rect class="slot slot-5" x="422" y="368" width="68" height="36" rx="8" fill="#14b8a6"/>
+
+  <!-- Small inner lines on time slots to suggest text -->
+  <rect x="126" y="382" width="36" height="6" rx="3" fill="#ffffff" opacity="0.6"/>
+  <rect x="204" y="382" width="36" height="6" rx="3" fill="#14b8a6" opacity="0.5"/>
+  <rect x="282" y="382" width="36" height="6" rx="3" fill="#ffffff" opacity="0.6"/>
+  <rect x="360" y="382" width="36" height="6" rx="3" fill="#ffffff" opacity="0.6"/>
+  <rect x="438" y="382" width="36" height="6" rx="3" fill="#ffffff" opacity="0.6"/>
+
+  <!-- === Confirm button at bottom === -->
+  <rect class="confirm-btn" x="180" y="424" width="240" height="38" rx="8" fill="#14b8a6"/>
+  <rect x="264" y="439" width="72" height="8" rx="4" fill="#ffffff" opacity="0.7"/>
+
+  <!-- === Decorative accent dots === -->
+  <circle cx="96" cy="50" r="3" fill="#22d3ee" opacity="0.4"/>
+  <circle cx="504" cy="50" r="3" fill="#22d3ee" opacity="0.4"/>
+  <circle cx="96" cy="440" r="2.5" fill="#14b8a6" opacity="0.3"/>
+  <circle cx="504" cy="440" r="2.5" fill="#14b8a6" opacity="0.3"/>
+  <circle cx="556" cy="240" r="2" fill="#22d3ee" opacity="0.3"/>
+  <circle cx="44" cy="240" r="2" fill="#22d3ee" opacity="0.3"/>
+</svg>

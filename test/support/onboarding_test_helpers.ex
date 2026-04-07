@@ -11,16 +11,24 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   @endpoint TymeslotWeb.Endpoint
 
   @doc """
-  Helper to fill basic settings form.
+  Helper to fill profile form (basic settings).
   """
-  @spec fill_basic_settings(any(), String.t(), String.t()) :: String.t()
-  def fill_basic_settings(view, full_name, username) do
+  @spec fill_profile(any(), String.t(), String.t()) :: String.t()
+  def fill_profile(view, full_name, username) do
     render_change(view, "validate_basic_settings", %{
       "basic_settings" => %{
         "full_name" => full_name,
         "username" => username
       }
     })
+  end
+
+  @doc """
+  Alias for fill_profile/3 — kept for backward compatibility in tests.
+  """
+  @spec fill_basic_settings(any(), String.t(), String.t()) :: String.t()
+  def fill_basic_settings(view, full_name, username) do
+    fill_profile(view, full_name, username)
   end
 
   @doc """
@@ -63,29 +71,46 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   end
 
   @doc """
-  Navigates from the current step to the scheduling preferences step.
-  Assumes the view is at the welcome step and navigates through basic settings.
+  Navigates from the welcome step to the first scheduling preference step (buffer time).
+  Fills the profile form and clicks through connect_calendar.
   """
-  @spec navigate_to_scheduling_preferences(any()) :: any()
-  def navigate_to_scheduling_preferences(view) do
-    # From welcome to basic settings
+  @spec navigate_to_scheduling_steps(any()) :: any()
+  def navigate_to_scheduling_steps(view) do
+    # From welcome to profile
     view
     |> element("button[phx-click='next_step']")
     |> render_click()
 
-    # Fill basic settings with unique username
+    # Fill profile form with unique username
     view
-    |> form("form#basic-settings-form", %{
+    |> form("form#profile-form", %{
       "full_name" => "Test User",
       "username" => "testuser#{System.unique_integer([:positive])}"
     })
     |> render_change()
 
-    # To scheduling preferences
+    # Profile to connect_calendar
+    view
+    |> element("button[phx-click='next_step']")
+    |> render_click()
+
+    # connect_calendar to buffer_time
     view
     |> element("button[phx-click='next_step']")
     |> render_click()
 
     view
   end
+
+  @doc """
+  Alias for navigate_to_scheduling_steps/1 — kept for backward compatibility.
+  """
+  @spec navigate_to_preferences(any()) :: any()
+  def navigate_to_preferences(view), do: navigate_to_scheduling_steps(view)
+
+  @doc """
+  Alias for navigate_to_scheduling_steps/1 — kept for backward compatibility.
+  """
+  @spec navigate_to_scheduling_preferences(any()) :: any()
+  def navigate_to_scheduling_preferences(view), do: navigate_to_scheduling_steps(view)
 end

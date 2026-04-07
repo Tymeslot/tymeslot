@@ -3,7 +3,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   Navigation event handlers for the onboarding flow.
 
   Handles step navigation including next/previous step transitions,
-  modal management, and onboarding completion.
+  skip modal management, step skipping, and onboarding completion.
   """
 
   use TymeslotWeb, :verified_routes
@@ -26,11 +26,11 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   @spec handle_next_step(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_next_step(socket) do
     case socket.assigns.current_step do
-      :basic_settings ->
-        handle_basic_settings_next(socket)
+      :profile ->
+        handle_profile_next(socket)
 
-      :complete ->
-        {:noreply, complete_onboarding(socket)}
+      :ready ->
+        handle_complete_onboarding(socket, redirect_to: ~p"/dashboard/event-types")
 
       step ->
         {:noreply,
@@ -50,17 +50,23 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_previous_step(socket) do
     case socket.assigns.current_step do
-      :scheduling_preferences ->
+      :connect_calendar ->
         {:noreply,
          socket
-         |> Component.assign(:current_step, StepConfig.previous_step(:scheduling_preferences))
+         |> Component.assign(:current_step, StepConfig.previous_step(:connect_calendar))
          |> Component.assign(:form_data, BasicSettingsShared.build_form_data(socket))
          |> LiveView.clear_flash()}
 
-      :complete ->
+      step when step in [:buffer_time, :booking_window, :minimum_notice] ->
         {:noreply,
          socket
-         |> Component.assign(:current_step, StepConfig.previous_step(:complete))
+         |> Component.assign(:current_step, StepConfig.previous_step(step))
+         |> LiveView.clear_flash()}
+
+      :ready ->
+        {:noreply,
+         socket
+         |> Component.assign(:current_step, StepConfig.previous_step(:ready))
          |> Component.assign_new(:custom_input_mode, fn ->
            CustomInputModeHelper.default_custom_mode()
          end)
@@ -74,6 +80,24 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
           prev ->
             {:noreply, socket |> Component.assign(:current_step, prev) |> LiveView.clear_flash()}
         end
+    end
+  end
+
+  @doc """
+  Handles skipping the current step (e.g. calendar connection).
+  Advances to the next step without validation.
+  """
+  @spec handle_skip_step(Phoenix.LiveView.Socket.t()) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_skip_step(socket) do
+    case StepConfig.next_step(socket.assigns.current_step) do
+      nil ->
+        {:noreply, socket}
+
+      next ->
+        {:noreply,
+         socket
+         |> Component.assign(:current_step, next)
+         |> LiveView.clear_flash()}
     end
   end
 
@@ -96,22 +120,37 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   end
 
   @doc """
-  Handles skipping the onboarding process.
+  Handles skipping the onboarding process entirely.
   """
   @spec handle_skip_onboarding(Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_skip_onboarding(socket) do
-    {:noreply, complete_onboarding(socket)}
+    handle_complete_onboarding(socket)
   end
 
-  defp complete_onboarding(socket) do
+  @doc """
+  Completes the onboarding flow, marking it done and redirecting.
+
+  ## Options
+
+  * `:redirect_to` - Path to redirect to after completion (default: `/dashboard`)
+  """
+  @spec handle_complete_onboarding(Phoenix.LiveView.Socket.t(), keyword()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_complete_onboarding(socket, opts \\ []) do
+    redirect_to = Keyword.get(opts, :redirect_to, ~p"/dashboard")
+    {:noreply, complete_onboarding(socket, redirect_to)}
+  end
+
+  # -------------------------------------------------------------------
+  # Private helpers
+  # -------------------------------------------------------------------
+
+  defp complete_onboarding(socket, redirect_to) do
     user = socket.assigns.current_user
 
-    # Reload profile from DB to ensure we don't have stale state if updated in another tab
     case ProfileQueries.get_by_user_id(user.id) do
       {:ok, profile} ->
-        # Ensure user has a username before completing onboarding
-        # This prevents broken booking URLs if they skip setup
         case ensure_username(profile, user.id) do
           {:ok, _profile} ->
             is_debug = socket.assigns.live_action in [:debug_welcome, :debug_step]
@@ -128,7 +167,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
                 else
                   socket
                   |> LiveView.put_flash(:info, "Welcome to Tymeslot! Your account is now set up.")
-                  |> LiveView.redirect(to: ~p"/dashboard")
+                  |> LiveView.redirect(to: redirect_to)
                 end
 
               {:error, _reason} ->
@@ -149,15 +188,11 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       {:ok, profile}
     else
       default_username = Profiles.generate_default_username(user_id)
-      # Use ProfileQueries.update_username directly to bypass rate limits
-      # for system-assigned default usernames
       ProfileQueries.update_username(profile, default_username)
     end
   end
 
-  # Helper function to update basic settings and proceed to next step
   defp update_and_proceed(socket, sanitized_params) do
-    # Ensure timezone is included so it persists even if the user didn't change it explicitly
     case BasicSettingsShared.persist_basic_settings(
            socket,
            sanitized_params,
@@ -167,10 +202,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         socket =
           socket
           |> Component.assign(:profile, profile)
-          |> Component.assign(:current_step, :scheduling_preferences)
-          |> Component.assign_new(:custom_input_mode, fn ->
-            CustomInputModeHelper.default_custom_mode()
-          end)
+          |> Component.assign(:current_step, :connect_calendar)
           |> LiveView.clear_flash()
 
         {:noreply, socket}
@@ -185,8 +217,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     end
   end
 
-  # Handle next step for basic settings
-  defp handle_basic_settings_next(socket) do
+  defp handle_profile_next(socket) do
     case BasicSettingsShared.validate_basic_settings(socket, socket.assigns.form_data) do
       {:ok, sanitized_params} ->
         handle_username_validation(socket, sanitized_params)
@@ -196,25 +227,20 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
     end
   end
 
-  # Handle username validation and availability check
   defp handle_username_validation(socket, sanitized_params) do
     username = Map.get(sanitized_params, "username", "")
     current_username = socket.assigns.profile.username || ""
 
     cond do
-      # Username hasn't changed, proceed
       username == current_username ->
         update_and_proceed(socket, sanitized_params)
 
-      # Username is empty, show error
       username == "" ->
         {:noreply, Component.assign(socket, :form_errors, %{username: "Username is required"})}
 
-      # Check if username is available
       Profiles.username_available?(username) ->
         update_and_proceed(socket, sanitized_params)
 
-      # Username is taken
       true ->
         {:noreply,
          Component.assign(socket, :form_errors, %{

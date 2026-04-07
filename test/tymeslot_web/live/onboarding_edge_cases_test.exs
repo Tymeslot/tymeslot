@@ -29,18 +29,17 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   describe "focus_custom_input with invalid inputs" do
     test "invalid setting name does not crash", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
 
-      # Handler will gracefully return {:noreply, socket} without changes
       html = render(view)
-      assert html =~ "Preferences"
+      assert html =~ "Buffer between meetings"
     end
   end
 
   describe "update_scheduling_preferences with boundary values" do
     test "negative buffer_minutes value is rejected", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
 
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
@@ -50,8 +49,8 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       |> element("form[phx-change='update_scheduling_preferences']")
       |> render_change(%{"buffer_minutes" => "-10"})
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
+      # Navigate through remaining steps to ready
+      navigate_scheduling_steps_to_ready(view)
 
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
       assert profile.buffer_minutes >= 0
@@ -59,7 +58,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
     test "exceeding maximum buffer_minutes is rejected", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
 
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
@@ -69,8 +68,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       |> element("form[phx-change='update_scheduling_preferences']")
       |> render_change(%{"buffer_minutes" => "999"})
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
+      navigate_scheduling_steps_to_ready(view)
 
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
       assert profile.buffer_minutes <= 120
@@ -80,7 +78,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   describe "preset spoofing security" do
     test "cannot spoof preset marker with non-preset value", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
 
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
@@ -97,8 +95,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       html = render(view)
       assert html =~ ~s(name="buffer_minutes")
 
-      view |> element("button[phx-click='next_step']") |> render_click()
-      view |> element("button[phx-click='next_step']") |> render_click()
+      navigate_scheduling_steps_to_ready(view)
 
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
       assert profile.buffer_minutes == 20
@@ -106,7 +103,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
     test "preset marker is verified for actual preset values", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
 
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
@@ -126,9 +123,12 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   describe "custom_input_mode state preservation" do
     test "validation errors preserve custom mode state", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
 
-      refute render(view) =~ ~s(name="buffer_minutes")
+      # Navigate to booking_window step
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      refute render(view) =~ ~s(name="advance_booking_days")
 
       view
       |> element(
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
     test "navigating back preserves custom_input_mode state", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
 
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
@@ -158,6 +158,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       |> element("form[phx-change='update_scheduling_preferences']")
       |> render_change(%{"buffer_minutes" => "25"})
 
+      # Navigate forward then back
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='previous_step']") |> render_click()
 
@@ -170,7 +171,10 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   describe "boundary value testing" do
     test "advance_booking_days accepts minimum value (1)", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
+
+      # Navigate to booking_window step
+      view |> element("button[phx-click='next_step']") |> render_click()
 
       view
       |> element(
@@ -182,6 +186,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       |> element("form[phx-change='update_scheduling_preferences']")
       |> render_change(%{"advance_booking_days" => "1"})
 
+      # booking_window → minimum_notice → ready
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
@@ -191,7 +196,10 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
     test "advance_booking_days accepts maximum value (365)", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
+
+      # Navigate to booking_window step
+      view |> element("button[phx-click='next_step']") |> render_click()
 
       view
       |> element(
@@ -199,6 +207,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       )
       |> render_click()
 
+      # booking_window → minimum_notice → ready
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
@@ -208,7 +217,11 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
     test "min_advance_hours accepts zero", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
+
+      # Navigate to minimum_notice step (buffer_time → booking_window → minimum_notice)
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
 
       view
       |> element(
@@ -216,7 +229,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       )
       |> render_click()
 
-      view |> element("button[phx-click='next_step']") |> render_click()
+      # minimum_notice → ready
       view |> element("button[phx-click='next_step']") |> render_click()
 
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
@@ -225,7 +238,11 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
     test "min_advance_hours accepts maximum (168)", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
+
+      # Navigate to minimum_notice step
+      view |> element("button[phx-click='next_step']") |> render_click()
+      view |> element("button[phx-click='next_step']") |> render_click()
 
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='min_advance_hours']")
@@ -235,7 +252,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       |> element("form[phx-change='update_scheduling_preferences']")
       |> render_change(%{"min_advance_hours" => "168"})
 
-      view |> element("button[phx-click='next_step']") |> render_click()
+      # minimum_notice → ready
       view |> element("button[phx-click='next_step']") |> render_click()
 
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
@@ -246,7 +263,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
   describe "concurrent updates" do
     test "rapid preset button clicks work correctly", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
 
       view
       |> element(
@@ -266,12 +283,12 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       )
       |> render_click()
 
-      assert render(view) =~ "Preferences"
+      assert render(view) =~ "Buffer between meetings"
     end
 
     test "switching between custom and preset rapidly works", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_scheduling_steps(view)
 
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
@@ -289,5 +306,12 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
       assert render(view) =~ ~s(name="buffer_minutes")
     end
+  end
+
+  # Navigates from buffer_time through booking_window and minimum_notice to ready
+  defp navigate_scheduling_steps_to_ready(view) do
+    view |> element("button[phx-click='next_step']") |> render_click()
+    view |> element("button[phx-click='next_step']") |> render_click()
+    view |> element("button[phx-click='next_step']") |> render_click()
   end
 end

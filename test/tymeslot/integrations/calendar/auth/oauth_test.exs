@@ -17,7 +17,9 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
       expected_url =
         "https://accounts.google.com/o/oauth2/v2/auth?client_id=test&state=#{user.id}"
 
-      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id, _redirect_uri ->
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id,
+                                                                    _redirect_uri,
+                                                                    _opts ->
         expected_url
       end)
 
@@ -27,7 +29,9 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
     test "returns error when mock helper raises configuration error" do
       user = insert(:user)
 
-      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id, _redirect_uri ->
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id,
+                                                                    _redirect_uri,
+                                                                    _opts ->
         raise "Client ID not configured"
       end)
 
@@ -44,7 +48,9 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
       expected_url =
         "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=test"
 
-      expect(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _user_id, _redirect_uri ->
+      expect(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _user_id,
+                                                                     _redirect_uri,
+                                                                     _opts ->
         expected_url
       end)
 
@@ -54,7 +60,9 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
     test "returns error when mock helper raises configuration error" do
       user = insert(:user)
 
-      expect(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _user_id, _redirect_uri ->
+      expect(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _user_id,
+                                                                     _redirect_uri,
+                                                                     _opts ->
         raise "Client ID not configured"
       end)
 
@@ -70,7 +78,9 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
       integration = insert(:calendar_integration, user: user, provider: "google")
       expected_url = "https://accounts.google.com/upgrade"
 
-      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id, _integration_id ->
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id,
+                                                                    _redirect_uri,
+                                                                    _opts ->
         expected_url
       end)
 
