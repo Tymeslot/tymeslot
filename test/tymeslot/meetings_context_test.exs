@@ -10,8 +10,8 @@ defmodule Tymeslot.MeetingsContextTest do
   import Mox
 
   alias Ecto.UUID
-  alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
   import Tymeslot.MeetingTestHelpers
   import Tymeslot.CursorPaginationTestCases

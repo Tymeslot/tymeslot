@@ -8,7 +8,7 @@ defmodule TymeslotWeb.MeetingManagement.SharedHelpers do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.DatabaseQueries.MeetingQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileQueries
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers

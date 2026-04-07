@@ -6,8 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
   import Mox
 
-  alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
 
   setup :verify_on_exit!

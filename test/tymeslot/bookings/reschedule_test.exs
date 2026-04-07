@@ -9,7 +9,7 @@ defmodule Tymeslot.Bookings.RescheduleTest do
   import Mox
 
   alias Tymeslot.Bookings.Reschedule
-  alias Tymeslot.DatabaseQueries.MeetingQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
   import Tymeslot.MeetingTestHelpers
 

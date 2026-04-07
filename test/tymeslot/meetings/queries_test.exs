@@ -6,27 +6,27 @@ defmodule Tymeslot.Meetings.QueriesTest do
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.Meetings.Queries
+  alias Tymeslot.Meetings
 
   describe "get_meeting_for_user/2" do
     test "returns meeting when user is organizer" do
       meeting = insert(:meeting, organizer_email: "organizer@example.com")
 
-      assert {:ok, found} = Queries.get_meeting_for_user(meeting.id, "organizer@example.com")
+      assert {:ok, found} = Meetings.get_meeting_for_user(meeting.id, "organizer@example.com")
       assert found.id == meeting.id
     end
 
     test "returns meeting when user is attendee" do
       meeting = insert(:meeting, attendee_email: "attendee@example.com")
 
-      assert {:ok, found} = Queries.get_meeting_for_user(meeting.id, "attendee@example.com")
+      assert {:ok, found} = Meetings.get_meeting_for_user(meeting.id, "attendee@example.com")
       assert found.id == meeting.id
     end
 
     test "returns error when user is neither organizer nor attendee" do
       meeting = insert(:meeting)
 
-      assert {:error, :not_found} = Queries.get_meeting_for_user(meeting.id, "other@example.com")
+      assert {:error, :not_found} = Meetings.get_meeting_for_user(meeting.id, "other@example.com")
     end
   end
 
@@ -35,7 +35,7 @@ defmodule Tymeslot.Meetings.QueriesTest do
       meeting = insert(:meeting, organizer_email: "organizer@example.com")
 
       assert {:ok, found} =
-               Queries.get_meeting_by_uid_for_user(meeting.uid, "organizer@example.com")
+               Meetings.get_meeting_by_uid_for_user(meeting.uid, "organizer@example.com")
 
       assert found.uid == meeting.uid
     end
@@ -44,7 +44,7 @@ defmodule Tymeslot.Meetings.QueriesTest do
       meeting = insert(:meeting, attendee_email: "attendee@example.com")
 
       assert {:ok, found} =
-               Queries.get_meeting_by_uid_for_user(meeting.uid, "attendee@example.com")
+               Meetings.get_meeting_by_uid_for_user(meeting.uid, "attendee@example.com")
 
       assert found.uid == meeting.uid
     end
@@ -53,7 +53,7 @@ defmodule Tymeslot.Meetings.QueriesTest do
       meeting = insert(:meeting)
 
       assert {:error, :not_found} =
-               Queries.get_meeting_by_uid_for_user(meeting.uid, "unauthorized@example.com")
+               Meetings.get_meeting_by_uid_for_user(meeting.uid, "unauthorized@example.com")
     end
   end
 
@@ -115,7 +115,7 @@ defmodule Tymeslot.Meetings.QueriesTest do
           reminder_email_sent: false
         )
 
-      meetings = Queries.meetings_needing_reminders()
+      meetings = Meetings.meetings_needing_reminders()
       meeting_ids = Enum.map(meetings, & &1.id)
 
       assert meeting_needing_reminder.id in meeting_ids

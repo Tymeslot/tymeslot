@@ -4,7 +4,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
   """
 
   import Swoosh.Email
-  alias Tymeslot.DatabaseSchemas.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   alias Tymeslot.Emails.Shared.{
     Components,
@@ -16,7 +16,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  @spec reschedule_request_email(Tymeslot.DatabaseSchemas.MeetingSchema.t()) ::
+  @spec reschedule_request_email(Tymeslot.Meetings.MeetingSchema.t()) ::
           Swoosh.Email.t()
   def reschedule_request_email(%Meeting{} = meeting) do
     locale = meeting.attendee_locale || "en"

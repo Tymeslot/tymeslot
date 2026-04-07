@@ -30,7 +30,7 @@ defmodule Tymeslot.Bookings.ConfirmationEmailsIntegrationTest do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Create
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker

@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
   import Tymeslot.AuthTestHelpers
   import Mox
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
 
   alias Plug.Test

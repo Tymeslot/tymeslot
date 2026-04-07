@@ -7,9 +7,9 @@ defmodule TymeslotWeb.BookingRecaptchaTest do
 
   @moduletag backup_tests: true
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Infrastructure.Security.Recaptcha
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks

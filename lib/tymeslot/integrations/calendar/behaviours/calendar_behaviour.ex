@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
   Behaviour for calendar operations to enable testing with mocks.
   """
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   @callback list_events_in_range(pos_integer() | nil, DateTime.t(), DateTime.t()) ::

@@ -11,8 +11,8 @@ defmodule Tymeslot.Webhooks do
 
   require Logger
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Features
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Security.UrlValidation
   alias Tymeslot.Webhooks.{PayloadBuilder, WebhookDeliverySchema, WebhookQueries, WebhookSchema}
   alias Tymeslot.Workers.WebhookWorker

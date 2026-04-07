@@ -14,8 +14,8 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   require Logger
 
   alias Tymeslot.Bookings.Cancel
-  alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Emails.EmailService
+  alias Tymeslot.Meetings.MeetingQueries
 
   @typep integration_id :: integer()
   @typep signal :: :deleted | :modified

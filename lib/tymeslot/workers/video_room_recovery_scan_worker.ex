@@ -9,7 +9,7 @@ defmodule Tymeslot.Workers.VideoRoomRecoveryScanWorker do
   use Oban.Worker, queue: :default, max_attempts: 1, unique: [period: 60]
   require Logger
 
-  alias Tymeslot.DatabaseQueries.MeetingQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.VideoRoomWorker
 
   @impl Oban.Worker

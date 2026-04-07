@@ -11,8 +11,8 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.LinkAccessPolicy
   alias Tymeslot.Security.RateLimiter

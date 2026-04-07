@@ -10,11 +10,9 @@ defmodule Tymeslot.Meetings.Scheduling do
 
   require Logger
 
-  import Ecto.Query, warn: false
-
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseQueries.MeetingQueries
-  alias Tymeslot.DatabaseSchemas.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Profiles
   alias Tymeslot.Repo
 
@@ -109,21 +107,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   """
   @spec has_time_conflict?(DateTime.t(), DateTime.t(), String.t() | nil) :: boolean()
   def has_time_conflict?(%DateTime{} = start_time, %DateTime{} = end_time, exclude_uid \\ nil) do
-    query =
-      from(m in Meeting,
-        where:
-          m.status in ["confirmed", "pending"] and
-            (m.start_time < ^end_time and m.end_time > ^start_time)
-      )
-
-    query =
-      if exclude_uid do
-        from(m in query, where: m.uid != ^exclude_uid)
-      else
-        query
-      end
-
-    Repo.exists?(query)
+    MeetingQueries.time_conflict_exists?(start_time, end_time, exclude_uid)
   end
 
   # Private functions
@@ -133,7 +117,12 @@ defmodule Tymeslot.Meetings.Scheduling do
       compute_buffered_window(start_time, end_time, organizer_user_id)
 
     Repo.transaction(fn ->
-      case check_time_conflicts(buffered_start, buffered_end, nil, organizer_user_id) do
+      case MeetingQueries.count_locked_conflicts(
+             buffered_start,
+             buffered_end,
+             nil,
+             organizer_user_id
+           ) do
         {:ok, :no_conflicts} ->
           operation_fn.()
 
@@ -142,34 +131,6 @@ defmodule Tymeslot.Meetings.Scheduling do
           Repo.rollback(:time_conflict)
       end
     end)
-  end
-
-  defp check_time_conflicts(buffered_start, buffered_end, exclude_uid, organizer_user_id) do
-    base =
-      from(m in Meeting,
-        where:
-          m.status in ["confirmed", "pending"] and
-            m.start_time < ^buffered_end and
-            m.end_time > ^buffered_start
-      )
-
-    base =
-      if organizer_user_id do
-        from(m in base, where: m.organizer_user_id == ^organizer_user_id)
-      else
-        base
-      end
-
-    base = if exclude_uid, do: from(m in base, where: m.uid != ^exclude_uid), else: base
-
-    locked = from(m in base, lock: "FOR UPDATE NOWAIT")
-    count_query = from(m in subquery(locked), select: count(m.id))
-
-    case Repo.one(count_query) do
-      0 -> {:ok, :no_conflicts}
-      n when is_integer(n) -> {:error, n}
-      nil -> {:ok, :no_conflicts}
-    end
   end
 
   defp get_buffer_minutes(organizer_user_id) do
@@ -220,7 +181,7 @@ defmodule Tymeslot.Meetings.Scheduling do
       compute_buffered_window(start_time, end_time, meeting.organizer_user_id)
 
     Repo.transaction(fn ->
-      case check_time_conflicts(
+      case MeetingQueries.count_locked_conflicts(
              buffered_start,
              buffered_end,
              meeting.uid,

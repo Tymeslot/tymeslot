@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseSchemas.MeetingSchemaTest do
+defmodule Tymeslot.Meetings.MeetingSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :schema
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   describe "business logic" do
     test "prevents meetings with end time before start time" do

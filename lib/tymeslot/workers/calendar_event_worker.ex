@@ -22,7 +22,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     priority: 1
 
   alias Ecto.{Changeset, UUID}
-  alias Tymeslot.DatabaseQueries.MeetingQueries
+  alias Tymeslot.Meetings.MeetingQueries
   require Logger
 
   # Configuration

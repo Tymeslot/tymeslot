@@ -6,7 +6,7 @@ defmodule Tymeslot.Webhooks.PayloadBuilder do
   making it easy for users to parse in their automation tools (n8n, Zapier, etc.).
   """
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
 
   @doc """
   Builds a webhook payload for a meeting event.

@@ -6,8 +6,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
   import Mox
   import Tymeslot.Factory
   alias Ecto.UUID
-  alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.EmailServiceMock
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.EmailWorkerHandlers
 
   setup :verify_on_exit!

@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseQueries.MeetingQueries do
+defmodule Tymeslot.Meetings.MeetingQueries do
   @moduledoc """
   Database queries for Meeting schema.
 
@@ -11,34 +11,23 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
 
   alias Ecto.Changeset
   alias Ecto.UUID
-  alias Tymeslot.DatabaseSchemas.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Repo
-  alias Tymeslot.Utils.ReminderUtils
 
-  @doc false
-  # Private helper: filter meetings where the given email matches organizer OR attendee.
-  defp for_user_email(query, email) do
-    from(m in query,
-      where: m.organizer_email == ^email or m.attendee_email == ^email
-    )
-  end
+  # Query building helpers
 
-  @doc false
-  defp for_attendee_email(query, email) do
-    from(m in query, where: m.attendee_email == ^email)
-  end
+  defp for_user_email(query, email),
+    do: from(m in query, where: m.organizer_email == ^email or m.attendee_email == ^email)
 
-  @doc false
-  defp for_organizer_email(query, email) do
-    from(m in query, where: m.organizer_email == ^email)
-  end
+  defp for_attendee_email(query, email),
+    do: from(m in query, where: m.attendee_email == ^email)
 
-  @doc false
-  # Private helper: optionally filter by exact status when provided.
+  defp for_organizer_email(query, email),
+    do: from(m in query, where: m.organizer_email == ^email)
+
   defp with_status(query, nil), do: query
   defp with_status(query, status), do: from(m in query, where: m.status == ^status)
 
-  @doc false
   defp without_status(query, nil), do: query
   defp without_status(query, ""), do: query
 
@@ -47,33 +36,20 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
 
   defp without_status(query, status), do: from(m in query, where: m.status != ^status)
 
-  @doc false
-  # Private helper: filter upcoming meetings (not yet ended).
   defp upcoming(query, now), do: from(m in query, where: m.end_time > ^now)
-
-  @doc false
-  # Private helper: filter past meetings strictly before the provided timestamp.
   defp past(query, now), do: from(m in query, where: m.end_time < ^now)
-
-  @doc false
   defp order_by_start_desc(query), do: from(m in query, order_by: [desc: m.start_time])
-
-  @doc false
   defp order_by_start_asc(query), do: from(m in query, order_by: [asc: m.start_time])
 
-  @doc false
   defp paginate_offset(query, page, per_page),
     do: from(m in query, limit: ^per_page, offset: ^((page - 1) * per_page))
 
-  @doc false
   defp apply_limit(query, limit), do: from(m in query, limit: ^limit)
 
-  @doc false
   defp apply_time_filter(query, nil, _now), do: query
   defp apply_time_filter(query, :upcoming, now), do: upcoming(query, now)
   defp apply_time_filter(query, :past, now), do: past(query, now)
 
-  @doc false
   defp cursor_after(query, nil, _after_id), do: query
   defp cursor_after(query, _after_start, nil), do: query
 
@@ -85,22 +61,10 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
     )
   end
 
-  @doc false
   defp order_by_start_desc_id_desc(query),
     do: from(m in query, order_by: [desc: m.start_time, desc: m.id])
 
-  @doc """
-  Creates a meeting.
-
-  ## Examples
-
-      iex> create_meeting(%{uid: "unique-123", title: "Meeting"})
-      {:ok, %Meeting{}}
-
-      iex> create_meeting(%{bad_field: "bad_value"})
-      {:error, %Ecto.Changeset{}}
-
-  """
+  @doc "Creates a meeting."
   @spec create_meeting(map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def create_meeting(attrs \\ %{}) when is_map(attrs) do
     %Meeting{}
@@ -108,18 +72,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
     |> Repo.insert()
   end
 
-  @doc """
-  Gets a single meeting by ID.
-
-  ## Examples
-
-      iex> get_meeting(meeting_id)
-      {:ok, %Meeting{}}
-
-      iex> get_meeting("non-existent-id")
-      {:error, :not_found}
-
-  """
+  @doc "Gets a single meeting by ID."
   @spec get_meeting(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
   def get_meeting(id) do
     case UUID.cast(id) do
@@ -153,18 +106,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
     end
   end
 
-  @doc """
-  Gets a single meeting by UID.
-
-  ## Examples
-
-      iex> get_meeting_by_uid("unique-uid")
-      {:ok, %Meeting{}}
-
-      iex> get_meeting_by_uid("non-existent-uid")
-      {:error, :not_found}
-
-  """
+  @doc "Gets a single meeting by UID."
   @spec get_meeting_by_uid(String.t()) :: {:ok, Meeting.t()} | {:error, :not_found}
   def get_meeting_by_uid(uid) do
     case Repo.get_by(Meeting, uid: uid) do
@@ -173,18 +115,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
     end
   end
 
-  @doc """
-  Updates a meeting.
-
-  ## Examples
-
-      iex> update_meeting(meeting, %{title: "New Title"})
-      {:ok, %Meeting{}}
-
-      iex> update_meeting(meeting, %{title: nil})
-      {:error, %Ecto.Changeset{}}
-
-  """
+  @doc "Updates a meeting."
   @spec update_meeting(Meeting.t(), map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def update_meeting(%Meeting{} = meeting, attrs) when is_map(attrs) do
     meeting
@@ -192,18 +123,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
     |> Repo.update()
   end
 
-  @doc """
-  Deletes a meeting.
-
-  ## Examples
-
-      iex> delete_meeting(meeting)
-      {:ok, %Meeting{}}
-
-      iex> delete_meeting(%Meeting{id: "non-existent"})
-      {:error, %Ecto.Changeset{}}
-
-  """
+  @doc "Deletes a meeting."
   @spec delete_meeting(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def delete_meeting(%Meeting{} = meeting) do
     Repo.delete(meeting)
@@ -329,42 +249,39 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
 
   @doc """
   Appends a reminder to reminders_sent and marks reminders as sent.
+
+  Accepts a map with `value` (integer) and `unit` (string) keys representing
+  an already-normalised reminder. Callers are responsible for validation.
   """
-  @spec append_reminder_sent(Meeting.t(), integer(), String.t()) ::
-          {:ok, Meeting.t()} | {:error, Changeset.t() | :invalid_reminder | :not_found}
-  def append_reminder_sent(%Meeting{} = meeting, reminder_value, reminder_unit) do
-    case ReminderUtils.normalize_reminder(%{value: reminder_value, unit: reminder_unit}) do
-      {:ok, %{value: val, unit: unit}} ->
-        new_reminder = %{"value" => val, "unit" => unit}
-        new_reminder_list = [new_reminder]
+  @spec append_reminder_sent(Meeting.t(), %{value: integer(), unit: String.t()}) ::
+          {:ok, Meeting.t()} | {:error, :not_found}
+  def append_reminder_sent(%Meeting{} = meeting, %{value: val, unit: unit}) do
+    new_reminder = %{"value" => val, "unit" => unit}
+    new_reminder_list = [new_reminder]
 
-        {count, _value} =
-          Repo.update_all(
-            from(m in Meeting,
-              where: m.id == ^meeting.id,
-              update: [
-                set: [
-                  reminder_email_sent: true,
-                  reminders_sent:
-                    fragment(
-                      "CASE WHEN COALESCE(reminders_sent, ARRAY[]::jsonb[]) @> ?::jsonb[] THEN COALESCE(reminders_sent, ARRAY[]::jsonb[]) ELSE array_append(COALESCE(reminders_sent, ARRAY[]::jsonb[]), ?::jsonb) END",
-                      ^new_reminder_list,
-                      ^new_reminder
-                    )
-                ]
-              ]
-            ),
-            []
-          )
+    {count, _value} =
+      Repo.update_all(
+        from(m in Meeting,
+          where: m.id == ^meeting.id,
+          update: [
+            set: [
+              reminder_email_sent: true,
+              reminders_sent:
+                fragment(
+                  "CASE WHEN COALESCE(reminders_sent, ARRAY[]::jsonb[]) @> ?::jsonb[] THEN COALESCE(reminders_sent, ARRAY[]::jsonb[]) ELSE array_append(COALESCE(reminders_sent, ARRAY[]::jsonb[]), ?::jsonb) END",
+                  ^new_reminder_list,
+                  ^new_reminder
+                )
+            ]
+          ]
+        ),
+        []
+      )
 
-        if count == 1 do
-          get_meeting(meeting.id)
-        else
-          {:error, :not_found}
-        end
-
-      _other ->
-        {:error, :invalid_reminder}
+    if count == 1 do
+      get_meeting(meeting.id)
+    else
+      {:error, :not_found}
     end
   end
 
@@ -743,5 +660,69 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueries do
     |> cursor_after(after_start, after_id)
     |> apply_limit(limit)
     |> Repo.all()
+  end
+
+  # =====================================
+  # Conflict Detection Queries
+  # =====================================
+
+  @doc """
+  Checks whether any active meetings overlap the given time window.
+
+  Optionally excludes a meeting by UID (for update-without-self-conflict).
+  """
+  @spec time_conflict_exists?(DateTime.t(), DateTime.t(), String.t() | nil) :: boolean()
+  def time_conflict_exists?(start_time, end_time, exclude_uid \\ nil) do
+    query =
+      from(m in Meeting,
+        where:
+          m.status in ["confirmed", "pending"] and
+            (m.start_time < ^end_time and m.end_time > ^start_time)
+      )
+
+    query =
+      if exclude_uid do
+        from(m in query, where: m.uid != ^exclude_uid)
+      else
+        query
+      end
+
+    Repo.exists?(query)
+  end
+
+  @doc """
+  Counts conflicting meetings with row-level locking (FOR UPDATE NOWAIT).
+
+  Used inside transactions for atomic conflict-checked create/update.
+  Returns `{:ok, :no_conflicts}` or `{:error, count}`.
+  """
+  @spec count_locked_conflicts(DateTime.t(), DateTime.t(), String.t() | nil, integer() | nil) ::
+          {:ok, :no_conflicts} | {:error, pos_integer()}
+  def count_locked_conflicts(buffered_start, buffered_end, exclude_uid, organizer_user_id) do
+    base =
+      from(m in Meeting,
+        where:
+          m.status in ["confirmed", "pending"] and
+            m.start_time < ^buffered_end and
+            m.end_time > ^buffered_start
+      )
+
+    base =
+      if organizer_user_id do
+        from(m in base, where: m.organizer_user_id == ^organizer_user_id)
+      else
+        base
+      end
+
+    base = if exclude_uid, do: from(m in base, where: m.uid != ^exclude_uid), else: base
+
+    locked = from(m in base, lock: "FOR UPDATE NOWAIT")
+    count_query = from(m in subquery(locked), select: count(m.id))
+
+    case Repo.one(count_query) do
+      0 -> {:ok, :no_conflicts}
+      n when is_integer(n) -> {:error, n}
+      nil -> {:ok, :no_conflicts}
+    end
   end
 end

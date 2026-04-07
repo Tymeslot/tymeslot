@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseQueries.MeetingQueriesTest do
+defmodule Tymeslot.Meetings.MeetingQueriesTest do
   @moduledoc false
 
   use Tymeslot.DataCase, async: true
@@ -6,7 +6,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueriesTest do
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.MeetingQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
 
   # Helper functions to reduce duplication in test setup
@@ -55,21 +55,27 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueriesTest do
     end
   end
 
-  describe "append_reminder_sent/3" do
+  describe "append_reminder_sent/2" do
     test "atomically appends reminder and avoids duplicates" do
       meeting = insert(:meeting, reminders_sent: [])
 
       # First append
-      {:ok, updated} = MeetingQueries.append_reminder_sent(meeting, 30, "minutes")
+      {:ok, updated} =
+        MeetingQueries.append_reminder_sent(meeting, %{value: 30, unit: "minutes"})
+
       assert updated.reminders_sent == [%{"value" => 30, "unit" => "minutes"}]
       assert updated.reminder_email_sent == true
 
       # Duplicate append (should be idempotent due to CASE @> guard)
-      {:ok, updated2} = MeetingQueries.append_reminder_sent(updated, 30, "minutes")
+      {:ok, updated2} =
+        MeetingQueries.append_reminder_sent(updated, %{value: 30, unit: "minutes"})
+
       assert updated2.reminders_sent == [%{"value" => 30, "unit" => "minutes"}]
 
       # Second unique append
-      {:ok, updated3} = MeetingQueries.append_reminder_sent(updated2, 1, "hours")
+      {:ok, updated3} =
+        MeetingQueries.append_reminder_sent(updated2, %{value: 1, unit: "hours"})
+
       assert %{"value" => 1, "unit" => "hours"} in updated3.reminders_sent
       assert length(updated3.reminders_sent) == 2
     end
@@ -77,7 +83,9 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueriesTest do
     test "handles nil reminders_sent" do
       meeting = insert(:meeting, reminders_sent: nil)
 
-      {:ok, updated} = MeetingQueries.append_reminder_sent(meeting, 30, "minutes")
+      {:ok, updated} =
+        MeetingQueries.append_reminder_sent(meeting, %{value: 30, unit: "minutes"})
+
       assert updated.reminders_sent == [%{"value" => 30, "unit" => "minutes"}]
     end
   end

@@ -14,8 +14,8 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   require Logger
 
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.DatabaseQueries.MeetingQueries
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.EmailWorker
 
   @doc """

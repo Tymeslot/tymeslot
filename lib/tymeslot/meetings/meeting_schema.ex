@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
+defmodule Tymeslot.Meetings.MeetingSchema do
   @moduledoc """
   Ecto schema for meetings with comprehensive fields for calendar integration,
   video conferencing, and meeting lifecycle management.

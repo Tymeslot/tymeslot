@@ -618,7 +618,7 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
     now = DateTime.utc_now()
 
     meeting_integration_ids =
-      from(m in Tymeslot.DatabaseSchemas.MeetingSchema,
+      from(m in Tymeslot.Meetings.MeetingSchema,
         where: m.status == "confirmed" and m.start_time >= ^meeting_since_dt,
         where: not is_nil(m.calendar_integration_id),
         select: m.calendar_integration_id,

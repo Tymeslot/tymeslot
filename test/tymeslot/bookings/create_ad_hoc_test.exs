@@ -5,7 +5,7 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
   import Tymeslot.Factory
 
   alias Tymeslot.Bookings.CreateAdHoc
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
 
   @moduletag :bookings
 

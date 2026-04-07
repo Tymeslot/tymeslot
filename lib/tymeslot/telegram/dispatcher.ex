@@ -6,7 +6,7 @@ defmodule Tymeslot.Telegram.Dispatcher do
 
   require Logger
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Telegram
 
   @spec dispatch(atom() | String.t(), MeetingSchema.t()) :: :ok | {:error, term()}

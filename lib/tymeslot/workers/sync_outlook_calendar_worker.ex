@@ -21,13 +21,13 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
   alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Meetings.MeetingQueries
 
   @base_url "https://graph.microsoft.com/v1.0"
 

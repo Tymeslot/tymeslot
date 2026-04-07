@@ -9,7 +9,7 @@ defmodule Tymeslot.Bookings.CancelTest do
   import Mox
 
   alias Tymeslot.Bookings.Cancel
-  alias Tymeslot.DatabaseQueries.MeetingQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
   import Tymeslot.MeetingTestHelpers
 

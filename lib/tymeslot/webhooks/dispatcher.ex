@@ -8,7 +8,7 @@ defmodule Tymeslot.Webhooks.Dispatcher do
 
   require Logger
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Webhooks
 
   @doc """

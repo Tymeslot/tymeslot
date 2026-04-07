@@ -10,9 +10,10 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   alias Tymeslot.DatabaseQueries.{
     CalendarIntegrationQueries,
     IntegrationHealthStateQueries,
-    MeetingQueries,
     VideoIntegrationQueries
   }
+
+  alias Tymeslot.Meetings.MeetingQueries
 
   alias Tymeslot.Emails.AppointmentBuilder
   alias Tymeslot.Utils.ReminderUtils
@@ -383,15 +384,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
         {:ok, _updated_meeting} ->
           :ok
 
-        {:error, reason} ->
-          Logger.error("Failed to track reminder as sent",
-            meeting_id: meeting.id,
-            reminder_value: reminder_value,
-            reminder_unit: reminder_unit,
-            error: inspect(reason)
-          )
+            {:error, reason} ->
+              Logger.error("Failed to track reminder as sent",
+                meeting_id: meeting.id,
+                reminder_value: reminder_value,
+                reminder_unit: reminder_unit,
+                error: inspect(reason)
+              )
 
-          {:error, "Failed to track reminder: #{inspect(reason)}"}
+              {:error, "Failed to track reminder: #{inspect(reason)}"}
       end
     else
       :ok

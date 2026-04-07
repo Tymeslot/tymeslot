@@ -8,7 +8,7 @@ defmodule Tymeslot.TestAssertions do
   import Phoenix.LiveViewTest
   import Ecto.Query
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
 
   @doc """

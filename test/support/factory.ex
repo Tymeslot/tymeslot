@@ -11,10 +11,10 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema
   alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
@@ -27,7 +27,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema
 
-  @spec meeting_factory() :: Tymeslot.DatabaseSchemas.MeetingSchema.t()
+  @spec meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def meeting_factory do
     start_time = DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.truncate(:second)
     end_time = DateTime.add(start_time, 60, :minute)
@@ -60,7 +60,7 @@ defmodule Tymeslot.Factory do
     build(:meeting, status: status)
   end
 
-  @spec past_meeting_factory() :: Tymeslot.DatabaseSchemas.MeetingSchema.t()
+  @spec past_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def past_meeting_factory do
     start_time = DateTime.utc_now() |> DateTime.add(-1, :day) |> DateTime.truncate(:second)
     end_time = DateTime.add(start_time, 60, :minute)
@@ -72,7 +72,7 @@ defmodule Tymeslot.Factory do
     )
   end
 
-  @spec future_meeting_factory() :: Tymeslot.DatabaseSchemas.MeetingSchema.t()
+  @spec future_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def future_meeting_factory do
     start_time = DateTime.utc_now() |> DateTime.add(7, :day) |> DateTime.truncate(:second)
     end_time = DateTime.add(start_time, 60, :minute)
@@ -84,12 +84,12 @@ defmodule Tymeslot.Factory do
     )
   end
 
-  @spec cancelled_meeting_factory() :: Tymeslot.DatabaseSchemas.MeetingSchema.t()
+  @spec cancelled_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def cancelled_meeting_factory do
     build(:meeting, status: "cancelled")
   end
 
-  @spec pending_meeting_factory() :: Tymeslot.DatabaseSchemas.MeetingSchema.t()
+  @spec pending_meeting_factory() :: Tymeslot.Meetings.MeetingSchema.t()
   def pending_meeting_factory do
     build(:meeting, status: "pending")
   end

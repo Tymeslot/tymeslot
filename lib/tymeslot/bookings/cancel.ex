@@ -7,9 +7,9 @@ defmodule Tymeslot.Bookings.Cancel do
   require Logger
 
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.DatabaseQueries.MeetingQueries
-  alias Tymeslot.DatabaseSchemas.MeetingSchema, as: Meeting
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Notifications.Events
 
   @doc """

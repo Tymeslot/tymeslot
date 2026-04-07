@@ -10,7 +10,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.UUID
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
 
   setup :verify_on_exit!

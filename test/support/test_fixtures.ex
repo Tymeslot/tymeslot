@@ -161,7 +161,7 @@ defmodule Tymeslot.TestFixtures do
     import Ecto.Query
 
     Repo.delete_all(
-      from(m in Tymeslot.DatabaseSchemas.MeetingSchema, where: like(m.uid, ^"#{uid_pattern}%"))
+      from(m in Tymeslot.Meetings.MeetingSchema, where: like(m.uid, ^"#{uid_pattern}%"))
     )
   end
 

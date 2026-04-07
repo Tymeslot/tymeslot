@@ -9,8 +9,8 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.UUID
-  alias Tymeslot.DatabaseQueries.MeetingQueries
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker

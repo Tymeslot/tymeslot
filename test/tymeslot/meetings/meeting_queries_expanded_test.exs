@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseQueries.MeetingQueriesExpandedTest do
+defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
   @moduledoc """
   Expanded tests for MeetingQueries - covering CRUD and listing functions.
   """
@@ -9,7 +9,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueriesExpandedTest do
   @moduletag :queries
 
   alias Ecto.UUID
-  alias Tymeslot.DatabaseQueries.MeetingQueries
+  alias Tymeslot.Meetings.MeetingQueries
 
   # Helper to build meeting times
   defp build_meeting_times(offset_days, duration_minutes) do

@@ -3,9 +3,9 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
 
   @moduletag :emails
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Emails.EmailService
   alias Tymeslot.Emails.Templates.ExternalBookingChange
+  alias Tymeslot.Meetings.MeetingSchema
 
   defp build_meeting(overrides \\ %{}) do
     defaults = %{

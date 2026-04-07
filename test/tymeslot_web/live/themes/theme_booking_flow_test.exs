@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 

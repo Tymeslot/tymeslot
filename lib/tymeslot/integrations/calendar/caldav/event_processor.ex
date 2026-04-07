@@ -9,11 +9,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
   require Logger
 
   alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
-  alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Meetings.MeetingQueries
 
   @doc """
   Upserts a list of events into the calendar event cache and triggers

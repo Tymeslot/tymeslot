@@ -9,8 +9,8 @@ defmodule Tymeslot.WorkerTestHelpers do
   alias Ecto.UUID
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
+  alias Tymeslot.Meetings.MeetingSchema
 
   @doc """
   Sets up a complete calendar scenario with user, integration, and meeting.

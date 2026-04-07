@@ -6,8 +6,8 @@ defmodule TymeslotWeb.BookingHoneypotTest do
   import Tymeslot.Factory
   import Tymeslot.BookingTestHelpers
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.TestMocks

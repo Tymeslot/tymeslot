@@ -18,9 +18,8 @@ defmodule Tymeslot.Workers.VideoRoomWorker do
     priority: 0
 
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseQueries.MeetingQueries
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Utils.ReminderUtils
   require Logger

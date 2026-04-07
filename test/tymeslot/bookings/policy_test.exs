@@ -8,7 +8,7 @@ defmodule Tymeslot.Bookings.PolicyTest do
   setup :verify_on_exit!
 
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingSchema
 
   describe "can_cancel_meeting?/1" do
     test "allows cancellation for future meetings" do

@@ -8,7 +8,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
   import Swoosh.Email
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema, as: Meeting
+  alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   alias Tymeslot.Emails.Shared.{
     Components,

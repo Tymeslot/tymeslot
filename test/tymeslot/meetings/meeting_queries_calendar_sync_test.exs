@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseQueries.MeetingQueriesCalendarSyncTest do
+defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
@@ -6,8 +6,8 @@ defmodule Tymeslot.DatabaseQueries.MeetingQueriesCalendarSyncTest do
   @moduletag :calendar
 
   alias Ecto.UUID
-  alias Tymeslot.DatabaseQueries.MeetingQueries
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingSchema
 
   defp create_meeting_with_calendar(overrides \\ %{}) do
     user = insert(:user)

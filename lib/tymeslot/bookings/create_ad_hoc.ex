@@ -33,7 +33,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
         }
 
   @spec execute(params()) ::
-          {:ok, Tymeslot.DatabaseSchemas.MeetingSchema.t()} | {:error, String.t()}
+          {:ok, Tymeslot.Meetings.MeetingSchema.t()} | {:error, String.t()}
   def execute(params) do
     with :ok <- validate(params) do
       params

@@ -5,8 +5,8 @@ defmodule TymeslotWeb.PublicBookingHappyPathTest do
   import Mox
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 

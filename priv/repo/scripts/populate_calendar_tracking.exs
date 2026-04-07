@@ -3,7 +3,7 @@
 # The system will handle NULL values gracefully by falling back to the first available calendar
 
 alias Tymeslot.Repo
-alias Tymeslot.DatabaseSchemas.MeetingSchema
+alias Tymeslot.Meetings.MeetingSchema
 alias Tymeslot.Auth.UserSchema
 alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
 

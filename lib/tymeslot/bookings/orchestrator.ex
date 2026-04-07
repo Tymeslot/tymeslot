@@ -7,8 +7,8 @@ defmodule Tymeslot.Bookings.Orchestrator do
   """
 
   alias Tymeslot.Bookings.{Create, Validation}
-  alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Meetings
+  alias Tymeslot.Meetings.MeetingQueries
 
   @typedoc "Parameters for `submit_booking/2`."
   @type booking_submission_params :: %{

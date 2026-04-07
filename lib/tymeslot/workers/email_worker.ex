@@ -20,7 +20,7 @@ defmodule Tymeslot.Workers.EmailWorker do
 
   alias Ecto.Changeset
   alias Oban.Job
-  alias Tymeslot.DatabaseQueries.MeetingQueries
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorkerHandlers
@@ -601,6 +601,7 @@ defmodule Tymeslot.Workers.EmailWorker do
       "reminder_unit" => reminder_unit
     }
 
+    # TODO: Move to ObanJobQueries (Task 11)
     Repo.delete_all(
       from(j in Job,
         where: j.queue == "emails",
