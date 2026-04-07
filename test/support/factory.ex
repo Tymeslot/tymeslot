@@ -12,10 +12,10 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.DatabaseSchemas.MeetingSchema
-  alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.Encryption
@@ -130,7 +130,7 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec meeting_type_factory() :: Tymeslot.DatabaseSchemas.MeetingTypeSchema.t()
+  @spec meeting_type_factory() :: Tymeslot.MeetingTypes.MeetingTypeSchema.t()
   def meeting_type_factory do
     %MeetingTypeSchema{
       name: sequence(:meeting_type_name, &"Meeting Type #{&1}"),

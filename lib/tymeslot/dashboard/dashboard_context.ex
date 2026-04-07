@@ -6,12 +6,12 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.MeetingTypeQueries
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
 
   @typep integration_status :: %{
            has_calendar: boolean(),

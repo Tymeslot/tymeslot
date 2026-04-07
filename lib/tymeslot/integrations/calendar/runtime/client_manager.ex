@@ -11,10 +11,10 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   require Logger
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.DatabaseSchemas.MeetingSchema
-  alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Utils.UriUtils
 
   @type user_id :: pos_integer()

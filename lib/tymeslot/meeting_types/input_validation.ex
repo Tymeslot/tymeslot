@@ -6,7 +6,7 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
   meeting type creation/editing and scheduling settings configuration.
   """
 
-  alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints

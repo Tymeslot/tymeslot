@@ -1,9 +1,9 @@
-defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
+defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   @moduledoc """
   Database queries for meeting types.
   """
   import Ecto.Query, warn: false
-  alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Repo
 
   @doc """
@@ -106,95 +106,35 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
   end
 
   @doc """
-  Creates default meeting types for a new user.
-  Optimized version using bulk insert instead of individual inserts.
-  Only creates types that don't already exist for the user.
+  Bulk-inserts meeting types from a list of attribute maps.
+  Each map must include all required fields including timestamps.
+  Returns `{:ok, meeting_types}` on success.
   """
-  @spec create_default_meeting_types(integer()) ::
-          {:ok, [MeetingTypeSchema.t()]} | {:error, term()}
-  def create_default_meeting_types(user_id) when is_integer(user_id) do
-    # Get user's primary calendar info for default booking destination
-    alias Tymeslot.Integrations.CalendarPrimary
+  @spec bulk_insert_meeting_types([map()]) :: {:ok, [MeetingTypeSchema.t()]} | {:error, term()}
+  def bulk_insert_meeting_types([]), do: {:ok, []}
 
-    {calendar_integration_id, target_calendar_id} =
-      case CalendarPrimary.get_primary_calendar_integration(user_id) do
-        {:ok, %{default_booking_calendar_id: cal_id} = integration}
-        when is_binary(cal_id) ->
-          {integration.id, cal_id}
-
-        _other ->
-          {nil, nil}
-      end
-
-    # Check existing meeting types to avoid duplicates
-    existing_names =
-      MapSet.new(
-        Repo.all(
-          from(mt in MeetingTypeSchema,
-            where: mt.user_id == ^user_id,
-            select: mt.name
-          )
-        )
-      )
-
-    now = NaiveDateTime.utc_now(:second)
-
-    default_types =
-      Enum.reject(
-        [
-          %{
-            user_id: user_id,
-            name: "15 Minutes",
-            description: "Quick chat or brief consultation",
-            duration_minutes: 15,
-            icon: "hero-bolt",
-            sort_order: 0,
-            is_active: true,
-            allow_video: false,
-            calendar_integration_id: calendar_integration_id,
-            target_calendar_id: target_calendar_id,
-            reminder_config: [%{value: 30, unit: "minutes"}],
-            inserted_at: now,
-            updated_at: now
-          },
-          %{
-            user_id: user_id,
-            name: "30 Minutes",
-            description: "In-depth discussion or detailed review",
-            duration_minutes: 30,
-            icon: "hero-rocket-launch",
-            sort_order: 1,
-            is_active: true,
-            allow_video: false,
-            calendar_integration_id: calendar_integration_id,
-            target_calendar_id: target_calendar_id,
-            reminder_config: [%{value: 30, unit: "minutes"}],
-            inserted_at: now,
-            updated_at: now
-          }
-        ],
-        fn type -> MapSet.member?(existing_names, type.name) end
-      )
-
-    case default_types do
-      [] ->
-        {:ok, []}
-
-      types_to_create ->
-        try do
-          case Repo.insert_all(MeetingTypeSchema, types_to_create, returning: true) do
-            {_count, meeting_types} ->
-              {:ok, meeting_types}
-          end
-        rescue
-          error -> {:error, error}
-        end
+  def bulk_insert_meeting_types(attrs_list) when is_list(attrs_list) do
+    case Repo.insert_all(MeetingTypeSchema, attrs_list, returning: true) do
+      {_count, meeting_types} ->
+        {:ok, meeting_types}
     end
+  rescue
+    error -> {:error, error}
   end
 
-  @spec create_default_meeting_types(term()) :: {:error, :invalid_user_id}
-  def create_default_meeting_types(_invalid_user_id) do
-    {:error, :invalid_user_id}
+  @doc """
+  Returns the names of all existing meeting types for a user as a MapSet.
+  """
+  @spec existing_names(integer()) :: MapSet.t()
+  def existing_names(user_id) do
+    MapSet.new(
+      Repo.all(
+        from(mt in MeetingTypeSchema,
+          where: mt.user_id == ^user_id,
+          select: mt.name
+        )
+      )
+    )
   end
 
   @doc """
@@ -227,14 +167,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
   @spec create_default_meeting_types_individual(integer()) ::
           {:ok, [MeetingTypeSchema.t()]} | {:error, term()}
   def create_default_meeting_types_individual(user_id) when is_integer(user_id) do
-    # Check existing meeting types to avoid duplicates
-    existing_names =
-      from(mt in MeetingTypeSchema,
-        where: mt.user_id == ^user_id,
-        select: mt.name
-      )
-      |> Repo.all()
-      |> MapSet.new()
+    existing = existing_names(user_id)
 
     default_types =
       Enum.reject(
@@ -260,7 +193,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueries do
             reminder_config: [%{value: 30, unit: "minutes"}]
           }
         ],
-        fn type -> MapSet.member?(existing_names, type.name) end
+        fn type -> MapSet.member?(existing, type.name) end
       )
 
     handle_individual_defaults_creation(default_types)

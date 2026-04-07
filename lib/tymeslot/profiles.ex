@@ -9,8 +9,8 @@ defmodule Tymeslot.Profiles do
 
   alias Ecto.Changeset
   alias Tymeslot.Availability.WeeklySchedule
-  alias Tymeslot.DatabaseQueries.MeetingTypeQueries
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema

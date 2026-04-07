@@ -97,7 +97,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
 
     belongs_to(:video_integration, Tymeslot.DatabaseSchemas.VideoIntegrationSchema, type: :id)
 
-    belongs_to(:meeting_type_ref, Tymeslot.DatabaseSchemas.MeetingTypeSchema,
+    belongs_to(:meeting_type_ref, Tymeslot.MeetingTypes.MeetingTypeSchema,
       foreign_key: :meeting_type_id,
       type: :id
     )

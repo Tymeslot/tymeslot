@@ -1,10 +1,11 @@
-defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
+defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.MeetingTypeQueries
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   describe "list_active_meeting_types/1" do
     test "returns active meeting types for user ordered by sort_order and name" do
@@ -293,66 +294,72 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
     end
   end
 
-  describe "create_default_meeting_types/1" do
-    test "creates default meeting types for user" do
+  describe "bulk_insert_meeting_types/1" do
+    test "inserts multiple meeting types at once" do
       user = insert(:user)
+      now = NaiveDateTime.utc_now(:second)
 
-      MeetingTypeQueries.create_default_meeting_types(user.id)
+      attrs_list = [
+        %{
+          user_id: user.id,
+          name: "15 Minutes",
+          description: "Quick chat",
+          duration_minutes: 15,
+          icon: "hero-bolt",
+          sort_order: 0,
+          is_active: true,
+          allow_video: false,
+          calendar_integration_id: nil,
+          target_calendar_id: nil,
+          reminder_config: [%{value: 30, unit: "minutes"}],
+          inserted_at: now,
+          updated_at: now
+        },
+        %{
+          user_id: user.id,
+          name: "30 Minutes",
+          description: "In-depth discussion",
+          duration_minutes: 30,
+          icon: "hero-rocket-launch",
+          sort_order: 1,
+          is_active: true,
+          allow_video: false,
+          calendar_integration_id: nil,
+          target_calendar_id: nil,
+          reminder_config: [%{value: 30, unit: "minutes"}],
+          inserted_at: now,
+          updated_at: now
+        }
+      ]
 
-      meeting_types = MeetingTypeQueries.list_all_meeting_types(user.id)
+      assert {:ok, meeting_types} = MeetingTypeQueries.bulk_insert_meeting_types(attrs_list)
       assert length(meeting_types) == 2
 
-      # Check 15-minute meeting type
-      mt15 = Enum.find(meeting_types, &(&1.duration_minutes == 15))
-      assert mt15.name == "15 Minutes"
-      assert mt15.description == "Quick chat or brief consultation"
-      assert mt15.icon == "hero-bolt"
-      assert mt15.sort_order == 0
-      assert mt15.is_active == true
-      assert mt15.allow_video == false
-
-      # Check 30-minute meeting type
-      mt30 = Enum.find(meeting_types, &(&1.duration_minutes == 30))
-      assert mt30.name == "30 Minutes"
-      assert mt30.description == "In-depth discussion or detailed review"
-      assert mt30.icon == "hero-rocket-launch"
-      assert mt30.sort_order == 1
-      assert mt30.is_active == true
-      assert mt30.allow_video == false
-    end
-
-    test "creates default types even if user already has some meeting types" do
-      user = insert(:user)
-
-      # Create existing meeting type
-      insert(:meeting_type, user: user, name: "Existing Meeting")
-
-      MeetingTypeQueries.create_default_meeting_types(user.id)
-
-      meeting_types = MeetingTypeQueries.list_all_meeting_types(user.id)
-      # 1 existing + 2 default
-      assert length(meeting_types) == 3
-    end
-
-    test "handles duplicate names gracefully" do
-      user = insert(:user)
-
-      # Create meeting type with same name as default
-      insert(:meeting_type, user: user, name: "15 Minutes")
-
-      # Should succeed but only create the non-duplicate meeting type
-      {:ok, meeting_types} = MeetingTypeQueries.create_default_meeting_types(user.id)
-
-      # Should only create the "30 Minutes" type (not duplicate "15 Minutes")
-      assert length(meeting_types) == 1
-      assert hd(meeting_types).name == "30 Minutes"
-
-      # Verify user now has both types
-      all_types = MeetingTypeQueries.list_all_meeting_types(user.id)
-      assert length(all_types) == 2
-      names = Enum.map(all_types, & &1.name)
+      names = Enum.map(meeting_types, & &1.name)
       assert "15 Minutes" in names
       assert "30 Minutes" in names
+    end
+
+    test "returns ok with empty list for empty input" do
+      assert {:ok, []} = MeetingTypeQueries.bulk_insert_meeting_types([])
+    end
+  end
+
+  describe "existing_names/1" do
+    test "returns names of existing meeting types as MapSet" do
+      user = insert(:user)
+      insert(:meeting_type, user: user, name: "Alpha")
+      insert(:meeting_type, user: user, name: "Beta")
+
+      names = MeetingTypeQueries.existing_names(user.id)
+      assert MapSet.member?(names, "Alpha")
+      assert MapSet.member?(names, "Beta")
+      refute MapSet.member?(names, "Gamma")
+    end
+
+    test "returns empty MapSet when user has no meeting types" do
+      user = insert(:user)
+      assert MeetingTypeQueries.existing_names(user.id) == MapSet.new()
     end
   end
 
@@ -393,41 +400,6 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
 
       # Verify user no longer has meeting types
       assert MeetingTypeQueries.has_meeting_types?(user.id) == false
-    end
-  end
-
-  describe "create_default_meeting_types/1 (bulk insert version)" do
-    test "creates default meeting types using bulk insert" do
-      user = insert(:user)
-
-      {:ok, meeting_types} = MeetingTypeQueries.create_default_meeting_types(user.id)
-
-      assert length(meeting_types) == 2
-
-      # Verify first meeting type (15 minutes)
-      first_type = Enum.find(meeting_types, &(&1.name == "15 Minutes"))
-      assert first_type.duration_minutes == 15
-      assert first_type.description == "Quick chat or brief consultation"
-      assert first_type.icon == "hero-bolt"
-      assert first_type.sort_order == 0
-      assert first_type.is_active == true
-      assert first_type.user_id == user.id
-
-      # Verify second meeting type (30 minutes)
-      second_type = Enum.find(meeting_types, &(&1.name == "30 Minutes"))
-      assert second_type.duration_minutes == 30
-      assert second_type.description == "In-depth discussion or detailed review"
-      assert second_type.icon == "hero-rocket-launch"
-      assert second_type.sort_order == 1
-      assert second_type.is_active == true
-      assert second_type.user_id == user.id
-    end
-
-    test "returns error for invalid user_id" do
-      assert {:error, :invalid_user_id} = MeetingTypeQueries.create_default_meeting_types(nil)
-
-      assert {:error, :invalid_user_id} =
-               MeetingTypeQueries.create_default_meeting_types("invalid")
     end
   end
 
@@ -596,10 +568,10 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
         |> NaiveDateTime.add(-10, :second)
         |> NaiveDateTime.truncate(:second)
 
-      Repo.update_all(Tymeslot.DatabaseSchemas.MeetingTypeSchema, set: [updated_at: past_time])
+      Repo.update_all(MeetingTypeSchema, set: [updated_at: past_time])
 
       # Refresh mt3 to get the past_time
-      mt3 = Repo.get!(Tymeslot.DatabaseSchemas.MeetingTypeSchema, mt3.id)
+      mt3 = Repo.get!(MeetingTypeSchema, mt3.id)
 
       assert {:ok, _result} = MeetingTypeQueries.reorder_meeting_types(user.id, new_order)
 
@@ -624,7 +596,7 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
                MeetingTypeQueries.reorder_meeting_types(user.id, [mt1.id, 999_999])
 
       # Verify original sort order is preserved (transaction rolled back)
-      reloaded = Repo.get!(Tymeslot.DatabaseSchemas.MeetingTypeSchema, mt1.id)
+      reloaded = Repo.get!(MeetingTypeSchema, mt1.id)
       assert reloaded.sort_order == 0
     end
   end
@@ -656,11 +628,11 @@ defmodule Tymeslot.DatabaseQueries.MeetingTypeQueriesTest do
 
       assert updated_count == 1
 
-      reloaded = Repo.get!(Tymeslot.DatabaseSchemas.MeetingTypeSchema, mt.id)
+      reloaded = Repo.get!(MeetingTypeSchema, mt.id)
       assert reloaded.calendar_integration_id == nil
       assert reloaded.target_calendar_id == nil
 
-      reloaded_other = Repo.get!(Tymeslot.DatabaseSchemas.MeetingTypeSchema, mt_other.id)
+      reloaded_other = Repo.get!(MeetingTypeSchema, mt_other.id)
       assert reloaded_other.calendar_integration_id == other_calendar.id
       assert reloaded_other.target_calendar_id == "other-cal"
     end

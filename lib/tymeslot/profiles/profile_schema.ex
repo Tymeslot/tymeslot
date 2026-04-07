@@ -34,7 +34,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
             | nil,
           theme_customization:
             ThemeCustomizationSchema.t() | Ecto.Association.NotLoaded.t() | nil,
-          meeting_types: [Tymeslot.DatabaseSchemas.MeetingTypeSchema.t()] | nil,
+          meeting_types: [Tymeslot.MeetingTypes.MeetingTypeSchema.t()] | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }

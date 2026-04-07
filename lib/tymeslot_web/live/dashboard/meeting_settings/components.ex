@@ -11,8 +11,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components do
     statics: TymeslotWeb.static_paths()
 
   alias Phoenix.LiveView.JS
-  alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers

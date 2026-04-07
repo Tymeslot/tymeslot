@@ -8,8 +8,8 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   """
 
   alias Tymeslot.DatabaseSchemas.MeetingSchema
-  alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Utils.ContextUtils
 
@@ -191,7 +191,7 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   """
   @spec get_booking_integration_info(
           pos_integer()
-          | Tymeslot.DatabaseSchemas.MeetingTypeSchema.t()
+          | Tymeslot.MeetingTypes.MeetingTypeSchema.t()
         ) ::
           {:ok, %{integration_id: pos_integer(), calendar_path: String.t()}} | {:error, term()}
   def get_booking_integration_info(context) do

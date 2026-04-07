@@ -4,9 +4,9 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
   calendar invariant (promote another or clear primary).
   """
 
-  alias Tymeslot.DatabaseQueries.MeetingTypeQueries
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 

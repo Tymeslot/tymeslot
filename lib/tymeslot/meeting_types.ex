@@ -3,8 +3,10 @@ defmodule Tymeslot.MeetingTypes do
   Context for managing meeting types.
   """
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseQueries.MeetingTypeQueries
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
+  alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Utils.UriUtils
   require Logger
@@ -17,7 +19,7 @@ defmodule Tymeslot.MeetingTypes do
     case MeetingTypeQueries.has_meeting_types?(user_id) do
       false ->
         Logger.info("Creating default meeting types for user", user_id: user_id)
-        MeetingTypeQueries.create_default_meeting_types(user_id)
+        create_default_meeting_types(user_id)
         MeetingTypeQueries.list_active_meeting_types(user_id)
 
       true ->
@@ -33,7 +35,7 @@ defmodule Tymeslot.MeetingTypes do
     case MeetingTypeQueries.has_meeting_types?(user_id) do
       false ->
         Logger.info("Creating default meeting types for user", user_id: user_id)
-        MeetingTypeQueries.create_default_meeting_types(user_id)
+        create_default_meeting_types(user_id)
         MeetingTypeQueries.list_all_meeting_types(user_id)
 
       true ->
@@ -235,7 +237,79 @@ defmodule Tymeslot.MeetingTypes do
     end
   end
 
+  @doc """
+  Creates default meeting types for a new user.
+  Fetches the user's primary calendar integration, builds default templates,
+  deduplicates against existing names, then bulk-inserts.
+  """
+  @spec create_default_meeting_types(integer()) ::
+          {:ok, [MeetingTypeSchema.t()]} | {:error, term()}
+  def create_default_meeting_types(user_id) when is_integer(user_id) do
+    {calendar_integration_id, target_calendar_id} = resolve_primary_calendar(user_id)
+    existing = MeetingTypeQueries.existing_names(user_id)
+    now = NaiveDateTime.utc_now(:second)
+
+    user_id
+    |> default_meeting_type_templates(calendar_integration_id, target_calendar_id, now)
+    |> Enum.reject(fn type -> MapSet.member?(existing, type.name) end)
+    |> MeetingTypeQueries.bulk_insert_meeting_types()
+  end
+
+  @spec create_default_meeting_types(term()) :: {:error, :invalid_user_id}
+  def create_default_meeting_types(_invalid_user_id), do: {:error, :invalid_user_id}
+
   # Private functions
+
+  defp resolve_primary_calendar(user_id) do
+    case CalendarPrimary.get_primary_calendar_integration(user_id) do
+      {:ok, %{default_booking_calendar_id: cal_id} = integration}
+      when is_binary(cal_id) ->
+        {integration.id, cal_id}
+
+      _other ->
+        {nil, nil}
+    end
+  end
+
+  defp default_meeting_type_templates(
+         user_id,
+         calendar_integration_id,
+         target_calendar_id,
+         now
+       ) do
+    [
+      %{
+        user_id: user_id,
+        name: "15 Minutes",
+        description: "Quick chat or brief consultation",
+        duration_minutes: 15,
+        icon: "hero-bolt",
+        sort_order: 0,
+        is_active: true,
+        allow_video: false,
+        calendar_integration_id: calendar_integration_id,
+        target_calendar_id: target_calendar_id,
+        reminder_config: [%{value: 30, unit: "minutes"}],
+        inserted_at: now,
+        updated_at: now
+      },
+      %{
+        user_id: user_id,
+        name: "30 Minutes",
+        description: "In-depth discussion or detailed review",
+        duration_minutes: 30,
+        icon: "hero-rocket-launch",
+        sort_order: 1,
+        is_active: true,
+        allow_video: false,
+        calendar_integration_id: calendar_integration_id,
+        target_calendar_id: target_calendar_id,
+        reminder_config: [%{value: 30, unit: "minutes"}],
+        inserted_at: now,
+        updated_at: now
+      }
+    ]
+  end
 
   defp build_meeting_type_attrs(params, ui_state) do
     video_integration_id =

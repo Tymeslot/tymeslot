@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchemaTest do
+defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :schema
 
-  alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   describe "business rules" do
     test "prevents meetings longer than 8 hours" do

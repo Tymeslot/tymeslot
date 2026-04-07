@@ -6,8 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.EntryTest do
   import Tymeslot.Factory
 
   alias Tymeslot.DatabaseSchemas.MeetingSchema
-  alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   setup :verify_on_exit!
 

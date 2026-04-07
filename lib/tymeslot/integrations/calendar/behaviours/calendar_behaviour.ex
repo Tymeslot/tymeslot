@@ -4,7 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarBehaviour do
   """
 
   alias Tymeslot.DatabaseSchemas.MeetingSchema
-  alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   @callback list_events_in_range(pos_integer() | nil, DateTime.t(), DateTime.t()) ::
               {:ok, list()} | {:error, any()}

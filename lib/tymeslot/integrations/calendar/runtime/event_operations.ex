@@ -12,13 +12,13 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.EventOperations do
 
   require Logger
   alias Tymeslot.DatabaseSchemas.MeetingSchema
-  alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.Utils.EventValidator
+  alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()

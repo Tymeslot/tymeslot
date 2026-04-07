@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchema do
+defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   @moduledoc """
   Schema for meeting types that users can configure.
   """
