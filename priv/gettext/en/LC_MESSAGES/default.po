@@ -1065,5 +1065,5 @@ msgstr "Details"
 #, elixir-autogen, elixir-format
 msgid "1 attendee hasn't been invited yet. Discard?"
 msgid_plural "%{count} attendees haven't been invited yet. Discard?"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "1 attendee hasn't been invited yet. Discard?"
+msgstr[1] "%{count} attendees haven't been invited yet. Discard?"

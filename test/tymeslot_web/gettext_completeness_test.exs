@@ -202,10 +202,13 @@ defmodule TymeslotWeb.GettextCompletenessTest do
             msgid = extract_quoted_value(trimmed, "msgid")
             {:cont, {:msgid, msgid}}
 
-          # msgstr following msgid
-          String.starts_with?(trimmed, "msgstr \"") && match?({:msgid, _msgid}, acc) ->
+          # msgstr or msgstr[0] (plural) following msgid
+          (String.starts_with?(trimmed, "msgstr \"") ||
+             String.starts_with?(trimmed, "msgstr[0] \"")) &&
+              match?({:msgid, _msgid}, acc) ->
             {:msgid, msgid} = acc
-            msgstr = extract_quoted_value(trimmed, "msgstr")
+            prefix = if String.starts_with?(trimmed, "msgstr["), do: "msgstr[0]", else: "msgstr"
+            msgstr = extract_quoted_value(trimmed, prefix)
             {:cont, {msgid, msgstr}, nil}
 
           true ->
