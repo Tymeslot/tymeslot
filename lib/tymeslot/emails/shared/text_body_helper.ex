@@ -152,4 +152,36 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
     do: "#{dgettext("emails", "Type:")} #{meeting_type}"
 
   defp format_meeting_type_line(_meeting_type), do: nil
+
+  @doc "Formats a list of event field changes as plain text lines."
+  @spec format_event_changes([{atom(), term(), term()}], String.t()) :: String.t()
+  def format_event_changes(changes, locale \\ "en") do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      changes
+      |> Enum.map(&format_single_change/1)
+      |> Enum.filter(& &1)
+      |> Enum.join("\n")
+    end)
+  end
+
+  defp format_single_change({:title, from, to}) do
+    "#{dgettext("emails", "Title:")} #{from || dgettext("emails", "(none)")} → #{to || dgettext("emails", "(none)")}"
+  end
+
+  defp format_single_change({:location, from, to}) do
+    "#{dgettext("emails", "Location:")} #{from || dgettext("emails", "(none)")} → #{to || dgettext("emails", "(none)")}"
+  end
+
+  defp format_single_change({:description, _from, _to}) do
+    dgettext("emails", "Description updated")
+  end
+
+  defp format_single_change({:time, from_start, to_start}) do
+    "#{dgettext("emails", "Time:")} #{format_time_short(from_start)} → #{format_time_short(to_start)}"
+  end
+
+  defp format_single_change(_other), do: nil
+
+  defp format_time_short(%DateTime{} = dt), do: Calendar.strftime(dt, "%d %b %Y, %H:%M UTC")
+  defp format_time_short(val), do: to_string(val)
 end

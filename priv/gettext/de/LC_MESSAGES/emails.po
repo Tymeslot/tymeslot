@@ -197,6 +197,8 @@ msgid "Location"
 msgstr "Ort"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:149
+#: lib/tymeslot/emails/shared/text_body_helper.ex:172
+#: lib/tymeslot/emails/templates/event_update_notification.ex:134
 #: lib/tymeslot/emails/templates/reschedule_request.ex:101
 #, elixir-autogen, elixir-format
 msgid "Location:"
@@ -211,6 +213,7 @@ msgstr "Ich freue mich auf unseren Termin!"
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:85
 #: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:85
 #: lib/tymeslot/emails/templates/calendar_invitation.ex:110
+#: lib/tymeslot/emails/templates/event_update_notification.ex:163
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "TERMIN-DETAILS:"
@@ -222,7 +225,7 @@ msgstr "NACHRICHT DES TEILNEHMERS:"
 
 #: lib/tymeslot/emails/templates/reschedule_request.ex:41
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:22
-#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:164
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:188
 #, elixir-autogen, elixir-format
 msgid "Meeting"
 msgstr "Meeting"
@@ -254,7 +257,7 @@ msgstr "Treffen mit %{name}"
 msgid "Meeting with:"
 msgstr "Treffen mit:"
 
-#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:118
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:142
 #, elixir-autogen, elixir-format
 msgid "Message from %{name}:"
 msgstr "Nachricht von %{name}:"
@@ -392,6 +395,8 @@ msgid "Time"
 msgstr "Uhrzeit"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:144
+#: lib/tymeslot/emails/shared/text_body_helper.ex:180
+#: lib/tymeslot/emails/templates/event_update_notification.ex:144
 #, elixir-autogen, elixir-format
 msgid "Time:"
 msgstr "Uhrzeit:"
@@ -408,12 +413,12 @@ msgid "Type:"
 msgstr "Art:"
 
 #: lib/tymeslot/emails/shared/shared_helpers.ex:251
-#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:141
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:165
 #, elixir-autogen, elixir-format
 msgid "Video Call"
 msgstr "Videoanruf"
 
-#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:128
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:152
 #, elixir-autogen, elixir-format
 msgid "Video meeting:"
 msgstr "Video-Meeting:"
@@ -439,7 +444,7 @@ msgstr "Möchten Sie einen neuen Termin vereinbaren?"
 msgid "You'll receive %{count} reminders before the appointment."
 msgstr "Sie erhalten vor dem Termin %{count} Erinnerungen."
 
-#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:116
+#: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:140
 #, elixir-autogen, elixir-format
 msgid "attendee"
 msgstr "Teilnehmer"
@@ -659,3 +664,47 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "You're Invited"
 msgstr ""
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:62
+#: lib/tymeslot/emails/templates/event_update_notification.ex:161
+#, elixir-autogen, elixir-format
+msgid "%{name} has updated an event you're attending."
+msgstr "%{name} hat eine Veranstaltung aktualisiert, an der du teilnimmst."
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex:168
+#: lib/tymeslot/emails/shared/text_body_helper.ex:168
+#: lib/tymeslot/emails/shared/text_body_helper.ex:172
+#: lib/tymeslot/emails/shared/text_body_helper.ex:172
+#: lib/tymeslot/emails/templates/event_update_notification.ex:149
+#, elixir-autogen, elixir-format
+msgid "(none)"
+msgstr "(keine)"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex:176
+#: lib/tymeslot/emails/templates/event_update_notification.ex:138
+#, elixir-autogen, elixir-format
+msgid "Description updated"
+msgstr "Beschreibung aktualisiert"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:60
+#: lib/tymeslot/emails/templates/event_update_notification.ex:159
+#, elixir-autogen, elixir-format
+msgid "Event Updated"
+msgstr "Veranstaltung aktualisiert"
+
+#: lib/tymeslot/emails/shared/text_body_helper.ex:168
+#: lib/tymeslot/emails/templates/event_update_notification.ex:128
+#, elixir-autogen, elixir-format
+msgid "Title:"
+msgstr "Titel:"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:100
+#, elixir-autogen, elixir-format
+msgid "Updated: %{title} — %{date}"
+msgstr "Aktualisiert: %{title} — %{date}"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:71
+#: lib/tymeslot/emails/templates/event_update_notification.ex:166
+#, elixir-autogen, elixir-format
+msgid "What Changed"
+msgstr "Was hat sich geändert"

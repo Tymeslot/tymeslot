@@ -149,11 +149,11 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   defp complete_onboarding(socket, redirect_to) do
     user = socket.assigns.current_user
 
-    case Profiles.get_profile(user.id) do
-      nil ->
+    case Profiles.get_profile_by_user_id(user.id) do
+      {:error, :not_found} ->
         LiveView.put_flash(socket, :error, "Profile not found. Please try again.")
 
-      profile ->
+      {:ok, profile} ->
         case ensure_username(profile, user.id) do
           {:ok, _profile} ->
             is_debug = socket.assigns.live_action in [:debug_welcome, :debug_step]
@@ -188,7 +188,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       {:ok, profile}
     else
       default_username = Profiles.generate_default_username(user_id)
-      Profiles.update_username(profile, default_username, user_id)
+      Profiles.assign_default_username(profile, default_username)
     end
   end
 

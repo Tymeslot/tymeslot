@@ -1060,3 +1060,11 @@ msgstr "Дата та час"
 #, elixir-autogen, elixir-format
 msgid "Details"
 msgstr "Деталі"
+
+#: lib/tymeslot_web/live/dashboard/calendar_grid/modals/confirm_discard_attendees_modal.ex:24
+#, elixir-autogen, elixir-format
+msgid "1 attendee hasn't been invited yet. Discard?"
+msgid_plural "%{count} attendees haven't been invited yet. Discard?"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""

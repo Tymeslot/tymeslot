@@ -48,6 +48,22 @@ defmodule Tymeslot.Profiles do
   end
 
   @doc """
+  Gets a profile for a user, returning a tagged result tuple.
+  """
+  @spec get_profile_by_user_id(user_id) :: result(profile)
+  def get_profile_by_user_id(user_id), do: ProfileQueries.get_by_user_id(user_id)
+
+  @doc """
+  Assigns a system-generated default username to a profile, bypassing rate limiting.
+
+  This is intended for system use only (e.g. assigning a username during onboarding
+  completion when the user has not chosen one themselves).
+  """
+  @spec assign_default_username(profile(), username()) :: result(profile())
+  def assign_default_username(%ProfileSchema{} = profile, username),
+    do: ProfileQueries.update_username(profile, username)
+
+  @doc """
   Gets a profile by its database ID.
   """
   @spec get_profile_by_id(integer()) :: profile | nil

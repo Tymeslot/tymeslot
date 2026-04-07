@@ -197,6 +197,7 @@ msgid "Location"
 msgstr "Місце проведення"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:149
+#: lib/tymeslot/emails/templates/event_update_notification.ex:134
 #: lib/tymeslot/emails/templates/reschedule_request.ex:101
 #, elixir-autogen, elixir-format
 msgid "Location:"
@@ -211,6 +212,7 @@ msgstr "З нетерпінням чекаю на зустріч!"
 #: lib/tymeslot/emails/templates/appointment_confirmation_organizer.ex:85
 #: lib/tymeslot/emails/templates/appointment_reminder_organizer.ex:85
 #: lib/tymeslot/emails/templates/calendar_invitation.ex:110
+#: lib/tymeslot/emails/templates/event_update_notification.ex:163
 #, elixir-autogen, elixir-format
 msgid "MEETING DETAILS:"
 msgstr "ДЕТАЛІ ЗУСТРІЧІ:"
@@ -392,6 +394,7 @@ msgid "Time"
 msgstr "Час"
 
 #: lib/tymeslot/emails/shared/text_body_helper.ex:144
+#: lib/tymeslot/emails/templates/event_update_notification.ex:144
 #, elixir-autogen, elixir-format
 msgid "Time:"
 msgstr "Час:"
@@ -662,3 +665,41 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "You're Invited"
 msgstr ""
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:62
+#: lib/tymeslot/emails/templates/event_update_notification.ex:161
+#, elixir-autogen, elixir-format
+msgid "%{name} has updated an event you're attending."
+msgstr "%{name} оновив подію, на яку ви записані."
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:149
+#, elixir-autogen, elixir-format
+msgid "(none)"
+msgstr "(не)"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:138
+#, elixir-autogen, elixir-format
+msgid "Description updated"
+msgstr "Описання оновлено"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:60
+#: lib/tymeslot/emails/templates/event_update_notification.ex:159
+#, elixir-autogen, elixir-format
+msgid "Event Updated"
+msgstr "Подія оновлена"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:128
+#, elixir-autogen, elixir-format
+msgid "Title:"
+msgstr "Назва:"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:100
+#, elixir-autogen, elixir-format
+msgid "Updated: %{title} — %{date}"
+msgstr "Оновлено: %{title} — %{date}"
+
+#: lib/tymeslot/emails/templates/event_update_notification.ex:71
+#: lib/tymeslot/emails/templates/event_update_notification.ex:166
+#, elixir-autogen, elixir-format
+msgid "What Changed"
+msgstr "Що змінилося"

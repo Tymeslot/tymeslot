@@ -212,7 +212,56 @@ defmodule Tymeslot.Notifications.Orchestrator do
     end)
   end
 
+  @doc """
+  Schedules a delayed event update notification for all attendees.
+
+  Captures the "before" snapshot of attendee-relevant fields. The Oban job
+  fires after 2 minutes, reads the current event state, diffs against the
+  snapshot, and sends one email per attendee if changes remain.
+  """
+  @spec schedule_event_update_notification(pos_integer(), map()) :: :ok
+  def schedule_event_update_notification(user_id, original_event) do
+    attendee_emails = extract_attendee_emails(original_event.attendees)
+
+    if attendee_emails == [] do
+      :ok
+    else
+      worker_module = get_email_worker_module()
+
+      case worker_module.schedule_event_update_notification(%{
+             user_id: user_id,
+             event_uid: original_event.uid,
+             integration_id: original_event.calendar_integration_id,
+             attendee_emails: attendee_emails,
+             before_title: original_event.title,
+             before_location: original_event.location,
+             before_description: original_event.description,
+             before_start_at: original_event.start_at,
+             before_end_at: original_event.end_at
+           }) do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Failed to schedule event update notification",
+            event_uid: original_event.uid,
+            reason: reason
+          )
+      end
+
+      :ok
+    end
+  end
+
   # Private functions
+
+  defp extract_attendee_emails(nil), do: []
+
+  defp extract_attendee_emails(attendees) do
+    attendees
+    |> Enum.map(&(&1["email"] || &1[:email]))
+    |> Enum.filter(& &1)
+  end
 
   defp schedule_email_job(
          notification_type,

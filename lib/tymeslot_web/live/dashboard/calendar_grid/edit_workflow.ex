@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias Tymeslot.Notifications.Orchestrator
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec default_integration_id(Phoenix.LiveView.Socket.t()) :: integer() | nil
@@ -172,6 +173,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
           send(lv_pid, {:event_update_result, :ok})
 
+          if (original_event.attendees || []) != [] do
+            Orchestrator.schedule_event_update_notification(user_id, original_event)
+          end
+
         {:error, reason} ->
           send(
             lv_pid,
@@ -204,6 +209,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
         :ok ->
           CalendarGrid.update_cached_event(cache_row)
           send(lv_pid, {:event_update_result, :ok})
+
+          if (original_event.attendees || []) != [] do
+            Orchestrator.schedule_event_update_notification(user_id, original_event)
+          end
 
         {:error, reason} ->
           send(

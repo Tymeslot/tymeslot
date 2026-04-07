@@ -93,6 +93,19 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
     where(query, [e], like(e.provider_event_id, ^prefix))
   end
 
+  @doc "Fetches a single cached event by integration ID and UID."
+  @spec get_by_uid(integer(), String.t()) ::
+          {:ok, CalendarEventCacheSchema.t()} | {:error, :not_found}
+  def get_by_uid(calendar_integration_id, uid) do
+    case Repo.get_by(CalendarEventCacheSchema,
+           calendar_integration_id: calendar_integration_id,
+           uid: uid
+         ) do
+      nil -> {:error, :not_found}
+      event -> {:ok, event}
+    end
+  end
+
   @doc """
   Deletes a single event identified by its integration and uid.
 

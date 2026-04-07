@@ -420,6 +420,66 @@ defmodule Tymeslot.Workers.EmailWorker do
     end
   end
 
+  @doc """
+  Schedules an event update notification with a 2-minute delay.
+
+  Uses Oban uniqueness (keyed on action + event_uid, 5-minute period) to
+  coalesce rapid edits into a single notification.
+  """
+  @spec schedule_event_update_notification(map()) :: :ok | {:error, String.t()}
+  def schedule_event_update_notification(params) do
+    result =
+      %{
+        "action" => "send_event_update_notification",
+        "user_id" => params.user_id,
+        "event_uid" => params.event_uid,
+        "integration_id" => params.integration_id,
+        "attendee_emails" => params.attendee_emails,
+        "before_title" => params.before_title,
+        "before_location" => params.before_location,
+        "before_description" => params.before_description,
+        "before_start_at" =>
+          params.before_start_at && DateTime.to_iso8601(params.before_start_at),
+        "before_end_at" => params.before_end_at && DateTime.to_iso8601(params.before_end_at)
+      }
+      |> new(
+        queue: :emails,
+        priority: 1,
+        scheduled_at: DateTime.add(DateTime.utc_now(), 120, :second),
+        unique: [
+          period: 300,
+          fields: [:args, :queue],
+          keys: [:action, :event_uid]
+        ]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        Logger.info("Event update notification job scheduled",
+          event_uid: params.event_uid,
+          scheduled_in: "2 minutes"
+        )
+
+        :ok
+
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
+        Logger.info("Event update notification job already pending, coalescing",
+          event_uid: params.event_uid
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule event update notification",
+          event_uid: params.event_uid,
+          error: format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
   # Private functions
 
   defp format_insert_error(%Changeset{} = changeset) do
@@ -613,6 +673,19 @@ defmodule Tymeslot.Workers.EmailWorker do
           "event_uid",
           "event_start_at",
           "event_end_at"
+        ]
+
+      "send_event_update_notification" ->
+        [
+          "user_id",
+          "event_uid",
+          "integration_id",
+          "attendee_emails",
+          "before_title",
+          "before_location",
+          "before_description",
+          "before_start_at",
+          "before_end_at"
         ]
 
       nil ->

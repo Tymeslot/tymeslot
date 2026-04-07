@@ -57,6 +57,71 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     }
   end
 
+  @doc """
+  Generates an ICS attachment for an event update with the given SEQUENCE number.
+  SEQUENCE > 0 signals to calendar clients that this is an update to an existing event.
+  """
+  @spec generate_ics_update_attachment(map(), non_neg_integer(), String.t(), String.t()) ::
+          Swoosh.Attachment.t()
+  def generate_ics_update_attachment(
+        meeting_details,
+        sequence,
+        locale \\ "en",
+        filename \\ "meeting.ics"
+      ) do
+    ics_content = generate_ics_with_sequence(meeting_details, sequence, locale)
+
+    %Swoosh.Attachment{
+      filename: filename,
+      content_type: "text/calendar; charset=utf-8; method=REQUEST",
+      data: ics_content
+    }
+  end
+
+  defp generate_ics_with_sequence(meeting_details, sequence, locale) do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      event = %Magical.Event{
+        summary: Map.get(meeting_details, :title, dgettext("emails", "Meeting")),
+        description: build_ics_description(meeting_details),
+        dtstart: meeting_details.start_time,
+        dtend: meeting_details.end_time,
+        location: determine_location(meeting_details),
+        uid:
+          "#{Map.get(meeting_details, :uid, UUID.uuid4())}@#{Application.get_env(:tymeslot, :email)[:domain]}",
+        organizer: format_organizer(meeting_details),
+        attendee: format_attendees(meeting_details),
+        status: "CONFIRMED"
+      }
+
+      generate_basic_ics_update(event, sequence)
+    end)
+  end
+
+  defp generate_basic_ics_update(event, sequence) do
+    attendee_line = if event.attendee, do: "ATTENDEE:#{event.attendee}\n", else: ""
+
+    """
+    BEGIN:VCALENDAR
+    VERSION:2.0
+    METHOD:REQUEST
+    PRODID:-//Tymeslot//Tymeslot 1.0//EN
+    CALSCALE:GREGORIAN
+    BEGIN:VEVENT
+    UID:#{event.uid}
+    DTSTAMP:#{format_datetime_utc(DateTime.utc_now())}
+    DTSTART:#{format_datetime_utc(event.dtstart)}
+    DTEND:#{format_datetime_utc(event.dtend)}
+    SEQUENCE:#{sequence}
+    SUMMARY:#{escape_ical_text(event.summary || dgettext("emails", "Meeting"))}
+    DESCRIPTION:#{escape_ical_text(event.description)}
+    LOCATION:#{escape_ical_text(event.location)}
+    ORGANIZER:#{event.organizer}
+    #{attendee_line}STATUS:#{event.status}
+    END:VEVENT
+    END:VCALENDAR
+    """
+  end
+
   defp format_organizer(meeting_details) do
     organizer_name = Map.get(meeting_details, :organizer_name)
 

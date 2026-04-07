@@ -407,5 +407,4 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
        EditWorkflow.apply_event_change(socket, event, optimistic_event, new_start, new_end)}
     end
   end
-
 end

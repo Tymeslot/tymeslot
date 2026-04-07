@@ -154,6 +154,13 @@ defmodule Tymeslot.CalendarGrid do
     :ok
   end
 
+  @doc "Fetches a single cached event by integration ID and UID."
+  @spec get_cached_event(integer(), String.t()) ::
+          {:ok, CalendarEventCacheSchema.t()} | {:error, :not_found}
+  def get_cached_event(integration_id, uid) do
+    CalendarEventCacheQueries.get_by_uid(integration_id, uid)
+  end
+
   @doc """
   Removes a cached event by its integration ID and UID.
   """

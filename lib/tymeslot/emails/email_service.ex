@@ -49,6 +49,7 @@ defmodule Tymeslot.Emails.EmailService do
     EmailChangeNotification,
     EmailChangeVerification,
     EmailVerification,
+    EventUpdateNotification,
     ExternalBookingChange,
     IntegrationUnhealthy,
     PasswordReset,
@@ -559,6 +560,22 @@ defmodule Tymeslot.Emails.EmailService do
 
     attendee_email
     |> CalendarInvitation.invitation_email(invitation_details)
+    |> deliver()
+  end
+
+  @doc """
+  Sends an event update notification to an attendee with a change summary and updated .ics.
+  """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  @spec send_event_update_notification(String.t(), map()) :: {:ok, any()} | {:error, any()}
+  def send_event_update_notification(attendee_email, update_details) do
+    Logger.info("Sending event update notification",
+      title: update_details[:event_title],
+      to: attendee_email
+    )
+
+    attendee_email
+    |> EventUpdateNotification.update_notification_email(update_details)
     |> deliver()
   end
 

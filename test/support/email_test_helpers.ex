@@ -214,6 +214,30 @@ defmodule Tymeslot.EmailTestHelpers do
   end
 
   @doc """
+  Builds event update details for event update notification email tests.
+  """
+  @spec build_event_update_details(map()) :: map()
+  def build_event_update_details(overrides \\ %{}) do
+    now = DateTime.utc_now()
+
+    defaults = %{
+      event_title: "Updated Event",
+      event_uid: "test-uid-#{System.unique_integer([:positive])}",
+      start_time: now,
+      end_time: DateTime.add(now, 3600, :second),
+      date: DateTime.to_date(now),
+      duration: 60,
+      location: "Room B",
+      description: "Updated agenda",
+      organizer_name: "Test Organiser",
+      organizer_email: "organiser@example.com",
+      changes: [{:location, "Room A", "Room B"}]
+    }
+
+    Map.merge(defaults, overrides)
+  end
+
+  @doc """
   Builds email change data for email change email tests.
   """
   @spec build_email_change_data(map()) :: map()
