@@ -152,6 +152,10 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
           url: url,
           headers: headers,
           receive_timeout: timeout,
+          # Disable Req's default retry: :safe_transient which silently retries
+          # GET/HEAD/OPTIONS on 5xx and transient errors. Retries are handled
+          # explicitly at the CalDAV layer (RetryLogic) and Oban layer.
+          retry: false,
           # Disable automatic JSON decoding to match HTTPoison behavior
           # Callers handle JSON parsing explicitly with Jason.decode!
           decode_body: false
@@ -164,6 +168,7 @@ defmodule Tymeslot.Infrastructure.HTTPClient do
           url: url,
           headers: headers,
           receive_timeout: timeout,
+          retry: false,
           decode_body: false
         ]
       end

@@ -269,7 +269,8 @@ defmodule Tymeslot.Infrastructure.ProxyConfigTest do
           proxy: {:http, "proxy.example.com", 3128, []},
           proxy_headers: [
             {"Proxy-Authorization", "Basic " <> Base.encode64("testuser:testpass")}
-          ]
+          ],
+          timeout: 10_000
         ]
       ]
 

@@ -48,4 +48,35 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
       assert_raise ArgumentError, fn -> String.to_existing_atom(unknown_method) end
     end
   end
+
+  describe "retry behaviour" do
+    test "does not retry failed GET requests" do
+      call_count = :counters.new(1, [:atomics])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        :counters.add(call_count, 1, 1)
+        Conn.send_resp(conn, 503, "unavailable")
+      end)
+
+      assert {:ok, %Req.Response{status: 503}} =
+               HTTPClient.get("http://localhost/test")
+
+      assert :counters.get(call_count, 1) == 1
+    end
+  end
+
+  describe "connect timeout" do
+    test "proxy connect_options include a 10s connect timeout" do
+      proxy_config = %{
+        scheme: "http",
+        host: "proxy.example.com",
+        port: 8080,
+        auth: nil
+      }
+
+      opts = Tymeslot.Infrastructure.ProxyConfig.build_req_proxy_options(proxy_config)
+      connect_options = Keyword.get(opts, :connect_options, [])
+      assert Keyword.get(connect_options, :timeout) == 10_000
+    end
+  end
 end
