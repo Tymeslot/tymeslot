@@ -113,4 +113,32 @@ defmodule TymeslotWeb.OnboardingTestHelpers do
   """
   @spec navigate_to_scheduling_preferences(any()) :: any()
   def navigate_to_scheduling_preferences(view), do: navigate_to_scheduling_steps(view)
+
+  @doc """
+  Navigates from the welcome step to the booking window step (advance_booking_days).
+  """
+  @spec navigate_to_booking_window_step(any()) :: any()
+  def navigate_to_booking_window_step(view) do
+    navigate_to_scheduling_steps(view)
+
+    view
+    |> element("button[phx-click='next_step']")
+    |> render_click()
+
+    view
+  end
+
+  @doc """
+  Navigates from the welcome step to the minimum notice step (min_advance_hours).
+  """
+  @spec navigate_to_minimum_notice_step(any()) :: any()
+  def navigate_to_minimum_notice_step(view) do
+    navigate_to_booking_window_step(view)
+
+    view
+    |> element("button[phx-click='next_step']")
+    |> render_click()
+
+    view
+  end
 end

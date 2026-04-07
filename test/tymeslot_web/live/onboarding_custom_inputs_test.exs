@@ -71,7 +71,7 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
   describe "advance_booking_days custom input" do
     test "clicking Custom button shows custom input field", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_booking_window_step(view)
 
       # Click "Custom" button
       view
@@ -89,7 +89,7 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
 
     test "custom value persists through onboarding completion", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_booking_window_step(view)
 
       # Set custom value (100 days)
       view
@@ -102,11 +102,7 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       |> element("form[phx-change='update_scheduling_preferences']")
       |> render_change(%{"advance_booking_days" => "100"})
 
-      # Complete onboarding
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
+      # Continue through remaining steps
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
@@ -120,7 +116,7 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
   describe "min_advance_hours custom input" do
     test "clicking Custom button shows custom input field", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_minimum_notice_step(view)
 
       # Click "Custom" button
       view
@@ -136,7 +132,7 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
 
     test "custom value persists through onboarding completion", %{conn: conn} do
       {:ok, view, _html, user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_minimum_notice_step(view)
 
       # Set custom value (10 hours)
       view
@@ -147,11 +143,7 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       |> element("form[phx-change='update_scheduling_preferences']")
       |> render_change(%{"min_advance_hours" => "10"})
 
-      # Complete onboarding
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
+      # Continue to the ready step
       view
       |> element("button[phx-click='next_step']")
       |> render_click()
@@ -200,7 +192,7 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
 
     test "custom input remains visible when typing a different preset value", %{conn: conn} do
       {:ok, view, _html, _user} = setup_onboarding(conn)
-      navigate_to_scheduling_preferences(view)
+      navigate_to_booking_window_step(view)
 
       # Click "Custom" for advance_booking_days
       view
@@ -227,37 +219,30 @@ defmodule TymeslotWeb.OnboardingCustomInputsTest do
       {:ok, view, _html, user} = setup_onboarding(conn)
       navigate_to_scheduling_preferences(view)
 
-      # Click "Custom" for all three settings (they'll use default custom values)
+      # Step: buffer_time — set custom buffer (uses default_custom value: 20)
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='buffer_minutes']")
       |> render_click()
 
+      # Navigate to booking_window
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      # Step: booking_window — set custom advance booking (uses default_custom value: 120)
       view
       |> element(
         "button[phx-click='focus_custom_input'][phx-value-setting='advance_booking_days']"
       )
       |> render_click()
 
+      # Navigate to minimum_notice
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      # Step: minimum_notice — set custom min advance (uses default_custom value: 8)
       view
       |> element("button[phx-click='focus_custom_input'][phx-value-setting='min_advance_hours']")
       |> render_click()
 
-      # All custom inputs should be visible
-      html = render(view)
-      assert html =~ ~s(name="buffer_minutes")
-      assert html =~ ~s(name="advance_booking_days")
-      assert html =~ ~s(name="min_advance_hours")
-
-      # Complete onboarding
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      view
-      |> element("button[phx-click='next_step']")
-      |> render_click()
-
-      # Verify custom values were saved (using defaults from focus_custom_input)
+      # Verify all three custom values were saved to the database
       # Default custom values from step_config.ex: buffer=20, advance=120, min=8
       profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
       assert profile.buffer_minutes == 20
