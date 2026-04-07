@@ -3,8 +3,8 @@ defmodule Tymeslot.Payments.PendingTransactions do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.PaymentQueries
-  alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema, as: PaymentTransaction
+  alias Tymeslot.Payments.PaymentQueries
+  alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   @type transaction :: PaymentTransaction.t()
 

@@ -1,8 +1,8 @@
-defmodule Tymeslot.DatabaseQueries.PaymentQueriesTest do
+defmodule Tymeslot.Payments.PaymentQueriesTest do
   use Tymeslot.DataCase, async: true
   @moduletag :payments
 
-  alias Tymeslot.DatabaseQueries.PaymentQueries
+  alias Tymeslot.Payments.PaymentQueries
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.TestFixtures
 

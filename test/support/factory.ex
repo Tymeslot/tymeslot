@@ -11,11 +11,11 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema
   alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.Encryption
@@ -286,7 +286,7 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec payment_transaction_factory() :: Tymeslot.DatabaseSchemas.PaymentTransactionSchema.t()
+  @spec payment_transaction_factory() :: Tymeslot.Payments.PaymentTransactionSchema.t()
   def payment_transaction_factory do
     %PaymentTransactionSchema{
       user: build(:user),

@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.PaymentTransactionSchema do
+defmodule Tymeslot.Payments.PaymentTransactionSchema do
   @moduledoc """
   Schema for payment transactions.
   Tracks both one-time payments and subscription payments.

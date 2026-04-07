@@ -10,8 +10,8 @@ defmodule Tymeslot.Payments.Webhooks.HandlersTest do
     PaymentIntentHandler
   }
 
-  alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
   alias Tymeslot.Factory
+  alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Repo
 
   import Mox

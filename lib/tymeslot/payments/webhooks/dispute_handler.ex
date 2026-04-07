@@ -15,10 +15,9 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.PaymentQueries
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Mailer
-  alias Tymeslot.Payments.Config
+  alias Tymeslot.Payments.{Config, PaymentQueries}
 
   @impl Tymeslot.Payments.Behaviours.WebhookHandler
   def can_handle?(event_type)

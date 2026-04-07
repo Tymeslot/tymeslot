@@ -62,8 +62,8 @@ defmodule Tymeslot.Payments.ErrorConventions do
   - Caller needs detailed field-level error information
 
   **Examples:**
-  - `Tymeslot.DatabaseQueries.PaymentQueries.create_transaction/1`
-  - `Tymeslot.DatabaseQueries.PaymentQueries.update_transaction/2`
+  - `Tymeslot.Payments.PaymentQueries.create_transaction/1`
+  - `Tymeslot.Payments.PaymentQueries.update_transaction/2`
 
   ### 4. Exception-Based Errors (Avoid)
 

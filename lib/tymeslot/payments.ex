@@ -6,7 +6,7 @@ defmodule Tymeslot.Payments do
 
   require Logger
 
-  alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema, as: PaymentTransaction
+  alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   alias Tymeslot.Payments.{
     Config,

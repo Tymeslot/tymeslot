@@ -2,9 +2,9 @@ defmodule Tymeslot.PaymentsTest do
   use Tymeslot.DataCase, async: true
   @moduletag :utils
 
-  alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
   alias Tymeslot.Factory
   alias Tymeslot.Payments
+  alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Repo
   import Mox
 

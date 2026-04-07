@@ -2,8 +2,8 @@ defmodule Tymeslot.Payments.DatabaseOperationsTest do
   use Tymeslot.DataCase, async: true
   @moduletag :payments
 
-  alias Tymeslot.DatabaseQueries.PaymentQueries
   alias Tymeslot.Payments.DatabaseOperations
+  alias Tymeslot.Payments.PaymentQueries
 
   import Tymeslot.Factory
 

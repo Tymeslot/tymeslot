@@ -6,9 +6,8 @@ defmodule Tymeslot.Payments.DatabaseOperations do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.PaymentQueries
-  alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema, as: PaymentTransaction
-  alias Tymeslot.Payments.{ErrorHandler, PubSub}
+  alias Tymeslot.Payments.{ErrorHandler, PaymentQueries, PubSub}
+  alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
 
   @type transaction :: PaymentTransaction.t()
   @type stripe_id :: String.t()
@@ -157,7 +156,7 @@ defmodule Tymeslot.Payments.DatabaseOperations do
   def process_subscription_renewal(subscription_id, invoice_data) do
     Logger.info("Processing subscription renewal", subscription_id: subscription_id)
 
-    case PaymentQueries.coordinate_subscription_renewal(subscription_id, invoice_data) do
+    case coordinate_subscription_renewal(subscription_id, invoice_data) do
       {:ok, updated_transaction} ->
         {:ok, process_subscription_updates(updated_transaction)}
 
@@ -305,5 +304,33 @@ defmodule Tymeslot.Payments.DatabaseOperations do
       {:stripe_id, {_error_message, opts}} -> Keyword.get(opts, :constraint) == :unique
       _other_error -> false
     end)
+  end
+
+  # Coordinates successful subscription renewal payment by creating a new transaction record.
+  # This is domain orchestration (fetch existing → build renewal attrs → create new record),
+  # so it lives here rather than in the query module.
+  @spec coordinate_subscription_renewal(String.t(), map()) ::
+          {:ok, PaymentTransaction.t()} | {:error, any()}
+  defp coordinate_subscription_renewal(subscription_id, invoice_data) do
+    with {:ok, transaction} <-
+           PaymentQueries.get_active_subscription_transaction_by_subscription_id(subscription_id) do
+      renewal_attrs = %{
+        user_id: transaction.user_id,
+        amount: invoice_data["amount_paid"] || transaction.amount,
+        status: "completed",
+        stripe_id: invoice_data["id"],
+        stripe_customer_id: transaction.stripe_customer_id,
+        product_identifier: transaction.product_identifier,
+        subscription_id: subscription_id,
+        metadata:
+          Map.merge(transaction.metadata, %{
+            renewal_invoice_id: invoice_data["id"],
+            renewal_date: invoice_data["created"],
+            original_transaction_id: transaction.id
+          })
+      }
+
+      PaymentQueries.create_transaction(renewal_attrs)
+    end
   end
 end

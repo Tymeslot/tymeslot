@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseQueries.PaymentQueries do
+defmodule Tymeslot.Payments.PaymentQueries do
   @moduledoc """
   Database queries for payment transactions.
   """
   import Ecto.Query
 
-  alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema, as: PaymentTransaction
+  alias Tymeslot.Payments.PaymentTransactionSchema, as: PaymentTransaction
   alias Tymeslot.Repo
 
   @doc """

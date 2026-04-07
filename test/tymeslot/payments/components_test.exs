@@ -5,9 +5,9 @@ defmodule Tymeslot.Payments.ComponentsTest do
   import Mox
 
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
   alias Tymeslot.Factory
   alias Tymeslot.Payments.{ChangesetHelpers, PendingTransactions, Validation}
+  alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Repo
 
   setup :set_mox_from_context

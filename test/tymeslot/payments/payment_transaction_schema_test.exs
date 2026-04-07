@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.PaymentTransactionSchemaTest do
+defmodule Tymeslot.Payments.PaymentTransactionSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :schema
@@ -7,7 +7,7 @@ defmodule Tymeslot.DatabaseSchemas.PaymentTransactionSchemaTest do
   import Ecto.Changeset
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
+  alias Tymeslot.Payments.PaymentTransactionSchema
 
   describe "changeset/2" do
     test "valid with required fields" do

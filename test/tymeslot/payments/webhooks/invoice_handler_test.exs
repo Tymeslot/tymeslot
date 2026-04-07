@@ -2,7 +2,7 @@ defmodule Tymeslot.Payments.Webhooks.InvoiceHandlerTest do
   use Tymeslot.DataCase, async: true
   @moduletag :payments
 
-  alias Tymeslot.DatabaseQueries.PaymentQueries
+  alias Tymeslot.Payments.PaymentQueries
   alias Tymeslot.Payments.Webhooks.{InvoiceHandler, WebhookRegistry}
   import Tymeslot.Factory
 

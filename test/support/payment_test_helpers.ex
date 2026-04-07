@@ -3,14 +3,14 @@ defmodule Tymeslot.PaymentTestHelpers do
   Test helpers for payment-related functionality.
   """
 
-  alias Tymeslot.DatabaseQueries.PaymentQueries
+  alias Tymeslot.Payments.PaymentQueries
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.Repo
 
   @doc """
   Creates a test payment transaction.
   """
-  @spec create_test_transaction(map()) :: Tymeslot.DatabaseSchemas.PaymentTransactionSchema.t()
+  @spec create_test_transaction(map()) :: Tymeslot.Payments.PaymentTransactionSchema.t()
   def create_test_transaction(attrs \\ %{}) do
     defaults = %{
       user_id: attrs[:user_id] || raise("user_id is required"),
@@ -81,7 +81,7 @@ defmodule Tymeslot.PaymentTestHelpers do
   """
   @spec clear_payment_transactions() :: {integer(), nil}
   def clear_payment_transactions do
-    Repo.delete_all(Tymeslot.DatabaseSchemas.PaymentTransactionSchema)
+    Repo.delete_all(Tymeslot.Payments.PaymentTransactionSchema)
   end
 
   @doc """

@@ -4,7 +4,7 @@ defmodule Tymeslot.Payments.SubscriptionFlow do
   require Logger
 
   alias Ecto.UUID
-  alias Tymeslot.DatabaseQueries.PaymentQueries
+  alias Tymeslot.Payments.PaymentQueries
 
   alias Tymeslot.Payments.{
     ChangesetHelpers,

@@ -271,6 +271,33 @@ defmodule Tymeslot.Webhooks.WebhookQueries do
   # ============================================================================
 
   @doc """
+  Deletes all webhook events.
+  """
+  @spec delete_all_webhook_events() :: {non_neg_integer(), nil}
+  def delete_all_webhook_events do
+    Repo.delete_all(WebhookEventSchema)
+  end
+
+  @doc """
+  Gets a webhook event by its Stripe event ID.
+  """
+  @spec get_webhook_event_by_stripe_id(String.t()) :: WebhookEventSchema.t() | nil
+  def get_webhook_event_by_stripe_id(stripe_event_id) do
+    Repo.get_by(WebhookEventSchema, stripe_event_id: stripe_event_id)
+  end
+
+  @doc """
+  Inserts a webhook event record, doing nothing on conflict with existing stripe_event_id.
+  """
+  @spec upsert_webhook_event(map()) ::
+          {:ok, WebhookEventSchema.t()} | {:error, Ecto.Changeset.t()}
+  def upsert_webhook_event(attrs) do
+    %WebhookEventSchema{}
+    |> WebhookEventSchema.changeset(attrs)
+    |> Repo.insert(on_conflict: :nothing, conflict_target: :stripe_event_id)
+  end
+
+  @doc """
   Nullifies payloads on webhook events older than the given cutoff date.
 
   Returns `{count, nil}` where count is the number of rows updated.
