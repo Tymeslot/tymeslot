@@ -4,8 +4,9 @@ defmodule Tymeslot.AvailabilityTestHelpers do
   """
 
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Availability.WeeklySchedule
-  alias Tymeslot.DatabaseSchemas.{ProfileSchema, WeeklyAvailabilitySchema}
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.MeetingTestHelpers
 
   @default_day_attrs %{
