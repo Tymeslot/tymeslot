@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseQueries.ThemeCustomizationQueriesTest do
+defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueriesTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.ThemeCustomizationQueries
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
 
   describe "create/1" do
     test "creates a theme customization with valid attributes" do

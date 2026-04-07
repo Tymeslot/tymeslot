@@ -2,9 +2,9 @@ defmodule Tymeslot.ThemeCustomizationsBackgroundOperationsTest do
   use Tymeslot.DataCase, async: true
   @moduletag :utils
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Profiles
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   describe "ThemeCustomizations background operations" do
     setup do

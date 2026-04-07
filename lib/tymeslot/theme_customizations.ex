@@ -5,10 +5,10 @@ defmodule Tymeslot.ThemeCustomizations do
   """
 
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseQueries.ThemeCustomizationQueries
   alias Tymeslot.DatabaseSchemas.ProfileSchema
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Media.Transcoder
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias TymeslotWeb.Helpers.UploadHandler
 
   # Functional submodules

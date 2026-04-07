@@ -4,11 +4,11 @@ defmodule TymeslotWeb.Themes.Shared.Customization.Helpers do
   """
   use Phoenix.Component
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Demo
   alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.Capability
   alias Tymeslot.ThemeCustomizations.Defaults
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.ThemeCustomizations.Validation
 
   @doc """

@@ -4,7 +4,7 @@ defmodule Tymeslot.ThemeCustomizations.Defaults do
   Handles theme-specific default configurations and customization initialization.
   """
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Themes.Registry
 
   @doc """

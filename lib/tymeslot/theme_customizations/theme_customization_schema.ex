@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.ThemeCustomizationSchema do
+defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   @moduledoc """
   Schema for user theme customizations including color schemes and backgrounds.
   """

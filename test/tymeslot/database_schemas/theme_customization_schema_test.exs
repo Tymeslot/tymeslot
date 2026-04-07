@@ -1,11 +1,11 @@
-defmodule Tymeslot.DatabaseSchemas.ThemeCustomizationSchemaTest do
+defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :schema
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Repo
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   describe "background validation business rules" do
     test "uploaded video backgrounds require video path" do

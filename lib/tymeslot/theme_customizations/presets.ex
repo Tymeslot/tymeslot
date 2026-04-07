@@ -4,7 +4,7 @@ defmodule Tymeslot.ThemeCustomizations.Presets do
   Handles color schemes, gradients, images, and video presets.
   """
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   @type color_scheme_preset :: %{
           required(:name) => String.t(),

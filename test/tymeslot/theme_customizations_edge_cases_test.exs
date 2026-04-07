@@ -385,7 +385,7 @@ defmodule Tymeslot.ThemeCustomizationsEdgeCasesTest do
   # Private helper
 
   defp build_customization(profile_id) do
-    %Tymeslot.DatabaseSchemas.ThemeCustomizationSchema{
+    %Tymeslot.ThemeCustomizations.ThemeCustomizationSchema{
       profile_id: profile_id,
       theme_id: "1",
       color_scheme: "default",

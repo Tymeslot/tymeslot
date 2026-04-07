@@ -1,11 +1,13 @@
-defmodule Tymeslot.DatabaseQueries.ThemeCustomizationQueries do
+defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
   @moduledoc """
   Query interface for theme customization-related database operations.
   """
   import Ecto.Query, warn: false
+
+  alias Ecto.Changeset
   alias Tymeslot.DatabaseSchemas.ProfileSchema
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Repo
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   @doc """
   Gets a theme customization by profile ID and theme ID.
@@ -84,6 +86,26 @@ defmodule Tymeslot.DatabaseQueries.ThemeCustomizationQueries do
     case get_profile_by_user_id(user_id) do
       nil -> {:error, :not_found}
       profile -> {:ok, profile}
+    end
+  end
+
+  @doc """
+  Updates the video processing status for a theme customization.
+  Returns :ok on success or if the record doesn't exist,
+  {:error, :status_update_failed} on update failure.
+  """
+  @spec update_video_processing_status(integer(), String.t()) ::
+          :ok | {:error, :status_update_failed}
+  def update_video_processing_status(id, status) do
+    case Repo.get(ThemeCustomizationSchema, id) do
+      nil ->
+        :ok
+
+      record ->
+        case record |> Changeset.change(%{video_processing: status}) |> Repo.update() do
+          {:ok, _updated} -> :ok
+          {:error, _changeset} -> {:error, :status_update_failed}
+        end
     end
   end
 end

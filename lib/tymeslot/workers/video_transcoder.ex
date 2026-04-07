@@ -17,10 +17,8 @@ defmodule Tymeslot.Workers.VideoTranscoder do
 
   require Logger
 
-  alias Ecto.Changeset
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Media.Transcoder
-  alias Tymeslot.Repo
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationQueries
 
   @status_completed "completed"
   @status_failed "failed"
@@ -103,24 +101,17 @@ defmodule Tymeslot.Workers.VideoTranscoder do
   end
 
   defp update_status(id, status) do
-    case Repo.get(ThemeCustomizationSchema, id) do
-      nil ->
+    case ThemeCustomizationQueries.update_video_processing_status(id, status) do
+      :ok ->
         :ok
 
-      record ->
-        case record |> Changeset.change(%{video_processing: status}) |> Repo.update() do
-          {:ok, _updated} ->
-            :ok
+      {:error, :status_update_failed} ->
+        Logger.warning("Failed to update video processing status",
+          theme_customization_id: id,
+          status: status
+        )
 
-          {:error, changeset} ->
-            Logger.warning("Failed to update video processing status",
-              theme_customization_id: id,
-              status: status,
-              error: inspect(changeset.errors)
-            )
-
-            {:error, :status_update_failed}
-        end
+        {:error, :status_update_failed}
     end
   end
 

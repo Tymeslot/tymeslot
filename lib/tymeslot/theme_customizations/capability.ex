@@ -6,8 +6,8 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
   rather than hardcoded theme IDs, making the system more flexible.
   """
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.ThemeCustomizations.Validation
   alias Tymeslot.Themes.Registry
 

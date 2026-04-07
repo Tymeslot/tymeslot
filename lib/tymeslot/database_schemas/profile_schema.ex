@@ -5,10 +5,10 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Profiles
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.Security
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Timezones
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Themes.Core.Registry

@@ -2,8 +2,8 @@ defmodule Tymeslot.ThemeCustomizationsDataTransformTest do
   use Tymeslot.DataCase, async: true
   @moduletag :utils
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.ThemeCustomizations.DataTransform
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   describe "DataTransform module" do
     test "extract_save_attributes/1 from struct" do

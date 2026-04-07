@@ -6,10 +6,10 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
   import Tymeslot.Factory
 
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
   alias Tymeslot.ThemeCustomizations
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   describe "theme customization application" do
     setup tags do

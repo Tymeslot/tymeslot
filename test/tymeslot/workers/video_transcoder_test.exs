@@ -7,9 +7,9 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
   import Mox
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Media.Transcoder
   alias Tymeslot.Repo
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Workers.VideoTranscoder
 
   setup :verify_on_exit!

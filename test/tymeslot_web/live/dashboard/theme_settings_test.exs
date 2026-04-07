@@ -6,8 +6,8 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   import Tymeslot.TestHelpers.Eventually
   import Tymeslot.DashboardTestHelpers
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.Repo
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   setup :setup_dashboard_user_with_theme
 

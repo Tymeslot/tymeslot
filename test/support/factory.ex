@@ -16,7 +16,6 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
   alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.DatabaseSchemas.UserSessionSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
@@ -27,6 +26,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   @spec meeting_factory() :: Tymeslot.DatabaseSchemas.MeetingSchema.t()
   def meeting_factory do
@@ -227,7 +227,7 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec theme_customization_factory() :: Tymeslot.DatabaseSchemas.ThemeCustomizationSchema.t()
+  @spec theme_customization_factory() :: Tymeslot.ThemeCustomizations.ThemeCustomizationSchema.t()
   def theme_customization_factory do
     %ThemeCustomizationSchema{
       theme_id: sequence(:theme_id, ["1", "2"]),

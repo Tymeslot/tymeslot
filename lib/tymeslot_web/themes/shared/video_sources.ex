@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.VideoSources do
 
   use Phoenix.Component
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias TymeslotWeb.Themes.Shared.Customization.Video, as: VideoHelpers
 
   import TymeslotWeb.Themes.Shared.Customization.Helpers,

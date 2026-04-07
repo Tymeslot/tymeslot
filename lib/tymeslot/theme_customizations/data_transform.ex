@@ -4,7 +4,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
   Handles converting between different data formats and extracting attributes.
   """
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   @type background_type :: :gradient | :color | :image | :video | String.t()
   @type customization_struct :: ThemeCustomizationSchema.t()

@@ -2,8 +2,8 @@ defmodule Tymeslot.ThemeCustomizationsBackgroundsTest do
   use Tymeslot.DataCase, async: true
   @moduletag :utils
 
-  alias Tymeslot.DatabaseSchemas.ThemeCustomizationSchema
   alias Tymeslot.ThemeCustomizations.{Backgrounds, Presets}
+  alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   describe "Backgrounds module" do
     test "apply_background_selection/3 updates type and value" do
