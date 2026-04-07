@@ -17,12 +17,11 @@ defmodule Tymeslot.Workers.WebhookWorker do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.{MeetingQueries, WebhookQueries}
-  alias Tymeslot.DatabaseSchemas.WebhookSchema
+  alias Tymeslot.DatabaseQueries.MeetingQueries
   alias Tymeslot.Features
   alias Tymeslot.Security.{DnsResolution, UrlValidation}
   alias Tymeslot.Webhooks
-  alias Tymeslot.Webhooks.PayloadBuilder
+  alias Tymeslot.Webhooks.{PayloadBuilder, WebhookQueries, WebhookSchema}
 
   # 10 second timeout for webhook delivery
   @delivery_timeout_ms 10_000
@@ -268,11 +267,11 @@ defmodule Tymeslot.Workers.WebhookWorker do
             {:ok, delivery}
 
           {:ok, status, _body} ->
-            if attempt == 1, do: WebhookQueries.record_failure(webhook, "HTTP #{status}")
+            if attempt == 1, do: Webhooks.record_delivery_failure(webhook, "HTTP #{status}")
             {:error, {:http_error, status}}
 
           {:error, reason} ->
-            if attempt == 1, do: WebhookQueries.record_failure(webhook, to_string(reason))
+            if attempt == 1, do: Webhooks.record_delivery_failure(webhook, to_string(reason))
             {:error, reason}
         end
 
@@ -305,7 +304,7 @@ defmodule Tymeslot.Workers.WebhookWorker do
     )
 
     # SSRF block should also count as a failure to eventually disable the webhook
-    if attempt == 1, do: WebhookQueries.record_failure(webhook, "SSRF Blocked: #{reason}")
+    if attempt == 1, do: Webhooks.record_delivery_failure(webhook, "SSRF Blocked: #{reason}")
 
     # Create a delivery log for the blocked attempt
     case WebhookQueries.create_delivery(%{

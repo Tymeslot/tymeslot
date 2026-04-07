@@ -10,8 +10,8 @@ defmodule Tymeslot.Workers.WebhookWorkerTest do
   import Tymeslot.WorkerTestHelpers
 
   alias Ecto.UUID
-  alias Tymeslot.DatabaseSchemas.WebhookDeliverySchema
-  alias Tymeslot.DatabaseSchemas.WebhookSchema
+  alias Tymeslot.Webhooks.WebhookDeliverySchema
+  alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.WebhookWorker
 
   setup :verify_on_exit!

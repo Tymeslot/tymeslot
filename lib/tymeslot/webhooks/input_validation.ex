@@ -10,9 +10,9 @@ defmodule Tymeslot.Webhooks.InputValidation do
 
   alias Ecto.Changeset
   alias Tymeslot.ChangesetValidators.URL, as: URLValidator
-  alias Tymeslot.DatabaseSchemas.WebhookSchema
   alias Tymeslot.Security.{RateLimiter, UniversalSanitizer}
   alias Tymeslot.Validation.Constraints
+  alias Tymeslot.Webhooks.WebhookSchema
 
   @primary_key false
   embedded_schema do

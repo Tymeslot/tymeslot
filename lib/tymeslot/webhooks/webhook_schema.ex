@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.WebhookSchema do
+defmodule Tymeslot.Webhooks.WebhookSchema do
   @moduledoc """
   Ecto schema for webhooks.
 

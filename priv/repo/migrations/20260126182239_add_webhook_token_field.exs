@@ -11,13 +11,13 @@ defmodule Tymeslot.Repo.Migrations.AddWebhookTokenField do
 
     # Generate and encrypt tokens for existing webhooks
     Tymeslot.Repo.transaction(fn ->
-      Tymeslot.Repo.stream(Tymeslot.DatabaseSchemas.WebhookSchema)
+      Tymeslot.Repo.stream(Tymeslot.Webhooks.WebhookSchema)
       |> Enum.each(fn webhook ->
         token = "ts_" <> Base.encode64(:crypto.strong_rand_bytes(24), padding: false)
         encrypted_token = Tymeslot.Security.Encryption.encrypt(token)
 
         Tymeslot.Repo.update_all(
-          from(w in Tymeslot.DatabaseSchemas.WebhookSchema, where: w.id == ^webhook.id),
+          from(w in Tymeslot.Webhooks.WebhookSchema, where: w.id == ^webhook.id),
           set: [webhook_token_encrypted: encrypted_token]
         )
       end)

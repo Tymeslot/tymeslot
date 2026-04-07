@@ -11,11 +11,10 @@ defmodule Tymeslot.Webhooks do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.WebhookQueries
-  alias Tymeslot.DatabaseSchemas.{MeetingSchema, WebhookDeliverySchema, WebhookSchema}
+  alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Features
   alias Tymeslot.Security.UrlValidation
-  alias Tymeslot.Webhooks.PayloadBuilder
+  alias Tymeslot.Webhooks.{PayloadBuilder, WebhookDeliverySchema, WebhookQueries, WebhookSchema}
   alias Tymeslot.Workers.WebhookWorker
 
   # ============================================================================
@@ -89,6 +88,24 @@ defmodule Tymeslot.Webhooks do
   def toggle_webhook(webhook) do
     with :ok <- Features.check_access(webhook.user_id, :automations_allowed) do
       WebhookQueries.toggle_webhook(webhook)
+    end
+  end
+
+  @doc """
+  Records a failed webhook delivery.
+
+  Atomically increments the failure count and, if the threshold (10 consecutive
+  failures) is reached, auto-disables the webhook.
+  """
+  @spec record_delivery_failure(WebhookSchema.t(), String.t()) ::
+          {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t() | :not_found}
+  def record_delivery_failure(webhook, reason) do
+    with {:ok, updated} <- WebhookQueries.increment_failure_count(webhook, reason) do
+      if updated.failure_count >= 10 do
+        WebhookQueries.disable_webhook(updated, "Too many consecutive failures: #{reason}")
+      else
+        {:ok, updated}
+      end
     end
   end
 

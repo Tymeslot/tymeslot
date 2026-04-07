@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseSchemas.WebhookEventSchemaTest do
+defmodule Tymeslot.Webhooks.WebhookEventSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :schema
   @moduletag :payments
 
-  alias Tymeslot.DatabaseSchemas.WebhookEventSchema
+  alias Tymeslot.Webhooks.WebhookEventSchema
 
   @valid_attrs %{
     stripe_event_id: "evt_abc123",

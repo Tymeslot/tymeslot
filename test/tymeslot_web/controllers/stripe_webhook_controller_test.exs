@@ -6,11 +6,11 @@ defmodule TymeslotWeb.StripeWebhookControllerTest do
   import Tymeslot.ConfigTestHelpers
 
   alias Stripe.Error, as: StripeError
-  alias Tymeslot.DatabaseSchemas.WebhookEventSchema, as: WebhookEvent
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.PaymentTestHelpers
   alias Tymeslot.Repo
   alias Tymeslot.TestFixtures
+  alias Tymeslot.Webhooks.WebhookEventSchema, as: WebhookEvent
 
   setup :verify_on_exit!
 

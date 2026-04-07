@@ -8,9 +8,9 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCache do
   Uses the centralized CacheStore infrastructure for ETS tier.
   """
 
-  alias Tymeslot.DatabaseSchemas.WebhookEventSchema, as: WebhookEvent
   alias Tymeslot.Infrastructure.CacheStore
   alias Tymeslot.Repo
+  alias Tymeslot.Webhooks.WebhookEventSchema, as: WebhookEvent
 
   import Ecto.Query
 

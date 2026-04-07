@@ -17,10 +17,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
 
   require Logger
 
-  import Ecto.Query
-  alias Tymeslot.DatabaseQueries.WebhookQueries
-  alias Tymeslot.DatabaseSchemas.WebhookEventSchema, as: WebhookEvent
-  alias Tymeslot.Repo
+  alias Tymeslot.Webhooks.WebhookQueries
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
@@ -64,12 +61,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
       |> DateTime.add(-retention_days, :day)
       |> DateTime.to_naive()
 
-    query =
-      from(w in WebhookEvent,
-        where: w.inserted_at < ^cutoff_date and not is_nil(w.payload)
-      )
-
-    case Repo.update_all(query, set: [payload: nil]) do
+    case WebhookQueries.nullify_stale_payloads(cutoff_date) do
       {count, _nil} when count > 0 ->
         Logger.info("Nullified stale webhook payloads",
           count: count,
@@ -95,12 +87,7 @@ defmodule Tymeslot.Workers.WebhookCleanupWorker do
       |> DateTime.add(-retention_days, :day)
       |> DateTime.to_naive()
 
-    query =
-      from(w in WebhookEvent,
-        where: w.inserted_at < ^cutoff_date
-      )
-
-    case Repo.delete_all(query) do
+    case WebhookQueries.delete_old_webhook_events(cutoff_date) do
       {count, nil} when count > 0 ->
         Logger.info("Cleaned up old Stripe webhook events",
           count: count,

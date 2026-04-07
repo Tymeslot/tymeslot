@@ -512,14 +512,12 @@ defmodule Tymeslot.WebhooksTest do
   # Record Failure (WebhookQueries)
   # ============================================================================
 
-  describe "record_failure/2" do
-    alias Tymeslot.DatabaseQueries.WebhookQueries
-
+  describe "record_delivery_failure/2" do
     test "increments failure_count by 1" do
       user = insert(:user)
       webhook = insert(:webhook, user: user, failure_count: 0)
 
-      assert {:ok, updated} = WebhookQueries.record_failure(webhook, "timeout")
+      assert {:ok, updated} = Webhooks.record_delivery_failure(webhook, "timeout")
       assert updated.failure_count == 1
     end
 
@@ -527,16 +525,16 @@ defmodule Tymeslot.WebhooksTest do
       user = insert(:user)
       webhook = insert(:webhook, user: user, failure_count: 9)
 
-      assert {:ok, updated} = WebhookQueries.record_failure(webhook, "timeout")
+      assert {:ok, updated} = Webhooks.record_delivery_failure(webhook, "timeout")
       assert updated.is_active == false
       assert updated.disabled_at != nil
       assert updated.disabled_reason != nil
     end
 
     test "returns {:error, :not_found} for non-existent webhook" do
-      fake_webhook = %Tymeslot.DatabaseSchemas.WebhookSchema{id: -1}
+      fake_webhook = %Tymeslot.Webhooks.WebhookSchema{id: -1}
 
-      assert {:error, :not_found} = WebhookQueries.record_failure(fake_webhook, "timeout")
+      assert {:error, :not_found} = Webhooks.record_delivery_failure(fake_webhook, "timeout")
     end
   end
 

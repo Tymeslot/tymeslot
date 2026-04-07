@@ -1,12 +1,12 @@
-defmodule Tymeslot.DatabaseQueries.WebhookQueries do
+defmodule Tymeslot.Webhooks.WebhookQueries do
   @moduledoc """
   Database queries for webhooks and webhook deliveries.
   """
 
   import Ecto.Query, warn: false
 
-  alias Tymeslot.DatabaseSchemas.{WebhookDeliverySchema, WebhookSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Webhooks.{WebhookDeliverySchema, WebhookEventSchema, WebhookSchema}
 
   # ============================================================================
   # Webhook Queries
@@ -113,13 +113,14 @@ defmodule Tymeslot.DatabaseQueries.WebhookQueries do
   end
 
   @doc """
-  Records a failed webhook delivery.
+  Atomically increments the failure count and records the failure reason.
+
+  Returns the updated webhook with the new failure count. Does NOT check
+  thresholds or auto-disable — that decision belongs in the context module.
   """
-  @spec record_failure(WebhookSchema.t(), String.t()) ::
-          {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t() | :not_found}
-  def record_failure(%WebhookSchema{id: id}, reason) do
-    # Use atomic increment to prevent race conditions
-    # returning: true is supported by PostgreSQL
+  @spec increment_failure_count(WebhookSchema.t(), String.t()) ::
+          {:ok, WebhookSchema.t()} | {:error, :not_found}
+  def increment_failure_count(%WebhookSchema{id: id}, reason) do
     case WebhookSchema
          |> where([w], w.id == ^id)
          |> select([w], w)
@@ -131,17 +132,21 @@ defmodule Tymeslot.DatabaseQueries.WebhookQueries do
         {:error, :not_found}
 
       {1, [updated_webhook]} ->
-        # Handle auto-disabling if necessary
-        if updated_webhook.failure_count >= 10 do
-          update_webhook(updated_webhook, %{
-            is_active: false,
-            disabled_at: DateTime.utc_now(),
-            disabled_reason: "Too many consecutive failures: #{reason}"
-          })
-        else
-          {:ok, updated_webhook}
-        end
+        {:ok, updated_webhook}
     end
+  end
+
+  @doc """
+  Disables a webhook with a reason.
+  """
+  @spec disable_webhook(WebhookSchema.t(), String.t()) ::
+          {:ok, WebhookSchema.t()} | {:error, Ecto.Changeset.t()}
+  def disable_webhook(%WebhookSchema{} = webhook, reason) do
+    update_webhook(webhook, %{
+      is_active: false,
+      disabled_at: DateTime.utc_now(),
+      disabled_reason: reason
+    })
   end
 
   @doc """
@@ -259,5 +264,39 @@ defmodule Tymeslot.DatabaseQueries.WebhookQueries do
     WebhookDeliverySchema
     |> where([d], d.inserted_at < ^cutoff)
     |> Repo.delete_all()
+  end
+
+  # ============================================================================
+  # Webhook Event Queries (incoming Stripe events)
+  # ============================================================================
+
+  @doc """
+  Nullifies payloads on webhook events older than the given cutoff date.
+
+  Returns `{count, nil}` where count is the number of rows updated.
+  """
+  @spec nullify_stale_payloads(NaiveDateTime.t()) :: {non_neg_integer(), nil}
+  def nullify_stale_payloads(%NaiveDateTime{} = cutoff_date) do
+    query =
+      from(w in WebhookEventSchema,
+        where: w.inserted_at < ^cutoff_date and not is_nil(w.payload)
+      )
+
+    Repo.update_all(query, set: [payload: nil])
+  end
+
+  @doc """
+  Deletes webhook events older than the given cutoff date.
+
+  Returns `{count, nil}` where count is the number of rows deleted.
+  """
+  @spec delete_old_webhook_events(NaiveDateTime.t()) :: {non_neg_integer(), nil}
+  def delete_old_webhook_events(%NaiveDateTime{} = cutoff_date) do
+    query =
+      from(w in WebhookEventSchema,
+        where: w.inserted_at < ^cutoff_date
+      )
+
+    Repo.delete_all(query)
   end
 end

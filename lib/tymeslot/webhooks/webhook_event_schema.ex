@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.WebhookEventSchema do
+defmodule Tymeslot.Webhooks.WebhookEventSchema do
   @moduledoc """
   Schema for storing processed webhook events for long-term deduplication.
 

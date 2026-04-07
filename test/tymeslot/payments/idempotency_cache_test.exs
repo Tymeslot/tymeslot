@@ -2,9 +2,9 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
   use Tymeslot.DataCase, async: false
   @moduletag :payments
 
-  alias Tymeslot.DatabaseSchemas.WebhookEventSchema, as: WebhookEvent
   alias Tymeslot.Payments.Webhooks.IdempotencyCache
   alias Tymeslot.Repo
+  alias Tymeslot.Webhooks.WebhookEventSchema, as: WebhookEvent
 
   setup do
     # Clear cache before each test

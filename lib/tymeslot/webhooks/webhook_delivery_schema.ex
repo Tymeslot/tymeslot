@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.WebhookDeliverySchema do
+defmodule Tymeslot.Webhooks.WebhookDeliverySchema do
   @moduledoc """
   Ecto schema for webhook delivery logs.
 
@@ -9,7 +9,7 @@ defmodule Tymeslot.DatabaseSchemas.WebhookDeliverySchema do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Tymeslot.DatabaseSchemas.WebhookSchema
+  alias Tymeslot.Webhooks.WebhookSchema
 
   @type t :: %__MODULE__{
           id: binary() | nil,

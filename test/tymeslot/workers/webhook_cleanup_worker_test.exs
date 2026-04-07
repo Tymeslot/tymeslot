@@ -7,8 +7,8 @@ defmodule Tymeslot.Workers.WebhookCleanupWorkerTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.WebhookDeliverySchema
-  alias Tymeslot.DatabaseSchemas.WebhookEventSchema
+  alias Tymeslot.Webhooks.WebhookDeliverySchema
+  alias Tymeslot.Webhooks.WebhookEventSchema
   alias Tymeslot.Workers.WebhookCleanupWorker
 
   describe "perform/1 - outgoing webhook delivery cleanup" do

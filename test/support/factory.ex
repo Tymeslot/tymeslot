@@ -19,14 +19,14 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.DatabaseSchemas.UserSessionSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.WebhookDeliverySchema
-  alias Tymeslot.DatabaseSchemas.WebhookSchema
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
   alias Tymeslot.Profiles
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
+  alias Tymeslot.Webhooks.WebhookDeliverySchema
+  alias Tymeslot.Webhooks.WebhookSchema
 
   @spec meeting_factory() :: Tymeslot.DatabaseSchemas.MeetingSchema.t()
   def meeting_factory do
@@ -238,7 +238,7 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec webhook_factory() :: Tymeslot.DatabaseSchemas.WebhookSchema.t()
+  @spec webhook_factory() :: Tymeslot.Webhooks.WebhookSchema.t()
   def webhook_factory do
     %WebhookSchema{
       name: sequence(:webhook_name, &"Webhook #{&1}"),
@@ -275,7 +275,7 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec webhook_delivery_factory() :: Tymeslot.DatabaseSchemas.WebhookDeliverySchema.t()
+  @spec webhook_delivery_factory() :: Tymeslot.Webhooks.WebhookDeliverySchema.t()
   def webhook_delivery_factory do
     %WebhookDeliverySchema{
       webhook: build(:webhook),
