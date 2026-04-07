@@ -166,6 +166,23 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   end
 
   @doc """
+  Coerces a `Date`, `DateTime`, or `nil` into a `DateTime`.
+
+  - `%DateTime{}` values pass through unchanged.
+  - `%Date{}` values become midnight UTC on that date.
+  - `nil` returns `nil`.
+
+  Useful for normalising calendar events where all-day events use `Date`
+  structs while timed events use `DateTime`.
+  """
+  @spec to_datetime(DateTime.t()) :: DateTime.t()
+  @spec to_datetime(Date.t()) :: DateTime.t()
+  @spec to_datetime(nil) :: nil
+  def to_datetime(%DateTime{} = dt), do: dt
+  def to_datetime(%Date{} = date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
+  def to_datetime(nil), do: nil
+
+  @doc """
   Converts a DateTime to a different timezone safely.
   """
   @spec convert_to_timezone(DateTime.t(), String.t()) :: DateTime.t()

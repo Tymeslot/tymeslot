@@ -7,12 +7,12 @@ defmodule Tymeslot.Bookings.Validation do
   """
 
   alias Tymeslot.Availability.TimeSlots
-  alias Tymeslot.Utils.TimeRange
+  alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
 
   @typedoc "A calendar event with start and optional end time, used for conflict checking."
   @type calendar_event :: %{
-          required(:start_time) => DateTime.t(),
-          required(:end_time) => DateTime.t() | nil
+          required(:start_time) => DateTime.t() | Date.t(),
+          required(:end_time) => DateTime.t() | Date.t() | nil
         }
 
   @typedoc "String-keyed form submission params (e.g. from a booking form)."
@@ -92,10 +92,14 @@ defmodule Tymeslot.Bookings.Validation do
   @spec check_slot_availability(DateTime.t(), DateTime.t(), [calendar_event()], non_neg_integer()) ::
           :ok | {:error, :slot_unavailable}
   def check_slot_availability(start_datetime, end_datetime, events, buffer_minutes \\ 0) do
-    # Normalize events to ensure they have end times
     normalized_events =
       Enum.map(events, fn event ->
-        %{event | end_time: event.end_time || DateTime.add(event.start_time, 30, :minute)}
+        start_time = DateTimeUtils.to_datetime(event.start_time)
+
+        end_time =
+          DateTimeUtils.to_datetime(event.end_time) || DateTime.add(start_time, 30, :minute)
+
+        %{event | start_time: start_time, end_time: end_time}
       end)
 
     if TimeRange.has_conflict_with_events?(

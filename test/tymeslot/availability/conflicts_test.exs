@@ -692,6 +692,68 @@ defmodule Tymeslot.Availability.ConflictsTest do
     end
   end
 
+  describe "all-day events with Date types" do
+    test "filter_available_slots blocks slots when event has Date start/end" do
+      date = Date.add(Date.utc_today(), 7)
+      slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
+
+      # All-day event using Date structs (as returned by providers for all-day events)
+      events = [%{start_time: date, end_time: Date.add(date, 1)}]
+
+      result = filter_slots(slots, events, %{date: date})
+
+      assert result == [], "All slots should be blocked by an all-day event"
+    end
+
+    test "filter_available_slots blocks slots when event has Date start and nil end" do
+      date = Date.add(Date.utc_today(), 7)
+      slots = ["12:00 AM"]
+
+      events = [%{start_time: date, end_time: nil}]
+
+      result = filter_slots(slots, events, %{date: date})
+
+      # nil end_time normalises to start + 30 min (00:00–00:30), so 12:00 AM is blocked
+      assert result == []
+    end
+
+    test "date_has_slots_with_events? handles all-day Date events without crashing" do
+      date = get_future_weekday()
+
+      events = [%{start_time: date, end_time: Date.add(date, 1)}]
+
+      result =
+        Conflicts.date_has_slots_with_events?(
+          date,
+          "Etc/UTC",
+          "Etc/UTC",
+          events,
+          DateTime.utc_now(),
+          %{buffer_minutes: 0, min_advance_hours: 0}
+        )
+
+      # All-day event covers 00:00–00:00 next day, should block the entire day
+      assert result == false
+    end
+
+    test "filter_available_slots handles mixed Date and DateTime events" do
+      date = Date.add(Date.utc_today(), 7)
+      slots = ["9:00 AM", "2:00 PM"]
+
+      events = [
+        %{start_time: date, end_time: Date.add(date, 1)},
+        %{
+          start_time: DateTime.new!(date, ~T[14:00:00], "Etc/UTC"),
+          end_time: DateTime.new!(date, ~T[15:00:00], "Etc/UTC")
+        }
+      ]
+
+      result = filter_slots(slots, events, %{date: date})
+
+      assert result == [], "Both Date and DateTime events should block their respective slots"
+    end
+  end
+
   describe "performance" do
     test "date_has_slots_with_events? remains fast with a noisy calendar (500+ events)" do
       date = ~D[2026-06-15]

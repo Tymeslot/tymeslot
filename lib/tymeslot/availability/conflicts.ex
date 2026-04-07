@@ -122,6 +122,8 @@ defmodule Tymeslot.Availability.Conflicts do
           not (Date.compare(event_end_date, start_date_limit) == :lt or
                  Date.compare(event_start_date, end_date_limit) == :gt)
 
+        # After normalise_event_times/1 all events carry DateTime structs;
+        # this arm is a defensive fallback only.
         _other ->
           false
       end
@@ -232,9 +234,17 @@ defmodule Tymeslot.Availability.Conflicts do
   end
 
   # All providers normalise free events to transparency: "transparent".
+  # Also coerces Date (all-day event) times to DateTime so downstream
+  # comparisons and conflict checks don't crash on mixed types.
   defp busy_events(events) do
-    Enum.reject(events, fn event ->
-      Map.get(event, :transparency) == "transparent"
-    end)
+    events
+    |> Enum.reject(fn event -> Map.get(event, :transparency) == "transparent" end)
+    |> Enum.map(&normalise_event_times/1)
+  end
+
+  defp normalise_event_times(event) do
+    start_time = DateTimeUtils.to_datetime(event.start_time)
+    end_time = DateTimeUtils.to_datetime(event.end_time) || DateTime.add(start_time, 30, :minute)
+    %{event | start_time: start_time, end_time: end_time}
   end
 end

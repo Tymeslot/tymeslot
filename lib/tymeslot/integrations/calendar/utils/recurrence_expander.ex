@@ -11,6 +11,8 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   this module provides the equivalent for CalDAV providers.
   """
 
+  alias Tymeslot.Utils.DateTimeUtils
+
   @day_atoms %{
     "MO" => :monday,
     "TU" => :tuesday,
@@ -168,12 +170,12 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
   defp generate_occurrences(event, rule, range_start, range_end, exdates) do
     # All-day events store Date structs; normalise to DateTime for uniform arithmetic
     all_day? = is_struct(event.start_time, Date) and not is_struct(event.start_time, DateTime)
-    start_dt = to_datetime(event.start_time)
-    end_dt = to_datetime(event.end_time)
+    start_dt = DateTimeUtils.to_datetime(event.start_time)
+    end_dt = DateTimeUtils.to_datetime(event.end_time) || DateTime.add(start_dt, 30, :minute)
     duration = DateTime.diff(end_dt, start_dt, :second)
     safety_cap = min(@max_occurrences, rule.count || @max_occurrences)
-    range_start_dt = to_datetime(range_start)
-    range_end_dt = to_datetime(range_end)
+    range_start_dt = DateTimeUtils.to_datetime(range_start)
+    range_end_dt = DateTimeUtils.to_datetime(range_end)
 
     start_dt
     |> Stream.iterate(&advance(&1, rule))
@@ -198,9 +200,6 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
       end_time: DateTime.add(occ_start, duration, :second)
     })
   end
-
-  defp to_datetime(%DateTime{} = dt), do: dt
-  defp to_datetime(%Date{} = date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
 
   defp advance(dt, %{freq: :daily, interval: interval}) do
     DateTime.add(dt, interval, :day)

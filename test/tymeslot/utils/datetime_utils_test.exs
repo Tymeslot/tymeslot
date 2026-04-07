@@ -246,4 +246,20 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
       refute Map.has_key?(result, "Early Morning")
     end
   end
+
+  describe "to_datetime/1" do
+    test "passes DateTime through unchanged" do
+      dt = ~U[2026-04-07 14:30:00Z]
+      assert DateTimeUtils.to_datetime(dt) == dt
+    end
+
+    test "converts Date to midnight UTC" do
+      date = ~D[2026-04-07]
+      assert DateTimeUtils.to_datetime(date) == ~U[2026-04-07 00:00:00Z]
+    end
+
+    test "returns nil for nil" do
+      assert DateTimeUtils.to_datetime(nil) == nil
+    end
+  end
 end
