@@ -6,6 +6,8 @@ defmodule Tymeslot.Security.FieldValidators.EmailValidator do
   providing specific feedback for common email format issues.
   """
 
+  alias Tymeslot.Security.FieldValidators.TLDList
+
   @email_max_length 254
   @email_regex ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -33,8 +35,9 @@ defmodule Tymeslot.Security.FieldValidators.EmailValidator do
     max_length = Keyword.get(opts, :max_length, @email_max_length)
 
     with :ok <- validate_length(email, max_length),
-         :ok <- validate_basic_format(email) do
-      validate_advanced_format(email)
+         :ok <- validate_basic_format(email),
+         :ok <- validate_advanced_format(email) do
+      validate_tld(email)
     end
   end
 
@@ -94,6 +97,24 @@ defmodule Tymeslot.Security.FieldValidators.EmailValidator do
     email
     |> String.graphemes()
     |> Enum.count(&(&1 == "@")) > 1
+  end
+
+  defp validate_tld(email) do
+    [_username, domain] = String.split(email, "@", parts: 2)
+    tld = TLDList.extract_tld(domain)
+
+    if TLDList.valid_public_tld?(tld) do
+      :ok
+    else
+      case TLDList.suggest_tld(tld) do
+        {:ok, suggestion} ->
+          {:error,
+           "Email has an unrecognised domain ending (.#{tld}) — did you mean .#{suggestion}?"}
+
+        :no_suggestion ->
+          {:error, "Email has an unrecognised domain ending (.#{tld})"}
+      end
+    end
   end
 
   defp invalid_domain_format?(email) do
