@@ -3,8 +3,8 @@ defmodule Tymeslot.Telegram.InputValidation do
   Input validation for Telegram integration fields.
   """
 
-  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Security.UniversalSanitizer
+  alias Tymeslot.Telegram.TelegramIntegrationSchema
 
   @bot_token_regex ~r/^\d{8,10}:[A-Za-z0-9_-]{35,50}$/
   @chat_id_numeric_regex ~r/^-?\d+$/

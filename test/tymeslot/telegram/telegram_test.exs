@@ -7,8 +7,8 @@ defmodule Tymeslot.TelegramTest do
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Telegram
+  alias Tymeslot.Telegram.TelegramIntegrationSchema
 
   setup do
     setup_config(:tymeslot,
@@ -190,7 +190,7 @@ defmodule Tymeslot.TelegramTest do
       assert {:error, :wrong_bot_mode} = Telegram.handle_start_payload(token, "999888777")
 
       # chat_id must remain nil — no update occurred
-      reloaded = Repo.get(Tymeslot.DatabaseSchemas.TelegramIntegrationSchema, integration.id)
+      reloaded = Repo.get(TelegramIntegrationSchema, integration.id)
       assert is_nil(reloaded.chat_id)
     end
 

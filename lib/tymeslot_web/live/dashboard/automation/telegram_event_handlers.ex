@@ -7,10 +7,10 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlers do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.InputValidation, as: TelegramInputValidation
+  alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Hooks.ModalHook
   alias TymeslotWeb.Live.Shared.Flash

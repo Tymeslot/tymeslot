@@ -1,12 +1,12 @@
-defmodule Tymeslot.DatabaseQueries.TelegramQueries do
+defmodule Tymeslot.Telegram.TelegramQueries do
   @moduledoc """
   Database queries for Telegram integrations and deliveries.
   """
 
   import Ecto.Query, warn: false
 
-  alias Tymeslot.DatabaseSchemas.{TelegramDeliverySchema, TelegramIntegrationSchema}
   alias Tymeslot.Repo
+  alias Tymeslot.Telegram.{TelegramDeliverySchema, TelegramIntegrationSchema}
 
   # ============================================================================
   # Integration Queries
@@ -16,8 +16,6 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
 
   @spec list_integrations(integer()) :: [TelegramIntegrationSchema.t()]
   def list_integrations(user_id) do
-    cleanup_orphaned_stubs(user_id)
-
     TelegramIntegrationSchema
     |> where([i], i.user_id == ^user_id)
     |> order_by([i], desc: i.inserted_at)
@@ -33,7 +31,8 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
     |> Repo.delete_all()
   end
 
-  defp cleanup_orphaned_stubs(user_id) do
+  @spec cleanup_orphaned_stubs(integer()) :: {non_neg_integer(), nil | [term()]}
+  def cleanup_orphaned_stubs(user_id) do
     cutoff = DateTime.add(DateTime.utc_now(), -@stub_ttl_minutes * 60, :second)
 
     TelegramIntegrationSchema
@@ -126,9 +125,9 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
     })
   end
 
-  @spec record_failure(TelegramIntegrationSchema.t(), String.t()) ::
-          {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def record_failure(%TelegramIntegrationSchema{id: id}, reason) do
+  @spec increment_failure(TelegramIntegrationSchema.t()) ::
+          {:ok, TelegramIntegrationSchema.t()} | {:error, :not_found}
+  def increment_failure(%TelegramIntegrationSchema{id: id}) do
     case TelegramIntegrationSchema
          |> where([i], i.id == ^id)
          |> select([i], i)
@@ -137,15 +136,7 @@ defmodule Tymeslot.DatabaseQueries.TelegramQueries do
         {:error, :not_found}
 
       {_count, [updated]} ->
-        if updated.failure_count >= TelegramIntegrationSchema.max_failure_count() do
-          update_integration(updated, %{
-            is_active: false,
-            disabled_at: DateTime.utc_now(),
-            disabled_reason: "Too many consecutive failures: #{reason}"
-          })
-        else
-          {:ok, TelegramIntegrationSchema.derive_status(updated)}
-        end
+        {:ok, TelegramIntegrationSchema.derive_status(updated)}
     end
   end
 

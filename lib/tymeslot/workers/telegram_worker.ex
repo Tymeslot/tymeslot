@@ -13,12 +13,10 @@ defmodule Tymeslot.Workers.TelegramWorker do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.TelegramQueries
-  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Features
   alias Tymeslot.Meetings
   alias Tymeslot.Telegram
-  alias Tymeslot.Telegram.{API, MessageBuilder}
+  alias Tymeslot.Telegram.{API, MessageBuilder, TelegramIntegrationSchema, TelegramQueries}
 
   @impl Oban.Worker
   def perform(
@@ -159,7 +157,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
   defp handle_api_result(integration, attempt, result) do
     case result do
       {:ok, status, _body} when status >= 200 and status < 300 ->
-        TelegramQueries.record_success(integration)
+        Telegram.record_success(integration)
         :ok
 
       {:ok, 401, _body} ->
@@ -173,11 +171,11 @@ defmodule Tymeslot.Workers.TelegramWorker do
         handle_rate_limit(body)
 
       {:ok, status, _body} ->
-        if attempt == 1, do: TelegramQueries.record_failure(integration, "HTTP #{status}")
+        if attempt == 1, do: Telegram.record_failure(integration, "HTTP #{status}")
         {:error, {:http_error, status}}
 
       {:error, reason} ->
-        if attempt == 1, do: TelegramQueries.record_failure(integration, to_string(reason))
+        if attempt == 1, do: Telegram.record_failure(integration, to_string(reason))
         {:error, reason}
     end
   end
@@ -196,7 +194,7 @@ defmodule Tymeslot.Workers.TelegramWorker do
 
       true ->
         if attempt == 1,
-          do: TelegramQueries.record_failure(integration, "Bad Request: #{description}")
+          do: Telegram.record_failure(integration, "Bad Request: #{description}")
 
         {:error, {:bad_request, description}}
     end

@@ -10,8 +10,8 @@ defmodule Tymeslot.Workers.TelegramWorkerTest do
   import Tymeslot.Factory
   import Tymeslot.WorkerTestHelpers
 
-  alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
-  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
+  alias Tymeslot.Telegram.TelegramDeliverySchema
+  alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.Workers.TelegramWorker
 
   setup :verify_on_exit!

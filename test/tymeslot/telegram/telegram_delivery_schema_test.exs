@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.TelegramDeliverySchemaTest do
+defmodule Tymeslot.Telegram.TelegramDeliverySchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :schema
@@ -7,7 +7,7 @@ defmodule Tymeslot.DatabaseSchemas.TelegramDeliverySchemaTest do
   import Ecto.Changeset
 
   alias Ecto.UUID
-  alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
+  alias Tymeslot.Telegram.TelegramDeliverySchema
 
   @valid_attrs %{
     integration_id: 1,

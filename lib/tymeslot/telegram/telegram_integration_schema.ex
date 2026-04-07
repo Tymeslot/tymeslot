@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
+defmodule Tymeslot.Telegram.TelegramIntegrationSchema do
   @moduledoc """
   Schema for Telegram integration records linking users to their Telegram bot configuration.
   """

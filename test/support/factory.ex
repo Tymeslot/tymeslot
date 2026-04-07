@@ -14,8 +14,6 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
-  alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
-  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
   alias Tymeslot.Profiles
@@ -23,6 +21,8 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
+  alias Tymeslot.Telegram.TelegramDeliverySchema
+  alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
   alias Tymeslot.Webhooks.WebhookSchema

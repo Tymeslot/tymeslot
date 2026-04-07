@@ -5,11 +5,9 @@ defmodule Tymeslot.Telegram do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.TelegramQueries
-  alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
-  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.Features
-  alias Tymeslot.Telegram.{API, MessageBuilder}
+  alias Tymeslot.Telegram.{API, MessageBuilder, TelegramDeliverySchema, TelegramIntegrationSchema}
+  alias Tymeslot.Telegram.TelegramQueries
   alias Tymeslot.Workers.TelegramWorker
 
   # ============================================================================
@@ -18,6 +16,7 @@ defmodule Tymeslot.Telegram do
 
   @spec list_integrations(integer()) :: [TelegramIntegrationSchema.t()]
   def list_integrations(user_id) do
+    TelegramQueries.cleanup_orphaned_stubs(user_id)
     TelegramQueries.list_integrations(user_id)
   end
 
@@ -254,6 +253,32 @@ defmodule Tymeslot.Telegram do
 
       {:error, :not_found} ->
         {:error, :not_found}
+    end
+  end
+
+  # ============================================================================
+  # Delivery Outcome Tracking
+  # ============================================================================
+
+  @spec record_success(TelegramIntegrationSchema.t()) ::
+          {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def record_success(%TelegramIntegrationSchema{} = integration) do
+    TelegramQueries.record_success(integration)
+  end
+
+  @spec record_failure(TelegramIntegrationSchema.t(), String.t()) ::
+          {:ok, TelegramIntegrationSchema.t()} | {:error, Ecto.Changeset.t() | :not_found}
+  def record_failure(%TelegramIntegrationSchema{} = integration, reason) do
+    with {:ok, updated} <- TelegramQueries.increment_failure(integration) do
+      if updated.failure_count >= TelegramIntegrationSchema.max_failure_count() do
+        TelegramQueries.update_integration(updated, %{
+          is_active: false,
+          disabled_at: DateTime.utc_now(),
+          disabled_reason: "Too many consecutive failures: #{reason}"
+        })
+      else
+        {:ok, updated}
+      end
     end
   end
 

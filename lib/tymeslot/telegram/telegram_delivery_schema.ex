@@ -1,11 +1,11 @@
-defmodule Tymeslot.DatabaseSchemas.TelegramDeliverySchema do
+defmodule Tymeslot.Telegram.TelegramDeliverySchema do
   @moduledoc """
   Schema for tracking individual Telegram message delivery attempts and their outcomes.
   """
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
+  alias Tymeslot.Telegram.TelegramIntegrationSchema
 
   @type t :: %__MODULE__{
           id: binary() | nil,

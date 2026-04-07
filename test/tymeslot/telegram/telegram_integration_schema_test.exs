@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchemaTest do
+defmodule Tymeslot.Telegram.TelegramIntegrationSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :schema
@@ -7,7 +7,7 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchemaTest do
   import Ecto.Changeset
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
+  alias Tymeslot.Telegram.TelegramIntegrationSchema
 
   describe "changeset/2" do
     test "valid with required fields" do
