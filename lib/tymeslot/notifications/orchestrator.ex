@@ -6,8 +6,8 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.ObanJobQueries
   alias Tymeslot.Emails.EmailService
+  alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Notifications.{ContentBuilder, Recipients, SchedulingRules}
   alias Tymeslot.Utils.ReminderUtils
 

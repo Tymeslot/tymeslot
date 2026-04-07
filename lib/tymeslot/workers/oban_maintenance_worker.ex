@@ -18,7 +18,7 @@ defmodule Tymeslot.Workers.ObanMaintenanceWorker do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.ObanJobQueries
+  alias Tymeslot.Jobs.ObanJobQueries
 
   @stuck_job_threshold_hours 4
   @old_job_retention_days 90

@@ -32,9 +32,8 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
 
   require Logger
 
-  import Ecto.Query
   alias Tymeslot.Infrastructure.AdminAlerts
-  alias Tymeslot.Repo
+  alias Tymeslot.Jobs.ObanJobQueries
 
   # Default alert thresholds (can be overridden via application config)
   @default_thresholds %{
@@ -84,13 +83,8 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
     recent_cutoff = DateTime.add(DateTime.utc_now(), -recent_days, :day)
 
     unhealthy_queues =
-      from(j in Oban.Job,
-        where: j.state == "available",
-        where: j.inserted_at > ^recent_cutoff,
-        group_by: j.queue,
-        select: {j.queue, count(j.id)}
-      )
-      |> Repo.all()
+      recent_cutoff
+      |> ObanJobQueries.list_accumulated_jobs()
       |> Enum.filter(fn {_queue, count} -> count > threshold end)
 
     if unhealthy_queues != [] do
@@ -123,14 +117,8 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
     recent_cutoff = DateTime.add(DateTime.utc_now(), -recent_days, :day)
 
     unhealthy_queues =
-      from(j in Oban.Job,
-        where: j.state == "available",
-        where: j.inserted_at < ^cutoff_time,
-        where: j.inserted_at > ^recent_cutoff,
-        group_by: j.queue,
-        select: {j.queue, count(j.id)}
-      )
-      |> Repo.all()
+      cutoff_time
+      |> ObanJobQueries.list_stuck_available_jobs(recent_cutoff)
       |> Enum.filter(fn {_queue, count} -> count > threshold end)
 
     if unhealthy_queues != [] do
@@ -166,15 +154,8 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
     recent_cutoff = DateTime.add(now, -recent_days, :day)
 
     unhealthy_queues =
-      from(j in Oban.Job,
-        where: j.state == "retryable",
-        where: j.scheduled_at < ^now,
-        where: j.scheduled_at < ^cutoff_time,
-        where: j.inserted_at > ^recent_cutoff,
-        group_by: j.queue,
-        select: {j.queue, count(j.id)}
-      )
-      |> Repo.all()
+      now
+      |> ObanJobQueries.list_stuck_retryable_jobs(cutoff_time, recent_cutoff)
       |> Enum.filter(fn {_queue, count} -> count > threshold end)
 
     if unhealthy_queues != [] do

@@ -16,12 +16,9 @@ defmodule Tymeslot.Workers.EmailWorker do
     # Higher priority (0-3, lower number = higher priority)
     priority: 1
 
-  import Ecto.Query, warn: false
-
   alias Ecto.Changeset
-  alias Oban.Job
+  alias Tymeslot.Jobs.ObanJobQueries
   alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Repo
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Workers.EmailWorkerHandlers
   require Logger
@@ -592,23 +589,10 @@ defmodule Tymeslot.Workers.EmailWorker do
   end
 
   defp delete_existing_reminder_jobs(meeting_id, reminder_value, reminder_unit) do
-    worker_str = to_string(__MODULE__)
-
-    args_match = %{
-      "action" => "send_reminder_emails",
-      "meeting_id" => meeting_id,
-      "reminder_value" => reminder_value,
-      "reminder_unit" => reminder_unit
-    }
-
-    # TODO: Move to ObanJobQueries (Task 11)
-    Repo.delete_all(
-      from(j in Job,
-        where: j.queue == "emails",
-        where: j.worker == ^worker_str,
-        where: j.state in ["available", "scheduled", "retryable"],
-        where: fragment("? @> ?::jsonb", j.args, type(^args_match, :map))
-      )
+    ObanJobQueries.delete_reminder_jobs_for_meeting(
+      meeting_id,
+      to_string(__MODULE__),
+      %{"reminder_value" => reminder_value, "reminder_unit" => reminder_unit}
     )
   end
 
