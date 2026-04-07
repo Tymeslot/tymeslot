@@ -337,16 +337,9 @@ defmodule Tymeslot.Security.Security do
   defp validate_domain_tld(domain) do
     tld = TLDList.extract_tld(domain)
 
-    if TLDList.valid_public_tld?(tld) do
-      {:ok, domain}
-    else
-      case TLDList.suggest_tld(tld) do
-        {:ok, suggestion} ->
-          {:error, "Domain has an unrecognised ending (.#{tld}) — did you mean .#{suggestion}?"}
-
-        :no_suggestion ->
-          {:error, "Domain has an unrecognised ending (.#{tld})"}
-      end
+    case TLDList.validate_tld(tld, "Domain") do
+      :ok -> {:ok, domain}
+      {:error, _reason} = error -> error
     end
   end
 

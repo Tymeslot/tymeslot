@@ -102,19 +102,7 @@ defmodule Tymeslot.Security.FieldValidators.EmailValidator do
   defp validate_tld(email) do
     [_username, domain] = String.split(email, "@", parts: 2)
     tld = TLDList.extract_tld(domain)
-
-    if TLDList.valid_public_tld?(tld) do
-      :ok
-    else
-      case TLDList.suggest_tld(tld) do
-        {:ok, suggestion} ->
-          {:error,
-           "Email has an unrecognised domain ending (.#{tld}) — did you mean .#{suggestion}?"}
-
-        :no_suggestion ->
-          {:error, "Email has an unrecognised domain ending (.#{tld})"}
-      end
-    end
+    TLDList.validate_tld(tld, "Email")
   end
 
   defp invalid_domain_format?(email) do

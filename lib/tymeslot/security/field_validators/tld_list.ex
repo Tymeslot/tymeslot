@@ -58,6 +58,29 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
   end
 
   @doc """
+  Validates the TLD extracted from a domain string.
+
+  Returns `:ok` when the TLD is a known public TLD. Returns `{:error, message}`
+  with a human-readable error including a typo suggestion when one is available.
+  The `label` parameter (e.g. `"Email"`, `"Domain"`) is used in the error message.
+  """
+  @spec validate_tld(String.t(), String.t()) :: :ok | {:error, String.t()}
+  def validate_tld(tld, label) when is_binary(tld) and is_binary(label) do
+    if valid_public_tld?(tld) do
+      :ok
+    else
+      case suggest_tld(tld) do
+        {:ok, suggestion} ->
+          {:error,
+           "#{label} has an unrecognised domain ending (.#{tld}) — did you mean .#{suggestion}?"}
+
+        :no_suggestion ->
+          {:error, "#{label} has an unrecognised domain ending (.#{tld})"}
+      end
+    end
+  end
+
+  @doc """
   Suggests a valid TLD for a likely typo.
 
   Returns `{:ok, suggestion}` when exactly one plausible candidate is found
@@ -80,18 +103,23 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
     candidates =
       @public_tlds
       |> Enum.map(fn tld -> {tld, dl_distance(typo, tld), MapSet.member?(@common_tlds, tld)} end)
-      |> Enum.filter(fn {_, dist, _} -> dist <= 2 end)
-      |> Enum.sort_by(fn {_, dist, is_common} -> {dist, !is_common} end)
+      |> Enum.filter(fn {_tld, dist, _is_common} -> dist <= 2 end)
+      |> Enum.sort_by(fn {tld, dist, is_common} ->
+        {dist, !is_common, abs(String.length(tld) - String.length(typo)), tld}
+      end)
 
     case candidates do
-      [] -> :no_suggestion
-      [{best_tld, best_dist, _} | _] -> resolve_candidate(candidates, best_tld, best_dist)
+      [] ->
+        :no_suggestion
+
+      [{best_tld, best_dist, _is_common} | _rest] ->
+        resolve_candidate(candidates, best_tld, best_dist)
     end
   end
 
   defp resolve_candidate(candidates, best_tld, best_dist) do
-    total_at_best = Enum.count(candidates, fn {_, dist, _} -> dist == best_dist end)
-    common_at_best = Enum.count(candidates, fn {_, dist, c} -> dist == best_dist and c end)
+    total_at_best = Enum.count(candidates, fn {_tld, dist, _is_common} -> dist == best_dist end)
+    common_at_best = Enum.count(candidates, fn {_tld, dist, c} -> dist == best_dist and c end)
 
     cond do
       total_at_best == 1 -> {:ok, best_tld}
@@ -102,7 +130,9 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
   end
 
   defp find_common_at_dist(candidates, dist) do
-    {tld, _, _} = Enum.find(candidates, fn {_, d, common?} -> d == dist and common? end)
+    {tld, _dist, _is_common} =
+      Enum.find(candidates, fn {_tld, d, common?} -> d == dist and common? end)
+
     tld
   end
 
@@ -166,5 +196,5 @@ defmodule Tymeslot.Security.FieldValidators.TLDList do
     end
   end
 
-  defp maybe_transposition(_, _, _, _, _, val), do: val
+  defp maybe_transposition(_d, _s_chars, _t_chars, _i, _j, val), do: val
 end
