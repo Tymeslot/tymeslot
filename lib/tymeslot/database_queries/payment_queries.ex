@@ -94,8 +94,18 @@ defmodule Tymeslot.DatabaseQueries.PaymentQueries do
   Coordinates successful subscription renewal payment by creating a new transaction record.
   """
   @spec coordinate_subscription_renewal(String.t(), map()) ::
-          {:ok, PaymentTransaction.t()} | {:error, any()}
+          {:ok, PaymentTransaction.t() | :already_processed} | {:error, any()}
   def coordinate_subscription_renewal(subscription_id, invoice_data) do
+    # The initial subscription invoice (billing_reason: "subscription_create") is already
+    # handled by checkout.session.completed — skip it here to avoid a duplicate transaction.
+    if invoice_data["billing_reason"] == "subscription_create" do
+      {:ok, :already_processed}
+    else
+      do_coordinate_subscription_renewal(subscription_id, invoice_data)
+    end
+  end
+
+  defp do_coordinate_subscription_renewal(subscription_id, invoice_data) do
     with {:ok, transaction} <-
            get_active_subscription_transaction_by_subscription_id(subscription_id) do
       # Create a NEW transaction record for the renewal instead of updating the old one
