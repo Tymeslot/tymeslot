@@ -66,7 +66,8 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :integration,
       :schema,
       :queries,
-      :migrations
+      :migrations,
+      :dev_support
     ],
     special: [
       # Excluded by default in ExUnit.configure — keep in sync with test_helper.exs
