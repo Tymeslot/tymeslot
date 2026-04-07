@@ -8,6 +8,7 @@ defmodule Tymeslot.Profiles do
   require Logger
 
   alias Ecto.Changeset
+  alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.DatabaseQueries.MeetingTypeQueries
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.Avatars
@@ -93,8 +94,6 @@ defmodule Tymeslot.Profiles do
   """
   @spec create_profile(user_id) :: result(profile)
   def create_profile(user_id) do
-    alias Tymeslot.Availability.WeeklySchedule
-
     Repo.transaction(fn ->
       with {:ok, profile} <- ProfileQueries.insert_profile(user_id),
            {:ok, _result} <- WeeklySchedule.create_default_weekly_schedule(profile.id) do
