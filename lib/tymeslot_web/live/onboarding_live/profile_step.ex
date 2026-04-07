@@ -76,7 +76,6 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
         <div class="relative group">
           <% base_url = Policy.app_url() %>
           <% display_url = String.replace(base_url, ~r/^https?:\/\//, "") %>
-          <% padding_rem = (String.length(display_url) + 1) * 0.55 %>
           <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <span class="text-tymeslot-400 font-bold text-token-sm tracking-tight">
               {display_url}/
@@ -93,7 +92,7 @@ defmodule TymeslotWeb.OnboardingLive.ProfileStep do
                 do: "input-error"
               )
             ]}
-            style={"padding-left: #{padding_rem}rem;"}
+            style={"padding-left: #{String.length(display_url) + 2}ch;"}
             placeholder="yourname"
             autocomplete="username"
           />

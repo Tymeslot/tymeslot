@@ -68,4 +68,56 @@ defmodule Tymeslot.Integrations.Common.OAuth.StateTest do
       assert {:error, "Invalid state parameter"} = State.validate(tampered, @secret)
     end
   end
+
+  describe "return_to functionality" do
+    test "generate/4 with return_to embeds path that peek_return_to/1 can extract" do
+      state = State.generate(123, @secret, nil, return_to: "/dashboard/onboarding")
+      assert State.peek_return_to(state) == "/dashboard/onboarding"
+    end
+
+    test "validate/3 on state with return_to includes return_to in result" do
+      state = State.generate(123, @secret, nil, return_to: "/dashboard/onboarding")
+
+      assert {:ok, %{user_id: 123, integration_id: nil, return_to: "/dashboard/onboarding"}} =
+               State.validate(state, @secret)
+    end
+
+    test "validate/3 on state with integration_id and return_to includes both" do
+      state = State.generate(123, @secret, 42, return_to: "/dashboard/onboarding")
+
+      assert {:ok, %{user_id: 123, integration_id: 42, return_to: "/dashboard/onboarding"}} =
+               State.validate(state, @secret)
+    end
+
+    test "peek_return_to/1 returns nil for state without return_to" do
+      state = State.generate(123, @secret)
+      assert State.peek_return_to(state) == nil
+    end
+
+    test "peek_return_to/1 returns nil for invalid state" do
+      assert State.peek_return_to("not-a-valid-state") == nil
+    end
+
+    test "peek_return_to/1 returns nil for tampered state" do
+      state = State.generate(123, @secret, nil, return_to: "/dashboard/onboarding")
+      [_data, sig] = String.split(state, ".")
+      tampered = "tampered.#{sig}"
+      assert State.peek_return_to(tampered) == nil
+    end
+
+    test "peek_return_to/1 returns nil for non-binary input" do
+      assert State.peek_return_to(nil) == nil
+      assert State.peek_return_to(123) == nil
+    end
+
+    test "peek_return_to/1 rejects paths not starting with /" do
+      state = State.generate(123, @secret, nil, return_to: "https://evil.example.com")
+      assert State.peek_return_to(state) == nil
+    end
+
+    test "peek_return_to/1 rejects paths starting with //" do
+      state = State.generate(123, @secret, nil, return_to: "//evil.example.com")
+      assert State.peek_return_to(state) == nil
+    end
+  end
 end

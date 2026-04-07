@@ -40,7 +40,7 @@ defmodule TymeslotWeb.OnboardingLive.SkipConfirmationModal do
         </div>
       </:header>
 
-      <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
+      <p class="text-tymeslot-600 font-medium text-token-lg leading-relaxed">
         Are you sure you want to skip the quick start? You can always configure these settings later in your dashboard.
       </p>
 

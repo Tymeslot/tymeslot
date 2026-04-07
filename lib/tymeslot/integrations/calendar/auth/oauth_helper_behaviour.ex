@@ -6,7 +6,8 @@ defmodule Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour do
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
 
   @callback authorization_url(pos_integer(), String.t()) :: String.t()
-  @callback authorization_url(pos_integer(), String.t(), list(atom() | String.t())) :: String.t()
+  @callback authorization_url(pos_integer(), String.t(), list(atom() | String.t()) | keyword()) ::
+              String.t()
   @callback handle_callback(String.t(), String.t(), String.t()) ::
               {:ok, CalendarIntegrationSchema.t()} | {:error, String.t()}
   @callback exchange_code_for_tokens(String.t(), String.t()) :: {:ok, map()} | {:error, term()}

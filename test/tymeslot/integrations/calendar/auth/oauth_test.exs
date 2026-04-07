@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
   # Make sure mocks are verified
   setup :verify_on_exit!
 
-  describe "initiate_google_oauth/1" do
+  describe "initiate_google_oauth/2" do
     test "generates valid authorization URL with user ID using mock" do
       user = insert(:user)
 
@@ -39,9 +39,24 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
       assert String.contains?(message, "Google OAuth is not configured")
       assert String.contains?(message, "GOOGLE_CLIENT_ID")
     end
+
+    test "passes return_to option through to the helper" do
+      user = insert(:user)
+      expected_url = "https://accounts.google.com/o/oauth2/v2/auth?client_id=test&state=encoded"
+
+      expect(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id,
+                                                                    _redirect_uri,
+                                                                    opts ->
+        assert Keyword.get(opts, :return_to) == "/dashboard/onboarding"
+        expected_url
+      end)
+
+      assert {:ok, ^expected_url} =
+               OAuth.initiate_google_oauth(user.id, return_to: "/dashboard/onboarding")
+    end
   end
 
-  describe "initiate_outlook_oauth/1" do
+  describe "initiate_outlook_oauth/2" do
     test "generates valid authorization URL with user ID using mock" do
       user = insert(:user)
 
@@ -69,6 +84,23 @@ defmodule Tymeslot.Integrations.Calendar.OAuthTest do
       assert {:error, message} = OAuth.initiate_outlook_oauth(user.id)
       assert String.contains?(message, "Outlook OAuth is not configured")
       assert String.contains?(message, "OUTLOOK_CLIENT_ID")
+    end
+
+    test "passes return_to option through to the helper" do
+      user = insert(:user)
+
+      expected_url =
+        "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=test&state=encoded"
+
+      expect(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _user_id,
+                                                                     _redirect_uri,
+                                                                     opts ->
+        assert Keyword.get(opts, :return_to) == "/dashboard/onboarding"
+        expected_url
+      end)
+
+      assert {:ok, ^expected_url} =
+               OAuth.initiate_outlook_oauth(user.id, return_to: "/dashboard/onboarding")
     end
   end
 

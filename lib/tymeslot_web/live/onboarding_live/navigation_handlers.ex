@@ -10,7 +10,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
 
   alias Phoenix.Component
   alias Phoenix.LiveView
-  alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias Tymeslot.Bookings.Policy
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
   alias TymeslotWeb.CustomInputModeHelper
@@ -149,8 +149,11 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   defp complete_onboarding(socket, redirect_to) do
     user = socket.assigns.current_user
 
-    case ProfileQueries.get_by_user_id(user.id) do
-      {:ok, profile} ->
+    case Profiles.get_profile(user.id) do
+      nil ->
+        LiveView.put_flash(socket, :error, "Profile not found. Please try again.")
+
+      profile ->
         case ensure_username(profile, user.id) do
           {:ok, _profile} ->
             is_debug = socket.assigns.live_action in [:debug_welcome, :debug_step]
@@ -177,9 +180,6 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
           {:error, _reason} ->
             LiveView.put_flash(socket, :error, "Could not set up your profile. Please try again.")
         end
-
-      {:error, :not_found} ->
-        LiveView.put_flash(socket, :error, "Profile not found. Please try again.")
     end
   end
 
@@ -188,7 +188,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
       {:ok, profile}
     else
       default_username = Profiles.generate_default_username(user_id)
-      ProfileQueries.update_username(profile, default_username)
+      Profiles.update_username(profile, default_username, user_id)
     end
   end
 
@@ -199,9 +199,12 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
            preserve_timezone: true
          ) do
       {:ok, profile} ->
+        booking_url = "#{Policy.app_url()}/#{profile.username || ""}"
+
         socket =
           socket
           |> Component.assign(:profile, profile)
+          |> Component.assign(:booking_url, booking_url)
           |> Component.assign(:current_step, :connect_calendar)
           |> LiveView.clear_flash()
 
