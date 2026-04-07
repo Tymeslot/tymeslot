@@ -98,11 +98,11 @@ defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
     end
 
     test "enforces maximum domain length of 255 characters", %{user: user} do
-      # 255 chars should be OK (need multiple labels, each max 63 chars)
-      # Create a domain with multiple 63-char labels: aaa...aaa.bbb...bbb.ccc...ccc.com
-      # 63 + 1 + 63 + 1 + 63 + 1 + 63 = 255 chars
+      # 255 chars should be OK (need multiple labels, each max 63 chars, real TLD)
+      # aaa(63).aaa(63).aaa(63).aaa(59).com = 63+1+63+1+63+1+59+1+3 = 255 chars
       label_63 = String.duplicate("a", 63)
-      domain_255 = "#{label_63}.#{label_63}.#{label_63}.#{String.duplicate("b", 63)}"
+      label_59 = String.duplicate("a", 59)
+      domain_255 = "#{label_63}.#{label_63}.#{label_63}.#{label_59}.com"
       assert byte_size(domain_255) == 255
 
       changeset_255 =
