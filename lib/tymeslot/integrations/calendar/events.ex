@@ -7,10 +7,10 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   configured behaviour module (defaults to `Calendar.Operations`).
   """
 
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Utils.ContextUtils
 
   require Logger

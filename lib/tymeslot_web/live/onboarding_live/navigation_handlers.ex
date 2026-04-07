@@ -13,6 +13,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Onboarding
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileQueries
   alias TymeslotWeb.CustomInputModeHelper
   alias TymeslotWeb.OnboardingLive.BasicSettingsShared
   alias TymeslotWeb.OnboardingLive.StepConfig

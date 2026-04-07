@@ -11,7 +11,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.{UserQueries, UserSchema}
-  alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
   @type oauth_auth_params :: %{String.t() => term()}

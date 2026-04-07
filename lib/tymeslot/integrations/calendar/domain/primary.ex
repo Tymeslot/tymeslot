@@ -6,11 +6,12 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   and automatic primary calendar selection logic.
   """
 
-  alias Tymeslot.DatabaseQueries.{CalendarIntegrationQueries, ProfileQueries}
+  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar, as: CalendarContext
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Profiles.ProfileQueries
 
   require Logger
 
@@ -159,11 +160,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   end
 
   defp update_profile_primary(user_id, integration_id) do
-    ProfileQueries.set_primary_calendar_integration_transactional(
-      user_id,
-      integration_id,
-      nil
-    )
+    ProfileQueries.set_primary_calendar_integration(user_id, integration_id)
   end
 
   defp verify_integration_ownership(%CalendarIntegrationSchema{user_id: user_id}, user_id),

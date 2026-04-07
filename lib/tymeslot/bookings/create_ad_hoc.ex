@@ -12,9 +12,9 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.CalendarJobs
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Notifications.Events
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoRoomWorker
   alias TymeslotWeb.Endpoint

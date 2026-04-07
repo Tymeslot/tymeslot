@@ -11,7 +11,7 @@ defmodule TymeslotWeb.AccountLiveTest do
   alias Ecto.Changeset
   alias Tymeslot.Auth
   alias Tymeslot.Auth.UserSchema
-  alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AccountLive.ErrorFormatter

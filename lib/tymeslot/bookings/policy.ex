@@ -3,12 +3,12 @@ defmodule Tymeslot.Bookings.Policy do
   Business rules and policies for bookings.
   Pure functions that define what is allowed.
   """
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Locales
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.ReminderUtils
   alias TymeslotWeb.Endpoint

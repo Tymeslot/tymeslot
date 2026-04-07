@@ -5,8 +5,8 @@ defmodule Tymeslot.Auth.Registration do
 
   require Logger
   alias Tymeslot.Auth.{ErrorFormatter, Helpers.AccountLogging, UserQueries}
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Infrastructure.{Config, PubSub}
+  alias Tymeslot.Profiles
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -127,7 +127,7 @@ defmodule Tymeslot.Auth.Registration do
     case verification.verify_user_email(socket_or_conn, user, validated_params) do
       {:ok, _updated_user} ->
         # Create user profile with default settings
-        case ProfileQueries.create_profile(user.id) do
+        case Profiles.create_profile(user.id) do
           {:ok, _profile} ->
             Logger.info("Created profile", user_id: user.id)
 

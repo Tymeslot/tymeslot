@@ -88,7 +88,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       assert user.onboarding_completed_at != nil
 
       # Verify profile was created and updated with all fields
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.full_name == "Test User"
       assert profile.username == "testuser123"
       # Without connect_params, timezone falls back to business default
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       |> render_click()
 
       # Verify all data was persisted — including the browser-detected timezone
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.full_name == "Jane Doe Updated"
       assert profile.username == "janedoe2024"
       assert profile.timezone == "Europe/Paris"
@@ -144,7 +144,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
         )
 
       # The browser-detected timezone should already be in the DB after mount
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.timezone == "America/New_York"
     end
 
@@ -198,7 +198,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify custom values were persisted (defaults from step_config.ex: 20, 120, 8)
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.buffer_minutes == 20
       assert profile.advance_booking_days == 120
       assert profile.min_advance_hours == 8
@@ -254,13 +254,13 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       conn = log_in_user(conn, user)
 
       # Verify no profile exists yet
-      assert Repo.get_by(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id) == nil
+      assert Repo.get_by(Tymeslot.Profiles.ProfileSchema, user_id: user.id) == nil
 
       # Mount onboarding
       {:ok, _view, _html} = live(conn, ~p"/onboarding")
 
       # Profile should now exist
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.user_id == user.id
     end
 
@@ -282,7 +282,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       {:ok, _view, _html} = live(conn, ~p"/onboarding")
 
       # The explicitly set timezone should NOT be overwritten by browser detection
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.timezone == "America/New_York"
     end
 
@@ -317,7 +317,7 @@ defmodule TymeslotWeb.OnboardingLiveTest do
 
       # Profile should not be duplicated
       profiles =
-        Repo.all(from(p in Tymeslot.DatabaseSchemas.ProfileSchema, where: p.user_id == ^user.id))
+        Repo.all(from(p in Tymeslot.Profiles.ProfileSchema, where: p.user_id == ^user.id))
 
       assert length(profiles) == 1
       assert hd(profiles).id == profile.id

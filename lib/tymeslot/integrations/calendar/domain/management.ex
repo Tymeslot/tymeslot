@@ -7,11 +7,11 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   """
 
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Profiles.ProfileQueries
   require Logger
 
   @type user_id :: integer()

@@ -5,9 +5,9 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
 
   import Ecto.Query
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
   @doc """
@@ -229,16 +229,9 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   end
 
   defp set_integration_as_primary(integration) do
-    # Clear other booking calendars and set this as primary
-    clear_others_fn = fn ->
-      # No need to clear others for the first integration
-      :ok
-    end
-
-    case ProfileQueries.set_primary_calendar_integration_transactional(
+    case ProfileQueries.set_primary_calendar_integration(
            integration.user_id,
-           integration.id,
-           clear_others_fn
+           integration.id
          ) do
       {:ok, _updated_profile} -> integration
       {:error, error_reason} -> Repo.rollback(error_reason)

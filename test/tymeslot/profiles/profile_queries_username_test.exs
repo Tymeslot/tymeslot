@@ -1,10 +1,10 @@
-defmodule Tymeslot.Database.ProfileQueriesUsernameTest do
+defmodule Tymeslot.Profiles.ProfileQueriesUsernameTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias Tymeslot.Profiles.ProfileQueries
   import Tymeslot.Factory
 
   describe "username operations" do

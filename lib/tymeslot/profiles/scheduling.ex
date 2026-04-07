@@ -4,8 +4,8 @@ defmodule Tymeslot.Profiles.Scheduling do
   Focuses on validation and coordination with ProfileQueries.
   """
 
-  alias Tymeslot.DatabaseQueries.ProfileQueries
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Validation.Constraints
 
   @min_advance_hours_range Constraints.min_advance_hours_range()

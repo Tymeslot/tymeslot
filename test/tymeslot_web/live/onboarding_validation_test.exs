@@ -294,7 +294,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Get profile and verify defaults were used
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       # Defaults from factory: buffer_minutes: 15, advance_booking_days: 90, min_advance_hours: 3
       assert profile.buffer_minutes == 15
       assert profile.advance_booking_days == 90
@@ -318,7 +318,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify value was saved
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.buffer_minutes == 0
     end
 
@@ -349,7 +349,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify minimum boundary value was saved
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.advance_booking_days == 1
     end
 
@@ -379,7 +379,7 @@ defmodule TymeslotWeb.OnboardingValidationTest do
       view |> element("button[phx-click='next_step']") |> render_click()
 
       # Verify max boundary value was saved
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.min_advance_hours == 168
     end
   end

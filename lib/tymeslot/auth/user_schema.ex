@@ -75,7 +75,7 @@ defmodule Tymeslot.Auth.UserSchema do
     field(:google_user_id, :string)
     field(:onboarding_completed_at, :utc_datetime)
 
-    has_one(:profile, Tymeslot.DatabaseSchemas.ProfileSchema, foreign_key: :user_id)
+    has_one(:profile, Tymeslot.Profiles.ProfileSchema, foreign_key: :user_id)
 
     has_many(:calendar_integrations, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema,
       foreign_key: :user_id

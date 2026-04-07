@@ -5,9 +5,9 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   """
 
   alias Tymeslot.Auth.UserQueries
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Utils.DateTimeUtils
 
   @doc """

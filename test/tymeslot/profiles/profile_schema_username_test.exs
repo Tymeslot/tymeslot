@@ -1,10 +1,10 @@
-defmodule Tymeslot.Database.ProfileSchemaUsernameTest do
+defmodule Tymeslot.Profiles.ProfileSchemaUsernameTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :schema
 
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.Profiles.ProfileSchema
 
   describe "username validation" do
     test "accepts valid usernames" do

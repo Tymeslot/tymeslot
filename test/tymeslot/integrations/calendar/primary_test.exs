@@ -3,9 +3,9 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
   @moduletag :integrations
 
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Profiles.ProfileQueries
 
   setup do
     user = insert(:user)

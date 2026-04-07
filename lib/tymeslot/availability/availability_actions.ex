@@ -6,8 +6,9 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   """
 
   alias Tymeslot.Availability.{Breaks, WeeklySchedule}
-  alias Tymeslot.DatabaseQueries.{ProfileQueries, WeeklyAvailabilityQueries}
+  alias Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Utils.DateTimeUtils
 
   # Schedule Management Actions

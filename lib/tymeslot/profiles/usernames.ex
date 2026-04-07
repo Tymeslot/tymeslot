@@ -4,7 +4,7 @@ defmodule Tymeslot.Profiles.Usernames do
   Focuses on generation and validation logic.
   """
 
-  alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias Tymeslot.Profiles.ProfileQueries
 
   @type username :: String.t()
   @type user_id :: pos_integer()

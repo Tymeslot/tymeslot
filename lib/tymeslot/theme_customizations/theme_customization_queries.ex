@@ -5,7 +5,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationQueries do
   import Ecto.Query, warn: false
 
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 

@@ -1,8 +1,8 @@
-defmodule Tymeslot.DatabaseSchemas.ProfileSchemaTest do
+defmodule Tymeslot.Profiles.ProfileSchemaTest do
   use Tymeslot.DataCase, async: true
   @moduletag :utils
 
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.Profiles.ProfileSchema
   import Tymeslot.Factory
 
   describe "embed domain validation" do

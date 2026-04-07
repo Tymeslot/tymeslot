@@ -5,7 +5,7 @@ defmodule Tymeslot.ThemeCustomizations.ThemeCustomizationSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.Themes.Core.Registry
 
   @type t :: %__MODULE__{

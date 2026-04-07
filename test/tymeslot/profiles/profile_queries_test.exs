@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseQueries.ProfileQueriesTest do
+defmodule Tymeslot.Profiles.ProfileQueriesTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias Tymeslot.Profiles.ProfileQueries
 
   describe "get_or_create_by_user_id/1" do
     test "applies correct business defaults for new user profiles" do
@@ -49,26 +49,19 @@ defmodule Tymeslot.DatabaseQueries.ProfileQueriesTest do
     end
   end
 
-  describe "public booking page business logic" do
-    test "only shows active meeting types to visitors" do
+  describe "get_by_username_with_user/1" do
+    test "returns profile with preloaded user" do
       user = insert(:user)
       _profile = insert(:profile, user: user, username: "scheduler")
 
-      insert(:meeting_type, user: user, name: "15 min", is_active: true)
-      insert(:meeting_type, user: user, name: "30 min", is_active: true)
-      insert(:meeting_type, user: user, name: "Disabled", is_active: false)
+      {:ok, result} = ProfileQueries.get_by_username_with_user("scheduler")
 
-      {:ok, result} = ProfileQueries.get_by_username_with_context("scheduler")
-
-      assert length(result.meeting_types) == 2
-      meeting_names = Enum.map(result.meeting_types, & &1.name)
-      assert "15 min" in meeting_names
-      assert "30 min" in meeting_names
-      refute "Disabled" in meeting_names
+      assert result.username == "scheduler"
+      assert result.user.id == user.id
     end
 
-    test "handles non-existent users gracefully for public pages" do
-      result = ProfileQueries.get_by_username_with_context("nonexistent")
+    test "handles non-existent users gracefully" do
+      result = ProfileQueries.get_by_username_with_user("nonexistent")
       assert result == {:error, :not_found}
     end
   end

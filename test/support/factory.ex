@@ -14,12 +14,12 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.DatabaseSchemas.MeetingTypeSchema
   alias Tymeslot.DatabaseSchemas.PaymentTransactionSchema
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
   alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
@@ -119,7 +119,7 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec profile_factory() :: Tymeslot.DatabaseSchemas.ProfileSchema.t()
+  @spec profile_factory() :: Tymeslot.Profiles.ProfileSchema.t()
   def profile_factory do
     %ProfileSchema{
       timezone: Profiles.get_default_timezone(),

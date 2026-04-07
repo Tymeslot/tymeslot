@@ -3,9 +3,9 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
   @moduletag :integrations
 
   import Tymeslot.Factory
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Profiles.ProfileQueries
 
   describe "prepare_attrs/2" do
     test "prepares attributes for CalDAV integration" do

@@ -5,15 +5,19 @@ defmodule Tymeslot.Profiles do
   specialized tasks to subcomponents.
   """
 
+  require Logger
+
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseQueries.ProfileQueries
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.DatabaseQueries.MeetingTypeQueries
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles.Avatars
+  alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Profiles.ReservedPaths
   alias Tymeslot.Profiles.Scheduling
   alias Tymeslot.Profiles.Timezone
   alias Tymeslot.Profiles.Usernames
+  alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.Security
@@ -71,9 +75,37 @@ defmodule Tymeslot.Profiles do
 
   @doc """
   Gets or creates a profile for a user.
+  Creates default weekly schedule for newly created profiles.
   """
   @spec get_or_create_profile(user_id) :: result(profile)
-  def get_or_create_profile(user_id), do: ProfileQueries.get_or_create_by_user_id(user_id)
+  def get_or_create_profile(user_id) do
+    case ProfileQueries.get_by_user_id(user_id) do
+      {:ok, profile} ->
+        {:ok, profile}
+
+      {:error, :not_found} ->
+        create_profile(user_id)
+    end
+  end
+
+  @doc """
+  Creates a profile for a user with default weekly schedule.
+  """
+  @spec create_profile(user_id) :: result(profile)
+  def create_profile(user_id) do
+    alias Tymeslot.Availability.WeeklySchedule
+
+    Repo.transaction(fn ->
+      with {:ok, profile} <- ProfileQueries.insert_profile(user_id),
+           {:ok, _result} <- WeeklySchedule.create_default_weekly_schedule(profile.id) do
+        profile
+      else
+        {:error, %Ecto.Changeset{} = changeset} -> Repo.rollback(changeset)
+        {:error, _reason} -> Repo.rollback("Failed to create default availability")
+        other -> Repo.rollback(other)
+      end
+    end)
+  end
 
   @doc """
   Gets a profile by username.
@@ -92,8 +124,20 @@ defmodule Tymeslot.Profiles do
   Updates a user's profile settings.
   """
   @spec update_profile(profile, map()) :: result(profile)
-  def update_profile(%ProfileSchema{} = profile, attrs),
-    do: ProfileQueries.update_profile(profile, attrs)
+  def update_profile(%ProfileSchema{} = profile, attrs) do
+    case ProfileQueries.update_profile(profile, attrs) do
+      {:ok, updated_profile} = result ->
+        Logger.info("Profile updated successfully",
+          user_id: updated_profile.user_id,
+          timezone: updated_profile.timezone
+        )
+
+        result
+
+      error ->
+        error
+    end
+  end
 
   @doc """
   Updates a specific field in the profile.
@@ -476,9 +520,14 @@ defmodule Tymeslot.Profiles do
   """
   @spec resolve_organizer_context(username) :: {:ok, map()} | {:error, :profile_not_found}
   def resolve_organizer_context(username) when is_binary(username) do
-    case ProfileQueries.get_by_username_with_context(username) do
-      {:ok, profile} -> {:ok, build_organizer_context(profile, username)}
-      {:error, :not_found} -> {:error, :profile_not_found}
+    case ProfileQueries.get_by_username_with_user(username) do
+      {:ok, profile} ->
+        meeting_types = load_active_meeting_types(profile.user_id)
+        profile_with_meeting_types = %{profile | meeting_types: meeting_types}
+        {:ok, build_organizer_context(profile_with_meeting_types, username)}
+
+      {:error, :not_found} ->
+        {:error, :profile_not_found}
     end
   end
 
@@ -488,6 +537,10 @@ defmodule Tymeslot.Profiles do
   @spec resolve_organizer_context_optimized(username) ::
           {:ok, map()} | {:error, :profile_not_found}
   def resolve_organizer_context_optimized(username), do: resolve_organizer_context(username)
+
+  defp load_active_meeting_types(user_id) do
+    MeetingTypeQueries.list_active_meeting_types(user_id)
+  end
 
   defp build_organizer_context(profile, username) do
     meeting_types = meeting_types_for_profile(profile)

@@ -13,7 +13,6 @@ defmodule Tymeslot.Integrations.Calendar do
   """
 
   alias Tymeslot.Dashboard.DashboardContext
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Connection
   alias Tymeslot.Integrations.Calendar.Creation
@@ -25,6 +24,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
+  alias Tymeslot.Profiles.ProfileQueries
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()

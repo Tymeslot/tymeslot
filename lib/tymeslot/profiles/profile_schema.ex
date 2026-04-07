@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.ProfileSchema do
+defmodule Tymeslot.Profiles.ProfileSchema do
   @moduledoc """
   Schema for user profiles containing calendar and appointment settings.
   """

@@ -4,8 +4,8 @@ defmodule Tymeslot.Profiles.Settings do
   This module coordinates updates across multiple profile aspects.
   """
 
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.FieldValidators.UsernameValidator
 
   @type profile :: ProfileSchema.t()

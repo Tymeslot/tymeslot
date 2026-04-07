@@ -5,7 +5,7 @@ defmodule Tymeslot.TestFixtures do
 
   import Tymeslot.Factory
   alias Tymeslot.Auth.{UserQueries, UserSessionQueries}
-  alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
 

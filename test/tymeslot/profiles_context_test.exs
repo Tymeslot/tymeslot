@@ -8,8 +8,8 @@ defmodule Tymeslot.ProfilesContextTest do
   @moduletag :profiles
   @moduletag :unit
 
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Themes.Theme
 
   # =====================================

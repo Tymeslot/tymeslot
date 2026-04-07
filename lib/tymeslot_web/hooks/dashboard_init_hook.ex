@@ -13,8 +13,8 @@ defmodule TymeslotWeb.Hooks.DashboardInitHook do
   import Phoenix.Component
   alias Tymeslot.Auth
   alias Tymeslot.Dashboard.DashboardContext
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileSchema
 
   @spec on_mount(:default, map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()} | {:halt, Phoenix.LiveView.Socket.t()}

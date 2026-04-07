@@ -39,7 +39,7 @@ defmodule TymeslotWeb.OnboardingLive.BasicSettingsShared do
   Persists the sanitized params to the profile. Optionally preserves the existing timezone.
   """
   @spec persist_basic_settings(Phoenix.LiveView.Socket.t(), map(), keyword()) ::
-          {:ok, Tymeslot.DatabaseSchemas.ProfileSchema.t()} | {:error, {:update_failed, term()}}
+          {:ok, Tymeslot.Profiles.ProfileSchema.t()} | {:error, {:update_failed, term()}}
   def persist_basic_settings(socket, sanitized_params, opts \\ []) do
     params =
       if Keyword.get(opts, :preserve_timezone, false) do

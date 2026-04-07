@@ -6,7 +6,7 @@ defmodule Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema do
   import Ecto.Changeset
 
   alias Tymeslot.ChangesetValidators.TimeOrder
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{

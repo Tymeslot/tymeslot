@@ -52,7 +52,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       # Navigate through remaining steps to ready
       navigate_scheduling_steps_to_ready(view)
 
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.buffer_minutes >= 0
     end
 
@@ -70,7 +70,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
       navigate_scheduling_steps_to_ready(view)
 
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.buffer_minutes <= 120
     end
   end
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
 
       navigate_scheduling_steps_to_ready(view)
 
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.buffer_minutes == 20
     end
 
@@ -190,7 +190,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.advance_booking_days == 1
     end
 
@@ -211,7 +211,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       view |> element("button[phx-click='next_step']") |> render_click()
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.advance_booking_days == 365
     end
 
@@ -232,7 +232,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       # minimum_notice → ready
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.min_advance_hours == 0
     end
 
@@ -255,7 +255,7 @@ defmodule TymeslotWeb.OnboardingEdgeCasesTest do
       # minimum_notice → ready
       view |> element("button[phx-click='next_step']") |> render_click()
 
-      profile = Repo.get_by!(Tymeslot.DatabaseSchemas.ProfileSchema, user_id: user.id)
+      profile = Repo.get_by!(Tymeslot.Profiles.ProfileSchema, user_id: user.id)
       assert profile.min_advance_hours == 168
     end
   end

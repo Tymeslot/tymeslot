@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Integration.LayoutExtensionTest do
   import Tymeslot.Factory
   import Mox
   alias Tymeslot.ConfigTestHelpers
-  alias Tymeslot.DatabaseQueries.ProfileQueries
+  alias Tymeslot.Profiles.ProfileQueries
 
   setup do
     verify_on_exit!()

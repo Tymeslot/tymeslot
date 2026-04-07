@@ -4,9 +4,9 @@ defmodule Tymeslot.Profiles.Avatars do
   Handles file system operations and coordinates with ProfileQueries.
   """
 
-  alias Tymeslot.DatabaseQueries.ProfileQueries
-  alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Utils.AvatarUtils
   alias Tymeslot.Utils.MediaValidator
   alias TymeslotWeb.Helpers.UploadHandler

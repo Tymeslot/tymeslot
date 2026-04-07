@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
   Assigns contract
   - Required (passed in):
-    - profile: Tymeslot.DatabaseSchemas.ProfileSchema.t()
+    - profile: Tymeslot.Profiles.ProfileSchema.t()
     - theme_id: String.t()
   - Provided/managed by this component (do not pass these in):
     - customization: map with current customization state (see customization_t())
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
   @typedoc "Assigns contract for this component"
   @type assigns_t :: %{
-          required(:profile) => Tymeslot.DatabaseSchemas.ProfileSchema.t(),
+          required(:profile) => Tymeslot.Profiles.ProfileSchema.t(),
           required(:theme_id) => String.t(),
           required(:customization) => customization_t(),
           required(:presets) => presets_t(),

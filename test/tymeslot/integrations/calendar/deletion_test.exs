@@ -4,10 +4,10 @@ defmodule Tymeslot.Integrations.Calendar.DeletionTest do
 
   import Tymeslot.Factory
   alias Tymeslot.DatabaseQueries.MeetingTypeQueries
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Integrations.Calendar.Deletion
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Profiles.ProfileQueries
 
   describe "delete_with_primary_reassignment/2" do
     setup do

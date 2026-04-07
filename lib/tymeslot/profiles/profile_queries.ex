@@ -1,41 +1,39 @@
-defmodule Tymeslot.DatabaseQueries.ProfileQueries do
+defmodule Tymeslot.Profiles.ProfileQueries do
   @moduledoc """
   Database queries for user profiles.
   """
 
   import Ecto.Query
-  alias Tymeslot.Availability.WeeklySchedule
-  alias Tymeslot.DatabaseSchemas.{MeetingTypeSchema, ProfileSchema}
+  alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
   @doc """
-  Creates a profile for a user ID.
+  Inserts a new profile record for a user ID.
+  Returns the profile with its user preloaded.
   """
-  @spec create_profile(integer()) :: {:ok, ProfileSchema.t()} | {:error, term()}
-  def create_profile(user_id) do
-    Repo.transaction(fn ->
-      with {:ok, profile} <-
-             %ProfileSchema{user_id: user_id}
-             |> ProfileSchema.changeset(%{})
-             |> Repo.insert(),
-           {:ok, _result} <- WeeklySchedule.create_default_weekly_schedule(profile.id) do
-        Repo.preload(profile, :user)
-      else
-        {:error, %Ecto.Changeset{} = changeset} -> Repo.rollback(changeset)
-        {:error, _reason} -> Repo.rollback("Failed to create default availability")
-        other -> Repo.rollback(other)
-      end
-    end)
+  @spec insert_profile(integer()) :: {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
+  def insert_profile(user_id) do
+    result =
+      %ProfileSchema{user_id: user_id}
+      |> ProfileSchema.changeset(%{})
+      |> Repo.insert()
+
+    case result do
+      {:ok, profile} -> {:ok, Repo.preload(profile, :user)}
+      error -> error
+    end
   end
 
   @doc """
   Gets a profile by user ID, creating one if it doesn't exist.
+  Note: The caller is responsible for any post-creation side effects
+  (e.g. creating default weekly schedules).
   """
   @spec get_or_create_by_user_id(integer()) :: {:ok, ProfileSchema.t()} | {:error, term()}
   def get_or_create_by_user_id(user_id) do
     case get_by_user_id(user_id) do
       {:error, :not_found} ->
-        create_profile(user_id)
+        insert_profile(user_id)
 
       {:ok, profile} ->
         {:ok, profile}
@@ -86,26 +84,9 @@ defmodule Tymeslot.DatabaseQueries.ProfileQueries do
   @spec update_profile(ProfileSchema.t(), map()) ::
           {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_profile(%ProfileSchema{} = profile, attrs) do
-    result =
-      profile
-      |> ProfileSchema.changeset(attrs)
-      |> Repo.update()
-
-    case result do
-      {:ok, updated_profile} = result ->
-        # Log successful update for debugging
-        require Logger
-
-        Logger.info("Profile updated successfully",
-          user_id: updated_profile.user_id,
-          timezone: updated_profile.timezone
-        )
-
-        result
-
-      error ->
-        error
-    end
+    profile
+    |> ProfileSchema.changeset(attrs)
+    |> Repo.update()
   end
 
   @doc """
@@ -232,14 +213,12 @@ defmodule Tymeslot.DatabaseQueries.ProfileQueries do
   end
 
   @doc """
-  Gets a profile by username with preloaded user and meeting types in a single query.
-  This optimizes the organizer context resolution by avoiding multiple queries.
-  Returns {:ok, profile} with :user and :meeting_types preloaded, or {:error, :not_found} if not found.
+  Gets a profile by username with preloaded user.
+  Returns {:ok, profile} or {:error, :not_found}.
   """
-  @spec get_by_username_with_context(String.t()) ::
+  @spec get_by_username_with_user(String.t()) ::
           {:ok, ProfileSchema.t()} | {:error, :not_found}
-  def get_by_username_with_context(username) when is_binary(username) do
-    # Use a single query with preloading to avoid N+1
+  def get_by_username_with_user(username) when is_binary(username) do
     query =
       from(p in ProfileSchema,
         where: p.username == ^username,
@@ -247,52 +226,24 @@ defmodule Tymeslot.DatabaseQueries.ProfileQueries do
       )
 
     case Repo.one(query) do
-      nil ->
-        {:error, :not_found}
-
-      profile ->
-        # Load meeting types in a single query and attach to profile
-        meeting_types_query =
-          from(mt in MeetingTypeSchema,
-            where: mt.user_id == ^profile.user_id and mt.is_active == true,
-            order_by: [asc: mt.sort_order, asc: mt.name]
-          )
-
-        meeting_types = Repo.all(meeting_types_query)
-        # Add meeting_types as a virtual field
-        result = %{profile | meeting_types: meeting_types}
-        {:ok, result}
+      nil -> {:error, :not_found}
+      profile -> {:ok, profile}
     end
   end
 
   @doc """
-  Sets the primary calendar integration for a user within a transaction.
-  This ensures data consistency when updating the profile and clearing other integrations.
+  Sets the primary calendar integration for a user's profile.
+  Updates only the `primary_calendar_integration_id` field.
   """
-  @spec set_primary_calendar_integration_transactional(integer(), integer(), function() | nil) ::
+  @spec set_primary_calendar_integration(integer(), integer()) ::
           {:ok, ProfileSchema.t()} | {:error, Ecto.Changeset.t() | term()}
-  def set_primary_calendar_integration_transactional(user_id, integration_id, clear_others_fn) do
-    Repo.transaction(fn ->
-      with {:ok, profile} <- get_by_user_id(user_id),
-           :ok <- run_clear_fun(clear_others_fn),
-           {:ok, updated_profile} <-
-             update_profile(profile, %{primary_calendar_integration_id: integration_id}) do
-        updated_profile
-      else
-        {:error, %Ecto.Changeset{} = changeset} -> Repo.rollback(changeset)
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
-  end
+  def set_primary_calendar_integration(user_id, integration_id) do
+    case get_by_user_id(user_id) do
+      {:ok, profile} ->
+        update_profile(profile, %{primary_calendar_integration_id: integration_id})
 
-  defp run_clear_fun(nil), do: :ok
-
-  defp run_clear_fun(fun) when is_function(fun, 0) do
-    case fun.() do
-      {:ok, _result} -> :ok
-      :ok -> :ok
-      {:error, reason} -> {:error, reason}
-      _other -> :ok
+      error ->
+        error
     end
   end
 

@@ -5,9 +5,9 @@ defmodule Tymeslot.Integrations.Calendar.Deletion do
   """
 
   alias Tymeslot.DatabaseQueries.MeetingTypeQueries
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
   @type user_id :: pos_integer()

@@ -7,9 +7,9 @@ defmodule TymeslotWeb.E2EHelpers do
   import Wallaby.Query
 
   alias Tymeslot.Auth.UserSchema
-  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Factory
   alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileQueries
 
   @default_password "Password123!"
 
