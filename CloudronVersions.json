@@ -736,6 +736,52 @@
       },
       "publishState": "published",
       "ts": "Fri, 03 Apr 2026 15:54:55 GMT"
+    },
+    "0.99.40": {
+      "creationDate": "Tue, 07 Apr 2026 16:11:20 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* core: Extract shared Date-to-DateTime coercion into DateTimeUtils.to_datetime/1\n* saas: Exclude manual subscriptions from reconciliation discrepancy checks\n* core: Skip duplicate transaction on initial subscription invoice\n* core: Address review findings in onboarding redesign\n* core: Address review findings in TLD validation\n* core: Add warning log and test assertions for partial reminder delivery\n* core: Prevent duplicate reminder emails on partial delivery failure\n* core: Defer view assign to initialisation and handle background sync\n* core: Remove dead pattern match branch in get_calendar_path\n* core: Restore calendar grid scrolling broken by empty state wrapper\n* core: Update CalendarEventWorker default to Calendar.Events\n* core: Use real user in integration_health_state schema tests\n* core: Add missing calendar integration setup in event creation tests\n* core: Add missing user FK constraint to integration_health_states\n* core: Address review findings in typespec refactor\n* core: Add central Mox setup for HTTP client in calendar tests\n* saas: Correct Dialyzer type specs in email testing helpers\n* core: Supervise security monitoring webhook task\n* core: Correct Dialyzer type specs in security logger\n* core: Correct Dialyzer type specs across auth, bookings, emails, integrations, and security modules\n* core: Correct Dialyzer type specs for theme customisation presets\n* core: Inline changelog text in CloudronVersions.json entries\n* core: Resolve Credo config path doubling when run from child app\n* core: Add translations for attendee discard confirmation plural string\n* core: Notify attendees when organiser updates event details\n* core: Redesign onboarding with split-screen layout and individual scheduling steps\n* core: Add 310 missing IANA TLDs to validation list\n* core: Expand TLD list with 77 missing domain extensions\n* core: Add TLD validation to domain validator\n* core: Add TLD validation to email validator\n* core: Add TLD list module with typo suggestions\n* core: Add TLD data file for domain ending validation\n* core: Add calendar invitation emails with attendee management\n* core: Add multi-attendee support to calendar events\n* core: Add ad-hoc meeting invitations from dashboard calendar\n* core: Show empty state banner when no calendars are connected",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:0.99.40",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "0.99.40",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Tue, 07 Apr 2026 16:11:20 GMT"
     }
   }
 }
