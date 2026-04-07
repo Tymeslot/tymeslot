@@ -1,11 +1,11 @@
-defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchemaTest do
+defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
   use Tymeslot.DataCase, async: true
   import ExUnit.CaptureLog
 
   @moduletag :database
   @moduletag :schema
 
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   describe "changeset/2 - provider validation" do
     test "accepts valid providers (mirotalk, google_meet, custom)" do

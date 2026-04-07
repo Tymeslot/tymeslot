@@ -2,7 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.OAuthHelper
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   import Tymeslot.Factory

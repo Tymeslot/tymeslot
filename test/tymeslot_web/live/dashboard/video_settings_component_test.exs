@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.TestHelpers.Eventually
 
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
   alias Plug.Test

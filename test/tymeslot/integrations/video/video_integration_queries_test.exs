@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseQueries.VideoIntegrationQueriesTest do
+defmodule Tymeslot.Integrations.Video.VideoIntegrationQueriesTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   describe "get_by_provider_for_user/2" do
     test "returns active integration for user+provider" do

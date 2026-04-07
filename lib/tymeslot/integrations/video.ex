@@ -6,8 +6,8 @@ defmodule Tymeslot.Integrations.Video do
   """
 
   # Database
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   # OAuth helpers
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch

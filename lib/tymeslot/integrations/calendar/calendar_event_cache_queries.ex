@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
+defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
   @moduledoc """
   Database queries for cached calendar events.
 
@@ -8,7 +8,7 @@ defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueries do
 
   import Ecto.Query, warn: false
 
-  alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
   alias Tymeslot.Repo
 
   @doc """

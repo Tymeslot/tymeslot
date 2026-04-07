@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.IntegrationHealthStateSchemaTest do
+defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
@@ -7,7 +7,7 @@ defmodule Tymeslot.DatabaseSchemas.IntegrationHealthStateSchemaTest do
   import Ecto.Changeset
   import Tymeslot.TestFixtures
 
-  alias Tymeslot.DatabaseSchemas.IntegrationHealthStateSchema
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
 
   setup do
     user = create_user_fixture()

@@ -5,7 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJobTest do
 
   use Oban.Testing, repo: Tymeslot.Repo
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption

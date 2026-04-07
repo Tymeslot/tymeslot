@@ -8,8 +8,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ICalParser
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast

@@ -23,8 +23,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync

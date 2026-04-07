@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour do
   Behaviour for Outlook Calendar API client.
   """
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
 
   @type api_error ::
           {:error,

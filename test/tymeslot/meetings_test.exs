@@ -9,7 +9,7 @@ defmodule Tymeslot.MeetingsTest do
   import Mox
 
   alias Ecto.UUID
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo

@@ -7,7 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Defaults do
   from other contexts to allow easy reuse.
   """
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
 
   @doc """
   Determine best default calendar within an integration struct.

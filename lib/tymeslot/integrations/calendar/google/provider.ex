@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     display_name: "Google Calendar",
     base_url: "https://www.googleapis.com/calendar/v3"
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch

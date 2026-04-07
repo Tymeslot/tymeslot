@@ -6,9 +6,9 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   and automatic primary calendar selection logic.
   """
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar, as: CalendarContext
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Profiles.ProfileQueries

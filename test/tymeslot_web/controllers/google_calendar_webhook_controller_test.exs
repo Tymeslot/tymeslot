@@ -8,7 +8,7 @@ defmodule TymeslotWeb.GoogleCalendarWebhookControllerTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimit
   alias Tymeslot.Security.RateLimiter

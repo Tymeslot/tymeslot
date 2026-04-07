@@ -2,7 +2,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBaseTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Common.OAuthBase
 
   describe "validate_config/2" do

@@ -1,11 +1,11 @@
-defmodule Tymeslot.DatabaseQueries.VideoIntegrationQueries do
+defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   @moduledoc """
   Database queries for video integrations.
   """
 
   import Ecto.Query
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
   @doc """

@@ -7,8 +7,8 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   and to record notification timestamps.
   """
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
 
   @type integration :: CalendarIntegrationSchema.t()
 

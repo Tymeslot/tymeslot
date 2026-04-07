@@ -8,8 +8,8 @@ defmodule Tymeslot.Bookings.Create do
 
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Repo

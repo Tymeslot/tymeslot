@@ -3,7 +3,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
   @moduletag :utils
 
   alias Phoenix.Flash
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Integrations.Calendar.Google.OAuthHelper, as: GoogleCalendarOAuthHelper
@@ -11,6 +10,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Security.RateLimiter
 
   setup do
@@ -221,7 +221,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       :meck.expect(VideoIntegrationQueries, :create, fn _attrs ->
         {:ok,
-         %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+         %Tymeslot.Integrations.Video.VideoIntegrationSchema{
            id: 10,
            user_id: user_id,
            name: "Google Meet",
@@ -266,7 +266,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       :meck.expect(VideoIntegrationQueries, :create, fn _attrs ->
         {:ok,
-         %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+         %Tymeslot.Integrations.Video.VideoIntegrationSchema{
            id: 11,
            user_id: user_id,
            name: "Microsoft Teams",
@@ -313,7 +313,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
          }}
       end)
 
-      integration = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+      integration = %Tymeslot.Integrations.Video.VideoIntegrationSchema{
         id: 1,
         user_id: user_id,
         name: "Google Meet",
@@ -344,7 +344,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       user_id = 123
       new_expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
-      existing = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+      existing = %Tymeslot.Integrations.Video.VideoIntegrationSchema{
         id: 42,
         user_id: user_id,
         name: "Google Meet",
@@ -399,7 +399,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
          }}
       end)
 
-      integration = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+      integration = %Tymeslot.Integrations.Video.VideoIntegrationSchema{
         id: 1,
         user_id: user_id,
         name: "Microsoft Teams",
@@ -429,7 +429,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     test "teams_callback updates existing integration on re-authorization", %{conn: conn} do
       user_id = 456
 
-      existing = %Tymeslot.DatabaseSchemas.VideoIntegrationSchema{
+      existing = %Tymeslot.Integrations.Video.VideoIntegrationSchema{
         id: 99,
         user_id: user_id,
         name: "Microsoft Teams",

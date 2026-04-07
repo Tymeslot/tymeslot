@@ -43,7 +43,7 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   state (integration.calendar_list), returning a unified list where each item
   includes a boolean "selected" field.
   """
-  @spec discover_with_selection(Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()) ::
+  @spec discover_with_selection(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()) ::
           {:ok, list()} | {:error, term()}
   def discover_with_selection(integration) do
     case Calendar.discover_calendars_for_integration(integration) do
@@ -144,9 +144,9 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
   Update calendar selection for an integration.
   """
   @spec update_calendar_selection(
-          Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t(),
+          Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t(),
           %{String.t() => term()}
-        ) :: {:ok, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()} | {:error, any()}
+        ) :: {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()} | {:error, any()}
   def update_calendar_selection(integration, params) do
     selected_calendar_ids = params["selected_calendars"] || []
 

@@ -5,7 +5,7 @@
 
 require Logger
 
-alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
 alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
 
 # Get integration ID from command line args, default to 13

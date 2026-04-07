@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.IntegrationHealthStateSchema do
+defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
   @moduledoc """
   Schema for persisting integration health state across restarts.
 

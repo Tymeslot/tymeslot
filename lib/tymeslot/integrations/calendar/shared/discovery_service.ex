@@ -88,7 +88,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   - `{:error, reason}` - Error if discovery fails
   """
   @spec discover_for_integration(
-          Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t(),
+          Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t(),
           keyword()
         ) :: {:ok, list(map())} | {:error, String.t()}
   def discover_for_integration(integration, opts \\ []) do

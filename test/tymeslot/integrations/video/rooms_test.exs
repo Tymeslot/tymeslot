@@ -17,13 +17,13 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
 
   setup :verify_on_exit!
 
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.Integrations.Video.Providers.CustomProvider
   alias Tymeslot.Integrations.Video.Providers.GoogleMeetProvider
   alias Tymeslot.Integrations.Video.Providers.MiroTalkProvider
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
   alias Tymeslot.Integrations.Video.Rooms
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
 
   describe "create_meeting_room/1" do

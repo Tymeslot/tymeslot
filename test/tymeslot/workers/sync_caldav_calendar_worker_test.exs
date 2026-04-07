@@ -11,7 +11,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
-  alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
   # Switch from HTTPClientMock to the real HTTPClient so Req.Test intercepts calls.
@@ -495,7 +495,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
 
       # Sync token is NOT cleared because the sync_token_expired handler is never reached
       updated =
-        Repo.get!(Tymeslot.DatabaseSchemas.CalendarIntegrationSchema, integration.id)
+        Repo.get!(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
       assert updated.caldav_sync_token == "stale-sync-token"
     end

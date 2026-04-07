@@ -17,8 +17,8 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Common.ErrorHandler
 

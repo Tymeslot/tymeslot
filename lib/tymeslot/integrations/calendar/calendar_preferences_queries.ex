@@ -1,7 +1,7 @@
-defmodule Tymeslot.DatabaseQueries.CalendarPreferencesQueries do
+defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesQueries do
   @moduledoc false
 
-  alias Tymeslot.DatabaseSchemas.CalendarPreferencesSchema
+  alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Repo
 
   @updatable_fields [

@@ -5,7 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.TokensTest do
   import Tymeslot.Factory
   import Mox
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Repo
 

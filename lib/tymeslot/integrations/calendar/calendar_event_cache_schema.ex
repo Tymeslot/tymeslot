@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.CalendarEventCacheSchema do
+defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheSchema do
   @moduledoc """
   Schema for cached calendar events fetched from external calendar providers.
 
@@ -31,7 +31,7 @@ defmodule Tymeslot.DatabaseSchemas.CalendarEventCacheSchema do
           etag: String.t() | nil,
           synced_at: DateTime.t() | nil,
           calendar_integration:
-            Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()
+            Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()
             | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -55,7 +55,7 @@ defmodule Tymeslot.DatabaseSchemas.CalendarEventCacheSchema do
     field(:etag, :string)
     field(:synced_at, :utc_datetime)
 
-    belongs_to(:calendar_integration, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema)
+    belongs_to(:calendar_integration, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema)
 
     timestamps()
   end

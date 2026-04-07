@@ -4,7 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   Standardizes provider-specific discovery flows.
   """
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry

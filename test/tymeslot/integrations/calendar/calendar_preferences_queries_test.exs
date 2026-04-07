@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseQueries.CalendarPreferencesQueriesTest do
+defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesQueriesTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.CalendarPreferencesQueries
+  alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
 
   describe "get_or_create/1" do
     test "returns a new struct with defaults for user without preferences" do

@@ -91,11 +91,11 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     )
 
     # Calendar integration tracking
-    belongs_to(:calendar_integration, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema,
+    belongs_to(:calendar_integration, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema,
       type: :id
     )
 
-    belongs_to(:video_integration, Tymeslot.DatabaseSchemas.VideoIntegrationSchema, type: :id)
+    belongs_to(:video_integration, Tymeslot.Integrations.Video.VideoIntegrationSchema, type: :id)
 
     belongs_to(:meeting_type_ref, Tymeslot.MeetingTypes.MeetingTypeSchema,
       foreign_key: :meeting_type_id,

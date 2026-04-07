@@ -1,11 +1,11 @@
-defmodule Tymeslot.DatabaseQueries.CalendarEventCacheQueriesTest do
+defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueriesTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
-  alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
 
   defp build_event_attrs(integration, overrides) do
     now = DateTime.utc_now(:second)

@@ -10,7 +10,7 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
 
   alias Ecto.Changeset
   alias Oban.Job
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Repo
 

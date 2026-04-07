@@ -482,7 +482,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     end
 
     test "correctly calculates toggled selection state" do
-      integration = %Tymeslot.DatabaseSchemas.CalendarIntegrationSchema{
+      integration = %Tymeslot.Integrations.Calendar.CalendarIntegrationSchema{
         id: 1,
         user_id: 1,
         provider: "caldav",
@@ -515,7 +515,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     end
 
     test "handles empty calendar_list" do
-      integration = %Tymeslot.DatabaseSchemas.CalendarIntegrationSchema{
+      integration = %Tymeslot.Integrations.Calendar.CalendarIntegrationSchema{
         id: 1,
         user_id: 1,
         provider: "caldav",

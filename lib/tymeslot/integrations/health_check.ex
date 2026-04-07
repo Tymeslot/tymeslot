@@ -41,11 +41,9 @@ defmodule Tymeslot.Integrations.HealthCheck do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.{
-    CalendarIntegrationQueries,
-    IntegrationHealthStateQueries,
-    VideoIntegrationQueries
-  }
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   alias Tymeslot.Integrations.HealthCheck.{
     Assessor,

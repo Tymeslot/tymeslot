@@ -4,7 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
   @moduletag :calendar
   @moduletag :integrations
 
-  alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
 
   defp subscribe(user_id) do

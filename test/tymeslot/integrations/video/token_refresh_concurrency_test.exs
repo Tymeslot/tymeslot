@@ -19,8 +19,8 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
   import Mox
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.Rooms
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   setup :verify_on_exit!
 

@@ -10,9 +10,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
+  alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
@@ -147,7 +148,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
         is_active: true
       })
 
-    create_fn = fn -> CalendarIntegrationQueries.create_with_auto_primary(attrs) end
+    create_fn = fn -> PrimarySelection.create_with_auto_primary(attrs) end
 
     result =
       if is_binary(provider_account_id) do

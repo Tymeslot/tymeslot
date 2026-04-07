@@ -10,13 +10,13 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   def provider_type, do: :google_meet

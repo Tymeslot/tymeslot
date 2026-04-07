@@ -4,9 +4,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   """
   use TymeslotWeb, :live_component
 
-  alias Tymeslot.DatabaseQueries.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils

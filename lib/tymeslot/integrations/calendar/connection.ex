@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   Business logic for connection validation with timeout semantics and provider checks.
   """
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.DiscoveryService
   alias Tymeslot.Integrations.Calendar.Tokens

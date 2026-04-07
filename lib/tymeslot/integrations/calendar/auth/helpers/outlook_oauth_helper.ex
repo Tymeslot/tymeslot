@@ -10,8 +10,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Common.OAuth.IdToken
@@ -198,7 +199,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
         base_url: "https://graph.microsoft.com/v1.0"
       })
 
-    create_fn = fn -> CalendarIntegrationQueries.create_with_auto_primary(attrs) end
+    create_fn = fn -> PrimarySelection.create_with_auto_primary(attrs) end
 
     result =
       if is_binary(provider_account_id) do

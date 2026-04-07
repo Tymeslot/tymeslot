@@ -8,9 +8,9 @@ defmodule Tymeslot.Integrations.Video.Connection do
   - Emits telemetry for connection tests
   """
 
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @spec test_connection(pos_integer(), pos_integer()) :: {:ok, String.t()} | {:error, any()}
   def test_connection(user_id, id) when is_integer(user_id) and is_integer(id) do

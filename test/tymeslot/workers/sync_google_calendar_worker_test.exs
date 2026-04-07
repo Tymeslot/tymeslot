@@ -8,7 +8,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
   import Mox
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 

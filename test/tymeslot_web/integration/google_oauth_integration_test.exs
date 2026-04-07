@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Integration.GoogleOAuthIntegrationTest do
 
   import Tymeslot.Factory
   alias Phoenix.Flash
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
 
   describe "Google OAuth Security" do
     test "prevents CSRF attacks with state parameter validation" do

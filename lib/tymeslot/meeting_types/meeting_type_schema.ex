@@ -37,8 +37,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:reminder_config, {:array, :map}, default: nil)
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
-    belongs_to(:video_integration, Tymeslot.DatabaseSchemas.VideoIntegrationSchema)
-    belongs_to(:calendar_integration, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema)
+    belongs_to(:video_integration, Tymeslot.Integrations.Video.VideoIntegrationSchema)
+    belongs_to(:calendar_integration, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema)
 
     timestamps()
   end

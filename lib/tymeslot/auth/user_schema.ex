@@ -5,11 +5,9 @@ defmodule Tymeslot.Auth.UserSchema do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Tymeslot.DatabaseSchemas.{
-    CalendarIntegrationSchema,
-    ProfileSchema,
-    VideoIntegrationSchema
-  }
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Profiles.ProfileSchema
 
   alias Tymeslot.ChangesetValidators.Email, as: EmailChangeset
   alias Tymeslot.Security.FieldValidators.PasswordValidator
@@ -77,11 +75,11 @@ defmodule Tymeslot.Auth.UserSchema do
 
     has_one(:profile, Tymeslot.Profiles.ProfileSchema, foreign_key: :user_id)
 
-    has_many(:calendar_integrations, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema,
+    has_many(:calendar_integrations, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema,
       foreign_key: :user_id
     )
 
-    has_many(:video_integrations, Tymeslot.DatabaseSchemas.VideoIntegrationSchema,
+    has_many(:video_integrations, Tymeslot.Integrations.Video.VideoIntegrationSchema,
       foreign_key: :user_id
     )
 

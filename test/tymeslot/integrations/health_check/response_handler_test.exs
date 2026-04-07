@@ -3,11 +3,9 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
   use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :integrations
 
-  alias Tymeslot.DatabaseQueries.{
-    CalendarIntegrationQueries,
-    IntegrationHealthStateQueries,
-    VideoIntegrationQueries
-  }
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   alias Tymeslot.Integrations.HealthCheck.ResponseHandler
   alias Tymeslot.Workers.EmailWorker

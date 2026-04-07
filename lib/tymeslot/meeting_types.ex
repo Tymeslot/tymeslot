@@ -2,9 +2,9 @@ defmodule Tymeslot.MeetingTypes do
   @moduledoc """
   Context for managing meeting types.
   """
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Utils.ReminderUtils

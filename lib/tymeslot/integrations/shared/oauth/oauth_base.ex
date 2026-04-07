@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   that are common across different OAuth-based calendar providers like Google and Outlook.
   """
 
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.Common.ConfigManager
 
   # Type definitions
@@ -108,8 +110,6 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
   @spec create_or_update_integration(integer(), String.t(), %{atom() => term()}, oauth_tokens()) ::
           {:ok, any()} | {:error, any()}
   def create_or_update_integration(user_id, provider_name, provider_config, tokens) do
-    alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-
     case CalendarIntegrationQueries.get_by_user_and_provider(user_id, provider_name) do
       {:error, :not_found} ->
         attrs =
@@ -123,7 +123,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
             is_active: true
           })
 
-        CalendarIntegrationQueries.create_with_auto_primary(attrs)
+        PrimarySelection.create_with_auto_primary(attrs)
 
       {:ok, existing_integration} ->
         attrs = %{

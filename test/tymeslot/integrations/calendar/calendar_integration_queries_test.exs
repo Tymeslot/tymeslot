@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueriesTest do
+defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueriesTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
 
   describe "security isolation" do
     test "prevents access to other users' integrations" do
@@ -32,7 +32,7 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueriesTest do
 
       # Verify credentials are encrypted in database
       raw_integration =
-        Repo.get(Tymeslot.DatabaseSchemas.CalendarIntegrationSchema, integration.id)
+        Repo.get(Tymeslot.Integrations.Calendar.CalendarIntegrationSchema, integration.id)
 
       assert raw_integration.username_encrypted != nil
       assert raw_integration.password_encrypted != nil

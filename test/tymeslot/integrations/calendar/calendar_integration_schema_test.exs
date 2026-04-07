@@ -1,11 +1,11 @@
-defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchemaTest do
+defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
   use Tymeslot.DataCase, async: true
   @moduletag :database
   @moduletag :schema
 
   import Ecto.Changeset
   import Tymeslot.Factory
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Security.Encryption
 
   describe "changeset/2" do

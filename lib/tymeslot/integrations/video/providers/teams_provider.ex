@@ -6,14 +6,14 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   Provides seamless OAuth integration allowing users to create Teams meetings on their behalf.
   """
 
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   require Logger
 

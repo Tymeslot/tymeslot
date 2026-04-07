@@ -21,7 +21,7 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
 
   @impl Oban.Worker

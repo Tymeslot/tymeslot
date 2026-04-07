@@ -95,7 +95,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
   previously had calendars selected, to prevent accidental data loss.
   """
   @spec update_integration_with_discovery(map()) ::
-          {:ok, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()} | {:error, term()}
+          {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()} | {:error, term()}
   def update_integration_with_discovery(integration) do
     with {:ok, refreshed_integration} <- refresh_integration(integration),
          {:ok, merged} <- Selection.discover_with_selection(refreshed_integration) do

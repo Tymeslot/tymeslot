@@ -4,8 +4,8 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   enforcing primary-integration invariants.
   """
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
@@ -26,7 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     {:error, term()}
   """
   @spec create_with_validation(user_id(), %{String.t() => term()}, keyword()) ::
-          {:ok, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()}
+          {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()}
           | {:error,
              {:form_errors, %{String.t() => term()}} | {:changeset, Ecto.Changeset.t()} | term()}
   def create_with_validation(user_id, params, opts \\ [])

@@ -10,14 +10,12 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   that tracking survives process restarts.
   """
 
-  alias Tymeslot.DatabaseQueries.{
-    CalendarIntegrationQueries,
-    IntegrationHealthStateQueries,
-    VideoIntegrationQueries
-  }
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
-  alias Tymeslot.DatabaseSchemas.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.HealthCheck.ErrorAnalysis
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
 
   @failure_threshold 3
   @recovery_threshold 2

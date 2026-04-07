@@ -8,18 +8,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   require Logger
 
-  alias Ecto.Changeset
-  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.{EventTimeFormatter, HTTP}
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
-  alias Tymeslot.Repo
 
   @base_url "https://graph.microsoft.com/v1.0"
   @silent_event_headers [
@@ -453,14 +452,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   end
 
   defp persist_graph_subscription(integration, attrs) do
-    now = DateTime.utc_now(:second)
-
-    result =
-      integration
-      |> Changeset.change(Map.put(attrs, :last_external_sync_at, now))
-      |> Repo.update()
-
-    case result do
+    case CalendarIntegrationQueries.update_graph_subscription(integration, attrs) do
       {:ok, updated} -> {:ok, updated}
       {:error, changeset} -> {:error, {:db_error, changeset}}
     end

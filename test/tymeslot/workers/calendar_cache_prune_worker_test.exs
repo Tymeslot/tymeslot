@@ -3,7 +3,7 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
 
   @moduletag :calendar
 
-  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
   alias Tymeslot.Workers.CalendarCachePruneWorker
 
   describe "perform/1" do

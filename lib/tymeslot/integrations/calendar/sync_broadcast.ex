@@ -6,7 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcast do
   workers to upsert events and notify subscribers in a single call.
   """
 
-  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
 
   require Logger
 

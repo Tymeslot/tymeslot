@@ -7,8 +7,8 @@ defmodule TymeslotWeb.Integration.OutlookCalendarIntegrationTest do
 
   import Tymeslot.Factory
   alias Phoenix.Flash
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
 
   @moduletag :calendar_integration

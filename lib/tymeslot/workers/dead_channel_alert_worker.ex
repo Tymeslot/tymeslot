@@ -18,7 +18,7 @@ defmodule Tymeslot.Workers.DeadChannelAlertWorker do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
 
   @silence_threshold_hours 12
   @meeting_lookback_hours 72

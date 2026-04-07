@@ -29,7 +29,7 @@ defmodule Tymeslot.Profiles.ProfileSchema do
           primary_calendar_integration_id: integer() | nil,
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           primary_calendar_integration:
-            Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()
+            Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()
             | Ecto.Association.NotLoaded.t()
             | nil,
           theme_customization:
@@ -52,7 +52,12 @@ defmodule Tymeslot.Profiles.ProfileSchema do
     field(:allowed_embed_domains, {:array, :string}, default: ["none"])
     field(:meeting_types, {:array, :map}, virtual: true)
     belongs_to(:user, Tymeslot.Auth.UserSchema)
-    belongs_to(:primary_calendar_integration, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema)
+
+    belongs_to(
+      :primary_calendar_integration,
+      Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+    )
+
     has_one(:theme_customization, ThemeCustomizationSchema, foreign_key: :profile_id)
 
     timestamps()

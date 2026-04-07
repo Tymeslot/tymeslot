@@ -6,8 +6,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
   a usable access token, reducing duplication across provider clients.
   """
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Shared.Lock
 
   @type integration :: map()

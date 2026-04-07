@@ -5,8 +5,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
   alias Tymeslot.Repo
 
   describe "clean_etag/1" do

@@ -4,8 +4,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.AccessToken do
   before executing API calls.
   """
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
 
   @default_buffer 300

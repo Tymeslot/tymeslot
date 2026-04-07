@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
+defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
   @moduledoc """
   Schema for video conferencing integrations (MiroTalk).
   """

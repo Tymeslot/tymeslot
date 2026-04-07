@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   """
   use TymeslotWeb, :live_component
 
-  alias Tymeslot.DatabaseQueries.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Integrations.Video

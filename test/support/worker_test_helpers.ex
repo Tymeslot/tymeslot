@@ -8,8 +8,8 @@ defmodule Tymeslot.WorkerTestHelpers do
 
   alias Ecto.UUID
   alias Tymeslot.Auth.UserSchema
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
 
   @doc """

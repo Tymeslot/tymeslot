@@ -8,16 +8,16 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
 
   require Logger
 
-  alias Ecto.{Changeset, UUID}
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Ecto.UUID
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.{EventTimeFormatter, HTTP}
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
-  alias Tymeslot.Repo
 
   @base_url "https://www.googleapis.com/calendar/v3"
   @token_url "https://oauth2.googleapis.com/token"
@@ -376,14 +376,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   defp maybe_put_page_token(params, token), do: Map.put(params, "pageToken", token)
 
   defp persist_push_channel(integration, attrs) do
-    now = DateTime.utc_now(:second)
-
-    result =
-      integration
-      |> Changeset.change(Map.put(attrs, :last_external_sync_at, now))
-      |> Repo.update()
-
-    case result do
+    case CalendarIntegrationQueries.update_push_channel(integration, attrs) do
       {:ok, updated} -> {:ok, updated}
       {:error, changeset} -> {:error, {:db_error, changeset}}
     end

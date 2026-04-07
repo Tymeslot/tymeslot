@@ -2,7 +2,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
   use Tymeslot.DataCase, async: true
   @moduletag :integrations
 
-  alias Tymeslot.DatabaseQueries.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
 
   describe "initial_state/0" do

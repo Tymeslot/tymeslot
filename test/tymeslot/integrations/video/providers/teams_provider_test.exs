@@ -5,10 +5,10 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProviderTest do
   import Mox
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.HTTPClientMock
   alias Tymeslot.Integrations.Video.Providers.TeamsProvider
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.TeamsOAuthHelperMock
 

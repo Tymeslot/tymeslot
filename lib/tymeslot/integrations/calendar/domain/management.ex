@@ -6,10 +6,11 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   separated from primary calendar logic and discovery operations.
   """
 
-  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Profiles.ProfileQueries
   require Logger
@@ -53,7 +54,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     with {:ok, discovered_attrs} <-
            Discovery.maybe_discover_calendars(normalize_provider_attrs(attrs)),
          {:ok, integration} <-
-           CalendarIntegrationQueries.create_with_auto_primary(discovered_attrs),
+           PrimarySelection.create_with_auto_primary(discovered_attrs),
          {:ok, final_integration} <- ensure_default_booking_calendar(integration) do
       {:ok, final_integration}
     else

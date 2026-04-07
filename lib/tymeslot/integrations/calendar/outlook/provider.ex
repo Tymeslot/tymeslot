@@ -11,7 +11,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     display_name: "Outlook Calendar",
     base_url: "https://graph.microsoft.com/v1.0"
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, MultiCalendarFetch, ProviderCommon}
 

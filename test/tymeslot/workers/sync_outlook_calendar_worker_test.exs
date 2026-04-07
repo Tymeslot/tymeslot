@@ -121,7 +121,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
 
       cached =
         Repo.get_by(
-          Tymeslot.DatabaseSchemas.CalendarEventCacheSchema,
+          Tymeslot.Integrations.Calendar.CalendarEventCacheSchema,
           provider_event_id: "outlook-allday-1"
         )
 
@@ -157,7 +157,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
       # The cached event IS removed because handle_event_deleted is reached
       remaining =
         Repo.all(
-          from e in Tymeslot.DatabaseSchemas.CalendarEventCacheSchema,
+          from e in Tymeslot.Integrations.Calendar.CalendarEventCacheSchema,
             where:
               e.calendar_integration_id == ^integration.id and
                 e.provider_event_id == "deleted-event-123"

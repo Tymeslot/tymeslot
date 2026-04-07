@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
   Utilities shared across calendar provider implementations.
   """
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
 
   @doc """

@@ -10,9 +10,9 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
-  alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
@@ -144,7 +144,8 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec calendar_integration_factory() :: Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.t()
+  @spec calendar_integration_factory() ::
+          Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()
   def calendar_integration_factory do
     username = sequence(:calendar_username, &"user#{&1}")
 
@@ -160,7 +161,8 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec calendar_event_cache_factory() :: Tymeslot.DatabaseSchemas.CalendarEventCacheSchema.t()
+  @spec calendar_event_cache_factory() ::
+          Tymeslot.Integrations.Calendar.CalendarEventCacheSchema.t()
   def calendar_event_cache_factory do
     now = DateTime.utc_now(:second)
 
@@ -174,7 +176,7 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec video_integration_factory() :: Tymeslot.DatabaseSchemas.VideoIntegrationSchema.t()
+  @spec video_integration_factory() :: Tymeslot.Integrations.Video.VideoIntegrationSchema.t()
   def video_integration_factory do
     api_key = sequence(:api_key, &"api_key_#{&1}")
 

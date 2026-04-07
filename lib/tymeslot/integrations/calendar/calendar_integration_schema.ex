@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
+defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   @moduledoc """
   Schema for calendar integrations.
 
@@ -53,7 +53,7 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
           last_external_sync_at: DateTime.t() | nil,
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           calendar_events:
-            [Tymeslot.DatabaseSchemas.CalendarEventCacheSchema.t()]
+            [Tymeslot.Integrations.Calendar.CalendarEventCacheSchema.t()]
             | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -113,7 +113,7 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
-    has_many(:calendar_events, Tymeslot.DatabaseSchemas.CalendarEventCacheSchema,
+    has_many(:calendar_events, Tymeslot.Integrations.Calendar.CalendarEventCacheSchema,
       foreign_key: :calendar_integration_id
     )
 

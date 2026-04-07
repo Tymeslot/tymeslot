@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour do
   Behaviour for Calendar OAuth helpers to enable mocking in tests.
   """
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
 
   @callback authorization_url(pos_integer(), String.t()) :: String.t()
   @callback authorization_url(pos_integer(), String.t(), list(atom() | String.t()) | keyword()) ::

@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.CalendarPreferencesSchema do
+defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesSchema do
   @moduledoc false
 
   use Ecto.Schema

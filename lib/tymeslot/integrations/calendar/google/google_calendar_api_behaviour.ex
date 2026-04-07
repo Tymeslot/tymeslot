@@ -3,7 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
   Behaviour for Google Calendar API client.
   """
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
 
   @type api_error ::
           {:error,

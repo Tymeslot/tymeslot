@@ -9,10 +9,11 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
 
   require Logger
 
-  alias Tymeslot.DatabaseSchemas.{CalendarIntegrationSchema, VideoIntegrationSchema}
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.HealthCheck.ProviderHelpers
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @type integration_type :: :calendar | :video
   @type check_result :: {:ok, any()} | {:error, any()}

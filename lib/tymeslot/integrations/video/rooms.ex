@@ -8,10 +8,10 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   """
 
   require Logger
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
-  alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @doc """
   Creates a new meeting room using the configured provider for a user.

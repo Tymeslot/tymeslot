@@ -8,7 +8,7 @@ defmodule TymeslotWeb.OutlookCalendarWebhookControllerTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncOutlookCalendarWorker
 

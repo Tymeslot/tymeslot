@@ -2,7 +2,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.OAuthHelper
   alias Tymeslot.Integrations.Common.OAuth.State
   import Tymeslot.Factory

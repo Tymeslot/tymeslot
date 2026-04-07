@@ -6,9 +6,9 @@ defmodule Tymeslot.Dashboard.DashboardContext do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Meetings
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.MeetingTypeQueries

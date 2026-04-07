@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseQueries.IntegrationHealthStateQueries do
+defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   @moduledoc """
   Database queries for integration health state persistence.
 
@@ -9,11 +9,9 @@ defmodule Tymeslot.DatabaseQueries.IntegrationHealthStateQueries do
 
   import Ecto.Query
 
-  alias Tymeslot.DatabaseSchemas.{
-    CalendarIntegrationSchema,
-    IntegrationHealthStateSchema,
-    VideoIntegrationSchema
-  }
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   alias Tymeslot.Repo
 

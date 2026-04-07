@@ -20,7 +20,7 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
 
   @retention_days 90
 

@@ -1,12 +1,11 @@
-defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
+defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   @moduledoc """
   Database queries for calendar integrations.
   """
 
   import Ecto.Query
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
-  alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
@@ -186,56 +185,6 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
     %CalendarIntegrationSchema{}
     |> CalendarIntegrationSchema.changeset(attrs)
     |> Repo.insert()
-  end
-
-  @doc """
-  Creates a new calendar integration with automatic primary setting if it's the first.
-  Uses a transaction to ensure atomicity.
-  """
-  @spec create_with_auto_primary(map()) :: {:ok, CalendarIntegrationSchema.t()} | {:error, term()}
-  def create_with_auto_primary(attrs) do
-    Repo.transaction(fn ->
-      case create(attrs) do
-        {:ok, integration} ->
-          maybe_set_as_primary(integration)
-
-        {:error, changeset} ->
-          Repo.rollback(changeset)
-      end
-    end)
-  end
-
-  defp maybe_set_as_primary(integration) do
-    user_id = integration.user_id
-
-    # Acquire an advisory lock scoped to this user to prevent two concurrent
-    # first-integration inserts from both seeing count == 1.
-    Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [1, user_id])
-
-    existing_count = count_for_user(user_id)
-
-    need_primary =
-      case ProfileQueries.get_by_user_id(user_id) do
-        {:ok, %{primary_calendar_integration_id: nil}} -> true
-        {:ok, _existing_profile} -> existing_count == 1
-        {:error, _error_reason} -> existing_count == 1
-      end
-
-    if need_primary do
-      set_integration_as_primary(integration)
-    else
-      integration
-    end
-  end
-
-  defp set_integration_as_primary(integration) do
-    case ProfileQueries.set_primary_calendar_integration(
-           integration.user_id,
-           integration.id
-         ) do
-      {:ok, _updated_profile} -> integration
-      {:error, error_reason} -> Repo.rollback(error_reason)
-    end
   end
 
   @doc """
@@ -592,6 +541,24 @@ defmodule Tymeslot.DatabaseQueries.CalendarIntegrationQueries do
   def update_sync_state(integration, attrs) when is_map(attrs) do
     integration
     |> Changeset.change(attrs)
+    |> Repo.update()
+  end
+
+  @doc "Persists Google push channel fields and touches last_external_sync_at."
+  @spec update_push_channel(CalendarIntegrationSchema.t(), map()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_push_channel(integration, attrs) do
+    integration
+    |> Changeset.change(Map.put(attrs, :last_external_sync_at, DateTime.utc_now(:second)))
+    |> Repo.update()
+  end
+
+  @doc "Persists Microsoft Graph subscription fields and touches last_external_sync_at."
+  @spec update_graph_subscription(CalendarIntegrationSchema.t(), map()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_graph_subscription(integration, attrs) do
+    integration
+    |> Changeset.change(Map.put(attrs, :last_external_sync_at, DateTime.utc_now(:second)))
     |> Repo.update()
   end
 
