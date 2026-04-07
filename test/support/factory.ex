@@ -7,12 +7,12 @@ defmodule Tymeslot.Factory do
 
   alias Ecto.UUID
   alias Tymeslot.Auth.{UserSchema, UserSessionSchema}
-  alias Tymeslot.DatabaseSchemas.AvailabilityBreakSchema
-  alias Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema
+  alias Tymeslot.Availability.AvailabilityBreakSchema
+  alias Tymeslot.Availability.AvailabilityOverrideSchema
+  alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
@@ -196,7 +196,7 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec weekly_availability_factory() :: Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema.t()
+  @spec weekly_availability_factory() :: Tymeslot.Availability.WeeklyAvailabilitySchema.t()
   def weekly_availability_factory do
     %WeeklyAvailabilitySchema{
       # Monday
@@ -205,7 +205,7 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec availability_break_factory() :: Tymeslot.DatabaseSchemas.AvailabilityBreakSchema.t()
+  @spec availability_break_factory() :: Tymeslot.Availability.AvailabilityBreakSchema.t()
   def availability_break_factory do
     %AvailabilityBreakSchema{
       start_time: ~T[12:00:00],
@@ -216,7 +216,7 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec availability_override_factory() :: Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema.t()
+  @spec availability_override_factory() :: Tymeslot.Availability.AvailabilityOverrideSchema.t()
   def availability_override_factory do
     %AvailabilityOverrideSchema{
       date: Date.add(Date.utc_today(), 1),

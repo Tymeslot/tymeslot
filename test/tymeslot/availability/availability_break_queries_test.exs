@@ -1,11 +1,11 @@
-defmodule Tymeslot.DatabaseQueries.AvailabilityBreakQueriesTest do
+defmodule Tymeslot.Availability.AvailabilityBreakQueriesTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.AvailabilityBreakQueries
-  alias Tymeslot.DatabaseSchemas.AvailabilityBreakSchema
+  alias Tymeslot.Availability.AvailabilityBreakQueries
+  alias Tymeslot.Availability.AvailabilityBreakSchema
 
   describe "create_break/1" do
     test "creates a break with valid attributes" do

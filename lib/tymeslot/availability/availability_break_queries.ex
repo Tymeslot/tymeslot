@@ -1,9 +1,9 @@
-defmodule Tymeslot.DatabaseQueries.AvailabilityBreakQueries do
+defmodule Tymeslot.Availability.AvailabilityBreakQueries do
   @moduledoc """
   Query interface for availability break-related database operations.
   """
   import Ecto.Query, warn: false
-  alias Tymeslot.DatabaseSchemas.AvailabilityBreakSchema
+  alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Repo
 
   @doc """

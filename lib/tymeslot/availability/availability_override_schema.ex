@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema do
+defmodule Tymeslot.Availability.AvailabilityOverrideSchema do
   @moduledoc """
   Schema for date-specific availability overrides.
   """

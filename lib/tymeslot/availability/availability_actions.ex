@@ -5,8 +5,7 @@ defmodule Tymeslot.Availability.AvailabilityActions do
   without any UI-specific concerns.
   """
 
-  alias Tymeslot.Availability.{Breaks, WeeklySchedule}
-  alias Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries
+  alias Tymeslot.Availability.{Breaks, WeeklyAvailabilityQueries, WeeklySchedule}
   alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Utils.DateTimeUtils

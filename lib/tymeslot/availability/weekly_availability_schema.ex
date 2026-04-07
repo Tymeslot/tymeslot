@@ -1,12 +1,13 @@
-defmodule Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema do
+defmodule Tymeslot.Availability.WeeklyAvailabilitySchema do
   @moduledoc """
   Schema for weekly availability settings per day of week.
   """
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.ChangesetValidators.TimeOrder
-  alias Tymeslot.DatabaseSchemas.{AvailabilityBreakSchema, ProfileSchema}
+  alias Tymeslot.Profiles.ProfileSchema
 
   @type t :: %__MODULE__{
           id: integer() | nil,

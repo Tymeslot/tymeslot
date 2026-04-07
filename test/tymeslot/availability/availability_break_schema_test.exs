@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseSchemas.AvailabilityBreakSchemaTest do
+defmodule Tymeslot.Availability.AvailabilityBreakSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :schema
 
-  alias Tymeslot.DatabaseSchemas.AvailabilityBreakSchema
+  alias Tymeslot.Availability.AvailabilityBreakSchema
 
   describe "business rule validations" do
     test "break end time must be after start time" do

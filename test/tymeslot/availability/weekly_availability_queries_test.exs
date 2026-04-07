@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseQueries.WeeklyAvailabilityQueriesTest do
+defmodule Tymeslot.Availability.WeeklyAvailabilityQueriesTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries
+  alias Tymeslot.Availability.WeeklyAvailabilityQueries
 
   describe "default business hours (user onboarding)" do
     test "creates sensible default schedule for new users" do

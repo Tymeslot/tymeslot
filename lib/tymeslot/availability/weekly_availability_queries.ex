@@ -1,9 +1,9 @@
-defmodule Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries do
+defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
   @moduledoc """
   Query interface for weekly availability-related database operations.
   """
   import Ecto.Query, warn: false
-  alias Tymeslot.DatabaseSchemas.{AvailabilityBreakSchema, WeeklyAvailabilitySchema}
+  alias Tymeslot.Availability.{AvailabilityBreakSchema, WeeklyAvailabilitySchema}
   alias Tymeslot.Repo
 
   @doc """

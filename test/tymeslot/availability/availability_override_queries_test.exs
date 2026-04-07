@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseQueries.AvailabilityOverrideQueriesTest do
+defmodule Tymeslot.Availability.AvailabilityOverrideQueriesTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.AvailabilityOverrideQueries
+  alias Tymeslot.Availability.AvailabilityOverrideQueries
 
   describe "availability override queries" do
     test "get_override/1 returns the override by id" do
@@ -105,7 +105,7 @@ defmodule Tymeslot.DatabaseQueries.AvailabilityOverrideQueriesTest do
     test "delete_override/1 deletes the override" do
       override = insert(:availability_override)
       {:ok, _result} = AvailabilityOverrideQueries.delete_override(override)
-      assert Repo.get(Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema, override.id) == nil
+      assert Repo.get(Tymeslot.Availability.AvailabilityOverrideSchema, override.id) == nil
     end
 
     test "delete_overrides_by_profile/1 deletes all for profile" do

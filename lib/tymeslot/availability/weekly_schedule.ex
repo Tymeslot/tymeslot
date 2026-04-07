@@ -3,8 +3,8 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   Context for managing weekly availability schedules.
   """
 
-  alias Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries
-  alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
+  alias Tymeslot.Availability.WeeklyAvailabilityQueries
+  alias Tymeslot.Availability.WeeklyAvailabilitySchema
 
   @doc """
   Gets the complete weekly schedule for a profile including breaks.

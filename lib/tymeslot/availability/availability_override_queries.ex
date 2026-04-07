@@ -1,9 +1,9 @@
-defmodule Tymeslot.DatabaseQueries.AvailabilityOverrideQueries do
+defmodule Tymeslot.Availability.AvailabilityOverrideQueries do
   @moduledoc """
   Query interface for availability override-related database operations.
   """
   import Ecto.Query, warn: false
-  alias Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema
+  alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Repo
 
   @doc """

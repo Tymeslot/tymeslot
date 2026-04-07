@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.AvailabilityLiveTest do
   import Tymeslot.DashboardTestHelpers
 
   alias Tymeslot.Availability.{Breaks, WeeklySchedule}
-  alias Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries
+  alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Infrastructure.AvailabilityCache
 
   setup %{conn: conn} do

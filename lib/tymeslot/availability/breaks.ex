@@ -4,9 +4,9 @@ defmodule Tymeslot.Availability.Breaks do
   """
 
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseQueries.AvailabilityBreakQueries
-  alias Tymeslot.DatabaseQueries.WeeklyAvailabilityQueries
-  alias Tymeslot.DatabaseSchemas.AvailabilityBreakSchema
+  alias Tymeslot.Availability.AvailabilityBreakQueries
+  alias Tymeslot.Availability.AvailabilityBreakSchema
+  alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Utils.TimeRange
 
   @doc """

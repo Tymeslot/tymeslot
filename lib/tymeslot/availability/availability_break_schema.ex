@@ -1,13 +1,13 @@
-defmodule Tymeslot.DatabaseSchemas.AvailabilityBreakSchema do
+defmodule Tymeslot.Availability.AvailabilityBreakSchema do
   @moduledoc """
   Schema for breaks within a day's availability.
   """
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Tymeslot.Availability.AvailabilityBreakQueries
+  alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.ChangesetValidators.TimeOrder
-  alias Tymeslot.DatabaseQueries.AvailabilityBreakQueries
-  alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
   alias Tymeslot.Validation.Constraints
 
   @type t :: %__MODULE__{

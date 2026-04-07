@@ -4,8 +4,8 @@ defmodule Tymeslot.Availability.Calculate do
   Combines business hours, time slots, and conflict detection.
   """
 
+  alias Tymeslot.Availability.{AvailabilityOverrideQueries, WeeklyAvailabilityQueries}
   alias Tymeslot.Availability.{BusinessHours, Conflicts, Events, TimeSlots}
-  alias Tymeslot.DatabaseQueries.{AvailabilityOverrideQueries, WeeklyAvailabilityQueries}
   alias Tymeslot.Utils.DateTimeUtils
 
   @type availability_config :: %{

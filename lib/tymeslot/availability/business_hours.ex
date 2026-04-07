@@ -5,9 +5,9 @@ defmodule Tymeslot.Availability.BusinessHours do
   Uses dynamic weekly availability from user profiles.
   """
 
+  alias Tymeslot.Availability.AvailabilityOverrideQueries
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.Availability.WeeklySchedule
-  alias Tymeslot.DatabaseQueries.AvailabilityOverrideQueries
   alias Tymeslot.Utils.DateTimeUtils
 
   # Fallback business hours configuration (for backwards compatibility)

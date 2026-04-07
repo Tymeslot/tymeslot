@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseSchemas.AvailabilityOverrideSchemaTest do
+defmodule Tymeslot.Availability.AvailabilityOverrideSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :schema
 
-  alias Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema
+  alias Tymeslot.Availability.AvailabilityOverrideSchema
 
   describe "changeset/2 - override type validation" do
     test "accepts valid override types (unavailable, custom_hours, available)" do

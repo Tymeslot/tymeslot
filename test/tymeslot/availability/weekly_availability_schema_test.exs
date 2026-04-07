@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchemaTest do
+defmodule Tymeslot.Availability.WeeklyAvailabilitySchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :schema
 
-  alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
+  alias Tymeslot.Availability.WeeklyAvailabilitySchema
 
   describe "changeset/2 - day_of_week validation" do
     test "accepts valid day_of_week values (1-7)" do
