@@ -60,6 +60,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       "send_integration_unhealthy_notification" ->
         handle_integration_unhealthy_notification(args)
 
+      "send_calendar_invitation" ->
+        handle_calendar_invitation(args)
+
       _other ->
         {:discard, "Unknown action: #{action}"}
     end
@@ -610,6 +613,64 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
         )
 
         {:discard, "User or integration not found"}
+    end
+  end
+
+  defp handle_calendar_invitation(%{"user_id" => user_id} = args) do
+    with {:ok, user} <- UserQueries.get_user(user_id),
+         {:ok, details} <- build_invitation_details(user, args),
+         {:ok, _email_result} <-
+           email_service_module().send_calendar_invitation(args["attendee_email"], details) do
+      Logger.info("Calendar invitation sent",
+        attendee_email: args["attendee_email"],
+        event_uid: args["event_uid"]
+      )
+
+      :ok
+    else
+      {:error, :not_found} ->
+        Logger.warning("User not found for calendar invitation", user_id: user_id)
+        {:discard, "User not found"}
+
+      {:error, "Invalid datetime: " <> _rest = reason} ->
+        Logger.warning("Invalid datetime in calendar invitation args", reason: reason)
+        {:discard, reason}
+
+      {:error, reason} ->
+        Logger.error("Failed to send calendar invitation",
+          attendee_email: args["attendee_email"],
+          error: inspect(reason)
+        )
+
+        {:error, "Failed to send calendar invitation"}
+    end
+  end
+
+  defp build_invitation_details(user, args) do
+    with {:ok, start_time} <- parse_datetime(args["event_start_at"]),
+         {:ok, end_time} <- parse_datetime(args["event_end_at"]) do
+      duration = DateTime.diff(end_time, start_time, :minute)
+
+      {:ok,
+       %{
+         event_title: args["event_title"],
+         event_uid: args["event_uid"],
+         start_time: start_time,
+         end_time: end_time,
+         date: DateTime.to_date(start_time),
+         duration: duration,
+         location: args["event_location"],
+         description: args["event_description"],
+         organizer_name: user.name || user.email,
+         organizer_email: user.email
+       }}
+    end
+  end
+
+  defp parse_datetime(iso_string) do
+    case DateTime.from_iso8601(iso_string) do
+      {:ok, dt, _offset} -> {:ok, dt}
+      {:error, _reason} -> {:error, "Invalid datetime: #{iso_string}"}
     end
   end
 

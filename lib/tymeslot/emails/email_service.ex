@@ -43,6 +43,7 @@ defmodule Tymeslot.Emails.EmailService do
     AppointmentConfirmationOrganizer,
     AppointmentReminderAttendee,
     AppointmentReminderOrganizer,
+    CalendarInvitation,
     CalendarSyncError,
     EmailChangeConfirmed,
     EmailChangeNotification,
@@ -543,6 +544,22 @@ defmodule Tymeslot.Emails.EmailService do
 
     email = RescheduleRequest.reschedule_request_email(meeting)
     deliver(email)
+  end
+
+  @doc """
+  Sends a calendar invitation email to an attendee for a dashboard-created event.
+  """
+  @impl Tymeslot.Emails.EmailServiceBehaviour
+  @spec send_calendar_invitation(String.t(), map()) :: {:ok, any()} | {:error, any()}
+  def send_calendar_invitation(attendee_email, invitation_details) do
+    Logger.info("Sending calendar invitation",
+      title: invitation_details[:event_title],
+      to: attendee_email
+    )
+
+    attendee_email
+    |> CalendarInvitation.invitation_email(invitation_details)
+    |> deliver()
   end
 
   @doc """

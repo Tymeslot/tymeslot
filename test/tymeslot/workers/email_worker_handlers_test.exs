@@ -180,6 +180,80 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
     end
   end
 
+  describe "execute_email_action/2 - send_calendar_invitation" do
+    test "sends invitation and returns :ok on success" do
+      user = insert(:user, name: "Alice Organiser")
+
+      expect(EmailServiceMock, :send_calendar_invitation, fn email, details ->
+        assert email == "colleague@example.com"
+        assert details.organizer_name == "Alice Organiser"
+        assert details.organizer_email == user.email
+        assert details.event_title == "Team Standup"
+        assert details.event_uid == "uid-abc-123"
+        assert details.duration == 30
+        assert details.location == "Room 42"
+        assert details.description == "Daily sync"
+        {:ok, :sent}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+                 "user_id" => user.id,
+                 "attendee_email" => "colleague@example.com",
+                 "event_title" => "Team Standup",
+                 "event_uid" => "uid-abc-123",
+                 "event_start_at" => "2026-04-10T10:00:00Z",
+                 "event_end_at" => "2026-04-10T10:30:00Z",
+                 "event_location" => "Room 42",
+                 "event_description" => "Daily sync"
+               })
+    end
+
+    test "discards job when user is not found" do
+      assert {:discard, "User not found"} =
+               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+                 "user_id" => 999_999,
+                 "attendee_email" => "colleague@example.com",
+                 "event_title" => "Team Standup",
+                 "event_uid" => "uid-abc-123",
+                 "event_start_at" => "2026-04-10T10:00:00Z",
+                 "event_end_at" => "2026-04-10T10:30:00Z"
+               })
+    end
+
+    test "returns error when email delivery fails" do
+      user = insert(:user)
+
+      expect(EmailServiceMock, :send_calendar_invitation, fn _email, _details ->
+        {:error, "delivery failed"}
+      end)
+
+      assert {:error, "Failed to send calendar invitation"} =
+               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+                 "user_id" => user.id,
+                 "attendee_email" => "colleague@example.com",
+                 "event_title" => "Team Standup",
+                 "event_uid" => "uid-abc-123",
+                 "event_start_at" => "2026-04-10T10:00:00Z",
+                 "event_end_at" => "2026-04-10T10:30:00Z"
+               })
+    end
+
+    test "discards job when datetime is invalid" do
+      user = insert(:user)
+
+      assert {:discard, "Invalid datetime: not-a-date"} =
+               EmailWorkerHandlers.execute_email_action("send_calendar_invitation", %{
+                 "user_id" => user.id,
+                 "attendee_email" => "colleague@example.com",
+                 "event_title" => "Team Standup",
+                 "event_uid" => "uid-abc-123",
+                 "event_start_at" => "not-a-date",
+                 "event_end_at" => "2026-04-10T10:30:00Z"
+               })
+    end
+  end
+
   describe "handle_email_change_verification/1" do
     test "successfully sends verification email to new address" do
       user = insert(:user)

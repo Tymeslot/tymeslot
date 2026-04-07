@@ -43,4 +43,5 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
   @callback send_external_booking_change(map(), String.t(), :deleted | :modified) ::
               {:ok, any()} | {:error, any()}
+  @callback send_calendar_invitation(String.t(), map()) :: {:ok, any()} | {:error, any()}
 end

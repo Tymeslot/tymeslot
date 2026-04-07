@@ -191,6 +191,29 @@ defmodule Tymeslot.EmailTestHelpers do
   end
 
   @doc """
+  Builds invitation details for calendar invitation email tests.
+  """
+  @spec build_invitation_details(map()) :: map()
+  def build_invitation_details(overrides \\ %{}) do
+    now = DateTime.utc_now()
+
+    defaults = %{
+      event_title: "Test Event",
+      event_uid: "test-uid-#{System.unique_integer([:positive])}",
+      start_time: now,
+      end_time: DateTime.add(now, 3600, :second),
+      date: DateTime.to_date(now),
+      duration: 60,
+      location: nil,
+      description: nil,
+      organizer_name: "Test Organiser",
+      organizer_email: "organiser@example.com"
+    }
+
+    Map.merge(defaults, overrides)
+  end
+
+  @doc """
   Builds email change data for email change email tests.
   """
   @spec build_email_change_data(map()) :: map()

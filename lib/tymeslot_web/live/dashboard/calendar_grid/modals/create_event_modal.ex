@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
   use TymeslotWeb, :html
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
@@ -97,7 +98,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
           >
             <span
               :for={email <- @creating_event[:attendees] || []}
-              class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
+              class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-amber-50 border border-dashed border-amber-300 text-token-xs text-amber-800"
             >
               {email}
               <button
@@ -105,7 +106,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
                 phx-click="remove_create_attendee"
                 phx-value-email={email}
                 phx-target={@myself}
-                class="w-4 h-4 rounded-full hover:bg-turquoise-200 flex items-center justify-center transition-colors"
+                class="w-4 h-4 rounded-full hover:bg-amber-200 flex items-center justify-center transition-colors"
                 aria-label={"Remove #{email}"}
               >
                 <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,32 +134,35 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal do
             </button>
           </form>
           <p class="text-token-xs text-tymeslot-400 mt-1">
-            Each person will receive an invitation from your calendar provider.
+            Invitations will be sent when you create the event.
           </p>
         </div>
         <div :if={(@creating_event[:attendees] || []) != [] and @video_integrations != []}>
-          <label
-            for="video_integration_id"
-            class="block text-token-xs font-medium text-tymeslot-600 mb-1"
-          >
+          <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">
             Video
-          </label>
-          <select
-            id="video_integration_id"
-            name="video_integration_id"
-            phx-change="update_create_video"
-            phx-target={@myself}
-            class="w-full rounded-md border-tymeslot-300 text-token-sm focus:border-turquoise-500 focus:ring-turquoise-500"
-          >
-            <option value="">None</option>
-            <option
-              :for={vi <- @video_integrations}
-              value={vi.id}
-              selected={to_string(vi.id) == to_string(@creating_event[:video_integration_id])}
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              phx-click="update_create_video"
+              phx-value-video_integration_id=""
+              phx-target={@myself}
+              class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@creating_event[:video_integration_id]), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
             >
-              {vi.name}
-            </option>
-          </select>
+              None
+            </button>
+            <button
+              :for={vi <- @video_integrations}
+              type="button"
+              phx-click="update_create_video"
+              phx-value-video_integration_id={vi.id}
+              phx-target={@myself}
+              class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@creating_event[:video_integration_id]), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+            >
+              <ProviderIcon.provider_icon provider={vi.provider} type="video" size="mini" />
+              <span class="truncate max-w-[10rem]"><%= vi.name %></span>
+            </button>
+          </div>
         </div>
       </div>
 

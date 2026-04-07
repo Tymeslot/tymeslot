@@ -139,6 +139,29 @@ defmodule Tymeslot.Emails.EmailServiceTest do
     end
   end
 
+  describe "send_calendar_invitation/2" do
+    test "sends calendar invitation email" do
+      details = build_invitation_details()
+
+      result = EmailService.send_calendar_invitation("attendee@example.com", details)
+
+      assert {:ok, _email} = result
+    end
+
+    test "sends calendar invitation with custom details" do
+      details =
+        build_invitation_details(%{
+          event_title: "Team Standup",
+          location: "Conference Room B",
+          description: "Weekly sync"
+        })
+
+      result = EmailService.send_calendar_invitation("colleague@example.com", details)
+
+      assert {:ok, _email} = result
+    end
+  end
+
   describe "template integration" do
     test "confirmation templates create valid Swoosh emails" do
       details = build_appointment_details()

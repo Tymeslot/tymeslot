@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -49,7 +50,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   @spec handle_close_create_form(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_close_create_form(_params, socket) do
-    {:noreply, assign(socket, :creating_event, nil)}
+    creating = socket.assigns.creating_event
+
+    if creating && creating.attendees != [] do
+      {:noreply, assign(socket, :confirm_discard_attendees, true)}
+    else
+      {:noreply, assign(socket, :creating_event, nil)}
+    end
   end
 
   @spec handle_update_create_title(map(), Phoenix.LiveView.Socket.t()) ::
@@ -249,6 +256,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
     case result do
       {:ok, created} ->
         uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
+
+        Orchestrator.schedule_calendar_invitations(
+          user_id,
+          creating[:attendees] || [],
+          %{
+            title: creating.title,
+            uid: uid,
+            start_at: start_at,
+            end_at: end_at,
+            location: creating[:location],
+            description: creating[:description]
+          }
+        )
+
         {:ok, %{uid: uid, creating: creating, start_at: start_at, end_at: end_at}}
 
       {:error, reason} ->

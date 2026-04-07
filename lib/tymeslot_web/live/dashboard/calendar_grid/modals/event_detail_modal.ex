@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   attr :myself, :any, required: true
   attr :editable, :boolean, default: false
   attr :attendee_input, :string, default: ""
+  attr :pending_attendees, :list, default: []
 
   @spec event_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def event_detail_modal(assigns) do
@@ -182,9 +183,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           <%!-- Editable attendee tags --%>
           <div :if={@editable}>
             <div
-              :if={(@selected_event.attendees || []) != []}
+              :if={(@selected_event.attendees || []) != [] or @pending_attendees != []}
               class="flex flex-wrap gap-1.5 mb-2"
             >
+              <%!-- Existing (invited) attendees — turquoise --%>
               <span
                 :for={attendee <- @selected_event.attendees || []}
                 class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-turquoise-50 border border-turquoise-200 text-token-xs text-turquoise-800"
@@ -197,6 +199,25 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
                   phx-target={@myself}
                   class="w-4 h-4 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors"
                   aria-label={"Remove #{attendee["email"] || attendee[:email]}"}
+                >
+                  <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+              <%!-- Pending (unsent) attendees — amber dashed --%>
+              <span
+                :for={email <- @pending_attendees}
+                class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-amber-50 border border-dashed border-amber-300 text-token-xs text-amber-800"
+              >
+                {email}
+                <button
+                  type="button"
+                  phx-click="remove_pending_attendee"
+                  phx-value-email={email}
+                  phx-target={@myself}
+                  class="w-4 h-4 rounded-full hover:bg-amber-200 flex items-center justify-center transition-colors"
+                  aria-label={"Remove #{email}"}
                 >
                   <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" />
@@ -222,7 +243,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
                 Add
               </button>
             </form>
-            <p class="text-token-xs text-tymeslot-400 mt-1">
+            <p :if={@pending_attendees == []} class="text-token-xs text-tymeslot-400 mt-1">
               Each person will receive an invitation from your calendar provider.
             </p>
           </div>
@@ -254,8 +275,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         </div>
       </div>
 
-      <%!-- Delete button --%>
-      <div :if={@editable} class="mt-4 pt-3 border-t border-tymeslot-100">
+      <%!-- Footer actions --%>
+      <div :if={@editable} class="mt-4 pt-3 border-t border-tymeslot-100 flex items-center justify-between">
         <button
           type="button"
           phx-click="request_delete_event"
@@ -263,6 +284,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           class="text-token-sm text-red-500 hover:text-red-700 transition-colors"
         >
           Delete event
+        </button>
+        <button
+          :if={@pending_attendees != []}
+          type="button"
+          phx-click="send_invitations"
+          phx-target={@myself}
+          class="px-3 py-1.5 rounded-md bg-turquoise-600 text-white text-token-xs font-medium hover:bg-turquoise-700 transition-colors"
+        >
+          Send invitations (<%= length(@pending_attendees) %>)
         </button>
       </div>
     </.modal>

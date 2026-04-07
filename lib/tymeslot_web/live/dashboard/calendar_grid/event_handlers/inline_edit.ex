@@ -3,6 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -14,7 +15,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     case Shared.parse_int(id_str) do
       {:ok, event_id} ->
         event = Enum.find(socket.assigns.events, &(&1.id == event_id))
-        {:noreply, assign(socket, :selected_event, event)}
+
+        {:noreply,
+         socket
+         |> assign(:selected_event, event)
+         |> assign(:pending_attendees, [])
+         |> assign(:attendee_input, "")}
 
       :error ->
         {:noreply, socket}
@@ -24,7 +30,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   @spec handle_close_event_detail(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_close_event_detail(_params, socket) do
-    {:noreply, assign(socket, :selected_event, nil)}
+    sub_modal_open =
+      socket.assigns.confirm_remove_attendee != nil or
+        socket.assigns.confirm_discard_attendees
+
+    cond do
+      sub_modal_open ->
+        {:noreply, socket}
+
+      socket.assigns.pending_attendees != [] ->
+        {:noreply, assign(socket, :confirm_discard_attendees, true)}
+
+      true ->
+        {:noreply,
+         socket
+         |> assign(:selected_event, nil)
+         |> assign(:attendee_input, "")}
+    end
   end
 
   @spec handle_update_event_title(map(), Phoenix.LiveView.Socket.t()) ::
@@ -131,37 +153,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
       event ->
         email = raw_email |> String.trim() |> String.downcase()
-        existing = event.attendees || []
-        already_present = Enum.any?(existing, &((&1["email"] || &1[:email]) == email))
+        existing_emails = Enum.map(event.attendees || [], &(&1["email"] || &1[:email]))
+        pending = socket.assigns.pending_attendees
+        already_present = email in existing_emails or email in pending
 
         with true <- Shared.valid_email?(email),
              false <- already_present,
-             :ok <- EditWorkflow.assert_owns_event(socket, event),
-             :ok <- Shared.check_edit_rate_limit(socket) do
-          new_attendees = existing ++ [%{"email" => email}]
-          updated_event = %{event | attendees: new_attendees}
-
-          updated_events =
-            Enum.map(socket.assigns.events, fn e ->
-              if e.id == event.id, do: updated_event, else: e
-            end)
-
-          socket =
-            socket
-            |> assign(:selected_event, updated_event)
-            |> assign(:events, updated_events)
-            |> assign(:attendee_input, "")
-            |> Helpers.precompute_derived()
-            |> EditWorkflow.update_attendees_async(event, new_attendees)
-
-          {:noreply, socket}
+             :ok <- EditWorkflow.assert_owns_event(socket, event) do
+          {:noreply,
+           socket
+           |> assign(:pending_attendees, pending ++ [email])
+           |> assign(:attendee_input, "")}
         else
           {:error, :unauthorized} ->
             send(self(), {:flash, {:error, "You don't have permission to modify this event"}})
-            {:noreply, socket}
-
-          {:error, :rate_limited, _message} ->
-            send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
             {:noreply, socket}
 
           _invalid ->
@@ -245,6 +250,94 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     {:noreply, assign(socket, :attendee_input, value)}
   end
 
+  @spec handle_send_invitations(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_send_invitations(_params, socket) do
+    event = socket.assigns.selected_event
+    pending = socket.assigns.pending_attendees
+
+    if is_nil(event) or pending == [] do
+      {:noreply, socket}
+    else
+      case Shared.check_edit_rate_limit(socket) do
+        :ok ->
+          new_attendee_maps = Enum.map(pending, &%{"email" => &1})
+          combined = (event.attendees || []) ++ new_attendee_maps
+          updated_event = %{event | attendees: combined}
+
+          updated_events =
+            Enum.map(socket.assigns.events, fn e ->
+              if e.id == event.id, do: updated_event, else: e
+            end)
+
+          user_id = socket.assigns.current_user.id
+
+          Orchestrator.schedule_calendar_invitations(
+            user_id,
+            pending,
+            %{
+              title: updated_event.title,
+              uid: updated_event.uid,
+              start_at: updated_event.start_at,
+              end_at: updated_event.end_at,
+              location: updated_event.location,
+              description: updated_event.description
+            }
+          )
+
+          socket =
+            socket
+            |> assign(:selected_event, updated_event)
+            |> assign(:events, updated_events)
+            |> assign(:pending_attendees, [])
+            |> Helpers.precompute_derived()
+            |> EditWorkflow.update_attendees_async(event, combined)
+
+          {:noreply, socket}
+
+        {:error, :rate_limited, _message} ->
+          send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+          {:noreply, socket}
+      end
+    end
+  end
+
+  @spec handle_remove_pending_attendee(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_remove_pending_attendee(%{"email" => email}, socket) do
+    updated = List.delete(socket.assigns.pending_attendees, email)
+    {:noreply, assign(socket, :pending_attendees, updated)}
+  end
+
+  @spec handle_discard_pending_attendees(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_discard_pending_attendees(_params, socket) do
+    cond do
+      socket.assigns.selected_event != nil ->
+        {:noreply,
+         socket
+         |> assign(:pending_attendees, [])
+         |> assign(:confirm_discard_attendees, false)
+         |> assign(:selected_event, nil)
+         |> assign(:attendee_input, "")}
+
+      socket.assigns.creating_event != nil ->
+        {:noreply,
+         socket
+         |> assign(:creating_event, nil)
+         |> assign(:confirm_discard_attendees, false)}
+
+      true ->
+        {:noreply, assign(socket, :confirm_discard_attendees, false)}
+    end
+  end
+
+  @spec handle_cancel_discard_attendees(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_cancel_discard_attendees(_params, socket) do
+    {:noreply, assign(socket, :confirm_discard_attendees, false)}
+  end
+
   defp handle_update_event_field(field, max_length, new_value, socket) do
     case socket.assigns.selected_event do
       nil ->
@@ -314,4 +407,5 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
        EditWorkflow.apply_event_change(socket, event, optimistic_event, new_start, new_end)}
     end
   end
+
 end

@@ -27,6 +27,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.Header
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDiscardAttendeesModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal
@@ -59,6 +60,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
       |> assign(:deleting_event, false)
       |> assign(:video_integrations, [])
       |> assign(:confirm_remove_attendee, nil)
+      |> assign(:pending_attendees, [])
+      |> assign(:confirm_discard_attendees, false)
       |> assign(:attendee_input, "")
       |> assign(:owned_integration_ids, MapSet.new())
       |> assign(:visible_events, [])
@@ -257,6 +260,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: InlineEdit.handle_cancel_remove_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
+  def handle_event("send_invitations", params, socket),
+    do: InlineEdit.handle_send_invitations(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_pending_attendee", params, socket),
+    do: InlineEdit.handle_remove_pending_attendee(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("discard_pending_attendees", params, socket),
+    do: InlineEdit.handle_discard_pending_attendees(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("cancel_discard_attendees", params, socket),
+    do: InlineEdit.handle_cancel_discard_attendees(params, socket)
+
+  @impl Phoenix.LiveComponent
   def handle_event("update_attendee_input", params, socket),
     do: InlineEdit.handle_update_attendee_input(params, socket)
 
@@ -403,6 +422,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           myself={@myself}
           editable={MapSet.member?(@owned_integration_ids, @selected_event.calendar_integration_id)}
           attendee_input={@attendee_input}
+          pending_attendees={@pending_attendees}
         />
         <ConfirmDeleteModal.confirm_delete_modal
           :if={@confirm_delete_event}
@@ -414,6 +434,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
         <ConfirmRemoveAttendeeModal.confirm_remove_attendee_modal
           :if={@confirm_remove_attendee}
           confirm_remove_attendee={@confirm_remove_attendee}
+          myself={@myself}
+        />
+        <ConfirmDiscardAttendeesModal.confirm_discard_attendees_modal
+          :if={@confirm_discard_attendees}
+          count={
+            if @selected_event,
+              do: length(@pending_attendees),
+              else: length((@creating_event || %{})[:attendees] || [])
+          }
           myself={@myself}
         />
       </div>

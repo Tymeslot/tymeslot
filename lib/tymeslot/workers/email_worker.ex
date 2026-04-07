@@ -361,6 +361,65 @@ defmodule Tymeslot.Workers.EmailWorker do
     end
   end
 
+  @doc """
+  Schedules a calendar invitation email with high priority.
+
+  Takes a map with atom keys containing event details and the organiser's user ID.
+  DateTimes are passed as ISO 8601 strings for JSON serialisation.
+  """
+  @spec schedule_calendar_invitation(map()) :: :ok | {:error, String.t()}
+  def schedule_calendar_invitation(params) do
+    result =
+      %{
+        "action" => "send_calendar_invitation",
+        "user_id" => params.user_id,
+        "attendee_email" => params.attendee_email,
+        "event_title" => params.event_title,
+        "event_uid" => params.event_uid,
+        "event_start_at" => params.event_start_at,
+        "event_end_at" => params.event_end_at,
+        "event_location" => params[:event_location],
+        "event_description" => params[:event_description]
+      }
+      |> new(
+        queue: :emails,
+        priority: 0,
+        unique: [
+          period: 300,
+          fields: [:args, :queue],
+          keys: [:action, :attendee_email, :event_uid]
+        ]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        Logger.info("Calendar invitation email job scheduled",
+          user_id: params.user_id,
+          attendee_email: params.attendee_email,
+          event_uid: params.event_uid
+        )
+
+        :ok
+
+      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
+        Logger.info("Calendar invitation email job already exists, skipping duplicate",
+          attendee_email: params.attendee_email,
+          event_uid: params.event_uid
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule calendar invitation email",
+          user_id: params.user_id,
+          error: format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
   # Private functions
 
   defp format_insert_error(%Changeset{} = changeset) do
@@ -545,6 +604,16 @@ defmodule Tymeslot.Workers.EmailWorker do
 
       "send_integration_unhealthy_notification" ->
         ["user_id", "integration_id", "integration_type"]
+
+      "send_calendar_invitation" ->
+        [
+          "user_id",
+          "attendee_email",
+          "event_title",
+          "event_uid",
+          "event_start_at",
+          "event_end_at"
+        ]
 
       nil ->
         ["action"]

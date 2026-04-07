@@ -175,6 +175,43 @@ defmodule Tymeslot.Notifications.Orchestrator do
     }
   end
 
+  @doc """
+  Schedules calendar invitation emails for a list of attendees.
+
+  Enqueues one Oban job per attendee via EmailWorker. Logs warnings for
+  individual scheduling failures but does not abort the remaining attendees.
+  """
+  @spec schedule_calendar_invitations(pos_integer(), [String.t()], map()) :: :ok
+  def schedule_calendar_invitations(_user_id, [], _event_details), do: :ok
+
+  def schedule_calendar_invitations(user_id, attendee_emails, event_details) do
+    worker_module = get_email_worker_module()
+
+    Enum.each(attendee_emails, fn email ->
+      params = %{
+        user_id: user_id,
+        attendee_email: email,
+        event_title: event_details.title,
+        event_uid: event_details.uid,
+        event_start_at: DateTime.to_iso8601(event_details.start_at),
+        event_end_at: DateTime.to_iso8601(event_details.end_at),
+        event_location: event_details[:location],
+        event_description: event_details[:description]
+      }
+
+      case worker_module.schedule_calendar_invitation(params) do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Failed to schedule invitation",
+            attendee_email: email,
+            reason: reason
+          )
+      end
+    end)
+  end
+
   # Private functions
 
   defp schedule_email_job(

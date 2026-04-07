@@ -375,6 +375,67 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
     end
   end
 
+  describe "schedule_calendar_invitation/1" do
+    test "creates high priority job with correct args" do
+      user = insert(:user)
+
+      params = %{
+        user_id: user.id,
+        attendee_email: "colleague@example.com",
+        event_title: "Team Standup",
+        event_uid: "uid-abc-123",
+        event_start_at: "2026-04-10T10:00:00Z",
+        event_end_at: "2026-04-10T10:30:00Z",
+        event_location: "Room 42",
+        event_description: "Daily sync"
+      }
+
+      assert :ok = EmailWorker.schedule_calendar_invitation(params)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "user_id" => user.id,
+          "attendee_email" => "colleague@example.com",
+          "event_title" => "Team Standup",
+          "event_uid" => "uid-abc-123",
+          "event_start_at" => "2026-04-10T10:00:00Z",
+          "event_end_at" => "2026-04-10T10:30:00Z",
+          "event_location" => "Room 42",
+          "event_description" => "Daily sync"
+        }
+      )
+
+      job = List.first(all_enqueued(worker: EmailWorker))
+      assert job.priority == 0
+    end
+
+    test "prevents duplicate jobs within 5 minute window" do
+      user = insert(:user)
+
+      params = %{
+        user_id: user.id,
+        attendee_email: "colleague@example.com",
+        event_title: "Team Standup",
+        event_uid: "uid-abc-123",
+        event_start_at: "2026-04-10T10:00:00Z",
+        event_end_at: "2026-04-10T10:30:00Z"
+      }
+
+      assert :ok = EmailWorker.schedule_calendar_invitation(params)
+      assert :ok = EmailWorker.schedule_calendar_invitation(params)
+
+      jobs =
+        all_enqueued(
+          worker: EmailWorker,
+          args: %{"action" => "send_calendar_invitation", "event_uid" => "uid-abc-123"}
+        )
+
+      assert length(jobs) == 1
+    end
+  end
+
   describe "backoff/1" do
     test "calculates exponential backoff: 1s, 2s, 4s, 8s, 16s" do
       assert EmailWorker.backoff(%Oban.Job{attempt: 1}) == 1

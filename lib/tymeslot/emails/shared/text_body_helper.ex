@@ -10,14 +10,13 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   @doc """
   Formats basic meeting details for text body.
   """
-  @spec format_meeting_details(Tymeslot.Emails.EmailService.appointment_details()) :: String.t()
+  @spec format_meeting_details(map()) :: String.t()
   def format_meeting_details(appointment_details) do
     locale = Map.get(appointment_details, :attendee_locale, "en")
     format_meeting_details(appointment_details, locale)
   end
 
-  @spec format_meeting_details(Tymeslot.Emails.EmailService.appointment_details(), String.t()) ::
-          String.t()
+  @spec format_meeting_details(map(), String.t()) :: String.t()
   def format_meeting_details(appointment_details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       details = [

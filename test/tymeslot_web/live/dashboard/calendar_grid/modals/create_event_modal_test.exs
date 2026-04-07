@@ -88,7 +88,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
     assigns =
       base_assigns(%{
         creating_event: Map.put(@creating_event, :attendees, ["alice@example.com"]),
-        video_integrations: [%{id: 10, name: "Zoom"}]
+        video_integrations: [%{id: 10, name: "Zoom", provider: "google_meet"}]
       })
 
     html = render_component(&CreateEventModal.create_event_modal/1, assigns)
@@ -100,7 +100,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModalTest do
   test "hides video picker when no attendees" do
     html = render_component(&CreateEventModal.create_event_modal/1, base_assigns())
 
-    refute html =~ ~r/select.*video_integration_id/s
+    refute html =~ "Video"
   end
 
   test "shows loading state when saving" do

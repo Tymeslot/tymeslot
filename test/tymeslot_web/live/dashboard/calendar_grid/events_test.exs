@@ -418,7 +418,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
       # Change only the end-date
       html =
         lv
-        |> element("#create-event-modal form")
+        |> element(~s(#create-event-modal form[phx-change="update_create_time"]))
         |> render_change(%{
           "start-date" => today_iso,
           "end-date" => tomorrow_iso,
@@ -568,6 +568,106 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
       # Open the event detail modal — empty attendees list must not crash
       html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
       assert html =~ "Solo Meeting"
+    end
+  end
+
+  describe "pending attendee management" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          title: "Attendee Test Event",
+          start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
+          all_day: false,
+          attendees: [%{"email" => "existing@example.com", "name" => "Existing", "status" => "accepted"}]
+        })
+
+      {:ok, integration: integration, event: event}
+    end
+
+    test "adding a pending attendee shows it in the detail modal", %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("add_event_attendee", %{"email" => "new@example.com"})
+
+      assert html =~ "new@example.com"
+    end
+
+    test "removing a pending attendee removes it from the list", %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("add_event_attendee", %{"email" => "removeme@example.com"})
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("remove_pending_attendee", %{"email" => "removeme@example.com"})
+
+      refute html =~ "removeme@example.com"
+    end
+
+    test "closing detail modal with pending attendees shows discard confirmation", %{
+      conn: conn,
+      event: event
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("add_event_attendee", %{"email" => "pending@example.com"})
+
+      html = lv |> element("#calendar-grid") |> render_hook("close_event_detail", %{})
+
+      assert html =~ "Unsent invitations"
+    end
+
+    test "cancelling discard returns to event detail with pending attendees intact", %{
+      conn: conn,
+      event: event
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("add_event_attendee", %{"email" => "keep@example.com"})
+
+      lv |> element("#calendar-grid") |> render_hook("close_event_detail", %{})
+
+      html =
+        lv |> element("#calendar-grid") |> render_hook("cancel_discard_attendees", %{})
+
+      assert html =~ "keep@example.com"
+    end
+
+    test "confirming discard clears pending attendees and closes modal", %{
+      conn: conn,
+      event: event
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("add_event_attendee", %{"email" => "discard@example.com"})
+
+      lv |> element("#calendar-grid") |> render_hook("close_event_detail", %{})
+
+      html =
+        lv |> element("#calendar-grid") |> render_hook("discard_pending_attendees", %{})
+
+      refute html =~ "discard@example.com"
+      refute html =~ "Unsent invitations"
     end
   end
 
