@@ -458,6 +458,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
         {:calendar_events_updated, user.id, []}
       )
 
+      # First render flushes the handle_info, which calls send_update on the component.
+      # Second render processes the send_update, triggering the event reload.
+      render(lv)
       assert render(lv) =~ "New Live Event"
     end
   end
