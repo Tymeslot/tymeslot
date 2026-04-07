@@ -1,7 +1,6 @@
 # Tymeslot Docker Compose Configuration
 #
 # IMPORTANT: Create a .env file before starting:
-#   cd apps/tymeslot  # Go to tymeslot core directory
 #   cp .env.example .env
 #
 # Then generate required secrets:
@@ -26,8 +25,8 @@ services:
       DEPLOYMENT_TYPE: docker
       PHX_HOST: ${PHX_HOST}
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB:-tymeslot}
+      POSTGRES_USER: ${POSTGRES_USER:-tymeslot}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       
       # Optional configurations

@@ -61,7 +61,7 @@ cd tymeslot
 
 ```bash
 # Copy environment template
-cp apps/tymeslot/.env.example .env
+cp .env.example .env
 
 # Generate required secrets
 openssl rand -base64 64 | tr -d '\n'  # For SECRET_KEY_BASE
@@ -95,7 +95,7 @@ PORT=4000
 
 ```bash
 # Run from project root
-./apps/tymeslot/build-docker.sh
+./build-docker.sh
 ```
 
 The script will:
@@ -106,17 +106,15 @@ The script will:
 #### Option B: Using Docker Compose
 
 ```bash
-# From apps/tymeslot directory
-cd apps/tymeslot
 docker compose up -d --build
 ```
 
 #### Option C: Manual Docker Commands
 
 ```bash
-# Build image (from project root)
+# Build image
 source .env
-docker build -f apps/tymeslot/Dockerfile.docker -t tymeslot .
+docker build -f Dockerfile.docker -t tymeslot .
 
 # Run container
 docker run -d \
@@ -155,7 +153,7 @@ Runs on your host machine to prepare and build the Docker image.
 
 **Usage**:
 ```bash
-./apps/tymeslot/build-docker.sh
+./build-docker.sh
 ```
 
 ### start-docker.sh (Container Entrypoint)
@@ -380,14 +378,13 @@ docker exec -it tymeslot bin/tymeslot remote
 git pull origin main
 
 # Rebuild and restart
-./apps/tymeslot/build-docker.sh
+./build-docker.sh
 ```
 
 Or with Docker Compose:
 
 ```bash
 git pull origin main
-cd apps/tymeslot
 docker compose down
 docker compose up -d --build
 ```
