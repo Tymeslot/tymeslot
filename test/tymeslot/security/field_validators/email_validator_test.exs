@@ -72,4 +72,42 @@ defmodule Tymeslot.Security.FieldValidators.EmailValidatorTest do
       assert {:error, "Email must be a text value"} = EmailValidator.validate(123)
     end
   end
+
+  describe "validate/2 TLD validation" do
+    test "accepts emails with valid TLDs" do
+      assert :ok = EmailValidator.validate("user@example.com")
+      assert :ok = EmailValidator.validate("user@example.org")
+      assert :ok = EmailValidator.validate("user@example.co.uk")
+      assert :ok = EmailValidator.validate("user@example.de")
+      assert :ok = EmailValidator.validate("user@example.io")
+    end
+
+    test "rejects emails with invalid TLDs and shows the ending" do
+      {:error, msg} = EmailValidator.validate("user@example.or")
+      assert msg =~ "unrecognised domain ending"
+      assert msg =~ ".or"
+    end
+
+    test "includes suggestion when confident" do
+      {:error, msg} = EmailValidator.validate("user@example.ocm")
+      assert msg =~ "unrecognised domain ending"
+      assert msg =~ ".ocm"
+      assert msg =~ "did you mean .com?"
+    end
+
+    test "omits suggestion when ambiguous" do
+      {:error, msg} = EmailValidator.validate("user@example.or")
+      refute msg =~ "did you mean"
+    end
+
+    test "handles case-insensitive TLDs" do
+      assert :ok = EmailValidator.validate("user@example.COM")
+      assert :ok = EmailValidator.validate("user@example.Co.Uk")
+    end
+
+    test "extracts multi-part TLD correctly" do
+      assert :ok = EmailValidator.validate("user@company.co.uk")
+      assert :ok = EmailValidator.validate("user@uni.ac.jp")
+    end
+  end
 end

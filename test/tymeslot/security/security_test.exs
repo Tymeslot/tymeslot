@@ -139,4 +139,38 @@ defmodule Tymeslot.Security.SecurityTest do
                Security.validate_domain(long_domain)
     end
   end
+
+  describe "validate_domain/1 TLD validation" do
+    test "accepts domains with valid TLDs" do
+      assert {:ok, "example.com"} = Security.validate_domain("example.com")
+      assert {:ok, "example.co.uk"} = Security.validate_domain("example.co.uk")
+      assert {:ok, "example.de"} = Security.validate_domain("example.de")
+    end
+
+    test "still accepts localhost and special development domains" do
+      assert {:ok, "localhost"} = Security.validate_domain("localhost")
+      assert {:ok, "127.0.0.1"} = Security.validate_domain("127.0.0.1")
+      assert {:ok, "none"} = Security.validate_domain("none")
+    end
+
+    test "rejects domains with invalid TLDs" do
+      {:error, msg} = Security.validate_domain("example.or")
+      assert msg =~ "unrecognised"
+      assert msg =~ ".or"
+    end
+
+    test "includes suggestion when confident" do
+      {:error, msg} = Security.validate_domain("example.ocm")
+      assert msg =~ "did you mean .com?"
+    end
+
+    test "accepts wildcard domains with valid TLDs" do
+      assert {:ok, "*.example.com"} = Security.validate_domain("*.example.com")
+    end
+
+    test "rejects wildcard domains with invalid TLDs" do
+      {:error, msg} = Security.validate_domain("*.example.or")
+      assert msg =~ "unrecognised"
+    end
+  end
 end

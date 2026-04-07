@@ -8,6 +8,7 @@ defmodule Tymeslot.Security.Security do
 
   alias Phoenix.LiveView
   alias Tymeslot.Profiles
+  alias Tymeslot.Security.FieldValidators.TLDList
   alias Tymeslot.Security.RateLimiter
 
   @doc """
@@ -310,7 +311,10 @@ defmodule Tymeslot.Security.Security do
              ~r/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i,
              bare
            ) do
-          {:ok, "*." <> String.downcase(bare)}
+          case validate_domain_tld(String.downcase(bare)) do
+            {:ok, validated} -> {:ok, "*." <> validated}
+            error -> error
+          end
         else
           {:error, "Invalid domain format (e.g. *.example.com)"}
         end
@@ -321,7 +325,7 @@ defmodule Tymeslot.Security.Security do
         ~r/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i,
         domain
       ) ->
-        {:ok, String.downcase(domain)}
+        validate_domain_tld(String.downcase(domain))
 
       true ->
         {:error, "Invalid domain format (e.g. example.com)"}
@@ -329,6 +333,15 @@ defmodule Tymeslot.Security.Security do
   end
 
   def validate_domain(_invalid_value), do: {:error, "Invalid domain"}
+
+  defp validate_domain_tld(domain) do
+    tld = TLDList.extract_tld(domain)
+
+    case TLDList.validate_tld(tld, "Domain") do
+      :ok -> {:ok, domain}
+      {:error, _reason} = error -> error
+    end
+  end
 
   defp maybe_extract_host(domain) do
     if String.contains?(domain, "://") do
