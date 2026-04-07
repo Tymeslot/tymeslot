@@ -4,7 +4,7 @@ defmodule Tymeslot.Auth.SessionTest do
   @moduletag :auth
 
   alias Tymeslot.Auth.Session
-  alias Tymeslot.DatabaseQueries.UserSessionQueries
+  alias Tymeslot.Auth.UserSessionQueries
 
   import Plug.Conn, only: [get_session: 2, put_session: 3]
   import Tymeslot.Factory

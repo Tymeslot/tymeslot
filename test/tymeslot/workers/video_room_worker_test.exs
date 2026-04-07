@@ -306,7 +306,7 @@ defmodule Tymeslot.Workers.VideoRoomWorkerTest do
     %{meeting: meeting} = setup_video_scenario()
 
     # Create a meeting type with a 24-hour reminder
-    user = Repo.get!(Tymeslot.DatabaseSchemas.UserSchema, meeting.organizer_user_id)
+    user = Repo.get!(Tymeslot.Auth.UserSchema, meeting.organizer_user_id)
 
     meeting_type =
       insert(:meeting_type, user: user, reminder_config: [%{value: 24, unit: "hours"}])

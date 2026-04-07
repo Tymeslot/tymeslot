@@ -6,7 +6,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
   use ExUnitProperties
 
   alias Tymeslot.Auth.OAuth.TransactionalUserCreation
-  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   import Tymeslot.Factory
 

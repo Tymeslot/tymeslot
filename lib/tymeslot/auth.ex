@@ -16,10 +16,11 @@ defmodule Tymeslot.Auth do
     Registration,
     Session,
     SocialAuthentication,
+    UserQueries,
+    UserSessionQueries,
     Verification
   }
 
-  alias Tymeslot.DatabaseQueries.{UserQueries, UserSessionQueries}
   alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Security.{Password, Token}

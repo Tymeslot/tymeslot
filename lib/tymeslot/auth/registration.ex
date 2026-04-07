@@ -4,14 +4,11 @@ defmodule Tymeslot.Auth.Registration do
   """
 
   require Logger
-  alias Tymeslot.Auth.{ErrorFormatter, Helpers.AccountLogging}
+  alias Tymeslot.Auth.{ErrorFormatter, Helpers.AccountLogging, UserQueries}
   alias Tymeslot.DatabaseQueries.ProfileQueries
-  alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.Infrastructure.{Config, PubSub}
-  alias Tymeslot.Repo
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.Helpers.ClientIP
-  import Ecto.Query
 
   @type signup_params :: Tymeslot.Auth.Validation.signup_params()
 
@@ -117,15 +114,10 @@ defmodule Tymeslot.Auth.Registration do
   end
 
   defp check_email_uniqueness(email) do
-    # Case-insensitive email check
-    case UserSchema
-         |> where([u], fragment("LOWER(?) = LOWER(?)", u.email, ^email))
-         |> Repo.one() do
-      nil ->
-        :ok
-
-      _user ->
-        {:error, :duplicate}
+    if UserQueries.email_exists_case_insensitive?(email) do
+      {:error, :duplicate}
+    else
+      :ok
     end
   end
 

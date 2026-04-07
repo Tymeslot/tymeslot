@@ -1,9 +1,9 @@
-defmodule Tymeslot.DatabaseQueries.UserSessionQueries do
+defmodule Tymeslot.Auth.UserSessionQueries do
   @moduledoc """
   Query interface for user session operations.
   """
   import Ecto.Query, warn: false
-  alias Tymeslot.DatabaseSchemas.{UserSchema, UserSessionSchema}
+  alias Tymeslot.Auth.{UserSchema, UserSessionSchema}
   alias Tymeslot.Repo
 
   @doc """

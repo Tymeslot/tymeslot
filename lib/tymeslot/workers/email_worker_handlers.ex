@@ -5,11 +5,12 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
 
   require Logger
 
+  alias Tymeslot.Auth.UserQueries
+
   alias Tymeslot.DatabaseQueries.{
     CalendarIntegrationQueries,
     IntegrationHealthStateQueries,
     MeetingQueries,
-    UserQueries,
     VideoIntegrationQueries
   }
 

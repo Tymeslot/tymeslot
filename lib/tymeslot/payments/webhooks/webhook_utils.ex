@@ -4,7 +4,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookUtils do
   """
 
   require Logger
-  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Mailer
 
   @doc """

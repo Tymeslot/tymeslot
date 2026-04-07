@@ -7,8 +7,8 @@ defmodule TymeslotWeb.Dashboard.Automation.AutomationIntegrationTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.TestFixtures
   import Tymeslot.Factory
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
-  alias Tymeslot.DatabaseQueries.UserQueries
   alias Tymeslot.Webhooks
 
   setup %{conn: conn} do

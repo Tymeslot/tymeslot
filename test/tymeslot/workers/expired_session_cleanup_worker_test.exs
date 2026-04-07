@@ -7,7 +7,7 @@ defmodule Tymeslot.Workers.ExpiredSessionCleanupWorkerTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.UserSessionSchema
+  alias Tymeslot.Auth.UserSessionSchema
   alias Tymeslot.Workers.ExpiredSessionCleanupWorker
 
   describe "perform/1" do

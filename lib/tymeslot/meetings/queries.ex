@@ -15,8 +15,8 @@ defmodule Tymeslot.Meetings.Queries do
 
   require Logger
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.DatabaseQueries.MeetingQueries
-  alias Tymeslot.DatabaseQueries.UserQueries
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Pagination.CursorPage
 

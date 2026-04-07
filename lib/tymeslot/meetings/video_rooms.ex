@@ -13,8 +13,8 @@ defmodule Tymeslot.Meetings.VideoRooms do
 
   require Logger
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.DatabaseQueries.MeetingQueries
-  alias Tymeslot.DatabaseQueries.UserQueries
   alias Tymeslot.DatabaseQueries.VideoIntegrationQueries
   alias Tymeslot.DatabaseSchemas.MeetingSchema
   alias Tymeslot.Integrations.Video

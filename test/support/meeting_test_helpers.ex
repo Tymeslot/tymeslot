@@ -4,7 +4,8 @@ defmodule Tymeslot.MeetingTestHelpers do
   """
 
   import Tymeslot.Factory
-  alias Tymeslot.DatabaseSchemas.{MeetingSchema, ProfileSchema, UserSchema}
+  alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.DatabaseSchemas.{MeetingSchema, ProfileSchema}
 
   @doc """
   Creates a user with a related profile and returns both.

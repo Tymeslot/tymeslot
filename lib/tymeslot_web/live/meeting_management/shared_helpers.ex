@@ -6,8 +6,9 @@ defmodule TymeslotWeb.MeetingManagement.SharedHelpers do
   import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView, only: [put_flash: 3, push_navigate: 2]
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.DatabaseQueries.{MeetingQueries, ProfileQueries, UserQueries}
+  alias Tymeslot.DatabaseQueries.{MeetingQueries, ProfileQueries}
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
 

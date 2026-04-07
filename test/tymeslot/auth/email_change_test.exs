@@ -6,8 +6,8 @@ defmodule Tymeslot.Auth.EmailChangeTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth
-  alias Tymeslot.DatabaseQueries.UserQueries
-  alias Tymeslot.DatabaseSchemas.UserSessionSchema
+  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.UserSessionSchema
   alias Tymeslot.Security.Token
   alias Tymeslot.Workers.EmailWorker
 

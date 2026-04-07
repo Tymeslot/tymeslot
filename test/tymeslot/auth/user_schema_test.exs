@@ -1,10 +1,10 @@
-defmodule Tymeslot.DatabaseSchemas.UserSchemaTest do
+defmodule Tymeslot.Auth.UserSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :database
   @moduletag :schema
 
-  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Auth.UserSchema
 
   describe "security validations" do
     test "enforces strong password requirements" do

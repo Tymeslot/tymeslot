@@ -59,7 +59,7 @@ defmodule Tymeslot.DatabaseSchemas.TelegramIntegrationSchema do
       virtual: true
     )
 
-    belongs_to(:user, Tymeslot.DatabaseSchemas.UserSchema)
+    belongs_to(:user, Tymeslot.Auth.UserSchema)
 
     timestamps(type: :utc_datetime)
   end

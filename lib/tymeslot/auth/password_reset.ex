@@ -5,9 +5,14 @@ defmodule Tymeslot.Auth.PasswordReset do
 
   require Logger
 
-  alias Tymeslot.Auth.{ErrorFormatter, Helpers.AccountLogging, Validation}
-  alias Tymeslot.DatabaseQueries.UserSessionQueries
-  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Auth.{
+    ErrorFormatter,
+    Helpers.AccountLogging,
+    UserSchema,
+    UserSessionQueries,
+    Validation
+  }
+
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.{InputProcessor, RateLimiter, Token}
   alias Tymeslot.Utils.UrlBuilder

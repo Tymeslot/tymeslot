@@ -26,7 +26,7 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
           failure_count: integer(),
           disabled_at: DateTime.t() | nil,
           disabled_reason: String.t() | nil,
-          user: Tymeslot.DatabaseSchemas.UserSchema.t() | Ecto.Association.NotLoaded.t(),
+          user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           webhook_token: String.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -47,7 +47,7 @@ defmodule Tymeslot.Webhooks.WebhookSchema do
     # Virtual field for decrypted token
     field(:webhook_token, :string, virtual: true)
 
-    belongs_to(:user, Tymeslot.DatabaseSchemas.UserSchema)
+    belongs_to(:user, Tymeslot.Auth.UserSchema)
 
     timestamps(type: :utc_datetime)
   end

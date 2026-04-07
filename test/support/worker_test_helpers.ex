@@ -7,9 +7,9 @@ defmodule Tymeslot.WorkerTestHelpers do
   import Tymeslot.Factory
 
   alias Ecto.UUID
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.DatabaseSchemas.MeetingSchema
-  alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
 
   @doc """

@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseQueries.UserQueriesTest do
+defmodule Tymeslot.Auth.UserQueriesTest do
   @moduledoc false
 
   use Tymeslot.DataCase, async: true
@@ -6,7 +6,7 @@ defmodule Tymeslot.DatabaseQueries.UserQueriesTest do
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.UserQueries
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Security.Password
 
   describe "authentication security (protects user accounts)" do

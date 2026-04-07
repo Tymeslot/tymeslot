@@ -7,7 +7,7 @@ defmodule Tymeslot.DatabaseSchemas.PaymentTransactionSchema do
 
   import Ecto.Changeset
 
-  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Auth.UserSchema
 
   @type t :: %__MODULE__{
           id: integer() | nil,

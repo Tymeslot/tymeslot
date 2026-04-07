@@ -27,7 +27,8 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
   require Logger
 
-  alias Tymeslot.DatabaseQueries.{IntegrationHealthStateQueries, UserQueries}
+  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.DatabaseQueries.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Workers.EmailWorker
 

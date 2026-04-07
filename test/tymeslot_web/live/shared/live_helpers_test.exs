@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Live.Shared.LiveHelpersTest do
 
   @moduletag :utils
 
-  alias Tymeslot.DatabaseQueries.UserSessionQueries
+  alias Tymeslot.Auth.UserSessionQueries
   alias Tymeslot.Security.Token
   alias Tymeslot.TestFixtures
   alias TymeslotWeb.Live.Shared.LiveHelpers

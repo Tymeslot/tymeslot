@@ -3,7 +3,7 @@ defmodule Tymeslot.Auth.OAuth.UserRegistrationTest do
   @moduletag :auth
 
   alias Tymeslot.Auth.OAuth.UserRegistration
-  alias Tymeslot.DatabaseQueries.UserQueries
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Factory
 
   describe "find_existing_user/2" do

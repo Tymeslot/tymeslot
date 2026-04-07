@@ -6,6 +6,7 @@ defmodule Tymeslot.Factory do
   use ExMachina.Ecto, repo: Tymeslot.Repo
 
   alias Ecto.UUID
+  alias Tymeslot.Auth.{UserSchema, UserSessionSchema}
   alias Tymeslot.DatabaseSchemas.AvailabilityBreakSchema
   alias Tymeslot.DatabaseSchemas.AvailabilityOverrideSchema
   alias Tymeslot.DatabaseSchemas.CalendarEventCacheSchema
@@ -16,8 +17,6 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.DatabaseSchemas.ProfileSchema
   alias Tymeslot.DatabaseSchemas.TelegramDeliverySchema
   alias Tymeslot.DatabaseSchemas.TelegramIntegrationSchema
-  alias Tymeslot.DatabaseSchemas.UserSchema
-  alias Tymeslot.DatabaseSchemas.UserSessionSchema
   alias Tymeslot.DatabaseSchemas.VideoIntegrationSchema
   alias Tymeslot.DatabaseSchemas.WeeklyAvailabilitySchema
   alias Tymeslot.Profiles
@@ -95,7 +94,7 @@ defmodule Tymeslot.Factory do
     build(:meeting, status: "pending")
   end
 
-  @spec user_factory() :: Tymeslot.DatabaseSchemas.UserSchema.t()
+  @spec user_factory() :: Tymeslot.Auth.UserSchema.t()
   def user_factory do
     %UserSchema{
       email: sequence(:email, &"user#{&1}@example.com"),
@@ -106,12 +105,12 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec unverified_user_factory() :: Tymeslot.DatabaseSchemas.UserSchema.t()
+  @spec unverified_user_factory() :: Tymeslot.Auth.UserSchema.t()
   def unverified_user_factory do
     build(:user, verified_at: nil)
   end
 
-  @spec user_session_factory() :: Tymeslot.DatabaseSchemas.UserSessionSchema.t()
+  @spec user_session_factory() :: Tymeslot.Auth.UserSessionSchema.t()
   def user_session_factory do
     %UserSessionSchema{
       token: Token.generate_session_token(),

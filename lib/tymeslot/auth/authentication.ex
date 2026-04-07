@@ -5,7 +5,7 @@ defmodule Tymeslot.Auth.Authentication do
 
   alias Tymeslot.Auth.ErrorFormatter
   alias Tymeslot.Auth.Helpers.AccountLogging
-  alias Tymeslot.DatabaseQueries.{UserQueries, UserSessionQueries}
+  alias Tymeslot.Auth.{UserQueries, UserSessionQueries}
   alias Tymeslot.Infrastructure.StructuredLogger
   alias Tymeslot.Security.{InputProcessor, Password, RateLimiter, SecurityLogger}
 

@@ -5,9 +5,9 @@ defmodule Tymeslot.Auth.VerificationTest do
 
   @moduletag :auth
 
+  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Auth.Verification
-  alias Tymeslot.DatabaseQueries.UserQueries
-  alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
 

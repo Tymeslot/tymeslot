@@ -10,8 +10,8 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   require Logger
 
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseQueries.{ProfileQueries, UserQueries}
-  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Auth.{UserQueries, UserSchema}
+  alias Tymeslot.DatabaseQueries.ProfileQueries
   alias Tymeslot.Repo
 
   @type oauth_auth_params :: %{String.t() => term()}

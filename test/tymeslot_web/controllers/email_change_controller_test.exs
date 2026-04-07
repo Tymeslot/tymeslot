@@ -5,7 +5,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
 
   alias Ecto.Changeset
   alias Phoenix.Flash
-  alias Tymeslot.DatabaseQueries.UserQueries
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Factory
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter

@@ -4,7 +4,7 @@
 
 alias Tymeslot.Repo
 alias Tymeslot.DatabaseSchemas.MeetingSchema
-alias Tymeslot.DatabaseSchemas.UserSchema
+alias Tymeslot.Auth.UserSchema
 alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
 
 IO.puts("Checking existing meetings for calendar tracking data...")

@@ -9,7 +9,7 @@ defmodule Tymeslot.Workers.ExpiredSessionCleanupWorker do
   use Oban.Worker, queue: :default, max_attempts: 1, unique: [period: 60]
   require Logger
 
-  alias Tymeslot.DatabaseQueries.UserSessionQueries
+  alias Tymeslot.Auth.UserSessionQueries
 
   @impl Oban.Worker
   def perform(_job) do

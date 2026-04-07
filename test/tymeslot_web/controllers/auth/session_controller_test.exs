@@ -5,10 +5,10 @@ defmodule TymeslotWeb.SessionControllerTest do
   import Mox
 
   alias Phoenix.Flash
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Auth.Verification
   alias Tymeslot.Auth.VerificationMock
   alias Tymeslot.AuthTestHelpers
-  alias Tymeslot.DatabaseQueries.UserQueries
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Repo

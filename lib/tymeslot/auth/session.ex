@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.Session do
   require Logger
   alias Phoenix.Component
   alias Plug.Conn
-  alias Tymeslot.DatabaseQueries.UserSessionQueries
+  alias Tymeslot.Auth.UserSessionQueries
   alias Tymeslot.Security.{SecurityLogger, Token}
 
   @user_token_key :user_token

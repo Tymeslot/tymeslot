@@ -36,7 +36,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingTypeSchema do
     field(:target_calendar_id, :string)
     field(:reminder_config, {:array, :map}, default: nil)
 
-    belongs_to(:user, Tymeslot.DatabaseSchemas.UserSchema)
+    belongs_to(:user, Tymeslot.Auth.UserSchema)
     belongs_to(:video_integration, Tymeslot.DatabaseSchemas.VideoIntegrationSchema)
     belongs_to(:calendar_integration, Tymeslot.DatabaseSchemas.CalendarIntegrationSchema)
 

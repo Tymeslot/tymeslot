@@ -18,7 +18,7 @@ defmodule Tymeslot.DatabaseSchemas.CalendarPreferencesSchema do
         }
 
   schema "calendar_preferences" do
-    belongs_to :user, Tymeslot.DatabaseSchemas.UserSchema
+    belongs_to :user, Tymeslot.Auth.UserSchema
     field :default_view, :string, default: "week"
     field :hidden_integration_ids, {:array, :integer}, default: []
     field :week_start_day, :string, default: "monday"

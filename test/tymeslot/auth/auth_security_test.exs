@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.SecurityTest do
 
   alias Tymeslot.Auth
   alias Tymeslot.Auth.{Authentication, Session}
-  alias Tymeslot.DatabaseQueries.UserQueries
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Security.{Password, Token}
 
   import Tymeslot.Factory

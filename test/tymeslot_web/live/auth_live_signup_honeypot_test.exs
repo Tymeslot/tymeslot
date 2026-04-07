@@ -2,7 +2,7 @@ defmodule TymeslotWeb.AuthLiveSignupHoneypotTest do
   use TymeslotWeb.LiveCase, async: false
   @moduletag :utils
 
-  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
 

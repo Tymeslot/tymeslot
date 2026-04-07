@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.UserSchema do
+defmodule Tymeslot.Auth.UserSchema do
   @moduledoc """
   Schema for user accounts in the Tymeslot system.
   """

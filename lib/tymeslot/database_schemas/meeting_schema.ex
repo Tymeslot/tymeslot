@@ -85,7 +85,7 @@ defmodule Tymeslot.DatabaseSchemas.MeetingSchema do
     field(:organizer_email, :string)
     field(:organizer_title, :string)
 
-    belongs_to(:organizer_user, Tymeslot.DatabaseSchemas.UserSchema,
+    belongs_to(:organizer_user, Tymeslot.Auth.UserSchema,
       foreign_key: :organizer_user_id,
       type: :id
     )

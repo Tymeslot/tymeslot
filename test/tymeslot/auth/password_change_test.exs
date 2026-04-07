@@ -4,7 +4,7 @@ defmodule Tymeslot.Auth.PasswordChangeTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
-  alias Tymeslot.DatabaseSchemas.UserSessionSchema
+  alias Tymeslot.Auth.UserSessionSchema
   alias Tymeslot.Security.Password
 
   import Tymeslot.Factory

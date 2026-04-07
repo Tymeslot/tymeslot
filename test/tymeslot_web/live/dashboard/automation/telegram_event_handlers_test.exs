@@ -11,8 +11,8 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramEventHandlersTest do
   import Tymeslot.Factory
   import Tymeslot.TestHelpers.Eventually
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
-  alias Tymeslot.DatabaseQueries.UserQueries
   alias Tymeslot.Telegram
 
   setup %{conn: conn} do

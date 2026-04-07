@@ -7,8 +7,8 @@ defmodule Tymeslot.Demo.NoOp do
   """
   @behaviour Tymeslot.Demo.Behaviour
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Availability.WeeklySchedule
-  alias Tymeslot.DatabaseQueries.UserQueries
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles

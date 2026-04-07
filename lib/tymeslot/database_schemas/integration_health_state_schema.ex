@@ -15,7 +15,7 @@ defmodule Tymeslot.DatabaseSchemas.IntegrationHealthStateSchema do
           id: integer() | nil,
           integration_type: String.t() | nil,
           integration_id: integer() | nil,
-          user: Tymeslot.DatabaseSchemas.UserSchema.t() | Ecto.Association.NotLoaded.t(),
+          user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           user_id: integer() | nil,
           status: String.t(),
           failures: non_neg_integer(),
@@ -32,7 +32,7 @@ defmodule Tymeslot.DatabaseSchemas.IntegrationHealthStateSchema do
   schema "integration_health_states" do
     field(:integration_type, :string)
     field(:integration_id, :integer)
-    belongs_to(:user, Tymeslot.DatabaseSchemas.UserSchema)
+    belongs_to(:user, Tymeslot.Auth.UserSchema)
     field(:status, :string, default: "healthy")
     field(:failures, :integer, default: 0)
     field(:successes, :integer, default: 0)

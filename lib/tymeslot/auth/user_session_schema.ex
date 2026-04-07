@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.UserSessionSchema do
+defmodule Tymeslot.Auth.UserSessionSchema do
   @moduledoc """
   Schema for user session tokens.
   """
@@ -15,7 +15,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSessionSchema do
         }
 
   schema "user_sessions" do
-    belongs_to(:user, Tymeslot.DatabaseSchemas.UserSchema)
+    belongs_to(:user, Tymeslot.Auth.UserSchema)
     field(:token, :string)
     field(:expires_at, :utc_datetime)
 

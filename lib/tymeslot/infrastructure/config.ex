@@ -12,7 +12,7 @@ defmodule Tymeslot.Infrastructure.Config do
   """
   @spec user_queries_module() :: module()
   def user_queries_module do
-    get_module(:user_queries_module, Tymeslot.DatabaseQueries.UserQueries)
+    get_module(:user_queries_module, Tymeslot.Auth.UserQueries)
   end
 
   @doc """
@@ -20,7 +20,7 @@ defmodule Tymeslot.Infrastructure.Config do
   """
   @spec user_schema_module() :: module()
   def user_schema_module do
-    get_module(:user_schema_module, Tymeslot.DatabaseSchemas.UserSchema)
+    get_module(:user_schema_module, Tymeslot.Auth.UserSchema)
   end
 
   @doc """
@@ -28,7 +28,7 @@ defmodule Tymeslot.Infrastructure.Config do
   """
   @spec user_session_queries_module() :: module()
   def user_session_queries_module do
-    get_module(:user_session_queries_module, Tymeslot.DatabaseQueries.UserSessionQueries)
+    get_module(:user_session_queries_module, Tymeslot.Auth.UserSessionQueries)
   end
 
   # Authentication Modules

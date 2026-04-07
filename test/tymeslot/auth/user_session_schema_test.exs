@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseSchemas.UserSessionSchemaTest do
+defmodule Tymeslot.Auth.UserSessionSchemaTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :schema
@@ -6,7 +6,7 @@ defmodule Tymeslot.DatabaseSchemas.UserSessionSchemaTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.DatabaseSchemas.UserSessionSchema
+  alias Tymeslot.Auth.UserSessionSchema
 
   describe "changeset/2" do
     test "valid with required fields" do

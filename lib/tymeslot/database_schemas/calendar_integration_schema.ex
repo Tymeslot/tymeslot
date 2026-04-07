@@ -51,7 +51,7 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
           caldav_sync_tier: integer() | nil,
           caldav_sync_token: String.t() | nil,
           last_external_sync_at: DateTime.t() | nil,
-          user: Tymeslot.DatabaseSchemas.UserSchema.t() | Ecto.Association.NotLoaded.t(),
+          user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           calendar_events:
             [Tymeslot.DatabaseSchemas.CalendarEventCacheSchema.t()]
             | Ecto.Association.NotLoaded.t(),
@@ -111,7 +111,7 @@ defmodule Tymeslot.DatabaseSchemas.CalendarIntegrationSchema do
     field(:access_token, :string, virtual: true)
     field(:refresh_token, :string, virtual: true)
 
-    belongs_to(:user, Tymeslot.DatabaseSchemas.UserSchema)
+    belongs_to(:user, Tymeslot.Auth.UserSchema)
 
     has_many(:calendar_events, Tymeslot.DatabaseSchemas.CalendarEventCacheSchema,
       foreign_key: :calendar_integration_id

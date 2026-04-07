@@ -5,8 +5,8 @@ defmodule TymeslotWeb.AuthLiveTest do
   alias Phoenix.Flash
   alias Tymeslot.Auth
   alias Tymeslot.Auth.AuthActions
-  alias Tymeslot.DatabaseQueries.UserQueries
-  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter, Token}
   import Ecto.Query, only: [from: 2]

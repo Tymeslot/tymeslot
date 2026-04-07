@@ -4,8 +4,8 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   Pure functions for converting meeting data into notification-ready formats.
   """
 
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.DatabaseQueries.ProfileQueries
-  alias Tymeslot.DatabaseQueries.UserQueries
   alias Tymeslot.Notifications.Recipients
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils

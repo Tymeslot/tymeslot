@@ -1,4 +1,4 @@
-defmodule Tymeslot.DatabaseQueries.UserSessionQueriesTest do
+defmodule Tymeslot.Auth.UserSessionQueriesTest do
   @moduledoc false
 
   use Tymeslot.DataCase, async: true
@@ -6,7 +6,7 @@ defmodule Tymeslot.DatabaseQueries.UserSessionQueriesTest do
   @moduletag :database
   @moduletag :queries
 
-  alias Tymeslot.DatabaseQueries.UserSessionQueries
+  alias Tymeslot.Auth.UserSessionQueries
 
   describe "create_session/3" do
     test "creates session with valid attributes" do

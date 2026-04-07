@@ -4,8 +4,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   @moduletag :auth
 
   alias Tymeslot.Auth.PasswordReset
-  alias Tymeslot.DatabaseQueries.{UserQueries, UserSessionQueries}
-  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Auth.{UserQueries, UserSchema, UserSessionQueries}
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, Token}
 

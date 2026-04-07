@@ -3,8 +3,9 @@ defmodule Tymeslot.AvailabilityTestHelpers do
   Helpers for availability-related tests to avoid repeated setup.
   """
 
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Availability.WeeklySchedule
-  alias Tymeslot.DatabaseSchemas.{ProfileSchema, UserSchema, WeeklyAvailabilitySchema}
+  alias Tymeslot.DatabaseSchemas.{ProfileSchema, WeeklyAvailabilitySchema}
   alias Tymeslot.MeetingTestHelpers
 
   @default_day_attrs %{

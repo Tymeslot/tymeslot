@@ -6,8 +6,8 @@ defmodule TymeslotWeb.E2EHelpers do
   import Wallaby.Browser
   import Wallaby.Query
 
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.DatabaseQueries.ProfileQueries
-  alias Tymeslot.DatabaseSchemas.UserSchema
   alias Tymeslot.Factory
   alias Tymeslot.Profiles
 

@@ -29,7 +29,7 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
           provider_account_email: String.t() | nil,
           is_active: boolean(),
           settings: map(),
-          user: Tymeslot.DatabaseSchemas.UserSchema.t() | Ecto.Association.NotLoaded.t(),
+          user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -64,7 +64,7 @@ defmodule Tymeslot.DatabaseSchemas.VideoIntegrationSchema do
     field(:tenant_id, :string, virtual: true)
     field(:teams_user_id, :string, virtual: true)
 
-    belongs_to(:user, Tymeslot.DatabaseSchemas.UserSchema)
+    belongs_to(:user, Tymeslot.Auth.UserSchema)
 
     timestamps()
   end

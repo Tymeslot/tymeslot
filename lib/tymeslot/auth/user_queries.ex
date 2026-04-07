@@ -1,11 +1,11 @@
-defmodule Tymeslot.DatabaseQueries.UserQueries do
+defmodule Tymeslot.Auth.UserQueries do
   @moduledoc """
   Query interface for user-related database operations.
   """
   import Ecto.Query, warn: false
   require Logger
   alias Ecto.Changeset
-  alias Tymeslot.DatabaseSchemas.UserSchema
+  alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Password
 
@@ -549,6 +549,17 @@ defmodule Tymeslot.DatabaseQueries.UserQueries do
       email_change_sent_at: nil
     })
     |> Repo.update()
+  end
+
+  @doc """
+  Checks whether an email is already registered (case-insensitive).
+  Returns `true` if a user with a matching email exists, `false` otherwise.
+  """
+  @spec email_exists_case_insensitive?(String.t()) :: boolean()
+  def email_exists_case_insensitive?(email) when is_binary(email) do
+    UserSchema
+    |> where([u], fragment("LOWER(?) = LOWER(?)", u.email, ^email))
+    |> Repo.exists?()
   end
 
   @doc """
