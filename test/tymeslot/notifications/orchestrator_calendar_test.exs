@@ -1,5 +1,5 @@
 defmodule Tymeslot.Notifications.OrchestratorCalendarTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
 
   @moduletag :notifications
 
@@ -27,7 +27,15 @@ defmodule Tymeslot.Notifications.OrchestratorCalendarTest do
 
   setup do
     original = Application.get_env(:tymeslot, :email_worker_module)
-    on_exit(fn -> Application.put_env(:tymeslot, :email_worker_module, original) end)
+
+    on_exit(fn ->
+      if is_nil(original) do
+        Application.delete_env(:tymeslot, :email_worker_module)
+      else
+        Application.put_env(:tymeslot, :email_worker_module, original)
+      end
+    end)
+
     :ok
   end
 
