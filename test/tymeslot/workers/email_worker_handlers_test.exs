@@ -195,6 +195,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
       assert %{"value" => 30, "unit" => "minutes"} in updated.reminders_sent
+      assert updated.reminder_email_sent == true
     end
 
     test "marks reminder sent and succeeds when attendee sent but organizer fails" do
@@ -213,6 +214,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
 
       {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
       assert %{"value" => 30, "unit" => "minutes"} in updated.reminders_sent
+      assert updated.reminder_email_sent == true
     end
 
     test "returns error when both organizer and attendee emails fail" do

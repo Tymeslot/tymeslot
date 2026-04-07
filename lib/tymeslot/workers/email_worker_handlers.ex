@@ -392,13 +392,23 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   end
 
   defp log_email_results(meeting, {:reminder, val, unit}, organizer_success, attendee_success) do
-    Logger.info("Reminder emails sent",
-      reminder_value: val,
-      reminder_unit: unit,
-      meeting_id: meeting.id,
-      organizer_sent: organizer_success,
-      attendee_sent: attendee_success
-    )
+    if organizer_success != attendee_success do
+      Logger.warning("Partial reminder delivery — one recipient did not receive the email",
+        reminder_value: val,
+        reminder_unit: unit,
+        meeting_id: meeting.id,
+        organizer_sent: organizer_success,
+        attendee_sent: attendee_success
+      )
+    else
+      Logger.info("Reminder emails sent",
+        reminder_value: val,
+        reminder_unit: unit,
+        meeting_id: meeting.id,
+        organizer_sent: organizer_success,
+        attendee_sent: attendee_success
+      )
+    end
   end
 
   defp log_email_results(meeting, email_type, organizer_success, attendee_success) do
