@@ -17,6 +17,12 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
   setup :verify_on_exit!
 
   setup do
+    # This test exercises the real HealthCheck implementation end-to-end.
+    # The global test.exs config points health_check_module at HealthCheckMock
+    # (for IntegrationHealthWorkerTest), so we restore the real module here and
+    # undo it on exit so other tests are unaffected.
+    Application.put_env(:tymeslot, :health_check_module, HealthCheck)
+
     # Start the GenServer with initial_delay: 0 to disable automatic checks
     {:ok, pid} = HealthCheck.start_link(check_interval: 1_000_000, initial_delay: 0)
 
@@ -25,6 +31,12 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
     Mox.set_mox_global()
 
     on_exit(fn ->
+      Application.put_env(
+        :tymeslot,
+        :health_check_module,
+        Tymeslot.Integrations.HealthCheckMock
+      )
+
       Mox.set_mox_private()
 
       if Process.alive?(pid) do
