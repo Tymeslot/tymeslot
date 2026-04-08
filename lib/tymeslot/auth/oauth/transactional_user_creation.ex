@@ -39,14 +39,14 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     provider_uid = auth_params[provider_field]
 
     result =
-      UserQueries.transaction(fn ->
+      Repo.transaction(fn ->
         with {:ok, {user, created}} <-
                find_or_create_by_provider(Repo, provider, provider_uid, auth_params),
              {:ok, _result} <- ensure_profile(Repo, user, created, profile_params) do
           {user, created}
         else
           {:error, {operation, reason}} ->
-            UserQueries.rollback({operation, reason})
+            Repo.rollback({operation, reason})
         end
       end)
 

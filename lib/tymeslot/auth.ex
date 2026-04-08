@@ -22,6 +22,7 @@ defmodule Tymeslot.Auth do
   }
 
   alias Tymeslot.Infrastructure.{Config, PubSub}
+  alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Security.{Password, Token}
   alias Tymeslot.Utils.{ChangesetUtils, UrlBuilder}
@@ -288,7 +289,7 @@ defmodule Tymeslot.Auth do
   end
 
   defp verify_email_change_in_transaction(user, old_email, new_email) do
-    UserQueries.transaction(fn ->
+    Repo.transaction(fn ->
       # Confirm the email change
       case UserQueries.confirm_email_change(user) do
         {:ok, updated_user} ->
@@ -304,7 +305,7 @@ defmodule Tymeslot.Auth do
           %{user: updated_user}
 
         {:error, changeset} ->
-          UserQueries.rollback({:changeset_error, format_changeset_error(changeset)})
+          Repo.rollback({:changeset_error, format_changeset_error(changeset)})
       end
     end)
   end

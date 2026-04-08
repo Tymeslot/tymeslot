@@ -423,23 +423,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
-  Executes a function or Ecto.Multi within a database transaction.
-  """
-  @spec transaction((-> any()) | Ecto.Multi.t()) ::
-          {:ok, any()} | {:error, any()} | {:ok, map()} | {:error, any(), any(), map()}
-  def transaction(fun_or_multi) do
-    Repo.transaction(fun_or_multi)
-  end
-
-  @doc """
-  Rolls back the current transaction with the given reason.
-  """
-  @spec rollback(any()) :: no_return()
-  def rollback(reason) do
-    Repo.rollback(reason)
-  end
-
-  @doc """
   Returns active Google integrations where the channel has not sent a notification
   since `cutoff_dt` (or never) AND the channel is not expired AND there is at least
   one confirmed meeting linked to the integration since `meeting_since_dt`.

@@ -591,41 +591,4 @@ defmodule Tymeslot.Auth.UserQueries do
     end
   end
 
-  @doc """
-  Executes a function within a database transaction.
-
-  This function is used to ensure all database operations in auth workflows
-  are properly wrapped in transactions.
-
-  ## Parameters
-  - fun: A function that will be executed within the transaction
-
-  ## Returns
-  - The result of the transaction
-  """
-  @spec transaction((... -> any())) :: {:ok, any()} | {:error, any()}
-  def transaction(fun) when is_function(fun) do
-    Repo.transaction(fun)
-  end
-
-  # Overload for Ecto.Multi
-  @spec transaction(Ecto.Multi.t()) ::
-          {:ok, map()} | {:error, any(), any(), map()}
-  def transaction(multi) do
-    Repo.transaction(multi)
-  end
-
-  @doc """
-  Rolls back a transaction with the given reason.
-
-  ## Parameters
-  - reason: The reason for rolling back
-
-  ## Returns
-  - no_return (raises Ecto.Rollback)
-  """
-  @spec rollback(any()) :: no_return()
-  def rollback(reason) do
-    Repo.rollback(reason)
-  end
 end

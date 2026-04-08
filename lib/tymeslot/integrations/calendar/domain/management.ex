@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Repo
   require Logger
 
   @type user_id :: integer()
@@ -69,7 +70,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @spec toggle_with_primary_rebalance(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, any()}
   def toggle_with_primary_rebalance(%CalendarIntegrationSchema{} = integration) do
-    CalendarIntegrationQueries.transaction(fn ->
+    Repo.transaction(fn ->
       CalendarIntegrationQueries.lock_user_profile_and_integrations(integration.user_id)
 
       current_primary_id = get_current_primary_id(integration.user_id)
@@ -80,7 +81,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
           updated
 
         error ->
-          CalendarIntegrationQueries.rollback(error)
+          Repo.rollback(error)
       end
     end)
   end

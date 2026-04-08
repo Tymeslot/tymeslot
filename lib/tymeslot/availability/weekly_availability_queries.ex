@@ -231,13 +231,6 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
     end
   end
 
-  @doc """
-  Performs a database transaction.
-  """
-  @spec transaction((-> any())) :: {:ok, any()} | {:error, any()}
-  def transaction(fun) do
-    Repo.transaction(fun)
-  end
 
   @doc """
   Deletes all breaks for a weekly availability and creates new ones.
@@ -292,11 +285,4 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
     )
   end
 
-  @doc """
-  Rolls back a transaction.
-  """
-  @spec rollback(term()) :: no_return()
-  def rollback(reason) do
-    Repo.rollback(reason)
-  end
 end

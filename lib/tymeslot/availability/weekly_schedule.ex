@@ -5,6 +5,7 @@ defmodule Tymeslot.Availability.WeeklySchedule do
 
   alias Tymeslot.Availability.WeeklyAvailabilityQueries
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
+  alias Tymeslot.Repo
 
   @doc """
   Gets the complete weekly schedule for a profile including breaks.
@@ -67,7 +68,7 @@ defmodule Tymeslot.Availability.WeeklySchedule do
         {:error, "Source day not found"}
 
       source ->
-        WeeklyAvailabilityQueries.transaction(fn ->
+        Repo.transaction(fn ->
           to_days
           |> Enum.reject(&(&1 == from_day))
           |> Enum.each(&copy_single_day_settings(source, profile_id, &1))
@@ -88,7 +89,7 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   end
 
   defp apply_preset_in_tx(profile_id, days, config) do
-    WeeklyAvailabilityQueries.transaction(fn ->
+    Repo.transaction(fn ->
       Enum.each(days, &upsert_day_availability(profile_id, &1, config))
     end)
   end
@@ -119,7 +120,7 @@ defmodule Tymeslot.Availability.WeeklySchedule do
         copy_breaks(source.breaks, target_availability.id)
 
       {:error, _changeset} = error ->
-        WeeklyAvailabilityQueries.rollback(error)
+        Repo.rollback(error)
     end
   end
 
