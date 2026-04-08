@@ -194,6 +194,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   end
 
   defp handle_save_event_with(creating, socket) do
+    case Shared.check_edit_rate_limit(socket) do
+      {:error, :rate_limited, _message} ->
+        send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
+        {:noreply, socket}
+
+      :ok ->
+        do_save_event(creating, socket)
+    end
+  end
+
+  defp do_save_event(creating, socket) do
     integration = Enum.find(socket.assigns.integrations, &(&1.id == creating.integration_id))
 
     if is_nil(integration) do

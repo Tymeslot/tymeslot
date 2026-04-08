@@ -109,42 +109,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("discover_calendars", %{"integration" => params}, socket) do
-    provider = normalize_provider(params["provider"] || socket.assigns.selected_provider)
+    ip = socket.assigns.security_metadata.ip
 
-    socket =
-      socket
-      |> assign(:is_saving, true)
-      |> assign(:form_values, params)
-      |> assign(:form_errors, %{})
+    case RateLimiter.check_calendar_discovery_rate_limit(ip) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
+        {:noreply, socket}
 
-    case CalendarInputValidation.validate_calendar_discovery(params,
-           metadata: socket.assigns.security_metadata,
-           provider: provider
-         ) do
-      {:ok, sanitized_params} ->
-        case Calendar.discover_and_filter_calendars(
-               provider,
-               sanitized_params["url"],
-               sanitized_params["username"],
-               sanitized_params["password"]
-             ) do
-          {:ok, %{calendars: calendars, discovery_credentials: credentials}} ->
-            {:noreply,
-             socket
-             |> assign(:discovered_calendars, calendars)
-             |> assign(:discovery_credentials, credentials)
-             |> assign(:show_calendar_selection, true)
-             |> assign(:is_saving, false)}
-
-          {:error, reason} ->
-            {:noreply,
-             socket
-             |> assign(:form_errors, %{discovery: Calendar.normalize_discovery_error(reason)})
-             |> assign(:is_saving, false)}
-        end
-
-      {:error, validation_errors} ->
-        {:noreply, assign(socket, form_errors: validation_errors, is_saving: false)}
+      :ok ->
+        do_discover_calendars(params, socket)
     end
   end
 
@@ -322,24 +295,34 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("test_connection", %{"id" => id}, socket) do
-    with {:ok, int_id} <- parse_int(id),
-         socket = assign(socket, :testing_integration_id, int_id),
-         {:ok, integration} <- Calendar.get_integration(int_id, socket.assigns.current_user.id),
-         {:ok, message} <- Calendar.test_connection(integration) do
-      Flash.info(message)
-      {:noreply, assign(socket, :testing_integration_id, nil)}
-    else
-      {:error, :not_found} ->
-        Flash.error("Integration not found")
-        {:noreply, assign(socket, :testing_integration_id, nil)}
+    ip = socket.assigns.security_metadata.ip
 
-      {:error, reason} ->
-        Flash.error("Connection test failed: #{inspect(reason)}")
-        {:noreply, assign(socket, :testing_integration_id, nil)}
-
-      :error ->
-        Flash.error("Invalid calendar ID")
+    case RateLimiter.check_caldav_connection_rate_limit(ip) do
+      {:error, :rate_limited, message} ->
+        Flash.error(message)
         {:noreply, socket}
+
+      :ok ->
+        with {:ok, int_id} <- parse_int(id),
+             socket = assign(socket, :testing_integration_id, int_id),
+             {:ok, integration} <-
+               Calendar.get_integration(int_id, socket.assigns.current_user.id),
+             {:ok, message} <- Calendar.test_connection(integration) do
+          Flash.info(message)
+          {:noreply, assign(socket, :testing_integration_id, nil)}
+        else
+          {:error, :not_found} ->
+            Flash.error("Integration not found")
+            {:noreply, assign(socket, :testing_integration_id, nil)}
+
+          {:error, reason} ->
+            Flash.error("Connection test failed: #{inspect(reason)}")
+            {:noreply, assign(socket, :testing_integration_id, nil)}
+
+          :error ->
+            Flash.error("Invalid calendar ID")
+            {:noreply, socket}
+        end
     end
   end
 
@@ -402,6 +385,46 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   # --- Private Helpers ---
+
+  defp do_discover_calendars(params, socket) do
+    provider = normalize_provider(params["provider"] || socket.assigns.selected_provider)
+
+    socket =
+      socket
+      |> assign(:is_saving, true)
+      |> assign(:form_values, params)
+      |> assign(:form_errors, %{})
+
+    case CalendarInputValidation.validate_calendar_discovery(params,
+           metadata: socket.assigns.security_metadata,
+           provider: provider
+         ) do
+      {:ok, sanitized_params} ->
+        case Calendar.discover_and_filter_calendars(
+               provider,
+               sanitized_params["url"],
+               sanitized_params["username"],
+               sanitized_params["password"]
+             ) do
+          {:ok, %{calendars: calendars, discovery_credentials: credentials}} ->
+            {:noreply,
+             socket
+             |> assign(:discovered_calendars, calendars)
+             |> assign(:discovery_credentials, credentials)
+             |> assign(:show_calendar_selection, true)
+             |> assign(:is_saving, false)}
+
+          {:error, reason} ->
+            {:noreply,
+             socket
+             |> assign(:form_errors, %{discovery: Calendar.normalize_discovery_error(reason)})
+             |> assign(:is_saving, false)}
+        end
+
+      {:error, validation_errors} ->
+        {:noreply, assign(socket, form_errors: validation_errors, is_saving: false)}
+    end
+  end
 
   defp load_integrations(socket) do
     user_id = socket.assigns.current_user.id
