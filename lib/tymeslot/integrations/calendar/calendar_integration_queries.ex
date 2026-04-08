@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   import Ecto.Query
   alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
 
@@ -568,7 +569,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     now = DateTime.utc_now()
 
     meeting_integration_ids =
-      from(m in Tymeslot.Meetings.MeetingSchema,
+      from(m in MeetingSchema,
         where: m.status == "confirmed" and m.start_time >= ^meeting_since_dt,
         where: not is_nil(m.calendar_integration_id),
         select: m.calendar_integration_id,
