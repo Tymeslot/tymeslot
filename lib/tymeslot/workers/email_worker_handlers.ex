@@ -6,6 +6,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   require Logger
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.CalendarGrid
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
@@ -710,7 +711,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
        ) do
     with {:ok, user} <- UserQueries.get_user(args["user_id"]),
          {:ok, current_event} <-
-           Tymeslot.CalendarGrid.get_cached_event(integration_id, event_uid),
+           CalendarGrid.get_cached_event(integration_id, event_uid),
          {:ok, changes} <- compute_changes(current_event, args),
          false <- changes == [] do
       details = build_update_details(user, current_event, changes)
