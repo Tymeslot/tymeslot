@@ -54,11 +54,21 @@ defmodule Tymeslot.Workers.IntegrationHealthWorkerTest do
                  "integration_id" => 7
                })
     end
-  end
 
-  describe "worker configuration" do
-    test "has a 120-second job timeout" do
-      assert IntegrationHealthWorker.job_timeout_ms() == 120_000
+    test "returns :ok when perform_single_check exceeds timeout (task is killed)" do
+      Application.put_env(:tymeslot, :health_check_timeout_ms, 100)
+
+      on_exit(fn -> Application.delete_env(:tymeslot, :health_check_timeout_ms) end)
+
+      expect(HealthCheckMock, :perform_single_check, fn :calendar, 99 ->
+        Process.sleep(:infinity)
+      end)
+
+      assert :ok =
+               perform_job(IntegrationHealthWorker, %{
+                 "type" => "calendar",
+                 "integration_id" => 99
+               })
     end
   end
 end

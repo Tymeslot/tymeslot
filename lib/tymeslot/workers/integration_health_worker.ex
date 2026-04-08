@@ -19,10 +19,6 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
   require Logger
   alias Tymeslot.Integrations.HealthCheck
 
-  @doc false
-  @spec job_timeout_ms() :: pos_integer()
-  def job_timeout_ms, do: @job_timeout_ms
-
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => type_str, "integration_id" => integration_id}} = job)
       when is_binary(type_str) and is_integer(integration_id) do
@@ -50,7 +46,9 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
         health_check_module().perform_single_check(type, integration_id)
       end)
 
-    case Task.yield(task, @job_timeout_ms) || Task.shutdown(task, :brutal_kill) do
+    timeout_ms = Application.get_env(:tymeslot, :health_check_timeout_ms, @job_timeout_ms)
+
+    case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
       {:ok, :ok} ->
         :ok
 
@@ -68,7 +66,7 @@ defmodule Tymeslot.Workers.IntegrationHealthWorker do
         Logger.warning("Integration health check timed out",
           type: type,
           integration_id: integration_id,
-          timeout_ms: @job_timeout_ms,
+          timeout_ms: timeout_ms,
           job_id: job_id
         )
 

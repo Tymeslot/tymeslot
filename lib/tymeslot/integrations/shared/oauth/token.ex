@@ -125,6 +125,9 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
 
         {:ok, access_token}
 
+      {:ok, _non_binary_token} ->
+        {:error, :token_not_available}
+
       {:error, type, reason} ->
         {:error, type, reason}
 
@@ -138,14 +141,6 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
   defp maybe_refetch_valid_token(integration_id, refetch_fun, decrypt_fun, buffer_seconds) do
     case refetch_fun.(integration_id) do
       %{} = fresh ->
-        if valid?(fresh, buffer_seconds) do
-          decrypted = decrypt_fun.(fresh)
-          {:ok, Map.get(decrypted, :access_token) || Map.get(decrypted, "access_token")}
-        else
-          :stale
-        end
-
-      {:ok, %{} = fresh} ->
         if valid?(fresh, buffer_seconds) do
           decrypted = decrypt_fun.(fresh)
           {:ok, Map.get(decrypted, :access_token) || Map.get(decrypted, "access_token")}

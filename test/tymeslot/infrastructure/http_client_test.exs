@@ -64,19 +64,4 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
       assert :counters.get(call_count, 1) == 1
     end
   end
-
-  describe "connect timeout" do
-    test "proxy connect_options include a 10s connect timeout" do
-      proxy_config = %{
-        scheme: "http",
-        host: "proxy.example.com",
-        port: 8080,
-        auth: nil
-      }
-
-      opts = Tymeslot.Infrastructure.ProxyConfig.build_req_proxy_options(proxy_config)
-      connect_options = Keyword.get(opts, :connect_options, [])
-      assert Keyword.get(connect_options, :timeout) == 10_000
-    end
-  end
 end

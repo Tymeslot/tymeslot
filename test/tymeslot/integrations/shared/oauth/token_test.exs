@@ -4,7 +4,9 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
   @moduletag :integrations
 
   alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
+  alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Common.OAuth.Token
+  alias Tymeslot.Integrations.Shared.Lock
 
   describe "valid?/2" do
     test "returns false if expires_at is nil" do
@@ -78,7 +80,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
 
       holder =
         spawn(fn ->
-          Tymeslot.Integrations.Shared.Lock.with_lock(
+          Lock.with_lock(
             lock_key,
             fn ->
               send(test_pid, :lock_held)
@@ -102,6 +104,29 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
       Process.exit(holder, :kill)
     end
 
+    test "refreshes without lock when Lock GenServer is not running" do
+      integration = %{
+        token_expires_at: DateTime.add(DateTime.utc_now(), -100, :second),
+        access_token: "old",
+        id: :no_id
+      }
+
+      new_expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+      refresh_fun = fn _client -> {:ok, {"new_token", "new_refresh", new_expires_at}} end
+
+      # Stop the Lock GenServer; the supervisor will restart it automatically
+      GenServer.stop(Lock)
+
+      assert {:ok, "new_token"} =
+               Token.ensure_valid_access_token(integration,
+                 refresh_fun: refresh_fun,
+                 persist: false
+               )
+
+      # Wait for the supervisor to have restarted Lock before any other test runs
+      :ok = wait_for_lock_restart()
+    end
+
     test "skips refresh when refetch_fun returns a valid token" do
       user = insert(:user)
       valid_expires = DateTime.add(DateTime.utc_now(), 3600, :second)
@@ -114,7 +139,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
         )
 
       # Simulate another process having already refreshed the token in the DB
-      {:ok, _} =
+      {:ok, _updated} =
         CalendarIntegrationQueries.update_integration(integration, %{
           access_token: "already-refreshed",
           token_expires_at: valid_expires
@@ -127,7 +152,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
 
       refetch_fun = fn id ->
         {:ok, fresh} = CalendarIntegrationQueries.get(id)
-        Tymeslot.DatabaseSchemas.CalendarIntegrationSchema.decrypt_oauth_tokens(fresh)
+        CalendarIntegrationSchema.decrypt_oauth_tokens(fresh)
       end
 
       assert {:ok, _token} =
@@ -135,6 +160,22 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
                  refresh_fun: refresh_fun,
                  refetch_fun: refetch_fun
                )
+    end
+  end
+
+  # Polls until the Lock GenServer has been restarted by its supervisor, with a
+  # short backoff so we don't busy-wait. Used after deliberately stopping Lock.
+  defp wait_for_lock_restart(retries \\ 50) do
+    case GenServer.whereis(Tymeslot.Integrations.Shared.Lock) do
+      nil when retries > 0 ->
+        Process.sleep(10)
+        wait_for_lock_restart(retries - 1)
+
+      nil ->
+        raise "Lock GenServer did not restart within the expected time"
+
+      _pid ->
+        :ok
     end
   end
 end
