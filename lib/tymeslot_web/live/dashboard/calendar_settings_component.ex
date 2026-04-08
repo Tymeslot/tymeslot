@@ -109,12 +109,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("discover_calendars", %{"integration" => params}, socket) do
-    ip = socket.assigns.security_metadata.ip
+    user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check_calendar_discovery_rate_limit(ip) do
+    case RateLimiter.check_calendar_discovery_rate_limit(user_id) do
       {:error, :rate_limited, message} ->
         Flash.error(message)
-        {:noreply, socket}
+        {:noreply, assign(socket, :is_saving, false)}
 
       :ok ->
         do_discover_calendars(params, socket)
@@ -295,9 +295,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("test_connection", %{"id" => id}, socket) do
-    ip = socket.assigns.security_metadata.ip
+    user_id = socket.assigns.current_user.id
 
-    case RateLimiter.check_caldav_connection_rate_limit(ip) do
+    case RateLimiter.check_caldav_connection_rate_limit(user_id) do
       {:error, :rate_limited, message} ->
         Flash.error(message)
         {:noreply, socket}
