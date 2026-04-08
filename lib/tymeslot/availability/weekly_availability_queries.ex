@@ -231,7 +231,6 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
     end
   end
 
-
   @doc """
   Deletes all breaks for a weekly availability and creates new ones.
   """

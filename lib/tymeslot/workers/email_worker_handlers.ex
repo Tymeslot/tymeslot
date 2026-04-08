@@ -720,7 +720,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
           email_service_module().send_event_update_notification(email, details)
         end)
 
-      errors = Enum.filter(results, &match?({:error, _}, &1))
+      errors = Enum.filter(results, &match?({:error, _reason}, &1))
 
       if errors == [] do
         Logger.info("Event update notifications sent",
@@ -780,8 +780,8 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   defp maybe_add_time_change(changes, args, current_event) do
     with before_start when is_binary(before_start) <- args["before_start_at"],
          before_end when is_binary(before_end) <- args["before_end_at"],
-         {:ok, before_start_dt, _} <- DateTime.from_iso8601(before_start),
-         {:ok, before_end_dt, _} <- DateTime.from_iso8601(before_end) do
+         {:ok, before_start_dt, _offset} <- DateTime.from_iso8601(before_start),
+         {:ok, before_end_dt, _offset} <- DateTime.from_iso8601(before_end) do
       start_changed = DateTime.compare(before_start_dt, current_event.start_at) != :eq
       end_changed = DateTime.compare(before_end_dt, current_event.end_at) != :eq
 

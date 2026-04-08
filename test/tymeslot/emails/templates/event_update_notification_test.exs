@@ -13,7 +13,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       email = EventUpdateNotification.update_notification_email("attendee@example.com", details)
 
       assert %Swoosh.Email{} = email
-      assert [{_, "attendee@example.com"}] = email.to
+      assert [{_name, "attendee@example.com"}] = email.to
       assert email.subject =~ "Updated:"
       assert email.subject =~ details.event_title
     end
