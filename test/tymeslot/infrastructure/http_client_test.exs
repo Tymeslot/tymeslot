@@ -48,4 +48,20 @@ defmodule Tymeslot.Infrastructure.HTTPClientTest do
       assert_raise ArgumentError, fn -> String.to_existing_atom(unknown_method) end
     end
   end
+
+  describe "retry behaviour" do
+    test "does not retry failed GET requests" do
+      call_count = :counters.new(1, [:atomics])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        :counters.add(call_count, 1, 1)
+        Conn.send_resp(conn, 503, "unavailable")
+      end)
+
+      assert {:ok, %Req.Response{status: 503}} =
+               HTTPClient.get("http://localhost/test")
+
+      assert :counters.get(call_count, 1) == 1
+    end
+  end
 end

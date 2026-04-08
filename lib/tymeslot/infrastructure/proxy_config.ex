@@ -221,17 +221,19 @@ defmodule Tymeslot.Infrastructure.ProxyConfig do
     # Build proxy tuple WITHOUT headers (they go at connect_options level)
     proxy_tuple = {scheme, proxy_config.host, proxy_config.port, []}
 
-    # Build connect_options with proxy_headers at the correct level
+    # Build connect_options with proxy_headers at the correct level.
+    # Explicit 10s connect timeout since proxy paths bypass the Finch pool-level
+    # conn_opts and create dynamic connections via Req.
     connect_opts =
       case proxy_config.auth do
         {user, password} when is_binary(user) and user != "" ->
           # Proxy-Authorization header must be at connect_options level, not in proxy tuple
           # This is required for Mint.TunnelProxy to properly send auth during CONNECT handshake
           auth_header = {"Proxy-Authorization", "Basic " <> Base.encode64("#{user}:#{password}")}
-          [proxy: proxy_tuple, proxy_headers: [auth_header]]
+          [proxy: proxy_tuple, proxy_headers: [auth_header], timeout: 10_000]
 
         _other ->
-          [proxy: proxy_tuple]
+          [proxy: proxy_tuple, timeout: 10_000]
       end
 
     [connect_options: connect_opts]

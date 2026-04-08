@@ -98,6 +98,7 @@ config :tymeslot, :http_client_module, Tymeslot.HTTPClientMock
 config :tymeslot, :req_test_plug, {Req.Test, :tymeslot_http}
 config :tymeslot, :email_service, Tymeslot.EmailServiceMock
 config :tymeslot, :transcoder, Tymeslot.Media.TranscoderMock
+config :tymeslot, :health_check_module, Tymeslot.Integrations.HealthCheckMock
 
 # MiroTalk test configuration
 config :tymeslot, :mirotalk_api,

@@ -4,6 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.AccessToken do
   before executing API calls.
   """
 
+  alias Tymeslot.DatabaseQueries.CalendarIntegrationQueries
   alias Tymeslot.DatabaseSchemas.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
 
@@ -19,11 +20,19 @@ defmodule Tymeslot.Integrations.Calendar.Shared.AccessToken do
   def with_access_token(integration, refresh_fun, callback, opts \\ []) do
     buffer_seconds = Keyword.get(opts, :buffer_seconds, @default_buffer)
 
+    refetch_fun = fn id ->
+      case CalendarIntegrationQueries.get(id) do
+        {:ok, fresh} -> fresh
+        _error -> nil
+      end
+    end
+
     with {:ok, token} <-
            OAuthToken.ensure_valid_access_token(integration,
              decrypt_fun: &CalendarIntegrationSchema.decrypt_oauth_tokens/1,
              refresh_fun: refresh_fun,
-             buffer_seconds: buffer_seconds
+             buffer_seconds: buffer_seconds,
+             refetch_fun: refetch_fun
            ) do
       callback.(token)
     end

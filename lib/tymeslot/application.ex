@@ -49,7 +49,11 @@ defmodule Tymeslot.Application do
       # Start the Finch HTTP client (used by Req for all HTTP requests).
       # pool_max_idle_time evicts connections that remote servers silently
       # close after their keep-alive timeout, preventing "socket closed" errors.
-      {Finch, name: Tymeslot.Finch, pools: %{default: [pool_max_idle_time: 30_000]}},
+      # conn_opts timeout caps the TCP connect handshake at 10s, preventing
+      # OS-level TCP timeout (75-120s) from dominating when endpoints are unreachable.
+      {Finch,
+       name: Tymeslot.Finch,
+       pools: %{default: [pool_max_idle_time: 30_000, conn_opts: [timeout: 10_000]]}},
       # Start token refresh lock manager
       {Lock, []},
       # Task Supervisor for async operations

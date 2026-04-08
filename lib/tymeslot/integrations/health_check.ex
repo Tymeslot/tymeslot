@@ -37,6 +37,8 @@ defmodule Tymeslot.Integrations.HealthCheck do
   """
 
   use GenServer
+  @behaviour Tymeslot.Integrations.HealthCheck.HealthCheckBehaviour
+
   require Logger
 
   alias Tymeslot.DatabaseQueries.{
@@ -86,6 +88,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
   7. Persist new state to DB via Monitor
   8. Handle transitions via ResponseHandler
   """
+  @impl Tymeslot.Integrations.HealthCheck.HealthCheckBehaviour
   @spec perform_single_check(integration_type(), integer()) :: :ok | {:error, any()}
   def perform_single_check(type, integration_id) do
     Logger.debug("Performing single health check", type: type, id: integration_id)

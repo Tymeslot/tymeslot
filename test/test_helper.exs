@@ -87,6 +87,10 @@ Mox.defmock(Tymeslot.Auth.SessionMock,
 
 Mox.defmock(Tymeslot.Media.TranscoderMock, for: Tymeslot.Media.TranscoderBehaviour)
 
+Mox.defmock(Tymeslot.Integrations.HealthCheckMock,
+  for: Tymeslot.Integrations.HealthCheck.HealthCheckBehaviour
+)
+
 Mox.defmock(Tymeslot.Auth.VerificationMock,
   for: Tymeslot.Infrastructure.VerificationBehaviour
 )
