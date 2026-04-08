@@ -378,7 +378,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
          attendee_success
        ) do
     if organizer_success || attendee_success do
-      case MeetingQueries.append_reminder_sent(meeting, reminder_value, reminder_unit) do
+      case MeetingQueries.append_reminder_sent(meeting, %{value: reminder_value, unit: reminder_unit}) do
         {:ok, _updated_meeting} ->
           :ok
 
