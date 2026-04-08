@@ -29,13 +29,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
 
   alias Phoenix.Component
   alias Tymeslot.Security.InputProcessor
+  alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Helpers
-
-  @booking_field_spec [
-    {"name", :name},
-    {"email", :email},
-    {"message", :message, [required: false, min_length: 0]}
-  ]
 
   @doc """
   Validates booking form data and updates socket state.
@@ -55,7 +50,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
   @spec validate_form(Phoenix.LiveView.Socket.t(), map()) ::
           {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
   def validate_form(socket, booking_params) do
-    case InputProcessor.validate_form(booking_params, @booking_field_spec) do
+    case InputProcessor.validate_form(booking_params, BookingConfig.booking_field_spec()) do
       {:ok, sanitized_params} ->
         form = Component.to_form(sanitized_params)
 
@@ -93,7 +88,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
   @spec sanitize_params(Phoenix.LiveView.Socket.t(), map()) :: {:ok, Phoenix.LiveView.Socket.t()}
   def sanitize_params(socket, params) do
     sanitized_params =
-      case InputProcessor.validate_form(params, @booking_field_spec) do
+      case InputProcessor.validate_form(params, BookingConfig.booking_field_spec()) do
         {:ok, p} -> p
         {:error, _errors} -> params
       end

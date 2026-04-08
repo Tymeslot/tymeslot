@@ -7,13 +7,8 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
 
   alias Phoenix.Component
   alias Tymeslot.Security.InputProcessor
+  alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
-
-  @booking_field_spec [
-    {"name", :name},
-    {"email", :email},
-    {"message", :message, [required: false, min_length: 0]}
-  ]
 
   require Logger
 
@@ -60,7 +55,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
     # with (blurred). This matches the per-field validation UX of auth and
     # contact forms — touching name doesn't reveal email errors.
     visible_errors =
-      case InputProcessor.validate_form(booking_params, @booking_field_spec) do
+      case InputProcessor.validate_form(booking_params, BookingConfig.booking_field_spec()) do
         {:ok, _sanitized_params} -> %{}
         {:error, errors} -> filter_errors_for_touched_fields(errors, touched_fields)
       end

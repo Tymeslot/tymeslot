@@ -36,12 +36,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
-
-  @booking_field_spec [
-    {"name", :name},
-    {"email", :email},
-    {"message", :message, [required: false, min_length: 0]}
-  ]
+  alias TymeslotWeb.Live.Scheduling.BookingConfig
 
   require Logger
 
@@ -70,7 +65,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     if honeypot_tripped?(booking_params) do
       handle_honeypot_booking(socket, booking_params)
     else
-      case InputProcessor.validate_form(booking_params, @booking_field_spec) do
+      case InputProcessor.validate_form(booking_params, BookingConfig.booking_field_spec()) do
         {:ok, sanitized_params} ->
           Logger.info("Form validation passed, proceeding to booking")
 

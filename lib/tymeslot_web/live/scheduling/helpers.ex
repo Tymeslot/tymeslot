@@ -14,17 +14,12 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   alias Tymeslot.Timezones
   alias Tymeslot.Utils.{ContextUtils, DateTimeUtils}
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Live.Scheduling.BookingConfig
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   require Logger
 
   import Component, only: [assign: 3]
-
-  @booking_field_spec [
-    {"name", :name},
-    {"email", :email},
-    {"message", :message, [required: false, min_length: 0]}
-  ]
 
   @doc """
   Handles username resolution and organizer setup.
@@ -149,7 +144,7 @@ defmodule TymeslotWeb.Live.Scheduling.Helpers do
   """
   @spec form_valid?(Phoenix.HTML.Form.t()) :: boolean()
   def form_valid?(%{source: source}) when is_map(source) do
-    case InputProcessor.validate_form(source, @booking_field_spec) do
+    case InputProcessor.validate_form(source, BookingConfig.booking_field_spec()) do
       {:ok, _result} -> true
       {:error, _reason} -> false
     end
