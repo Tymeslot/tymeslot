@@ -18,19 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   @dialyzer {:nowarn_function, generate_ics: 2}
   def generate_ics(meeting_details, locale \\ "en") do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      event = %Magical.Event{
-        summary: Map.get(meeting_details, :title, dgettext("emails", "Meeting")),
-        description: build_ics_description(meeting_details),
-        dtstart: meeting_details.start_time,
-        dtend: meeting_details.end_time,
-        location: determine_location(meeting_details),
-        uid:
-          "#{Map.get(meeting_details, :uid, UUID.uuid4())}@#{Application.get_env(:tymeslot, :email)[:domain]}",
-        organizer: format_organizer(meeting_details),
-        attendee: format_attendees(meeting_details),
-        status: "CONFIRMED"
-      }
-
+      event = build_event(meeting_details)
       calendar = %Magical.Calendar{events: [event]}
 
       try do
@@ -80,21 +68,25 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   defp generate_ics_with_sequence(meeting_details, sequence, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      event = %Magical.Event{
-        summary: Map.get(meeting_details, :title, dgettext("emails", "Meeting")),
-        description: build_ics_description(meeting_details),
-        dtstart: meeting_details.start_time,
-        dtend: meeting_details.end_time,
-        location: determine_location(meeting_details),
-        uid:
-          "#{Map.get(meeting_details, :uid, UUID.uuid4())}@#{Application.get_env(:tymeslot, :email)[:domain]}",
-        organizer: format_organizer(meeting_details),
-        attendee: format_attendees(meeting_details),
-        status: "CONFIRMED"
-      }
-
-      generate_basic_ics_update(event, sequence)
+      meeting_details
+      |> build_event()
+      |> generate_basic_ics_update(sequence)
     end)
+  end
+
+  defp build_event(meeting_details) do
+    %Magical.Event{
+      summary: Map.get(meeting_details, :title, dgettext("emails", "Meeting")),
+      description: build_ics_description(meeting_details),
+      dtstart: meeting_details.start_time,
+      dtend: meeting_details.end_time,
+      location: determine_location(meeting_details),
+      uid:
+        "#{Map.get(meeting_details, :uid, UUID.uuid4())}@#{Application.get_env(:tymeslot, :email)[:domain]}",
+      organizer: format_organizer(meeting_details),
+      attendee: format_attendees(meeting_details),
+      status: "CONFIRMED"
+    }
   end
 
   defp generate_basic_ics_update(event, sequence) do
