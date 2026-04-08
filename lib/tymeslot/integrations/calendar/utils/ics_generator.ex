@@ -3,8 +3,6 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   Module for generating ICS (iCalendar) files for meeting appointments.
   """
 
-  require Logger
-
   use Gettext, backend: TymeslotWeb.Gettext
 
   @doc """
@@ -15,19 +13,11 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     - locale: Locale for translated strings (default: "en")
   """
   @spec generate_ics(map(), String.t()) :: String.t()
-  @dialyzer {:nowarn_function, generate_ics: 2}
   def generate_ics(meeting_details, locale \\ "en") do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      event = build_event(meeting_details)
-      calendar = %Magical.Calendar{events: [event]}
-
-      try do
-        Magical.to_ics(calendar)
-      rescue
-        error ->
-          Logger.error("Failed to generate ICS with Magical library", error: inspect(error))
-          generate_basic_ics(event)
-      end
+      meeting_details
+      |> build_event()
+      |> generate_basic_ics()
     end)
   end
 
@@ -75,7 +65,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   end
 
   defp build_event(meeting_details) do
-    %Magical.Event{
+    %{
       summary: Map.get(meeting_details, :title, dgettext("emails", "Meeting")),
       description: build_ics_description(meeting_details),
       dtstart: meeting_details.start_time,
