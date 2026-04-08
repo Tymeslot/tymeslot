@@ -100,8 +100,7 @@ defmodule Tymeslot.Profiles do
         profile
       else
         {:error, %Ecto.Changeset{} = changeset} -> Repo.rollback(changeset)
-        {:error, _reason} -> Repo.rollback("Failed to create default availability")
-        other -> Repo.rollback(other)
+        {:error, _reason} -> Repo.rollback(:failed_to_create_schedule)
       end
     end)
   end
@@ -558,7 +557,7 @@ defmodule Tymeslot.Profiles do
   defp get_user_name_from_profile(_arg), do: nil
 
   defp meeting_types_for_profile(%{meeting_types: meeting_types, user_id: user_id}) do
-    if is_list(meeting_types) and meeting_types != [] do
+    if meeting_types != [] do
       meeting_types
     else
       if user_id, do: MeetingTypes.get_active_meeting_types(user_id), else: []
