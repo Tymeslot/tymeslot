@@ -38,7 +38,7 @@ We welcome many types of contributions:
 - 🧪 **Testing** - Add test coverage and improve test quality
 - 🎨 **Themes** - Create new booking interface themes
 - 🔌 **Integrations** - Add support for new calendar/video providers
-- 🚀 **Performance** - Optimize code and improve efficiency
+- 🚀 **Performance** - Optimise code and improve efficiency
 - 🔒 **Security** - Enhance security measures and practices
 
 ## 📦 Releases & Feedback
@@ -51,7 +51,7 @@ The most significant way you can contribute to Tymeslot is by providing **feedba
 
 ### Prerequisites
 
-- **Elixir**: 1.19.3+ (with Erlang 28.1.1+)
+- **Elixir**: ~> 1.19 (with Erlang 28.3.3+)
 - **Node.js**: 18+ (for asset compilation)
 - **PostgreSQL**: 14+
 - **Git**: Latest version
@@ -64,29 +64,12 @@ The most significant way you can contribute to Tymeslot is by providing **feedba
    cd tymeslot
    ```
 
-2. **Install Elixir dependencies**
+2. **Install all dependencies**
    ```bash
-   mix deps.get
+   mix setup
    ```
 
-3. **Install Node.js dependencies**
-   ```bash
-   cd assets && npm install && cd ..
-   ```
-
-4. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your local configuration
-   ```
-
-5. **Create and migrate database**
-   ```bash
-   mix ecto.create
-   mix ecto.migrate
-   ```
-
-6. **Start the development server**
+3. **Start the development server**
    ```bash
    mix phx.server
    ```
@@ -99,7 +82,7 @@ For testing authentication and calendar integrations:
 - **GitHub OAuth**: [GitHub Developer Settings](https://github.com/settings/developers)
 - **Microsoft OAuth**: [Azure App Registration](https://portal.azure.com/)
 
-Add OAuth credentials to your `.env` file for full functionality testing.
+Configure OAuth credentials in your environment for full functionality testing.
 
 For detailed setup instructions including required redirect URIs and API permissions, see:
 - [Docker OAuth Setup Guide](README-Docker.md#oauth-provider-setup)
@@ -129,26 +112,30 @@ mix format --check-formatted
 
 ```bash
 # Run Credo for code analysis
-mix credo
+mix credo --strict
 
 # Run Dialyzer for type checking
 mix dialyzer
 ```
 
-### Module Organization
+### Module Organisation
 
-Follow our domain-driven structure:
+Tymeslot follows a **domain- and feature-driven module structure**. Modules are grouped by what they do for the business, not by technical role. Each domain owns its own schemas, queries, and logic — colocated under one namespace.
 
 ```
 lib/tymeslot/
 ├── auth/                     # Authentication domain
+│   ├── auth.ex               # Public context API
+│   ├── user_schema.ex        # Ecto schema
+│   └── user_queries.ex       # Database queries
 ├── availability/             # Availability calculation domain
-├── bookings/                # Meeting booking domain
-├── integrations/            # External service integrations
-├── notifications/           # Email and notification system
-├── security/               # Security and validation
-├── database_schemas/       # Ecto schemas
-└── database_queries/       # Query modules
+├── bookings/                 # Meeting booking domain
+├── integrations/             # External service integrations
+├── jobs/                     # Oban job definitions
+├── meetings/                 # Meeting management domain
+├── notifications/            # Email and notification system
+├── security/                 # Security and validation
+└── workers/                  # Oban background workers
 ```
 
 ### Key Patterns to Follow
@@ -167,20 +154,24 @@ lib/tymeslot/
    def render(assigns) do
      ~H"""
      <div class="my-component">
-       <!-- All content wrapped in single element -->
+       <%!-- All content wrapped in single element --%>
      </div>
      """
    end
    ```
 
-3. **Repository Pattern**: Use dedicated query modules
+3. **Repository Pattern**: Use dedicated query modules, colocated with their domain
    ```elixir
-   # Good
-   UserQueries.find_by_email(email)
-   
-   # Avoid
+   # Good — query module owns all Repo calls
+   Tymeslot.Auth.UserQueries.find_by_email(email)
+
+   # Avoid — bypasses the query module boundary
    Repo.get_by(User, email: email)
    ```
+
+4. **Repo calls belong in query modules**: `Repo.get`, `Repo.insert`, `Repo.update`, `Repo.delete`, `Repo.all`, `Repo.one`, `Repo.exists?`, and similar must live in `*_queries.ex` files. Only `Repo.transaction`, `Repo.rollback`, and `Repo.preload` are permitted in domain context modules.
+
+5. **HEEx comments only**: Use `<%!-- --%>` in `.heex` files and `~H` sigils. Never use HTML comments (`<!-- -->`); they are sent to the browser.
 
 ## 🧪 Testing Guidelines
 
@@ -194,55 +185,69 @@ mix test
 mix test --cover
 
 # Run specific test file
-mix test test/tymeslot/auth/auth_test.exs
+mix test apps/tymeslot/test/tymeslot/auth/auth_test.exs
 
-# Run tests matching a pattern
-mix test --grep "user registration"
+# Run a single test by line number
+mix test apps/tymeslot/test/tymeslot/auth/auth_test.exs:42
+
+# Run Elixir tests only (skip JS)
+mix test.elixir
 ```
 
 ### Test Coverage
 
-- **Target**: 75% overall coverage
-- **Current**: 11.17% (help us improve!)
-- **Required**: All new features must include tests
-- **Integration tests**: Include OAuth setup tags
+- **Required**: All new public context functions, LiveView events, Oban workers, and controller actions must include tests.
+- **Behaviour over implementation**: Assert on return values, database state, and rendered HTML — not internal function calls or private module details.
 
 ### Writing Tests
 
-1. **Unit Tests**: Test individual functions and modules
-2. **Integration Tests**: Test complete user workflows
-3. **LiveView Tests**: Test real-time interactions
-4. **Security Tests**: Test validation and sanitization
+Every test module must declare at least one `@moduletag` from the approved taxonomy defined in `test/support/tag_taxonomy.ex`.
+
+**Domain tags**: `:auth`, `:availability`, `:bookings`, `:calendar`, `:database`, `:emails`, `:integrations`, `:meetings`, `:meeting_types`, `:notifications`, `:payments`, `:profiles`, `:scheduling`, `:security`, `:themes`, `:workers`, and more.
+
+**Web layer tags**: `:components`, `:controllers`, `:live`, `:plugs`, `:hooks`
+
+**Test type tags**: `:unit`, `:integration`, `:schema`, `:queries`, `:migrations`
 
 Example test structure:
 ```elixir
 defmodule Tymeslot.Auth.AuthenticationTest do
   use Tymeslot.DataCase
+
+  @moduletag :auth
+  @moduletag :unit
+
   alias Tymeslot.Auth.Authentication
 
   describe "authenticate_user/2" do
     test "returns user for valid credentials" do
       user = Factory.insert(:user)
-      
-      assert {:ok, authenticated_user} = 
+
+      assert {:ok, authenticated_user} =
         Authentication.authenticate_user(user.email, "valid_password")
       assert authenticated_user.id == user.id
     end
 
     test "returns error for invalid credentials" do
-      assert {:error, :invalid_credentials} = 
+      assert {:error, :invalid_credentials} =
         Authentication.authenticate_user("invalid@email.com", "wrong_password")
     end
   end
 end
 ```
 
-### Test Organization
+### Test Organisation
 
 - `test/tymeslot/` - Unit tests for business logic
 - `test/tymeslot_web/` - Tests for web layer (controllers, live views)
-- `test/integration/` - End-to-end integration tests
 - `test/support/` - Test helpers and factories
+
+### Test Philosophy
+
+- **Test behaviour, not implementation.** Assert on outcomes visible to callers.
+- **One concept per test.** Each test should have a single, clear reason to fail.
+- **No `Process.sleep/1`.** Use `assert_receive`, ExUnit async helpers, or Oban's test mode.
+- **Mock at system boundaries only.** Mock external HTTP calls and third-party APIs — not your own modules.
 
 ## 🔄 Pull Request Process
 
@@ -256,10 +261,8 @@ Use descriptive branch names:
 
 ### Commit Messages
 
-Follow conventional commit format:
+Follow [Conventional Commits](https://www.conventionalcommits.org/) format:
 ```
-type(scope): description
-
 feat(auth): add GitHub OAuth integration
 fix(calendar): resolve timezone conversion bug
 docs(readme): update installation instructions
@@ -267,13 +270,32 @@ test(bookings): add integration tests for meeting creation
 refactor(themes): extract common theme utilities
 ```
 
+The changelog is auto-generated from `feat` and `fix` commits. To exclude a `feat` or `fix` commit from the changelog (e.g. internal test fixes, Dialyzer suppressions), add a `Changelog: skip` footer:
+
+```
+fix(core): unwrap tuple in OAuth session test
+
+Changelog: skip
+```
+
+### Definition of Done
+
+A task is complete only when all of the following pass:
+
+```bash
+mix test          # 0 failures
+mix credo --strict  # all issues resolved
+mix dialyzer      # no warnings
+mix format --check-formatted  # properly formatted
+```
+
 ### Pull Request Checklist
 
 Before submitting a PR, ensure:
 
-- [ ] Code follows style guidelines (`mix format`, `mix credo`)
+- [ ] Code follows style guidelines (`mix format`, `mix credo --strict`)
 - [ ] Tests pass (`mix test`)
-- [ ] New functionality includes tests
+- [ ] New functionality includes tests with appropriate `@moduletag` declarations
 - [ ] Documentation is updated if needed
 - [ ] Security considerations are addressed
 - [ ] Breaking changes are clearly documented
@@ -312,7 +334,7 @@ When reporting bugs, include:
 
 1. **Clear title** describing the issue
 2. **Steps to reproduce** the problem
-3. **Expected behavior** vs **actual behavior**
+3. **Expected behaviour** vs **actual behaviour**
 4. **Environment details** (OS, Elixir version, browser)
 5. **Error logs** or screenshots if applicable
 6. **Minimal reproduction case** if possible
@@ -328,7 +350,7 @@ For new features, provide:
 
 ### Issue Labels
 
-We use these labels to organize issues:
+We use these labels to organise issues:
 
 - `bug` - Something isn't working
 - `enhancement` - New feature or improvement
@@ -340,31 +362,48 @@ We use these labels to organize issues:
 
 ## 🏗️ Architecture Guidelines
 
+### Project Structure
+
+Tymeslot is an **umbrella project** with two independently deployable OTP applications:
+
+| App | Path | Namespaces |
+|-----|------|------------|
+| `:tymeslot` (Core) | `apps/tymeslot` | `Tymeslot.*`, `TymeslotWeb.*` |
+| `:tymeslot_saas` (SaaS) | `apps/tymeslot_saas` | `TymeslotSaasWeb.*` |
+
+**Core** is the complete, self-contained scheduling product — the open-source codebase for self-hosters. It owns all domain logic, database schemas, migrations, the HTTP endpoint, and the full web UI.
+
+**SaaS** is a thin routing overlay for the managed cloud offering. It adds marketing pages, billing, legal agreements, and subscription management. SaaS depends on Core; Core has zero knowledge of SaaS.
+
+### Core/SaaS Boundary
+
+- **Core never references SaaS.** No imports, calls, or checks for SaaS presence anywhere in Core.
+- **Feature flags bridge behavioural differences.** Define flags in Core with safe defaults; override in SaaS config.
+- **Commits are separated.** Core and SaaS changes always go in separate commits.
+
 ### Domain-Driven Design
 
-Tymeslot follows domain-driven design principles:
-
-1. **Bounded Contexts**: Each domain (auth, bookings, etc.) is isolated
-2. **Domain Logic**: Business rules live in domain modules, not controllers
-3. **Repository Pattern**: Data access through dedicated query modules
-4. **Event-Driven**: Use events for cross-domain communication
+1. **Bounded Contexts**: Each domain (auth, bookings, etc.) is isolated with a single public context module as its API.
+2. **Domain Logic**: Business rules live in domain modules, not controllers or LiveViews.
+3. **Repository Pattern**: All database access through dedicated `*_queries.ex` modules.
+4. **No queries in `mount/3`**: Defer data loading to `handle_params/3` to avoid double-loading.
 
 ### Security First
 
 Always consider security when contributing:
 
 1. **Input Validation**: Use security input processors
-2. **Rate Limiting**: Apply appropriate rate limits
+2. **Rate Limiting**: Apply appropriate rate limits via `Tymeslot.Security.RateLimiter`
 3. **Encryption**: Encrypt sensitive data (API keys, tokens)
-4. **Sanitization**: Sanitize all user inputs
-5. **Authorization**: Verify user permissions
+4. **Sanitisation**: Sanitise all user inputs
+5. **Authorisation**: Verify user permissions
 
 ### Performance Considerations
 
 1. **Database Queries**: Use efficient queries and indexes
 2. **External APIs**: Implement circuit breakers and timeouts
 3. **Caching**: Cache expensive operations appropriately
-4. **Background Jobs**: Use Oban for async processing
+4. **Background Jobs**: Use Oban for async processing — never raw `spawn/1` or `Task.async/1`
 
 ## 🎯 Tymeslot-Specific Guidelines
 
@@ -372,31 +411,35 @@ Always consider security when contributing:
 
 When creating new themes:
 
-1. **Theme Structure**: Follow the theme behavior pattern
-2. **Component Isolation**: Themes should be self-contained
-3. **Consistent Functionality**: All themes must support the same features
-4. **CSS Organization**: Use the modular CSS structure
-5. **Mobile Responsive**: Ensure mobile compatibility
+1. **Theme Structure**: Follow the theme behaviour pattern
+2. **Component Isolation**: Themes are self-contained — do not reference `app.css` or Tailwind utilities
+3. **Consistent Functionality**: All themes must support the same scheduling features
+4. **Mobile Responsive**: Ensure mobile compatibility
 
 Example theme structure:
 ```
 lib/tymeslot_web/themes/
 └── my_theme/
-    ├── my_theme.ex              # Theme behavior implementation
-    ├── components/              # Theme-specific components
-    ├── assets/                  # Theme CSS/JS
-    └── templates/               # Theme templates
+    ├── theme.ex                 # Theme behaviour implementation
+    ├── scheduling/              # Scheduling flow pages
+    │   ├── live.ex
+    │   ├── wrapper.ex
+    │   └── components/          # Theme-specific components
+    └── meeting/                 # Meeting management pages
+        ├── cancel.ex
+        └── reschedule.ex
 ```
 
 ### Integration Providers
 
 When adding new calendar/video providers:
 
-1. **Provider Pattern**: Implement the provider behavior
+1. **Provider Pattern**: Implement the provider behaviour
 2. **OAuth Flow**: Handle authentication properly
 3. **Error Handling**: Implement robust error handling
 4. **Rate Limiting**: Respect provider rate limits
 5. **Circuit Breakers**: Use circuit breakers for resilience
+6. **HTTP Client**: Use `Req` — never `:httpoison`, `:tesla`, or `:httpc`
 
 ### Email Templates
 
@@ -404,9 +447,15 @@ For email template changes:
 
 1. **MJML**: Use MJML for responsive templates
 2. **Multi-format**: Support HTML and plain text
-3. **Attachments**: Include calendar files (.ics)
+3. **Attachments**: Include calendar files (.ics) where appropriate
 4. **Testing**: Test across email clients
-5. **Localization**: Consider internationalization
+5. **Localisation**: Consider internationalisation
+
+### Database Migrations
+
+1. **Generate migrations** with `mix ecto.gen.migration <name>` — never create migration files manually.
+2. **Backfill before constraining**: When adding constraints to existing tables, handle violating rows in the same migration.
+3. **Use `IF NOT EXISTS` / `IF EXISTS`** in repair migrations for idempotency.
 
 ### Security Contributions
 
@@ -442,7 +491,7 @@ Security-related contributions should:
 
 ## 🙏 Recognition
 
-Contributors will be recognized in:
+Contributors will be recognised in:
 
 - **README.md** - Major contributors
 - **Release Notes** - Feature contributors
