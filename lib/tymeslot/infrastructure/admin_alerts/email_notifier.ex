@@ -22,6 +22,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
+  alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
   alias Tymeslot.Workers.EmailWorker
 
   @impl Tymeslot.Infrastructure.AdminAlerts
@@ -63,7 +64,10 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   end
 
   defp enrich_metadata(metadata) do
-    Map.merge(Map.new(metadata), deployment_context())
+    metadata
+    |> Map.new()
+    |> PIIScrubber.scrub()
+    |> Map.merge(deployment_context())
   end
 
   defp deployment_context do
@@ -83,9 +87,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   end
 
   defp hostname do
-    case :inet.gethostname() do
-      {:ok, name} -> to_string(name)
-      {:error, _reason} -> "unknown"
-    end
+    {:ok, name} = :inet.gethostname()
+    to_string(name)
   end
 end

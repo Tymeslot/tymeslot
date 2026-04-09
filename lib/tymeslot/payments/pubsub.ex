@@ -47,12 +47,13 @@ defmodule Tymeslot.Payments.PubSub do
           )
 
           # Alert monitoring system - repeated failures indicate infrastructure issues
-          AdminAlerts.send_alert(
-            :pubsub_broadcast_failed,
-            %{
+          AdminAlerts.report(:pubsub_broadcast_failed,
+            summary: "PubSub broadcast failed for payment_successful",
+            reason: reason,
+            context: %{
               event: :payment_successful,
-              user_id: transaction.user_id,
-              reason: reason
+              topic: "payment:payment_successful",
+              user_id: transaction.user_id
             }
           )
 
@@ -105,13 +106,14 @@ defmodule Tymeslot.Payments.PubSub do
           reason: inspect(reason)
         )
 
-        AdminAlerts.send_alert(
-          :pubsub_broadcast_failed,
-          %{
+        AdminAlerts.report(:pubsub_broadcast_failed,
+          summary: "PubSub broadcast failed for subscription_event",
+          reason: reason,
+          context: %{
             event: :subscription_event,
+            topic: topic,
             event_type: event_type,
-            user_id: user_id,
-            reason: reason
+            user_id: user_id
           }
         )
 
@@ -145,13 +147,14 @@ defmodule Tymeslot.Payments.PubSub do
           reason: inspect(reason)
         )
 
-        AdminAlerts.send_alert(
-          :pubsub_broadcast_failed,
-          %{
+        AdminAlerts.report(:pubsub_broadcast_failed,
+          summary: "PubSub broadcast failed for payment_event",
+          reason: reason,
+          context: %{
             event: :payment_event,
+            topic: topic,
             event_type: event_type,
-            user_id: user_id,
-            reason: reason
+            user_id: user_id
           }
         )
 
@@ -239,12 +242,13 @@ defmodule Tymeslot.Payments.PubSub do
             reason: inspect(reason)
           )
 
-          AdminAlerts.send_alert(
-            :pubsub_broadcast_failed,
-            %{
+          AdminAlerts.report(:pubsub_broadcast_failed,
+            summary: "PubSub broadcast failed for subscription_successful",
+            reason: reason,
+            context: %{
               event: :subscription_successful,
-              user_id: transaction.user_id,
-              reason: reason
+              topic: "payment:subscription_successful",
+              user_id: transaction.user_id
             }
           )
 
@@ -292,12 +296,13 @@ defmodule Tymeslot.Payments.PubSub do
             reason: inspect(reason)
           )
 
-          AdminAlerts.send_alert(
-            :pubsub_broadcast_failed,
-            %{
+          AdminAlerts.report(:pubsub_broadcast_failed,
+            summary: "PubSub broadcast failed for subscription_failed",
+            reason: reason,
+            context: %{
               event: :subscription_failed,
-              user_id: transaction.user_id,
-              reason: reason
+              topic: "payment:subscription_failed",
+              user_id: transaction.user_id
             }
           )
 

@@ -154,6 +154,32 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifierTest do
       [job] = all_enqueued(worker: EmailWorker)
       assert job.args["recipient"] == "alerts@example.org"
     end
+
+    test "masks denylisted PII keys in metadata before enqueuing" do
+      assert :ok =
+               AdminAlerts.send_alert(:calendar_sync_error, %{
+                 owner_email: "alice@example.com",
+                 meeting_id: 99
+               })
+
+      [job] = all_enqueued(worker: EmailWorker)
+      metadata = job.args["metadata"]
+
+      refute Map.has_key?(metadata, "owner_email")
+      assert metadata["owner_email_masked"] == "a***@example.com"
+      assert metadata["meeting_id"] == 99
+    end
+
+    test "masks embedded email addresses in free-form string fields" do
+      assert :ok =
+               AdminAlerts.send_alert(:calendar_sync_error, %{
+                 summary: "User alice@example.com failed",
+                 meeting_id: 99
+               })
+
+      [job] = all_enqueued(worker: EmailWorker)
+      assert job.args["metadata"]["summary"] == "User a***@example.com failed"
+    end
   end
 
   describe "deduplication" do

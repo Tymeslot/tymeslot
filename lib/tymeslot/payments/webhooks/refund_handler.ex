@@ -94,12 +94,16 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
         )
 
         # Alert admin about unlinked refund
-        AdminAlerts.send_alert(:unlinked_refund, %{
-          charge_id: charge_id,
-          customer_id: customer_id,
-          total_refunded: total_refunded,
-          charge_amount: charge_amount
-        })
+        AdminAlerts.report(:unlinked_refund,
+          summary: "Unlinked refund received — no matching subscription",
+          reason: {:no_subscription_for_customer, customer_id},
+          context: %{
+            charge_id: charge_id,
+            customer_id: customer_id,
+            total_refunded: total_refunded,
+            charge_amount: charge_amount
+          }
+        )
 
         {:ok, :refund_logged}
 
@@ -132,9 +136,9 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
         case result do
           :ok ->
             # Alert admin about processed refund
-            AdminAlerts.send_alert(
-              :refund_processed,
-              %{
+            AdminAlerts.report(:refund_processed,
+              summary: "Refund processed for subscription",
+              context: %{
                 user_id: subscription.user_id,
                 charge_id: charge_id,
                 total_refunded: total_refunded,

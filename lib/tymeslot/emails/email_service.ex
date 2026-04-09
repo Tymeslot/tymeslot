@@ -299,12 +299,13 @@ defmodule Tymeslot.Emails.EmailService do
     )
 
     # Alert admin about calendar sync error
-    AdminAlerts.send_alert(
-      :calendar_sync_error,
-      %{
+    AdminAlerts.report(:calendar_sync_error,
+      summary: "Calendar sync failed for meeting",
+      reason: error_reason,
+      context: %{
         meeting_id: meeting.id,
         owner_email: owner_email,
-        reason: error_reason
+        calendar_integration_id: Map.get(meeting, :calendar_integration_id)
       }
     )
 

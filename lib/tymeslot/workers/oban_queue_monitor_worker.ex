@@ -93,9 +93,9 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
         threshold: threshold
       )
 
-      AdminAlerts.send_alert(
-        :oban_jobs_accumulating,
-        %{
+      AdminAlerts.report(:oban_jobs_accumulating,
+        summary: "Oban queues accumulating jobs above threshold",
+        context: %{
           affected_queues: unhealthy_queues,
           total_affected: length(unhealthy_queues),
           threshold: threshold
@@ -126,9 +126,9 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
         age_hours: age_hours
       )
 
-      AdminAlerts.send_alert(
-        :oban_queue_stuck,
-        %{
+      AdminAlerts.report(:oban_queue_stuck,
+        summary: "Oban queues have stuck jobs in available state",
+        context: %{
           affected_queues: unhealthy_queues,
           total_affected: length(unhealthy_queues),
           job_state: "available",
@@ -162,9 +162,9 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
         age_hours: age_hours
       )
 
-      AdminAlerts.send_alert(
-        :oban_queue_stuck,
-        %{
+      AdminAlerts.report(:oban_queue_stuck,
+        summary: "Oban queues have stuck jobs in retryable state",
+        context: %{
           affected_queues: unhealthy_queues,
           total_affected: length(unhealthy_queues),
           job_state: "retryable",
