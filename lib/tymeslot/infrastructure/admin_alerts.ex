@@ -1,11 +1,26 @@
 defmodule Tymeslot.Infrastructure.AdminAlerts do
   @moduledoc """
-  Behaviour for sending administrative alerts.
+  Behaviour and dispatcher for sending administrative alerts.
 
-  This allows the core application to trigger alerts without knowing
-  how they are delivered (e.g., email, Slack, internal dashboard).
-  In standalone mode, these alerts typically just go to the logs.
-  In SaaS mode, they can be routed to a centralized monitoring system.
+  This allows the application to trigger alerts without knowing how they are
+  delivered. The default implementation (`EmailNotifier`) uses Core's standard
+  email delivery infrastructure: it logs every alert, and additionally sends an
+  email to the configured admin recipient when the feature is enabled.
+
+  ## Configuration
+
+  Alerts are gated behind two settings:
+
+    * `:tymeslot, :admin_alerts_enabled` — boolean feature flag (default `false`)
+    * `:tymeslot, :admin_alert_email` — recipient address (default `nil`)
+
+  Both must be set for emails to actually be delivered. Both can be controlled
+  at runtime via the `ADMIN_ALERTS_ENABLED` and `ADMIN_ALERT_EMAIL` environment
+  variables. SaaS deployments override `:admin_alerts_enabled` to `true` in
+  config and supply the email address via the deployment environment.
+
+  Self-hosters can enable this to receive error reports for their own debugging
+  or to share with the project — see `CONTRIBUTING.md` for details.
   """
 
   @type alert_type ::
@@ -17,17 +32,26 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
           | :integration_health_recovery
           | :oban_queue_stuck
           | :oban_jobs_accumulating
+          | :pubsub_broadcast_failed
+          | :dispute_created
+          | :dispute_lost
+          | :reconciliation_discrepancies
+          | :subscription_not_in_database
           | atom()
 
-  @callback send_alert(alert_type(), map(), keyword()) :: :ok | {:error, any()}
+  @callback send_alert(alert_type(), map()) :: :ok | {:error, any()}
 
   require Logger
 
   @doc """
   Sends an administrative alert using the configured implementation.
+
+  Errors raised by the implementation are caught and logged so that alert
+  failures never propagate up and break the calling code path.
   """
-  def send_alert(type, metadata \\ %{}, opts \\ []) do
-    impl().send_alert(type, metadata, opts)
+  @spec send_alert(alert_type(), map()) :: :ok | {:error, any()}
+  def send_alert(type, metadata \\ %{}) do
+    impl().send_alert(type, metadata)
   rescue
     exception ->
       Logger.error("Failed to send admin alert",
@@ -48,32 +72,26 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
       {:error, {kind, reason}}
   end
 
+  @doc """
+  Returns true if the given value is a syntactically plausible email address.
+
+  Used to gate admin alert email delivery — a malformed or empty address means
+  no email is sent, even if the feature flag is enabled.
+  """
+  @spec valid_email?(term()) :: boolean()
+  def valid_email?(value) when is_binary(value) do
+    value
+    |> String.trim()
+    |> Kernel.=~(~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+  end
+
+  def valid_email?(_other), do: false
+
   defp impl do
     Application.get_env(
       :tymeslot,
       :admin_alerts_impl,
-      Tymeslot.Infrastructure.AdminAlerts.Default
+      Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
     )
-  end
-end
-
-defmodule Tymeslot.Infrastructure.AdminAlerts.Default do
-  @moduledoc """
-  Default implementation of AdminAlerts that logs alerts to the system logger.
-  """
-  @behaviour Tymeslot.Infrastructure.AdminAlerts
-
-  require Logger
-
-  @impl Tymeslot.Infrastructure.AdminAlerts
-  def send_alert(type, metadata, opts) do
-    level = Keyword.get(opts, :level, :warning)
-
-    Logger.log(level, "ADMIN ALERT: #{type}",
-      event_type: type,
-      metadata: metadata
-    )
-
-    :ok
   end
 end

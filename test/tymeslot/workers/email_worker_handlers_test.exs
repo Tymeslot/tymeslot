@@ -317,6 +317,111 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
     end
   end
 
+  describe "handle_admin_alert/1" do
+    test "happy path: returns :ok and calls email service with correctly mapped args" do
+      expect(EmailServiceMock, :send_admin_alert, fn recipient,
+                                                     category,
+                                                     severity,
+                                                     message,
+                                                     metadata ->
+        assert recipient == "admin@example.com"
+        assert category == "Webhook"
+        assert severity == :warning
+        assert message == "Unhandled webhook event received"
+        assert metadata == %{"event_id" => "evt_001"}
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_admin_alert", %{
+                 "recipient" => "admin@example.com",
+                 "category" => "Webhook",
+                 "severity" => "warning",
+                 "message" => "Unhandled webhook event received",
+                 "metadata" => %{"event_id" => "evt_001"}
+               })
+    end
+
+    test "error propagation: returns {:error, reason} when email service fails" do
+      expect(EmailServiceMock, :send_admin_alert, fn _recipient,
+                                                     _category,
+                                                     _severity,
+                                                     _message,
+                                                     _metadata ->
+        {:error, "SMTP timeout"}
+      end)
+
+      assert {:error, "Failed to deliver admin alert"} =
+               EmailWorkerHandlers.execute_email_action("send_admin_alert", %{
+                 "recipient" => "admin@example.com",
+                 "category" => "Webhook",
+                 "severity" => "warning",
+                 "message" => "Something went wrong",
+                 "metadata" => %{}
+               })
+    end
+
+    test "severity fallback: unknown severity string maps to :warning" do
+      expect(EmailServiceMock, :send_admin_alert, fn _recipient,
+                                                     _category,
+                                                     severity,
+                                                     _message,
+                                                     _metadata ->
+        assert severity == :warning
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_admin_alert", %{
+                 "recipient" => "admin@example.com",
+                 "category" => "General",
+                 "severity" => "nonsense",
+                 "message" => "Something happened",
+                 "metadata" => %{}
+               })
+    end
+
+    test "known severity 'info' maps to :info atom" do
+      expect(EmailServiceMock, :send_admin_alert, fn _recipient,
+                                                     _category,
+                                                     severity,
+                                                     _message,
+                                                     _metadata ->
+        assert severity == :info
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_admin_alert", %{
+                 "recipient" => "admin@example.com",
+                 "category" => "General",
+                 "severity" => "info",
+                 "message" => "Informational notice",
+                 "metadata" => %{}
+               })
+    end
+
+    test "known severity 'error' maps to :error atom" do
+      expect(EmailServiceMock, :send_admin_alert, fn _recipient,
+                                                     _category,
+                                                     severity,
+                                                     _message,
+                                                     _metadata ->
+        assert severity == :error
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_admin_alert", %{
+                 "recipient" => "admin@example.com",
+                 "category" => "Payments",
+                 "severity" => "error",
+                 "message" => "Payment processing failed",
+                 "metadata" => %{"charge_id" => "ch_001"}
+               })
+    end
+  end
+
   describe "handle_email_change_confirmations/1" do
     test "successfully sends confirmations to both old and new addresses" do
       user = insert(:user)

@@ -7,6 +7,7 @@ Thank you for your interest in contributing to Tymeslot! We welcome contribution
 - [Code of Conduct](#code-of-conduct)
 - [Support Tymeslot's Future](#support-tymeslots-future)
 - [Types of Contributions](#types-of-contributions)
+- [Helping Us Debug Issues](#helping-us-debug-issues)
 - [Development Setup](#development-setup)
 - [Code Standards](#code-standards)
 - [Testing Guidelines](#testing-guidelines)
@@ -46,6 +47,31 @@ We welcome many types of contributions:
 While we are constantly improving the codebase, we only publish official, stable releases through **GitHub Releases**. Not every commit to the repository is intended to be a production-ready release.
 
 The most significant way you can contribute to Tymeslot is by providing **feedback**. Real-world usage reports, feature ideas, and constructive criticism are what truly help the project evolve. Even if you don't write a single line of code, sharing your experience is the biggest contribution you can make.
+
+## 🚨 Helping Us Debug Issues
+
+If you self-host Tymeslot, one of the most valuable things you can do is enable **admin alerts** and share the resulting reports with us when something breaks. Admin alerts are off by default — your data stays on your server unless you explicitly opt in.
+
+### How to enable
+
+Set two environment variables on your deployment:
+
+```bash
+ADMIN_ALERTS_ENABLED=true
+ADMIN_ALERT_EMAIL=you@example.com
+```
+
+Both must be set. If `ADMIN_ALERT_EMAIL` is missing or invalid, no email is sent even when the flag is on.
+
+When enabled, Tymeslot will email you a structured report whenever an alert is raised — failed webhooks, calendar sync errors, stuck Oban queues, broken integrations, and similar issues. Each report includes the alert category, severity, message, and a context table containing your Tymeslot version, deployment type, hostname, timestamp, and any relevant identifiers.
+
+Identical alerts are deduplicated within a 24-hour window, so a persistent issue produces at most one email per day for the same content — you won't be spammed by a tight error loop.
+
+### Sharing reports with the project
+
+These reports are designed to be copy-paste friendly. If you encounter an issue you'd like us to investigate, open a GitHub issue at <https://github.com/Tymeslot/tymeslot/issues> and paste the relevant alert. **Please redact any sensitive values** (user IDs, email addresses, charge IDs, internal hostnames) before sharing publicly — we only need the technical details to reproduce the failure.
+
+If the alert references logs, attach the relevant log lines as well. The more context you include, the faster we can diagnose and fix the issue.
 
 ## 🛠️ Development Setup
 

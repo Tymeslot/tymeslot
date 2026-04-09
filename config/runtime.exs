@@ -500,6 +500,20 @@ config :tymeslot, :email,
       System.get_env("CLOUDRON_APP_DOMAIN") ||
       "tymeslot.app"
 
+# Admin alerts — disabled by default. Self-hosters can opt in by setting
+# ADMIN_ALERTS_ENABLED=true and ADMIN_ALERT_EMAIL=<recipient>. Both must be
+# set for emails to be delivered. See CONTRIBUTING.md for how to share alerts
+# with the project as error reports.
+if System.get_env("ADMIN_ALERTS_ENABLED") in ["true", "1", "yes"] do
+  config :tymeslot, :admin_alerts_enabled, true
+end
+
+case System.get_env("ADMIN_ALERT_EMAIL") do
+  nil -> :ok
+  "" -> :ok
+  email -> config :tymeslot, :admin_alert_email, email
+end
+
 # Stripe Payment Configuration (optional for core, can be configured later)
 if config_env() == :prod do
   stripe_secret_key = System.get_env("STRIPE_SECRET_KEY")

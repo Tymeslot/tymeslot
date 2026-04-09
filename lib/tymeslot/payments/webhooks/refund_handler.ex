@@ -140,8 +140,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
                 total_refunded: total_refunded,
                 charge_amount: charge_amount,
                 access_revoked: should_revoke
-              },
-              level: :info
+              }
             )
 
             # Send email notification to user

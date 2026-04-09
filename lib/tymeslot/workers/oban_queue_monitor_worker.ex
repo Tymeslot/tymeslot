@@ -99,8 +99,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
           affected_queues: unhealthy_queues,
           total_affected: length(unhealthy_queues),
           threshold: threshold
-        },
-        level: :warning
+        }
       )
     end
   end
@@ -135,8 +134,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
           job_state: "available",
           age_hours: age_hours,
           threshold: threshold
-        },
-        level: :warning
+        }
       )
     end
   end
@@ -172,8 +170,7 @@ defmodule Tymeslot.Workers.ObanQueueMonitorWorker do
           job_state: "retryable",
           age_hours: age_hours,
           threshold: threshold
-        },
-        level: :warning
+        }
       )
     end
   end

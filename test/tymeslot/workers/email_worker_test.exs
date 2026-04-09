@@ -436,6 +436,29 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
     end
   end
 
+  describe "perform/1 send_admin_alert" do
+    test "happy path: returns :ok when all required fields are present" do
+      Mox.expect(Tymeslot.EmailServiceMock, :send_admin_alert, fn _recipient,
+                                                                  _category,
+                                                                  _severity,
+                                                                  _message,
+                                                                  _metadata ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               perform_job(EmailWorker, %{
+                 "action" => "send_admin_alert",
+                 "recipient" => "ops@example.com",
+                 "category" => "Webhook",
+                 "severity" => "warning",
+                 "message" => "Unhandled webhook event",
+                 "metadata" => %{"event_id" => "evt_001"},
+                 "alert_hash" => String.duplicate("a", 64)
+               })
+    end
+  end
+
   describe "backoff/1" do
     test "calculates exponential backoff: 1s, 2s, 4s, 8s, 16s" do
       assert EmailWorker.backoff(%Oban.Job{attempt: 1}) == 1
