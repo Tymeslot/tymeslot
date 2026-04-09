@@ -10,8 +10,8 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessorTest do
   setup :verify_on_exit!
 
   defmodule TestAdminAlerts do
-    @spec send_alert(atom(), map(), keyword()) :: :ok
-    def send_alert(event_type, payload, _opts) do
+    @spec send_alert(atom(), map()) :: :ok
+    def send_alert(event_type, payload) do
       pid = Application.get_env(:tymeslot, :admin_alerts_test_pid)
       send(pid, {:send_alert, event_type, payload})
       :ok

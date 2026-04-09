@@ -45,4 +45,11 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               {:ok, any()} | {:error, any()}
   @callback send_calendar_invitation(String.t(), map()) :: {:ok, any()} | {:error, any()}
   @callback send_event_update_notification(String.t(), map()) :: {:ok, any()} | {:error, any()}
+  @callback send_admin_alert(
+              recipient :: String.t(),
+              category :: String.t(),
+              severity :: :info | :warning | :error,
+              message :: String.t(),
+              metadata :: map()
+            ) :: {:ok, any()} | {:error, any()}
 end

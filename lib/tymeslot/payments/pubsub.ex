@@ -53,8 +53,7 @@ defmodule Tymeslot.Payments.PubSub do
               event: :payment_successful,
               user_id: transaction.user_id,
               reason: reason
-            },
-            level: :error
+            }
           )
 
           :ok
@@ -113,8 +112,7 @@ defmodule Tymeslot.Payments.PubSub do
             event_type: event_type,
             user_id: user_id,
             reason: reason
-          },
-          level: :error
+          }
         )
 
         :ok
@@ -154,8 +152,7 @@ defmodule Tymeslot.Payments.PubSub do
             event_type: event_type,
             user_id: user_id,
             reason: reason
-          },
-          level: :error
+          }
         )
 
         :ok
@@ -248,8 +245,7 @@ defmodule Tymeslot.Payments.PubSub do
               event: :subscription_successful,
               user_id: transaction.user_id,
               reason: reason
-            },
-            level: :error
+            }
           )
 
           :ok
@@ -302,8 +298,7 @@ defmodule Tymeslot.Payments.PubSub do
               event: :subscription_failed,
               user_id: transaction.user_id,
               reason: reason
-            },
-            level: :error
+            }
           )
 
           :ok

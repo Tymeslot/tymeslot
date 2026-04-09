@@ -67,10 +67,46 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
       "send_event_update_notification" ->
         handle_event_update_notification(args)
 
+      "send_admin_alert" ->
+        handle_admin_alert(args)
+
       _other ->
         {:discard, "Unknown action: #{action}"}
     end
   end
+
+  defp handle_admin_alert(%{
+         "recipient" => recipient,
+         "category" => category,
+         "severity" => severity_str,
+         "message" => message,
+         "metadata" => metadata
+       }) do
+    severity = severity_atom(severity_str)
+
+    case email_service_module().send_admin_alert(recipient, category, severity, message, metadata) do
+      {:ok, _result} ->
+        Logger.info("Admin alert email delivered",
+          category: category,
+          recipient: recipient
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to deliver admin alert email",
+          category: category,
+          error: inspect(reason)
+        )
+
+        {:error, "Failed to deliver admin alert"}
+    end
+  end
+
+  defp severity_atom("info"), do: :info
+  defp severity_atom("warning"), do: :warning
+  defp severity_atom("error"), do: :error
+  defp severity_atom(_other), do: :warning
 
   defp handle_confirmation_emails(%{"meeting_id" => meeting_id}) do
     case MeetingQueries.get_meeting(meeting_id) do
@@ -379,19 +415,22 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
          attendee_success
        ) do
     if organizer_success || attendee_success do
-      case MeetingQueries.append_reminder_sent(meeting, %{value: reminder_value, unit: reminder_unit}) do
+      case MeetingQueries.append_reminder_sent(meeting, %{
+             value: reminder_value,
+             unit: reminder_unit
+           }) do
         {:ok, _updated_meeting} ->
           :ok
 
-            {:error, reason} ->
-              Logger.error("Failed to track reminder as sent",
-                meeting_id: meeting.id,
-                reminder_value: reminder_value,
-                reminder_unit: reminder_unit,
-                error: inspect(reason)
-              )
+        {:error, reason} ->
+          Logger.error("Failed to track reminder as sent",
+            meeting_id: meeting.id,
+            reminder_value: reminder_value,
+            reminder_unit: reminder_unit,
+            error: inspect(reason)
+          )
 
-              {:error, "Failed to track reminder: #{inspect(reason)}"}
+          {:error, "Failed to track reminder: #{inspect(reason)}"}
       end
     else
       :ok

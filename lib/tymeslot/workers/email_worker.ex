@@ -477,6 +477,24 @@ defmodule Tymeslot.Workers.EmailWorker do
     end
   end
 
+  @doc """
+  Schedules an administrative alert email.
+
+  Delegates to `Tymeslot.Workers.EmailWorker.AdminAlertScheduler.schedule/5`,
+  which handles dedup via Oban's uniqueness constraint (24-hour window keyed on
+  recipient + category + message hash).
+  """
+  @spec schedule_admin_alert(
+          recipient :: String.t(),
+          category :: String.t(),
+          severity :: :info | :warning | :error,
+          message :: String.t(),
+          metadata :: map()
+        ) :: :ok | {:error, String.t()}
+  defdelegate schedule_admin_alert(recipient, category, severity, message, metadata),
+    to: Tymeslot.Workers.EmailWorker.AdminAlertScheduler,
+    as: :schedule
+
   # Private functions
 
   defp format_insert_error(%Changeset{} = changeset) do
@@ -672,6 +690,9 @@ defmodule Tymeslot.Workers.EmailWorker do
           "before_start_at",
           "before_end_at"
         ]
+
+      "send_admin_alert" ->
+        ["recipient", "category", "severity", "message", "metadata", "alert_hash"]
 
       nil ->
         ["action"]

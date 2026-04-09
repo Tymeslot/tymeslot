@@ -62,8 +62,12 @@ config :tymeslot,
   # Subscription manager - nil by default (can be provided by external layers)
   subscription_manager: nil,
 
-  # Admin alerts module - nil by default (can be provided by external layers)
-  admin_alerts_impl: Tymeslot.Infrastructure.AdminAlerts.Default,
+  # Admin alerts — disabled by default. Self-hosters can enable via the
+  # ADMIN_ALERTS_ENABLED env var (set true) plus a valid ADMIN_ALERT_EMAIL.
+  # SaaS overrides admin_alerts_enabled to true in apps/tymeslot_saas/config/config.exs.
+  admin_alerts_impl: Tymeslot.Infrastructure.AdminAlerts.EmailNotifier,
+  admin_alerts_enabled: false,
+  admin_alert_email: nil,
 
   # Dashboard Extensions
   dashboard_sidebar_extensions: [],
