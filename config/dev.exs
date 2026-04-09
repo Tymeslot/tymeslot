@@ -56,7 +56,7 @@ config :tymeslot, Tymeslot.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "tymeslot_dev",
+  database: "tymeslot_dev#{System.get_env("DB_SUFFIX")}",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 60
