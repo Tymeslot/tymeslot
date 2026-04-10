@@ -9,7 +9,7 @@ defmodule Tymeslot.Meetings do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Bookings.{Cancel, Create, Reschedule, RescheduleRequest}
-  alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema, VideoRooms}
+  alias Tymeslot.Meetings.{MeetingCalendarQueries, MeetingQueries, MeetingSchema, VideoRooms}
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Pagination.CursorPage
   alias Tymeslot.Utils.DateTimeUtils
@@ -499,7 +499,7 @@ defmodule Tymeslot.Meetings do
   @spec dismiss_calendar_sync_status(String.t(), integer()) ::
           {:ok, MeetingSchema.t()} | {:error, :not_found}
   def dismiss_calendar_sync_status(meeting_id, user_id) do
-    MeetingQueries.dismiss_calendar_sync_status(meeting_id, user_id)
+    MeetingCalendarQueries.dismiss_calendar_sync_status(meeting_id, user_id)
   end
 
   # =====================================

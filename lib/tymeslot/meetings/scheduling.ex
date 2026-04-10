@@ -11,6 +11,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   require Logger
 
   alias Ecto.Changeset
+  alias Tymeslot.Meetings.MeetingConflictQueries
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
   alias Tymeslot.Profiles
@@ -107,7 +108,7 @@ defmodule Tymeslot.Meetings.Scheduling do
   """
   @spec has_time_conflict?(DateTime.t(), DateTime.t(), String.t() | nil) :: boolean()
   def has_time_conflict?(%DateTime{} = start_time, %DateTime{} = end_time, exclude_uid \\ nil) do
-    MeetingQueries.time_conflict_exists?(start_time, end_time, exclude_uid)
+    MeetingConflictQueries.time_conflict_exists?(start_time, end_time, exclude_uid)
   end
 
   # Private functions
@@ -117,7 +118,7 @@ defmodule Tymeslot.Meetings.Scheduling do
       compute_buffered_window(start_time, end_time, organizer_user_id)
 
     Repo.transaction(fn ->
-      case MeetingQueries.count_locked_conflicts(
+      case MeetingConflictQueries.count_locked_conflicts(
              buffered_start,
              buffered_end,
              nil,
@@ -181,7 +182,7 @@ defmodule Tymeslot.Meetings.Scheduling do
       compute_buffered_window(start_time, end_time, meeting.organizer_user_id)
 
     Repo.transaction(fn ->
-      case MeetingQueries.count_locked_conflicts(
+      case MeetingConflictQueries.count_locked_conflicts(
              buffered_start,
              buffered_end,
              meeting.uid,
