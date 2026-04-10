@@ -407,19 +407,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       end
     end
 
-    test "detects Tymeslot-created event via PRODID" do
-      raw = %{
-        uid: "abc123@other.com",
-        summary: "Tymeslot Booking",
-        dtstart: ~U[2030-06-15 09:00:00Z],
-        dtend: ~U[2030-06-15 10:00:00Z],
-        prodid: "-//Tymeslot//Calendar Integration//EN"
-      }
-
-      assert {:ok, [event]} = EventProcessor.normalise_events([raw], @context)
-      assert event.created_by_tymeslot == true
-    end
-
     test "detects Tymeslot-created event via UID domain" do
       raw = %{
         uid: "abc123def456@tymeslot.com",

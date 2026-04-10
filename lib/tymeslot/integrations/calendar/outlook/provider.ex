@@ -13,6 +13,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
     display_name: "Outlook Calendar",
     base_url: "https://graph.microsoft.com/v1.0"
 
+  @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
+
   require Logger
 
   alias Tymeslot.Infrastructure.AdminAlerts
@@ -134,7 +136,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   defp tymeslot_origin?(%{"singleValueExtendedProperties" => props})
        when is_list(props) do
     Enum.any?(props, fn
-      %{"value" => "tymeslot"} -> true
+      %{"id" => @outlook_tymeslot_property_id, "value" => "tymeslot"} -> true
       _other -> false
     end)
   end

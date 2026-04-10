@@ -154,6 +154,51 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
     end
   end
 
+  describe "update_event/4" do
+    test "PUT body includes extendedProperties and source fingerprint" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      event_data = %{
+        summary: "Updated Meeting",
+        start_time: DateTime.utc_now(),
+        end_time: DateTime.add(DateTime.utc_now(), 3600),
+        timezone: "UTC"
+      }
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :put, url, body, _headers, _opts ->
+        assert String.contains?(url, "/calendars/primary/events/")
+        decoded_body = Jason.decode!(body)
+        assert decoded_body["summary"] == "Updated Meeting"
+
+        assert decoded_body["source"] == %{
+                 "title" => "Tymeslot",
+                 "url" => "https://tymeslot.app"
+               }
+
+        assert decoded_body["extendedProperties"] == %{
+                 "private" => %{"createdBy" => "tymeslot"}
+               }
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body: Jason.encode!(%{"id" => "event-abc"})
+         }}
+      end)
+
+      assert {:ok, %{"id" => "event-abc"}} =
+               CalendarAPI.update_event(integration, "primary", "event-abc", event_data)
+    end
+  end
+
   describe "refresh_token/1" do
     test "calls Google token endpoint and returns new tokens" do
       user = insert(:user)

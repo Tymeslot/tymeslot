@@ -106,7 +106,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   @spec update_event(CalendarIntegrationSchema.t(), String.t(), String.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def update_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id, event_data) do
-    body = format_event_data(event_data)
+    body =
+      event_data
+      |> format_event_data()
+      |> add_tymeslot_fingerprint()
+
     # Convert the event_id to Google Calendar format
     google_event_id = uuid_to_google_event_id(event_id)
 

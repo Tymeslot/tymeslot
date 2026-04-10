@@ -135,7 +135,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec update_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def update_event(%CalendarIntegrationSchema{} = integration, event_id, event_data) do
-    body = format_event_data(event_data)
+    body =
+      event_data
+      |> format_event_data()
+      |> add_tymeslot_fingerprint()
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       with {:ok, response} <-
@@ -154,7 +157,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec update_event(CalendarIntegrationSchema.t(), String.t(), String.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def update_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_id, event_data) do
-    body = format_event_data(event_data)
+    body =
+      event_data
+      |> format_event_data()
+      |> add_tymeslot_fingerprint()
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       with {:ok, response} <-
@@ -281,6 +287,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
         do_register_graph_subscription(integration, webhook_base_url)
     end
   end
+
+  @doc false
+  @spec tymeslot_property_id() :: String.t()
+  def tymeslot_property_id, do: @outlook_tymeslot_property_id
 
   # Private functions
 

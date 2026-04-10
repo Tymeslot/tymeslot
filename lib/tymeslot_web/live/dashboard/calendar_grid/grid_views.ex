@@ -120,7 +120,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
               <img
                 :if={Map.get(event, :created_by_tymeslot)}
                 src="/images/brand/logo.svg"
-                alt="Tymeslot event"
+                alt="Tymeslot"
                 class="absolute top-0.5 right-0.5 w-3 h-3 opacity-60"
               />
               <div data-resize-handle class="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize opacity-0 group-hover:opacity-100 bg-black/10 rounded-b"></div>

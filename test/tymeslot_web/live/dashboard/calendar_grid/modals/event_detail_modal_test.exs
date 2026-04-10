@@ -181,4 +181,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModalTest do
 
     assert html =~ "Work"
   end
+
+  test "shows 'Created by Tymeslot' badge when created_by_tymeslot is true" do
+    event = Map.put(@event, :created_by_tymeslot, true)
+
+    html =
+      render_component(
+        &EventDetailModal.event_detail_modal/1,
+        base_assigns(%{selected_event: event})
+      )
+
+    assert html =~ "Created by Tymeslot"
+  end
+
+  test "does not show 'Created by Tymeslot' badge when created_by_tymeslot is false" do
+    event = Map.put(@event, :created_by_tymeslot, false)
+
+    html =
+      render_component(
+        &EventDetailModal.event_detail_modal/1,
+        base_assigns(%{selected_event: event})
+      )
+
+    refute html =~ "Created by Tymeslot"
+  end
 end

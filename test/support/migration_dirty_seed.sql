@@ -12,7 +12,7 @@
 -- 4. Comments explain WHY each row is adversarial, not what it contains.
 --
 -- Tables seeded: users, profiles, calendar_integrations, video_integrations,
---                calendar_events
+--                calendar_events (renamed to provider_calendar_events by migration)
 
 -- ============================================================================
 -- USERS
@@ -106,6 +106,11 @@ FROM users WHERE email = 'seed-user-2@example.com';
 --
 -- Note: inserts target the legacy `calendar_events` table — this seed
 -- runs after `create_calendar_events` but before `recreate_provider_calendar_events`.
+--
+-- 20260410142214_add_created_by_tymeslot_to_provider_calendar_events adds a NOT NULL
+-- `created_by_tymeslot` column with `default: false`. No explicit value is included
+-- here because the column does not exist in `calendar_events` at insert time; the
+-- column default backfills all pre-existing rows automatically when the migration runs.
 
 -- Baseline legacy row: title set, synced_at populated — happy path.
 INSERT INTO calendar_events (uid, calendar_integration_id, calendar_path, title, start_at, end_at, all_day, status, synced_at, inserted_at, updated_at)

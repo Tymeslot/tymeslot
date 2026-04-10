@@ -597,6 +597,18 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
       assert event.created_by_tymeslot == false
     end
 
+    test "does not treat a property with the right value but wrong id as Tymeslot-created" do
+      raw =
+        build_raw_event(%{
+          "singleValueExtendedProperties" => [
+            %{"id" => "some-other-id", "value" => "tymeslot"}
+          ]
+        })
+
+      assert {:ok, [event]} = Provider.normalise_events([raw], @context)
+      assert event.created_by_tymeslot == false
+    end
+
     test "datetime without offset gets Z appended" do
       raw =
         build_raw_event(%{

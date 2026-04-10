@@ -242,9 +242,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
   # --- Field mappers ---
 
   defp tymeslot_origin?(raw) do
-    prodid = raw[:prodid] || ""
     uid = raw[:uid] || ""
-    String.contains?(prodid, "Tymeslot") or String.ends_with?(uid, "@tymeslot.com")
+    String.ends_with?(uid, "@tymeslot.com")
   end
 
   defp map_visibility("PUBLIC"), do: :public

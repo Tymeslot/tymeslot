@@ -91,6 +91,50 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
     end
   end
 
+  describe "create_event/2" do
+    test "sends correct payload with fingerprint to primary calendar" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "outlook",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      event_data = %{
+        summary: "Primary Calendar Meeting",
+        start_time: DateTime.utc_now(),
+        end_time: DateTime.add(DateTime.utc_now(), 3600),
+        timezone: "UTC"
+      }
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, url, body, _headers, _opts ->
+        assert String.contains?(url, "/me/events")
+        decoded_body = Jason.decode!(body)
+        assert decoded_body["subject"] == "Primary Calendar Meeting"
+
+        assert [%{"value" => "tymeslot"}] =
+                 decoded_body["singleValueExtendedProperties"]
+
+        {:ok,
+         %Req.Response{
+           status: 201,
+           body:
+             Jason.encode!(%{
+               "id" => "new_primary_id",
+               "subject" => "Primary Calendar Meeting",
+               "start" => %{"dateTime" => "2024-01-01T10:00:00"},
+               "end" => %{"dateTime" => "2024-01-01T11:00:00"}
+             })
+         }}
+      end)
+
+      assert {:ok, %{id: "new_primary_id"}} = CalendarAPI.create_event(integration, event_data)
+    end
+  end
+
   describe "create_event/3" do
     test "sends correct payload to Outlook API" do
       user = insert(:user)
@@ -154,6 +198,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
         assert String.contains?(url, "/me/calendars/primary/events/event123")
         decoded_body = Jason.decode!(body)
         assert decoded_body["subject"] == "Updated Meeting"
+
+        assert [%{"value" => "tymeslot"}] =
+                 decoded_body["singleValueExtendedProperties"]
 
         {:ok,
          %Req.Response{

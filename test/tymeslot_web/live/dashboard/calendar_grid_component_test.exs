@@ -147,6 +147,42 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
     end
   end
 
+  describe "created_by_tymeslot badge" do
+    setup %{conn: conn} do
+      user = insert(:user, onboarding_completed_at: DateTime.utc_now())
+      _profile = insert(:profile, user: user)
+      integration = insert(:calendar_integration, user: user)
+      conn = conn |> Test.init_test_session(%{}) |> fetch_session()
+      conn = log_in_user(conn, user)
+      {:ok, conn: conn, user: user, integration: integration}
+    end
+
+    test "renders logo badge for events created by Tymeslot", %{
+      conn: conn,
+      integration: integration
+    } do
+      _event =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          created_by_tymeslot: true
+        )
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
+      assert html =~ "logo.svg"
+    end
+
+    test "does not render logo badge for external events", %{conn: conn, integration: integration} do
+      _event =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          created_by_tymeslot: false
+        )
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
+      refute html =~ "logo.svg"
+    end
+  end
+
   # Extracts the text content of the first <h2> element found in HTML.
   defp extract_period_label(html) do
     case Regex.run(~r/<h2[^>]*>(.*?)<\/h2>/s, html) do
