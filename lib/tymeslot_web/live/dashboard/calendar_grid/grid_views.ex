@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
             phx-value-event-id={event.id}
             phx-target={@myself}
           >
-            <%= event.title || "(No title)" %>
+            <%= event.summary || "(No title)" %>
           </div>
         </div>
       </div>
@@ -110,7 +110,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
               data-start-minutes={DateTime.shift_zone!(event.start_at, @user_timezone) |> then(&(&1.hour * 60 + &1.minute))}
               data-duration-minutes={max(15, round(DateTime.diff(Map.get(event, :display_end_at, event.end_at), Map.get(event, :display_start_at, event.start_at), :second) / 60))}
             >
-              <div class="truncate font-semibold"><%= event.title || "(No title)" %></div>
+              <div class="truncate font-semibold"><%= event.summary || "(No title)" %></div>
               <div class="opacity-80"><%= Helpers.format_display_time_range(event, Helpers.time_format(assigns), @user_timezone) %></div>
               <div data-resize-handle class="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize opacity-0 group-hover:opacity-100 bg-black/10 rounded-b"></div>
             </div>
@@ -189,7 +189,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                 phx-value-event-id={event.id}
                 phx-target={@myself}
               >
-                <%= event.title || "(No title)" %>
+                <%= event.summary || "(No title)" %>
               </div>
               <div :if={length(day_evts) > 3} class="text-token-xs text-tymeslot-400 mt-0.5">
                 +<%= length(day_evts) - 3 %> more

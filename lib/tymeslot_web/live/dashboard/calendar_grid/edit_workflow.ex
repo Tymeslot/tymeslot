@@ -130,7 +130,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     lv_pid = self()
 
     base_event_data = %{
-      summary: optimistic_event.title || "",
+      summary: optimistic_event.summary || "",
       start_time: new_start,
       end_time: new_end,
       description: optimistic_event.description || original_event.description || "",
@@ -155,21 +155,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
       case result do
         :ok ->
-          CalendarGrid.update_cached_event(%{
-            uid: original_event.uid,
-            calendar_integration_id: original_event.calendar_integration_id,
-            provider_event_id: original_event.provider_event_id,
-            title: optimistic_event.title,
-            start_at: new_start,
-            end_at: new_end,
-            all_day: optimistic_event.all_day,
-            location: optimistic_event.location || original_event.location,
-            description: optimistic_event.description || original_event.description,
-            attendees: original_event.attendees || [],
-            status: original_event.status,
-            raw_data: original_event.raw_data,
-            synced_at: DateTime.utc_now(:second)
-          })
+          timing =
+            if optimistic_event.all_day do
+              %{start_date: optimistic_event.start_date, end_date: optimistic_event.end_date}
+            else
+              %{start_at: new_start, end_at: new_end}
+            end
+
+          CalendarGrid.update_cached_event(
+            Map.merge(timing, %{
+              uid: original_event.uid,
+              calendar_integration_id: original_event.calendar_integration_id,
+              provider: original_event.provider,
+              provider_calendar_id: original_event.provider_calendar_id,
+              provider_event_id: original_event.provider_event_id,
+              summary: optimistic_event.summary,
+              all_day: optimistic_event.all_day,
+              location: optimistic_event.location || original_event.location,
+              description: optimistic_event.description || original_event.description,
+              attendees: original_event.attendees || [],
+              status: original_event.status,
+              provider_metadata: original_event.provider_metadata,
+              synced_at: DateTime.utc_now(:second)
+            })
+          )
 
           send(lv_pid, {:event_update_result, :ok})
 
@@ -191,7 +200,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   @spec update_field_async(Phoenix.LiveView.Socket.t(), map(), atom(), String.t()) ::
           Phoenix.LiveView.Socket.t()
   def update_field_async(socket, original_event, field, new_value)
-      when field in [:title, :location, :description] do
+      when field in [:summary, :location, :description] do
     user_id = socket.assigns.current_user.id
     lv_pid = self()
     event_data = build_field_event_data(original_event, field, new_value)
@@ -238,8 +247,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     lv_pid = self()
     new_calendar_id = opts[:calendar_id]
 
+    new_integration = Enum.find(socket.assigns.integrations, &(&1.id == new_integration_id))
+
+    new_provider = new_integration && new_integration.provider
+
+    new_provider_calendar_id =
+      new_calendar_id ||
+        (new_integration && new_integration.default_booking_calendar_id) ||
+        "primary"
+
     event_attrs = %{
-      summary: event.title || "",
+      summary: event.summary || "",
       start_time: event.start_at,
       end_time: event.end_at,
       description: event.description || "",
@@ -269,14 +287,23 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
         uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
 
-        CalendarGrid.cache_created_event(%{
-          uid: uid,
-          calendar_integration_id: new_integration_id,
-          title: event.title,
-          start_at: event.start_at,
-          end_at: event.end_at,
-          all_day: event.all_day || false
-        })
+        timing =
+          if event.all_day do
+            %{start_date: event.start_date, end_date: event.end_date}
+          else
+            %{start_at: event.start_at, end_at: event.end_at}
+          end
+
+        CalendarGrid.cache_created_event(
+          Map.merge(timing, %{
+            uid: uid,
+            calendar_integration_id: new_integration_id,
+            provider: new_provider,
+            provider_calendar_id: new_provider_calendar_id,
+            summary: event.summary,
+            all_day: event.all_day || false
+          })
+        )
 
         send(lv_pid, {:event_move_result, {:ok, uid: uid, integration_id: new_integration_id}})
       else
@@ -295,7 +322,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     lv_pid = self()
 
     event_data = %{
-      summary: event.title || "",
+      summary: event.summary || "",
       start_time: event.start_at,
       end_time: event.end_at,
       description: event.description || "",
@@ -304,21 +331,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       attendees: attendees
     }
 
-    cache_row = %{
-      uid: event.uid,
-      calendar_integration_id: event.calendar_integration_id,
-      provider_event_id: event.provider_event_id,
-      title: event.title,
-      start_at: event.start_at,
-      end_at: event.end_at,
-      all_day: event.all_day,
-      location: event.location,
-      description: event.description,
-      attendees: attendees,
-      status: event.status,
-      raw_data: event.raw_data,
-      synced_at: DateTime.utc_now(:second)
-    }
+    timing =
+      if event.all_day do
+        %{start_date: event.start_date, end_date: event.end_date}
+      else
+        %{start_at: event.start_at, end_at: event.end_at}
+      end
+
+    cache_row =
+      Map.merge(timing, %{
+        uid: event.uid,
+        calendar_integration_id: event.calendar_integration_id,
+        provider: event.provider,
+        provider_calendar_id: event.provider_calendar_id,
+        provider_event_id: event.provider_event_id,
+        summary: event.summary,
+        all_day: event.all_day,
+        location: event.location,
+        description: event.description,
+        attendees: attendees,
+        status: event.status,
+        provider_metadata: event.provider_metadata,
+        synced_at: DateTime.utc_now(:second)
+      })
 
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       result =
@@ -346,7 +381,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
   defp build_field_event_data(event, field, new_value) do
     base = %{
-      summary: event.title || "",
+      summary: event.summary || "",
       start_time: event.start_at,
       end_time: event.end_at,
       description: event.description || "",
@@ -355,31 +390,37 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     }
 
     case field do
-      :title -> %{base | summary: new_value}
+      :summary -> %{base | summary: new_value}
       :location -> %{base | location: new_value}
       :description -> %{base | description: new_value}
     end
   end
 
   defp build_field_cache_row(event, field, new_value) do
-    Map.put(
-      %{
+    timing =
+      if event.all_day do
+        %{start_date: event.start_date, end_date: event.end_date}
+      else
+        %{start_at: event.start_at, end_at: event.end_at}
+      end
+
+    base =
+      Map.merge(timing, %{
         uid: event.uid,
         calendar_integration_id: event.calendar_integration_id,
+        provider: event.provider,
+        provider_calendar_id: event.provider_calendar_id,
         provider_event_id: event.provider_event_id,
-        title: event.title,
-        start_at: event.start_at,
-        end_at: event.end_at,
+        summary: event.summary,
         all_day: event.all_day,
         location: event.location,
         description: event.description,
         attendees: event.attendees || [],
         status: event.status,
-        raw_data: event.raw_data,
+        provider_metadata: event.provider_metadata,
         synced_at: DateTime.utc_now(:second)
-      },
-      field,
-      new_value
-    )
+      })
+
+    Map.put(base, field, new_value)
   end
 end

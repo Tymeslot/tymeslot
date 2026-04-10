@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPickerTest do
 
     test "derives Google calendar ID from organizer email" do
       event = %{
-        raw_data: %{"organizer" => %{"email" => "meetings@gmail.com"}},
+        provider_metadata: %{"organizer" => %{"email" => "meetings@gmail.com"}},
         provider_event_id: nil
       }
 
@@ -110,12 +110,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPickerTest do
         default_booking_calendar_id: nil
       }
 
-      event = %{raw_data: nil, provider_event_id: "/caldav/personal/event-123.ics"}
+      event = %{provider_metadata: nil, provider_event_id: "/caldav/personal/event-123.ics"}
       assert CalendarPicker.derive_event_calendar_id(event, integration) == "/caldav/personal/"
     end
 
     test "falls back to default when no match" do
-      event = %{raw_data: nil, provider_event_id: nil}
+      event = %{provider_metadata: nil, provider_event_id: nil}
       result = CalendarPicker.derive_event_calendar_id(event, @integration)
 
       assert result == "primary@gmail.com"

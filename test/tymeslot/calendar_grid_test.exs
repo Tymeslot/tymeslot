@@ -49,7 +49,7 @@ defmodule Tymeslot.CalendarGridTest do
 
     test "returns events within the time range", %{integration: integration} do
       event =
-        insert(:calendar_event_cache,
+        insert(:provider_calendar_event,
           calendar_integration: integration,
           start_at: ~U[2026-03-15 10:00:00Z],
           end_at: ~U[2026-03-15 11:00:00Z]
@@ -67,7 +67,7 @@ defmodule Tymeslot.CalendarGridTest do
     end
 
     test "excludes events outside the time range", %{integration: integration} do
-      insert(:calendar_event_cache,
+      insert(:provider_calendar_event,
         calendar_integration: integration,
         start_at: ~U[2026-03-10 10:00:00Z],
         end_at: ~U[2026-03-10 11:00:00Z]
@@ -86,7 +86,7 @@ defmodule Tymeslot.CalendarGridTest do
     test "excludes events from other integrations", %{integration: integration} do
       other = insert(:calendar_integration)
 
-      insert(:calendar_event_cache,
+      insert(:provider_calendar_event,
         calendar_integration: other,
         start_at: ~U[2026-03-15 10:00:00Z],
         end_at: ~U[2026-03-15 11:00:00Z]
@@ -105,7 +105,7 @@ defmodule Tymeslot.CalendarGridTest do
     test "excludes events ending exactly at range start (strict boundary)", %{
       integration: integration
     } do
-      insert(:calendar_event_cache,
+      insert(:provider_calendar_event,
         calendar_integration: integration,
         start_at: ~U[2026-03-14 23:00:00Z],
         end_at: ~U[2026-03-15 00:00:00Z]

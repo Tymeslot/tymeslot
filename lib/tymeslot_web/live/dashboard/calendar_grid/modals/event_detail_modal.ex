@@ -43,7 +43,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
             type="text"
             id="event-title-input"
             name="value"
-            value={@selected_event.title || ""}
+            value={@selected_event.summary || ""}
             placeholder="(No title)"
             phx-blur="update_event_title"
             phx-target={@myself}
@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
           />
         </form>
         <h3 :if={!@editable} class="text-token-2xl font-black text-tymeslot-900 tracking-tight pr-8">
-          <%= @selected_event.title || "(No title)" %>
+          <%= @selected_event.summary || "(No title)" %>
         </h3>
       </div>
 
@@ -107,7 +107,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
               </span>
             </p>
             <p class="text-token-xs text-tymeslot-400 mt-0.5">
-              <%= Calendar.strftime(@selected_event.start_at |> DateTime.shift_zone!(@user_timezone) |> DateTime.to_date(), "%A, %B %-d") %>
+              <%= Calendar.strftime(Helpers.event_display_date(@selected_event, @user_timezone), "%A, %B %-d") %>
             </p>
           </div>
         </div>

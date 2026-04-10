@@ -72,7 +72,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
   @doc """
   Derives which calendar ID within an integration an event belongs to.
 
-  For Google: matches organizer email from raw_data against calendar list IDs.
+  For Google: matches organizer email from provider_metadata against calendar list IDs.
   For CalDAV: matches the calendar path prefix in provider_event_id.
   Falls back to default_booking_calendar_id or first calendar.
   """
@@ -84,8 +84,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
 
     derived =
       cond do
-        is_map(event.raw_data) && is_map(event.raw_data["organizer"]) ->
-          find_google_calendar_id(calendars, event.raw_data["organizer"]["email"])
+        is_map(event.provider_metadata) && is_map(event.provider_metadata["organizer"]) ->
+          find_google_calendar_id(calendars, event.provider_metadata["organizer"]["email"])
 
         is_binary(event.provider_event_id) ->
           find_caldav_calendar_id(calendars, event.provider_event_id)

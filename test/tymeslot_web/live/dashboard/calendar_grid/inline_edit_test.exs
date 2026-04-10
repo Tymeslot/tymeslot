@@ -25,7 +25,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
       event =
         insert_event(integration, %{
-          title: "Team Standup",
+          summary: "Team Standup",
           start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
           all_day: false
@@ -101,7 +101,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
       event =
         insert_event(integration, %{
-          title: "Location Event",
+          summary: "Location Event",
           location: "Room 101",
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
       event =
         insert_event(integration, %{
-          title: "No Location Event",
+          summary: "No Location Event",
           location: nil,
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -181,7 +181,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
       event =
         insert_event(integration, %{
-          title: "Description Event",
+          summary: "Description Event",
           description: "Original notes",
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
@@ -228,7 +228,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
       event =
         insert_event(integration, %{
-          title: "No Notes Event",
+          summary: "No Notes Event",
           description: nil,
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -261,7 +261,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
       event =
         insert_event(integration, %{
-          title: "Timed Event",
+          summary: "Timed Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
           all_day: false
@@ -345,7 +345,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
       event =
         insert_event(integration, %{
-          title: "Recurring Timed Event",
+          summary: "Recurring Timed Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           all_day: false,
@@ -368,9 +368,83 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
 
       assert html =~ "Edit recurring event"
     end
+
+    test "rejects time edit for all-day events with an info flash", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      today = Date.utc_today()
+
+      event =
+        insert_event(integration, %{
+          summary: "All Day Workshop",
+          all_day: true,
+          start_date: today,
+          end_date: Date.add(today, 1),
+          start_at: nil,
+          end_at: nil
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      # All-day events are in the banner row, not the time grid; open via the show_event hook
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("show_event", %{"event-id" => to_string(event.id)})
+
+      today_iso = Date.to_iso8601(today)
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_event_time", %{
+        "start-date" => today_iso,
+        "start-time" => "09:00",
+        "end-date" => today_iso,
+        "end-time" => "10:00"
+      })
+
+      # Flash message propagates to the parent LiveView on the next render
+      assert render(lv) =~ "all-day"
+    end
+  end
+
+  describe "send invitations" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Invite Test Event",
+          start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
+          all_day: false,
+          attendees: []
+        })
+
+      {:ok, event: event}
+    end
+
+    test "new attendees are rendered after send_invitations", %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("add_event_attendee", %{"email" => "new-invite@example.com"})
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("send_invitations", %{})
+
+      # Attendee email must be visible in the modal after invitations are sent
+      assert html =~ "new-invite@example.com"
+      # Pending list must be cleared
+      refute html =~ "border-dashed"
+    end
   end
 
   defp insert_event(integration, attrs) do
-    insert(:calendar_event_cache, Map.merge(%{calendar_integration: integration}, attrs))
+    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 end

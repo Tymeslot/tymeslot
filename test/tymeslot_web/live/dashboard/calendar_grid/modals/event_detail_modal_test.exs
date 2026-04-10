@@ -18,7 +18,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModalTest do
   }
 
   @event %{
-    title: "Team Standup",
+    summary: "Team Standup",
     start_at: ~U[2026-04-06 08:00:00Z],
     end_at: ~U[2026-04-06 08:30:00Z],
     all_day: false,
@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModalTest do
     attendees: [],
     calendar_integration_id: 1,
     provider_event_id: "evt-123",
-    raw_data: nil
+    provider_metadata: nil
   }
 
   defp base_assigns(overrides \\ %{}) do
@@ -163,8 +163,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModalTest do
     refute html =~ "Delete event"
   end
 
-  test "renders no-title placeholder when title is nil" do
-    event = %{@event | title: nil}
+  test "renders no-title placeholder when summary is nil" do
+    event = %{@event | summary: nil}
 
     html =
       render_component(

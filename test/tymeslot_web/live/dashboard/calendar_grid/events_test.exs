@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       insert_event(integration, %{
-        title: "My Test Meeting",
+        summary: "My Test Meeting",
         start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
         all_day: false
@@ -37,7 +37,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       insert_event(integration, %{
-        title: "All Day Conference",
+        summary: "All Day Conference",
+        start_date: Date.utc_today(),
+        end_date: Date.add(Date.utc_today(), 1),
         start_at: DateTime.new!(Date.utc_today(), ~T[00:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.add(Date.utc_today(), 1), ~T[00:00:00], "Etc/UTC"),
         all_day: true
@@ -56,7 +58,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Clickable Event",
+          summary: "Clickable Event",
           start_at: start_utc,
           end_at: end_utc,
           all_day: false
@@ -78,7 +80,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Off-site Meetup",
+          summary: "Off-site Meetup",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           all_day: false,
@@ -95,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Planning Session",
+          summary: "Planning Session",
           start_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[12:00:00], "Etc/UTC"),
           all_day: false,
@@ -112,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Team Sync",
+          summary: "Team Sync",
           start_at: DateTime.new!(Date.utc_today(), ~T[13:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           all_day: false,
@@ -136,7 +138,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Anonymous Meeting",
+          summary: "Anonymous Meeting",
           start_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
           all_day: false,
@@ -155,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Close Me",
+          summary: "Close Me",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           all_day: false
@@ -177,7 +179,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Recurring Meeting",
+          summary: "Recurring Meeting",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           all_day: false,
@@ -270,7 +272,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       insert_event(integration, %{
-        title: "Hidden Event",
+        summary: "Hidden Event",
         start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
         all_day: false
@@ -436,7 +438,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       insert_event(integration, %{
-        title: "Live Update Event",
+        summary: "Live Update Event",
         start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
         all_day: false
@@ -446,7 +448,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
       assert html =~ "Live Update Event"
 
       insert_event(integration, %{
-        title: "New Live Event",
+        summary: "New Live Event",
         start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
         all_day: false
@@ -471,7 +473,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Failing Event",
+          summary: "Failing Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           all_day: false
@@ -495,7 +497,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Moveable Event",
+          summary: "Moveable Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           all_day: false
@@ -521,12 +523,50 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
     end
   end
 
+  describe "all-day event move" do
+    test "moving an all-day event to another integration does not crash", %{
+      conn: conn,
+      user: user
+    } do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      other_integration = insert(:calendar_integration, user: user, is_active: true)
+      today = Date.utc_today()
+
+      event =
+        insert_event(integration, %{
+          summary: "All Day Conf",
+          all_day: true,
+          start_date: today,
+          end_date: Date.add(today, 1),
+          start_at: nil,
+          end_at: nil
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      # All-day events are in the banner row, not the time grid; open via the show_event hook
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("show_event", %{"event-id" => to_string(event.id)})
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("update_event_calendar", %{
+          "integration-id" => to_string(other_integration.id)
+        })
+
+      # The optimistic UI update must not raise; no permission error expected
+      refute html =~ "You don't have permission"
+    end
+  end
+
   describe "graceful rendering of sparse event data" do
-    test "renders events with nil title gracefully", %{conn: conn, user: user} do
+    test "renders events with nil summary gracefully", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
       insert_event(integration, %{
-        title: nil,
+        summary: nil,
         start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
         end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
         all_day: false
@@ -542,7 +582,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "No Description Event",
+          summary: "No Description Event",
           description: nil,
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
@@ -560,7 +600,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Solo Meeting",
+          summary: "Solo Meeting",
           start_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[17:00:00], "Etc/UTC"),
           all_day: false,
@@ -580,7 +620,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Team Sync",
+          summary: "Team Sync",
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
           all_day: false,
@@ -607,7 +647,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Team Sync",
+          summary: "Team Sync",
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
           all_day: false,
@@ -635,7 +675,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Team Sync",
+          summary: "Team Sync",
           start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
           all_day: false,
@@ -660,7 +700,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
 
       event =
         insert_event(integration, %{
-          title: "Validation Test Event",
+          summary: "Validation Test Event",
           start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
           end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
           all_day: false,
@@ -801,6 +841,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsTest do
   end
 
   defp insert_event(integration, attrs) do
-    insert(:calendar_event_cache, Map.merge(%{calendar_integration: integration}, attrs))
+    insert(:provider_calendar_event, Map.merge(%{calendar_integration: integration}, attrs))
   end
 end

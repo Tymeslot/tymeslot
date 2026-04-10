@@ -70,13 +70,25 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
       slug = "refinement-chat"
 
       stub(Tymeslot.CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        start_utc =
+          DateTime.shift_zone!(DateTime.new!(target_date, ~T[00:00:00], timezone), "Etc/UTC")
+
+        end_utc =
+          DateTime.shift_zone!(DateTime.new!(target_date, ~T[23:59:59], timezone), "Etc/UTC")
+
         {:ok,
          [
-           %{
+           Tymeslot.Integrations.Calendar.CalendarEvent.new!(%{
              uid: "busy-day-#{System.unique_integer()}",
-             start_time: DateTime.new!(target_date, ~T[00:00:00], timezone),
-             end_time: DateTime.new!(target_date, ~T[23:59:59], timezone)
-           }
+             calendar_integration_id: 1,
+             provider: :google,
+             provider_event_id: "busy-day-#{System.unique_integer()}",
+             provider_calendar_id: "primary",
+             all_day: false,
+             start_at: start_utc,
+             end_at: end_utc,
+             synced_at: DateTime.utc_now()
+           })
          ]}
       end)
 

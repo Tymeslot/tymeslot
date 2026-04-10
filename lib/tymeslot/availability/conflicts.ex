@@ -1,11 +1,13 @@
 defmodule Tymeslot.Availability.Conflicts do
   @moduledoc """
   Pure functions for conflict detection and slot filtering.
+
+  Events must be pre-filtered through `CalendarEvent.blocking?/1` before
+  reaching this module — it performs overlap checks only, not blocking logic.
   """
 
   alias Tymeslot.Availability.{BusinessHours, TimeSlots}
   alias Tymeslot.Availability.Calculate
-  alias Tymeslot.Availability.Events
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
 
   @typedoc """
@@ -23,10 +25,13 @@ defmodule Tymeslot.Availability.Conflicts do
 
   @doc """
   Filters available slots based on conflicts and booking rules.
+
+  Events must already be filtered to blocking-only and converted to the user's
+  timezone as maps with `start_time` / `end_time` (both `DateTime`).
   """
   @spec filter_available_slots(
           [String.t()],
-          [Events.calendar_event()],
+          [map()],
           integer(),
           String.t(),
           Date.t(),
@@ -39,8 +44,6 @@ defmodule Tymeslot.Availability.Conflicts do
 
     current_time = DateTimeUtils.now_in_timezone(timezone)
 
-    busy = busy_events(events)
-
     Enum.filter(all_slots, fn slot ->
       slot_time = TimeSlots.parse_time_slot(slot)
       slot_start = DateTimeUtils.create_datetime_safe(date, slot_time, timezone)
@@ -52,7 +55,7 @@ defmodule Tymeslot.Availability.Conflicts do
         min_advance_hours,
         max_advance_booking_days
       ) and
-        not TimeRange.has_conflict_with_events?(slot_start, slot_end, busy, buffer_minutes)
+        not TimeRange.has_conflict_with_events?(slot_start, slot_end, events, buffer_minutes)
     end)
   end
 
@@ -65,6 +68,9 @@ defmodule Tymeslot.Availability.Conflicts do
   Checks if a date has available slots given pre-fetched events.
   Used for efficient month view checking.
 
+  Events must already be filtered to blocking-only and converted to the user's
+  timezone as maps with `start_time` / `end_time` (both `DateTime`).
+
   Accepts a pre-computed `now` DateTime to avoid repeated clock calls
   when checking many dates in a loop.
   """
@@ -72,7 +78,7 @@ defmodule Tymeslot.Availability.Conflicts do
           Date.t(),
           String.t(),
           String.t(),
-          [Events.calendar_event()],
+          [map()],
           DateTime.t(),
           Calculate.availability_config()
         ) :: boolean()
@@ -90,7 +96,7 @@ defmodule Tymeslot.Availability.Conflicts do
     profile_id = Map.get(config, :profile_id)
 
     minimum_booking_time = DateTime.add(now, min_advance_hours * 60, :minute)
-    relevant_events = events_in_user_tz |> busy_events() |> filter_events_for_date_window(date)
+    relevant_events = filter_events_for_date_window(events_in_user_tz, date)
 
     params = %{
       target_date: date,
@@ -122,8 +128,6 @@ defmodule Tymeslot.Availability.Conflicts do
           not (Date.compare(event_end_date, start_date_limit) == :lt or
                  Date.compare(event_start_date, end_date_limit) == :gt)
 
-        # After normalise_event_times/1 all events carry DateTime structs;
-        # this arm is a defensive fallback only.
         _other ->
           false
       end
@@ -231,20 +235,5 @@ defmodule Tymeslot.Availability.Conflicts do
         end
       end
     end)
-  end
-
-  # All providers normalise free events to transparency: "transparent".
-  # Also coerces Date (all-day event) times to DateTime so downstream
-  # comparisons and conflict checks don't crash on mixed types.
-  defp busy_events(events) do
-    events
-    |> Enum.reject(fn event -> Map.get(event, :transparency) == "transparent" end)
-    |> Enum.map(&normalise_event_times/1)
-  end
-
-  defp normalise_event_times(event) do
-    start_time = DateTimeUtils.to_datetime(event.start_time)
-    end_time = DateTimeUtils.to_datetime(event.end_time) || DateTime.add(start_time, 30, :minute)
-    %{event | start_time: start_time, end_time: end_time}
   end
 end

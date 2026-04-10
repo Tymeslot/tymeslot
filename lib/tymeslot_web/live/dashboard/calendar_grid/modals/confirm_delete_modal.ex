@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModal do
 
       <p class="text-token-sm text-tymeslot-500">
         Are you sure you want to delete
-        <span class="font-medium text-tymeslot-700"><%= @event.title || "(No title)" %></span>?
+        <span class="font-medium text-tymeslot-700"><%= @event.summary || "(No title)" %></span>?
         This will also remove it from your calendar provider.
       </p>
       <p :if={@linked_to_booking} class="mt-2 text-token-sm text-amber-600">

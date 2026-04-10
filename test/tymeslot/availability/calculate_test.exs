@@ -7,6 +7,7 @@ defmodule Tymeslot.Availability.CalculateTest do
   @moduletag :availability
 
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
 
   describe "validate_time_selection/3" do
     test "returns error when date is nil" do
@@ -293,10 +294,17 @@ defmodule Tymeslot.Availability.CalculateTest do
 
     test "handles events parameter" do
       events = [
-        %{
-          start_time: DateTime.new!(~D[2025-06-15], ~T[10:00:00], "America/New_York"),
-          end_time: DateTime.new!(~D[2025-06-15], ~T[11:00:00], "America/New_York")
-        }
+        CalendarEvent.new!(%{
+          uid: "calc-test-event",
+          calendar_integration_id: 1,
+          provider: :google,
+          provider_event_id: "calc-test-event",
+          provider_calendar_id: "primary",
+          all_day: false,
+          start_at: DateTime.new!(~D[2025-06-15], ~T[10:00:00], "America/New_York"),
+          end_at: DateTime.new!(~D[2025-06-15], ~T[11:00:00], "America/New_York"),
+          synced_at: DateTime.utc_now()
+        })
       ]
 
       assert {:ok, availability_map} =

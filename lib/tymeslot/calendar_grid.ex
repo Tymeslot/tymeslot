@@ -7,8 +7,8 @@ defmodule Tymeslot.CalendarGrid do
   color indices to integrations.
   """
 
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
@@ -36,9 +36,9 @@ defmodule Tymeslot.CalendarGrid do
   Queries the event cache for events overlapping the [start_dt, end_dt] window.
   """
   @spec list_events_for_range([integer()], DateTime.t(), DateTime.t()) ::
-          [CalendarEventCacheSchema.t()]
+          [ProviderCalendarEventSchema.t()]
   def list_events_for_range(integration_ids, start_dt, end_dt) do
-    CalendarEventCacheQueries.list_for_range(integration_ids, start_dt, end_dt)
+    ProviderCalendarEventQueries.list_for_range(integration_ids, start_dt, end_dt)
   end
 
   @doc """
@@ -139,7 +139,7 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec cache_created_event(map()) :: :ok
   def cache_created_event(attrs) do
-    {:ok, _count} = CalendarEventCacheQueries.upsert_batch([attrs])
+    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([attrs])
     :ok
   end
 
@@ -150,15 +150,15 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec update_cached_event(map()) :: :ok
   def update_cached_event(attrs) do
-    {:ok, _count} = CalendarEventCacheQueries.upsert_batch([attrs])
+    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([attrs])
     :ok
   end
 
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_cached_event(integer(), String.t()) ::
-          {:ok, CalendarEventCacheSchema.t()} | {:error, :not_found}
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
   def get_cached_event(integration_id, uid) do
-    CalendarEventCacheQueries.get_by_uid(integration_id, uid)
+    ProviderCalendarEventQueries.get_by_uid(integration_id, uid)
   end
 
   @doc """
@@ -166,7 +166,7 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec delete_cached_event(integer(), String.t()) :: {:ok, :deleted | :not_found}
   def delete_cached_event(integration_id, uid) do
-    CalendarEventCacheQueries.delete_by_uid(integration_id, uid)
+    ProviderCalendarEventQueries.delete_by_uid(integration_id, uid)
   end
 
   @doc """

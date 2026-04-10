@@ -87,6 +87,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
       %{
         all_day: true,
         calendar_integration_id: 1,
+        start_date: start_date,
+        end_date: end_date,
         start_at: DateTime.new!(start_date, ~T[00:00:00], "Etc/UTC"),
         end_at: DateTime.new!(end_date, ~T[00:00:00], "Etc/UTC")
       }

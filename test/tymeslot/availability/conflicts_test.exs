@@ -10,6 +10,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
   use ExUnitProperties
 
   alias Tymeslot.Availability.{BusinessHours, Calculate, Conflicts, Events}
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
 
   defp get_future_weekday do
@@ -20,6 +21,35 @@ defmodule Tymeslot.Availability.ConflictsTest do
       7 -> Date.add(date, 1)
       _weekday -> date
     end
+  end
+
+  # Builds a timed CalendarEvent struct for use in tests that go through
+  # Calculate (which expects CalendarEvent structs).
+  defp build_calendar_event(date, start_time, end_time, timezone \\ "Etc/UTC", opts \\ []) do
+    uid = Keyword.get(opts, :uid, "test-#{System.unique_integer([:positive])}")
+
+    CalendarEvent.new!(%{
+      uid: uid,
+      calendar_integration_id: 1,
+      provider: :google,
+      provider_calendar_id: "primary",
+      provider_event_id: uid,
+      all_day: false,
+      start_at: DateTime.new!(date, start_time, timezone),
+      end_at: DateTime.new!(date, end_time, timezone),
+      synced_at: DateTime.utc_now(),
+      transparency: Keyword.get(opts, :transparency, :opaque),
+      status: Keyword.get(opts, :status, :confirmed)
+    })
+  end
+
+  # Builds a lightweight map with start_time/end_time for tests that call
+  # Conflicts functions directly (which expect pre-converted maps).
+  defp build_conflict_map(date, start_time, end_time, timezone \\ "Etc/UTC") do
+    %{
+      start_time: DateTime.new!(date, start_time, timezone),
+      end_time: DateTime.new!(date, end_time, timezone)
+    }
   end
 
   property "date_has_slots_with_events? matches available_slots availability" do
@@ -62,19 +92,31 @@ defmodule Tymeslot.Availability.ConflictsTest do
       date = Date.add(Date.utc_today(), days_ahead)
       config = %{buffer_minutes: buffer, min_advance_hours: 0, duration_minutes: duration}
 
-      # Convert generated event data into actual event maps
-      events_in_tz =
+      # Convert generated event data into CalendarEvent structs
+      calendar_events =
         Enum.map(events, fn {day_offset, hour, min, dur} ->
           event_date = Date.add(date, day_offset)
           time = Time.new!(hour, min, 0)
 
-          start_time = DateTimeUtils.create_datetime_safe(event_date, time, timezone)
+          start_at = DateTimeUtils.create_datetime_safe(event_date, time, timezone)
+          end_at = DateTime.add(start_at, dur, :minute)
 
-          %{
-            start_time: start_time,
-            end_time: DateTime.add(start_time, dur, :minute)
-          }
+          CalendarEvent.new!(%{
+            uid: "prop-#{System.unique_integer([:positive])}",
+            calendar_integration_id: 1,
+            provider: :google,
+            provider_event_id: "prop-#{System.unique_integer([:positive])}",
+            provider_calendar_id: "primary",
+            all_day: false,
+            start_at: start_at,
+            end_at: end_at,
+            synced_at: DateTime.utc_now()
+          })
         end)
+
+      # Pre-filter and convert for the optimized check (mirrors what Calculate does)
+      blocking = Enum.filter(calendar_events, &CalendarEvent.blocking?/1)
+      events_in_tz = Events.convert_events_to_timezone(blocking, timezone, timezone)
 
       # For this test, we use default business hours (Mon-Fri 11am-7:30pm)
       # We only check weekdays to ensure we have business hours
@@ -101,7 +143,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
             timezone,
             # owner_tz
             timezone,
-            events_in_tz,
+            calendar_events,
             config
           )
 
@@ -180,65 +222,78 @@ defmodule Tymeslot.Availability.ConflictsTest do
     end
   end
 
-  describe "filter_available_slots/6 - transparency (free/busy)" do
+  describe "filter_available_slots/6 - transparency via CalendarEvent.blocking?/1" do
     setup do
       date = Date.add(Date.utc_today(), 7)
       slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
       %{date: date, slots: slots}
     end
 
-    test "does not block slots for Google Calendar free events (transparency: transparent)", %{
+    test "transparent events are excluded by CalendarEvent.blocking?/1", %{
       date: date,
       slots: slots
     } do
-      events = [
-        %{
-          start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
-          end_time: DateTime.new!(date, ~T[10:30:00], "Etc/UTC"),
-          transparency: "transparent"
-        }
-      ]
+      event =
+        build_calendar_event(date, ~T[10:00:00], ~T[10:30:00], "Etc/UTC",
+          transparency: :transparent
+        )
 
-      result = filter_slots(slots, events, %{date: date})
+      refute CalendarEvent.blocking?(event)
+
+      # When passed through the full pipeline, transparent events don't block
+      blocking = Enum.filter([event], &CalendarEvent.blocking?/1)
+      events_in_tz = Events.convert_events_to_timezone(blocking, "Etc/UTC", "Etc/UTC")
+      result = filter_slots(slots, events_in_tz, %{date: date})
 
       assert "9:00 AM" in result
       assert "10:00 AM" in result
       assert "11:00 AM" in result
     end
 
-    test "blocks slots for events with nil transparency (default busy)", %{
-      date: date,
-      slots: slots
-    } do
-      events = [
-        %{
-          start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
-          end_time: DateTime.new!(date, ~T[10:30:00], "Etc/UTC"),
-          transparency: nil
-        }
-      ]
+    test "opaque events block slots", %{date: date, slots: slots} do
+      event =
+        build_calendar_event(date, ~T[10:00:00], ~T[10:30:00], "Etc/UTC", transparency: :opaque)
 
-      result = filter_slots(slots, events, %{date: date})
+      assert CalendarEvent.blocking?(event)
+
+      blocking = Enum.filter([event], &CalendarEvent.blocking?/1)
+      events_in_tz = Events.convert_events_to_timezone(blocking, "Etc/UTC", "Etc/UTC")
+      result = filter_slots(slots, events_in_tz, %{date: date})
 
       refute "10:00 AM" in result
       assert "9:00 AM" in result
       assert "11:00 AM" in result
     end
 
-    test "blocks slots for explicitly opaque (busy) events", %{date: date, slots: slots} do
-      events = [
-        %{
-          start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
-          end_time: DateTime.new!(date, ~T[10:30:00], "Etc/UTC"),
-          transparency: "opaque"
-        }
-      ]
+    test "cancelled events are excluded by CalendarEvent.blocking?/1", %{
+      date: date,
+      slots: slots
+    } do
+      event =
+        build_calendar_event(date, ~T[10:00:00], ~T[10:30:00], "Etc/UTC", status: :cancelled)
 
-      result = filter_slots(slots, events, %{date: date})
+      refute CalendarEvent.blocking?(event)
 
-      refute "10:00 AM" in result
-      assert "9:00 AM" in result
-      assert "11:00 AM" in result
+      blocking = Enum.filter([event], &CalendarEvent.blocking?/1)
+      events_in_tz = Events.convert_events_to_timezone(blocking, "Etc/UTC", "Etc/UTC")
+      result = filter_slots(slots, events_in_tz, %{date: date})
+
+      assert length(result) == 3
+    end
+
+    test "declined events are excluded by CalendarEvent.blocking?/1", %{
+      date: date,
+      slots: slots
+    } do
+      event = build_calendar_event(date, ~T[10:00:00], ~T[10:30:00], "Etc/UTC", status: :declined)
+
+      refute CalendarEvent.blocking?(event)
+
+      blocking = Enum.filter([event], &CalendarEvent.blocking?/1)
+      events_in_tz = Events.convert_events_to_timezone(blocking, "Etc/UTC", "Etc/UTC")
+      result = filter_slots(slots, events_in_tz, %{date: date})
+
+      assert length(result) == 3
     end
   end
 
@@ -256,16 +311,10 @@ defmodule Tymeslot.Availability.ConflictsTest do
       slots = ["9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM"]
       date = Date.add(Date.utc_today(), 7)
 
-      # Two separate events
+      # Two separate events (pre-converted maps)
       events = [
-        %{
-          start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
-          end_time: DateTime.new!(date, ~T[10:30:00], "Etc/UTC")
-        },
-        %{
-          start_time: DateTime.new!(date, ~T[12:00:00], "Etc/UTC"),
-          end_time: DateTime.new!(date, ~T[12:30:00], "Etc/UTC")
-        }
+        build_conflict_map(date, ~T[10:00:00], ~T[10:30:00]),
+        build_conflict_map(date, ~T[12:00:00], ~T[12:30:00])
       ]
 
       result = filter_slots(slots, events, %{date: date})
@@ -282,12 +331,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
       date = Date.add(Date.utc_today(), 7)
 
       # Event at 10:00-10:30
-      events = [
-        %{
-          start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
-          end_time: DateTime.new!(date, ~T[10:30:00], "Etc/UTC")
-        }
-      ]
+      events = [build_conflict_map(date, ~T[10:00:00], ~T[10:30:00])]
 
       # 60-minute slots starting at 9:30 would end at 10:30, overlapping with event
       result = filter_slots(slots, events, %{date: date, duration: 60})
@@ -325,13 +369,8 @@ defmodule Tymeslot.Availability.ConflictsTest do
       # Ensure we use a future weekday
       date = get_future_weekday()
 
-      # Event only covers part of the day
-      events = [
-        %{
-          start_time: DateTime.new!(date, ~T[10:00:00], "Etc/UTC"),
-          end_time: DateTime.new!(date, ~T[11:00:00], "Etc/UTC")
-        }
-      ]
+      # Event only covers part of the day (pre-converted map)
+      events = [build_conflict_map(date, ~T[10:00:00], ~T[11:00:00])]
 
       result =
         Conflicts.date_has_slots_with_events?(
@@ -349,14 +388,8 @@ defmodule Tymeslot.Availability.ConflictsTest do
     test "returns false when event covers entire business hours" do
       date = Date.add(Date.utc_today(), 7)
 
-      # Event covers the entire business day (starts before 9am, ends after 5pm)
-      # The function checks if buffered event start <= business start AND buffered event end >= business end
-      events = [
-        %{
-          start_time: DateTime.new!(date, ~T[00:00:00], "Etc/UTC"),
-          end_time: DateTime.new!(date, ~T[23:59:59], "Etc/UTC")
-        }
-      ]
+      # Event covers the entire business day
+      events = [build_conflict_map(date, ~T[00:00:00], ~T[23:59:59])]
 
       result =
         Conflicts.date_has_slots_with_events?(
@@ -387,24 +420,34 @@ defmodule Tymeslot.Availability.ConflictsTest do
       assert result == true
     end
 
-    test "ignores all-day free events when checking day availability" do
+    test "transparent events are filtered upstream via CalendarEvent.blocking?/1" do
       date = get_future_weekday()
 
-      # A full-day event that would normally block everything, but is marked Free
-      events = [
-        %{
-          start_time: DateTime.new!(date, ~T[00:00:00], "Etc/UTC"),
-          end_time: DateTime.new!(date, ~T[23:59:59], "Etc/UTC"),
-          transparency: "transparent"
-        }
-      ]
+      # A full-day blocking event would block everything, but when transparent
+      # it gets filtered out by CalendarEvent.blocking?/1 before reaching Conflicts.
+      event =
+        CalendarEvent.new!(%{
+          uid: "transparent-full-day",
+          calendar_integration_id: 1,
+          provider: :google,
+          provider_event_id: "transparent-full-day",
+          provider_calendar_id: "primary",
+          all_day: false,
+          start_at: DateTime.new!(date, ~T[00:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(date, ~T[23:59:59], "Etc/UTC"),
+          synced_at: DateTime.utc_now(),
+          transparency: :transparent
+        })
+
+      blocking = Enum.filter([event], &CalendarEvent.blocking?/1)
+      events_in_tz = Events.convert_events_to_timezone(blocking, "Etc/UTC", "Etc/UTC")
 
       result =
         Conflicts.date_has_slots_with_events?(
           date,
           "Etc/UTC",
           "Etc/UTC",
-          events,
+          events_in_tz,
           DateTime.utc_now(),
           %{buffer_minutes: 0}
         )
@@ -484,16 +527,21 @@ defmodule Tymeslot.Availability.ConflictsTest do
           ) do
       # All-day event on Monday: start ~D[2025-06-16], end ~D[2025-06-17]
       # This is how Outlook/Google represent "Monday" (exclusive end)
-      events = [
-        %{
-          start_time: monday_date,
-          end_time: tuesday_date,
-          uid: "all-day-monday"
-        }
-      ]
+      calendar_event =
+        CalendarEvent.new!(%{
+          uid: "all-day-monday",
+          calendar_integration_id: 1,
+          provider: :google,
+          provider_event_id: "all-day-monday",
+          provider_calendar_id: "primary",
+          all_day: true,
+          start_date: monday_date,
+          end_date: tuesday_date,
+          synced_at: DateTime.utc_now()
+        })
 
-      # Convert to the target timezone
-      events_in_tz = Events.convert_events_to_timezone(events, timezone, timezone)
+      # Convert to the target timezone (returns maps with start_time/end_time)
+      events_in_tz = Events.convert_events_to_timezone([calendar_event], timezone, timezone)
 
       # Slot on Tuesday
       slot_time = Time.new!(slot_hour, slot_min, 0)
@@ -538,19 +586,10 @@ defmodule Tymeslot.Availability.ConflictsTest do
     end
   end
 
-  defp build_events(date, start_time, end_time, timezone \\ "Etc/UTC") do
-    [
-      %{
-        start_time: DateTime.new!(date, start_time, timezone),
-        end_time: DateTime.new!(date, end_time, timezone)
-      }
-    ]
-  end
-
   defp conflict_slots(buffer_minutes \\ 0) do
     slots = ["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM"]
     date = Date.add(Date.utc_today(), 7)
-    events = build_events(date, ~T[10:00:00], ~T[10:30:00])
+    events = [build_conflict_map(date, ~T[10:00:00], ~T[10:30:00])]
     filter_slots(slots, events, %{date: date, buffer_minutes: buffer_minutes})
   end
 
@@ -589,7 +628,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
       end_date = Date.end_of_month(start_date)
 
       for date <- Date.range(start_date, end_date) do
-        # 1. Optimized check
+        # 1. Optimized check (with empty pre-converted events)
         res_optimized =
           Conflicts.date_has_slots_with_events?(
             date,
@@ -600,7 +639,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
             %{min_advance_hours: 0}
           )
 
-        # 2. Full calculation
+        # 2. Full calculation (with empty CalendarEvent list)
         {:ok, slots} =
           Calculate.available_slots(
             date,
@@ -646,12 +685,11 @@ defmodule Tymeslot.Availability.ConflictsTest do
       target_date = Date.add(Date.utc_today(), target_days_ahead)
       event_date = Date.add(Date.utc_today(), event_days_ahead)
 
-      # Create event in its own "random" timezone to simulate external calendar
-      # We'll use UTC for simplicity as we shift it to user_tz later anyway
+      # Create event in UTC, then shift to the viewing user's timezone
       event_start = DateTime.new!(event_date, Time.new!(event_hour, event_min, 0), "Etc/UTC")
       event_end = DateTime.add(event_start, event_dur_min, :minute)
 
-      # Shift event to the viewing user's timezone (this is what's passed to date_has_slots_with_events?)
+      # This is the pre-converted map shape that Conflicts receives
       event_in_user_tz = %{
         start_time: DateTime.shift_zone!(event_start, timezone),
         end_time: DateTime.shift_zone!(event_end, timezone)
@@ -692,42 +730,56 @@ defmodule Tymeslot.Availability.ConflictsTest do
     end
   end
 
-  describe "all-day events with Date types" do
-    test "filter_available_slots blocks slots when event has Date start/end" do
+  describe "all-day events with CalendarEvent structs" do
+    test "filter_available_slots blocks slots when all-day event covers the date" do
       date = Date.add(Date.utc_today(), 7)
       slots = ["9:00 AM", "10:00 AM", "11:00 AM"]
 
-      # All-day event using Date structs (as returned by providers for all-day events)
-      events = [%{start_time: date, end_time: Date.add(date, 1)}]
+      # All-day event as CalendarEvent, converted through Events
+      event =
+        CalendarEvent.new!(%{
+          uid: "all-day-test",
+          calendar_integration_id: 1,
+          provider: :google,
+          provider_event_id: "all-day-test",
+          provider_calendar_id: "primary",
+          all_day: true,
+          start_date: date,
+          end_date: Date.add(date, 1),
+          synced_at: DateTime.utc_now()
+        })
 
-      result = filter_slots(slots, events, %{date: date})
+      events_in_tz = Events.convert_events_to_timezone([event], "Etc/UTC", "Etc/UTC")
+
+      result = filter_slots(slots, events_in_tz, %{date: date})
 
       assert result == [], "All slots should be blocked by an all-day event"
     end
 
-    test "filter_available_slots blocks slots when event has Date start and nil end" do
-      date = Date.add(Date.utc_today(), 7)
-      slots = ["12:00 AM"]
-
-      events = [%{start_time: date, end_time: nil}]
-
-      result = filter_slots(slots, events, %{date: date})
-
-      # nil end_time normalises to start + 30 min (00:00–00:30), so 12:00 AM is blocked
-      assert result == []
-    end
-
-    test "date_has_slots_with_events? handles all-day Date events without crashing" do
+    test "date_has_slots_with_events? handles all-day CalendarEvent without crashing" do
       date = get_future_weekday()
 
-      events = [%{start_time: date, end_time: Date.add(date, 1)}]
+      event =
+        CalendarEvent.new!(%{
+          uid: "all-day-block",
+          calendar_integration_id: 1,
+          provider: :google,
+          provider_event_id: "all-day-block",
+          provider_calendar_id: "primary",
+          all_day: true,
+          start_date: date,
+          end_date: Date.add(date, 1),
+          synced_at: DateTime.utc_now()
+        })
+
+      events_in_tz = Events.convert_events_to_timezone([event], "Etc/UTC", "Etc/UTC")
 
       result =
         Conflicts.date_has_slots_with_events?(
           date,
           "Etc/UTC",
           "Etc/UTC",
-          events,
+          events_in_tz,
           DateTime.utc_now(),
           %{buffer_minutes: 0, min_advance_hours: 0}
         )
@@ -736,21 +788,31 @@ defmodule Tymeslot.Availability.ConflictsTest do
       assert result == false
     end
 
-    test "filter_available_slots handles mixed Date and DateTime events" do
+    test "filter_available_slots handles mixed all-day and timed CalendarEvents" do
       date = Date.add(Date.utc_today(), 7)
       slots = ["9:00 AM", "2:00 PM"]
 
-      events = [
-        %{start_time: date, end_time: Date.add(date, 1)},
-        %{
-          start_time: DateTime.new!(date, ~T[14:00:00], "Etc/UTC"),
-          end_time: DateTime.new!(date, ~T[15:00:00], "Etc/UTC")
-        }
-      ]
+      all_day =
+        CalendarEvent.new!(%{
+          uid: "all-day-mixed",
+          calendar_integration_id: 1,
+          provider: :google,
+          provider_event_id: "all-day-mixed",
+          provider_calendar_id: "primary",
+          all_day: true,
+          start_date: date,
+          end_date: Date.add(date, 1),
+          synced_at: DateTime.utc_now()
+        })
 
-      result = filter_slots(slots, events, %{date: date})
+      timed = build_calendar_event(date, ~T[14:00:00], ~T[15:00:00])
 
-      assert result == [], "Both Date and DateTime events should block their respective slots"
+      events_in_tz =
+        Events.convert_events_to_timezone([all_day, timed], "Etc/UTC", "Etc/UTC")
+
+      result = filter_slots(slots, events_in_tz, %{date: date})
+
+      assert result == [], "Both all-day and timed events should block their respective slots"
     end
   end
 
@@ -759,7 +821,7 @@ defmodule Tymeslot.Availability.ConflictsTest do
       date = ~D[2026-06-15]
       timezone = "UTC"
 
-      # Generate 500 random events for the month
+      # Generate 500 random pre-converted event maps
       events =
         Enum.map(1..500, fn i ->
           day = rem(i, 28) + 1

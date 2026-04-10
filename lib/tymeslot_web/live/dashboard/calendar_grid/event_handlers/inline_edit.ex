@@ -52,7 +52,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   @spec handle_update_event_title(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_update_event_title(%{"value" => new_value}, socket),
-    do: handle_update_event_field(:title, 500, new_value, socket)
+    do: handle_update_event_field(:summary, 500, new_value, socket)
 
   @spec handle_update_event_location(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -261,7 +261,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     else
       case Shared.check_edit_rate_limit(socket) do
         :ok ->
-          new_attendee_maps = Enum.map(pending, &%{"email" => &1})
+          new_attendee_maps =
+            Enum.map(pending, &%{email: &1, display_name: nil, status: :needs_action})
+
           combined = (event.attendees || []) ++ new_attendee_maps
           updated_event = %{event | attendees: combined}
 
@@ -276,7 +278,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             user_id,
             pending,
             %{
-              title: updated_event.title,
+              title: updated_event.summary,
               uid: updated_event.uid,
               start_at: updated_event.start_at,
               end_at: updated_event.end_at,
@@ -385,6 +387,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
 
   defp normalize_time(t) when byte_size(t) == 5, do: t <> ":00"
   defp normalize_time(t), do: t
+
+  defp apply_time_change(socket, event, _new_start, _raw_end) when event.all_day == true do
+    send(self(), {:flash, {:info, "Time editing is not available for all-day events."}})
+    {:noreply, socket}
+  end
 
   defp apply_time_change(socket, event, new_start, raw_end) do
     original_duration = DateTime.diff(event.end_at, event.start_at, :second)

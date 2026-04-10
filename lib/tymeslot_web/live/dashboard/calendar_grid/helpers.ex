@@ -324,8 +324,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
     end
   end
 
-  @spec datetime_to_local_parts(DateTime.t(), String.t()) ::
+  @spec datetime_to_local_parts(DateTime.t() | nil, String.t()) ::
           %{date: String.t(), time: String.t()}
+  def datetime_to_local_parts(nil, _timezone), do: %{date: "", time: ""}
+
   def datetime_to_local_parts(dt, timezone) do
     local = DateTime.shift_zone!(dt, timezone)
     date = Date.to_iso8601(DateTime.to_date(local))
@@ -361,11 +363,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   @spec all_day_events_for_day(map(), Date.t()) :: list()
   def all_day_events_for_day(assigns, date) do
     Enum.filter(visible_events(assigns), fn event ->
-      # end_at stores the exclusive end (iCal DTEND for all-day events is exclusive),
+      # end_date stores the exclusive end (iCal DTEND for all-day events is exclusive),
       # so the event covers `date` only when start_date <= date < end_date.
       event.all_day and
-        Date.compare(DateTime.to_date(event.start_at), date) != :gt and
-        Date.compare(DateTime.to_date(event.end_at), date) == :gt
+        Date.compare(event.start_date, date) != :gt and
+        Date.compare(event.end_date, date) == :gt
     end)
   end
 
@@ -473,6 +475,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   end
 
   @spec overlap_layout(list()) :: list()
+  @doc """
+  Returns the date an event should be displayed on in the given timezone.
+
+  For all-day events the date comes from `start_date` directly (no time-zone
+  shift, since all-day events are date-only). For timed events the
+  `start_at` datetime is shifted into the viewer's timezone.
+  """
+  def event_display_date(%{all_day: true, start_date: %Date{} = date}, _timezone), do: date
+
+  def event_display_date(%{start_at: %DateTime{} = start_at}, timezone) do
+    start_at |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+  end
+
   def overlap_layout([]), do: []
 
   def overlap_layout(events) do

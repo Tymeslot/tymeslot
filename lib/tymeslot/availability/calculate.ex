@@ -6,6 +6,7 @@ defmodule Tymeslot.Availability.Calculate do
 
   alias Tymeslot.Availability.{AvailabilityOverrideQueries, WeeklyAvailabilityQueries}
   alias Tymeslot.Availability.{BusinessHours, Conflicts, Events, TimeSlots}
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.DateTimeUtils
 
   @type availability_config :: %{
@@ -49,7 +50,7 @@ defmodule Tymeslot.Availability.Calculate do
           integer(),
           String.t(),
           String.t(),
-          [Events.calendar_event()],
+          [CalendarEvent.t()],
           availability_config()
         ) :: {:ok, [String.t()]} | {:error, any()}
   def available_slots(
@@ -92,8 +93,10 @@ defmodule Tymeslot.Availability.Calculate do
     if Enum.empty?(business_hours_windows) do
       {:ok, []}
     else
+      blocking_events = Enum.filter(events, &CalendarEvent.blocking?/1)
+
       events_in_user_tz =
-        Events.convert_events_to_timezone(events, owner_timezone, user_timezone)
+        Events.convert_events_to_timezone(blocking_events, owner_timezone, user_timezone)
 
       all_available_slots =
         business_hours_windows
@@ -137,7 +140,7 @@ defmodule Tymeslot.Availability.Calculate do
           Date.t(),
           String.t(),
           String.t(),
-          [Events.calendar_event()],
+          [CalendarEvent.t()],
           availability_config()
         ) :: {:ok, %{String.t() => boolean()}}
   def range_availability(
@@ -155,7 +158,11 @@ defmodule Tymeslot.Availability.Calculate do
     max_booking_date = Date.add(today, max_advance_booking_days)
     duration_minutes = Map.get(config, :duration_minutes, 30)
 
-    events_in_user_tz = Events.convert_events_to_timezone(events, owner_timezone, user_timezone)
+    blocking_events = Enum.filter(events, &CalendarEvent.blocking?/1)
+
+    events_in_user_tz =
+      Events.convert_events_to_timezone(blocking_events, owner_timezone, user_timezone)
+
     profile_id = Map.get(config, :profile_id)
 
     # Prefetch schedule data once for the entire range (with 1-day padding for adjacent-day checks)
@@ -200,7 +207,7 @@ defmodule Tymeslot.Availability.Calculate do
           integer(),
           String.t(),
           String.t(),
-          [Events.calendar_event()],
+          [CalendarEvent.t()],
           availability_config()
         ) :: {:ok, %{String.t() => boolean()}}
   def month_availability(

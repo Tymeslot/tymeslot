@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModalTest do
   defp base_assigns(overrides \\ %{}) do
     Map.merge(
       %{
-        event: %{title: "Team Standup"},
+        event: %{summary: "Team Standup"},
         deleting: false,
         linked_to_booking: false,
         myself: %Phoenix.LiveComponent.CID{cid: 1}
@@ -55,11 +55,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmDeleteModalTest do
     assert html =~ "Deleting..."
   end
 
-  test "renders no-title placeholder when title is nil" do
+  test "renders no-title placeholder when summary is nil" do
     html =
       render_component(
         &ConfirmDeleteModal.confirm_delete_modal/1,
-        base_assigns(%{event: %{title: nil}})
+        base_assigns(%{event: %{summary: nil}})
       )
 
     assert html =~ "(No title)"

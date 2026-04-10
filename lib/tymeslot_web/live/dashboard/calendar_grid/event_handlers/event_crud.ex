@@ -194,17 +194,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
   end
 
   defp handle_save_event_with(creating, socket) do
-    case Shared.check_edit_rate_limit(socket) do
-      {:error, :rate_limited, _message} ->
-        send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
-        {:noreply, socket}
-
-      :ok ->
-        do_save_event(creating, socket)
-    end
-  end
-
-  defp do_save_event(creating, socket) do
     integration = Enum.find(socket.assigns.integrations, &(&1.id == creating.integration_id))
 
     if is_nil(integration) do
@@ -320,10 +309,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud do
         {:ok, %{uid: uid, creating: creating, start_at: start_at, end_at: end_at}},
         socket
       ) do
+    integration =
+      Enum.find(socket.assigns.integrations, &(&1.id == creating.integration_id))
+
+    provider = integration && integration.provider
+
+    provider_calendar_id =
+      creating[:calendar_id] ||
+        (integration && integration.default_booking_calendar_id) ||
+        "primary"
+
     CalendarGrid.cache_created_event(%{
       uid: uid,
       calendar_integration_id: creating.integration_id,
-      title: creating.title,
+      provider: provider,
+      provider_calendar_id: provider_calendar_id,
+      summary: creating.title,
       start_at: start_at,
       end_at: end_at,
       all_day: false
