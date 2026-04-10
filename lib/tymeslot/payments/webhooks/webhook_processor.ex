@@ -116,9 +116,9 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessor do
         record_unhandled_event(event_type, event, object)
 
         # Alert admin about unhandled event
-        AdminAlerts.send_alert(
-          :unhandled_webhook,
-          sanitize_alert_payload(event, object)
+        AdminAlerts.report(:unhandled_webhook,
+          summary: "Unhandled Stripe webhook event type",
+          context: sanitize_alert_payload(event, object)
         )
 
         {:ok, :unhandled_event}

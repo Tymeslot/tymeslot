@@ -43,6 +43,38 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.AdminAlerts.ReasonNormaliser
+
+  @doc """
+  Reports an administrative alert using the canonical call shape.
+
+  This is the preferred entrypoint for application code. Call sites supply:
+
+    * `:summary` (required) — a one-line description of what happened
+    * `:reason` (optional) — any term; normalised into `reason_code` /
+      `reason_message` flat keys before dispatch
+    * `:context` (optional) — a map of domain fields to include verbatim
+
+  The normalised reason and context are merged with `:summary` and passed to
+  `send_alert/2`. `send_alert/2` remains the low-level primitive for tests
+  and future non-standard callers; new production code should use
+  `report/2`.
+  """
+  @spec report(alert_type(), keyword()) :: :ok | {:error, term()}
+  def report(type, opts) when is_list(opts) do
+    summary = Keyword.fetch!(opts, :summary)
+    reason = Keyword.get(opts, :reason)
+    context = Keyword.get(opts, :context, %{})
+
+    payload =
+      context
+      |> Map.new()
+      |> maybe_put_reason(reason)
+      |> Map.put(:summary, summary)
+
+    send_alert(type, payload)
+  end
+
   @doc """
   Sends an administrative alert using the configured implementation.
 
@@ -93,5 +125,19 @@ defmodule Tymeslot.Infrastructure.AdminAlerts do
       :admin_alerts_impl,
       Tymeslot.Infrastructure.AdminAlerts.EmailNotifier
     )
+  end
+
+  defp maybe_put_reason(payload, nil), do: payload
+
+  defp maybe_put_reason(payload, reason) do
+    case ReasonNormaliser.normalise(reason) do
+      nil ->
+        payload
+
+      %{code: code, message: message} ->
+        payload
+        |> Map.put(:reason_code, code)
+        |> Map.put(:reason_message, message)
+    end
   end
 end

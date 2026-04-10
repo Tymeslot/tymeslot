@@ -180,7 +180,13 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
         else
           # We still alert admin in Core for visibility
           if status == "lost" do
-            alert_admin_dispute_lost(dispute_id, nil)
+            alert_admin_dispute_lost(
+              dispute_id,
+              nil,
+              dispute["amount"],
+              dispute["reason"]
+            )
+
             send_dispute_lost_alert(dispute)
           end
 
@@ -196,11 +202,16 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
     end
   end
 
-  defp alert_admin_dispute_lost(dispute_id, user_id) do
-    AdminAlerts.send_alert(:dispute_lost, %{
-      dispute_id: dispute_id,
-      user_id: user_id
-    })
+  defp alert_admin_dispute_lost(dispute_id, user_id, amount, dispute_reason) do
+    AdminAlerts.report(:dispute_lost,
+      summary: "Dispute lost — consider manual access revocation",
+      reason: {:dispute_lost, dispute_reason},
+      context: %{
+        dispute_id: dispute_id,
+        user_id: user_id,
+        amount: amount
+      }
+    )
   end
 
   defp fetch_charge(charge_id) do
@@ -238,12 +249,15 @@ defmodule Tymeslot.Payments.Webhooks.DisputeHandler do
   end
 
   defp alert_admin_dispute_created(dispute_id, user_id, amount, reason) do
-    AdminAlerts.send_alert(:dispute_created, %{
-      dispute_id: dispute_id,
-      user_id: user_id,
-      amount: amount,
-      reason: reason
-    })
+    AdminAlerts.report(:dispute_created,
+      summary: "New dispute created — manual review required",
+      reason: {:dispute_created, reason},
+      context: %{
+        dispute_id: dispute_id,
+        user_id: user_id,
+        amount: amount
+      }
+    )
   end
 
   defp broadcast_dispute_event(user_id, event_type, dispute_id) do
