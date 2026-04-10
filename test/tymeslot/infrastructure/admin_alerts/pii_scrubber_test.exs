@@ -21,6 +21,21 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.PIIScrubberTest do
       assert PIIScrubber.scrub(%{owner_email: "not-an-email"}) == %{}
       assert PIIScrubber.scrub(%{owner_email: nil}) == %{}
       assert PIIScrubber.scrub(%{owner_email: 123}) == %{}
+      assert PIIScrubber.scrub(%{owner_email: "Contact alice@example.com"}) == %{}
+    end
+
+    test "masks other denylisted email keys" do
+      assert PIIScrubber.scrub(%{email: "alice@example.com"}) == %{
+               email_masked: "a***@example.com"
+             }
+
+      assert PIIScrubber.scrub(%{user_email: "bob@other.org"}) == %{
+               user_email_masked: "b***@other.org"
+             }
+
+      assert PIIScrubber.scrub(%{recipient_email: "carol@test.com"}) == %{
+               recipient_email_masked: "c***@test.com"
+             }
     end
 
     test "handles string and atom keys equivalently" do

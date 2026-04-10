@@ -57,7 +57,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.PIIScrubber do
   defp denylisted?(_key), do: false
 
   defp handle_denylisted(acc, key, value) when is_binary(value) do
-    case mask_email(value) do
+    case mask_email(String.trim(value)) do
       nil -> acc
       masked -> Map.put(acc, masked_key(key), masked)
     end

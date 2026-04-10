@@ -31,16 +31,17 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     category = if config, do: config.category, else: "General"
     severity = if config, do: config.severity, else: :warning
     message = AlertTypes.format_message(type, metadata)
+    scrubbed_metadata = metadata |> Map.new() |> PIIScrubber.scrub()
 
     Logger.log(severity, "ADMIN ALERT",
       event_type: type,
       category: category,
       message: message,
-      metadata: metadata
+      metadata: scrubbed_metadata
     )
 
     if alerts_enabled?() do
-      maybe_enqueue_email(category, severity, message, metadata)
+      maybe_enqueue_email(category, severity, message, scrubbed_metadata)
     end
 
     :ok
@@ -64,10 +65,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
   end
 
   defp enrich_metadata(metadata) do
-    metadata
-    |> Map.new()
-    |> PIIScrubber.scrub()
-    |> Map.merge(deployment_context())
+    Map.merge(metadata, deployment_context())
   end
 
   defp deployment_context do
@@ -86,8 +84,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
     end
   end
 
+  # Dialyzer: :inet.gethostname/0 is typed {:ok, hostname()} but the Erlang
+  # docs allow {:error, posix()} — keep the fallback for hostile environments.
+  @dialyzer {:nowarn_function, hostname: 0}
   defp hostname do
-    {:ok, name} = :inet.gethostname()
-    to_string(name)
+    case :inet.gethostname() do
+      {:ok, name} -> to_string(name)
+      {:error, _reason} -> "unknown"
+    end
   end
 end
