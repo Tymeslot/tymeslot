@@ -406,5 +406,42 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
         assert event.status == expected
       end
     end
+
+    test "detects Tymeslot-created event via PRODID" do
+      raw = %{
+        uid: "abc123@other.com",
+        summary: "Tymeslot Booking",
+        dtstart: ~U[2030-06-15 09:00:00Z],
+        dtend: ~U[2030-06-15 10:00:00Z],
+        prodid: "-//Tymeslot//Calendar Integration//EN"
+      }
+
+      assert {:ok, [event]} = EventProcessor.normalise_events([raw], @context)
+      assert event.created_by_tymeslot == true
+    end
+
+    test "detects Tymeslot-created event via UID domain" do
+      raw = %{
+        uid: "abc123def456@tymeslot.com",
+        summary: "Tymeslot Booking",
+        dtstart: ~U[2030-06-15 09:00:00Z],
+        dtend: ~U[2030-06-15 10:00:00Z]
+      }
+
+      assert {:ok, [event]} = EventProcessor.normalise_events([raw], @context)
+      assert event.created_by_tymeslot == true
+    end
+
+    test "marks non-Tymeslot event as not created by Tymeslot" do
+      raw = %{
+        uid: "external-uid@outlook.com",
+        summary: "External Meeting",
+        dtstart: ~U[2030-06-15 09:00:00Z],
+        dtend: ~U[2030-06-15 10:00:00Z]
+      }
+
+      assert {:ok, [event]} = EventProcessor.normalise_events([raw], @context)
+      assert event.created_by_tymeslot == false
+    end
   end
 end

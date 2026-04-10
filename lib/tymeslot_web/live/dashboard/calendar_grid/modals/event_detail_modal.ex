@@ -58,6 +58,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
 
       <div class={"h-1 rounded-full w-10 mb-2 #{Helpers.color_for_event(assigns, @selected_event)}"}></div>
 
+      <div :if={Map.get(@selected_event, :created_by_tymeslot)} class="flex items-center gap-1 text-token-xs text-tymeslot-500 mb-2">
+        <img src="/images/brand/logo.svg" alt="" class="w-3.5 h-3.5" />
+        <span>Created by Tymeslot</span>
+      </div>
+
       <%!-- Time --%>
       <div class="flex items-start gap-3 mb-3">
         <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Time">

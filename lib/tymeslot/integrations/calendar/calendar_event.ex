@@ -37,7 +37,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
           etag: String.t() | nil,
           synced_at: DateTime.t(),
           provider_updated_at: DateTime.t() | nil,
-          provider_metadata: map()
+          provider_metadata: map(),
+          created_by_tymeslot: boolean()
         }
 
   @enforce_keys [
@@ -79,7 +80,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
     attachments: [],
     links: [],
     reminders: [],
-    provider_metadata: %{}
+    provider_metadata: %{},
+    created_by_tymeslot: false
   ]
 
   @spec new(map()) :: {:ok, t()} | {:error, String.t()}
@@ -175,5 +177,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
     |> Map.put_new(:links, [])
     |> Map.put_new(:reminders, [])
     |> Map.put_new(:provider_metadata, %{})
+    |> Map.put_new(:created_by_tymeslot, false)
   end
 end

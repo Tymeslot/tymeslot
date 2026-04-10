@@ -128,9 +128,16 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
     end
   end
 
+  @tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
+
   defp fetch_event_raw(token, graph_resource_id) do
     path = "/me/events/#{graph_resource_id}"
-    params = %{"$select" => @select_fields}
+
+    params = %{
+      "$select" => @select_fields,
+      "$expand" => "singleValueExtendedProperties($filter=id eq '#{@tymeslot_property_id}')"
+    }
+
     headers = [{"Prefer", "outlook.timezone=\"UTC\""}]
 
     case http_get(token, path, params, headers) do

@@ -87,7 +87,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   @spec create_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def create_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_data) do
-    body = format_event_data(event_data)
+    body =
+      event_data
+      |> format_event_data()
+      |> add_tymeslot_fingerprint()
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       make_request_with_body(:post, "/calendars/#{calendar_id}/events", token, body,
@@ -552,6 +555,13 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
     map
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Map.new()
+  end
+
+  defp add_tymeslot_fingerprint(body) do
+    Map.merge(body, %{
+      "source" => %{"title" => "Tymeslot", "url" => "https://tymeslot.app"},
+      "extendedProperties" => %{"private" => %{"createdBy" => "tymeslot"}}
+    })
   end
 
   # Convert a UID to a Google Calendar compatible event ID.

@@ -133,7 +133,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
         colour: raw["colorId"],
         etag: raw["etag"],
         recurrence_rule: map_recurrence_rule(raw["recurrence"]),
-        provider_metadata: Map.put(raw, "recurringEventId", raw["recurringEventId"])
+        provider_metadata: Map.put(raw, "recurringEventId", raw["recurringEventId"]),
+        created_by_tymeslot:
+          get_in(raw, ["extendedProperties", "private", "createdBy"]) == "tymeslot"
       }
       |> Map.merge(parse_timing(raw))
       |> maybe_put_timezone(raw)

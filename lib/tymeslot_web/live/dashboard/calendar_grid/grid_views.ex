@@ -52,7 +52,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
             phx-value-event-id={event.id}
             phx-target={@myself}
           >
-            <%= event.summary || "(No title)" %>
+            <img
+              :if={Map.get(event, :created_by_tymeslot)}
+              src="/images/brand/logo.svg"
+              alt="Tymeslot"
+              class="inline-block w-3 h-3 opacity-60 mr-0.5 align-text-bottom"
+            /><%= event.summary || "(No title)" %>
           </div>
         </div>
       </div>
@@ -112,6 +117,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
             >
               <div class="truncate font-semibold"><%= event.summary || "(No title)" %></div>
               <div class="opacity-80"><%= Helpers.format_display_time_range(event, Helpers.time_format(assigns), @user_timezone) %></div>
+              <img
+                :if={Map.get(event, :created_by_tymeslot)}
+                src="/images/brand/logo.svg"
+                alt="Tymeslot event"
+                class="absolute top-0.5 right-0.5 w-3 h-3 opacity-60"
+              />
               <div data-resize-handle class="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize opacity-0 group-hover:opacity-100 bg-black/10 rounded-b"></div>
             </div>
             <%!-- Current time indicator --%>
@@ -189,7 +200,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
                 phx-value-event-id={event.id}
                 phx-target={@myself}
               >
-                <%= event.summary || "(No title)" %>
+                <img
+                  :if={Map.get(event, :created_by_tymeslot)}
+                  src="/images/brand/logo.svg"
+                  alt="Tymeslot"
+                  class="inline-block w-3 h-3 opacity-60 mr-0.5 align-text-bottom"
+                /><%= event.summary || "(No title)" %>
               </div>
               <div :if={length(day_evts) > 3} class="text-token-xs text-tymeslot-400 mt-0.5">
                 +<%= length(day_evts) - 3 %> more

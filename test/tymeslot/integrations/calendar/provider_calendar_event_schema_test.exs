@@ -59,6 +59,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheSchemaTest do
       attrs = ProviderCalendarEventSchema.from_calendar_event(event)
       assert attrs.start_at == start_at
     end
+
+    test "passes through created_by_tymeslot flag" do
+      event = base_calendar_event(%{created_by_tymeslot: true})
+      attrs = ProviderCalendarEventSchema.from_calendar_event(event)
+      assert attrs.created_by_tymeslot == true
+    end
   end
 
   describe "to_calendar_event/1" do
@@ -91,6 +97,18 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheSchemaTest do
       record = base_record(%{visibility: nil})
       event = ProviderCalendarEventSchema.to_calendar_event(record)
       assert event.visibility == nil
+    end
+
+    test "round-trips created_by_tymeslot flag" do
+      record = base_record(%{created_by_tymeslot: true})
+      event = ProviderCalendarEventSchema.to_calendar_event(record)
+      assert event.created_by_tymeslot == true
+    end
+
+    test "defaults created_by_tymeslot to false when nil" do
+      record = base_record(%{created_by_tymeslot: nil})
+      event = ProviderCalendarEventSchema.to_calendar_event(record)
+      assert event.created_by_tymeslot == false
     end
   end
 
@@ -129,7 +147,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheSchemaTest do
           etag: nil,
           synced_at: ~U[2026-04-08 09:00:00.000000Z],
           provider_updated_at: nil,
-          provider_metadata: %{}
+          provider_metadata: %{},
+          created_by_tymeslot: false
         },
         overrides
       )
@@ -170,7 +189,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheSchemaTest do
           etag: nil,
           synced_at: ~U[2026-04-08 09:00:00.000000Z],
           provider_updated_at: nil,
-          provider_metadata: %{}
+          provider_metadata: %{},
+          created_by_tymeslot: false
         },
         overrides
       )

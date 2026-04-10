@@ -150,7 +150,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
         recurrence_rule: raw[:rrule] || raw[:recurrence_rule],
         recurrence_exceptions: parse_exdates(raw[:exdate] || raw[:exdates] || []),
         etag: raw[:etag],
-        provider_metadata: raw
+        provider_metadata: raw,
+        created_by_tymeslot: tymeslot_origin?(raw)
       }
       |> Map.merge(timing_fields(all_day, start_val, end_val))
       |> maybe_put_timezone(timezone)
@@ -239,6 +240,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
   defp build_uid(raw), do: raw[:uid]
 
   # --- Field mappers ---
+
+  defp tymeslot_origin?(raw) do
+    prodid = raw[:prodid] || ""
+    uid = raw[:uid] || ""
+    String.contains?(prodid, "Tymeslot") or String.ends_with?(uid, "@tymeslot.com")
+  end
 
   defp map_visibility("PUBLIC"), do: :public
   defp map_visibility("PRIVATE"), do: :private

@@ -115,6 +115,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
         decoded_body = Jason.decode!(body)
         assert decoded_body["subject"] == "New Meeting"
 
+        assert [%{"value" => "tymeslot"}] =
+                 decoded_body["singleValueExtendedProperties"]
+
         {:ok,
          %Req.Response{
            status: 201,

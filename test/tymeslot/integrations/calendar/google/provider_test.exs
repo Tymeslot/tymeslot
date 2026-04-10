@@ -372,6 +372,37 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
     test "returns empty list for empty input", %{context: context} do
       assert {:ok, []} = Provider.normalise_events([], context)
     end
+
+    test "detects Tymeslot-created event via extendedProperties", %{context: context} do
+      raw_events = [
+        %{
+          "iCalUID" => "tymeslot-uid@google.com",
+          "id" => "tymeslot-id",
+          "summary" => "Booking",
+          "start" => %{"dateTime" => "2026-04-08T10:00:00Z"},
+          "end" => %{"dateTime" => "2026-04-08T11:00:00Z"},
+          "extendedProperties" => %{"private" => %{"createdBy" => "tymeslot"}}
+        }
+      ]
+
+      assert {:ok, [event]} = Provider.normalise_events(raw_events, context)
+      assert event.created_by_tymeslot == true
+    end
+
+    test "marks non-Tymeslot event as not created by Tymeslot", %{context: context} do
+      raw_events = [
+        %{
+          "iCalUID" => "other-uid@google.com",
+          "id" => "other-id",
+          "summary" => "External Meeting",
+          "start" => %{"dateTime" => "2026-04-08T10:00:00Z"},
+          "end" => %{"dateTime" => "2026-04-08T11:00:00Z"}
+        }
+      ]
+
+      assert {:ok, [event]} = Provider.normalise_events(raw_events, context)
+      assert event.created_by_tymeslot == false
+    end
   end
 
   describe "convert_event/1" do

@@ -33,6 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventTest do
       assert event.attendees == []
       assert event.reminders == []
       assert event.provider_metadata == %{}
+      assert event.created_by_tymeslot == false
     end
 
     test "creates a valid all-day event" do

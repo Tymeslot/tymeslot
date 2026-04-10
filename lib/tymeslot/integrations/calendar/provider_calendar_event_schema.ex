@@ -50,6 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
           synced_at: DateTime.t() | nil,
           provider_updated_at: DateTime.t() | nil,
           provider_metadata: map(),
+          created_by_tymeslot: boolean(),
           calendar_integration:
             CalendarIntegrationSchema.t()
             | Ecto.Association.NotLoaded.t(),
@@ -103,6 +104,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     field :synced_at, :utc_datetime_usec
     field :provider_updated_at, :utc_datetime_usec
     field :provider_metadata, :map, default: %{}
+    field :created_by_tymeslot, :boolean, default: false
 
     belongs_to :calendar_integration, CalendarIntegrationSchema
 
@@ -136,7 +138,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     :reminders,
     :etag,
     :provider_updated_at,
-    :provider_metadata
+    :provider_metadata,
+    :created_by_tymeslot
   ]
 
   @doc false
@@ -187,7 +190,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
       etag: record.etag,
       synced_at: record.synced_at,
       provider_updated_at: record.provider_updated_at,
-      provider_metadata: record.provider_metadata || %{}
+      provider_metadata: record.provider_metadata || %{},
+      created_by_tymeslot: record.created_by_tymeslot || false
     }
   end
 
@@ -228,7 +232,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
       etag: event.etag,
       synced_at: ensure_usec(event.synced_at),
       provider_updated_at: ensure_usec(event.provider_updated_at),
-      provider_metadata: event.provider_metadata
+      provider_metadata: event.provider_metadata,
+      created_by_tymeslot: event.created_by_tymeslot
     }
   end
 

@@ -122,13 +122,24 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
         attendees: map_attendees(raw["attendees"]),
         reminders: map_reminders(raw["reminderMinutesBeforeStart"]),
         recurrence_rule: map_recurrence_rule(raw["recurrence"]),
-        provider_metadata: Map.put(raw, "seriesMasterId", raw["seriesMasterId"])
+        provider_metadata: Map.put(raw, "seriesMasterId", raw["seriesMasterId"]),
+        created_by_tymeslot: tymeslot_origin?(raw)
       }
       |> Map.merge(parse_timing(raw))
       |> maybe_put_timezone(raw)
 
     CalendarEvent.new(attrs)
   end
+
+  defp tymeslot_origin?(%{"singleValueExtendedProperties" => props})
+       when is_list(props) do
+    Enum.any?(props, fn
+      %{"value" => "tymeslot"} -> true
+      _other -> false
+    end)
+  end
+
+  defp tymeslot_origin?(_raw), do: false
 
   defp map_visibility("normal"), do: :public
   defp map_visibility("private"), do: :private

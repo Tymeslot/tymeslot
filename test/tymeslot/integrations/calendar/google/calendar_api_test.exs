@@ -133,6 +133,15 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
         decoded_body = Jason.decode!(body)
         assert decoded_body["summary"] == "New Meeting"
 
+        assert decoded_body["source"] == %{
+                 "title" => "Tymeslot",
+                 "url" => "https://tymeslot.app"
+               }
+
+        assert decoded_body["extendedProperties"] == %{
+                 "private" => %{"createdBy" => "tymeslot"}
+               }
+
         {:ok,
          %Req.Response{
            status: 200,

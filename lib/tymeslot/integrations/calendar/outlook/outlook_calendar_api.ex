@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
 
   @base_url "https://graph.microsoft.com/v1.0"
+  @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
   @silent_event_headers [
     {"Prefer", "outlook.calendar-update.disableNotifications"}
   ]
@@ -90,7 +91,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec create_event(CalendarIntegrationSchema.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def create_event(%CalendarIntegrationSchema{} = integration, event_data) do
-    body = format_event_data(event_data)
+    body =
+      event_data
+      |> format_event_data()
+      |> add_tymeslot_fingerprint()
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       with {:ok, response} <-
@@ -109,7 +113,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @spec create_event(CalendarIntegrationSchema.t(), String.t(), map()) ::
           {:ok, calendar_event()} | api_error()
   def create_event(%CalendarIntegrationSchema{} = integration, calendar_id, event_data) do
-    body = format_event_data(event_data)
+    body =
+      event_data
+      |> format_event_data()
+      |> add_tymeslot_fingerprint()
 
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       with {:ok, response} <-
@@ -352,7 +359,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   defp fetch_initial_delta(token) do
     params = %{
       "$select" =>
-        "id,subject,start,end,iCalUId,location,body,attendees,recurrence,seriesMasterId,type,isAllDay,showAs"
+        "id,subject,start,end,iCalUId,location,body,attendees,recurrence,seriesMasterId,type,isAllDay,showAs",
+      "$expand" =>
+        "singleValueExtendedProperties($filter=id eq '#{@outlook_tymeslot_property_id}')"
     }
 
     result =
@@ -420,7 +429,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       "endDateTime" => DateTime.to_iso8601(end_time),
       "$orderby" => "start/dateTime",
       "$top" => "1000",
-      "$select" => "id,subject,body,location,start,end,showAs,isCancelled,responseStatus,isAllDay"
+      "$select" =>
+        "id,subject,body,location,start,end,showAs,isCancelled,responseStatus,isAllDay",
+      "$expand" =>
+        "singleValueExtendedProperties($filter=id eq '#{@outlook_tymeslot_property_id}')"
     }
   end
 
@@ -570,6 +582,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
     |> Map.new()
+  end
+
+  defp add_tymeslot_fingerprint(body) do
+    Map.put(body, "singleValueExtendedProperties", [
+      %{"id" => @outlook_tymeslot_property_id, "value" => "tymeslot"}
+    ])
   end
 
   defp build_attendees(event_data) do
