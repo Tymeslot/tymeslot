@@ -590,5 +590,4 @@ defmodule Tymeslot.Auth.UserQueries do
       {:error, _reason} -> {:error, :taken}
     end
   end
-
 end

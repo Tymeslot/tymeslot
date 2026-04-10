@@ -15,10 +15,102 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Emails.EmailService
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Meetings.MeetingQueries
 
   @typep integration_id :: integer()
   @typep signal :: :deleted | :modified
+
+  @doc """
+  Persists a batch of normalised calendar events to the local cache and
+  performs downstream side effects.
+
+  Called by every sync worker after its provider-specific `normalise_events/2`
+  returns. This is the single point where canonical `CalendarEvent` structs
+  become rows in the cache — no sync worker should upsert directly.
+
+  Steps:
+  1. Convert each event to cache attrs via `from_calendar_event/1`.
+  2. Upsert the batch in a single query.
+  3. Broadcast a cache update so live grids refresh.
+  4. Reconcile any linked Tymeslot meetings whose times changed externally.
+  """
+  @spec persist_normalised_events(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) ::
+          :ok | {:error, term()}
+  def persist_normalised_events(_integration, []), do: :ok
+
+  def persist_normalised_events(%CalendarIntegrationSchema{} = integration, calendar_events)
+      when is_list(calendar_events) do
+    attrs_list = Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
+
+    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch(attrs_list)
+
+    uids = Enum.map(calendar_events, & &1.uid)
+    SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
+
+    provider_event_ids = Enum.map(calendar_events, & &1.provider_event_id)
+
+    meetings_by_id =
+      MeetingQueries.list_by_provider_event_ids(integration.id, provider_event_ids)
+
+    Enum.each(calendar_events, &maybe_reconcile_time_change(integration, &1, meetings_by_id))
+    :ok
+  rescue
+    e ->
+      Logger.error("Calendar event cache upsert raised an exception",
+        calendar_integration_id: integration.id,
+        event_count: length(calendar_events),
+        reason: Exception.message(e)
+      )
+
+      {:error, Exception.message(e)}
+  end
+
+  defp maybe_reconcile_time_change(
+         _integration,
+         %CalendarEvent{provider_event_id: nil},
+         _meetings_by_id
+       ),
+       do: :ok
+
+  defp maybe_reconcile_time_change(
+         integration,
+         %CalendarEvent{} = cal_event,
+         meetings_by_id
+       ) do
+    case Map.get(meetings_by_id, cal_event.provider_event_id) do
+      nil ->
+        :ok
+
+      meeting ->
+        if time_changed?(meeting.start_time, cal_event) do
+          reconcile(integration.id, cal_event.provider_event_id, cal_event.uid, :modified)
+        else
+          :ok
+        end
+    end
+  end
+
+  # All-day event: compare start_date and end_date only.
+  defp time_changed?(meeting_start_time, %CalendarEvent{all_day: true} = cal_event) do
+    meeting_start_date = DateTime.to_date(meeting_start_time)
+    cal_event.start_date != meeting_start_date
+  end
+
+  # Timed event with no start_at — should not occur for valid timed events, treat as unchanged.
+  defp time_changed?(_meeting_start_time, %CalendarEvent{all_day: false, start_at: nil}),
+    do: false
+
+  defp time_changed?(meeting_start_time, %CalendarEvent{all_day: false, start_at: event_start}) do
+    DateTime.compare(
+      DateTime.truncate(meeting_start_time, :second),
+      DateTime.truncate(event_start, :second)
+    ) != :eq
+  end
 
   @doc """
   Main reconciliation entry point.

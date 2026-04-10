@@ -11,7 +11,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
 
   alias Plug.Conn
   alias Req.Test, as: ReqTest
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
   # Switch from HTTPClientMock to the real HTTPClient so Req.Test intercepts calls.
@@ -145,7 +145,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
 
       cached_uids =
         Repo.all(
-          from e in CalendarEventCacheSchema,
+          from e in ProviderCalendarEventSchema,
             where: e.calendar_integration_id == ^integration.id,
             select: e.uid
         )
@@ -192,17 +192,17 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
 
       cached =
         Repo.one!(
-          from e in CalendarEventCacheSchema,
+          from e in ProviderCalendarEventSchema,
             where:
               e.calendar_integration_id == ^integration.id and
                 e.uid == "allday-holiday@test"
         )
 
       assert cached.all_day == true
-      assert cached.title == "Congés"
-      assert cached.start_at == ~U[2026-04-07 00:00:00Z]
-      assert cached.end_at == ~U[2026-04-11 00:00:00Z]
-      assert cached.status == "free"
+      assert cached.summary == "Congés"
+      assert cached.start_date == ~D[2026-04-07]
+      assert cached.end_date == ~D[2026-04-11]
+      assert cached.transparency == "transparent"
     end
   end
 
@@ -246,7 +246,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
 
       cached_uids =
         Repo.all(
-          from e in CalendarEventCacheSchema,
+          from e in ProviderCalendarEventSchema,
             where: e.calendar_integration_id == ^integration.id,
             select: e.uid
         )
@@ -290,7 +290,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
 
       cached_uids =
         Repo.all(
-          from e in CalendarEventCacheSchema,
+          from e in ProviderCalendarEventSchema,
             where: e.calendar_integration_id == ^integration.id,
             select: e.uid
         )
@@ -303,11 +303,11 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
   describe "perform/1 - detect_deletions scoping" do
     # Events must be within the sync window (now -60d to now +365d) for
     # detect_deletions to consider them. Use a date 30 days in the future.
-    @future_start DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:second)
+    @future_start DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.truncate(:microsecond)
     @future_end DateTime.utc_now()
                 |> DateTime.add(30, :day)
                 |> DateTime.add(3600, :second)
-                |> DateTime.truncate(:second)
+                |> DateTime.truncate(:microsecond)
 
     defp future_ical(uid, summary) do
       start_str = Calendar.strftime(@future_start, "%Y%m%dT%H%M%SZ")
@@ -342,16 +342,18 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
         )
 
       # Pre-populate cache with an event from the primary path (path1)
-      Repo.insert!(%CalendarEventCacheSchema{
+      Repo.insert!(%ProviderCalendarEventSchema{
         calendar_integration_id: integration.id,
         uid: "pre-existing-path1@test",
+        provider: "caldav",
+        provider_calendar_id: @path1,
         provider_event_id: "#{@path1}pre-existing.ics",
-        title: "Pre-existing Path1 Event",
+        summary: "Pre-existing Path1 Event",
         start_at: @future_start,
         end_at: @future_end,
         all_day: false,
         synced_at:
-          DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
+          DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:microsecond)
       })
 
       ical1 = future_ical("path1-delta@test", "Path1 Delta Event")
@@ -386,7 +388,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
 
       cached_uids =
         Repo.all(
-          from e in CalendarEventCacheSchema,
+          from e in ProviderCalendarEventSchema,
             where: e.calendar_integration_id == ^integration.id,
             select: e.uid,
             order_by: e.uid
@@ -409,16 +411,18 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
         )
 
       # Pre-populate cache with an event on path1 that the server will NOT return
-      Repo.insert!(%CalendarEventCacheSchema{
+      Repo.insert!(%ProviderCalendarEventSchema{
         calendar_integration_id: integration.id,
         uid: "deleted-on-server@test",
+        provider: "caldav",
+        provider_calendar_id: @path1,
         provider_event_id: "#{@path1}deleted.ics",
-        title: "Deleted on Server",
+        summary: "Deleted on Server",
         start_at: @future_start,
         end_at: @future_end,
         all_day: false,
         synced_at:
-          DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:second)
+          DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:microsecond)
       })
 
       ical1 = future_ical("surviving-event@test", "Still on Server")
@@ -437,7 +441,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
 
       cached_uids =
         Repo.all(
-          from e in CalendarEventCacheSchema,
+          from e in ProviderCalendarEventSchema,
             where: e.calendar_integration_id == ^integration.id,
             select: e.uid
         )

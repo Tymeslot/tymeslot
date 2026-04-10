@@ -54,9 +54,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
   alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
+  alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalDAV.TierDetector
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
@@ -567,7 +568,14 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   end
 
   defp safe_process_events(integration, events, deleted_hrefs \\ []) do
-    with :ok <- EventProcessor.process_events(integration, events) do
+    context = %{
+      calendar_integration_id: integration.id,
+      provider_calendar_id: List.first(integration.calendar_paths),
+      synced_at: DateTime.utc_now(:microsecond)
+    }
+
+    with {:ok, calendar_events} <- CalDAVProvider.normalise_events(events, context),
+         :ok <- Sync.persist_normalised_events(integration, calendar_events) do
       maybe_process_deletions(integration, deleted_hrefs)
     end
   rescue
@@ -578,7 +586,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   defp maybe_process_deletions(_integration, []), do: :ok
 
   defp maybe_process_deletions(integration, deleted_hrefs) do
-    EventProcessor.process_deletions(integration, deleted_hrefs)
+    Enum.each(deleted_hrefs, fn href ->
+      ProviderCalendarEventQueries.delete_by_provider_event_id(integration.id, href)
+      Sync.reconcile(integration.id, href, nil, :deleted)
+    end)
   end
 
   defp detect_deletions(
@@ -592,7 +603,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     fetched_uids = MapSet.new(fetched_events, &Map.get(&1, :uid))
 
     cached_uids =
-      CalendarEventCacheQueries.list_uids_in_range(
+      ProviderCalendarEventQueries.list_uids_in_range(
         integration.id,
         start_time,
         end_time,
@@ -609,7 +620,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       )
 
       Enum.each(missing_uids, fn uid ->
-        CalendarEventCacheQueries.delete_by_uid(integration.id, uid)
+        ProviderCalendarEventQueries.delete_by_uid(integration.id, uid)
 
         case Sync.reconcile(integration.id, nil, uid, :deleted) do
           :ok ->

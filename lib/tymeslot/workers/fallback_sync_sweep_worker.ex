@@ -32,9 +32,11 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.HTTPClient
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
+  alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
@@ -256,7 +258,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
         uid_for_cache = ical_uid || graph_id
 
         if uid_for_cache do
-          CalendarEventCacheQueries.delete_by_uid(integration.id, uid_for_cache)
+          ProviderCalendarEventQueries.delete_by_uid(integration.id, uid_for_cache)
 
           case Sync.reconcile(integration.id, graph_id, ical_uid, :deleted) do
             :ok ->
@@ -276,7 +278,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
         end
       end)
 
-    with {:ok, _count} <- CalendarEventCacheQueries.upsert_batch(cache_attrs),
+    with {:ok, _count} <- ProviderCalendarEventQueries.upsert_batch(cache_attrs),
          :ok <- persist_delta_link(integration, new_delta_link) do
       uids = Enum.map(cache_attrs, & &1.uid) ++ removed_uids
       SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
@@ -344,9 +346,14 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   end
 
   defp build_cache_attrs_batch(events, calendar_integration_id) do
-    Enum.map(events, fn event ->
-      OutlookCalendarAPI.to_cache_attrs(event, calendar_integration_id)
-    end)
+    context = %{
+      calendar_integration_id: calendar_integration_id,
+      provider_calendar_id: nil,
+      synced_at: DateTime.utc_now(:microsecond)
+    }
+
+    {:ok, calendar_events} = OutlookProvider.normalise_events(events, context)
+    Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
   end
 
   defp persist_delta_link(integration, new_delta_link) do

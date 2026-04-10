@@ -21,13 +21,12 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.HTTPClient
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
+  alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
-  alias Tymeslot.Integrations.Calendar.SyncBroadcast
-  alias Tymeslot.Meetings.MeetingQueries
 
   @base_url "https://graph.microsoft.com/v1.0"
 
@@ -166,57 +165,35 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
       graph_resource_id: graph_resource_id
     )
 
-    CalendarEventCacheQueries.delete_by_provider_event_id(integration.id, graph_resource_id)
+    ProviderCalendarEventQueries.delete_by_provider_event_id(integration.id, graph_resource_id)
     Sync.reconcile(integration.id, graph_resource_id, nil, :deleted)
     update_last_sync_at(integration)
     :ok
   end
 
   defp handle_event_fetched(integration, graph_resource_id, event) do
-    attrs = OutlookCalendarAPI.to_cache_attrs(event, integration.id)
+    context = %{
+      calendar_integration_id: integration.id,
+      provider_calendar_id: integration.default_booking_calendar_id || "primary",
+      synced_at: DateTime.utc_now(:microsecond)
+    }
 
-    {:ok, _count} = CalendarEventCacheQueries.upsert_batch([attrs])
-    SyncBroadcast.broadcast_cache_update(integration.user_id, [attrs.uid])
-    maybe_reconcile_time_change(integration, graph_resource_id, event)
-    update_last_sync_at(integration)
-    :ok
-  end
+    case OutlookProvider.normalise_events([event], context) do
+      {:ok, [_cal_event | _rest] = calendar_events} ->
+        Sync.persist_normalised_events(integration, calendar_events)
+        update_last_sync_at(integration)
+        :ok
 
-  defp maybe_reconcile_time_change(integration, graph_resource_id, event) do
-    case MeetingQueries.get_by_provider_event_id(integration.id, graph_resource_id) do
-      {:ok, meeting} ->
-        event_start = parse_outlook_datetime(event["start"])
+      {:ok, []} ->
+        Logger.warning("Outlook event could not be normalised; skipping",
+          calendar_integration_id: integration.id,
+          graph_resource_id: graph_resource_id
+        )
 
-        if time_changed?(meeting.start_time, event_start) do
-          Sync.reconcile(integration.id, graph_resource_id, event["iCalUId"], :modified)
-        end
-
-      {:error, :not_found} ->
+        update_last_sync_at(integration)
         :ok
     end
   end
-
-  defp time_changed?(_meeting_time, nil), do: false
-
-  defp time_changed?(meeting_time, event_start) do
-    DateTime.compare(
-      DateTime.truncate(meeting_time, :second),
-      DateTime.truncate(event_start, :second)
-    ) != :eq
-  end
-
-  defp parse_outlook_datetime(nil), do: nil
-
-  defp parse_outlook_datetime(%{"dateTime" => dt_string, "timeZone" => _timezone}) do
-    normalized = String.replace(dt_string, ~r/\.\d+$/, "") <> "Z"
-
-    case DateTime.from_iso8601(normalized) do
-      {:ok, dt, _offset} -> DateTime.truncate(dt, :second)
-      _error -> nil
-    end
-  end
-
-  defp parse_outlook_datetime(_unknown), do: nil
 
   defp update_last_sync_at(integration) do
     case CalendarIntegrationQueries.update_sync_state(integration, %{

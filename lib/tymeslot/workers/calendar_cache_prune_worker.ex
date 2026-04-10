@@ -20,7 +20,7 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
 
   require Logger
 
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
 
   @retention_days 90
 
@@ -28,8 +28,8 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorker do
   def perform(_job) do
     cutoff = DateTime.add(DateTime.utc_now(), -@retention_days, :day)
 
-    old_count = CalendarEventCacheQueries.prune_ended_before(cutoff)
-    inactive_count = CalendarEventCacheQueries.prune_inactive_integrations()
+    old_count = ProviderCalendarEventQueries.prune_ended_before(cutoff)
+    inactive_count = ProviderCalendarEventQueries.prune_inactive_integrations()
 
     Logger.info("Calendar cache prune completed",
       old_events_pruned: old_count,

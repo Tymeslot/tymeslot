@@ -11,7 +11,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   """
 
   @behaviour Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @behaviour Tymeslot.Integrations.Calendar.Provider
 
+  alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalDAV.ServerDetector
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.ProviderCommon
@@ -147,6 +149,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   def delete_event(client, uid), do: CaldavCommon.delete_event(client, uid)
+
+  # --- Calendar.Provider behaviour ---
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def normalise_events(raw_events, context),
+    do: EventProcessor.normalise_events(raw_events, context)
 
   # Private helper functions
 

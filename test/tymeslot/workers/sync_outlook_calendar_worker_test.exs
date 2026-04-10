@@ -121,15 +121,54 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
 
       cached =
         Repo.get_by(
-          Tymeslot.Integrations.Calendar.CalendarEventCacheSchema,
+          Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema,
           provider_event_id: "outlook-allday-1"
         )
 
       assert cached.all_day == true
-      assert cached.title == "Holiday"
-      assert cached.start_at == ~U[2026-04-07 00:00:00Z]
-      assert cached.end_at == ~U[2026-04-11 00:00:00Z]
-      assert cached.status == "free"
+      assert cached.summary == "Holiday"
+      assert cached.start_date == ~D[2026-04-07]
+      assert cached.end_date == ~D[2026-04-11]
+      assert cached.transparency == "transparent"
+      assert cached.provider_calendar_id == "primary"
+    end
+  end
+
+  describe "perform/1 - nil default_booking_calendar_id" do
+    test "caches event with provider_calendar_id 'primary' when default_booking_calendar_id is nil" do
+      integration = outlook_integration(default_booking_calendar_id: nil)
+
+      graph_event_json =
+        Jason.encode!(%{
+          "id" => "outlook-no-cal-1",
+          "iCalUId" => "no-cal-uid@outlook.com",
+          "subject" => "Meeting",
+          "isAllDay" => false,
+          "start" => %{"dateTime" => "2026-04-10T10:00:00.0000000", "timeZone" => "UTC"},
+          "end" => %{"dateTime" => "2026-04-10T11:00:00.0000000", "timeZone" => "UTC"},
+          "showAs" => "busy",
+          "attendees" => [],
+          "type" => "singleInstance"
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %{status: 200, body: graph_event_json}}
+      end)
+
+      assert :ok =
+               perform_job(SyncOutlookCalendarWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "graph_resource_id" => "outlook-no-cal-1"
+               })
+
+      cached =
+        Repo.get_by(
+          Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema,
+          provider_event_id: "outlook-no-cal-1"
+        )
+
+      assert cached != nil
+      assert cached.provider_calendar_id == "primary"
     end
   end
 
@@ -137,7 +176,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
     test "removes cached event and returns :ok when Graph returns 404" do
       integration = outlook_integration()
 
-      insert(:calendar_event_cache,
+      insert(:provider_calendar_event,
         calendar_integration: integration,
         provider_event_id: "deleted-event-123",
         uid: "ical-uid-deleted@test"
@@ -157,7 +196,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorkerTest do
       # The cached event IS removed because handle_event_deleted is reached
       remaining =
         Repo.all(
-          from e in Tymeslot.Integrations.Calendar.CalendarEventCacheSchema,
+          from e in Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema,
             where:
               e.calendar_integration_id == ^integration.id and
                 e.provider_event_id == "deleted-event-123"

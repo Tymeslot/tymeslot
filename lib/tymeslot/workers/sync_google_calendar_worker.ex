@@ -23,13 +23,13 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
   require Logger
 
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
+  alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
-  alias Tymeslot.Meetings.MeetingQueries
 
   @sync_window_past_days ProviderConfig.sync_window_past_days()
   @sync_window_future_days ProviderConfig.sync_window_future_days()
@@ -182,7 +182,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
       Enum.reduce_while(secondary_ids, :ok, fn calendar_id, _acc ->
         case google_calendar_api().list_events(integration, calendar_id, start_time, end_time) do
           {:ok, events} ->
-            case safe_process_events(integration, events) do
+            case safe_process_events(integration, events, calendar_id) do
               :ok -> {:cont, :ok}
               error -> {:halt, error}
             end
@@ -215,122 +215,46 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     end
   end
 
-  # Best-effort: process all events even if individual upserts fail.
-  # process_cached_event already logs per-event failures, so we don't halt
-  # the batch on the first error — remaining events still get synced.
-  defp safe_process_events(integration, events) do
-    Enum.each(events, fn event -> process_event(integration, event) end)
-    :ok
+  # Best-effort: normalise all events via the provider, then delegate to
+  # the shared persistence pipeline in `Sync`. Cancelled events are handled
+  # separately — they are deleted from the cache and reconciled as deletions.
+  defp safe_process_events(integration, raw_events, calendar_id \\ nil) do
+    {cancelled, active} =
+      Enum.split_with(raw_events, fn event -> event["status"] == "cancelled" end)
+
+    Enum.each(cancelled, &process_cancelled_event(integration, &1))
+
+    context = normalisation_context(integration, calendar_id)
+
+    with {:ok, calendar_events} <- GoogleProvider.normalise_events(active, context) do
+      Sync.persist_normalised_events(integration, calendar_events)
+    end
   rescue
     e ->
       {:error, Exception.message(e)}
   end
 
-  defp process_event(integration, %{"status" => "cancelled"} = event) do
+  defp normalisation_context(integration, calendar_id) do
+    %{
+      calendar_integration_id: integration.id,
+      provider_calendar_id: calendar_id || integration.default_booking_calendar_id || "primary",
+      synced_at: DateTime.utc_now(:microsecond)
+    }
+  end
+
+  defp process_cancelled_event(integration, event) do
     uid = event["iCalUID"]
     provider_event_id = event["id"]
 
     Sync.reconcile(integration.id, provider_event_id, uid, :deleted)
-    CalendarEventCacheQueries.delete_by_uid(integration.id, uid)
+
+    if uid do
+      ProviderCalendarEventQueries.delete_by_uid(integration.id, uid)
+    else
+      ProviderCalendarEventQueries.delete_by_provider_event_id(integration.id, provider_event_id)
+    end
+
     :ok
-  end
-
-  defp process_event(integration, event) do
-    attrs = build_cache_attrs(integration.id, event)
-    log = [calendar_integration_id: integration.id, provider_event_id: event["id"]]
-
-    SyncBroadcast.process_cached_event(integration.user_id, attrs, log, fn ->
-      maybe_reconcile_time_change(integration, event)
-    end)
-  end
-
-  defp maybe_reconcile_time_change(integration, event) do
-    provider_event_id = event["id"]
-
-    case MeetingQueries.get_by_provider_event_id(integration.id, provider_event_id) do
-      {:ok, meeting} ->
-        event_start = parse_datetime(event["start"])
-
-        if time_changed?(meeting.start_time, event_start) do
-          Sync.reconcile(integration.id, provider_event_id, event["iCalUID"], :modified)
-        end
-
-      {:error, :not_found} ->
-        :ok
-    end
-  end
-
-  defp time_changed?(_meeting_time, nil), do: false
-
-  defp time_changed?(meeting_time, event_start) do
-    DateTime.compare(
-      DateTime.truncate(meeting_time, :second),
-      DateTime.truncate(event_start, :second)
-    ) != :eq
-  end
-
-  defp build_cache_attrs(integration_id, event) do
-    %{
-      uid: event["iCalUID"],
-      calendar_integration_id: integration_id,
-      provider_event_id: event["id"],
-      title: event["summary"],
-      start_at: parse_datetime(event["start"]),
-      end_at: parse_datetime(event["end"]),
-      all_day:
-        Map.has_key?(event["start"] || %{}, "date") &&
-          !Map.has_key?(event["start"] || %{}, "dateTime"),
-      location: event["location"],
-      description: event["description"],
-      attendees:
-        Enum.map(event["attendees"] || [], fn attendee ->
-          %{
-            "email" => attendee["email"],
-            "name" => attendee["displayName"],
-            "status" => attendee["responseStatus"]
-          }
-        end),
-      recurrence_rule: List.first(event["recurrence"] || []),
-      recurring_event_id: event["recurringEventId"],
-      status: event["status"],
-      raw_data: event,
-      etag: event["etag"],
-      synced_at: DateTime.utc_now(:second)
-    }
-  end
-
-  defp parse_datetime(nil), do: nil
-
-  defp parse_datetime(time_map) when is_map(time_map) do
-    cond do
-      datetime_str = Map.get(time_map, "dateTime") ->
-        parse_iso8601(datetime_str)
-
-      date_str = Map.get(time_map, "date") ->
-        parse_date_as_midnight_utc(date_str)
-
-      true ->
-        nil
-    end
-  end
-
-  defp parse_iso8601(str) do
-    case DateTime.from_iso8601(str) do
-      {:ok, dt, _offset} -> DateTime.truncate(dt, :second)
-      {:error, _reason} -> nil
-    end
-  end
-
-  defp parse_date_as_midnight_utc(str) do
-    case Date.from_iso8601(str) do
-      {:ok, date} ->
-        date
-        |> DateTime.new!(~T[00:00:00], "Etc/UTC")
-        |> DateTime.truncate(:second)
-
-      {:error, _reason} ->
-        nil
-    end
   end
 
   defp persist_sync_state(integration, next_sync_token) do

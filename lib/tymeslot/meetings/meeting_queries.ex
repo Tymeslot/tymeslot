@@ -370,6 +370,35 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Returns a map from `provider_event_id` to meeting for all meetings linked to the
+  given integration whose `provider_event_id` is in the supplied list.
+
+  Events with a `nil` provider_event_id are silently excluded because they cannot
+  be keyed. Use this instead of `get_by_provider_event_id/2` in loops to avoid
+  N+1 queries.
+  """
+  @spec list_by_provider_event_ids(integer(), [String.t()]) :: %{String.t() => Meeting.t()}
+  def list_by_provider_event_ids(_calendar_integration_id, []), do: %{}
+
+  def list_by_provider_event_ids(calendar_integration_id, provider_event_ids)
+      when is_list(provider_event_ids) do
+    ids = Enum.reject(provider_event_ids, &is_nil/1)
+
+    if ids == [] do
+      %{}
+    else
+      Meeting
+      |> where(
+        [m],
+        m.calendar_integration_id == ^calendar_integration_id and
+          m.provider_event_id in ^ids
+      )
+      |> Repo.all()
+      |> Map.new(&{&1.provider_event_id, &1})
+    end
+  end
+
+  @doc """
   Finds a meeting by its UID and calendar integration.
 
   Returns `{:ok, meeting}` if found, `{:error, :not_found}` otherwise.

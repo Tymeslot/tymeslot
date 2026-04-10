@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
 
   import Mox
 
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.TestMocks
@@ -204,6 +205,140 @@ defmodule Tymeslot.Integrations.Calendar.SyncTest do
       integration = insert(:calendar_integration)
 
       assert :ok = Sync.reconcile(integration.id, nil, nil, :deleted)
+    end
+  end
+
+  describe "persist_normalised_events/2" do
+    defp build_timed_event(integration, provider_event_id) do
+      now = DateTime.utc_now(:microsecond)
+
+      CalendarEvent.new!(%{
+        uid: "persist-uid-#{System.unique_integer([:positive])}",
+        calendar_integration_id: integration.id,
+        provider: :caldav,
+        provider_calendar_id: "/cal/primary",
+        provider_event_id: provider_event_id,
+        all_day: false,
+        start_at: now,
+        end_at: DateTime.add(now, 3600, :second),
+        synced_at: now
+      })
+    end
+
+    defp build_all_day_event(integration, provider_event_id, start_date) do
+      CalendarEvent.new!(%{
+        uid: "persist-allday-uid-#{System.unique_integer([:positive])}",
+        calendar_integration_id: integration.id,
+        provider: :caldav,
+        provider_calendar_id: "/cal/primary",
+        provider_event_id: provider_event_id,
+        all_day: true,
+        start_date: start_date,
+        end_date: Date.add(start_date, 1),
+        synced_at: DateTime.utc_now(:microsecond)
+      })
+    end
+
+    test "happy path: upserts events and broadcasts PubSub message" do
+      integration = insert(:calendar_integration)
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{integration.user_id}")
+
+      event = build_timed_event(integration, "evt-persist-1")
+
+      assert :ok = Sync.persist_normalised_events(integration, [event])
+
+      assert_receive {:calendar_events_updated, _user_id, uids}
+      assert event.uid in uids
+    end
+
+    test "empty list returns :ok without side effects" do
+      integration = insert(:calendar_integration)
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{integration.user_id}")
+
+      assert :ok = Sync.persist_normalised_events(integration, [])
+
+      refute_receive {:calendar_events_updated, _, _}, 100
+    end
+
+    test "time-changed reconcile (timed event): updates calendar_sync_status when start_at differs" do
+      integration = insert(:calendar_integration)
+
+      old_start = DateTime.add(DateTime.utc_now(:second), 3600, :second)
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "evt-timed-changed",
+          start_time: old_start
+        )
+
+      # Build an event with a different start time than the meeting's start_time
+      new_start = DateTime.add(old_start, 7200, :second)
+
+      event =
+        CalendarEvent.new!(%{
+          uid: "timed-changed-uid-#{System.unique_integer([:positive])}",
+          calendar_integration_id: integration.id,
+          provider: :caldav,
+          provider_calendar_id: "/cal/primary",
+          provider_event_id: "evt-timed-changed",
+          all_day: false,
+          start_at: new_start,
+          end_at: DateTime.add(new_start, 3600, :second),
+          synced_at: DateTime.utc_now(:microsecond)
+        })
+
+      assert :ok = Sync.persist_normalised_events(integration, [event])
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == "externally_modified"
+    end
+
+    test "time-changed reconcile (all-day event): updates calendar_sync_status when start_date differs" do
+      integration = insert(:calendar_integration)
+
+      # Meeting stored with start_time representing the original all-day date
+      original_date = ~D[2026-06-01]
+      original_start_time = DateTime.new!(original_date, ~T[00:00:00], "Etc/UTC")
+
+      meeting =
+        insert(:meeting,
+          calendar_integration_id: integration.id,
+          provider_event_id: "evt-allday-changed",
+          start_time: original_start_time
+        )
+
+      # Provider now says the event moved to a different date
+      new_date = ~D[2026-06-03]
+      event = build_all_day_event(integration, "evt-allday-changed", new_date)
+
+      assert :ok = Sync.persist_normalised_events(integration, [event])
+
+      {:ok, updated} = MeetingQueries.get_meeting(meeting.id)
+      assert updated.calendar_sync_status == "externally_modified"
+    end
+
+    test "upsert error: returns {:error, reason} when upsert raises" do
+      # Build a valid integration struct but swap in a bogus id before calling
+      # persist_normalised_events so the FK in provider_calendar_events fails. The
+      # struct still matches the function clause (%CalendarIntegrationSchema{}).
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+      bad_integration = %{integration | id: 999_999_999}
+
+      event =
+        CalendarEvent.new!(%{
+          uid: "err-uid-#{System.unique_integer([:positive])}",
+          calendar_integration_id: bad_integration.id,
+          provider: :caldav,
+          provider_calendar_id: "/cal/primary",
+          all_day: false,
+          start_at: DateTime.utc_now(:microsecond),
+          end_at: DateTime.add(DateTime.utc_now(:microsecond), 3600, :second),
+          synced_at: DateTime.utc_now(:microsecond)
+        })
+
+      assert {:error, _reason} = Sync.persist_normalised_events(bad_integration, [event])
     end
   end
 end

@@ -233,7 +233,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
              event_uid: original_event.uid,
              integration_id: original_event.calendar_integration_id,
              attendee_emails: attendee_emails,
-             before_title: original_event.title,
+             before_title: original_event.summary,
              before_location: original_event.location,
              before_description: original_event.description,
              before_start_at: original_event.start_at,

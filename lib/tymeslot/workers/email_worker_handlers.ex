@@ -798,7 +798,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
   defp compute_changes(current_event, args) do
     changes =
       []
-      |> maybe_add_change(:title, args["before_title"], current_event.title)
+      |> maybe_add_change(:title, args["before_title"], current_event.summary)
       |> maybe_add_change(:location, args["before_location"], current_event.location)
       |> maybe_add_change(:description, args["before_description"], current_event.description)
       |> maybe_add_time_change(args, current_event)
@@ -843,7 +843,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers do
     duration = DateTime.diff(current_event.end_at, current_event.start_at, :minute)
 
     %{
-      event_title: current_event.title,
+      event_title: current_event.summary,
       event_uid: current_event.uid,
       start_time: current_event.start_at,
       end_time: current_event.end_at,

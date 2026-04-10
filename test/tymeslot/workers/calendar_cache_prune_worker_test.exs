@@ -3,7 +3,7 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
 
   @moduletag :calendar
 
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Workers.CalendarCachePruneWorker
 
   describe "perform/1" do
@@ -11,14 +11,14 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
       integration = insert(:calendar_integration, is_active: true)
 
       old_event =
-        insert(:calendar_event_cache,
+        insert(:provider_calendar_event,
           calendar_integration: integration,
           start_at: ~U[2025-11-01 10:00:00Z],
           end_at: ~U[2025-11-01 11:00:00Z]
         )
 
       recent_event =
-        insert(:calendar_event_cache,
+        insert(:provider_calendar_event,
           calendar_integration: integration,
           start_at: DateTime.add(DateTime.utc_now(), -30, :day),
           end_at: DateTime.add(DateTime.utc_now(), -29, :day)
@@ -27,7 +27,7 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
       assert :ok = CalendarCachePruneWorker.perform(%Oban.Job{})
 
       remaining =
-        CalendarEventCacheQueries.list_for_range(
+        ProviderCalendarEventQueries.list_for_range(
           [integration.id],
           ~U[2020-01-01 00:00:00Z],
           ~U[2030-01-01 00:00:00Z]
@@ -43,14 +43,14 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
       inactive = insert(:calendar_integration, is_active: false)
 
       active_event =
-        insert(:calendar_event_cache,
+        insert(:provider_calendar_event,
           calendar_integration: active,
           start_at: DateTime.add(DateTime.utc_now(), 1, :day),
           end_at: DateTime.add(DateTime.utc_now(), 2, :day)
         )
 
       _inactive_event =
-        insert(:calendar_event_cache,
+        insert(:provider_calendar_event,
           calendar_integration: inactive,
           start_at: DateTime.add(DateTime.utc_now(), 1, :day),
           end_at: DateTime.add(DateTime.utc_now(), 2, :day)
@@ -59,7 +59,7 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
       assert :ok = CalendarCachePruneWorker.perform(%Oban.Job{})
 
       remaining =
-        CalendarEventCacheQueries.list_for_range(
+        ProviderCalendarEventQueries.list_for_range(
           [active.id, inactive.id],
           ~U[2020-01-01 00:00:00Z],
           ~U[2030-01-01 00:00:00Z]

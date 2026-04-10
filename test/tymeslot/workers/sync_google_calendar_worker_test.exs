@@ -8,7 +8,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
   import Mox
   import Tymeslot.Factory
 
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
@@ -194,13 +195,13 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
                  "calendar_integration_id" => integration.id
                })
 
-      cached = Repo.get_by(CalendarEventCacheSchema, provider_event_id: "google-event-1")
+      cached = Repo.get_by(ProviderCalendarEventSchema, provider_event_id: "google-event-1")
       assert [alice, bob] = cached.attendees
       assert alice["email"] == "alice@example.com"
-      assert alice["name"] == "Alice"
-      assert alice["status"] == "accepted"
-      assert bob["name"] == "Bob Jones"
-      assert bob["status"] == "tentative"
+      assert alice["display_name"] == "Alice"
+      assert alice["response_status"] == "accepted"
+      assert bob["display_name"] == "Bob Jones"
+      assert bob["response_status"] == "tentative"
     end
 
     test "stores location and description from Google event" do
@@ -231,7 +232,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
                  "calendar_integration_id" => integration.id
                })
 
-      cached = Repo.get_by(CalendarEventCacheSchema, provider_event_id: "google-event-2")
+      cached = Repo.get_by(ProviderCalendarEventSchema, provider_event_id: "google-event-2")
       assert cached.location == "Main Auditorium"
       assert cached.description == "Quarterly review notes"
     end
@@ -242,7 +243,8 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
       integration =
         insert(:calendar_integration,
           provider: "google",
-          google_sync_token: "valid-token"
+          google_sync_token: "valid-token",
+          default_booking_calendar_id: "primary"
         )
 
       event = %{
@@ -263,11 +265,121 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorkerTest do
                  "calendar_integration_id" => integration.id
                })
 
-      cached = Repo.get_by(CalendarEventCacheSchema, provider_event_id: "google-allday-1")
+      cached = Repo.get_by(ProviderCalendarEventSchema, uid: "allday-uid@google.com")
       assert cached.all_day == true
-      assert cached.title == "Holiday"
-      assert cached.start_at == ~U[2026-04-07 00:00:00Z]
-      assert cached.end_at == ~U[2026-04-11 00:00:00Z]
+      assert cached.summary == "Holiday"
+      assert cached.start_date == ~D[2026-04-07]
+      assert cached.end_date == ~D[2026-04-11]
+      assert cached.provider_calendar_id == "primary"
+    end
+  end
+
+  describe "perform/1 - cancelled event handling" do
+    test "deletes cached event by uid when iCalUID is present in cancellation delta" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: "valid-token"
+        )
+
+      _cached =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "cancelled-uid@google.com",
+          provider_event_id: "google-event-cancel-1"
+        )
+
+      cancelled_event = %{
+        "id" => "google-event-cancel-1",
+        "iCalUID" => "cancelled-uid@google.com",
+        "status" => "cancelled"
+      }
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:ok, %{events: [cancelled_event], next_sync_token: "new-token"}}
+      end)
+
+      assert :ok =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "cancelled-uid@google.com")
+    end
+
+    test "deletes cached event by provider_event_id when iCalUID is absent in cancellation delta" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: "valid-token"
+        )
+
+      cached =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "full-uid@google.com",
+          provider_event_id: "google-event-id-only"
+        )
+
+      # Google omits iCalUID for incremental cancellation deltas
+      cancelled_event = %{
+        "id" => "google-event-id-only",
+        "status" => "cancelled"
+      }
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:ok, %{events: [cancelled_event], next_sync_token: "new-token"}}
+      end)
+
+      assert :ok =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      refute Repo.get(ProviderCalendarEventSchema, cached.id)
+    end
+  end
+
+  describe "perform/1 - secondary calendar provider_calendar_id" do
+    test "tags secondary calendar events with the secondary calendar's ID, not the booking calendar" do
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_sync_token: "valid-token",
+          default_booking_calendar_id: "primary",
+          calendar_list: [
+            %{"id" => "primary", "selected" => true, "name" => "Primary"},
+            %{"id" => "work@example.com", "selected" => true, "name" => "Work"}
+          ]
+        )
+
+      secondary_event = %{
+        "id" => "work-event-1",
+        "iCalUID" => "work-uid-1@google.com",
+        "summary" => "Work Meeting",
+        "status" => "confirmed",
+        "start" => %{"dateTime" => "2030-06-01T10:00:00Z"},
+        "end" => %{"dateTime" => "2030-06-01T11:00:00Z"}
+      }
+
+      expect(GoogleCalendarAPIMock, :list_events_incremental, fn _integration ->
+        {:ok, %{events: [], next_sync_token: "new-token"}}
+      end)
+
+      expect(GoogleCalendarAPIMock, :list_events, fn _integration, calendar_id, _start, _end ->
+        assert calendar_id == "work@example.com"
+        {:ok, [secondary_event]}
+      end)
+
+      assert :ok =
+               perform_job(SyncGoogleCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      cached = Repo.get_by(ProviderCalendarEventSchema, provider_event_id: "work-event-1")
+      assert cached != nil
+      assert cached.provider_calendar_id == "work@example.com"
     end
   end
 

@@ -10,11 +10,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.{EventTimeFormatter, HTTP}
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
+  alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
@@ -286,10 +288,12 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       with {:ok, subscription_attrs} <-
              create_graph_subscription(token, client_state, expiration, webhook_base_url),
-           {:ok, {events, delta_link}} <- fetch_initial_delta(token) do
-        cache_attrs = Enum.map(events, &to_cache_attrs(&1, integration.id))
+           {:ok, {events, delta_link}} <- fetch_initial_delta(token),
+           {:ok, calendar_events} <- normalise_delta_events(events, integration.id) do
+        cache_attrs =
+          Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
 
-        with {:ok, _count} <- CalendarEventCacheQueries.upsert_batch(cache_attrs) do
+        with {:ok, _count} <- ProviderCalendarEventQueries.upsert_batch(cache_attrs) do
           persist_graph_subscription(
             integration,
             Map.merge(subscription_attrs, %{
@@ -300,6 +304,16 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
         end
       end
     end)
+  end
+
+  defp normalise_delta_events(events, calendar_integration_id) do
+    context = %{
+      calendar_integration_id: calendar_integration_id,
+      provider_calendar_id: nil,
+      synced_at: DateTime.utc_now(:microsecond)
+    }
+
+    OutlookProvider.normalise_events(events, context)
   end
 
   defp create_graph_subscription(token, client_state, expiration, webhook_base_url) do
@@ -383,64 +397,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       end
     end
   end
-
-  @spec to_cache_attrs(map(), integer()) :: map()
-  def to_cache_attrs(event, calendar_integration_id) do
-    %{
-      uid: event["iCalUId"] || event["id"],
-      calendar_integration_id: calendar_integration_id,
-      provider_event_id: event["id"],
-      title: event["subject"],
-      start_at: parse_outlook_datetime(event["start"]),
-      end_at: parse_outlook_datetime(event["end"]),
-      all_day: event["isAllDay"] || false,
-      location: get_in(event, ["location", "displayName"]),
-      description: get_in(event, ["body", "content"]),
-      attendees: map_attendees(event["attendees"]),
-      recurrence_rule: format_recurrence(event["recurrence"]),
-      recurring_event_id: event["seriesMasterId"],
-      status: if(event["showAs"] == "free", do: "free", else: "confirmed"),
-      raw_data: event,
-      synced_at: DateTime.utc_now(:second)
-    }
-  end
-
-  defp parse_outlook_datetime(nil), do: nil
-
-  defp parse_outlook_datetime(%{"dateTime" => dt_string, "timeZone" => timezone}) do
-    if timezone != "UTC",
-      do: Logger.debug("Non-UTC timezone in Graph response", timezone: timezone)
-
-    # Graph API returns ISO8601-like strings without timezone suffix; treat as UTC
-    normalized = String.replace(dt_string, ~r/\.\d+$/, "") <> "Z"
-    parse_iso8601_datetime(normalized)
-  end
-
-  defp parse_outlook_datetime(_unknown), do: nil
-
-  defp map_attendees(nil), do: []
-
-  defp map_attendees(attendees) when is_list(attendees) do
-    Enum.map(attendees, fn attendee ->
-      %{
-        "email" => get_in(attendee, ["emailAddress", "address"]),
-        "name" => get_in(attendee, ["emailAddress", "name"]),
-        "status" => get_in(attendee, ["status", "response"])
-      }
-    end)
-  end
-
-  defp format_recurrence(nil), do: nil
-
-  defp format_recurrence(%{"pattern" => pattern, "range" => range}) do
-    type = Map.get(pattern, "type", "")
-    interval = Map.get(pattern, "interval", 1)
-    range_type = Map.get(range, "type", "")
-
-    "FREQ=#{String.upcase(type)};INTERVAL=#{interval};RANGE_TYPE=#{range_type}"
-  end
-
-  defp format_recurrence(_unknown), do: nil
 
   defp parse_iso8601_datetime(nil), do: nil
 
