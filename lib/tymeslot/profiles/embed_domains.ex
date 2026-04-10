@@ -7,7 +7,6 @@ defmodule Tymeslot.Profiles.EmbedDomains do
   """
 
   alias Ecto.Changeset
-  alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Security.Security
 
@@ -31,10 +30,14 @@ defmodule Tymeslot.Profiles.EmbedDomains do
   end
 
   @doc """
-  Updates the allowed embed domains for a profile.
+  Validates and normalizes the allowed embed domains for a profile.
+
+  Returns `{:ok, attrs}` where `attrs` is a map ready to be passed to
+  `Profiles.update_profile/2`, or `{:error, changeset}` on validation failure.
   """
-  @spec update_allowed_embed_domains(profile(), String.t() | [String.t()]) :: result(profile())
-  def update_allowed_embed_domains(%ProfileSchema{} = profile, domains) when is_binary(domains) do
+  @spec validate_and_normalize(profile(), String.t() | [String.t()]) ::
+          {:ok, map()} | {:error, Ecto.Changeset.t()}
+  def validate_and_normalize(%ProfileSchema{} = profile, domains) when is_binary(domains) do
     domain_list =
       domains
       |> String.split(",")
@@ -44,18 +47,18 @@ defmodule Tymeslot.Profiles.EmbedDomains do
     # If the user explicitly cleared the field or entered "none", we treat it as disabled.
     # We allow "none" as a literal string here to support the "Disable" button flow.
     domain_list = if domain_list == [], do: ["none"], else: domain_list
-    update_allowed_embed_domains(profile, domain_list)
+    validate_and_normalize(profile, domain_list)
   end
 
-  def update_allowed_embed_domains(%ProfileSchema{} = profile, domains) when is_list(domains) do
+  def validate_and_normalize(%ProfileSchema{} = profile, domains) when is_list(domains) do
     # If the only domain is "none", we skip normalization to preserve the keyword.
     if domains == ["none"] do
-      update_profile(profile, %{allowed_embed_domains: ["none"]})
+      {:ok, %{allowed_embed_domains: ["none"]}}
     else
       case Security.validate_domains(domains) do
         {:ok, validated} ->
           normalized = validated |> Enum.reject(&(&1 == "none")) |> Enum.uniq()
-          update_profile(profile, %{allowed_embed_domains: normalized})
+          {:ok, %{allowed_embed_domains: normalized}}
 
         {:error, error_msg} ->
           changeset =
@@ -97,8 +100,4 @@ defmodule Tymeslot.Profiles.EmbedDomains do
   defp normalize_existing_domains(["none"]), do: []
   defp normalize_existing_domains(nil), do: []
   defp normalize_existing_domains(domains), do: domains
-
-  defp update_profile(profile, attrs) do
-    ProfileQueries.update_profile(profile, attrs)
-  end
 end

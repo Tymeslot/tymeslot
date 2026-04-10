@@ -21,7 +21,6 @@ defmodule Tymeslot.Auth do
   }
 
   alias Tymeslot.Infrastructure.{Config, PubSub}
-  alias Tymeslot.Profiles
   alias Tymeslot.Security.Token
 
   @doc """
@@ -220,25 +219,19 @@ defmodule Tymeslot.Auth do
 
   @doc """
   Marks a user's onboarding as complete.
-
-  Delegates to `Tymeslot.Profiles.mark_onboarding_complete/1`.
-  Retained here for backward compatibility with existing callers.
   """
   @spec mark_onboarding_complete(Ecto.Schema.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def mark_onboarding_complete(user) do
-    Profiles.mark_onboarding_complete(user)
+    UserQueries.mark_onboarding_complete(user)
   end
 
   @doc """
   Checks if a user has completed onboarding.
-
-  Delegates to `Tymeslot.Profiles.onboarding_completed?/1`.
-  Retained here for backward compatibility with existing callers.
   """
   @spec onboarding_completed?(Ecto.Schema.t()) :: boolean()
   def onboarding_completed?(user) do
-    Profiles.onboarding_completed?(user)
+    not is_nil(user.onboarding_completed_at)
   end
 
   @doc """

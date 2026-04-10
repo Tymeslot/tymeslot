@@ -7,7 +7,6 @@ defmodule Tymeslot.Profiles do
 
   require Logger
 
-  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Profiles.EmbedDomains
@@ -37,25 +36,6 @@ defmodule Tymeslot.Profiles do
           advance_booking_days: non_neg_integer(),
           min_advance_hours: non_neg_integer()
         }
-
-  # --- Onboarding Lifecycle ---
-
-  @doc """
-  Marks a user's onboarding as complete.
-  """
-  @spec mark_onboarding_complete(Ecto.Schema.t()) ::
-          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
-  def mark_onboarding_complete(user) do
-    UserQueries.mark_onboarding_complete(user)
-  end
-
-  @doc """
-  Checks if a user has completed onboarding.
-  """
-  @spec onboarding_completed?(Ecto.Schema.t()) :: boolean()
-  def onboarding_completed?(user) do
-    not is_nil(user.onboarding_completed_at)
-  end
 
   # --- Profile Retrieval ---
 
@@ -399,8 +379,11 @@ defmodule Tymeslot.Profiles do
   Updates the allowed embed domains for a profile.
   """
   @spec update_allowed_embed_domains(profile, String.t() | [String.t()]) :: result(profile)
-  def update_allowed_embed_domains(%ProfileSchema{} = profile, domains),
-    do: EmbedDomains.update_allowed_embed_domains(profile, domains)
+  def update_allowed_embed_domains(%ProfileSchema{} = profile, domains) do
+    with {:ok, attrs} <- EmbedDomains.validate_and_normalize(profile, domains) do
+      update_profile(profile, attrs)
+    end
+  end
 
   # --- Organizer Context ---
 

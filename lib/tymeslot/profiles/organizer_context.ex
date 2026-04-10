@@ -7,7 +7,6 @@ defmodule Tymeslot.Profiles.OrganizerContext do
   """
 
   alias Tymeslot.MeetingTypes
-  alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles.ProfileQueries
 
   @type username :: String.t()
@@ -29,7 +28,7 @@ defmodule Tymeslot.Profiles.OrganizerContext do
   end
 
   defp load_active_meeting_types(user_id) do
-    MeetingTypeQueries.list_active_meeting_types(user_id)
+    MeetingTypes.get_active_meeting_types(user_id)
   end
 
   defp build_organizer_context(profile, username) do
