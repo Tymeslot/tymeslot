@@ -90,6 +90,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc "Applies a where clause filtering events that overlap the given DateTime range."
+  @spec where_overlapping_range(Ecto.Query.t(), DateTime.t(), DateTime.t()) :: Ecto.Query.t()
   def where_overlapping_range(query, range_start, range_end) do
     range_start_date = DateTime.to_date(range_start)
     range_end_date = DateTime.to_date(range_end)
