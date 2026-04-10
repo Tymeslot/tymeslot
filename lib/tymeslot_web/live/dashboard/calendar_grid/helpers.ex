@@ -482,6 +482,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   shift, since all-day events are date-only). For timed events the
   `start_at` datetime is shifted into the viewer's timezone.
   """
+  @spec event_display_date(map(), String.t()) :: Date.t()
   def event_display_date(%{all_day: true, start_date: %Date{} = date}, _timezone), do: date
 
   def event_display_date(%{start_at: %DateTime{} = start_at}, timezone) do

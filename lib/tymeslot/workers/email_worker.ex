@@ -636,69 +636,39 @@ defmodule Tymeslot.Workers.EmailWorker do
     Changeset.add_error(changeset, :args, "args must be a map")
   end
 
-  defp required_fields_for_action(action) do
-    case action do
-      "send_confirmation_emails" ->
-        ["meeting_id"]
+  @fields_by_action %{
+    "send_confirmation_emails" => ["meeting_id"],
+    "send_cancellation_emails" => ["meeting_id"],
+    "send_reminder_emails" => ["meeting_id", "reminder_value", "reminder_unit"],
+    "send_reschedule_request" => ["meeting_id"],
+    "send_email_verification" => ["user_id", "verification_url"],
+    "send_password_reset" => ["user_id", "reset_url"],
+    "send_email_change_verification" => ["user_id", "new_email", "verification_url"],
+    "send_email_change_notification" => ["user_id", "new_email"],
+    "send_email_change_confirmations" => ["user_id", "old_email", "new_email"],
+    "send_integration_unhealthy_notification" => ["user_id", "integration_id", "integration_type"],
+    "send_calendar_invitation" => [
+      "user_id",
+      "attendee_email",
+      "event_title",
+      "event_uid",
+      "event_start_at",
+      "event_end_at"
+    ],
+    "send_event_update_notification" => [
+      "user_id",
+      "event_uid",
+      "integration_id",
+      "attendee_emails",
+      "before_title",
+      "before_location",
+      "before_description",
+      "before_start_at",
+      "before_end_at"
+    ],
+    "send_admin_alert" => ["recipient", "category", "severity", "message", "metadata", "alert_hash"]
+  }
 
-      "send_cancellation_emails" ->
-        ["meeting_id"]
-
-      "send_reminder_emails" ->
-        ["meeting_id", "reminder_value", "reminder_unit"]
-
-      "send_reschedule_request" ->
-        ["meeting_id"]
-
-      "send_email_verification" ->
-        ["user_id", "verification_url"]
-
-      "send_password_reset" ->
-        ["user_id", "reset_url"]
-
-      "send_email_change_verification" ->
-        ["user_id", "new_email", "verification_url"]
-
-      "send_email_change_notification" ->
-        ["user_id", "new_email"]
-
-      "send_email_change_confirmations" ->
-        ["user_id", "old_email", "new_email"]
-
-      "send_integration_unhealthy_notification" ->
-        ["user_id", "integration_id", "integration_type"]
-
-      "send_calendar_invitation" ->
-        [
-          "user_id",
-          "attendee_email",
-          "event_title",
-          "event_uid",
-          "event_start_at",
-          "event_end_at"
-        ]
-
-      "send_event_update_notification" ->
-        [
-          "user_id",
-          "event_uid",
-          "integration_id",
-          "attendee_emails",
-          "before_title",
-          "before_location",
-          "before_description",
-          "before_start_at",
-          "before_end_at"
-        ]
-
-      "send_admin_alert" ->
-        ["recipient", "category", "severity", "message", "metadata", "alert_hash"]
-
-      nil ->
-        ["action"]
-
-      _other_action ->
-        []
-    end
-  end
+  defp required_fields_for_action(nil), do: ["action"]
+  defp required_fields_for_action(action), do: Map.get(@fields_by_action, action, [])
 end

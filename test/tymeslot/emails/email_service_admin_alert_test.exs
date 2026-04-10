@@ -21,7 +21,7 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
   # assertions are covered by Tymeslot.Emails.Templates.AdminAlertTest instead.
   describe "send_admin_alert/5" do
     test "happy path: returns {:ok, _} for a :warning alert with metadata" do
-      assert {:ok, _} =
+      assert {:ok, _response} =
                EmailService.send_admin_alert(
                  "ops@example.com",
                  "Webhook",
@@ -32,7 +32,7 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
     end
 
     test "returns {:ok, _} for an :error severity alert" do
-      assert {:ok, _} =
+      assert {:ok, _response} =
                EmailService.send_admin_alert(
                  "ops@example.com",
                  "Security",
@@ -43,7 +43,7 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
     end
 
     test "returns {:ok, _} for an :info severity alert" do
-      assert {:ok, _} =
+      assert {:ok, _response} =
                EmailService.send_admin_alert(
                  "ops@example.com",
                  "Payments",
@@ -54,7 +54,7 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
     end
 
     test "returns {:ok, _} with empty metadata" do
-      assert {:ok, _} =
+      assert {:ok, _response} =
                EmailService.send_admin_alert(
                  "ops@example.com",
                  "General",
@@ -65,7 +65,7 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
     end
 
     test "returns {:ok, _} for a :warning alert with rich metadata" do
-      assert {:ok, _} =
+      assert {:ok, _response} =
                EmailService.send_admin_alert(
                  "ops@example.com",
                  "General",
@@ -92,6 +92,6 @@ defmodule Tymeslot.Emails.EmailServiceAdminAlertTest do
 
     result = EmailService.send_calendar_sync_error(meeting, :test_error)
 
-    assert {:ok, _} = result
+    assert {:ok, _response} = result
   end
 end

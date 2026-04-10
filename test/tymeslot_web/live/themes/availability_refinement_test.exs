@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Tymeslot.Infrastructure.AvailabilityCache
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Repo
   alias Tymeslot.TestMocks
 
@@ -78,7 +79,7 @@ defmodule TymeslotWeb.Live.Themes.AvailabilityRefinementTest do
 
         {:ok,
          [
-           Tymeslot.Integrations.Calendar.CalendarEvent.new!(%{
+           CalendarEvent.new!(%{
              uid: "busy-day-#{System.unique_integer()}",
              calendar_integration_id: 1,
              provider: :google,

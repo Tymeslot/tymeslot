@@ -95,7 +95,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
           [meeting.provider_event_id]
         )
 
-      assert %{^result => _} = %{result => :ok}
+      assert %{^result => _value} = %{result => :ok}
       assert Map.get(result, meeting.provider_event_id).id == meeting.id
     end
 
