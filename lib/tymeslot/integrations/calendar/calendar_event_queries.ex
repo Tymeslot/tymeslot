@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
   import Ecto.Query
 
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
 
@@ -26,16 +27,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueries do
   def in_range([], _range), do: []
 
   def in_range(integration_ids, {%DateTime{} = range_start, %DateTime{} = range_end}) do
-    range_start_date = DateTime.to_date(range_start)
-    range_end_date = DateTime.to_date(range_end)
-
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
-    |> where(
-      [e],
-      (e.all_day == false and e.start_at < ^range_end and e.end_at > ^range_start) or
-        (e.all_day == true and e.start_date < ^range_end_date and e.end_date > ^range_start_date)
-    )
+    |> ProviderCalendarEventQueries.where_overlapping_range(range_start, range_end)
     |> Repo.all()
     |> Enum.map(&ProviderCalendarEventSchema.to_calendar_event/1)
   end

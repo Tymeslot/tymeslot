@@ -24,16 +24,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   def list_for_range([], _range_start, _range_end), do: []
 
   def list_for_range(integration_ids, range_start, range_end) do
-    range_start_date = DateTime.to_date(range_start)
-    range_end_date = DateTime.to_date(range_end)
-
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
-    |> where(
-      [e],
-      (e.all_day == false and e.start_at < ^range_end and e.end_at > ^range_start) or
-        (e.all_day == true and e.start_date < ^range_end_date and e.end_date > ^range_start_date)
-    )
+    |> where_overlapping_range(range_start, range_end)
     |> order_by([e], asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)))
     |> Repo.all()
   end
@@ -87,20 +80,26 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
         synced_before,
         calendar_path \\ nil
       ) do
-    range_start_date = DateTime.to_date(range_start)
-    range_end_date = DateTime.to_date(range_end)
-
     ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id == ^calendar_integration_id)
-    |> where(
-      [e],
-      (e.all_day == false and e.start_at < ^range_end and e.end_at > ^range_start) or
-        (e.all_day == true and e.start_date < ^range_end_date and e.end_date > ^range_start_date)
-    )
+    |> where_overlapping_range(range_start, range_end)
     |> where([e], e.synced_at < ^synced_before)
     |> maybe_filter_calendar_path(calendar_path)
     |> select([e], e.uid)
     |> Repo.all()
+  end
+
+  @doc "Applies a where clause filtering events that overlap the given DateTime range."
+  def where_overlapping_range(query, range_start, range_end) do
+    range_start_date = DateTime.to_date(range_start)
+    range_end_date = DateTime.to_date(range_end)
+
+    where(
+      query,
+      [e],
+      (e.all_day == false and e.start_at < ^range_end and e.end_at > ^range_start) or
+        (e.all_day == true and e.start_date < ^range_end_date and e.end_date > ^range_start_date)
+    )
   end
 
   defp maybe_filter_calendar_path(query, nil), do: query
