@@ -17,7 +17,7 @@ defmodule Tymeslot.Auth.OAuth.Google do
   def authorize_url(conn, redirect_uri) do
     {updated_conn, state} = oauth_helper().generate_and_store_state(conn)
     client = oauth_helper().build_oauth_client(:google, redirect_uri, state)
-    authorize_url = Client.authorize_url!(client, scope: "email profile")
+    authorize_url = Client.authorize_url!(client, scope: "email profile", prompt: "select_account")
     {updated_conn, authorize_url}
   end
 

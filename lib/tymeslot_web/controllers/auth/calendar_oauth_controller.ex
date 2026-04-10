@@ -21,27 +21,16 @@ defmodule TymeslotWeb.CalendarOAuthController do
   @spec google_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def google_callback(conn, %{"code" => code, "state" => state} = params) do
     redirect_path = return_to_or_default(state)
+    redirect_uri = "#{Endpoint.url()}/auth/google/calendar/callback"
 
-    case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
-      :ok ->
-        redirect_uri = "#{Endpoint.url()}/auth/google/calendar/callback"
-
-        OAuthCallbackHandler.handle_callback(conn, params,
-          service_name: "Google Calendar",
-          exchange_fun: fn _params ->
-            GoogleOAuthHelper.handle_callback(code, state, redirect_uri)
-          end,
-          create_fun: fn result -> {:ok, result} end,
-          redirect_path: redirect_path
-        )
-
-      {:error, :rate_limited, _message} ->
-        Logger.warning("Rate limit exceeded for Google Calendar OAuth callback")
-
-        conn
-        |> put_flash(:error, "Too many requests. Please try again later.")
-        |> redirect(to: redirect_path)
-    end
+    OAuthCallbackHandler.handle_callback(conn, params,
+      service_name: "Google Calendar",
+      exchange_fun: fn _params ->
+        GoogleOAuthHelper.handle_callback(code, state, redirect_uri)
+      end,
+      create_fun: fn result -> {:ok, result} end,
+      redirect_path: redirect_path
+    )
   end
 
   def google_callback(conn, %{"error" => error, "state" => state}) do

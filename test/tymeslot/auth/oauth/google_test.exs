@@ -40,6 +40,7 @@ defmodule Tymeslot.Auth.OAuth.GoogleTest do
     {_updated_conn, url} = Google.authorize_url(conn, redirect_uri)
     assert url =~ "state=state456"
     assert url =~ "scope=email+profile"
+    assert url =~ "prompt=select_account"
   end
 
   test "get_callback_url/0 returns Google callback path" do
