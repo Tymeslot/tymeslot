@@ -6,7 +6,7 @@ defmodule Tymeslot.Meetings.MeetingQueriesCalendarSyncTest do
   @moduletag :calendar
 
   alias Ecto.UUID
-  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Meetings.MeetingCalendarQueries, as: MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
 
   defp create_meeting_with_calendar(overrides \\ %{}) do
