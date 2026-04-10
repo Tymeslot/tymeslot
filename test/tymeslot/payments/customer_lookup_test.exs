@@ -53,7 +53,11 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
       assert CustomerLookup.get_subscription_by_customer_id("cus_test") == nil
 
       # Restore for other tests
-      Application.put_env(:tymeslot, :subscription_schema, TymeslotSaas.Payments.SubscriptionSchema)
+      Application.put_env(
+        :tymeslot,
+        :subscription_schema,
+        TymeslotSaas.Payments.SubscriptionSchema
+      )
     end
 
     # Note: Full integration tests with SaaS schema are in the SaaS test suite
@@ -65,7 +69,11 @@ defmodule Tymeslot.Payments.CustomerLookupTest do
       assert CustomerLookup.get_subscription_by_customer_id("cus_123") == nil
 
       # Restore for other tests
-      Application.put_env(:tymeslot, :subscription_schema, TymeslotSaas.Payments.SubscriptionSchema)
+      Application.put_env(
+        :tymeslot,
+        :subscription_schema,
+        TymeslotSaas.Payments.SubscriptionSchema
+      )
     end
   end
 end

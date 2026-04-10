@@ -283,5 +283,4 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
       where(AvailabilityBreakSchema, [b], b.weekly_availability_id == ^weekly_availability_id)
     )
   end
-
 end
