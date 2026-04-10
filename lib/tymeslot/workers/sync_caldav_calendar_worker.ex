@@ -588,7 +588,18 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   defp maybe_process_deletions(integration, deleted_hrefs) do
     Enum.each(deleted_hrefs, fn href ->
       ProviderCalendarEventQueries.delete_by_provider_event_id(integration.id, href)
-      Sync.reconcile(integration.id, href, nil, :deleted)
+
+      case Sync.reconcile(integration.id, href, nil, :deleted) do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Reconcile failed for deleted event",
+            href: href,
+            integration_id: integration.id,
+            reason: inspect(reason)
+          )
+      end
     end)
   end
 

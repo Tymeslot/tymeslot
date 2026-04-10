@@ -7,6 +7,7 @@ defmodule Tymeslot.CalendarGrid do
   color indices to integrations.
   """
 
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesQueries
@@ -156,9 +157,12 @@ defmodule Tymeslot.CalendarGrid do
 
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_cached_event(integer(), String.t()) ::
-          {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
+          {:ok, CalendarEvent.t()} | {:error, :not_found}
   def get_cached_event(integration_id, uid) do
-    ProviderCalendarEventQueries.get_by_uid(integration_id, uid)
+    case ProviderCalendarEventQueries.get_by_uid(integration_id, uid) do
+      {:ok, record} -> {:ok, ProviderCalendarEventSchema.to_calendar_event(record)}
+      {:error, :not_found} -> {:error, :not_found}
+    end
   end
 
   @doc """

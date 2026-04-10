@@ -418,6 +418,41 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueriesTest do
     end
   end
 
+  describe "get_by_uid/2" do
+    test "returns {:ok, event} when the uid exists for the integration" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      event =
+        insert(:provider_calendar_event,
+          calendar_integration: integration,
+          uid: "get-by-uid-test"
+        )
+
+      assert {:ok, found} = ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+      assert found.id == event.id
+      assert found.uid == "get-by-uid-test"
+    end
+
+    test "returns {:error, :not_found} for a non-existent uid" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "does-not-exist")
+    end
+
+    test "does not return an event belonging to a different integration" do
+      user = insert(:user)
+      int1 = insert(:calendar_integration, user: user)
+      int2 = insert(:calendar_integration, user: user)
+
+      event = insert(:provider_calendar_event, calendar_integration: int1)
+
+      assert {:error, :not_found} = ProviderCalendarEventQueries.get_by_uid(int2.id, event.uid)
+    end
+  end
+
   describe "delete_by_uid/2" do
     test "deletes existing event" do
       event = insert(:provider_calendar_event)
@@ -557,6 +592,47 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueriesTest do
 
       assert 1 = ProviderCalendarEventQueries.prune_ended_before(cutoff)
       assert Repo.get(ProviderCalendarEventSchema, future.id)
+    end
+  end
+
+  describe "from_calendar_event/1 round-trip via upsert" do
+    test "stored and reloaded event equals original CalendarEvent on key fields" do
+      alias Tymeslot.Integrations.Calendar.CalendarEvent
+      alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      now = DateTime.utc_now(:microsecond)
+
+      original =
+        CalendarEvent.new!(%{
+          uid: "roundtrip-uid-1",
+          calendar_integration_id: integration.id,
+          provider: :google,
+          provider_calendar_id: "primary",
+          provider_event_id: "provider-rt-1",
+          all_day: false,
+          start_at: now,
+          end_at: DateTime.add(now, 3600, :second),
+          transparency: :transparent,
+          status: :tentative,
+          visibility: :private,
+          synced_at: now
+        })
+
+      attrs = ProviderCalendarEventSchema.from_calendar_event(original)
+      assert {:ok, 1} = ProviderCalendarEventQueries.upsert_batch([attrs])
+
+      {:ok, loaded} = ProviderCalendarEventQueries.get_by_uid(integration.id, original.uid)
+      rehydrated = ProviderCalendarEventSchema.to_calendar_event(loaded)
+
+      assert rehydrated.uid == original.uid
+      assert rehydrated.provider == original.provider
+      assert rehydrated.transparency == original.transparency
+      assert rehydrated.status == original.status
+      assert rehydrated.visibility == original.visibility
+      assert rehydrated.provider_event_id == original.provider_event_id
     end
   end
 

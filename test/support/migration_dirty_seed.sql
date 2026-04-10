@@ -99,13 +99,13 @@ FROM users WHERE email = 'seed-user-2@example.com';
 -- ============================================================================
 --
 -- Released v0.99.x shipped a `calendar_events` table; the
--- 20260408110831_recreate_calendar_event_cache migration renames it to
+-- 20260408110831_recreate_provider_calendar_events migration renames it to
 -- `provider_calendar_events` and adds four new NOT NULL constraints
 -- (provider, synced_at, transparency, status). These rows exercise the
 -- backfill and catch-all NULL guards in that migration.
 --
 -- Note: inserts target the legacy `calendar_events` table — this seed
--- runs after `create_calendar_events` but before `recreate_calendar_event_cache`.
+-- runs after `create_calendar_events` but before `recreate_provider_calendar_events`.
 
 -- Baseline legacy row: title set, synced_at populated — happy path.
 INSERT INTO calendar_events (uid, calendar_integration_id, calendar_path, title, start_at, end_at, all_day, status, synced_at, inserted_at, updated_at)

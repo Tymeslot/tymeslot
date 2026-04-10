@@ -122,8 +122,8 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   def format_message(:invalid_calendar_event, metadata) do
     provider = Map.get(metadata, :provider, "unknown")
     reason = Map.get(metadata, :reason, "unknown")
-    uid = Map.get(metadata, :uid, "unknown")
-    "Invalid #{provider} calendar event (uid: #{uid}): #{reason}"
+    event_id = Map.get(metadata, :event_id) || Map.get(metadata, :event_uid, "unknown")
+    "Invalid #{provider} calendar event (event_id: #{event_id}): #{reason}"
   end
 
   def format_message(type, _metadata) do
