@@ -28,9 +28,9 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   require Logger
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
-  alias Tymeslot.Workers.EmailWorker
 
   @type integration_type :: :calendar | :video
 
@@ -160,7 +160,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
           type: type
         )
 
-        EmailWorker.schedule_integration_unhealthy_notification(user, integration, type)
+        EmailScheduler.schedule_integration_unhealthy_notification(user, integration, type)
 
       {:error, _reason} ->
         Logger.warning("User not found for integration unhealthy notification",

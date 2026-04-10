@@ -416,9 +416,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
   # --- Private helpers ---
   defp validate_and_update_field("name", value, metadata, acc_data, acc_errors) do
-    case MeetingSettingsInputValidation.validate_meeting_type_field(:name, value,
-           metadata: metadata
-         ) do
+    case MeetingSettingsInputValidation.validate_field(:name, value, metadata) do
       {:ok, sanitized} -> {Map.put(acc_data, "name", sanitized), Map.delete(acc_errors, :name)}
       {:error, %{name: msg}} -> {acc_data, Map.put(acc_errors, :name, msg)}
       {:error, _reason} -> {acc_data, acc_errors}
@@ -426,9 +424,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   defp validate_and_update_field("duration", value, metadata, acc_data, acc_errors) do
-    case MeetingSettingsInputValidation.validate_meeting_type_field(:duration, value,
-           metadata: metadata
-         ) do
+    case MeetingSettingsInputValidation.validate_field(:duration, value, metadata) do
       {:ok, sanitized} ->
         {Map.put(acc_data, "duration", sanitized), Map.delete(acc_errors, :duration)}
 
@@ -441,9 +437,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   end
 
   defp validate_and_update_field("description", value, metadata, acc_data, acc_errors) do
-    case MeetingSettingsInputValidation.validate_meeting_type_field(:description, value,
-           metadata: metadata
-         ) do
+    case MeetingSettingsInputValidation.validate_field(:description, value, metadata) do
       {:ok, sanitized} ->
         {Map.put(acc_data, "description", sanitized), Map.delete(acc_errors, :description)}
 

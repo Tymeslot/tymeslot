@@ -18,7 +18,7 @@ defmodule Tymeslot.Workers.DeadChannelAlertWorker do
 
   require Logger
 
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
 
   @silence_threshold_hours 12
   @meeting_lookback_hours 72
@@ -28,10 +28,11 @@ defmodule Tymeslot.Workers.DeadChannelAlertWorker do
     cutoff = DateTime.add(DateTime.utc_now(), -@silence_threshold_hours * 3600, :second)
     meeting_since = DateTime.add(DateTime.utc_now(), -@meeting_lookback_hours * 3600, :second)
 
-    dead_google = CalendarIntegrationQueries.list_silent_google_channels(cutoff, meeting_since)
+    dead_google =
+      CalendarIntegrationWebhookQueries.list_silent_google_channels(cutoff, meeting_since)
 
     dead_outlook =
-      CalendarIntegrationQueries.list_silent_outlook_subscriptions(cutoff, meeting_since)
+      CalendarIntegrationWebhookQueries.list_silent_outlook_subscriptions(cutoff, meeting_since)
 
     Enum.each(dead_google ++ dead_outlook, fn integration ->
       Logger.warning("Calendar integration silent — possible dead channel",

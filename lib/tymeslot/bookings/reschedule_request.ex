@@ -14,9 +14,9 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   require Logger
 
   alias Tymeslot.Bookings.Policy
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.MeetingSchema
-  alias Tymeslot.Workers.EmailWorker
 
   @doc """
   Sends a reschedule request email for a meeting.
@@ -79,27 +79,6 @@ defmodule Tymeslot.Bookings.RescheduleRequest do
   end
 
   defp schedule_reschedule_email(meeting) do
-    job_params = %{
-      "action" => "send_reschedule_request",
-      "meeting_id" => meeting.id
-    }
-
-    case Oban.insert(EmailWorker.new(job_params, queue: :emails, priority: 1)) do
-      {:ok, _job} ->
-        Logger.info("Reschedule request email job queued",
-          meeting_id: meeting.id,
-          status: meeting.status
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to queue reschedule request email",
-          meeting_id: meeting.id,
-          error: inspect(reason)
-        )
-
-        {:error, reason}
-    end
+    EmailScheduler.schedule_reschedule_request(meeting.id)
   end
 end

@@ -5,7 +5,7 @@ defmodule TymeslotWeb.SessionControllerTest do
   import Mox
 
   alias Phoenix.Flash
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.{UserQueries, UserTokenQueries}
   alias Tymeslot.Auth.Verification
   alias Tymeslot.Auth.VerificationMock
   alias Tymeslot.AuthTestHelpers
@@ -274,7 +274,7 @@ defmodule TymeslotWeb.SessionControllerTest do
           signup_ip: signup_ip
         )
 
-      {:ok, user} = UserQueries.set_verification_token(user, token, signup_ip)
+      {:ok, user} = UserTokenQueries.set_verification_token(user, token, signup_ip)
       user
     end
 
@@ -315,7 +315,7 @@ defmodule TymeslotWeb.SessionControllerTest do
       expired_time = DateTime.add(DateTime.utc_now(), -25 * 3600, :second)
 
       user = Factory.insert(:user, verified_at: nil, signup_ip: "127.0.0.1")
-      {:ok, _token} = UserQueries.set_verification_token(user, "expired_verification_token")
+      {:ok, _token} = UserTokenQueries.set_verification_token(user, "expired_verification_token")
 
       Repo.query!(
         "UPDATE users SET verification_sent_at = $1 WHERE id = $2",

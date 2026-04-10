@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Defaults
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.PrimarySelection
@@ -71,7 +72,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
           {:ok, CalendarIntegrationSchema.t()} | {:error, any()}
   def toggle_with_primary_rebalance(%CalendarIntegrationSchema{} = integration) do
     Repo.transaction(fn ->
-      CalendarIntegrationQueries.lock_user_profile_and_integrations(integration.user_id)
+      CalendarIntegrationWebhookQueries.lock_user_profile_and_integrations(integration.user_id)
 
       current_primary_id = get_current_primary_id(integration.user_id)
 

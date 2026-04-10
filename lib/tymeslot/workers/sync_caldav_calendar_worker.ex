@@ -47,21 +47,16 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       states: [:available, :scheduled, :executing, :retryable]
     ]
 
-  import SweetXml
-
   require Logger
 
-  alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
-  alias Tymeslot.Integrations.Calendar.CalDAV.Http, as: CalDAVHttp
-  alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
+  alias Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport
+  alias Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler
   alias Tymeslot.Integrations.Calendar.CalDAV.TierDetector
   alias Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
-  alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
 
   # How far back and forward to fetch events on a full sync.
@@ -177,7 +172,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   defp do_sync_tier1(integration, client, primary_path) do
     calendar_url = UrlBuilder.build_calendar_url(client.base_url, primary_path)
 
-    case fetch_sync_collection(integration, client, calendar_url) do
+    case SyncCollectionReport.fetch(integration, client, calendar_url) do
       {:ok, {events, deleted_hrefs, new_sync_token}} ->
         Logger.info("CalDAV Tier 1 sync fetched changes",
           calendar_integration_id: integration.id,
@@ -185,7 +180,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           deleted_count: length(deleted_hrefs)
         )
 
-        case safe_process_events(integration, events, deleted_hrefs) do
+        case SyncReconciler.safe_process_events(integration, events, deleted_hrefs) do
           :ok ->
             persist_sync_state(integration, sync_token: new_sync_token)
             :ok
@@ -216,104 +211,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         log_sync_error(integration, "Tier 1 sync", reason)
         {:error, reason}
     end
-  end
-
-  defp fetch_sync_collection(integration, client, calendar_url) do
-    sync_token = integration.caldav_sync_token
-    report_body = build_sync_collection_report(sync_token)
-
-    case CalDAVHttp.report(calendar_url, client.username, client.password, report_body) do
-      {:ok, %Req.Response{status: 207, body: body}} ->
-        parse_sync_collection_response(body)
-
-      {:ok, %Req.Response{status: 410}} ->
-        {:error, :sync_token_expired}
-
-      {:ok, %Req.Response{status: 401}} ->
-        {:error, :unauthorized}
-
-      {:ok, %Req.Response{status: 403}} ->
-        {:error, :unauthorized}
-
-      {:error, :unauthorized} ->
-        {:error, :unauthorized}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp build_sync_collection_report(nil) do
-    # No stored token: request full sync
-    """
-    <?xml version="1.0" encoding="UTF-8"?>
-    <d:sync-collection xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-      <d:sync-token/>
-      <d:sync-level>1</d:sync-level>
-      <d:prop>
-        <d:getetag/>
-        <c:calendar-data/>
-      </d:prop>
-    </d:sync-collection>
-    """
-  end
-
-  defp build_sync_collection_report(sync_token) when is_binary(sync_token) do
-    """
-    <?xml version="1.0" encoding="UTF-8"?>
-    <d:sync-collection xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-      <d:sync-token>#{xml_escape(sync_token)}</d:sync-token>
-      <d:sync-level>1</d:sync-level>
-      <d:prop>
-        <d:getetag/>
-        <c:calendar-data/>
-      </d:prop>
-    </d:sync-collection>
-    """
-  end
-
-  defp parse_sync_collection_response(xml_body) do
-    doc = SweetXml.parse(xml_body, namespace_conformant: true, dtd: :none)
-
-    # Extract the new sync token from the response
-    raw_sync_token = xpath(doc, ~x"//*[local-name()='sync-token']/text()"s)
-    new_sync_token = if raw_sync_token == "", do: nil, else: raw_sync_token
-
-    responses =
-      xpath(
-        doc,
-        ~x"//*[local-name()='response']"l,
-        href: ~x"./*[local-name()='href']/text()"s,
-        status: ~x".//*[local-name()='status']/text()"s,
-        etag: ~x".//*[local-name()='getetag']/text()"s,
-        calendar_data: ~x".//*[local-name()='calendar-data']/text()"s
-      )
-
-    {changed, deleted} =
-      Enum.split_with(responses, fn r ->
-        r.calendar_data != "" and not String.contains?(r.status, "404")
-      end)
-
-    events =
-      changed
-      |> Enum.map(fn r ->
-        case EventProcessor.parse_ical_from_string(r.calendar_data) do
-          {:ok, event} ->
-            Map.merge(event, %{href: r.href, etag: EventProcessor.clean_etag(r.etag)})
-
-          {:error, _reason} ->
-            nil
-        end
-      end)
-      |> Enum.reject(&is_nil/1)
-
-    deleted_hrefs = Enum.map(deleted, & &1.href)
-
-    {:ok, {events, deleted_hrefs, new_sync_token}}
-  rescue
-    e ->
-      Logger.error("Failed to parse sync-collection response", error: inspect(e))
-      {:error, :invalid_response}
   end
 
   # ---------------------------------------------------------------------------
@@ -347,7 +244,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   defp do_sync_tier2(integration, client, primary_path) do
     calendar_url = UrlBuilder.build_calendar_url(client.base_url, primary_path)
 
-    case fetch_ctag(calendar_url, client) do
+    case SyncCollectionReport.fetch_ctag(calendar_url, client) do
       {:ok, current_ctag} ->
         stored_ctag = integration.caldav_sync_token
 
@@ -374,38 +271,6 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         # Fall back to full fetch on CTag probe failure
         do_full_fetch(integration, client, primary_path, [])
     end
-  end
-
-  defp fetch_ctag(calendar_url, client) do
-    case CalDAVHttp.propfind_ctag(calendar_url, client.username, client.password) do
-      {:ok, %Req.Response{status: status, body: body}} when status in [200, 207] ->
-        parse_ctag_from_response(body)
-
-      {:ok, %Req.Response{status: status}} when status in [401, 403] ->
-        {:error, :unauthorized}
-
-      {:ok, %Req.Response{status: status}} ->
-        {:error, {:http_error, status}}
-
-      {:error, :unauthorized} ->
-        {:error, :unauthorized}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp parse_ctag_from_response(xml_body) when is_binary(xml_body) do
-    doc = SweetXml.parse(xml_body, namespace_conformant: true, dtd: :none)
-
-    raw_ctag = xpath(doc, ~x"//*[local-name()='getctag']/text()"s)
-    ctag = if raw_ctag == "", do: nil, else: raw_ctag
-
-    {:ok, ctag}
-  rescue
-    e ->
-      Logger.warning("Failed to parse CTag response", error: inspect(e))
-      {:ok, nil}
   end
 
   # ---------------------------------------------------------------------------
@@ -448,9 +313,16 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           calendar_path: calendar_path
         )
 
-        case safe_process_events(integration, events) do
+        case SyncReconciler.safe_process_events(integration, events) do
           :ok ->
-            detect_deletions(integration, events, start_time, end_time, range_now, calendar_path)
+            SyncReconciler.detect_deletions(
+              integration,
+              events,
+              start_time,
+              end_time,
+              range_now,
+              calendar_path
+            )
 
             sync_token_opt =
               case Keyword.get(opts, :new_ctag) do
@@ -565,95 +437,5 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       phase: phase,
       error: inspect(reason)
     )
-  end
-
-  defp safe_process_events(integration, events, deleted_hrefs \\ []) do
-    context = %{
-      calendar_integration_id: integration.id,
-      provider_calendar_id: List.first(integration.calendar_paths),
-      synced_at: DateTime.utc_now(:microsecond)
-    }
-
-    with {:ok, calendar_events} <- CalDAVProvider.normalise_events(events, context),
-         :ok <- Sync.persist_normalised_events(integration, calendar_events) do
-      maybe_process_deletions(integration, deleted_hrefs)
-    end
-  rescue
-    e ->
-      {:error, Exception.message(e)}
-  end
-
-  defp maybe_process_deletions(_integration, []), do: :ok
-
-  defp maybe_process_deletions(integration, deleted_hrefs) do
-    Enum.each(deleted_hrefs, fn href ->
-      ProviderCalendarEventQueries.delete_by_provider_event_id(integration.id, href)
-
-      case Sync.reconcile(integration.id, href, nil, :deleted) do
-        :ok ->
-          :ok
-
-        {:error, reason} ->
-          Logger.warning("Reconcile failed for deleted event",
-            href: href,
-            integration_id: integration.id,
-            reason: inspect(reason)
-          )
-      end
-    end)
-  end
-
-  defp detect_deletions(
-         integration,
-         fetched_events,
-         start_time,
-         end_time,
-         sync_started_at,
-         calendar_path
-       ) do
-    fetched_uids = MapSet.new(fetched_events, &Map.get(&1, :uid))
-
-    cached_uids =
-      ProviderCalendarEventQueries.list_uids_in_range(
-        integration.id,
-        start_time,
-        end_time,
-        sync_started_at,
-        calendar_path
-      )
-
-    missing_uids = Enum.reject(cached_uids, &MapSet.member?(fetched_uids, &1))
-
-    if missing_uids != [] do
-      Logger.info("CalDAV full fetch detected missing events",
-        calendar_integration_id: integration.id,
-        missing_count: length(missing_uids)
-      )
-
-      Enum.each(missing_uids, fn uid ->
-        ProviderCalendarEventQueries.delete_by_uid(integration.id, uid)
-
-        case Sync.reconcile(integration.id, nil, uid, :deleted) do
-          :ok ->
-            :ok
-
-          {:error, reason} ->
-            Logger.warning("Reconcile failed for deleted event",
-              uid: uid,
-              integration_id: integration.id,
-              reason: inspect(reason)
-            )
-        end
-      end)
-    end
-  end
-
-  defp xml_escape(string) when is_binary(string) do
-    string
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
-    |> String.replace("'", "&apos;")
   end
 end

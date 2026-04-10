@@ -500,5 +500,4 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> apply_limit(limit)
     |> Repo.all()
   end
-
 end

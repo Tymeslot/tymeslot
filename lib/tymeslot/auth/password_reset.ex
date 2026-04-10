@@ -13,10 +13,10 @@ defmodule Tymeslot.Auth.PasswordReset do
     Validation
   }
 
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.{InputProcessor, RateLimiter, Token}
   alias Tymeslot.Utils.UrlBuilder
-  alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Helpers.ClientIP
 
   @doc """
@@ -77,10 +77,10 @@ defmodule Tymeslot.Auth.PasswordReset do
     end
   end
 
-  defp handle_user_found(user, user_queries) do
+  defp handle_user_found(user, _user_queries) do
     case user.provider do
       provider when provider in [nil, "email"] ->
-        process_regular_user_reset(user, user_queries)
+        process_regular_user_reset(user)
 
       provider ->
         handle_oauth_user_reset(user, provider)
@@ -102,10 +102,10 @@ defmodule Tymeslot.Auth.PasswordReset do
       end
   end
 
-  defp process_regular_user_reset(user, user_queries) do
+  defp process_regular_user_reset(user) do
     {token, _expiry} = Token.generate_password_reset_token()
 
-    case user_queries.set_reset_token(user, token) do
+    case Config.user_token_queries_module().set_reset_token(user, token) do
       {:ok, updated_user} ->
         reset_url = UrlBuilder.password_reset_url(token)
         send_reset_email_and_log(updated_user, reset_url)
@@ -126,7 +126,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   end
 
   defp send_reset_email_and_log(user, reset_url) do
-    case EmailWorker.schedule_password_reset(user.id, reset_url) do
+    case EmailScheduler.schedule_password_reset(user.id, reset_url) do
       :ok ->
         Logger.info("Password reset email sent",
           user_id: user.id,
@@ -168,7 +168,7 @@ defmodule Tymeslot.Auth.PasswordReset do
           {:ok, map(), String.t()}
           | {:error, atom(), String.t()}
   def verify_token(token, _opts \\ []) do
-    case Config.user_queries_module().get_user_by_reset_token(token) do
+    case Config.user_token_queries_module().get_user_by_reset_token(token) do
       {:error, :not_found} ->
         Logger.warning("Invalid password reset token",
           # Log only part of the token for security
@@ -263,7 +263,7 @@ defmodule Tymeslot.Auth.PasswordReset do
   end
 
   defp perform_token_clear(user) do
-    case Config.user_queries_module().set_reset_token(user, nil) do
+    case Config.user_token_queries_module().set_reset_token(user, nil) do
       {:ok, final_user} ->
         AccountLogging.log_password_reset(final_user, "completed")
         {:ok, final_user}

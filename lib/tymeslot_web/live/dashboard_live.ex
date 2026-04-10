@@ -153,6 +153,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias TymeslotWeb.Dashboard.{
     AutomationSettingsComponent,
     BookingsManagementComponent,
+    CalendarEventHandlers,
     CalendarGridComponent,
     CalendarSettingsComponent,
     DashboardOverviewComponent,
@@ -163,7 +164,6 @@ defmodule TymeslotWeb.DashboardLive do
     VideoSettingsComponent
   }
 
-  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
   alias TymeslotWeb.Live.Dashboard.EmbedSettingsComponent
 
   require Logger
@@ -392,159 +392,46 @@ defmodule TymeslotWeb.DashboardLive do
     {:noreply, socket}
   end
 
-  @spec handle_info(:tick, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info(:tick, socket) do
-    if socket.assigns.live_action == :calendar do
-      Process.send_after(self(), :tick, 60_000)
+  # Calendar-specific handle_info clauses — delegated to CalendarEventHandlers.
 
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        current_time: DateTime.utc_now()
-      )
-    end
+  def handle_info(:tick, socket),
+    do: CalendarEventHandlers.handle_tick(socket)
 
-    {:noreply, socket}
-  end
+  def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket),
+    do: CalendarEventHandlers.handle_calendar_events_updated(socket)
 
-  @spec handle_info({:calendar_events_updated, any(), any()}, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket) do
-    if socket.assigns.live_action == :calendar do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :events_updated
-      )
-    end
+  def handle_info({:calendar_sync_complete, _user_id, _integration_id}, socket),
+    do: CalendarEventHandlers.handle_calendar_sync_complete(socket)
 
-    {:noreply, socket}
-  end
+  def handle_info(:calendar_sync_flash, socket),
+    do: CalendarEventHandlers.handle_calendar_sync_flash(socket)
 
-  @spec handle_info({:calendar_sync_complete, any(), any()}, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info({:calendar_sync_complete, _user_id, _integration_id}, socket) do
-    if socket.assigns.live_action == :calendar do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :integration_synced
-      )
-    end
+  def handle_info(:reset_calendar_sync, socket),
+    do: CalendarEventHandlers.handle_reset_calendar_sync(socket)
 
-    {:noreply, socket}
-  end
+  def handle_info({:event_update_result, result}, socket),
+    do: CalendarEventHandlers.handle_event_update_result(result, socket)
 
-  @spec handle_info(
-          {:event_update_result, :ok | {:error, keyword()}},
-          Phoenix.LiveView.Socket.t()
-        ) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info({:event_update_result, :ok}, socket), do: {:noreply, socket}
+  def handle_info({:event_move_result, result}, socket),
+    do: CalendarEventHandlers.handle_event_move_result(result, socket)
 
-  def handle_info({:event_update_result, {:error, payload}}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :revert_event,
-      original_event: payload[:original_event]
-    )
+  def handle_info({:execute_create_event, payload}, socket),
+    do: CalendarEventHandlers.handle_execute_create_event(payload, socket)
 
-    {:noreply, put_flash(socket, :error, "Failed to update event — changes reverted")}
-  end
+  def handle_info({:create_event_result, result}, socket),
+    do: CalendarEventHandlers.handle_create_event_result(result, socket)
 
-  @spec handle_info(:calendar_sync_flash, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info(:calendar_sync_flash, socket) do
-    {:noreply, put_flash(socket, :info, "Calendars refreshed")}
-  end
+  def handle_info({:execute_create_ad_hoc_meeting, params}, socket),
+    do: CalendarEventHandlers.handle_execute_create_ad_hoc_meeting(params, socket)
 
-  @spec handle_info(:reset_calendar_sync, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_info(:reset_calendar_sync, socket) do
-    if socket.assigns.live_action == :calendar do
-      send_update(CalendarGridComponent,
-        id: "calendar",
-        action: :refresh_events
-      )
-    end
+  def handle_info({:create_ad_hoc_meeting_result, result}, socket),
+    do: CalendarEventHandlers.handle_create_ad_hoc_meeting_result(result, socket)
 
-    {:noreply, socket}
-  end
+  def handle_info({:execute_delete_event, payload}, socket),
+    do: CalendarEventHandlers.handle_execute_delete_event(payload, socket)
 
-  def handle_info({:event_move_result, {:ok, new_event_info}}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :event_moved,
-      new_event_uid: new_event_info[:uid],
-      new_event_integration_id: new_event_info[:integration_id]
-    )
-
-    {:noreply, socket}
-  end
-
-  def handle_info({:event_move_result, {:error, payload}}, socket) do
-    send_update(CalendarGridComponent,
-      id: "calendar",
-      action: :revert_event,
-      original_event: payload[:original_event]
-    )
-
-    {:noreply, put_flash(socket, :error, "Failed to move event")}
-  end
-
-  def handle_info({:execute_create_event, payload}, socket) do
-    lv_pid = self()
-
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-      send(lv_pid, {:create_event_result, EventCrud.run_create_event(payload)})
-    end)
-
-    {:noreply, socket}
-  end
-
-  def handle_info({:create_event_result, result}, socket) do
-    EventCrud.handle_create_result(result, socket)
-  end
-
-  def handle_info({:execute_create_ad_hoc_meeting, params}, socket) do
-    lv_pid = self()
-
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-      send(lv_pid, {:create_ad_hoc_meeting_result, EventCrud.run_create_ad_hoc_meeting(params)})
-    end)
-
-    {:noreply, socket}
-  end
-
-  def handle_info({:create_ad_hoc_meeting_result, {:ok, _result}}, socket) do
-    send_update(TymeslotWeb.Dashboard.CalendarGridComponent,
-      id: "calendar",
-      action: :ad_hoc_meeting_created
-    )
-
-    {:noreply, put_flash(socket, :info, "Meeting created and invitation sent")}
-  end
-
-  def handle_info({:create_ad_hoc_meeting_result, {:error, reason}}, socket) do
-    send_update(TymeslotWeb.Dashboard.CalendarGridComponent,
-      id: "calendar",
-      action: :ad_hoc_meeting_failed
-    )
-
-    {:noreply, put_flash(socket, :error, reason)}
-  end
-
-  def handle_info({:execute_delete_event, payload}, socket) do
-    lv_pid = self()
-
-    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
-      send(lv_pid, {:delete_event_result, EventCrud.run_delete_event(payload)})
-    end)
-
-    {:noreply, socket}
-  end
-
-  def handle_info({:delete_event_result, result}, socket) do
-    EventCrud.handle_delete_result(result, socket)
-  end
+  def handle_info({:delete_event_result, result}, socket),
+    do: CalendarEventHandlers.handle_delete_event_result(result, socket)
 
   @spec handle_info(any(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

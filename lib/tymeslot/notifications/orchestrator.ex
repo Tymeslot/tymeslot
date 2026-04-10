@@ -94,7 +94,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   end
 
   @doc """
-  Schedules cancellation notifications via EmailWorker.
+  Schedules cancellation notifications via EmailScheduler.
   """
   @spec send_cancellation_notifications(%{atom() => term()}) ::
           {:ok, atom()} | {:error, term()}
@@ -178,7 +178,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
   @doc """
   Schedules calendar invitation emails for a list of attendees.
 
-  Enqueues one Oban job per attendee via EmailWorker. Logs warnings for
+  Enqueues one Oban job per attendee via EmailScheduler. Logs warnings for
   individual scheduling failures but does not abort the remaining attendees.
   """
   @spec schedule_calendar_invitations(pos_integer(), [String.t()], map()) :: :ok
@@ -333,7 +333,7 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
   # Module getters for dependency injection in tests
   defp get_email_worker_module do
-    Application.get_env(:tymeslot, :email_worker_module, Tymeslot.Workers.EmailWorker)
+    Application.get_env(:tymeslot, :email_worker_module, Tymeslot.Emails.EmailScheduler)
   end
 
   defp get_email_service_module do

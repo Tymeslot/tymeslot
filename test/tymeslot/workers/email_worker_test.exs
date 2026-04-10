@@ -9,6 +9,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
   import Tymeslot.Factory
 
   alias Ecto.UUID
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
@@ -18,7 +19,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       user = insert(:user)
       meeting = insert(:meeting, organizer_user: user)
 
-      assert :ok = EmailWorker.schedule_confirmation_emails(meeting.id)
+      assert :ok = EmailScheduler.schedule_confirmation_emails(meeting.id)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -37,8 +38,8 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       user = insert(:user)
       meeting = insert(:meeting, organizer_user: user)
 
-      assert :ok = EmailWorker.schedule_confirmation_emails(meeting.id)
-      assert :ok = EmailWorker.schedule_confirmation_emails(meeting.id)
+      assert :ok = EmailScheduler.schedule_confirmation_emails(meeting.id)
+      assert :ok = EmailScheduler.schedule_confirmation_emails(meeting.id)
 
       # Only one job should exist
       jobs = all_enqueued(worker: EmailWorker)
@@ -49,7 +50,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       user = insert(:user)
       meeting = insert(:meeting, organizer_user: user)
 
-      assert :ok = EmailWorker.schedule_confirmation_emails(meeting.id)
+      assert :ok = EmailScheduler.schedule_confirmation_emails(meeting.id)
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.queue == "emails"
@@ -61,7 +62,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       user = insert(:user)
       meeting = insert(:meeting, organizer_user: user)
 
-      assert :ok = EmailWorker.schedule_cancellation_emails(meeting.id)
+      assert :ok = EmailScheduler.schedule_cancellation_emails(meeting.id)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -79,8 +80,8 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       user = insert(:user)
       meeting = insert(:meeting, organizer_user: user)
 
-      assert :ok = EmailWorker.schedule_cancellation_emails(meeting.id)
-      assert :ok = EmailWorker.schedule_cancellation_emails(meeting.id)
+      assert :ok = EmailScheduler.schedule_cancellation_emails(meeting.id)
+      assert :ok = EmailScheduler.schedule_cancellation_emails(meeting.id)
 
       jobs =
         all_enqueued(
@@ -95,7 +96,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       user = insert(:user)
       meeting = insert(:meeting, organizer_user: user)
 
-      assert :ok = EmailWorker.schedule_cancellation_emails(meeting.id)
+      assert :ok = EmailScheduler.schedule_cancellation_emails(meeting.id)
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.queue == "emails"
@@ -108,7 +109,8 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       meeting = insert(:meeting, organizer_user: user)
       scheduled_at = DateTime.add(DateTime.utc_now(), 30, :minute)
 
-      assert :ok = EmailWorker.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
+      assert :ok =
+               EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -129,7 +131,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       meeting = insert(:meeting, organizer_user: user)
       scheduled_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), 1, :hour), :second)
 
-      assert :ok = EmailWorker.schedule_reminder_emails(meeting.id, 1, "hours", scheduled_at)
+      assert :ok = EmailScheduler.schedule_reminder_emails(meeting.id, 1, "hours", scheduled_at)
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert DateTime.compare(DateTime.truncate(job.scheduled_at, :second), scheduled_at) == :eq
@@ -140,10 +142,12 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       meeting = insert(:meeting, organizer_user: user)
       scheduled_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), 30, :minute), :second)
 
-      assert :ok = EmailWorker.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
+      assert :ok =
+               EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
 
       # Should not create duplicate job
-      assert :ok = EmailWorker.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
+      assert :ok =
+               EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
 
       jobs = all_enqueued(worker: EmailWorker)
       assert length(jobs) == 1
@@ -157,13 +161,19 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       scheduled_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), 30, :minute), :second)
       new_scheduled_at = DateTime.truncate(DateTime.add(DateTime.utc_now(), 45, :minute), :second)
 
-      assert :ok = EmailWorker.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
+      assert :ok =
+               EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
 
       # In production, this would delete the existing job and create a new one with new_scheduled_at.
       # In Oban.Testing (manual mode), deletion from the DB won't affect the memory-enqueued job,
       # and the second insert will be treated as a unique duplicate by the code.
       assert :ok =
-               EmailWorker.schedule_reminder_emails(meeting.id, 30, "minutes", new_scheduled_at)
+               EmailScheduler.schedule_reminder_emails(
+                 meeting.id,
+                 30,
+                 "minutes",
+                 new_scheduled_at
+               )
 
       jobs = all_enqueued(worker: EmailWorker)
       assert length(jobs) == 1
@@ -177,7 +187,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       user = insert(:user)
       url = "https://example.com/verify"
 
-      assert :ok = EmailWorker.schedule_email_verification(user.id, url)
+      assert :ok = EmailScheduler.schedule_email_verification(user.id, url)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -198,7 +208,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       user = insert(:user)
       url = "https://example.com/reset"
 
-      assert :ok = EmailWorker.schedule_password_reset(user.id, url)
+      assert :ok = EmailScheduler.schedule_password_reset(user.id, url)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -390,7 +400,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
         event_description: "Daily sync"
       }
 
-      assert :ok = EmailWorker.schedule_calendar_invitation(params)
+      assert :ok = EmailScheduler.schedule_calendar_invitation(params)
 
       assert_enqueued(
         worker: EmailWorker,
@@ -423,8 +433,8 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
         event_end_at: "2026-04-10T10:30:00Z"
       }
 
-      assert :ok = EmailWorker.schedule_calendar_invitation(params)
-      assert :ok = EmailWorker.schedule_calendar_invitation(params)
+      assert :ok = EmailScheduler.schedule_calendar_invitation(params)
+      assert :ok = EmailScheduler.schedule_calendar_invitation(params)
 
       jobs =
         all_enqueued(
@@ -481,7 +491,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       user = insert(:user)
       meeting = insert(:meeting, organizer_user: user)
 
-      EmailWorker.schedule_confirmation_emails(meeting.id)
+      EmailScheduler.schedule_confirmation_emails(meeting.id)
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.queue == "emails"
@@ -492,7 +502,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       user = insert(:user)
       meeting = insert(:meeting, organizer_user: user)
 
-      EmailWorker.schedule_confirmation_emails(meeting.id)
+      EmailScheduler.schedule_confirmation_emails(meeting.id)
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.priority == 0
@@ -503,7 +513,7 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       meeting = insert(:meeting, organizer_user: user)
       scheduled_at = DateTime.add(DateTime.utc_now(), 30, :minute)
 
-      EmailWorker.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
+      EmailScheduler.schedule_reminder_emails(meeting.id, 30, "minutes", scheduled_at)
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.priority == 2

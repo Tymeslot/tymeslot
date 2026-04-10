@@ -1,0 +1,79 @@
+defmodule Tymeslot.Auth.PasswordUpdate do
+  @moduledoc """
+  Handles password updates for authenticated users.
+
+  Validates the current password, enforces password policies (minimum length,
+  confirmation match, not reusing the old password), persists the new hash,
+  and invalidates all existing sessions.
+  """
+
+  alias Ecto.Changeset
+
+  alias Tymeslot.Auth.{UserQueries, UserSessionQueries}
+  alias Tymeslot.Security.Password
+  alias Tymeslot.Utils.ChangesetUtils
+
+  @doc """
+  Updates a user's password after verifying their current password.
+  Pure domain logic without HTTP concerns.
+  """
+  @spec update_user_password(term(), String.t(), String.t(), String.t()) ::
+          {:ok, term()} | {:error, String.t()}
+  def update_user_password(user, current_password, new_password, new_password_confirmation) do
+    with :ok <- verify_current_password(user, current_password),
+         :ok <- ensure_not_same_as_old(user, new_password),
+         :ok <- validate_new_password(new_password, new_password_confirmation),
+         {:ok, updated_user} <- do_update_password(user, new_password, new_password_confirmation),
+         {_count, nil} <- UserSessionQueries.delete_user_sessions(user.id) do
+      {:ok, updated_user}
+    else
+      {:error, :invalid_password} ->
+        {:error, "Current password is incorrect"}
+
+      {:error, %Changeset{} = changeset} ->
+        {:error, format_changeset_error(changeset)}
+
+      {:error, reason} when is_binary(reason) ->
+        {:error, reason}
+    end
+  end
+
+  # --- Private helpers ---
+
+  defp verify_current_password(user, password) do
+    if Password.verify_password(password, user.password_hash) do
+      :ok
+    else
+      {:error, :invalid_password}
+    end
+  end
+
+  defp ensure_not_same_as_old(user, new_password) do
+    if Password.verify_password(new_password, user.password_hash) do
+      {:error, "New password must be different from current password"}
+    else
+      :ok
+    end
+  end
+
+  defp validate_new_password(password, password_confirmation) do
+    cond do
+      password != password_confirmation ->
+        {:error, "Passwords do not match"}
+
+      String.length(password) < 8 ->
+        {:error, "Password must be at least 8 characters long"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp do_update_password(user, new_password, new_password_confirmation) do
+    UserQueries.update_user_password(user, new_password, new_password_confirmation)
+  end
+
+  defp format_changeset_error(%Changeset{} = changeset) do
+    ChangesetUtils.get_first_error(changeset)
+  end
+end

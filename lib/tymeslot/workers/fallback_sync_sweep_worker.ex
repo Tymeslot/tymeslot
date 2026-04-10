@@ -33,6 +33,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -357,7 +358,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   end
 
   defp persist_delta_link(integration, new_delta_link) do
-    case CalendarIntegrationQueries.update_delta_link(integration, new_delta_link) do
+    case CalendarIntegrationWebhookQueries.update_delta_link(integration, new_delta_link) do
       {:ok, _updated} ->
         :ok
 

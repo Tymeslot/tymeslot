@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Tokens
   alias Tymeslot.Integrations.Common.ErrorHandler
 
@@ -82,13 +83,13 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
 
     # Refresh Google Calendar tokens
     Enum.each(
-      CalendarIntegrationQueries.list_expiring_google_tokens(threshold),
+      CalendarIntegrationWebhookQueries.list_expiring_google_tokens(threshold),
       &schedule_individual_refresh/1
     )
 
     # Refresh Outlook Calendar tokens
     Enum.each(
-      CalendarIntegrationQueries.list_expiring_outlook_tokens(threshold),
+      CalendarIntegrationWebhookQueries.list_expiring_outlook_tokens(threshold),
       &schedule_individual_refresh/1
     )
 
@@ -182,6 +183,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
           )
 
         CalendarIntegrationQueries.update_integration(integration, %{sync_error: error_msg})
+
         {:snooze, retry_after}
 
       :retryable ->
@@ -194,6 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
           )
 
         CalendarIntegrationQueries.update_integration(integration, %{sync_error: error_msg})
+
         {:error, "#{reason}"}
     end
   end

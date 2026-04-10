@@ -3,7 +3,6 @@ defmodule Tymeslot.Onboarding do
   Context module for onboarding business logic.
   """
 
-  alias Tymeslot.Auth
   alias Tymeslot.Profiles
 
   @doc """
@@ -60,7 +59,7 @@ defmodule Tymeslot.Onboarding do
     if dev_mode do
       {:ok, user}
     else
-      Auth.mark_onboarding_complete(user)
+      Profiles.mark_onboarding_complete(user)
     end
   end
 end

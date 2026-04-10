@@ -1,14 +1,14 @@
 defmodule Tymeslot.MeetingTypes.InputValidation do
   @moduledoc """
-  Meeting settings input validation and sanitization.
+  Meeting settings input validation and sanitisation.
 
-  Provides specialized validation for meeting settings forms including
+  Provides specialised validation for meeting settings forms including
   meeting type creation/editing and scheduling settings configuration.
   """
 
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
+  alias Tymeslot.MeetingTypes.ReminderValidation
   alias Tymeslot.Security.{SecurityLogger, UniversalSanitizer}
-  alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
   @doc """
@@ -47,6 +47,106 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     end
   end
 
+  @doc """
+  Single-field validation for the meeting type form.
+
+  Validates and sanitises one field at a time. Used for inline field
+  validation in LiveView forms.
+
+  ## Parameters
+  - `field` - The field atom (`:name`, `:duration`, `:description`, `:icon`,
+    `:meeting_mode`, `:reminder_config`)
+  - `value` - The raw input value
+  - `metadata` - Security metadata map (ip, user_agent, user_id)
+
+  ## Returns
+  - `{:ok, sanitised_value}` | `{:error, %{field => message}}`
+  """
+  @spec validate_field(atom(), any(), map()) :: {:ok, any()} | {:error, map()}
+  def validate_field(:name, value, metadata), do: validate_meeting_name(value, metadata)
+  def validate_field(:duration, value, metadata), do: validate_meeting_duration(value, metadata)
+
+  def validate_field(:description, value, metadata),
+    do: validate_meeting_description(value, metadata)
+
+  def validate_field(:icon, value, metadata), do: validate_icon(value, metadata)
+  def validate_field(:meeting_mode, value, metadata), do: validate_meeting_mode(value, metadata)
+
+  def validate_field(:calendar_integration_id, value, metadata),
+    do: validate_calendar_integration_id(value, metadata)
+
+  def validate_field(:target_calendar_id, value, metadata),
+    do: validate_target_calendar_id(value, metadata)
+
+  def validate_field(:reminder_config, value, metadata),
+    do: ReminderValidation.validate_reminder_config(value, metadata)
+
+  def validate_field(_other_field, _value, _metadata),
+    do: {:error, %{base: "Invalid field"}}
+
+  @doc """
+  Validates buffer minutes setting input.
+
+  ## Parameters
+  - `buffer_str` - String containing buffer minutes value
+  - `opts` - Options including metadata for logging
+
+  ## Returns
+  - `{:ok, validated_integer}` | `{:error, validation_error}`
+  """
+  @spec validate_buffer_minutes(String.t(), keyword()) :: {:ok, integer()} | {:error, String.t()}
+  def validate_buffer_minutes(buffer_str, opts \\ []) do
+    validate_numeric_setting(buffer_str, 0, 120, "Buffer minutes", "buffer_minutes", opts)
+  end
+
+  @doc """
+  Validates advance booking days setting input.
+
+  ## Parameters
+  - `days_str` - String containing advance booking days value
+  - `opts` - Options including metadata for logging
+
+  ## Returns
+  - `{:ok, validated_integer}` | `{:error, validation_error}`
+  """
+  @spec validate_advance_booking_days(String.t(), keyword()) ::
+          {:ok, integer()} | {:error, String.t()}
+  def validate_advance_booking_days(days_str, opts \\ []) do
+    validate_numeric_setting(
+      days_str,
+      1,
+      365,
+      "Advance booking days",
+      "advance_booking_days",
+      opts
+    )
+  end
+
+  @doc """
+  Validates minimum advance hours setting input.
+
+  ## Parameters
+  - `hours_str` - String containing minimum advance hours value
+  - `opts` - Options including metadata for logging
+
+  ## Returns
+  - `{:ok, validated_integer}` | `{:error, validation_error}`
+  """
+  @spec validate_min_advance_hours(String.t(), keyword()) ::
+          {:ok, integer()} | {:error, String.t()}
+  def validate_min_advance_hours(hours_str, opts \\ []) do
+    validate_numeric_setting(
+      hours_str,
+      0,
+      168,
+      "Minimum advance hours",
+      "min_advance_hours",
+      opts
+    )
+  end
+
+  # --- Private helpers ---
+
   defp run_validations(validations, metadata) do
     {sanitized_acc, error_acc} =
       Enum.reduce(validations, {%{}, %{}}, fn {field, value}, {s_acc, e_acc} ->
@@ -66,24 +166,6 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     end
   end
 
-  defp validate_field(:name, value, metadata), do: validate_meeting_name(value, metadata)
-  defp validate_field(:duration, value, metadata), do: validate_meeting_duration(value, metadata)
-
-  defp validate_field(:description, value, metadata),
-    do: validate_meeting_description(value, metadata)
-
-  defp validate_field(:icon, value, metadata), do: validate_icon(value, metadata)
-  defp validate_field(:meeting_mode, value, metadata), do: validate_meeting_mode(value, metadata)
-
-  defp validate_field(:calendar_integration_id, value, metadata),
-    do: validate_calendar_integration_id(value, metadata)
-
-  defp validate_field(:target_calendar_id, value, metadata),
-    do: validate_target_calendar_id(value, metadata)
-
-  defp validate_field(:reminder_config, value, metadata),
-    do: validate_reminder_config(value, metadata)
-
   defp log_validation_result(status, metadata, errors \\ nil) do
     event_name = "meeting_type_form_validation_#{status}"
 
@@ -99,108 +181,27 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
     SecurityLogger.log_security_event(event_name, log_params)
   end
 
-  @doc """
-  Field-level validation for the meeting type form. Validates only the provided field.
-
-  Returns {:ok, sanitized_value} | {:error, %{field => message}}
-  """
-  @spec validate_meeting_type_field(
-          :name | :duration | :description | :icon | :meeting_mode | :reminder_config,
-          any(),
-          keyword()
-        ) ::
-          {:ok, String.t()} | {:error, map()}
-  def validate_meeting_type_field(field, value, opts \\ [])
-
-  def validate_meeting_type_field(:name, value, opts) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    case validate_meeting_name(value, metadata) do
-      {:ok, sanitized} -> {:ok, sanitized}
-      {:error, %{name: _name_error} = err} -> {:error, err}
-    end
-  end
-
-  def validate_meeting_type_field(:duration, value, opts) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    case validate_meeting_duration(value, metadata) do
-      {:ok, sanitized} -> {:ok, sanitized}
-      {:error, %{duration: _duration_error} = err} -> {:error, err}
-    end
-  end
-
-  def validate_meeting_type_field(:description, value, opts) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    case validate_meeting_description(value, metadata) do
-      {:ok, sanitized} -> {:ok, sanitized}
-      {:error, %{description: _description_error} = err} -> {:error, err}
-    end
-  end
-
-  def validate_meeting_type_field(:icon, value, opts) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    case validate_icon(value, metadata) do
-      {:ok, sanitized} -> {:ok, sanitized}
-      {:error, %{icon: _icon_error} = err} -> {:error, err}
-    end
-  end
-
-  def validate_meeting_type_field(:meeting_mode, value, opts) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    case validate_meeting_mode(value, metadata) do
-      {:ok, sanitized} -> {:ok, sanitized}
-      {:error, %{meeting_mode: _mode_error} = err} -> {:error, err}
-    end
-  end
-
-  def validate_meeting_type_field(:reminder_config, value, opts) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    case validate_reminder_config(value, metadata) do
-      {:ok, sanitized} -> {:ok, sanitized}
-      {:error, err} -> {:error, err}
-    end
-  end
-
-  def validate_meeting_type_field(_other_field, _value, _opts),
-    do: {:error, %{base: "Invalid field"}}
-
-  @doc """
-  Validates buffer minutes setting input.
-
-  ## Parameters
-  - `buffer_str` - String containing buffer minutes value
-  - `opts` - Options including metadata for logging
-
-  ## Returns
-  - `{:ok, validated_integer}` | `{:error, validation_error}`
-  """
-  @spec validate_buffer_minutes(String.t(), keyword()) :: {:ok, integer()} | {:error, String.t()}
-  def validate_buffer_minutes(buffer_str, opts \\ []) do
+  defp validate_numeric_setting(value_str, min, max, label, event_name, opts) do
     metadata = Keyword.get(opts, :metadata, %{})
 
     with {:ok, sanitized_input} <-
-           UniversalSanitizer.sanitize_and_validate(buffer_str,
+           UniversalSanitizer.sanitize_and_validate(value_str,
              allow_html: false,
              metadata: metadata
            ),
-         {:ok, validated_buffer} <-
-           validate_numeric_range(sanitized_input, 0, 120, "Buffer minutes") do
-      SecurityLogger.log_security_event("buffer_minutes_validation_success", %{
+         {:ok, validated_value} <-
+           validate_numeric_range(sanitized_input, min, max, label) do
+      SecurityLogger.log_security_event("#{event_name}_validation_success", %{
         ip_address: metadata[:ip],
         user_agent: metadata[:user_agent],
         user_id: metadata[:user_id],
-        value: validated_buffer
+        value: validated_value
       })
 
-      {:ok, validated_buffer}
+      {:ok, validated_value}
     else
       {:error, error_msg} ->
-        SecurityLogger.log_security_event("buffer_minutes_validation_failure", %{
+        SecurityLogger.log_security_event("#{event_name}_validation_failure", %{
           ip_address: metadata[:ip],
           user_agent: metadata[:user_agent],
           user_id: metadata[:user_id],
@@ -210,94 +211,6 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
         {:error, error_msg}
     end
   end
-
-  @doc """
-  Validates advance booking days setting input.
-
-  ## Parameters
-  - `days_str` - String containing advance booking days value
-  - `opts` - Options including metadata for logging
-
-  ## Returns
-  - `{:ok, validated_integer}` | `{:error, validation_error}`
-  """
-  @spec validate_advance_booking_days(String.t(), keyword()) ::
-          {:ok, integer()} | {:error, String.t()}
-  def validate_advance_booking_days(days_str, opts \\ []) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    with {:ok, sanitized_input} <-
-           UniversalSanitizer.sanitize_and_validate(days_str,
-             allow_html: false,
-             metadata: metadata
-           ),
-         {:ok, validated_days} <-
-           validate_numeric_range(sanitized_input, 1, 365, "Advance booking days") do
-      SecurityLogger.log_security_event("advance_booking_days_validation_success", %{
-        ip_address: metadata[:ip],
-        user_agent: metadata[:user_agent],
-        user_id: metadata[:user_id],
-        value: validated_days
-      })
-
-      {:ok, validated_days}
-    else
-      {:error, error_msg} ->
-        SecurityLogger.log_security_event("advance_booking_days_validation_failure", %{
-          ip_address: metadata[:ip],
-          user_agent: metadata[:user_agent],
-          user_id: metadata[:user_id],
-          error: error_msg
-        })
-
-        {:error, error_msg}
-    end
-  end
-
-  @doc """
-  Validates minimum advance hours setting input.
-
-  ## Parameters
-  - `hours_str` - String containing minimum advance hours value
-  - `opts` - Options including metadata for logging
-
-  ## Returns
-  - `{:ok, validated_integer}` | `{:error, validation_error}`
-  """
-  @spec validate_min_advance_hours(String.t(), keyword()) ::
-          {:ok, integer()} | {:error, String.t()}
-  def validate_min_advance_hours(hours_str, opts \\ []) do
-    metadata = Keyword.get(opts, :metadata, %{})
-
-    with {:ok, sanitized_input} <-
-           UniversalSanitizer.sanitize_and_validate(hours_str,
-             allow_html: false,
-             metadata: metadata
-           ),
-         {:ok, validated_hours} <-
-           validate_numeric_range(sanitized_input, 0, 168, "Minimum advance hours") do
-      SecurityLogger.log_security_event("min_advance_hours_validation_success", %{
-        ip_address: metadata[:ip],
-        user_agent: metadata[:user_agent],
-        user_id: metadata[:user_id],
-        value: validated_hours
-      })
-
-      {:ok, validated_hours}
-    else
-      {:error, error_msg} ->
-        SecurityLogger.log_security_event("min_advance_hours_validation_failure", %{
-          ip_address: metadata[:ip],
-          user_agent: metadata[:user_agent],
-          user_id: metadata[:user_id],
-          error: error_msg
-        })
-
-        {:error, error_msg}
-    end
-  end
-
-  # Private helper functions
 
   defp validate_meeting_name(nil, _metadata), do: {:error, %{name: "Meeting name is required"}}
   defp validate_meeting_name("", _metadata), do: {:error, %{name: "Meeting name is required"}}
@@ -479,65 +392,6 @@ defmodule Tymeslot.MeetingTypes.InputValidation do
 
   defp validate_target_calendar_id(_invalid, _metadata) do
     {:error, %{target_calendar: "Invalid target calendar format"}}
-  end
-
-  defp validate_reminder_config(nil, _metadata), do: {:ok, []}
-  defp validate_reminder_config("", _metadata), do: {:ok, []}
-
-  defp validate_reminder_config(reminder_config, _metadata) do
-    with {:ok, reminders} <- parse_and_normalize_reminders(reminder_config),
-         :ok <- validate_reminders_policy(reminders) do
-      {:ok, reminders}
-    else
-      {:error, message} -> {:error, %{reminder_config: message}}
-    end
-  end
-
-  defp parse_and_normalize_reminders(reminders) when is_binary(reminders) do
-    case Jason.decode(reminders) do
-      {:ok, decoded} -> parse_and_normalize_reminders(decoded)
-      _invalid -> {:error, "Invalid reminder settings format"}
-    end
-  end
-
-  defp parse_and_normalize_reminders(reminders) when is_map(reminders) do
-    reminders
-    |> Map.values()
-    |> parse_and_normalize_reminders()
-  end
-
-  defp parse_and_normalize_reminders(reminders) when is_list(reminders) do
-    results = Enum.map(reminders, &ReminderUtils.normalize_reminder_string_keys/1)
-
-    if Enum.any?(results, &match?({:error, _reason}, &1)) do
-      {:error, "Reminder settings must include valid values and units"}
-    else
-      {:ok, Enum.map(results, fn {:ok, reminder} -> reminder end)}
-    end
-  end
-
-  defp parse_and_normalize_reminders(_other), do: {:error, "Invalid reminder settings format"}
-
-  defp validate_reminders_policy(reminders) do
-    cond do
-      length(reminders) > 3 ->
-        {:error, "You can configure up to 3 reminders"}
-
-      ReminderUtils.duplicate_reminders?(reminders) ->
-        {:error, "Reminder settings must be unique"}
-
-      Enum.any?(reminders, &reminder_exceeds_max?/1) ->
-        {:error, "Reminders cannot be set for more than 1 year in advance"}
-
-      true ->
-        :ok
-    end
-  end
-
-  # Max reminder: 1 year (365 days)
-  defp reminder_exceeds_max?(%{value: v, unit: u}) do
-    seconds = ReminderUtils.reminder_interval_seconds(v, u)
-    seconds > 365 * 24 * 60 * 60
   end
 
   defp validate_numeric_range(value_str, min, max, field_name) do

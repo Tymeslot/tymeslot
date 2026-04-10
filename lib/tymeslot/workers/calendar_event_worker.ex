@@ -21,7 +21,8 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     # High priority for calendar sync
     priority: 1
 
-  alias Ecto.{Changeset, UUID}
+  alias Ecto.UUID
+  alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Meetings.MeetingQueries
   require Logger
 
@@ -101,98 +102,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     end
   end
 
-  @doc """
-  Schedules calendar event creation to happen asynchronously with high priority.
-  """
-  @spec schedule_calendar_creation(integer()) :: :ok | {:error, String.t()}
-  def schedule_calendar_creation(meeting_id) do
-    result =
-      %{"action" => "create", "meeting_id" => meeting_id}
-      |> new(
-        queue: :calendar_events,
-        # Highest priority for calendar sync
-        priority: 0,
-        unique: [
-          # 5 minutes uniqueness window
-          period: 300,
-          fields: [:args, :queue],
-          keys: [:action, :meeting_id],
-          states: [:available, :scheduled, :executing, :retryable]
-        ]
-      )
-      |> Oban.insert()
-
-    case result do
-      {:ok, _job} ->
-        Logger.info("Calendar event creation job scheduled", meeting_id: meeting_id)
-        :ok
-
-      {:error, %Ecto.Changeset{errors: [unique: _details]}} ->
-        Logger.info("Calendar event creation job already exists, skipping duplicate",
-          meeting_id: meeting_id
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule calendar event creation",
-          meeting_id: meeting_id,
-          error: format_insert_error(reason)
-        )
-
-        {:error, "Failed to schedule job"}
-    end
-  end
-
-  @doc """
-  Schedules calendar event update with medium priority.
-  """
-  @spec schedule_calendar_update(String.t() | integer()) ::
-          {:ok, Oban.Job.t()} | {:error, Ecto.Changeset.t()}
-  def schedule_calendar_update(meeting_id) do
-    %{"action" => "update", "meeting_id" => meeting_id}
-    |> new(
-      queue: :calendar_events,
-      # Medium priority for updates
-      priority: 2,
-      unique: [
-        period: 300,
-        fields: [:args, :queue],
-        keys: [:action, :meeting_id],
-        states: [:available, :scheduled, :executing, :retryable]
-      ]
-    )
-    |> Oban.insert()
-  end
-
-  @doc """
-  Schedules calendar event deletion with high priority.
-  """
-  @spec schedule_calendar_deletion(String.t() | integer()) ::
-          {:ok, Oban.Job.t()} | {:error, Ecto.Changeset.t()}
-  def schedule_calendar_deletion(meeting_id) do
-    %{"action" => "delete", "meeting_id" => meeting_id}
-    |> new(
-      queue: :calendar_events,
-      # High priority for deletions
-      priority: 1,
-      unique: [
-        period: 300,
-        fields: [:args, :queue],
-        keys: [:action, :meeting_id],
-        states: [:available, :scheduled, :executing, :retryable]
-      ]
-    )
-    |> Oban.insert()
-  end
-
   # Private functions
-
-  defp format_insert_error(%Changeset{} = changeset) do
-    Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-  end
-
-  defp format_insert_error(other), do: inspect(other)
 
   defp handle_result(result, job) do
     case result do
@@ -358,26 +268,12 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
       {:ok, meeting} ->
         Logger.metadata(user_id: meeting.organizer_user_id)
         Logger.info("Updating calendar event", meeting_id: meeting_id, uid: meeting.uid)
-        event_data = build_event_data(meeting)
+        event_data = CalendarEventBuilder.build_event_data(meeting)
         update_or_create_calendar_event(meeting, event_data)
 
       {:error, :not_found} ->
         {:error, :meeting_not_found}
     end
-  end
-
-  defp build_event_data(meeting) do
-    %{
-      uid: meeting.uid,
-      summary: meeting.title,
-      description: build_event_description(meeting),
-      start_time: meeting.start_time,
-      end_time: meeting.end_time,
-      timezone: meeting.attendee_timezone,
-      location: meeting.meeting_url || meeting.location || "To be determined",
-      attendee_name: meeting.attendee_name,
-      attendee_email: meeting.attendee_email
-    }
   end
 
   defp update_or_create_calendar_event(meeting, event_data) do
@@ -461,22 +357,10 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     end
   end
 
-  defp build_event_description(meeting) do
-    parts = [
-      meeting.description,
-      if(meeting.attendee_message, do: "\n\nMessage from attendee:\n#{meeting.attendee_message}"),
-      if(meeting.meeting_url, do: "\n\nVideo meeting: #{meeting.meeting_url}")
-    ]
-
-    parts
-    |> Enum.filter(& &1)
-    |> Enum.join()
-  end
-
   defp create_event_for_meeting(meeting, meeting_id, attempt) do
     Logger.info("Creating calendar event", meeting_id: meeting_id, uid: meeting.uid)
 
-    event_data = build_event_data(meeting)
+    event_data = CalendarEventBuilder.build_event_data(meeting)
 
     # Use the meeting context to create in the correct calendar
     case calendar_module().create_event(event_data, meeting) do

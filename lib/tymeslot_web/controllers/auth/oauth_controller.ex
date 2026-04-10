@@ -7,13 +7,11 @@ defmodule TymeslotWeb.OAuthController do
   use TymeslotWeb, :controller
   require Logger
 
-  alias Tymeslot.Auth
   alias Tymeslot.Auth.{AuthActions, Session, Verification}
   alias Tymeslot.Auth.OAuth.{GenericOAuth, GitHub, Google}
   alias Tymeslot.Auth.OAuth.Helper, as: OAuthHelper
   alias Tymeslot.Auth.OAuth.{URLs, UserRegistration}
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Security.FieldValidators.EmailValidator
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.AuthControllerHelpers
   alias TymeslotWeb.Helpers.{ClientIP, RedirectSanitizer}
@@ -211,7 +209,7 @@ defmodule TymeslotWeb.OAuthController do
           terms_accepted: oauth_data.terms_accepted
         }
 
-        case validate_oauth_completion_data(oauth_data) do
+        case UserRegistration.validate_completion_data(oauth_data) do
           :ok ->
             case UserRegistration.create_oauth_user(provider, oauth_data, profile_params,
                    metadata: metadata
@@ -323,7 +321,7 @@ defmodule TymeslotWeb.OAuthController do
         redirect_to_registration_with_error(conn, reason, params)
 
       _other_error ->
-        oauth_error_response(conn, reason, ~p"/auth/login")
+        AuthControllerHelpers.oauth_error_response(conn, reason, ~p"/auth/login")
     end
   end
 
@@ -332,71 +330,13 @@ defmodule TymeslotWeb.OAuthController do
     redirect_to_registration_with_error(conn, validation_error, params)
   end
 
-  @spec validate_oauth_completion_data(map()) :: :ok | {:error, atom() | String.t()}
-  defp validate_oauth_completion_data(oauth_data) do
-    email = oauth_data.email
-
-    cond do
-      is_nil(email) or String.trim(email) == "" ->
-        {:error, :email_required}
-
-      EmailValidator.validate(email) != :ok ->
-        {:error, :invalid_email}
-
-      Config.enforce_legal_agreements?() and not oauth_data.terms_accepted ->
-        {:error, :terms_not_accepted}
-
-      true ->
-        # Check if email already exists in database
-        case Auth.check_email_availability(email) do
-          :ok -> :ok
-          {:error, message} -> {:error, message}
-        end
-    end
-  end
-
   @spec redirect_to_registration_with_error(Plug.Conn.t(), any(), map()) :: Plug.Conn.t()
   defp redirect_to_registration_with_error(conn, error, _params) do
-    query_params = %{"error" => format_error_for_params(error)}
+    query_params = %{"error" => AuthControllerHelpers.format_oauth_error_for_params(error)}
 
     conn
-    |> put_flash(:error, format_error_for_flash(error))
+    |> put_flash(:error, AuthControllerHelpers.format_oauth_error_for_flash(error))
     |> redirect(to: ~p"/auth/complete-registration?#{query_params}")
-  end
-
-  @spec format_error_for_flash(any()) :: String.t()
-  defp format_error_for_flash(%Ecto.Changeset{} = changeset) do
-    case changeset.errors do
-      [email: {"can't be blank", _opts}] ->
-        "Email address is required to complete registration."
-
-      [email: {message, _opts}] when is_binary(message) ->
-        "Email #{message}. Please provide a valid email address."
-
-      _other_errors ->
-        "Registration failed due to validation errors. Please check your information and try again."
-    end
-  end
-
-  defp format_error_for_flash(:email_required),
-    do: "Email address is required to complete registration."
-
-  defp format_error_for_flash(:invalid_email), do: "Please provide a valid email address."
-  defp format_error_for_flash(:terms_not_accepted), do: "You must accept the terms to continue."
-  defp format_error_for_flash(error_message) when is_binary(error_message), do: error_message
-
-  @spec format_error_for_params(any()) :: String.t()
-  defp format_error_for_params(%Ecto.Changeset{}), do: "validation_failed"
-  defp format_error_for_params(:email_required), do: "email_required"
-  defp format_error_for_params(:invalid_email), do: "invalid_email"
-  defp format_error_for_params(:terms_not_accepted), do: "terms_not_accepted"
-
-  defp format_error_for_params(error_message) when is_binary(error_message) do
-    cond do
-      error_message =~ "already registered" -> "email_taken"
-      error_message =~ "Invalid email" -> "invalid_email"
-      true -> "unknown_error"
-    end
   end
 
   @spec handle_rate_limited_error(Plug.Conn.t()) :: Plug.Conn.t()
@@ -492,43 +432,6 @@ defmodule TymeslotWeb.OAuthController do
       "oauth" -> {:ok, :oauth}
       _unsupported -> {:error, :unsupported_oauth_provider}
     end
-  end
-
-  @spec oauth_error_response(Plug.Conn.t(), any(), String.t()) :: Plug.Conn.t()
-  defp oauth_error_response(conn, reason, redirect_path) do
-    error_message =
-      case reason do
-        %Ecto.Changeset{} = changeset ->
-          format_error_for_flash(changeset)
-
-        :user_creation_failed ->
-          "Failed to create user account. Please try again."
-
-        :invalid_oauth_data ->
-          "Invalid OAuth data received. Please try again."
-
-        :email_required ->
-          "Email address is required to complete registration. Please provide your email address."
-
-        :invalid_email ->
-          "Please provide a valid email address."
-
-        :terms_not_accepted ->
-          "You must accept the terms to continue."
-
-        :email_already_taken ->
-          "This email address is already associated with another account. Please use a different email or sign in to your existing account."
-
-        :registration_disabled ->
-          AuthActions.registration_disabled_message()
-
-        _unknown_error ->
-          "Authentication failed. Please try again."
-      end
-
-    conn
-    |> put_flash(:error, error_message)
-    |> redirect(to: redirect_path)
   end
 
   defp get_terms_accepted(params) do

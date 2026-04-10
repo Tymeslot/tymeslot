@@ -4,7 +4,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
   @moduletag :auth
 
   alias Tymeslot.Auth.PasswordReset
-  alias Tymeslot.Auth.{UserQueries, UserSchema, UserSessionQueries}
+  alias Tymeslot.Auth.{UserSchema, UserSessionQueries, UserTokenQueries}
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, Token}
 
@@ -53,7 +53,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     test "with valid token returns {:ok, user_map, message}" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
       {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserQueries.set_reset_token(user, token)
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       assert {:ok, user_map, _message} = PasswordReset.verify_token(token)
       assert user_map.id == user.id
@@ -62,7 +62,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     test "with expired token returns {:error, :token_expired, _}" do
       user = insert(:user)
       {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserQueries.set_reset_token(user, token)
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # Manually expire the token by setting reset_sent_at to 3 hours ago
       expired_time = DateTime.add(DateTime.utc_now(), -3 * 3600, :second)
@@ -85,7 +85,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     test "reset tokens are single-use" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
       {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserQueries.set_reset_token(user, token)
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       new_password = "NewSecurePassword123!"
 
@@ -102,7 +102,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
       sessions = insert_list(3, :user_session, user: user)
       {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserQueries.set_reset_token(user, token)
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       new_password = "NewSecurePassword123!"
       {:ok, _user_map, _message} = PasswordReset.reset_password(token, new_password, new_password)
@@ -116,7 +116,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     test "with mismatched confirmation returns error" do
       user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
       {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserQueries.set_reset_token(user, token)
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       assert {:error, _reason, _message} =
                PasswordReset.reset_password(token, "NewPass123!", "DifferentPass123!")
@@ -125,7 +125,7 @@ defmodule Tymeslot.Auth.PasswordResetTest do
     test "enforces strong password requirements" do
       user = insert(:user)
       {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserQueries.set_reset_token(user, token)
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # Weak password rejected
       assert {:error, _reason, _changeset} = PasswordReset.reset_password(token, "weak", "weak")

@@ -14,11 +14,11 @@ defmodule Tymeslot.Meetings.VideoRooms do
   require Logger
 
   alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.Repo
-  alias Tymeslot.Workers.CalendarEventWorker
 
   # Get Video module dynamically to avoid compile-time warnings with mocks
   @spec video_module() :: module()
@@ -152,7 +152,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
              {:ok, updated_meeting} <- update_meeting_with_video_room(meeting, video_room_attrs) do
           # After attaching the video room, update the calendar event so Google/other calendars
           # include the meeting link in description/location.
-          _job = CalendarEventWorker.schedule_calendar_update(updated_meeting.id)
+          _job = CalendarEventScheduler.schedule_calendar_update(updated_meeting.id)
           updated_meeting
         else
           {:error, reason} ->

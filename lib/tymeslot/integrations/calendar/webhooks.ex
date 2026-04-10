@@ -7,8 +7,8 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   and to record notification timestamps.
   """
 
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
 
   @type integration :: CalendarIntegrationSchema.t()
 
@@ -19,7 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   @spec get_by_google_channel_id(String.t()) ::
           {:ok, integration()} | {:error, :not_found}
   def get_by_google_channel_id(channel_id) do
-    CalendarIntegrationQueries.get_by_google_channel_id(channel_id)
+    CalendarIntegrationWebhookQueries.get_by_google_channel_id(channel_id)
   end
 
   @doc """
@@ -29,7 +29,7 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   @spec get_by_graph_subscription_id(String.t()) ::
           {:ok, integration()} | {:error, :not_found}
   def get_by_graph_subscription_id(subscription_id) do
-    CalendarIntegrationQueries.get_by_graph_subscription_id(subscription_id)
+    CalendarIntegrationWebhookQueries.get_by_graph_subscription_id(subscription_id)
   end
 
   @doc """
@@ -38,7 +38,7 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   """
   @spec get_by_graph_subscription_ids([String.t()]) :: [integration()]
   def get_by_graph_subscription_ids(subscription_ids) do
-    CalendarIntegrationQueries.get_by_graph_subscription_ids(subscription_ids)
+    CalendarIntegrationWebhookQueries.get_by_graph_subscription_ids(subscription_ids)
   end
 
   @doc """
@@ -48,6 +48,6 @@ defmodule Tymeslot.Integrations.Calendar.Webhooks do
   @spec touch_notification_at(integration(), atom()) ::
           {:ok, integration()} | {:error, Ecto.Changeset.t()}
   def touch_notification_at(integration, field) when is_atom(field) do
-    CalendarIntegrationQueries.touch_notification_at(integration, field)
+    CalendarIntegrationWebhookQueries.touch_notification_at(integration, field)
   end
 end

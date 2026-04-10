@@ -8,27 +8,27 @@ defmodule Tymeslot.MeetingTypes.InputValidationPropertyTest do
 
   alias Tymeslot.MeetingTypes.InputValidation
 
-  describe "validate_meeting_type_field(:duration, ...)" do
+  describe "validate_field(:duration, ...)" do
     property "valid durations (5..480, divisible by 5) always pass" do
       check all(n <- integer(1..96)) do
         duration = n * 5
 
         assert {:ok, _sanitized} =
-                 InputValidation.validate_meeting_type_field(:duration, to_string(duration))
+                 InputValidation.validate_field(:duration, to_string(duration), %{})
       end
     end
 
     property "durations below 5 always fail" do
       check all(n <- integer(-100..4)) do
         assert {:error, %{duration: _msg}} =
-                 InputValidation.validate_meeting_type_field(:duration, to_string(n))
+                 InputValidation.validate_field(:duration, to_string(n), %{})
       end
     end
 
     property "durations above 480 always fail" do
       check all(n <- integer(481..10_000)) do
         assert {:error, %{duration: _msg}} =
-                 InputValidation.validate_meeting_type_field(:duration, to_string(n))
+                 InputValidation.validate_field(:duration, to_string(n), %{})
       end
     end
 
@@ -38,7 +38,7 @@ defmodule Tymeslot.MeetingTypes.InputValidationPropertyTest do
               rem(n, 5) != 0
             ) do
         assert {:error, %{duration: "Duration must be divisible by 5 minutes"}} =
-                 InputValidation.validate_meeting_type_field(:duration, to_string(n))
+                 InputValidation.validate_field(:duration, to_string(n), %{})
       end
     end
   end

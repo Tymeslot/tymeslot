@@ -7,7 +7,7 @@ defmodule Tymeslot.Auth.SecurityTest do
 
   alias Tymeslot.Auth
   alias Tymeslot.Auth.{Authentication, Session}
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Security.{Password, Token}
 
   import Tymeslot.Factory
@@ -201,7 +201,7 @@ defmodule Tymeslot.Auth.SecurityTest do
       # Get token directly using helper - initiate_password_reset sends it via email
       # For testing, we generate a fresh token and store it
       {token, _value} = Token.generate_password_reset_token()
-      {:ok, _result} = UserQueries.set_reset_token(user, token)
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
 
       # First use succeeds
       result = Auth.reset_password(token, "NewPass123!", "NewPass123!")

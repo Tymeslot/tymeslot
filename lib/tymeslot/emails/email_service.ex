@@ -34,8 +34,8 @@ defmodule Tymeslot.Emails.EmailService do
           optional(atom()) => term()
         }
 
-  alias Tymeslot.Infrastructure.{AdminAlerts, CircuitBreaker, Retry}
-  alias Tymeslot.Mailer
+  alias Tymeslot.Emails.Delivery
+  alias Tymeslot.Infrastructure.AdminAlerts
 
   alias Tymeslot.Emails.Templates.{
     AdminAlert,
@@ -71,7 +71,7 @@ defmodule Tymeslot.Emails.EmailService do
   def send_appointment_confirmation_to_organizer(organizer_email, appointment_details) do
     organizer_email
     |> AppointmentConfirmationOrganizer.confirmation_email(appointment_details)
-    |> deliver()
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -83,7 +83,7 @@ defmodule Tymeslot.Emails.EmailService do
   def send_appointment_confirmation_to_attendee(attendee_email, appointment_details) do
     attendee_email
     |> AppointmentConfirmationAttendee.confirmation_email(appointment_details)
-    |> deliver()
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -126,7 +126,7 @@ defmodule Tymeslot.Emails.EmailService do
   def send_appointment_reminder_to_organizer(organizer_email, appointment_details) do
     organizer_email
     |> AppointmentReminderOrganizer.reminder_email(appointment_details)
-    |> deliver()
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -138,7 +138,7 @@ defmodule Tymeslot.Emails.EmailService do
   def send_appointment_reminder_to_attendee(attendee_email, appointment_details) do
     attendee_email
     |> AppointmentReminderAttendee.reminder_email(appointment_details)
-    |> deliver()
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -218,7 +218,7 @@ defmodule Tymeslot.Emails.EmailService do
     result =
       attendee_email
       |> AppointmentCancellation.cancellation_email_attendee(appointment_details)
-      |> deliver()
+      |> Delivery.deliver()
 
     Logger.info("Cancellation email sent to attendee",
       sent: match?({:ok, _}, result)
@@ -240,7 +240,7 @@ defmodule Tymeslot.Emails.EmailService do
     result =
       organizer_email
       |> AppointmentCancellation.cancellation_email_organizer(appointment_details)
-      |> deliver()
+      |> Delivery.deliver()
 
     Logger.info("Cancellation email sent to organizer",
       sent: match?({:ok, _}, result)
@@ -318,7 +318,7 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
 
-    deliver(email)
+    Delivery.deliver(email)
   end
 
   @doc """
@@ -340,7 +340,7 @@ defmodule Tymeslot.Emails.EmailService do
     owner_timezone = resolve_owner_timezone(meeting)
 
     result =
-      deliver(
+      Delivery.deliver(
         ExternalBookingChange.build_email(meeting, organizer_email, discrepancy, owner_timezone)
       )
 
@@ -370,7 +370,7 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
 
-    deliver(email)
+    Delivery.deliver(email)
   end
 
   @doc """
@@ -391,7 +391,7 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
 
-    deliver(email)
+    Delivery.deliver(email)
   end
 
   @doc """
@@ -416,7 +416,7 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
 
-    deliver(email)
+    Delivery.deliver(email)
   end
 
   @doc """
@@ -443,7 +443,7 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
 
-    deliver(email)
+    Delivery.deliver(email)
   end
 
   @doc """
@@ -474,7 +474,7 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.html_body(html_body_old)
       |> Email.text_body(text_body_old)
 
-    old_result = deliver(email_old)
+    old_result = Delivery.deliver(email_old)
 
     # Send to new email
     html_body_new = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, false)
@@ -489,7 +489,7 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.html_body(html_body_new)
       |> Email.text_body(text_body_new)
 
-    new_result = deliver(email_new)
+    new_result = Delivery.deliver(email_new)
 
     Logger.info("Email change confirmations sent",
       old_sent: match?({:ok, _}, old_result),
@@ -530,7 +530,7 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
 
-    deliver(email)
+    Delivery.deliver(email)
   end
 
   @doc """
@@ -545,7 +545,7 @@ defmodule Tymeslot.Emails.EmailService do
     )
 
     email = RescheduleRequest.reschedule_request_email(meeting)
-    deliver(email)
+    Delivery.deliver(email)
   end
 
   @doc """
@@ -561,7 +561,7 @@ defmodule Tymeslot.Emails.EmailService do
 
     attendee_email
     |> CalendarInvitation.invitation_email(invitation_details)
-    |> deliver()
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -577,7 +577,7 @@ defmodule Tymeslot.Emails.EmailService do
 
     attendee_email
     |> EventUpdateNotification.update_notification_email(update_details)
-    |> deliver()
+    |> Delivery.deliver()
   end
 
   @doc """
@@ -606,90 +606,8 @@ defmodule Tymeslot.Emails.EmailService do
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
 
-    deliver(email)
+    Delivery.deliver(email)
   end
-
-  @doc """
-  Delivers an email using the configured mailer with circuit breaker and retry logic.
-  """
-  @spec deliver(Swoosh.Email.t()) :: {:ok, any()} | {:error, any()}
-  def deliver(email) do
-    with :ok <- check_text_body(email) do
-      Logger.debug("Delivering email via Mailer",
-        to: email.to,
-        subject: email.subject
-      )
-
-      # Use circuit breaker with retry logic for email delivery
-      CircuitBreaker.call(:email_service_breaker, fn ->
-        Retry.with_backoff(
-          fn -> do_deliver(email) end,
-          max_attempts: 3,
-          initial_delay: 1000,
-          max_delay: 10_000,
-          retriable?: &email_retriable?/1
-        )
-      end)
-    end
-  end
-
-  defp do_deliver(email) do
-    case Mailer.deliver(email) do
-      {:ok, _email} = result ->
-        Logger.info("Email delivered successfully",
-          to: email.to,
-          subject: email.subject
-        )
-
-        result
-
-      {:error, reason} = error ->
-        Logger.error("Failed to deliver email",
-          to: email.to,
-          subject: email.subject,
-          reason: reason
-        )
-
-        error
-    end
-  end
-
-  # Determine if an email error is retriable
-  defp email_retriable?(reason) when is_binary(reason) do
-    retriable_patterns = [
-      "timeout",
-      "connection refused",
-      "network",
-      "temporarily unavailable",
-      "rate limit",
-      "500",
-      "502",
-      "503",
-      "504"
-    ]
-
-    down = String.downcase(reason)
-    Enum.any?(retriable_patterns, fn pattern -> String.contains?(down, pattern) end)
-  end
-
-  defp email_retriable?(%{status: code}) when code in [500, 502, 503, 504] do
-    true
-  end
-
-  defp email_retriable?(:timeout), do: true
-  defp email_retriable?(:closed), do: true
-  defp email_retriable?(:econnrefused), do: true
-  defp email_retriable?(_error), do: false
-
-  defp check_text_body(%Swoosh.Email{text_body: body, subject: subject}) when body in [nil, ""] do
-    Logger.error("Refusing to deliver email without a plain-text body",
-      subject: subject
-    )
-
-    {:error, {:missing_text_body, subject}}
-  end
-
-  defp check_text_body(%Swoosh.Email{}), do: :ok
 
   defp resolve_owner_timezone(%{organizer_user_id: nil}), do: Profiles.get_default_timezone()
   defp resolve_owner_timezone(%{organizer_user_id: id}), do: Profiles.get_user_timezone(id)

@@ -9,11 +9,11 @@ defmodule Tymeslot.Meetings do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Bookings.{Cancel, Create, Reschedule, RescheduleRequest}
+  alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Meetings.{MeetingCalendarQueries, MeetingQueries, MeetingSchema, VideoRooms}
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Pagination.CursorPage
   alias Tymeslot.Utils.DateTimeUtils
-  alias Tymeslot.Workers.CalendarEventWorker
 
   @doc """
   Creates a meeting appointment with fresh calendar validation.
@@ -77,7 +77,7 @@ defmodule Tymeslot.Meetings do
   @spec create_calendar_event_async(Ecto.Schema.t()) :: :ok
   def create_calendar_event_async(meeting) do
     # Schedule calendar event creation through Oban worker
-    case CalendarEventWorker.schedule_calendar_creation(meeting.id) do
+    case CalendarEventScheduler.schedule_calendar_creation(meeting.id) do
       :ok ->
         Logger.info("Calendar event creation scheduled",
           meeting_id: meeting.id,
@@ -144,7 +144,7 @@ defmodule Tymeslot.Meetings do
     )
 
     # Schedule calendar event deletion through Oban worker
-    case CalendarEventWorker.schedule_calendar_deletion(meeting.id) do
+    case CalendarEventScheduler.schedule_calendar_deletion(meeting.id) do
       {:ok, _job} ->
         Logger.info("Calendar event deletion scheduled successfully",
           meeting_id: meeting.id,

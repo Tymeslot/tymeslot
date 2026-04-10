@@ -10,6 +10,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.UUID
+  alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
 
@@ -391,7 +392,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
 
   describe "scheduling" do
     test "schedule_calendar_creation/1 enqueues job" do
-      assert :ok = CalendarEventWorker.schedule_calendar_creation(123)
+      assert :ok = CalendarEventScheduler.schedule_calendar_creation(123)
 
       assert_enqueued(
         worker: CalendarEventWorker,
@@ -400,7 +401,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
     end
 
     test "schedule_calendar_update/1 enqueues job" do
-      assert {:ok, _result} = CalendarEventWorker.schedule_calendar_update(123)
+      assert {:ok, _result} = CalendarEventScheduler.schedule_calendar_update(123)
 
       assert_enqueued(
         worker: CalendarEventWorker,
@@ -409,7 +410,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
     end
 
     test "schedule_calendar_deletion/1 enqueues job" do
-      assert {:ok, _result} = CalendarEventWorker.schedule_calendar_deletion(123)
+      assert {:ok, _result} = CalendarEventScheduler.schedule_calendar_deletion(123)
 
       assert_enqueued(
         worker: CalendarEventWorker,

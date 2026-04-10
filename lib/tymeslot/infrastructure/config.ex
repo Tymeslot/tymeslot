@@ -16,6 +16,14 @@ defmodule Tymeslot.Infrastructure.Config do
   end
 
   @doc """
+  Gets the user token queries module configured for the application.
+  """
+  @spec user_token_queries_module() :: module()
+  def user_token_queries_module do
+    get_module(:user_token_queries_module, Tymeslot.Auth.UserTokenQueries)
+  end
+
+  @doc """
   Gets the user schema module configured for the application.
   """
   @spec user_schema_module() :: module()

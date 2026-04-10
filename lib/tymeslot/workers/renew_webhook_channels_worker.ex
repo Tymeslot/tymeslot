@@ -18,6 +18,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
 
@@ -69,13 +70,13 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
 
   defp schedule_google_renewals do
     48
-    |> CalendarIntegrationQueries.list_expiring_google_channels()
+    |> CalendarIntegrationWebhookQueries.list_expiring_google_channels()
     |> schedule_renewal_jobs("google")
   end
 
   defp schedule_outlook_renewals do
     48
-    |> CalendarIntegrationQueries.list_expiring_outlook_subscriptions()
+    |> CalendarIntegrationWebhookQueries.list_expiring_outlook_subscriptions()
     |> schedule_renewal_jobs("outlook")
   end
 

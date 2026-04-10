@@ -5,7 +5,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
 
   alias Ecto.Changeset
   alias Phoenix.Flash
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.{UserQueries, UserTokenQueries}
   alias Tymeslot.Factory
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
@@ -22,7 +22,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
       new_email = "new@example.com"
       token = Token.generate_token()
 
-      {:ok, _user} = UserQueries.request_email_change(user, new_email, token)
+      {:ok, _user} = UserTokenQueries.request_email_change(user, new_email, token)
 
       conn = get(conn, ~p"/email-change/#{token}")
 
@@ -46,7 +46,7 @@ defmodule TymeslotWeb.EmailChangeControllerTest do
       new_email = "new@example.com"
       token = Token.generate_token()
 
-      {:ok, _user} = UserQueries.request_email_change(user, new_email, token)
+      {:ok, _user} = UserTokenQueries.request_email_change(user, new_email, token)
 
       # Manually expire the token in DB
       user_in_db = UserQueries.get_user!(user.id)

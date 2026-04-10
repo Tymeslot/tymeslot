@@ -4,9 +4,11 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
   """
 
   require Logger
+  alias Tymeslot.Auth
   alias Tymeslot.Auth.OAuth.TransactionalUserCreation
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Infrastructure.PubSub
+  alias Tymeslot.Security.FieldValidators.EmailValidator
 
   @type provider :: :github | :google | :oauth
   @type oauth_registration_data :: %{
@@ -107,6 +109,31 @@ defmodule Tymeslot.Auth.OAuth.UserRegistration do
       {:error, reason} ->
         Logger.error("OAuth user creation failed", reason: inspect(reason))
         {:error, reason}
+    end
+  end
+
+  @doc """
+  Validates data submitted via the OAuth completion form.
+
+  Checks that the email is present, well-formed, not already registered, and
+  that legal agreements have been accepted when required.
+  """
+  @spec validate_completion_data(oauth_registration_data()) :: :ok | {:error, atom() | String.t()}
+  def validate_completion_data(oauth_data) do
+    email = oauth_data.email
+
+    cond do
+      is_nil(email) or String.trim(email) == "" ->
+        {:error, :email_required}
+
+      EmailValidator.validate(email) != :ok ->
+        {:error, :invalid_email}
+
+      Config.enforce_legal_agreements?() and not oauth_data.terms_accepted ->
+        {:error, :terms_not_accepted}
+
+      true ->
+        Auth.check_email_availability(email)
     end
   end
 

@@ -5,8 +5,8 @@ defmodule Tymeslot.Auth.VerificationTest do
 
   @moduletag :auth
 
-  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Auth.Verification
   alias Tymeslot.Repo
   alias Tymeslot.Security.Token
@@ -18,7 +18,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       user = insert(:unverified_user)
       {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
 
-      {:ok, _result} = UserQueries.set_verification_token(user, token)
+      {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
       # Use the token
       {:ok, _verified_user} = Verification.verify_user(token)
@@ -31,7 +31,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       user = insert(:unverified_user)
       {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
 
-      {:ok, _result} = UserQueries.set_verification_token(user, token)
+      {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
       # Manually set verification_sent_at to 25 hours ago to simulate expiry
       expired_time = DateTime.add(DateTime.utc_now(), -25 * 3600, :second)
@@ -52,7 +52,7 @@ defmodule Tymeslot.Auth.VerificationTest do
       user = insert(:unverified_user)
       {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
 
-      {:ok, _result} = UserQueries.set_verification_token(user, token)
+      {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
 
       # First use succeeds
       {:ok, _verified_user} = Verification.verify_user(token)

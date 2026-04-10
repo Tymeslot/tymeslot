@@ -20,10 +20,10 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
 
   require Logger
 
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Infrastructure.AdminAlerts.AlertTypes
   alias Tymeslot.Infrastructure.AdminAlerts.PIIScrubber
-  alias Tymeslot.Workers.EmailWorker
 
   @impl Tymeslot.Infrastructure.AdminAlerts
   def send_alert(type, metadata) do
@@ -56,7 +56,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.EmailNotifier do
 
     if AdminAlerts.valid_email?(recipient) do
       enriched = enrich_metadata(metadata)
-      EmailWorker.schedule_admin_alert(recipient, category, severity, message, enriched)
+      EmailScheduler.schedule_admin_alert(recipient, category, severity, message, enriched)
     else
       Logger.debug("Admin alert email not delivered: no valid recipient configured",
         category: category

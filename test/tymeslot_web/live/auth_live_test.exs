@@ -5,7 +5,7 @@ defmodule TymeslotWeb.AuthLiveTest do
   alias Phoenix.Flash
   alias Tymeslot.Auth
   alias Tymeslot.Auth.AuthActions
-  alias Tymeslot.Auth.UserQueries
+  alias Tymeslot.Auth.{UserQueries, UserTokenQueries}
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter, Token}
@@ -457,7 +457,7 @@ defmodule TymeslotWeb.AuthLiveTest do
   defp setup_password_reset_token(_context) do
     user = insert(:user)
     {token, _value} = Token.generate_password_reset_token()
-    {:ok, _result} = UserQueries.set_reset_token(user, token)
+    {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
     %{user: user, token: token}
   end
 

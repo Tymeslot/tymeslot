@@ -218,6 +218,85 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
   end
 
   @doc """
+  Renders the password reset success page within AuthLive.
+
+  Shown after a user successfully resets their password via the LiveView flow.
+  Provides a button to navigate back to the login state.
+  """
+  @spec password_reset_success(map()) :: Phoenix.LiveView.Rendered.t()
+  def password_reset_success(assigns) do
+    ~H"""
+    <.auth_card_layout
+      title="Success!"
+      flash={assigns[:flash] || %{}}
+    >
+      <:form>
+        <div class="text-center mb-8">
+          <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">Password Reset Successfully</h2>
+          <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
+            Your password has been reset. You can now log in with your new credentials.
+          </p>
+        </div>
+        <div class="mt-6">
+          <.auth_button
+            phx-click="navigate_to"
+            phx-value-state="login"
+          >
+            Log In
+          </.auth_button>
+        </div>
+      </:form>
+    </.auth_card_layout>
+    """
+  end
+
+  @doc """
+  Renders the invalid/expired token page within AuthLive.
+
+  Shown when a password reset link has expired or is otherwise invalid.
+  Provides buttons to request a new link or return to login.
+  """
+  @spec invalid_token(map()) :: Phoenix.LiveView.Rendered.t()
+  def invalid_token(assigns) do
+    ~H"""
+    <.auth_card_layout
+      title="Invalid Link"
+      flash={assigns[:flash] || %{}}
+    >
+      <:form>
+        <div class="text-center mb-8">
+          <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-2xl bg-red-50 border-2 border-red-100 shadow-xl shadow-red-500/10 mb-6 transform hover:scale-105 transition-all duration-300">
+            <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 class="text-xl font-bold text-tymeslot-900 tracking-tight mb-3">Link Expired or Invalid</h2>
+          <p class="text-base text-tymeslot-600 font-medium max-w-md mx-auto leading-relaxed">
+            The security link you followed is no longer valid. Please request a new one to continue.
+          </p>
+        </div>
+        <div class="space-y-4">
+          <.auth_button
+            phx-click="navigate_to"
+            phx-value-state="reset_password"
+          >
+            Request New Link
+          </.auth_button>
+          <button
+            type="button"
+            phx-click="navigate_to"
+            phx-value-state="login"
+            class="btn-secondary w-full py-3.5"
+          >
+            Back to Login
+          </button>
+        </div>
+      </:form>
+    </.auth_card_layout>
+    """
+  end
+
+  @doc """
   Renders the password changed confirmation page using shared auth components.
   """
   @spec new_password_set_page(map()) :: Phoenix.LiveView.Rendered.t()

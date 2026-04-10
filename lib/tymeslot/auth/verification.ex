@@ -8,10 +8,10 @@ defmodule Tymeslot.Auth.Verification do
   require Logger
 
   alias Tymeslot.Auth.Helpers.AccountLogging
+  alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.{RateLimiter, Token}
   alias Tymeslot.Utils.UrlBuilder
-  alias Tymeslot.Workers.EmailWorker
   alias TymeslotWeb.Helpers.ClientIP
 
   @type verification_result ::
@@ -26,7 +26,7 @@ defmodule Tymeslot.Auth.Verification do
   def store_verification_token(user_id, token, _expiry, ip_address \\ nil) do
     case Config.user_queries_module().get_user(user_id) do
       {:ok, user} ->
-        case Config.user_queries_module().set_verification_token(user, token, ip_address) do
+        case Config.user_token_queries_module().set_verification_token(user, token, ip_address) do
           {:ok, updated_user} ->
             {:ok, updated_user}
 
@@ -147,7 +147,7 @@ defmodule Tymeslot.Auth.Verification do
 
   @spec fetch_user_by_token(String.t()) :: {:ok, term()} | {:error, :invalid_token}
   defp fetch_user_by_token(token) do
-    case Config.user_queries_module().get_user_by_verification_token(token) do
+    case Config.user_token_queries_module().get_user_by_verification_token(token) do
       {:error, :not_found} ->
         AccountLogging.log_operation_failure("verification", "token", :invalid_token)
         {:error, :invalid_token}
@@ -221,7 +221,7 @@ defmodule Tymeslot.Auth.Verification do
 
   defp send_verification_email(user, verification_url) do
     # Use the email worker to send the verification email asynchronously
-    case EmailWorker.schedule_email_verification(user.id, verification_url) do
+    case EmailScheduler.schedule_email_verification(user.id, verification_url) do
       :ok ->
         Logger.info("Verification email job scheduled", user_id: user.id)
         {:ok, self()}

@@ -7,11 +7,11 @@ defmodule Tymeslot.Profiles do
 
   require Logger
 
-  alias Ecto.Changeset
+  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Availability.WeeklySchedule
-  alias Tymeslot.MeetingTypes
-  alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Profiles.Avatars
+  alias Tymeslot.Profiles.EmbedDomains
+  alias Tymeslot.Profiles.OrganizerContext
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Profiles.ReservedPaths
@@ -21,7 +21,6 @@ defmodule Tymeslot.Profiles do
   alias Tymeslot.Repo
   alias Tymeslot.Security.FieldValidators.UsernameValidator
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Security.Security
   alias Tymeslot.Themes.Theme
   alias Tymeslot.Validation.Constraints
 
@@ -38,6 +37,25 @@ defmodule Tymeslot.Profiles do
           advance_booking_days: non_neg_integer(),
           min_advance_hours: non_neg_integer()
         }
+
+  # --- Onboarding Lifecycle ---
+
+  @doc """
+  Marks a user's onboarding as complete.
+  """
+  @spec mark_onboarding_complete(Ecto.Schema.t()) ::
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def mark_onboarding_complete(user) do
+    UserQueries.mark_onboarding_complete(user)
+  end
+
+  @doc """
+  Checks if a user has completed onboarding.
+  """
+  @spec onboarding_completed?(Ecto.Schema.t()) :: boolean()
+  def onboarding_completed?(user) do
+    not is_nil(user.onboarding_completed_at)
+  end
 
   # --- Profile Retrieval ---
 
@@ -308,7 +326,7 @@ defmodule Tymeslot.Profiles do
       "size" => entry.client_size
     }
 
-    case validate_avatar_upload(uploaded_entry) do
+    case Avatars.validate_upload(uploaded_entry) do
       {:ok, validated_entry} ->
         atom_entry = %{path: validated_entry["path"], client_name: validated_entry["client_name"]}
 
@@ -319,67 +337,6 @@ defmodule Tymeslot.Profiles do
 
       {:error, validation_error} ->
         {:ok, {:error, validation_error}}
-    end
-  end
-
-  defp validate_avatar_upload(file_params) do
-    with :ok <- validate_avatar_file_type(file_params),
-         :ok <- validate_avatar_file_size(file_params),
-         :ok <- validate_avatar_file_name(file_params) do
-      {:ok, file_params}
-    end
-  end
-
-  defp validate_avatar_file_type(file_params) do
-    case Map.get(file_params, "client_name") do
-      nil ->
-        {:error, "No file name provided"}
-
-      filename ->
-        extension = filename |> Path.extname() |> String.downcase()
-
-        if extension in Avatars.accepted_extensions() do
-          :ok
-        else
-          {:error, "Invalid file type. Only JPG, PNG, GIF, and WebP files are allowed"}
-        end
-    end
-  end
-
-  defp validate_avatar_file_size(file_params) do
-    case Map.get(file_params, "size") do
-      nil ->
-        :ok
-
-      size when is_integer(size) ->
-        if size <= Avatars.max_file_size(),
-          do: :ok,
-          else: {:error, "File too large. Maximum size is 10MB"}
-
-      _other ->
-        {:error, "Invalid file size"}
-    end
-  end
-
-  defp validate_avatar_file_name(file_params) do
-    case Map.get(file_params, "client_name") do
-      nil ->
-        {:error, "No file name provided"}
-
-      filename ->
-        cond do
-          String.contains?(filename, ["../", "..\\", "\0"]) ->
-            {:error, "Invalid file name"}
-
-          String.match?(filename, ~r/[<>:"\\|?*]/) ->
-            {:error, "Invalid file name"}
-
-          String.length(filename) > 255 ->
-            {:error, "File name too long"}
-
-          true ->
-            :ok
-        end
     end
   end
 
@@ -435,81 +392,15 @@ defmodule Tymeslot.Profiles do
   """
   @spec add_embed_domains(profile, String.t()) ::
           {:ok, [String.t()]} | {:error, :empty_input | {:duplicates, [String.t()]}}
-  def add_embed_domains(%ProfileSchema{} = profile, domains_str) when is_binary(domains_str) do
-    input_domains = parse_domain_input(domains_str)
-
-    with :ok <- validate_non_empty_input(input_domains),
-         :ok <- check_no_duplicates(input_domains, profile.allowed_embed_domains) do
-      existing = normalize_existing_domains(profile.allowed_embed_domains)
-      {:ok, existing ++ input_domains}
-    end
-  end
-
-  defp parse_domain_input(str) do
-    str
-    |> String.split(",")
-    |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.uniq()
-  end
-
-  defp validate_non_empty_input([]), do: {:error, :empty_input}
-  defp validate_non_empty_input(_domains), do: :ok
-
-  defp check_no_duplicates(input_domains, existing_domains) do
-    lowered_existing =
-      existing_domains
-      |> normalize_existing_domains()
-      |> MapSet.new(&String.downcase/1)
-
-    duplicates = Enum.filter(input_domains, &(String.downcase(&1) in lowered_existing))
-
-    if duplicates == [],
-      do: :ok,
-      else: {:error, {:duplicates, duplicates}}
-  end
-
-  defp normalize_existing_domains(["none"]), do: []
-  defp normalize_existing_domains(nil), do: []
-  defp normalize_existing_domains(domains), do: domains
+  def add_embed_domains(%ProfileSchema{} = profile, domains_str),
+    do: EmbedDomains.add_embed_domains(profile, domains_str)
 
   @doc """
   Updates the allowed embed domains for a profile.
   """
   @spec update_allowed_embed_domains(profile, String.t() | [String.t()]) :: result(profile)
-  def update_allowed_embed_domains(%ProfileSchema{} = profile, domains) when is_binary(domains) do
-    domain_list =
-      domains
-      |> String.split(",")
-      |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
-
-    # If the user explicitly cleared the field or entered "none", we treat it as disabled.
-    # We allow "none" as a literal string here to support the "Disable" button flow.
-    domain_list = if domain_list == [], do: ["none"], else: domain_list
-    update_allowed_embed_domains(profile, domain_list)
-  end
-
-  def update_allowed_embed_domains(%ProfileSchema{} = profile, domains) when is_list(domains) do
-    # If the only domain is "none", we skip normalization to preserve the keyword.
-    if domains == ["none"] do
-      update_profile(profile, %{allowed_embed_domains: ["none"]})
-    else
-      case Security.validate_domains(domains) do
-        {:ok, validated} ->
-          normalized = validated |> Enum.reject(&(&1 == "none")) |> Enum.uniq()
-          update_profile(profile, %{allowed_embed_domains: normalized})
-
-        {:error, error_msg} ->
-          changeset =
-            profile
-            |> Changeset.change()
-            |> Changeset.add_error(:allowed_embed_domains, error_msg)
-
-          {:error, changeset}
-      end
-    end
-  end
+  def update_allowed_embed_domains(%ProfileSchema{} = profile, domains),
+    do: EmbedDomains.update_allowed_embed_domains(profile, domains)
 
   # --- Organizer Context ---
 
@@ -517,17 +408,8 @@ defmodule Tymeslot.Profiles do
   Resolves organizer context from username, including profile and meeting types.
   """
   @spec resolve_organizer_context(username) :: {:ok, map()} | {:error, :profile_not_found}
-  def resolve_organizer_context(username) when is_binary(username) do
-    case ProfileQueries.get_by_username_with_user(username) do
-      {:ok, profile} ->
-        meeting_types = load_active_meeting_types(profile.user_id)
-        profile_with_meeting_types = %{profile | meeting_types: meeting_types}
-        {:ok, build_organizer_context(profile_with_meeting_types, username)}
-
-      {:error, :not_found} ->
-        {:error, :profile_not_found}
-    end
-  end
+  def resolve_organizer_context(username),
+    do: OrganizerContext.resolve_organizer_context(username)
 
   @doc """
   Optimized version of resolve_organizer_context.
@@ -535,32 +417,4 @@ defmodule Tymeslot.Profiles do
   @spec resolve_organizer_context_optimized(username) ::
           {:ok, map()} | {:error, :profile_not_found}
   def resolve_organizer_context_optimized(username), do: resolve_organizer_context(username)
-
-  defp load_active_meeting_types(user_id) do
-    MeetingTypeQueries.list_active_meeting_types(user_id)
-  end
-
-  defp build_organizer_context(profile, username) do
-    meeting_types = meeting_types_for_profile(profile)
-    display_name = profile.full_name || get_user_name_from_profile(profile) || username
-
-    %{
-      username: username,
-      profile: profile,
-      user_id: profile.user_id,
-      meeting_types: meeting_types,
-      page_title: "Schedule with #{display_name}"
-    }
-  end
-
-  defp get_user_name_from_profile(%{user: %{name: name}}), do: name
-  defp get_user_name_from_profile(_arg), do: nil
-
-  defp meeting_types_for_profile(%{meeting_types: meeting_types, user_id: user_id}) do
-    if meeting_types != [] do
-      meeting_types
-    else
-      if user_id, do: MeetingTypes.get_active_meeting_types(user_id), else: []
-    end
-  end
 end

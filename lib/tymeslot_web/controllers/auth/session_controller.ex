@@ -98,7 +98,7 @@ defmodule TymeslotWeb.SessionController do
     current_ip = extract_request_ip(conn)
 
     # First, get the user with the token to check the IP before it's cleared
-    case Config.user_queries_module().get_user_by_verification_token(token) do
+    case Config.user_token_queries_module().get_user_by_verification_token(token) do
       {:error, :not_found} ->
         conn
         |> put_flash(:error, "The email verification link is invalid or has expired.")

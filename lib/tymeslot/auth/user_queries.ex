@@ -3,7 +3,7 @@ defmodule Tymeslot.Auth.UserQueries do
   Query interface for user-related database operations.
   """
   import Ecto.Query, warn: false
-  require Logger
+
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
@@ -24,10 +24,13 @@ defmodule Tymeslot.Auth.UserQueries do
   @doc """
   Gets a user by email.
   Returns {:ok, user} if found, {:error, :not_found} otherwise.
+
+  Accepts an optional `repo` argument for use within transactions.
   """
-  @spec get_user_by_email(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_email(email) when is_binary(email) do
-    case Repo.get_by(UserSchema, email: String.downcase(email)) do
+  @spec get_user_by_email(String.t(), module()) ::
+          {:ok, UserSchema.t()} | {:error, :not_found}
+  def get_user_by_email(email, repo \\ Repo) when is_binary(email) do
+    case repo.get_by(UserSchema, email: String.downcase(email)) do
       nil -> {:error, :not_found}
       user -> {:ok, user}
     end
@@ -76,49 +79,16 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Gets a user by verification token, only if not already used.
-  Returns {:ok, user} if found, {:error, :not_found} otherwise.
-  """
-  @spec get_user_by_verification_token(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_verification_token(token) when is_binary(token) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
-
-    case UserSchema
-         |> where(
-           [u],
-           u.verification_token == ^token_hash and is_nil(u.verification_token_used_at)
-         )
-         |> Repo.one() do
-      nil -> {:error, :not_found}
-      user -> {:ok, user}
-    end
-  end
-
-  @doc """
-  Gets a user by reset token, only if not already used.
-  Returns {:ok, user} if found, {:error, :not_found} otherwise.
-  """
-  @spec get_user_by_reset_token(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_reset_token(token) when is_binary(token) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
-
-    case UserSchema
-         |> where([u], u.reset_token_hash == ^token_hash and is_nil(u.reset_token_used_at))
-         |> Repo.one() do
-      nil -> {:error, :not_found}
-      user -> {:ok, user}
-    end
-  end
-
-  @doc """
   Gets a user by provider and provider uid.
   Returns {:ok, user} if found, {:error, :not_found} otherwise.
+
+  Accepts an optional `repo` argument for use within transactions.
   """
-  @spec get_user_by_provider(String.t(), String.t()) ::
+  @spec get_user_by_provider(String.t(), String.t(), module()) ::
           {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_provider(provider, provider_uid)
+  def get_user_by_provider(provider, provider_uid, repo \\ Repo)
       when is_binary(provider) and is_binary(provider_uid) do
-    case Repo.get_by(UserSchema, provider: provider, provider_uid: provider_uid) do
+    case repo.get_by(UserSchema, provider: provider, provider_uid: provider_uid) do
       nil -> {:error, :not_found}
       user -> {:ok, user}
     end
@@ -127,10 +97,20 @@ defmodule Tymeslot.Auth.UserQueries do
   @doc """
   Gets a user by GitHub user ID.
   Returns {:ok, user} if found, {:error, :not_found} otherwise.
+
+  When called without a repo, converts an integer ID to string for lookup.
+  Accepts an optional `repo` argument for use within transactions (expects a string ID).
   """
-  @spec get_user_by_github_id(integer()) :: {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_github_id(github_user_id) when is_integer(github_user_id) do
-    case Repo.get_by(UserSchema, github_user_id: Integer.to_string(github_user_id)) do
+  @spec get_user_by_github_id(integer() | String.t(), module()) ::
+          {:ok, UserSchema.t()} | {:error, :not_found}
+  def get_user_by_github_id(github_user_id, repo \\ Repo)
+
+  def get_user_by_github_id(github_user_id, repo) when is_integer(github_user_id) do
+    get_user_by_github_id(Integer.to_string(github_user_id), repo)
+  end
+
+  def get_user_by_github_id(github_user_id, repo) when is_binary(github_user_id) do
+    case repo.get_by(UserSchema, github_user_id: github_user_id) do
       nil -> {:error, :not_found}
       user -> {:ok, user}
     end
@@ -139,10 +119,13 @@ defmodule Tymeslot.Auth.UserQueries do
   @doc """
   Gets a user by Google user ID.
   Returns {:ok, user} if found, {:error, :not_found} otherwise.
+
+  Accepts an optional `repo` argument for use within transactions.
   """
-  @spec get_user_by_google_id(String.t()) :: {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_google_id(google_user_id) when is_binary(google_user_id) do
-    case Repo.get_by(UserSchema, google_user_id: google_user_id) do
+  @spec get_user_by_google_id(String.t(), module()) ::
+          {:ok, UserSchema.t()} | {:error, :not_found}
+  def get_user_by_google_id(google_user_id, repo \\ Repo) when is_binary(google_user_id) do
+    case repo.get_by(UserSchema, google_user_id: google_user_id) do
       nil -> {:error, :not_found}
       user -> {:ok, user}
     end
@@ -150,32 +133,48 @@ defmodule Tymeslot.Auth.UserQueries do
 
   @doc """
   Creates a user.
+
+  Accepts an optional `repo` argument for use within transactions.
   """
-  @spec create_user(map()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def create_user(attrs \\ %{}) do
+  @spec create_user(map(), module()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def create_user(attrs \\ %{}, repo \\ Repo) do
     %UserSchema{}
     |> UserSchema.registration_changeset(attrs)
-    |> Repo.insert()
+    |> repo.insert()
   end
 
   @doc """
   Creates a user from social auth.
+
+  Accepts an optional `repo` argument for use within transactions.
   """
-  @spec create_social_user(map()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def create_social_user(attrs \\ %{}) do
+  @spec create_social_user(map(), module()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def create_social_user(attrs \\ %{}, repo \\ Repo) do
     %UserSchema{}
     |> UserSchema.social_registration_changeset(attrs)
-    |> Repo.insert()
+    |> repo.insert()
   end
 
   @doc """
   Updates a user.
+
+  Accepts an optional `repo` argument for use within transactions.
   """
-  @spec update_user(UserSchema.t(), map()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def update_user(%UserSchema{} = user, attrs) do
+  @spec update_user(UserSchema.t(), map(), module()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def update_user(%UserSchema{} = user, attrs, repo \\ Repo) do
     user
     |> UserSchema.changeset(attrs)
-    |> Repo.update()
+    |> repo.update()
+  end
+
+  @doc """
+  Updates a user changeset using a specific repo (for transactions).
+  """
+  @spec update_changeset(Changeset.t(), module()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def update_changeset(changeset, repo \\ Repo) do
+    repo.update(changeset)
   end
 
   @doc """
@@ -192,121 +191,6 @@ defmodule Tymeslot.Auth.UserQueries do
       # NOTE: Do NOT clear signup_ip - keep for audit trail
     )
     |> Repo.update()
-  end
-
-  @doc """
-  Sets verification token for a user.
-  """
-  @spec set_verification_token(UserSchema.t(), String.t(), String.t() | nil) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def set_verification_token(%UserSchema{} = user, token, ip_address \\ nil) do
-    normalized_ip = normalize_ip_for_storage(ip_address)
-    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
-
-    changes = %{
-      verification_token: token_hash,
-      verification_sent_at: DateTime.utc_now(:second)
-    }
-
-    changes =
-      if normalized_ip in [nil, "", "unknown"],
-        do: changes,
-        else: maybe_set_signup_ip(changes, user.signup_ip, normalized_ip)
-
-    user
-    |> Changeset.change(changes)
-    |> Repo.update()
-  end
-
-  # Preserve the first captured signup_ip (semantics implied by the field name).
-  # Verification re-sends should not overwrite it.
-  defp maybe_set_signup_ip(changes, existing_signup_ip, normalized_ip) do
-    if existing_signup_ip in [nil, "", "unknown"] do
-      Map.put(changes, :signup_ip, normalized_ip)
-    else
-      changes
-    end
-  end
-
-  defp normalize_ip_for_storage(nil), do: nil
-  defp normalize_ip_for_storage(false), do: nil
-
-  defp normalize_ip_for_storage(ip) when is_binary(ip) do
-    String.trim(ip)
-  end
-
-  # Charlists (e.g. inet_ntoa) are common; only accept printable ones.
-  defp normalize_ip_for_storage(ip) when is_list(ip) do
-    if List.ascii_printable?(ip) do
-      ip |> to_string() |> String.trim()
-    else
-      nil
-    end
-  end
-
-  defp normalize_ip_for_storage(ip) when is_tuple(ip) do
-    ip |> :inet.ntoa() |> to_string()
-  end
-
-  defp normalize_ip_for_storage(_value), do: nil
-
-  @doc """
-  Sets password reset token for a user.
-  """
-  @spec set_reset_token(UserSchema.t(), String.t() | nil) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  # Set a new reset token (issue new link): clear any previous used_at marker
-  def set_reset_token(%UserSchema{} = user, token) when is_binary(token) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
-
-    result =
-      user
-      |> Changeset.change(
-        reset_token_hash: token_hash,
-        reset_sent_at: DateTime.utc_now(:second),
-        reset_token_used_at: nil
-      )
-      |> Repo.update()
-
-    case result do
-      {:ok, updated} ->
-        # Do not log token material; only log user_id
-        Logger.info("Stored reset token", user_id: updated.id)
-        {:ok, updated}
-
-      {:error, reason} ->
-        Logger.error("Failed to store reset token",
-          user_id: user.id,
-          reason: inspect(reason)
-        )
-
-        {:error, reason}
-    end
-  end
-
-  # Clear token (after successful reset): do not touch used_at so audit remains intact
-  def set_reset_token(%UserSchema{} = user, nil) do
-    result =
-      user
-      |> Changeset.change(
-        reset_token_hash: nil,
-        reset_sent_at: nil
-      )
-      |> Repo.update()
-
-    case result do
-      {:ok, updated} ->
-        Logger.info("Cleared reset token", user_id: updated.id)
-        {:ok, updated}
-
-      {:error, reason} ->
-        Logger.error("Failed to clear reset token",
-          user_id: user.id,
-          reason: inspect(reason)
-        )
-
-        {:error, reason}
-    end
   end
 
   @doc """
@@ -366,100 +250,6 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Gets a user by email using a specific repo (for transactions).
-  Returns {:ok, user} if found, {:error, :not_found} otherwise.
-  """
-  @spec get_user_by_email(String.t(), Ecto.Repo.t()) ::
-          {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_email(email, repo) when is_binary(email) do
-    case repo.get_by(UserSchema, email: String.downcase(email)) do
-      nil -> {:error, :not_found}
-      user -> {:ok, user}
-    end
-  end
-
-  @doc """
-  Creates a user using a specific repo (for transactions).
-  """
-  @spec create_user(map(), Ecto.Repo.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def create_user(attrs, repo) do
-    %UserSchema{}
-    |> UserSchema.registration_changeset(attrs)
-    |> repo.insert()
-  end
-
-  @doc """
-  Creates a social user using a specific repo (for transactions).
-  """
-  @spec create_social_user(map(), Ecto.Repo.t()) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def create_social_user(attrs, repo) do
-    %UserSchema{}
-    |> UserSchema.social_registration_changeset(attrs)
-    |> repo.insert()
-  end
-
-  @doc """
-  Gets a user by provider and provider uid using a specific repo (for transactions).
-  Returns {:ok, user} if found, {:error, :not_found} otherwise.
-  """
-  @spec get_user_by_provider(String.t(), String.t(), Ecto.Repo.t()) ::
-          {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_provider(provider, provider_uid, repo)
-      when is_binary(provider) and is_binary(provider_uid) do
-    case repo.get_by(UserSchema, provider: provider, provider_uid: provider_uid) do
-      nil -> {:error, :not_found}
-      user -> {:ok, user}
-    end
-  end
-
-  @doc """
-  Gets a user by GitHub ID using a specific repo (for transactions).
-  Returns {:ok, user} if found, {:error, :not_found} otherwise.
-  """
-  @spec get_user_by_github_id(String.t(), Ecto.Repo.t()) ::
-          {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_github_id(github_user_id, repo) when is_binary(github_user_id) do
-    case repo.get_by(UserSchema, github_user_id: github_user_id) do
-      nil -> {:error, :not_found}
-      user -> {:ok, user}
-    end
-  end
-
-  @doc """
-  Gets a user by Google ID using a specific repo (for transactions).
-  Returns {:ok, user} if found, {:error, :not_found} otherwise.
-  """
-  @spec get_user_by_google_id(String.t(), Ecto.Repo.t()) ::
-          {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_google_id(google_user_id, repo) when is_binary(google_user_id) do
-    case repo.get_by(UserSchema, google_user_id: google_user_id) do
-      nil -> {:error, :not_found}
-      user -> {:ok, user}
-    end
-  end
-
-  @doc """
-  Updates a user using a specific repo (for transactions).
-  """
-  @spec update_user(UserSchema.t(), map(), Ecto.Repo.t()) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def update_user(%UserSchema{} = user, attrs, repo) do
-    user
-    |> UserSchema.changeset(attrs)
-    |> repo.update()
-  end
-
-  @doc """
-  Updates a user changeset using a specific repo (for transactions).
-  """
-  @spec update_changeset(Changeset.t(), Ecto.Repo.t()) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def update_changeset(changeset, repo) do
-    repo.update(changeset)
-  end
-
-  @doc """
   Marks a user's onboarding as complete.
   """
   @spec mark_onboarding_complete(UserSchema.t()) ::
@@ -488,67 +278,6 @@ defmodule Tymeslot.Auth.UserQueries do
   @spec preload_profile(UserSchema.t()) :: UserSchema.t()
   def preload_profile(%UserSchema{} = user) do
     Repo.preload(user, :profile)
-  end
-
-  @doc """
-  Initiates an email change request for a user.
-  Returns {:ok, user} on success, {:error, changeset} on failure.
-  """
-  @spec request_email_change(UserSchema.t(), String.t(), String.t()) ::
-          {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def request_email_change(%UserSchema{} = user, new_email, token_raw) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token_raw), case: :lower)
-
-    user
-    |> UserSchema.email_change_request_changeset(%{
-      pending_email: new_email,
-      email_change_token_hash: token_hash
-    })
-    |> Repo.update()
-  end
-
-  @doc """
-  Gets a user by email change token.
-  Returns {:ok, user} if found and token not expired, {:error, :not_found} otherwise.
-  """
-  @spec get_user_by_email_change_token(String.t()) ::
-          {:ok, UserSchema.t()} | {:error, :not_found}
-  def get_user_by_email_change_token(token_raw) when is_binary(token_raw) do
-    token_hash = Base.encode16(:crypto.hash(:sha256, token_raw), case: :lower)
-
-    case UserSchema
-         |> where([u], u.email_change_token_hash == ^token_hash)
-         |> where([u], not is_nil(u.pending_email))
-         |> Repo.one() do
-      nil -> {:error, :not_found}
-      user -> {:ok, user}
-    end
-  end
-
-  @doc """
-  Confirms an email change for a user.
-  Returns {:ok, user} on success, {:error, changeset} on failure.
-  """
-  @spec confirm_email_change(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def confirm_email_change(%UserSchema{} = user) do
-    user
-    |> UserSchema.email_change_confirm_changeset()
-    |> Repo.update()
-  end
-
-  @doc """
-  Cancels a pending email change for a user.
-  Returns {:ok, user} on success, {:error, changeset} on failure.
-  """
-  @spec cancel_email_change(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
-  def cancel_email_change(%UserSchema{} = user) do
-    user
-    |> Changeset.change(%{
-      pending_email: nil,
-      email_change_token_hash: nil,
-      email_change_sent_at: nil
-    })
-    |> Repo.update()
   end
 
   @doc """

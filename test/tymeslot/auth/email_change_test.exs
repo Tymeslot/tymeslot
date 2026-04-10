@@ -6,8 +6,8 @@ defmodule Tymeslot.Auth.EmailChangeTest do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth
-  alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Auth.UserSessionSchema
+  alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Security.Token
   alias Tymeslot.Workers.EmailWorker
 
@@ -105,7 +105,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       token = Token.generate_token()
 
       {:ok, user_with_pending} =
-        UserQueries.request_email_change(user, new_email, token)
+        UserTokenQueries.request_email_change(user, new_email, token)
 
       {:ok, user: user_with_pending, token: token, new_email: new_email}
     end
@@ -169,7 +169,7 @@ defmodule Tymeslot.Auth.EmailChangeTest do
       token = Token.generate_token()
 
       {:ok, user_with_pending} =
-        UserQueries.request_email_change(user, new_email, token)
+        UserTokenQueries.request_email_change(user, new_email, token)
 
       {:ok, user: user_with_pending}
     end

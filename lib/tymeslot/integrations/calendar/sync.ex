@@ -164,7 +164,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   @spec apply_status_change(term(), String.t(), signal()) :: :ok | {:error, term()}
   defp apply_status_change(meeting, "externally_deleted", :deleted) do
-    case MeetingCalendarQueries.update_calendar_sync_status_if_changed(meeting.id, "externally_deleted") do
+    case MeetingCalendarQueries.update_calendar_sync_status_if_changed(
+           meeting.id,
+           "externally_deleted"
+         ) do
       {:ok, %{} = updated_meeting} ->
         Logger.info("Calendar sync status updated",
           meeting_id: meeting.id,
