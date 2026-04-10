@@ -10,13 +10,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.{EventTimeFormatter, HTTP}
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Shared.MicrosoftConfig

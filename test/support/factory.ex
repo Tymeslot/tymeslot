@@ -10,8 +10,8 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema

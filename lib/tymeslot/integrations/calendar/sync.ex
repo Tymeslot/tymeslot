@@ -16,9 +16,9 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Emails.EmailService
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Meetings.MeetingQueries
 
