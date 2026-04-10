@@ -22,6 +22,7 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
     dispute_created: %{category: "Dispute", severity: :error},
     dispute_lost: %{category: "Dispute", severity: :error},
     calendar_sync_error: %{category: "Calendar", severity: :error},
+    invalid_calendar_event: %{category: "Calendar", severity: :warning},
     pubsub_broadcast_failed: %{category: "System", severity: :error},
     integration_health_failure: %{category: "System", severity: :error},
     integration_health_recovery: %{category: "System", severity: :info},
@@ -116,6 +117,13 @@ defmodule Tymeslot.Infrastructure.AdminAlerts.AlertTypes do
   def format_message(:subscription_not_in_database, metadata) do
     stripe_id = Map.get(metadata, :stripe_subscription_id, "unknown")
     "Active Stripe subscription #{stripe_id} has no matching database record"
+  end
+
+  def format_message(:invalid_calendar_event, metadata) do
+    provider = Map.get(metadata, :provider, "unknown")
+    reason = Map.get(metadata, :reason, "unknown")
+    uid = Map.get(metadata, :uid, "unknown")
+    "Invalid #{provider} calendar event (uid: #{uid}): #{reason}"
   end
 
   def format_message(type, _metadata) do

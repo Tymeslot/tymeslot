@@ -4,7 +4,7 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
   @moduletag :calendar
   @moduletag :integrations
 
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
 
   defp subscribe(user_id) do
@@ -12,14 +12,18 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
   end
 
   defp build_event_attrs(integration) do
-    now = DateTime.utc_now(:second)
+    now = DateTime.utc_now(:microsecond)
 
     %{
       uid: "test-event-#{System.unique_integer([:positive])}",
       calendar_integration_id: integration.id,
+      provider: "google",
+      provider_calendar_id: "primary",
       start_at: now,
-      end_at: DateTime.add(now, 3600, :second),
-      title: "Test Event"
+      end_at: DateTime.truncate(DateTime.add(now, 3600, :second), :microsecond),
+      all_day: false,
+      synced_at: now,
+      summary: "Test Event"
     }
   end
 
@@ -62,14 +66,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
       # Verify event in DB
       assert [event] =
                Repo.all(
-                 from(e in CalendarEventCacheSchema,
+                 from(e in ProviderCalendarEventSchema,
                    where:
                      e.calendar_integration_id == ^integration.id and
                        e.uid == ^attrs.uid
                  )
                )
 
-      assert event.title == "Test Event"
+      assert event.summary == "Test Event"
 
       # Verify broadcast
       assert_receive {:calendar_events_updated, _, [uid]}
@@ -80,12 +84,17 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
       user = insert(:user)
 
       # Missing calendar_integration_id — will fail foreign key
+      now = DateTime.utc_now(:microsecond)
+
       attrs = %{
         uid: "orphan-event",
         calendar_integration_id: -1,
-        start_at: DateTime.utc_now(:second),
-        end_at: DateTime.add(DateTime.utc_now(:second), 3600, :second),
-        title: "Bad Event"
+        provider: "google",
+        start_at: now,
+        end_at: DateTime.truncate(DateTime.add(now, 3600, :second), :microsecond),
+        all_day: false,
+        synced_at: now,
+        summary: "Bad Event"
       }
 
       assert_raise Postgrex.Error, fn ->
@@ -119,12 +128,17 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
       test_pid = self()
       on_success = fn -> send(test_pid, :callback_called) end
 
+      now = DateTime.utc_now(:microsecond)
+
       attrs = %{
         uid: "orphan-event",
         calendar_integration_id: -1,
-        start_at: DateTime.utc_now(:second),
-        end_at: DateTime.add(DateTime.utc_now(:second), 3600, :second),
-        title: "Bad Event"
+        provider: "google",
+        start_at: now,
+        end_at: DateTime.truncate(DateTime.add(now, 3600, :second), :microsecond),
+        all_day: false,
+        synced_at: now,
+        summary: "Bad Event"
       }
 
       assert_raise Postgrex.Error, fn ->

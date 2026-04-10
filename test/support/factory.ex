@@ -10,7 +10,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
@@ -161,17 +161,23 @@ defmodule Tymeslot.Factory do
     }
   end
 
-  @spec calendar_event_cache_factory() ::
-          Tymeslot.Integrations.Calendar.CalendarEventCacheSchema.t()
-  def calendar_event_cache_factory do
-    now = DateTime.utc_now(:second)
+  @spec provider_calendar_event_factory() ::
+          Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema.t()
+  def provider_calendar_event_factory do
+    now = DateTime.utc_now(:microsecond)
 
-    %CalendarEventCacheSchema{
+    %ProviderCalendarEventSchema{
       uid: sequence(:event_uid, &"event-uid-#{&1}"),
-      title: sequence(:event_title, &"Event #{&1}"),
+      summary: sequence(:event_summary, &"Event #{&1}"),
+      provider: "google",
+      provider_calendar_id: "primary",
       start_at: now,
       end_at: DateTime.add(now, 3600, :second),
       all_day: false,
+      transparency: "opaque",
+      status: "confirmed",
+      synced_at: now,
+      provider_metadata: %{},
       calendar_integration: build(:calendar_integration)
     }
   end

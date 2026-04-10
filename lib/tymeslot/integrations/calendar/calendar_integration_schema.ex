@@ -53,7 +53,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           last_external_sync_at: DateTime.t() | nil,
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           calendar_events:
-            [Tymeslot.Integrations.Calendar.CalendarEventCacheSchema.t()]
+            [Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema.t()]
             | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -113,7 +113,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
 
-    has_many(:calendar_events, Tymeslot.Integrations.Calendar.CalendarEventCacheSchema,
+    has_many(:calendar_events, Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema,
       foreign_key: :calendar_integration_id
     )
 

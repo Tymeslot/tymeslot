@@ -1,30 +1,40 @@
-defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
+defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   @moduledoc """
   Database queries for cached calendar events.
 
-  Provides read and write operations for the calendar_events table, which stores
+  Provides read and write operations for the provider_calendar_events table, which stores
   events fetched from external calendar providers keyed by (calendar_integration_id, uid).
   """
 
   import Ecto.Query, warn: false
 
-  alias Tymeslot.Integrations.Calendar.CalendarEventCacheSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
 
   @doc """
   Returns all cached events for the given integration IDs within a time range.
 
-  Events are included if they overlap with the [start_at, end_at] window, i.e.
-  the event starts before end_at and ends after start_at.
+  Events are included if they overlap with the [range_start, range_end] window.
+  Both timed events (start_at/end_at) and all-day events (start_date/end_date)
+  are checked for overlap.
   """
-  @spec list_for_range([integer()], DateTime.t(), DateTime.t()) :: [CalendarEventCacheSchema.t()]
-  def list_for_range([], _start_at, _end_at), do: []
+  @spec list_for_range([integer()], DateTime.t(), DateTime.t()) :: [
+          ProviderCalendarEventSchema.t()
+        ]
+  def list_for_range([], _range_start, _range_end), do: []
 
-  def list_for_range(integration_ids, start_at, end_at) do
-    CalendarEventCacheSchema
+  def list_for_range(integration_ids, range_start, range_end) do
+    range_start_date = DateTime.to_date(range_start)
+    range_end_date = DateTime.to_date(range_end)
+
+    ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id in ^integration_ids)
-    |> where([e], e.start_at < ^end_at and e.end_at > ^start_at)
-    |> order_by([e], asc: e.start_at)
+    |> where(
+      [e],
+      (e.all_day == false and e.start_at < ^range_end and e.end_at > ^range_start) or
+        (e.all_day == true and e.start_date < ^range_end_date and e.end_date > ^range_start_date)
+    )
+    |> order_by([e], asc: coalesce(e.start_at, type(e.start_date, :utc_datetime_usec)))
     |> Repo.all()
   end
 
@@ -40,7 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
   def upsert_batch([]), do: {:ok, 0}
 
   def upsert_batch(events_attrs) do
-    now = DateTime.utc_now(:second)
+    now = DateTime.utc_now(:microsecond)
 
     entries =
       Enum.map(events_attrs, fn attrs ->
@@ -51,7 +61,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
 
     {count, _rows} =
       Repo.insert_all(
-        CalendarEventCacheSchema,
+        ProviderCalendarEventSchema,
         entries,
         on_conflict: {:replace, replace_fields()},
         conflict_target: [:calendar_integration_id, :uid]
@@ -72,14 +82,21 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
           [String.t()]
   def list_uids_in_range(
         calendar_integration_id,
-        start_at,
-        end_at,
+        range_start,
+        range_end,
         synced_before,
         calendar_path \\ nil
       ) do
-    CalendarEventCacheSchema
+    range_start_date = DateTime.to_date(range_start)
+    range_end_date = DateTime.to_date(range_end)
+
+    ProviderCalendarEventSchema
     |> where([e], e.calendar_integration_id == ^calendar_integration_id)
-    |> where([e], e.start_at < ^end_at and e.end_at > ^start_at)
+    |> where(
+      [e],
+      (e.all_day == false and e.start_at < ^range_end and e.end_at > ^range_start) or
+        (e.all_day == true and e.start_date < ^range_end_date and e.end_date > ^range_start_date)
+    )
     |> where([e], e.synced_at < ^synced_before)
     |> maybe_filter_calendar_path(calendar_path)
     |> select([e], e.uid)
@@ -89,15 +106,16 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
   defp maybe_filter_calendar_path(query, nil), do: query
 
   defp maybe_filter_calendar_path(query, calendar_path) do
-    prefix = calendar_path <> "%"
+    escaped = String.replace(calendar_path, ~r/[\\%_]/, "\\\\\\0")
+    prefix = escaped <> "%"
     where(query, [e], like(e.provider_event_id, ^prefix))
   end
 
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_by_uid(integer(), String.t()) ::
-          {:ok, CalendarEventCacheSchema.t()} | {:error, :not_found}
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
   def get_by_uid(calendar_integration_id, uid) do
-    case Repo.get_by(CalendarEventCacheSchema,
+    case Repo.get_by(ProviderCalendarEventSchema,
            calendar_integration_id: calendar_integration_id,
            uid: uid
          ) do
@@ -114,7 +132,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
   @spec delete_by_uid(integer(), String.t()) :: {:ok, :deleted | :not_found}
   def delete_by_uid(calendar_integration_id, uid) do
     {count, _rows} =
-      CalendarEventCacheSchema
+      ProviderCalendarEventSchema
       |> where(
         [e],
         e.calendar_integration_id == ^calendar_integration_id and e.uid == ^uid
@@ -132,7 +150,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
   @spec delete_by_provider_event_id(integer(), String.t()) :: {:ok, :deleted | :not_found}
   def delete_by_provider_event_id(calendar_integration_id, provider_event_id) do
     {count, _rows} =
-      CalendarEventCacheSchema
+      ProviderCalendarEventSchema
       |> where(
         [e],
         e.calendar_integration_id == ^calendar_integration_id and
@@ -158,7 +176,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
     Repo.transaction(fn ->
       Repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [2, calendar_integration_id])
 
-      CalendarEventCacheSchema
+      ProviderCalendarEventSchema
       |> where([e], e.calendar_integration_id == ^calendar_integration_id)
       |> Repo.delete_all()
 
@@ -170,13 +188,20 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
   @doc """
   Deletes cached events that ended before the given cutoff datetime.
 
+  Both timed events (end_at) and all-day events (end_date) are considered.
   Returns the number of deleted rows.
   """
   @spec prune_ended_before(DateTime.t()) :: non_neg_integer()
   def prune_ended_before(cutoff) do
+    cutoff_date = DateTime.to_date(cutoff)
+
     {count, _rows} =
-      CalendarEventCacheSchema
-      |> where([e], e.end_at < ^cutoff)
+      ProviderCalendarEventSchema
+      |> where(
+        [e],
+        (e.all_day == false and e.end_at < ^cutoff) or
+          (e.all_day == true and e.end_date < ^cutoff_date)
+      )
       |> Repo.delete_all()
 
     count
@@ -190,7 +215,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
   @spec prune_inactive_integrations() :: non_neg_integer()
   def prune_inactive_integrations do
     {count, _rows} =
-      CalendarEventCacheSchema
+      ProviderCalendarEventSchema
       |> join(:inner, [e], i in assoc(e, :calendar_integration))
       |> where([_e, i], i.is_active == false)
       |> Repo.delete_all()
@@ -198,24 +223,38 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueries do
     count
   end
 
-  # Fields updated on conflict — everything except the surrogate key and inserted_at.
+  # Fields updated on conflict — everything except the surrogate key, inserted_at,
+  # and the identity fields :provider and :provider_calendar_id (which are set at
+  # insert time from the integration and must never be overwritten with EXCLUDED
+  # values from partial cache-update maps that may omit them).
   defp replace_fields do
     [
-      :calendar_path,
       :provider_event_id,
-      :title,
+      :summary,
+      :description,
+      :location,
+      :visibility,
+      :colour,
+      :all_day,
+      :start_date,
+      :end_date,
       :start_at,
       :end_at,
-      :all_day,
-      :location,
-      :description,
+      :timezone,
+      :transparency,
+      :status,
+      :organiser,
       :attendees,
       :recurrence_rule,
+      :recurrence_exceptions,
       :recurring_event_id,
-      :status,
-      :raw_data,
+      :attachments,
+      :links,
+      :reminders,
       :etag,
       :synced_at,
+      :provider_updated_at,
+      :provider_metadata,
       :updated_at
     ]
   end
