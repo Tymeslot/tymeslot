@@ -119,14 +119,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
     test "month view with Sunday start begins on Sunday" do
       first_of_month = Date.new!(2026, 3, 1)
       grid_start = Date.beginning_of_week(first_of_month, :sunday)
-      [first_day | _] = Enum.map(0..41, &Date.add(grid_start, &1))
+      [first_day | _rest] = Enum.map(0..41, &Date.add(grid_start, &1))
       assert Date.day_of_week(first_day) == 7
     end
 
     test "month view with Monday start begins on Monday" do
       first_of_month = Date.new!(2026, 3, 1)
       grid_start = Date.beginning_of_week(first_of_month, :monday)
-      [first_day | _] = Enum.map(0..41, &Date.add(grid_start, &1))
+      [first_day | _rest] = Enum.map(0..41, &Date.add(grid_start, &1))
       assert Date.day_of_week(first_day) == 1
     end
 

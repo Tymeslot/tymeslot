@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.ValidationTest d
     end
 
     test "clears previous name error on successful validation" do
-      {_, errors} =
+      {_data, errors} =
         Validation.validate_and_update_field(
           "name",
           "Valid Name",

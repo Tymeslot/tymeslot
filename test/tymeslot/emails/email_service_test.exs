@@ -146,7 +146,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       result = EmailService.send_calendar_invitation("attendee@example.com", details)
 
-      assert {:ok, _} = result
+      assert {:ok, _response} = result
     end
 
     test "sends calendar invitation with custom details" do
@@ -159,7 +159,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       result = EmailService.send_calendar_invitation("colleague@example.com", details)
 
-      assert {:ok, _} = result
+      assert {:ok, _response} = result
     end
   end
 
@@ -215,7 +215,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
           :deleted
         )
 
-      assert {:ok, _} = result
+      assert {:ok, _response} = result
     end
 
     test "returns ok tuple for :modified discrepancy" do
@@ -229,7 +229,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
           :modified
         )
 
-      assert {:ok, _} = result
+      assert {:ok, _response} = result
     end
   end
 
@@ -240,7 +240,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
       result =
         EmailService.send_event_update_notification("attendee@example.com", details)
 
-      assert {:ok, _} = result
+      assert {:ok, _response} = result
     end
 
     test "returns ok tuple with custom changes" do
@@ -253,7 +253,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
       result =
         EmailService.send_event_update_notification("colleague@example.com", details)
 
-      assert {:ok, _} = result
+      assert {:ok, _response} = result
     end
   end
 
@@ -269,7 +269,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
       result =
         EmailService.send_integration_unhealthy_notification(user, integration, :calendar)
 
-      assert {:ok, _} = result
+      assert {:ok, _response} = result
     end
 
     test "returns ok tuple for video integration" do
@@ -283,7 +283,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
       result =
         EmailService.send_integration_unhealthy_notification(user, integration, :video)
 
-      assert {:ok, _} = result
+      assert {:ok, _response} = result
     end
   end
 
@@ -294,7 +294,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       result = EmailService.send_reschedule_request(meeting)
 
-      assert {:ok, _} = result
+      assert {:ok, _response} = result
     end
   end
 end
