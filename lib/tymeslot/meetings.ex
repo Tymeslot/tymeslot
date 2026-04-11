@@ -120,7 +120,12 @@ defmodule Tymeslot.Meetings do
     Reschedule.execute(meeting_uid, new_params, form_data)
   end
 
-  @doc false
+  @doc """
+  Cancels the calendar event associated with a meeting asynchronously.
+
+  Schedules calendar event deletion through an Oban worker. Does not fail the
+  broader cancellation workflow if scheduling fails.
+  """
   defdelegate cancel_calendar_event(meeting), to: CalendarEvents
 
   # =====================================
@@ -375,6 +380,14 @@ defmodule Tymeslot.Meetings do
     else
       _other -> {:error, :not_found}
     end
+  end
+
+  @doc """
+  Gets a single meeting by its unique identifier (UID).
+  """
+  @spec get_meeting_by_uid(String.t()) :: {:ok, MeetingSchema.t()} | {:error, :not_found}
+  def get_meeting_by_uid(uid) do
+    MeetingQueries.get_meeting_by_uid(uid)
   end
 
   @doc """

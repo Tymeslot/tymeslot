@@ -15,14 +15,17 @@ defmodule Tymeslot.MeetingTypes.ReminderValidationTest do
   describe "parse_and_normalize_reminders/1 — JSON string" do
     test "parses a valid JSON array of reminders" do
       json = Jason.encode!([%{"value" => 30, "unit" => "minutes"}])
-      assert {:ok, [%{value: 30, unit: "minutes"}]} = ReminderValidation.parse_and_normalize_reminders(json)
+
+      assert {:ok, [%{value: 30, unit: "minutes"}]} =
+               ReminderValidation.parse_and_normalize_reminders(json)
     end
 
     test "parses a JSON array with multiple valid reminders" do
-      json = Jason.encode!([
-        %{"value" => 15, "unit" => "minutes"},
-        %{"value" => 1, "unit" => "hours"}
-      ])
+      json =
+        Jason.encode!([
+          %{"value" => 15, "unit" => "minutes"},
+          %{"value" => 1, "unit" => "hours"}
+        ])
 
       assert {:ok, reminders} = ReminderValidation.parse_and_normalize_reminders(json)
       assert length(reminders) == 2
@@ -52,7 +55,9 @@ defmodule Tymeslot.MeetingTypes.ReminderValidationTest do
 
     test "normalises a single-entry index map" do
       params = %{"0" => %{"value" => "15", "unit" => "minutes"}}
-      assert {:ok, [%{value: 15, unit: "minutes"}]} = ReminderValidation.parse_and_normalize_reminders(params)
+
+      assert {:ok, [%{value: 15, unit: "minutes"}]} =
+               ReminderValidation.parse_and_normalize_reminders(params)
     end
 
     test "returns error when a reminder in the map has an invalid unit" do
@@ -64,7 +69,9 @@ defmodule Tymeslot.MeetingTypes.ReminderValidationTest do
   describe "parse_and_normalize_reminders/1 — list" do
     test "normalises a list of string-keyed reminder maps" do
       reminders = [%{"value" => 30, "unit" => "minutes"}]
-      assert {:ok, [%{value: 30, unit: "minutes"}]} = ReminderValidation.parse_and_normalize_reminders(reminders)
+
+      assert {:ok, [%{value: 30, unit: "minutes"}]} =
+               ReminderValidation.parse_and_normalize_reminders(reminders)
     end
 
     test "returns ok for an empty list" do
@@ -173,17 +180,23 @@ defmodule Tymeslot.MeetingTypes.ReminderValidationTest do
 
     test "accepts a valid JSON string" do
       json = Jason.encode!([%{"value" => 30, "unit" => "minutes"}])
-      assert {:ok, [%{value: 30, unit: "minutes"}]} = ReminderValidation.validate_reminder_config(json, %{})
+
+      assert {:ok, [%{value: 30, unit: "minutes"}]} =
+               ReminderValidation.validate_reminder_config(json, %{})
     end
 
     test "accepts a valid list of reminder maps" do
       reminders = [%{"value" => 30, "unit" => "minutes"}]
-      assert {:ok, [%{value: 30, unit: "minutes"}]} = ReminderValidation.validate_reminder_config(reminders, %{})
+
+      assert {:ok, [%{value: 30, unit: "minutes"}]} =
+               ReminderValidation.validate_reminder_config(reminders, %{})
     end
 
     test "accepts a Phoenix form index map" do
       params = %{"0" => %{"value" => "15", "unit" => "minutes"}}
-      assert {:ok, [%{value: 15, unit: "minutes"}]} = ReminderValidation.validate_reminder_config(params, %{})
+
+      assert {:ok, [%{value: 15, unit: "minutes"}]} =
+               ReminderValidation.validate_reminder_config(params, %{})
     end
 
     test "returns a reminder_config error key for malformed JSON" do

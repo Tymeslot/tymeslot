@@ -6,17 +6,15 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
 
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings
-  alias Tymeslot.Meetings.MeetingQueries
-  alias Tymeslot.Profiles
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Helpers.ClientIP
+  alias TymeslotWeb.Themes.Core.MountHelpers
 
   @doc "Loads and validates a meeting by UID for the given action."
   @spec validate_and_load_meeting(String.t(), atom()) :: {:ok, map()} | {:error, String.t()}
   def validate_and_load_meeting(meeting_uid, action) do
-    case MeetingQueries.get_meeting_by_uid(meeting_uid) do
+    case Meetings.get_meeting_by_uid(meeting_uid) do
       {:ok, meeting} ->
         case validate_meeting_action(meeting, action) do
           :ok -> {:ok, meeting}
@@ -92,7 +90,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
     duration_str = DateTimeUtils.format_duration_for_url(meeting.duration)
 
     socket
-    |> assign_user_timezone(params)
+    |> MountHelpers.assign_user_timezone(params)
     |> assign(:duration, duration_str)
   end
 
@@ -109,24 +107,5 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
       _no_username ->
         "/meeting/#{meeting.uid}/cancel-confirmed"
     end
-  end
-
-  # Private
-
-  defp assign_user_timezone(socket, params) do
-    timezone =
-      params["timezone"] || socket.assigns[:user_timezone] ||
-        Profiles.get_default_timezone()
-
-    normalized_timezone = Timezones.normalize(timezone)
-
-    validated_timezone =
-      if Timezones.valid?(normalized_timezone) do
-        normalized_timezone
-      else
-        Profiles.get_default_timezone()
-      end
-
-    assign(socket, :user_timezone, validated_timezone)
   end
 end

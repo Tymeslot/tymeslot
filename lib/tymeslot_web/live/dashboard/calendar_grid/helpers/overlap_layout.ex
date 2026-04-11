@@ -51,9 +51,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayout do
     end
   end
 
-  # Private helpers
-
-  defp day_boundary_utc(date, tz) do
+  @doc """
+  Returns the UTC boundaries `{day_start, day_end}` for a calendar day in the given timezone.
+  """
+  @spec day_boundary_utc(Date.t(), String.t()) :: {DateTime.t(), DateTime.t()}
+  def day_boundary_utc(date, tz) do
     day_start = DateTime.shift_zone!(DateTime.new!(date, ~T[00:00:00], tz), "Etc/UTC")
     day_end = DateTime.shift_zone!(DateTime.new!(Date.add(date, 1), ~T[00:00:00], tz), "Etc/UTC")
     {day_start, day_end}

@@ -416,7 +416,11 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       integration = insert(:calendar_integration, user: user)
 
       assert :ok =
-               EmailScheduler.schedule_integration_unhealthy_notification(user, integration, :caldav)
+               EmailScheduler.schedule_integration_unhealthy_notification(
+                 user,
+                 integration,
+                 :caldav
+               )
 
       job = List.first(all_enqueued(worker: EmailWorker))
       assert job.priority == 2
@@ -435,7 +439,10 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
 
       assert_enqueued(
         worker: EmailWorker,
-        args: %{"action" => "send_integration_unhealthy_notification", "integration_type" => "outlook"}
+        args: %{
+          "action" => "send_integration_unhealthy_notification",
+          "integration_type" => "outlook"
+        }
       )
     end
 
@@ -444,15 +451,26 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
       integration = insert(:calendar_integration, user: user)
 
       assert :ok =
-               EmailScheduler.schedule_integration_unhealthy_notification(user, integration, :google)
+               EmailScheduler.schedule_integration_unhealthy_notification(
+                 user,
+                 integration,
+                 :google
+               )
 
       assert :ok =
-               EmailScheduler.schedule_integration_unhealthy_notification(user, integration, :google)
+               EmailScheduler.schedule_integration_unhealthy_notification(
+                 user,
+                 integration,
+                 :google
+               )
 
       jobs =
         all_enqueued(
           worker: EmailWorker,
-          args: %{"action" => "send_integration_unhealthy_notification", "integration_id" => integration.id}
+          args: %{
+            "action" => "send_integration_unhealthy_notification",
+            "integration_id" => integration.id
+          }
         )
 
       assert length(jobs) == 1

@@ -16,12 +16,6 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias TymeslotWeb.Themes.Core.{Context, EventBus, MeetingManagement}
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
 
-  @doc "No-op debug logging hook (debug logging removed for production)."
-  @spec log_mount_debug_info(atom() | nil, map(), Phoenix.LiveView.Socket.t()) :: :ok
-  def log_mount_debug_info(_unused_action, _unused_profile, _unused_socket) do
-    # Debug logging removed for production
-  end
-
   @doc """
   Mounts the socket when an organizer profile is present.
 
@@ -33,8 +27,6 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
           {:ok, Phoenix.LiveView.Socket.t()}
   def mount_with_profile(profile, params, session, socket, delegate_fn) do
     action = socket.assigns[:live_action]
-
-    log_mount_debug_info(action, profile, socket)
 
     if action in [:reschedule, :cancel, :cancel_confirmed] && params["meeting_uid"] do
       mount_meeting_management(profile, params, socket, action)

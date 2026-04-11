@@ -101,8 +101,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   # Private helpers
 
   defp event_spans_day?(event, date, tz) do
-    day_start = DateTime.shift_zone!(DateTime.new!(date, ~T[00:00:00], tz), "Etc/UTC")
-    day_end = DateTime.shift_zone!(DateTime.new!(Date.add(date, 1), ~T[00:00:00], tz), "Etc/UTC")
+    {day_start, day_end} = OverlapLayout.day_boundary_utc(date, tz)
 
     DateTime.compare(event.start_at, day_end) == :lt and
       DateTime.compare(event.end_at, day_start) == :gt

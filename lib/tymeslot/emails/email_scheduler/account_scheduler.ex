@@ -1,6 +1,7 @@
 defmodule Tymeslot.Emails.EmailScheduler.AccountScheduler do
   @moduledoc "Schedules account management emails via Oban."
 
+  alias Tymeslot.Emails.EmailScheduler.Helpers
   alias Tymeslot.Workers.EmailWorker
 
   require Logger
@@ -49,7 +50,7 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountScheduler do
     else
       error ->
         Logger.error("Failed to enqueue email change emails",
-          error: inspect(error),
+          error: Helpers.format_insert_error(error),
           user_id: user_id
         )
 
@@ -85,7 +86,7 @@ defmodule Tymeslot.Emails.EmailScheduler.AccountScheduler do
 
       error ->
         Logger.error("Failed to enqueue email change confirmations",
-          error: inspect(error),
+          error: Helpers.format_insert_error(error),
           user_id: user_id
         )
 

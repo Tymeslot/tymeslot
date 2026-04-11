@@ -35,7 +35,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
     end
 
     test "prefers meeting_url over location for the location field" do
-      meeting = %{@base_meeting | meeting_url: "https://meet.example.com/room", location: "Office"}
+      meeting = %{
+        @base_meeting
+        | meeting_url: "https://meet.example.com/room",
+          location: "Office"
+      }
 
       result = CalendarEventBuilder.build_event_data(meeting)
 
