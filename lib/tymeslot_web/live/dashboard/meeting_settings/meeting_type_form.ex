@@ -8,10 +8,10 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   use TymeslotWeb, :live_component
 
   # Follow project rule: ALWAYS alias nested modules and organize alphabetically within groups
-  alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.{Init, Validation}
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
   import TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     socket = assign(socket, assigns)
-    {:ok, maybe_initialize(socket)}
+    {:ok, Init.maybe_initialize(socket)}
   end
 
   @impl Phoenix.LiveComponent
@@ -235,7 +235,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
 
     {updated_data, updated_errors} =
       Enum.reduce(changed_fields, {new_data, current_errors}, fn field, {acc_data, acc_errors} ->
-        validate_and_update_field(field, Map.get(params, field), metadata, acc_data, acc_errors)
+        Validation.validate_and_update_field(
+          field,
+          Map.get(params, field),
+          metadata,
+          acc_data,
+          acc_errors
+        )
       end)
 
     {:noreply, assign(socket, form_data: updated_data, form_errors: updated_errors)}
@@ -350,7 +356,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         _other -> {nil, nil}
       end
 
-    case validate_new_reminder(socket.assigns.reminders, amount, unit) do
+    case Validation.validate_new_reminder(socket.assigns.reminders, amount, unit) do
       {:ok, reminder} ->
         reminders = socket.assigns.reminders ++ [reminder]
 
@@ -376,7 +382,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
     value = socket.assigns.new_reminder_value
     unit = socket.assigns.new_reminder_unit
 
-    case validate_new_reminder(socket.assigns.reminders, value, unit) do
+    case Validation.validate_new_reminder(socket.assigns.reminders, value, unit) do
       {:ok, reminder} ->
         reminders = socket.assigns.reminders ++ [reminder]
 
@@ -413,163 +419,5 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
       end)
 
     {:noreply, assign(socket, reminders: reminders, reminder_error: nil)}
-  end
-
-  # --- Private helpers ---
-  defp validate_and_update_field("name", value, metadata, acc_data, acc_errors) do
-    case MeetingSettingsInputValidation.validate_field(:name, value, metadata) do
-      {:ok, sanitized} -> {Map.put(acc_data, "name", sanitized), Map.delete(acc_errors, :name)}
-      {:error, %{name: msg}} -> {acc_data, Map.put(acc_errors, :name, msg)}
-      {:error, _reason} -> {acc_data, acc_errors}
-    end
-  end
-
-  defp validate_and_update_field("duration", value, metadata, acc_data, acc_errors) do
-    case MeetingSettingsInputValidation.validate_field(:duration, value, metadata) do
-      {:ok, sanitized} ->
-        {Map.put(acc_data, "duration", sanitized), Map.delete(acc_errors, :duration)}
-
-      {:error, %{duration: msg}} ->
-        {acc_data, Map.put(acc_errors, :duration, msg)}
-
-      {:error, _reason} ->
-        {acc_data, acc_errors}
-    end
-  end
-
-  defp validate_and_update_field("description", value, metadata, acc_data, acc_errors) do
-    case MeetingSettingsInputValidation.validate_field(:description, value, metadata) do
-      {:ok, sanitized} ->
-        {Map.put(acc_data, "description", sanitized), Map.delete(acc_errors, :description)}
-
-      {:error, %{description: msg}} ->
-        {acc_data, Map.put(acc_errors, :description, msg)}
-
-      {:error, _reason} ->
-        {acc_data, acc_errors}
-    end
-  end
-
-  defp validate_and_update_field(_other, _value, _metadata, acc_data, acc_errors),
-    do: {acc_data, acc_errors}
-
-  defp maybe_initialize(%{assigns: %{__initialized__: true}} = socket), do: socket
-
-  defp maybe_initialize(%{assigns: assigns} = socket) do
-    type = Map.get(assigns, :type)
-
-    socket
-    |> assign(:selected_icon, get_selected_icon(type))
-    |> assign(:meeting_mode, get_meeting_mode(type))
-    |> assign(:selected_video_integration_id, get_video_integration_id(type))
-    |> assign(:selected_calendar_integration_id, get_calendar_integration_id(type))
-    |> assign(:selected_target_calendar_id, get_target_calendar_id(type))
-    |> assign(:reminders, get_reminders(type))
-    |> then(fn socket ->
-      if id = socket.assigns.selected_calendar_integration_id do
-        assign(
-          socket,
-          :available_calendars,
-          fetch_available_calendars(id, socket.assigns.calendar_integrations)
-        )
-      else
-        socket
-      end
-    end)
-    |> assign(:form_data, build_form_data(type))
-    |> assign(:__initialized__, true)
-  end
-
-  defp get_selected_icon(nil), do: "none"
-  defp get_selected_icon(%{icon: icon}) when is_binary(icon) and icon != "", do: icon
-  defp get_selected_icon(_arg), do: "none"
-
-  defp get_meeting_mode(%{allow_video: true}), do: "video"
-  defp get_meeting_mode(_arg), do: "personal"
-
-  defp get_video_integration_id(nil), do: nil
-  defp get_video_integration_id(%{video_integration_id: nil}), do: nil
-  defp get_video_integration_id(%{video_integration_id: id}) when is_integer(id), do: id
-
-  defp get_video_integration_id(%{video_integration_id: id}) when is_binary(id) do
-    case Integer.parse(id) do
-      {int, _value} -> int
-      :error -> nil
-    end
-  end
-
-  defp get_video_integration_id(_arg), do: nil
-
-  defp get_calendar_integration_id(nil), do: nil
-  defp get_calendar_integration_id(%{calendar_integration_id: nil}), do: nil
-  defp get_calendar_integration_id(%{calendar_integration_id: id}), do: id
-
-  defp get_target_calendar_id(nil), do: nil
-  defp get_target_calendar_id(%{target_calendar_id: nil}), do: nil
-  defp get_target_calendar_id(%{target_calendar_id: id}), do: id
-
-  defp fetch_available_calendars(integration_id, integrations) do
-    integration = Enum.find(integrations, &(&1.id == integration_id))
-
-    if integration && integration.calendar_list do
-      integration.calendar_list
-    else
-      []
-    end
-  end
-
-  defp build_form_data(nil) do
-    %{"name" => "", "duration" => "30", "description" => "", "icon" => "none"}
-  end
-
-  defp build_form_data(type) do
-    %{
-      "name" => type.name || "",
-      "duration" => to_string(type.duration_minutes || 30),
-      "description" => type.description || "",
-      "icon" => type.icon || "none"
-    }
-  end
-
-  defp get_reminders(nil), do: [%{value: 30, unit: "minutes"}]
-
-  defp get_reminders(%{reminder_config: reminders}) when is_list(reminders) do
-    Enum.flat_map(reminders, fn r ->
-      case ReminderUtils.normalize_reminder(r) do
-        {:ok, reminder} -> [reminder]
-        _other -> []
-      end
-    end)
-  end
-
-  defp get_reminders(_arg), do: [%{value: 30, unit: "minutes"}]
-
-  defp validate_new_reminder(reminders, value, unit) do
-    cond do
-      is_nil(value) or value == "" ->
-        {:error, "Reminder value is required"}
-
-      length(reminders) >= 3 ->
-        {:error, "You can configure up to 3 reminders"}
-
-      match?({:error, _reason}, ReminderUtils.validate_reminder_value(value)) ->
-        {:error, "Reminder value must be a positive number"}
-
-      unit not in ["minutes", "hours", "days"] ->
-        {:error, "Select a valid reminder unit"}
-
-      reminder_exists?(reminders, value, unit) ->
-        {:error, "This reminder already exists"}
-
-      true ->
-        {:ok, %{value: ReminderUtils.parse_reminder_value(value), unit: unit}}
-    end
-  end
-
-  defp reminder_exists?(reminders, value, unit) do
-    reminder_value = ReminderUtils.parse_reminder_value(value)
-    new_reminder = %{value: reminder_value, unit: unit}
-
-    ReminderUtils.duplicate_reminders?(reminders ++ [new_reminder])
   end
 end
