@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
   alias Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder
   alias Tymeslot.Security.{RateLimiter, UrlValidation}
 
@@ -96,7 +97,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
 
     # Always try HTTPS first; if it fails due to network/connection, fall back to HTTP
     handle_api_response(
-      try_https_then_http(base_url, "/api/v1/meeting", fn url ->
+      HttpHelpers.try_https_then_http(base_url, "/api/v1/meeting", fn url ->
         http_client().post(url, "", headers, options)
       end)
     )
@@ -202,7 +203,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
     ]
 
     # Try HTTPS first, then HTTP
-    case try_https_then_http(base_url, "/api/v1/meeting", fn url ->
+    case HttpHelpers.try_https_then_http(base_url, "/api/v1/meeting", fn url ->
            http_client().post(url, "", headers, [])
          end) do
       {:ok, %Req.Response{status: 200, body: body}} ->
@@ -360,42 +361,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalkProvider do
       :ok -> :ok
       {:error, :rate_limited, message} -> {:error, message}
     end
-  end
-
-  # Internal: attempt HTTPS first (by forcing https scheme), then fall back to the provided base_url
-  defp try_https_then_http(base_url, path, fun) when is_binary(base_url) and is_binary(path) do
-    https_url = force_https(base_url) <> path
-
-    case fun.(https_url) do
-      {:ok, %Req.Response{} = resp} ->
-        {:ok, resp}
-
-      {:error, exception} when is_exception(exception) ->
-        # Fallback to original base_url on network/connection error
-        fallback_url = base_url <> path
-
-        case fun.(fallback_url) do
-          {:ok, %Req.Response{} = resp2} -> {:ok, resp2}
-          {:error, exception2} when is_exception(exception2) -> {:error, exception2}
-          {:error, reason} -> {:error, reason}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp try_https_then_http(base_url, path, fun) do
-    # If inputs are unexpected, just attempt with concatenation
-    fun.(base_url <> path)
-  end
-
-  defp force_https(url) when is_binary(url) do
-    url
-    |> URI.parse()
-    |> Map.put(:scheme, "https")
-    |> Map.put(:port, 443)
-    |> URI.to_string()
   end
 
   defp http_client do

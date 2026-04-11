@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
+  alias Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers
 
   @type config :: %{required(:api_key) => String.t(), required(:base_url) => String.t()}
 
@@ -48,7 +49,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
       })
 
     handle_join_api_response(
-      try_https_then_http(base_url, "/api/v1/join", fn url ->
+      HttpHelpers.try_https_then_http(base_url, "/api/v1/join", fn url ->
         http_client().post(url, body, headers, [])
       end),
       :with_validation
@@ -84,7 +85,7 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
       })
 
     handle_join_api_response(
-      try_https_then_http(base_url, "/api/v1/join", fn url ->
+      HttpHelpers.try_https_then_http(base_url, "/api/v1/join", fn url ->
         http_client().post(url, body, headers, [])
       end),
       :legacy
@@ -271,39 +272,6 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.JoinUrlBuilder do
 
   defp map_role("organizer"), do: "admin"
   defp map_role(_other), do: "guest"
-
-  defp try_https_then_http(base_url, path, fun) when is_binary(base_url) and is_binary(path) do
-    https_url = force_https(base_url) <> path
-
-    case fun.(https_url) do
-      {:ok, %Req.Response{} = resp} ->
-        {:ok, resp}
-
-      {:error, exception} when is_exception(exception) ->
-        fallback_url = base_url <> path
-
-        case fun.(fallback_url) do
-          {:ok, %Req.Response{} = resp2} -> {:ok, resp2}
-          {:error, exception2} when is_exception(exception2) -> {:error, exception2}
-          {:error, reason} -> {:error, reason}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp try_https_then_http(base_url, path, fun) do
-    fun.(base_url <> path)
-  end
-
-  defp force_https(url) when is_binary(url) do
-    url
-    |> URI.parse()
-    |> Map.put(:scheme, "https")
-    |> Map.put(:port, 443)
-    |> URI.to_string()
-  end
 
   defp http_client do
     Application.get_env(:tymeslot, :http_client_module, HTTPClient)
