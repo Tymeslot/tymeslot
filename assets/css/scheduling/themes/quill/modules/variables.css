@@ -152,11 +152,11 @@
   --inset-highlight-medium: inset 0 1px 0 rgba(255, 255, 255, 0.15);
   --inset-highlight-strong: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 
-  /* Component-Specific Tokens - Avatars */
-  --avatar-size-sm: 32px;
-  --avatar-size-md: 48px;
-  --avatar-size-lg: 128px;
-  --avatar-size-xl: 192px;
+  /* Component-Specific Tokens - Avatars (fluid, scales with container) */
+  --avatar-size-sm: clamp(28px, 4cqi, 32px);
+  --avatar-size-md: clamp(40px, 6cqi, 48px);
+  --avatar-size-lg: clamp(96px, 15cqi, 128px);
+  --avatar-size-xl: clamp(128px, 22cqi, 192px);
 
   /* Component-Specific Tokens - Icons */
   --icon-2xs: 10px;
@@ -199,12 +199,12 @@
   --container-xl: 1024px;
   --container-2xl: 1280px;
 
-  /* Component-Specific Tokens - Card Heights */
-  --card-height-sm: 450px;
-  --card-height-md: 500px;
-  --card-height-lg: 600px;
-  --card-height-xl: 650px;
-  --card-height-2xl: 700px;
+  /* Component-Specific Tokens - Card Heights (fluid, scales with viewport) */
+  --card-height-sm: clamp(300px, 55vh, 450px);
+  --card-height-md: clamp(350px, 60vh, 500px);
+  --card-height-lg: clamp(400px, 70vh, 600px);
+  --card-height-xl: clamp(420px, 75vh, 650px);
+  --card-height-2xl: clamp(450px, 80vh, 700px);
 
   /* Component-Specific Tokens - Buttons */
   --button-padding: 0.75rem 1.5rem;
@@ -217,8 +217,8 @@
   --input-border-radius: 0.75rem;
   --input-padding: 0.75rem 1rem;
   --input-min-height: 44px;
-  --textarea-min-height: 120px;
-  --textarea-max-height: 400px;
+  --textarea-min-height: clamp(60px, 15vh, 120px);
+  --textarea-max-height: clamp(200px, 45vh, 400px);
 
   /* Component-Specific Tokens - Step Indicators */
   --step-circle-size: 2rem;
@@ -229,7 +229,10 @@
   --dropdown-width: 300px;
   --dropdown-width-sm: 160px;
   --dropdown-width-md: 180px;
-  --dropdown-max-height: 420px;
+  --dropdown-max-height: clamp(200px, 50vh, 420px);
+
+  /* Z-Index Scale */
+  --z-dropdown: 50;
 
   /* Component-Specific Tokens - Scrollbar */
   --scrollbar-width: 6px;

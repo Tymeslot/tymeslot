@@ -5,7 +5,7 @@
   position: absolute;
   top: var(--space-lg);
   right: var(--space-lg);
-  z-index: 50;
+  z-index: var(--z-dropdown);
 }
 
 /* Language switcher visibility (only on slide 1) */
@@ -86,7 +86,7 @@
 
   .language-dropdown-rhythm {
     width: var(--container-xs);
-    max-height: var(--dropdown-max-height-mobile);
+    max-height: var(--dropdown-max-height);
     right: 0;
     left: auto;
   }
@@ -113,7 +113,7 @@
 
   .language-dropdown-rhythm {
     width: var(--container-sm);
-    max-height: var(--dropdown-max-height-mobile);
+    max-height: var(--dropdown-max-height);
   }
 
   .language-dropdown-item-rhythm {

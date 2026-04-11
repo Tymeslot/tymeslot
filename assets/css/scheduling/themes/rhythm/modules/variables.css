@@ -105,11 +105,11 @@
   --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 var(--border-subtle);
   --slide-transition: opacity var(--transition-slow), transform var(--transition-slow);
 
-  /* Component-specific sizing */
-  --avatar-size-sm: 36px;
-  --avatar-size-md: 40px;
-  --avatar-size-lg: 52px;
-  --avatar-size-xl: 68px;
+  /* Component-specific sizing (fluid, scales with container) */
+  --avatar-size-sm: clamp(32px, 4cqi, 36px);
+  --avatar-size-md: clamp(36px, 5cqi, 40px);
+  --avatar-size-lg: clamp(44px, 7cqi, 52px);
+  --avatar-size-xl: clamp(52px, 8cqi, 68px);
   --min-touch-target: 48px;
 
   /* Container widths */
@@ -121,8 +121,10 @@
 
   /* Dropdown/Popover specific */
   --dropdown-width: var(--container-xs);
-  --dropdown-max-height: 420px;
-  --dropdown-max-height-mobile: 60vh;
+  --dropdown-max-height: clamp(200px, 50vh, 420px);
+
+  /* Z-Index Scale */
+  --z-dropdown: 50;
 
   /* Calendar specific */
   --calendar-gap: clamp(8px, 1.2vw, 12px);
@@ -135,8 +137,7 @@
   --time-slot-min-width: 88px;
   --time-slot-min-width-tablet: 96px;
   --time-slot-min-height: 40px;
-  --time-slots-max-height: 420px;
-  --time-slots-max-height-mobile: 280px;
+  --time-slots-max-height: clamp(280px, 50vh, 420px);
 
   /* Icon sizes */
   --icon-xs: 16px;

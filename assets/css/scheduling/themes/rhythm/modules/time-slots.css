@@ -91,7 +91,7 @@
   }
 
   .time-slots-grid {
-    max-height: var(--time-slots-max-height-mobile);
+    max-height: var(--time-slots-max-height);
     padding-right: var(--space-2xs);
   }
 }
