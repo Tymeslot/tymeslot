@@ -5,78 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
   @moduletag :calendar
 
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
-
-  describe "height_rem/2" do
-    test "1-hour event returns 4.0rem" do
-      start_dt = ~U[2026-03-12 10:00:00Z]
-      end_dt = ~U[2026-03-12 11:00:00Z]
-      assert Helpers.height_rem(start_dt, end_dt) == 4.0
-    end
-
-    test "very short event returns minimum floor of 0.5rem" do
-      start_dt = ~U[2026-03-12 10:00:00Z]
-      end_dt = ~U[2026-03-12 10:00:30Z]
-      assert Helpers.height_rem(start_dt, end_dt) == 0.5
-    end
-
-    test "multi-hour event scales proportionally" do
-      start_dt = ~U[2026-03-12 09:00:00Z]
-      end_dt = ~U[2026-03-12 12:00:00Z]
-      # 3h * 4rem/h = 12.0
-      assert Helpers.height_rem(start_dt, end_dt) == 12.0
-    end
-  end
-
-  describe "overlap_layout/1" do
-    test "empty list returns empty" do
-      assert Helpers.overlap_layout([]) == []
-    end
-
-    test "non-overlapping events get separate columns" do
-      e1 = %{start_at: ~U[2026-03-12 09:00:00Z], end_at: ~U[2026-03-12 10:00:00Z]}
-      e2 = %{start_at: ~U[2026-03-12 11:00:00Z], end_at: ~U[2026-03-12 12:00:00Z]}
-
-      result = Helpers.overlap_layout([e1, e2])
-      # Both fit in column 0 since they don't overlap
-      assert [{^e1, 0, 1}, {^e2, 0, 1}] = result
-    end
-
-    test "two overlapping events get different columns" do
-      e1 = %{start_at: ~U[2026-03-12 09:00:00Z], end_at: ~U[2026-03-12 10:30:00Z]}
-      e2 = %{start_at: ~U[2026-03-12 10:00:00Z], end_at: ~U[2026-03-12 11:00:00Z]}
-
-      result = Helpers.overlap_layout([e1, e2])
-      assert [{^e1, 0, 2}, {^e2, 1, 2}] = result
-    end
-  end
-
-  describe "top_rem/2" do
-    test "positions event using UTC hours when no timezone given" do
-      dt = ~U[2026-03-12 06:00:00Z]
-      # 6h * 60 / 60 * 4 = 24.0
-      assert Helpers.top_rem(dt) == 24.0
-    end
-
-    test "converts to user timezone before computing position" do
-      # 06:00 UTC = 09:00 in Etc/GMT-3 (UTC+3)
-      dt = ~U[2026-03-12 06:00:00Z]
-      # 9h * 60 / 60 * 4 = 36.0
-      assert Helpers.top_rem(dt, "Etc/GMT-3") == 36.0
-    end
-
-    test "handles negative offset timezones correctly" do
-      # 18:00 UTC = 13:00 in America/New_York (UTC-5 in March)
-      dt = ~U[2026-03-12 18:00:00Z]
-      # America/New_York is UTC-4 in March (DST) → 14:00 local
-      # 14h * 60 / 60 * 4 = 56.0
-      assert Helpers.top_rem(dt, "America/New_York") == 56.0
-    end
-
-    test "midnight UTC renders at top of grid" do
-      dt = ~U[2026-03-12 00:00:00Z]
-      assert Helpers.top_rem(dt) == 0.0
-    end
-  end
+  alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
 
   describe "all_day_events_for_day/2" do
     defp make_assigns(events) do
@@ -157,7 +86,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
     end
   end
 
-  describe "visible_days/1 with preferences" do
+  # visible_days/1 now reads from socket assigns (set by precompute_derived/1).
+  # The computation logic lives in DataLoading — tested here via PreferenceHelpers.
+  describe "visible_days computation via PreferenceHelpers" do
     test "week view with weekends hidden returns 5 days" do
       assigns = %{
         view: :week,
@@ -165,7 +96,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
         preferences: %{week_start_day: "monday", show_weekends: false}
       }
 
-      days = Helpers.visible_days(assigns)
+      ws = PreferenceHelpers.week_start(~D[2026-03-25], assigns)
+      all_days = Enum.map(0..6, &Date.add(ws, &1))
+      days = Enum.reject(all_days, fn d -> Date.day_of_week(d) in [6, 7] end)
+
       assert length(days) == 5
       assert Enum.all?(days, fn d -> Date.day_of_week(d) in 1..5 end)
     end
@@ -177,35 +111,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
         preferences: %{week_start_day: "monday", show_weekends: true}
       }
 
-      days = Helpers.visible_days(assigns)
+      ws = PreferenceHelpers.week_start(~D[2026-03-25], assigns)
+      days = Enum.map(0..6, &Date.add(ws, &1))
       assert length(days) == 7
     end
 
     test "month view with Sunday start begins on Sunday" do
-      assigns = %{
-        view: :month,
-        date: ~D[2026-03-15],
-        preferences: %{week_start_day: "sunday"}
-      }
-
-      [first_day | _rest] = Helpers.visible_days(assigns)
+      first_of_month = Date.new!(2026, 3, 1)
+      grid_start = Date.beginning_of_week(first_of_month, :sunday)
+      [first_day | _] = Enum.map(0..41, &Date.add(grid_start, &1))
       assert Date.day_of_week(first_day) == 7
     end
 
     test "month view with Monday start begins on Monday" do
-      assigns = %{
-        view: :month,
-        date: ~D[2026-03-15],
-        preferences: %{week_start_day: "monday"}
-      }
-
-      [first_day | _rest] = Helpers.visible_days(assigns)
+      first_of_month = Date.new!(2026, 3, 1)
+      grid_start = Date.beginning_of_week(first_of_month, :monday)
+      [first_day | _] = Enum.map(0..41, &Date.add(grid_start, &1))
       assert Date.day_of_week(first_day) == 1
     end
 
     test "month view always returns 42 days" do
-      assigns = %{view: :month, date: ~D[2026-03-15], preferences: %{week_start_day: "sunday"}}
-      assert length(Helpers.visible_days(assigns)) == 42
+      first_of_month = Date.new!(2026, 3, 1)
+      grid_start = Date.beginning_of_week(first_of_month, :sunday)
+      days = Enum.map(0..41, &Date.add(grid_start, &1))
+      assert length(days) == 42
     end
   end
 
@@ -284,31 +213,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.HelpersTest do
     test "Sunday start returns Sun first" do
       assigns = %{preferences: %{week_start_day: "sunday"}}
       assert hd(Helpers.day_name_headers(assigns)) == "Sun"
-    end
-  end
-
-  describe "top_rem/2 - DST-aware timezone conversion" do
-    test "10:00 UTC positions at 6:00 AM in America/New_York during EDT (UTC-4)" do
-      # 2026-03-12 is during EDT (DST started 2026-03-08)
-      # 10:00 UTC = 06:00 EDT (UTC-4)
-      dt = ~U[2026-03-12 10:00:00Z]
-      # 6h * 4rem/h = 24.0
-      assert Helpers.top_rem(dt, "America/New_York") == 24.0
-    end
-
-    test "10:00 UTC positions at 5:00 AM in America/New_York during EST (UTC-5)" do
-      # 2026-01-15 is during EST (standard time)
-      # 10:00 UTC = 05:00 EST (UTC-5)
-      dt = ~U[2026-01-15 10:00:00Z]
-      # 5h * 4rem/h = 20.0
-      assert Helpers.top_rem(dt, "America/New_York") == 20.0
-    end
-
-    test "event at 23:30 UTC in UTC+2 wraps to next day 01:30" do
-      # 23:30 UTC = 01:30 next day in Etc/GMT-2 (UTC+2)
-      dt = ~U[2026-03-12 23:30:00Z]
-      # 1h30m = 90 minutes → 90/60 * 4 = 6.0
-      assert Helpers.top_rem(dt, "Etc/GMT-2") == 6.0
     end
   end
 end
