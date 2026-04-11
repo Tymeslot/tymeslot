@@ -13,7 +13,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
   alias Tymeslot.Validation.Constraints
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
-  import TymeslotWeb.Dashboard.MeetingSettings.Components
+  import TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents
+  import TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders
 
   # Public assigns passed from parent
   # - type: existing meeting type or nil

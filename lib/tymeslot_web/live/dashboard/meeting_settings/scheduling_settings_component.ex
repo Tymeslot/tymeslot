@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.CustomInputModeHelper
-  alias TymeslotWeb.Dashboard.MeetingSettings.Components
+  alias TymeslotWeb.Dashboard.MeetingSettings.Components.SchedulingSettings
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
 
   @impl Phoenix.LiveComponent
@@ -35,17 +35,17 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.SchedulingSettingsComponent do
       />
 
       <div class="space-y-8">
-        <Components.buffer_minutes_setting
+        <SchedulingSettings.buffer_minutes_setting
           profile={@profile}
           myself={@myself}
           custom_mode={Map.get(@custom_input_mode, :buffer_minutes, false)}
         />
-        <Components.advance_booking_days_setting
+        <SchedulingSettings.advance_booking_days_setting
           profile={@profile}
           myself={@myself}
           custom_mode={Map.get(@custom_input_mode, :advance_booking_days, false)}
         />
-        <Components.min_advance_hours_setting
+        <SchedulingSettings.min_advance_hours_setting
           profile={@profile}
           myself={@myself}
           custom_mode={Map.get(@custom_input_mode, :min_advance_hours, false)}
