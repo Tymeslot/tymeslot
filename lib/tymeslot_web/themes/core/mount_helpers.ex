@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: ThemeCustomizationHelpers
 
   @doc "No-op debug logging hook (debug logging removed for production)."
+  @spec log_mount_debug_info(atom() | nil, map(), Phoenix.LiveView.Socket.t()) :: :ok
   def log_mount_debug_info(_unused_action, _unused_profile, _unused_socket) do
     # Debug logging removed for production
   end
@@ -28,6 +29,8 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   the live action and params. Accepts `delegate_fn` — a `(theme_id, function, args -> result)`
   function — for delegating scheduling-flow mounts to the theme module.
   """
+  @spec mount_with_profile(map(), map(), map(), Phoenix.LiveView.Socket.t(), function()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
   def mount_with_profile(profile, params, session, socket, delegate_fn) do
     action = socket.assigns[:live_action]
 
@@ -46,6 +49,8 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   Accepts `delegate_fn` — a `(theme_id, function, args -> result)` function — for delegating
   mounts to the theme module.
   """
+  @spec mount_without_profile(map(), map(), Phoenix.LiveView.Socket.t(), function()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
   def mount_without_profile(params, session, socket, delegate_fn) do
     if params["username"] && is_nil(socket.assigns[:organizer_profile]) do
       {:ok,
@@ -77,6 +82,8 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   Accepts `delegate_fn` — a `(theme_id, function, args -> result)` function — for delegating
   to the theme module.
   """
+  @spec mount_scheduling_flow(map(), map(), map(), Phoenix.LiveView.Socket.t(), function()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
   def mount_scheduling_flow(profile, params, session, socket, delegate_fn) do
     case LinkAccessPolicy.check_public_readiness(profile) do
       {:ok, :ready} ->
@@ -113,6 +120,8 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   end
 
   @doc "Loads a meeting and prepares the socket for the cancel/reschedule/cancel_confirmed flow."
+  @spec mount_meeting_management(map(), map(), Phoenix.LiveView.Socket.t(), atom()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
   def mount_meeting_management(profile, params, socket, action) do
     theme_id = profile.booking_theme || socket.assigns[:theme_id] || Registry.default_theme_id()
     meeting_uid = params["meeting_uid"]
@@ -141,6 +150,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   end
 
   @doc "Assigns the validated user timezone from params or socket assigns."
+  @spec assign_user_timezone(Phoenix.LiveView.Socket.t(), map()) :: Phoenix.LiveView.Socket.t()
   def assign_user_timezone(socket, params) do
     timezone =
       params["timezone"] || socket.assigns[:user_timezone] ||
@@ -159,6 +169,8 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
   end
 
   @doc "Builds the theme context from params and profile, assigns it to the socket."
+  @spec prepare_theme_context(map(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Context.t(), Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
   def prepare_theme_context(profile, params, socket) do
     case Context.from_params(params, profile) do
       %Context{} = context ->

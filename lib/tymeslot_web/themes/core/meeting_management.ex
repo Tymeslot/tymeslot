@@ -14,6 +14,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   alias TymeslotWeb.Helpers.ClientIP
 
   @doc "Loads and validates a meeting by UID for the given action."
+  @spec validate_and_load_meeting(String.t(), atom()) :: {:ok, map()} | {:error, String.t()}
   def validate_and_load_meeting(meeting_uid, action) do
     case MeetingQueries.get_meeting_by_uid(meeting_uid) do
       {:ok, meeting} ->
@@ -28,6 +29,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   end
 
   @doc "Validates whether the given action is permitted for the meeting."
+  @spec validate_meeting_action(map(), atom()) :: :ok | {:error, String.t()}
   def validate_meeting_action(meeting, :cancel) do
     Policy.can_cancel_meeting?(meeting)
   end
@@ -41,6 +43,8 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   end
 
   @doc "Handles cancel_meeting and keep_meeting events."
+  @spec handle_meeting_event(String.t(), map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_meeting_event("cancel_meeting", _unused_params, socket) do
     if socket.assigns[:live_action] == :cancel do
       meeting = socket.assigns[:meeting]
@@ -82,6 +86,8 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   end
 
   @doc "Assigns action-specific data to the socket (e.g. duration for reschedule)."
+  @spec assign_action_specific_data(Phoenix.LiveView.Socket.t(), atom(), map(), map()) ::
+          Phoenix.LiveView.Socket.t()
   def assign_action_specific_data(socket, :reschedule, meeting, params) do
     duration_str = DateTimeUtils.format_duration_for_url(meeting.duration)
 
@@ -94,6 +100,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
     do: socket
 
   @doc "Builds the URL to redirect to after a meeting is cancelled."
+  @spec build_cancel_confirmed_url(Phoenix.LiveView.Socket.t(), map()) :: String.t()
   def build_cancel_confirmed_url(socket, meeting) do
     case socket.assigns[:organizer_profile] do
       %{username: username} when is_binary(username) and byte_size(username) > 0 ->
