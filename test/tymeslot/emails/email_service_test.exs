@@ -3,6 +3,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
   @moduletag :emails
 
   import Tymeslot.EmailTestHelpers
+  import Tymeslot.Factory
 
   alias Tymeslot.Emails.EmailService
 
@@ -145,7 +146,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       result = EmailService.send_calendar_invitation("attendee@example.com", details)
 
-      assert {:ok, _email} = result
+      assert {:ok, _} = result
     end
 
     test "sends calendar invitation with custom details" do
@@ -158,7 +159,7 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       result = EmailService.send_calendar_invitation("colleague@example.com", details)
 
-      assert {:ok, _email} = result
+      assert {:ok, _} = result
     end
   end
 
@@ -199,6 +200,101 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       assert %Swoosh.Email{} = org_email
       assert %Swoosh.Email{} = att_email
+    end
+  end
+
+  describe "send_external_booking_change/3" do
+    test "returns ok tuple for :deleted discrepancy" do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user: user)
+
+      result =
+        EmailService.send_external_booking_change(
+          meeting,
+          meeting.organizer_email,
+          :deleted
+        )
+
+      assert {:ok, _} = result
+    end
+
+    test "returns ok tuple for :modified discrepancy" do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user: user)
+
+      result =
+        EmailService.send_external_booking_change(
+          meeting,
+          meeting.organizer_email,
+          :modified
+        )
+
+      assert {:ok, _} = result
+    end
+  end
+
+  describe "send_event_update_notification/2" do
+    test "returns ok tuple with valid update details" do
+      details = build_event_update_details()
+
+      result =
+        EmailService.send_event_update_notification("attendee@example.com", details)
+
+      assert {:ok, _} = result
+    end
+
+    test "returns ok tuple with custom changes" do
+      details =
+        build_event_update_details(%{
+          event_title: "Rescheduled Standup",
+          changes: [{:location, "Room A", "Room C"}, {:start_time, "09:00", "10:00"}]
+        })
+
+      result =
+        EmailService.send_event_update_notification("colleague@example.com", details)
+
+      assert {:ok, _} = result
+    end
+  end
+
+  describe "send_integration_unhealthy_notification/3" do
+    test "returns ok tuple for calendar integration" do
+      user = build_user_data(%{email: "owner@example.com", name: "Integration Owner"})
+
+      integration = %{
+        id: System.unique_integer([:positive]),
+        provider: :google
+      }
+
+      result =
+        EmailService.send_integration_unhealthy_notification(user, integration, :calendar)
+
+      assert {:ok, _} = result
+    end
+
+    test "returns ok tuple for video integration" do
+      user = build_user_data(%{email: "owner@example.com"})
+
+      integration = %{
+        id: System.unique_integer([:positive]),
+        provider: :zoom
+      }
+
+      result =
+        EmailService.send_integration_unhealthy_notification(user, integration, :video)
+
+      assert {:ok, _} = result
+    end
+  end
+
+  describe "send_reschedule_request/1" do
+    test "returns ok tuple for a valid meeting" do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user: user)
+
+      result = EmailService.send_reschedule_request(meeting)
+
+      assert {:ok, _} = result
     end
   end
 end
