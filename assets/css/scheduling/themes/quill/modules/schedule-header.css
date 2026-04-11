@@ -66,7 +66,7 @@
 
 .timezone-dropdown-wrapper {
   position: relative;
-  width: 14rem;
+  width: min(100%, 14rem);
 }
 
 .timezone-trigger {
@@ -160,7 +160,7 @@
 .timezone-dropdown {
   position: absolute;
   top: 100%;
-  z-index: 9999;
+  z-index: var(--z-dropdown);
   margin-top: var(--space-2xs);
   /* Fixed dark background — must not use --theme-background, which is
      overridable by per-profile customizations and could produce a light

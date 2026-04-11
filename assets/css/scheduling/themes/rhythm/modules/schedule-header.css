@@ -75,7 +75,7 @@
 
 .timezone-dropdown-wrapper {
   position: relative;
-  width: 14rem;
+  width: min(100%, 14rem);
 }
 
 .timezone-trigger {
@@ -106,7 +106,7 @@
   position: absolute;
   top: 100%;
   right: 0;
-  z-index: 9999;
+  z-index: var(--z-dropdown);
   margin-top: var(--space-2xs);
   background: linear-gradient(135deg, rgba(20, 20, 35, 0.98) 0%, rgba(15, 15, 25, 0.96) 100%);
   backdrop-filter: blur(20px);
@@ -259,9 +259,6 @@
     gap: var(--space-xs);
   }
 
-  .timezone-dropdown {
-    max-height: var(--dropdown-max-height-mobile);
-  }
 }
 
 /* Tablet mid-range: stack header, keep trigger normal */
@@ -270,10 +267,6 @@
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-md);
-  }
-
-  .timezone-dropdown {
-    max-height: var(--dropdown-max-height-mobile);
   }
 
   .timezone-trigger {

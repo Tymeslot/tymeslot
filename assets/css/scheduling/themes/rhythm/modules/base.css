@@ -358,32 +358,8 @@ body.rhythm-theme {
   }
 }
 
-/* Mobile */
-@media (max-width: 479px) {
-  .video-background-theme {
-    padding: 0;
-    background: rgba(0, 0, 0, 0.4);
-    align-items: flex-start;
-  }
-
-  .video-background-theme.theme-grid .content-area {
-    padding: 0;
-  }
-
-  .scheduling-box {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    min-height: auto;
-    max-height: none;
-    border-radius: 0;
-    border: none;
-    padding: 0;
-    overflow-x: hidden;
-    overflow-y: visible;
-    box-sizing: border-box;
-  }
-
+/* Mobile — container query for scheduling-box internals */
+@container scheduling (max-width: 479px) {
   .slide {
     padding: var(--space-md) var(--space-sm);
     min-height: auto;
@@ -411,6 +387,34 @@ body.rhythm-theme {
     gap: var(--space-sm);
     margin-top: auto;
     flex-shrink: 0;
+  }
+}
+
+/* Mobile — viewport rules that cannot be container queries
+   (elements outside .scheduling-box, or properties that reference vw) */
+@media (max-width: 479px) {
+  .video-background-theme {
+    padding: 0;
+    background: rgba(0, 0, 0, 0.4);
+    align-items: flex-start;
+  }
+
+  .video-background-theme.theme-grid .content-area {
+    padding: 0;
+  }
+
+  .scheduling-box {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    border-radius: 0;
+    border: none;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: visible;
+    box-sizing: border-box;
   }
 
   /* Prevent horizontal overflow */

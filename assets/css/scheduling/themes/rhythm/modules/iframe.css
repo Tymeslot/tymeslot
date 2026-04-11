@@ -79,6 +79,16 @@ html.rhythm-theme[data-embedded] .scheduling-box {
   border: none;
 }
 
+/* Time slots — prevent double-scrolling in embedded mode.
+   Height media queries in time-slots.css cap .time-slots-grid with max-height
+   based on iframe viewport, creating an internal scroll + page scroll.
+   Let slots flow naturally so only the page body scrolls. */
+html.rhythm-theme[data-embedded] .time-slots-grid {
+  max-height: none;
+  overflow-y: visible;
+  height: auto;
+}
+
 /* Language switcher — tighter to the corner in embedded mode */
 html.rhythm-theme[data-embedded] .language-switcher-container {
   top: var(--space-xs);
