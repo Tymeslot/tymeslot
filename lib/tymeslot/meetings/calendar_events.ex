@@ -7,7 +7,6 @@ defmodule Tymeslot.Meetings.CalendarEvents do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
-  alias Tymeslot.Notifications.Orchestrator
 
   @doc """
   Creates a calendar event asynchronously.
@@ -77,22 +76,5 @@ defmodule Tymeslot.Meetings.CalendarEvents do
       )
 
       :ok
-  end
-
-  @doc """
-  Schedules email notifications for a meeting via Oban.
-  """
-  @spec schedule_email_notifications(Ecto.Schema.t()) :: :ok | {:error, any()}
-  def schedule_email_notifications(meeting) do
-    case Orchestrator.schedule_meeting_notifications(meeting) do
-      {:ok, _result} ->
-        Logger.info("Meeting notifications scheduled", meeting_id: meeting.id)
-
-      {:error, reason} ->
-        Logger.warning("Failed to schedule meeting notifications",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-    end
   end
 end

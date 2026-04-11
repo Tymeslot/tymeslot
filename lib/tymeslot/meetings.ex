@@ -18,6 +18,8 @@ defmodule Tymeslot.Meetings do
     VideoRooms
   }
 
+  alias Tymeslot.Notifications.Orchestrator
+
   alias Tymeslot.Pagination.CursorPage
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -83,7 +85,19 @@ defmodule Tymeslot.Meetings do
   @doc """
   Schedules email notifications for a meeting via Oban.
   """
-  defdelegate schedule_email_notifications(meeting), to: CalendarEvents
+  @spec schedule_email_notifications(Ecto.Schema.t()) :: :ok | {:error, any()}
+  def schedule_email_notifications(meeting) do
+    case Orchestrator.schedule_meeting_notifications(meeting) do
+      {:ok, _result} ->
+        Logger.info("Meeting notifications scheduled", meeting_id: meeting.id)
+
+      {:error, reason} ->
+        Logger.warning("Failed to schedule meeting notifications",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+    end
+  end
 
   @doc """
   Cancels a meeting including all side effects.
