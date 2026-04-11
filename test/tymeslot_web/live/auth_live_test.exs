@@ -5,7 +5,7 @@ defmodule TymeslotWeb.AuthLiveTest do
   alias Phoenix.Flash
   alias Tymeslot.Auth
   alias Tymeslot.Auth.AuthActions
-  alias Tymeslot.Auth.{UserQueries, UserTokenQueries}
+  alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.{Password, RateLimiter, Token}
