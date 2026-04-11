@@ -9,9 +9,15 @@ defmodule Tymeslot.Meetings do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Bookings.{Cancel, Create, Reschedule, RescheduleRequest}
-  alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
-  alias Tymeslot.Meetings.{MeetingCalendarQueries, MeetingQueries, MeetingSchema, VideoRooms}
-  alias Tymeslot.Notifications.Orchestrator
+
+  alias Tymeslot.Meetings.{
+    CalendarEvents,
+    MeetingCalendarQueries,
+    MeetingQueries,
+    MeetingSchema,
+    VideoRooms
+  }
+
   alias Tymeslot.Pagination.CursorPage
   alias Tymeslot.Utils.DateTimeUtils
 
@@ -69,50 +75,15 @@ defmodule Tymeslot.Meetings do
     DateTimeUtils.create_datetime_safe(date, time, timezone)
   end
 
-  # Private functions
+  @doc """
+  Creates a calendar event asynchronously (does not fail the booking workflow if scheduling fails).
+  """
+  defdelegate create_calendar_event_async(meeting), to: CalendarEvents
 
   @doc """
-  Create calendar event asynchronously (don't fail the whole process if this fails).
+  Schedules email notifications for a meeting via Oban.
   """
-  @spec create_calendar_event_async(Ecto.Schema.t()) :: :ok
-  def create_calendar_event_async(meeting) do
-    # Schedule calendar event creation through Oban worker
-    case CalendarEventScheduler.schedule_calendar_creation(meeting.id) do
-      :ok ->
-        Logger.info("Calendar event creation scheduled",
-          meeting_id: meeting.id,
-          uid: meeting.uid
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.warning("Failed to schedule calendar event creation",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-
-        # Don't fail the meeting creation if scheduling fails
-        :ok
-    end
-  end
-
-  @doc """
-  Schedule email notifications via Oban.
-  """
-  @spec schedule_email_notifications(Ecto.Schema.t()) :: :ok | {:error, any()}
-  def schedule_email_notifications(meeting) do
-    case Orchestrator.schedule_meeting_notifications(meeting) do
-      {:ok, _result} ->
-        Logger.info("Meeting notifications scheduled", meeting_id: meeting.id)
-
-      {:error, reason} ->
-        Logger.warning("Failed to schedule meeting notifications",
-          meeting_id: meeting.id,
-          reason: inspect(reason)
-        )
-    end
-  end
+  defdelegate schedule_email_notifications(meeting), to: CalendarEvents
 
   @doc """
   Cancels a meeting including all side effects.
@@ -136,42 +107,7 @@ defmodule Tymeslot.Meetings do
   end
 
   @doc false
-  @spec cancel_calendar_event(Ecto.Schema.t()) :: :ok
-  def cancel_calendar_event(meeting) do
-    Logger.info("Scheduling calendar event cancellation",
-      meeting_id: meeting.id,
-      uid: meeting.uid
-    )
-
-    # Schedule calendar event deletion through Oban worker
-    case CalendarEventScheduler.schedule_calendar_deletion(meeting.id) do
-      {:ok, _job} ->
-        Logger.info("Calendar event deletion scheduled successfully",
-          meeting_id: meeting.id,
-          uid: meeting.uid
-        )
-
-        :ok
-
-      {:error, reason} ->
-        Logger.error("Failed to schedule calendar event deletion",
-          meeting_id: meeting.id,
-          uid: meeting.uid,
-          reason: inspect(reason)
-        )
-
-        # Don't fail the cancellation process if scheduling fails
-        :ok
-    end
-  rescue
-    error ->
-      Logger.warning("Exception while scheduling calendar event cancellation",
-        meeting_id: meeting.id,
-        error: inspect(error)
-      )
-
-      :ok
-  end
+  defdelegate cancel_calendar_event(meeting), to: CalendarEvents
 
   # =====================================
   # Video Room Integration Functions
