@@ -2,32 +2,39 @@ defmodule Tymeslot.Emails.Templates.EmailVerification do
   @moduledoc """
   Email template for user email verification.
   """
-  alias Tymeslot.Emails.Shared.{Components, SharedHelpers, TemplateHelper}
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Tymeslot.Emails.Shared.{Buttons, Sanitise, TemplateHelper, Text}
+
+  # A first-contact email welcoming a new user in.
+  @intent :confirmed
 
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render(user, verification_url) do
-    user_display_name = SharedHelpers.sanitize_for_email(user.name || user.email)
+    user_display_name = Sanitise.sanitize_for_email(user.name || user.email)
 
     mjml_content = """
-    #{Components.title_section("Welcome to Tymeslot!", emoji: "👋", align: "center")}
+    #{Text.centered_text(dgettext("emails", "Hi %{name},", name: user_display_name), padding: "8px 0 4px 0", font_size: "16px")}
 
-    #{Components.centered_text("Hi #{user_display_name},")}
+    #{Text.centered_text(dgettext("emails", "We're glad you're here. One quick step and your calendar will be ready to go — please confirm your email below."), padding: "0 0 20px 0")}
 
-    #{Components.centered_text("We're excited to have you on board! To start scheduling meetings and simplify your calendar, please verify your email address.", padding: "0 0 20px 0")}
+    #{Buttons.action_button(@intent, dgettext("emails", "Confirm Email & Get Started"), verification_url, full_width: true, size: :large)}
 
-    #{Components.action_button("Confirm Email & Get Started", verification_url, color: "primary", full_width: true)}
+    #{Text.system_footer_note(dgettext("emails", "For your security, this link expires in 24 hours. If you didn't sign up for Tymeslot, you can ignore this email."))}
 
-    #{Components.system_footer_note("For your security, this link expires in 24 hours. If you didn't sign up for Tymeslot, no further action is needed.")}
+    #{Text.divider(margin: "28px 0 16px 0")}
 
-    #{Components.divider(margin: "32px 0")}
-
-    #{Components.troubleshooting_link(verification_url)}
+    #{Text.troubleshooting_link(verification_url)}
     """
 
     TemplateHelper.compile_system_template(
       mjml_content,
-      "Account Verification",
-      "Welcome to Tymeslot! Please verify your email."
+      dgettext("emails", "Account Verification"),
+      dgettext("emails", "Welcome to Tymeslot — please verify your email."),
+      intent: @intent,
+      eyebrow: dgettext("emails", "Welcome"),
+      stage_title: dgettext("emails", "Welcome to Tymeslot"),
+      stage_subtitle: dgettext("emails", "Let's get you scheduling in under a minute.")
     )
   end
 
@@ -36,16 +43,16 @@ defmodule Tymeslot.Emails.Templates.EmailVerification do
     name = user.name || user.email
 
     """
-    Welcome to Tymeslot!
+    #{dgettext("emails", "Welcome to Tymeslot!")}
 
-    Hi #{name},
+    #{dgettext("emails", "Hi %{name},", name: name)}
 
-    We're excited to have you on board! To start scheduling meetings and simplify your calendar, please verify your email address.
+    #{dgettext("emails", "We're excited to have you on board! To start scheduling meetings and simplify your calendar, please verify your email address.")}
 
-    Confirm Email & Get Started:
+    #{dgettext("emails", "Confirm Email & Get Started:")}
     #{verification_url}
 
-    For your security, this link expires in 24 hours. If you didn't sign up for Tymeslot, no further action is needed.
+    #{dgettext("emails", "For your security, this link expires in 24 hours. If you didn't sign up for Tymeslot, no further action is needed.")}
     """
   end
 end

@@ -2,17 +2,19 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Emails.Templates.AppointmentCancellation
   alias Tymeslot.Notifications.ContentBuilder
   import Tymeslot.EmailTestHelpers
   import Tymeslot.Factory
 
-  describe "cancellation_email_organizer/2" do
+  describe "render/3 with :organizer" do
     test "creates email with correct subject line" do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_organizer(
+        AppointmentCancellation.render(
+          :organizer,
           "organizer@example.com",
           details
         )
@@ -25,7 +27,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_organizer("organizer@test.com", details)
+        AppointmentCancellation.render(:organizer, "organizer@test.com", details)
 
       assert email.to == [{"John Organizer", "organizer@test.com"}]
     end
@@ -34,7 +36,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_organizer(
+        AppointmentCancellation.render(
+          :organizer,
           "organizer@example.com",
           details
         )
@@ -53,7 +56,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
         })
 
       email =
-        AppointmentCancellation.cancellation_email_organizer(
+        AppointmentCancellation.render(
+          :organizer,
           "organizer@example.com",
           details
         )
@@ -69,7 +73,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
         })
 
       email =
-        AppointmentCancellation.cancellation_email_organizer(
+        AppointmentCancellation.render(
+          :organizer,
           "organizer@example.com",
           details
         )
@@ -82,7 +87,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_organizer(
+        AppointmentCancellation.render(
+          :organizer,
           "organizer@example.com",
           details
         )
@@ -95,7 +101,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_organizer(
+        AppointmentCancellation.render(
+          :organizer,
           "organizer@example.com",
           details
         )
@@ -109,7 +116,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_organizer(
+        AppointmentCancellation.render(
+          :organizer,
           "organizer@example.com",
           details
         )
@@ -121,7 +129,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_organizer(
+        AppointmentCancellation.render(
+          :organizer,
           "organizer@example.com",
           details
         )
@@ -131,12 +140,13 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
     end
   end
 
-  describe "cancellation_email_attendee/2" do
+  describe "render/3 with :attendee" do
     test "creates email with correct subject line" do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -148,7 +158,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
     test "sets correct recipient" do
       details = build_appointment_details()
 
-      email = AppointmentCancellation.cancellation_email_attendee("attendee@test.com", details)
+      email = AppointmentCancellation.render(:attendee, "attendee@test.com", details)
 
       assert email.to == [{"Jane Attendee", "attendee@test.com"}]
     end
@@ -157,7 +167,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -176,7 +187,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
         })
 
       email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -192,7 +204,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
         })
 
       email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -205,7 +218,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -218,7 +232,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -231,7 +246,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -245,7 +261,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -257,7 +274,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -273,7 +291,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
         details = build_appointment_details(%{attendee_locale: locale})
 
         email =
-          AppointmentCancellation.cancellation_email_attendee("a@b.com", details)
+          AppointmentCancellation.render(:attendee, "a@b.com", details)
 
         assert %Swoosh.Email{} = email,
                "Expected valid Swoosh email for locale #{locale}"
@@ -288,7 +306,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
 
     test "German cancellation translates subject and body" do
       details = build_appointment_details(%{attendee_locale: "de"})
-      email = AppointmentCancellation.cancellation_email_attendee("a@b.com", details)
+      email = AppointmentCancellation.render(:attendee, "a@b.com", details)
 
       assert email.subject =~ "Termin abgesagt"
       refute email.subject =~ "Meeting Cancelled"
@@ -297,7 +315,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
 
     test "French cancellation translates subject and body" do
       details = build_appointment_details(%{attendee_locale: "fr"})
-      email = AppointmentCancellation.cancellation_email_attendee("a@b.com", details)
+      email = AppointmentCancellation.render(:attendee, "a@b.com", details)
 
       assert email.subject =~ "Réunion annulée"
       refute email.subject =~ "Meeting Cancelled"
@@ -306,7 +324,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
 
     test "Ukrainian cancellation translates subject and body" do
       details = build_appointment_details(%{attendee_locale: "uk"})
-      email = AppointmentCancellation.cancellation_email_attendee("a@b.com", details)
+      email = AppointmentCancellation.render(:attendee, "a@b.com", details)
 
       assert email.subject =~ "Зустріч скасовано"
       refute email.subject =~ "Meeting Cancelled"
@@ -318,7 +336,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
     test "German locale is honoured end-to-end through ContentBuilder" do
       meeting = build(:meeting, attendee_locale: "de")
       details = ContentBuilder.build_cancellation_details(meeting)
-      email = AppointmentCancellation.cancellation_email_attendee(meeting.attendee_email, details)
+      email = AppointmentCancellation.render(:attendee, meeting.attendee_email, details)
 
       assert email.subject =~ "Termin abgesagt"
       refute email.subject =~ "Meeting Cancelled"
@@ -328,7 +346,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
     test "French locale is honoured end-to-end through ContentBuilder" do
       meeting = build(:meeting, attendee_locale: "fr")
       details = ContentBuilder.build_cancellation_details(meeting)
-      email = AppointmentCancellation.cancellation_email_attendee(meeting.attendee_email, details)
+      email = AppointmentCancellation.render(:attendee, meeting.attendee_email, details)
 
       assert email.subject =~ "Réunion annulée"
       refute email.subject =~ "Meeting Cancelled"
@@ -337,10 +355,37 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
     test "Ukrainian locale is honoured end-to-end through ContentBuilder" do
       meeting = build(:meeting, attendee_locale: "uk")
       details = ContentBuilder.build_cancellation_details(meeting)
-      email = AppointmentCancellation.cancellation_email_attendee(meeting.attendee_email, details)
+      email = AppointmentCancellation.render(:attendee, meeting.attendee_email, details)
 
       assert email.subject =~ "Зустріч скасовано"
       refute email.subject =~ "Meeting Cancelled"
+    end
+  end
+
+  describe "attendee cancellation email uses attendee timezone" do
+    test "HTML body shows attendee-local start time, not raw UTC" do
+      # start_time is 14:00 UTC; attendee is in America/New_York (UTC-5 in January)
+      # so attendee-local time is 09:00, represented here by a distinct DateTime value
+      utc_start = ~U[2026-01-15 14:00:00Z]
+      attendee_local_start = %{utc_start | hour: 9}
+
+      details =
+        build_appointment_details(%{
+          start_time: utc_start,
+          start_time_attendee_tz: attendee_local_start,
+          attendee_timezone: "America/New_York"
+        })
+
+      email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
+
+      formatted_attendee = Formatting.format_time(attendee_local_start, "en")
+      formatted_utc = Formatting.format_time(utc_start, "en")
+
+      assert email.html_body =~ formatted_attendee,
+             "Expected attendee-local time #{formatted_attendee} in HTML body"
+
+      refute email.html_body =~ formatted_utc,
+             "Expected raw UTC time #{formatted_utc} to be absent from HTML body"
     end
   end
 
@@ -349,13 +394,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       organizer_email =
-        AppointmentCancellation.cancellation_email_organizer(
+        AppointmentCancellation.render(
+          :organizer,
           "organizer@example.com",
           details
         )
 
       attendee_email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -367,13 +414,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       organizer_email =
-        AppointmentCancellation.cancellation_email_organizer(
+        AppointmentCancellation.render(
+          :organizer,
           "organizer@example.com",
           details
         )
 
       attendee_email =
-        AppointmentCancellation.cancellation_email_attendee(
+        AppointmentCancellation.render(
+          :attendee,
           "attendee@example.com",
           details
         )
@@ -389,10 +438,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       details = build_appointment_details()
 
       organizer_email =
-        AppointmentCancellation.cancellation_email_organizer("organizer@example.com", details)
+        AppointmentCancellation.render(:organizer, "organizer@example.com", details)
 
       attendee_email =
-        AppointmentCancellation.cancellation_email_attendee("attendee@example.com", details)
+        AppointmentCancellation.render(:attendee, "attendee@example.com", details)
 
       for email <- [organizer_email, attendee_email] do
         assert %Swoosh.Email{} = email

@@ -27,12 +27,12 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
     struct!(MeetingSchema, Map.merge(defaults, overrides))
   end
 
-  describe "ExternalBookingChange.build_email/4" do
+  describe "ExternalBookingChange.render/4" do
     test "builds email for deleted discrepancy" do
       meeting = build_meeting()
 
       email =
-        ExternalBookingChange.build_email(
+        ExternalBookingChange.render(
           meeting,
           "john@example.com",
           :deleted,
@@ -48,7 +48,7 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
       meeting = build_meeting()
 
       email =
-        ExternalBookingChange.build_email(
+        ExternalBookingChange.render(
           meeting,
           "john@example.com",
           :modified,
@@ -63,7 +63,7 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
       meeting = build_meeting(%{organizer_name: "Jane Smith"})
 
       email =
-        ExternalBookingChange.build_email(
+        ExternalBookingChange.render(
           meeting,
           "jane@example.com",
           :deleted,
@@ -77,7 +77,7 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
       meeting = build_meeting(%{organizer_name: nil})
 
       email =
-        ExternalBookingChange.build_email(
+        ExternalBookingChange.render(
           meeting,
           "jane@example.com",
           :deleted,

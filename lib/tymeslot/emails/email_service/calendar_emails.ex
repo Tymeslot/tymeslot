@@ -44,7 +44,8 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
       }
     )
 
-    {html_body, text_body} = CalendarSyncError.render_both(meeting, error_reason)
+    html_body = CalendarSyncError.render(meeting, error_reason)
+    text_body = CalendarSyncError.render_text(meeting, error_reason)
 
     email =
       MjmlEmail.base_email()
@@ -75,7 +76,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
 
     result =
       Delivery.deliver(
-        ExternalBookingChange.build_email(meeting, organizer_email, discrepancy, owner_timezone)
+        ExternalBookingChange.render(meeting, organizer_email, discrepancy, owner_timezone)
       )
 
     Logger.info("External booking change notification sent",
@@ -97,7 +98,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
     )
 
     attendee_email
-    |> CalendarInvitation.invitation_email(invitation_details)
+    |> CalendarInvitation.render(invitation_details)
     |> Delivery.deliver()
   end
 
@@ -112,7 +113,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
     )
 
     attendee_email
-    |> EventUpdateNotification.update_notification_email(update_details)
+    |> EventUpdateNotification.render(update_details)
     |> Delivery.deliver()
   end
 
@@ -126,7 +127,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
       to: meeting.attendee_email
     )
 
-    email = RescheduleRequest.reschedule_request_email(meeting)
+    email = RescheduleRequest.render(meeting)
     Delivery.deliver(email)
   end
 

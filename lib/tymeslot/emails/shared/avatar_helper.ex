@@ -3,7 +3,7 @@ defmodule Tymeslot.Emails.Shared.AvatarHelper do
   Helper functions for generating avatar URLs in email templates.
   """
 
-  alias Tymeslot.Emails.Shared.SharedHelpers
+  alias Tymeslot.Emails.Shared.Sanitise
 
   @doc """
   Generates an avatar URL for an organizer.
@@ -47,7 +47,7 @@ defmodule Tymeslot.Emails.Shared.AvatarHelper do
       |> String.split()
       |> Enum.map_join("", &String.first/1)
       |> String.upcase()
-      |> SharedHelpers.sanitize_for_email()
+      |> Sanitise.sanitize_for_email()
 
     svg = """
     <svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">

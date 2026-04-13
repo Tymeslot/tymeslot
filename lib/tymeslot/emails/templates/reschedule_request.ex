@@ -7,18 +7,23 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   alias Tymeslot.Emails.Shared.{
-    Components,
+    Buttons,
+    Formatting,
+    MeetingComponents,
     MjmlEmail,
-    SharedHelpers,
+    Styles,
     TemplateHelper,
+    Text,
     TimezoneHelper
   }
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  @spec reschedule_request_email(Tymeslot.Meetings.MeetingSchema.t()) ::
+  @intent :cancelled
+
+  @spec render(Tymeslot.Meetings.MeetingSchema.t()) ::
           Swoosh.Email.t()
-  def reschedule_request_email(%Meeting{} = meeting) do
+  def render(%Meeting{reschedule_url: url} = meeting) when is_binary(url) do
     locale = meeting.attendee_locale || "en"
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
@@ -43,35 +48,41 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
       }
 
       mjml_content = """
-      #{Components.title_section("📅 #{dgettext("emails", "Reschedule Request")}",
-      subtitle: dgettext("emails", "Hi %{name}, I need to reschedule our upcoming meeting. Could you please select a new time that works for you?", name: meeting.attendee_name))}
-      <mj-section padding="20px 0">
-        <mj-column>
-          <mj-text font-size="16px" font-weight="600" padding-bottom="10px">
-            #{dgettext("emails", "Cancelled Appointment Details")}
-          </mj-text>
-          #{Components.meeting_details_table(meeting_details, locale)}
-        </mj-column>
-      </mj-section>
-      <mj-section padding="12px 0">
-        <mj-column>
-          <mj-text font-size="16px" color="#3f3f46" line-height="24px" padding-bottom="16px">
-            #{dgettext("emails", "I apologize for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.")}
-          </mj-text>
-          <mj-button href="#{meeting.reschedule_url}" background-color="#7c3aed" color="#ffffff" font-size="16px" font-weight="600" padding="20px 0" inner-padding="12px 30px" border-radius="8px">
-            #{dgettext("emails", "Choose a New Time")}
-          </mj-button>
-          <mj-text font-size="14px" color="#52525b" line-height="20px" padding-top="16px">
-            #{dgettext("emails", "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.")}
-          </mj-text>
-          <mj-text font-size="14px" color="#52525b" padding-top="12px" align="center">
-            #{dgettext("emails", "Thank you for your understanding and flexibility.")}
-          </mj-text>
-        </mj-column>
-      </mj-section>
+      #{Text.section_title(dgettext("emails", "Cancelled Appointment Details"))}
+      #{MeetingComponents.meeting_details_table(meeting_details, locale)}
+
+      <mj-text font-size="16px" color="#{Styles.ink_soft()}" line-height="24px" padding="16px 0">
+        #{dgettext("emails", "I apologise for any inconvenience this may cause. Your current appointment has been cancelled, and I'd like to help you reschedule at your earliest convenience.")}
+      </mj-text>
+
+      #{Buttons.action_button(@intent, dgettext("emails", "Choose a New Time"), meeting.reschedule_url, full_width: true, size: :large)}
+
+      <mj-text font-size="14px" color="#{Styles.ink_muted()}" line-height="20px" padding="16px 0 0 0">
+        #{dgettext("emails", "Once you select a new slot, you'll receive a confirmation email with the updated details. If you have any questions or need to discuss alternative options, please don't hesitate to reach out.")}
+      </mj-text>
+
+      #{Text.centered_text(dgettext("emails", "Thank you for your understanding and flexibility."), color: Styles.ink_muted(), font_size: "14px")}
       """
 
-      html_body = TemplateHelper.compile_system_template(mjml_content)
+      html_body =
+        TemplateHelper.compile_system_template(
+          mjml_content,
+          dgettext("emails", "Reschedule Request"),
+          dgettext(
+            "emails",
+            "Hi %{name}, I need to reschedule our upcoming meeting. Could you please select a new time that works for you?",
+            name: meeting.attendee_name
+          ),
+          intent: @intent,
+          eyebrow: dgettext("emails", "Reschedule"),
+          stage_title: dgettext("emails", "Let's find a new time"),
+          stage_subtitle:
+            dgettext(
+              "emails",
+              "Hi %{name}, I need to reschedule our upcoming meeting.",
+              name: meeting.attendee_name
+            )
+        )
 
       MjmlEmail.base_email()
       |> to({meeting.attendee_name, meeting.attendee_email})
@@ -79,7 +90,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
       |> subject(
         dgettext("emails", "Reschedule Request: %{title} - %{date}",
           title: meeting.title,
-          date: SharedHelpers.format_date_short(attendee_time, locale)
+          date: Formatting.format_date_short(attendee_time, locale)
         )
       )
       |> html_body(html_body)
@@ -96,9 +107,9 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequest do
     #{dgettext("emails", "I need to reschedule our upcoming meeting. Could you please select a new time that works for you?")}
 
     #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
-    #{dgettext("emails", "Date:")} #{SharedHelpers.format_date_short(details.date, locale)}
-    #{dgettext("emails", "Duration:")} #{SharedHelpers.format_duration(details.duration, locale)}
-    #{dgettext("emails", "Location:")} #{SharedHelpers.format_location(details)}
+    #{dgettext("emails", "Date:")} #{Formatting.format_date_short(details.date, locale)}
+    #{dgettext("emails", "Duration:")} #{Formatting.format_duration(details.duration, locale)}
+    #{dgettext("emails", "Location:")} #{Formatting.format_location(details)}
     #{dgettext("emails", "Type:")} #{details.meeting_type}
     #{dgettext("emails", "Timezone:")} #{details.timezone}
 

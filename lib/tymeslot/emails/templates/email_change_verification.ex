@@ -3,46 +3,89 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
   Email template for email change verification.
   Sent to the NEW email address to verify ownership.
   """
-  alias Tymeslot.Emails.Shared.{Components, SharedHelpers, Styles, TemplateHelper}
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Tymeslot.Emails.Shared.{Buttons, Callouts, Sanitise, Styles, TemplateHelper, Text}
+
+  # A confirmation-style action to finalise an account change.
+  @intent :confirmed
 
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
   def render(user, new_email, verification_url) do
+    name = user.name || user.email
+
     mjml_content = """
-    #{Components.title_section("Verify Your New Email Address")}
+    #{Text.centered_text(dgettext("emails", "Hi %{name},", name: name),
+    font_size: "16px",
+    color: Styles.ink(),
+    padding: "8px 0 4px 0")}
 
-    <mj-text font-size="16px" color="#{Styles.text_color(:secondary)}" line-height="24px" padding-bottom="24px">
-      Hi #{SharedHelpers.sanitize_for_email(user.name || user.email)},
-    </mj-text>
+    #{Text.centered_text(dgettext("emails", "You asked to change the email address on your Tymeslot account. Confirm the new address below to finish the switch."),
+    font_size: "15px",
+    color: Styles.ink_soft(),
+    padding: "0 0 22px 0")}
 
-    <mj-text font-size="16px" color="#{Styles.text_color(:secondary)}" line-height="24px" padding-bottom="16px">
-      You've requested to change your Tymeslot email address to <strong>#{SharedHelpers.sanitize_for_email(new_email)}</strong>.
-    </mj-text>
+    #{new_email_card(new_email)}
 
-    <mj-text font-size="16px" color="#{Styles.text_color(:secondary)}" line-height="24px" padding-bottom="32px">
-      To confirm this change, please click the button below to verify that you have access to this email address.
-    </mj-text>
+    #{Buttons.action_button(@intent, dgettext("emails", "Verify New Email Address"), verification_url, full_width: true, size: :large)}
 
-    #{Components.action_button("Verify New Email Address", verification_url)}
+    #{Callouts.alert_box(@intent,
+    dgettext("emails", "This link expires in 24 hours. Once confirmed, you'll sign in with your new email address."),
+    title: dgettext("emails", "Heads up"))}
 
-    #{Components.alert_box("info", "This verification link will expire in 24 hours. After verification, your email will be updated and you'll need to use the new email to sign in.")}
+    #{Text.divider(margin: "24px 0 16px 0")}
 
-    <mj-text font-size="14px" color="#{Styles.text_color(:muted)}" padding-top="32px" line-height="20px">
-      <strong>Important:</strong> If you didn't request this email change, please ignore this message. Your account will remain unchanged.
-    </mj-text>
+    #{Text.centered_text(dgettext("emails", "Didn't request this change? You can safely ignore this email — nothing will happen to your account."),
+    font_size: "13px",
+    color: Styles.ink_muted(),
+    padding: "0 0 14px 0")}
 
-    #{Components.divider()}
-
-    <mj-text font-size="13px" color="#{Styles.text_color(:muted)}" line-height="20px">
-      Having trouble with the button? Copy and paste this link into your browser:
-    </mj-text>
-    <mj-text font-size="12px" padding-top="8px">
-      <a href="#{verification_url}" style="color: #14b8a6; text-decoration: underline; word-break: break-all;">
-        #{verification_url}
-      </a>
-    </mj-text>
+    #{Text.troubleshooting_link(verification_url)}
     """
 
-    TemplateHelper.compile_system_template(mjml_content, "Email Change Verification")
+    TemplateHelper.compile_system_template(
+      mjml_content,
+      dgettext("emails", "Verify your new email address"),
+      dgettext("emails", "Confirm the new email address on your Tymeslot account."),
+      intent: @intent,
+      eyebrow: dgettext("emails", "Verify"),
+      stage_title: dgettext("emails", "Confirm your new email"),
+      stage_subtitle: dgettext("emails", "One click and the switch is done.")
+    )
+  end
+
+  # A prominent card that pulls the new email address out of the body copy
+  # — gives the reader a single unambiguous anchor to visually verify.
+  defp new_email_card(email) do
+    safe_email = Sanitise.sanitize_for_email(email)
+
+    """
+    <mj-section
+      padding="0 0 22px 0"
+    >
+      <mj-column>
+        <mj-text
+          font-size="11px"
+          font-weight="700"
+          color="#{Styles.ink_muted()}"
+          letter-spacing="0.14em"
+          text-transform="uppercase"
+          align="center"
+          padding="0 0 10px 0"
+          css-class="mobile-eyebrow"
+        >
+          #{dgettext("emails", "New email address")}
+        </mj-text>
+        <mj-text
+          align="center"
+          padding="0"
+          font-size="0"
+        >
+          <span style="display: inline-block; padding: 14px 22px; border: 1px solid #{Styles.hairline()}; border-radius: #{Styles.radius(:md)}; background: #{Styles.canvas_soft()}; font-size: 18px; font-weight: 700; color: #{Styles.ink()}; letter-spacing: -0.01em; word-break: break-all; max-width: 100%;">#{safe_email}</span>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    """
   end
 
   @spec render_text(Tymeslot.Emails.EmailService.user_map(), String.t(), String.t()) :: String.t()
@@ -50,20 +93,18 @@ defmodule Tymeslot.Emails.Templates.EmailChangeVerification do
     name = user.name || user.email
 
     """
-    Verify Your New Email Address
+    #{dgettext("emails", "Verify your new email address")}
 
-    Hi #{name},
+    #{dgettext("emails", "Hi %{name},", name: name)}
 
-    You've requested to change your Tymeslot email address to #{new_email}.
+    #{dgettext("emails", "You asked to change the email address on your Tymeslot account to %{new_email}.", new_email: new_email)}
 
-    To confirm this change, please visit the link below to verify that you have access to this email address.
-
-    Verify New Email Address:
+    #{dgettext("emails", "To confirm this change, visit the link below:")}
     #{verification_url}
 
-    This verification link will expire in 24 hours. After verification, your email will be updated and you'll need to use the new email to sign in.
+    #{dgettext("emails", "This link expires in 24 hours. Once confirmed, you'll sign in with your new email address.")}
 
-    Important: If you didn't request this email change, please ignore this message. Your account will remain unchanged.
+    #{dgettext("emails", "Didn't request this change? You can safely ignore this email — nothing will happen to your account.")}
     """
   end
 end

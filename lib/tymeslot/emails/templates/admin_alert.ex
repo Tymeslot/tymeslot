@@ -4,18 +4,14 @@ defmodule Tymeslot.Emails.Templates.AdminAlert do
 
   Renders a single, unified template for every alert type registered in
   `Tymeslot.Infrastructure.AdminAlerts.AlertTypes`. The alert's severity is
-  translated into an alert-box colour, and any enriched metadata is rendered
+  translated into an alert-box intent, and any enriched metadata is rendered
   as a key/value table so self-hosters and operators can copy the report
   verbatim into an issue tracker.
   """
 
-  alias Tymeslot.Emails.Shared.{Components, TemplateHelper}
+  alias Tymeslot.Emails.Shared.{Callouts, Styles, TemplateHelper, Text}
 
-  @severity_to_alert_type %{
-    info: "info",
-    warning: "warning",
-    error: "error"
-  }
+  @intent :alert
 
   @doc """
   Renders the HTML body for an admin alert email.
@@ -27,28 +23,28 @@ defmodule Tymeslot.Emails.Templates.AdminAlert do
           metadata :: map()
         ) :: String.t()
   def render(category, severity, message, metadata) do
-    alert_type = Map.get(@severity_to_alert_type, severity, "warning")
+    callout_intent = severity_to_intent(severity)
 
     mjml_content = """
-    #{Components.alert_box(alert_type, message, title: "#{category} alert")}
+    #{Callouts.alert_box(callout_intent, message, title: "#{category} alert")}
 
-    <mj-section background-color="#ffffff" border-radius="8px" padding="20px">
-      <mj-column>
-        #{Components.title_section("Context")}
+    #{Text.title_section("Context")}
 
-        #{metadata_table(metadata)}
+    #{metadata_table(metadata)}
 
-        #{Components.divider()}
+    #{Text.divider()}
 
-        #{Components.system_footer_note("This is an automated alert from Tymeslot. If you are self-hosting and would like to help debug this issue, you can share the report above (redacting any sensitive values) via a GitHub issue at https://github.com/Tymeslot/tymeslot/issues.")}
-      </mj-column>
-    </mj-section>
+    #{Text.system_footer_note("This is an automated alert from Tymeslot. If you are self-hosting and would like to help debug this issue, you can share the report above (redacting any sensitive values) via a GitHub issue at https://github.com/Tymeslot/tymeslot/issues.")}
     """
 
     TemplateHelper.compile_system_template(
       mjml_content,
       "Tymeslot Admin Alert",
-      "#{category}: #{message}"
+      "#{category}: #{message}",
+      intent: @intent,
+      eyebrow: "Admin",
+      stage_title: "#{category} alert",
+      stage_subtitle: message
     )
   end
 
@@ -80,11 +76,19 @@ defmodule Tymeslot.Emails.Templates.AdminAlert do
     """
   end
 
+  # --- Severity mapping -----------------------------------------------------
+
+  @spec severity_to_intent(:info | :warning | :error) :: atom()
+  defp severity_to_intent(:info), do: :confirmed
+  defp severity_to_intent(:warning), do: :alert
+  defp severity_to_intent(:error), do: :cancelled
+  defp severity_to_intent(_other), do: :alert
+
   # --- Metadata rendering ---------------------------------------------------
 
   defp metadata_table(metadata) when map_size(metadata) == 0 do
     """
-    <mj-text font-size="14px" color="#71717a">
+    <mj-text font-size="14px" color="#{Styles.ink_muted()}">
       <em>No additional context.</em>
     </mj-text>
     """
@@ -97,7 +101,7 @@ defmodule Tymeslot.Emails.Templates.AdminAlert do
       |> Enum.map_join("\n", &metadata_row/1)
 
     """
-    <mj-text font-size="14px" color="#3f3f46" line-height="1.6">
+    <mj-text font-size="14px" color="#{Styles.ink()}" line-height="1.6">
       <table role="presentation" width="100%" cellpadding="4" cellspacing="0" style="border-collapse: collapse;">
         #{rows}
       </table>
@@ -108,8 +112,8 @@ defmodule Tymeslot.Emails.Templates.AdminAlert do
   defp metadata_row({key, value}) do
     """
     <tr>
-      <td style="vertical-align: top; padding: 4px 12px 4px 0; color: #71717a; font-weight: 600; white-space: nowrap;">#{html_escape(to_string(key))}</td>
-      <td style="vertical-align: top; padding: 4px 0; color: #3f3f46; word-break: break-word;"><code style="font-size: 13px;">#{html_escape(format_value(value))}</code></td>
+      <td style="vertical-align: top; padding: 4px 12px 4px 0; color: #{Styles.ink_muted()}; font-weight: 600; white-space: nowrap;">#{html_escape(to_string(key))}</td>
+      <td style="vertical-align: top; padding: 4px 0; color: #{Styles.ink()}; word-break: break-word;"><code style="font-size: 13px;">#{html_escape(format_value(value))}</code></td>
     </tr>
     """
   end

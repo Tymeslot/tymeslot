@@ -7,10 +7,8 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
 
   alias Tymeslot.Emails.Templates.{
     AppointmentCancellation,
-    AppointmentConfirmationAttendee,
-    AppointmentConfirmationOrganizer,
-    AppointmentReminderAttendee,
-    AppointmentReminderOrganizer
+    AppointmentConfirmation,
+    AppointmentReminder
   }
 
   @doc """
@@ -22,9 +20,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_confirmation_to_organizer(organizer_email, appointment_details) do
-    organizer_email
-    |> AppointmentConfirmationOrganizer.confirmation_email(appointment_details)
-    |> Delivery.deliver()
+    Delivery.deliver(
+      AppointmentConfirmation.render(:organizer, organizer_email, appointment_details)
+    )
   end
 
   @doc """
@@ -36,9 +34,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_confirmation_to_attendee(attendee_email, appointment_details) do
-    attendee_email
-    |> AppointmentConfirmationAttendee.confirmation_email(appointment_details)
-    |> Delivery.deliver()
+    Delivery.deliver(
+      AppointmentConfirmation.render(:attendee, attendee_email, appointment_details)
+    )
   end
 
   @doc """
@@ -80,9 +78,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_reminder_to_organizer(organizer_email, appointment_details) do
-    organizer_email
-    |> AppointmentReminderOrganizer.reminder_email(appointment_details)
-    |> Delivery.deliver()
+    Delivery.deliver(AppointmentReminder.render(:organizer, organizer_email, appointment_details))
   end
 
   @doc """
@@ -94,9 +90,7 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
         ) ::
           {:ok, any()} | {:error, any()}
   def send_appointment_reminder_to_attendee(attendee_email, appointment_details) do
-    attendee_email
-    |> AppointmentReminderAttendee.reminder_email(appointment_details)
-    |> Delivery.deliver()
+    Delivery.deliver(AppointmentReminder.render(:attendee, attendee_email, appointment_details))
   end
 
   @doc """
@@ -178,9 +172,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     )
 
     result =
-      attendee_email
-      |> AppointmentCancellation.cancellation_email_attendee(appointment_details)
-      |> Delivery.deliver()
+      Delivery.deliver(
+        AppointmentCancellation.render(:attendee, attendee_email, appointment_details)
+      )
 
     Logger.info("Cancellation email sent to attendee",
       sent: match?({:ok, _}, result)
@@ -203,9 +197,9 @@ defmodule Tymeslot.Emails.EmailService.AppointmentEmails do
     )
 
     result =
-      organizer_email
-      |> AppointmentCancellation.cancellation_email_organizer(appointment_details)
-      |> Delivery.deliver()
+      Delivery.deliver(
+        AppointmentCancellation.render(:organizer, organizer_email, appointment_details)
+      )
 
     Logger.info("Cancellation email sent to organizer",
       sent: match?({:ok, _}, result)

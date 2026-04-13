@@ -51,6 +51,7 @@ defmodule Tymeslot.Factory do
       attendee_message: "Looking forward to our meeting!",
       attendee_timezone: "America/New_York",
       attendee_locale: "en",
+      reschedule_url: sequence(:reschedule_url, &"https://example.com/reschedule/token#{&1}"),
       status: "confirmed"
     }
   end

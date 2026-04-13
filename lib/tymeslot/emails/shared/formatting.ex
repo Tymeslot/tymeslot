@@ -1,12 +1,10 @@
-defmodule Tymeslot.Emails.Shared.SharedHelpers do
+defmodule Tymeslot.Emails.Shared.Formatting do
   @moduledoc """
-  Shared helper functions for email templates.
-  Centralizes common formatting and utility functions used across all email templates.
+  Date, time, weekday, duration, currency, location, and general text formatting
+  helpers for Tymeslot emails.
   """
 
-  alias Phoenix.HTML
   alias Tymeslot.Utils.DateTimeUtils
-  alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Helpers.LocaleFormat
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -86,6 +84,23 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   end
 
   @doc """
+  Formats the weekday name for a date, locale-aware and uppercased.
+  Example (en): "WEDNESDAY", (de): "MITTWOCH"
+  """
+  @spec format_weekday(Date.t() | DateTime.t() | NaiveDateTime.t(), String.t()) :: String.t()
+  def format_weekday(%Date{} = date, locale) do
+    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      date |> Date.day_of_week() |> weekday_name() |> String.upcase()
+    end)
+  end
+
+  def format_weekday(%DateTime{} = datetime, locale),
+    do: datetime |> DateTime.to_date() |> format_weekday(locale)
+
+  def format_weekday(%NaiveDateTime{} = datetime, locale),
+    do: datetime |> NaiveDateTime.to_date() |> format_weekday(locale)
+
+  @doc """
   Formats a time with timezone.
   Example: "02:30 PM PST"
   """
@@ -126,22 +141,6 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   end
 
   @doc """
-  Gets the application URL from configuration.
-  """
-  @spec get_app_url() :: String.t()
-  def get_app_url do
-    Endpoint.url()
-  end
-
-  @doc """
-  Builds a full URL for a given path.
-  """
-  @spec build_url(String.t()) :: String.t()
-  def build_url(path) do
-    "#{get_app_url()}#{path}"
-  end
-
-  @doc """
   Formats a meeting duration.
   Example: "30 minutes" or "1 hour"
   """
@@ -161,84 +160,6 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   end
 
   @doc """
-  Generates calendar links for various providers.
-  """
-  @spec calendar_links(%{
-          required(:title) => String.t(),
-          required(:start_time) => DateTime.t(),
-          required(:end_time) => DateTime.t(),
-          required(:description) => String.t(),
-          required(:location) => String.t()
-        }) :: %{
-          required(:google) => String.t(),
-          required(:outlook) => String.t(),
-          required(:yahoo) => String.t()
-        }
-  def calendar_links(%{
-        title: title,
-        start_time: start_time,
-        end_time: end_time,
-        description: description,
-        location: location
-      }) do
-    # Format times for calendar URLs
-    start_str = format_calendar_time(start_time)
-    end_str = format_calendar_time(end_time)
-
-    %{
-      google: build_google_calendar_url(title, start_str, end_str, description, location),
-      outlook: build_outlook_calendar_url(title, start_str, end_str, description, location),
-      yahoo: build_yahoo_calendar_url(title, start_str, end_str, description, location)
-    }
-  end
-
-  # Private functions
-
-  defp format_calendar_time(%DateTime{} = datetime) do
-    datetime
-    |> DateTime.to_naive()
-    |> NaiveDateTime.to_iso8601()
-    |> String.replace(~r/[-:]/, "")
-    |> String.replace(~r/\.\d+/, "")
-  end
-
-  defp build_google_calendar_url(title, start_time, end_time, description, location) do
-    params = %{
-      action: "TEMPLATE",
-      text: title,
-      dates: "#{start_time}/#{end_time}",
-      details: description,
-      location: location
-    }
-
-    "https://calendar.google.com/calendar/render?#{URI.encode_query(params)}"
-  end
-
-  defp build_outlook_calendar_url(title, start_time, end_time, description, location) do
-    params = %{
-      subject: title,
-      startdt: start_time,
-      enddt: end_time,
-      body: description,
-      location: location
-    }
-
-    "https://outlook.live.com/calendar/0/deeplink/compose?#{URI.encode_query(params)}"
-  end
-
-  defp build_yahoo_calendar_url(title, start_time, end_time, description, _location) do
-    params = %{
-      v: "60",
-      title: title,
-      st: start_time,
-      et: end_time,
-      desc: description
-    }
-
-    "https://calendar.yahoo.com/?#{URI.encode_query(params)}"
-  end
-
-  @doc """
   Translates a location label based on location_type.
   Must be called within a `Gettext.with_locale` block to produce the correct locale.
   Falls back to the raw location string, or a translated default if nil.
@@ -253,6 +174,24 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
   def format_location(details), do: details[:location] || dgettext("emails", "TBD")
 
   @doc """
+  Formats currency based on cents and currency code.
+  Defaults to EUR (€) if currency is not provided or recognized.
+  """
+  @spec format_currency(integer(), String.t() | nil) :: String.t()
+  def format_currency(cents, currency \\ "eur") do
+    symbol =
+      case String.downcase(currency || "eur") do
+        "usd" -> "$"
+        "gbp" -> "£"
+        "jpy" -> "¥"
+        _other -> "€"
+      end
+
+    amount = cents / 100
+    "#{symbol}#{:erlang.float_to_binary(amount / 1, decimals: 2)}"
+  end
+
+  @doc """
   Truncates text to a maximum length with ellipsis.
   """
   @spec truncate(String.t(), integer()) :: String.t()
@@ -264,54 +203,15 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
     end
   end
 
-  @doc """
-  Returns the brand logo as a Base64 data URI.
-  This ensures the logo is always displayed in email clients without needing
-  to fetch it from a (potentially unreachable) development server.
-  """
-  @spec get_logo_data_uri() :: String.t()
-  def get_logo_data_uri do
-    case :ets.lookup(:tymeslot_email_assets, :logo_data_uri) do
-      [{:logo_data_uri, data_uri}] ->
-        data_uri
+  # Private functions
 
-      [] ->
-        path =
-          Path.join([
-            :code.priv_dir(:tymeslot),
-            "static",
-            "images",
-            "brand",
-            "logo-with-text.svg"
-          ])
-
-        data_uri =
-          case File.read(path) do
-            {:ok, content} ->
-              encoded = Base.encode64(content)
-              "data:image/svg+xml;base64,#{encoded}"
-
-            _other ->
-              ""
-          end
-
-        :ets.insert(:tymeslot_email_assets, {:logo_data_uri, data_uri})
-        data_uri
-    end
-  end
-
-  @doc """
-  Sanitizes text for email display.
-  """
-  @spec sanitize_for_email(String.t() | nil) :: String.t()
-  def sanitize_for_email(nil), do: ""
-
-  def sanitize_for_email(text) when is_binary(text) do
-    text
-    |> String.trim()
-    |> HTML.html_escape()
-    |> HTML.safe_to_string()
-  end
+  defp weekday_name(1), do: dgettext("emails", "Monday")
+  defp weekday_name(2), do: dgettext("emails", "Tuesday")
+  defp weekday_name(3), do: dgettext("emails", "Wednesday")
+  defp weekday_name(4), do: dgettext("emails", "Thursday")
+  defp weekday_name(5), do: dgettext("emails", "Friday")
+  defp weekday_name(6), do: dgettext("emails", "Saturday")
+  defp weekday_name(7), do: dgettext("emails", "Sunday")
 
   defp parse_duration_minutes(minutes) when is_integer(minutes) and minutes > 0, do: minutes
 
@@ -343,23 +243,5 @@ defmodule Tymeslot.Emails.Shared.SharedHelpers do
     mins = rem(m, 60)
 
     "#{h} #{dngettext("emails", "hour", "hours", h)} #{mins} #{dngettext("emails", "minute", "minutes", mins)}"
-  end
-
-  @doc """
-  Formats currency based on cents and currency code.
-  Defaults to EUR (€) if currency is not provided or recognized.
-  """
-  @spec format_currency(integer(), String.t() | nil) :: String.t()
-  def format_currency(cents, currency \\ "eur") do
-    symbol =
-      case String.downcase(currency || "eur") do
-        "usd" -> "$"
-        "gbp" -> "£"
-        "jpy" -> "¥"
-        _other -> "€"
-      end
-
-    amount = cents / 100
-    "#{symbol}#{:erlang.float_to_binary(amount / 1, decimals: 2)}"
   end
 end

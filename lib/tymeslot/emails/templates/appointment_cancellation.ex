@@ -8,44 +8,65 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
   alias Tymeslot.Locales
 
   alias Tymeslot.Emails.Shared.{
-    Components,
+    Buttons,
+    Formatting,
+    MeetingComponents,
     MjmlEmail,
-    SharedHelpers,
     TemplateHelper,
-    TextBodyHelper
+    Text,
+    TextBodyHelper,
+    Urls
   }
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  @spec cancellation_email_attendee(
+  # A cancellation email communicates a negative state change.
+  @intent :cancelled
+
+  @spec render(
+          :attendee | :organizer,
           String.t(),
           Tymeslot.Emails.EmailService.appointment_details()
-        ) :: Swoosh.Email.t()
-  def cancellation_email_attendee(attendee_email, appointment_details) do
+        ) ::
+          Swoosh.Email.t()
+  def render(:attendee, attendee_email, appointment_details) do
     locale = Map.get(appointment_details, :attendee_locale, "en")
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      meeting_details = %{
+        date: appointment_details.date,
+        start_time: appointment_details.start_time_attendee_tz,
+        duration: appointment_details.duration,
+        location: appointment_details.location,
+        location_type: Map.get(appointment_details, :location_type),
+        meeting_type: appointment_details.meeting_type,
+        timezone: appointment_details.attendee_timezone
+      }
+
       mjml_content = """
-      #{Components.alert_box("error",
-      dgettext("emails", "Hi %{name}, I wanted to let you know that our appointment has been cancelled.", name: appointment_details.attendee_name),
-      icon: "✕",
-      title: dgettext("emails", "Meeting Cancelled"))}
+      #{Text.centered_text(dgettext("emails", "Hi %{name} — our appointment has been cancelled. I'm sorry for the inconvenience.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
 
-      #{Components.section_title(dgettext("emails", "Meeting with %{name}", name: appointment_details.organizer_name), padding: "24px 0 16px 0")}
+      #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
-      #{Components.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type}, locale)}
+      #{Text.centered_text(dgettext("emails", "Would you like to schedule a new appointment?"), padding: "24px 0 10px 0")}
+      #{Buttons.action_button(:confirmed, dgettext("emails", "Schedule New Appointment"), Urls.get_app_url(), full_width: true)}
 
-      #{Components.centered_text(dgettext("emails", "Would you like to schedule a new appointment?"), padding: "24px 0 8px 0")}
-      #{Components.action_button(dgettext("emails", "Schedule New Appointment"), SharedHelpers.get_app_url(), color: "primary", full_width: true)}
-
-      #{Components.system_footer_note(dgettext("emails", "This time slot is now available for booking again."))}
-      #{Components.system_footer_note(dgettext("emails", "If you have any questions, please don't hesitate to reach out."))}
+      #{Text.system_footer_note(dgettext("emails", "This time slot is now available for booking again."))}
+      #{Text.system_footer_note(dgettext("emails", "If you have any questions, please don't hesitate to reach out."))}
       """
 
-      organizer_details = TemplateHelper.build_organizer_details(appointment_details)
+      organizer_details =
+        TemplateHelper.build_organizer_details(appointment_details,
+          intent: @intent,
+          eyebrow: dgettext("emails", "Cancelled"),
+          stage_title: dgettext("emails", "Meeting cancelled"),
+          stage_subtitle:
+            dgettext("emails", "with %{name}", name: appointment_details.organizer_name)
+        )
+
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
-      date_short = SharedHelpers.format_date_short(appointment_details.date, locale)
+      date_short = Formatting.format_date_short(appointment_details.date, locale)
 
       MjmlEmail.base_email()
       |> to({appointment_details.attendee_name, attendee_email})
@@ -60,34 +81,37 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     end)
   end
 
-  @spec cancellation_email_organizer(
-          String.t(),
-          Tymeslot.Emails.EmailService.appointment_details()
-        ) :: Swoosh.Email.t()
-  def cancellation_email_organizer(organizer_email, appointment_details) do
-    Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(), fn ->
+  def render(:organizer, organizer_email, appointment_details) do
+    Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(appointment_details), fn ->
       mjml_content = """
-      #{Components.alert_box("error",
-      dgettext("emails", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name),
-      icon: "✕",
-      title: dgettext("emails", "Meeting Cancelled"))}
+      #{Text.centered_text(dgettext("emails", "The appointment with %{name} has been cancelled.", name: appointment_details.attendee_name), padding: "8px 0 16px 0")}
 
-      #{Components.section_title(dgettext("emails", "Meeting with %{name}", name: appointment_details.attendee_name), padding: "24px 0 16px 0")}
+      #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type}, organizer_locale(appointment_details))}
 
-      #{Components.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type}, organizer_locale())}
-
-      #{Components.system_footer_note(dgettext("emails", "Your calendar has been updated to reflect this cancellation."))}
-      #{Components.system_footer_note(dgettext("emails", "The attendee has been notified of the cancellation."))}
+      #{Text.system_footer_note(dgettext("emails", "Your calendar has been updated to reflect this cancellation."))}
+      #{Text.system_footer_note(dgettext("emails", "The attendee has been notified of the cancellation."))}
       """
 
-      organizer_details = TemplateHelper.build_organizer_details(appointment_details)
+      organizer_details =
+        TemplateHelper.build_organizer_details(appointment_details,
+          intent: @intent,
+          eyebrow: dgettext("emails", "Cancelled"),
+          stage_title: dgettext("emails", "Meeting cancelled"),
+          stage_subtitle:
+            dgettext("emails", "with %{name}", name: appointment_details.attendee_name)
+        )
+
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
       MjmlEmail.base_email()
       |> to({appointment_details.organizer_name, organizer_email})
       |> subject(
         dgettext("emails", "Meeting Cancelled - %{date} with %{name}",
-          date: SharedHelpers.format_date_short(appointment_details.date, organizer_locale()),
+          date:
+            Formatting.format_date_short(
+              appointment_details.date,
+              organizer_locale(appointment_details)
+            ),
           name: appointment_details.attendee_name
         )
       )
@@ -113,19 +137,26 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     #{dgettext("emails", "This time slot is now available for booking again.")}
 
     #{dgettext("emails", "Would you like to schedule a new appointment?")}
-    #{dgettext("emails", "Visit:")} #{SharedHelpers.get_app_url()}
+    #{dgettext("emails", "Visit:")} #{Urls.get_app_url()}
 
     #{dgettext("emails", "If you have any questions, please don't hesitate to reach out.")}
     """
   end
 
-  defp organizer_locale, do: Locales.default_locale()
+  defp organizer_locale(_appointment_details), do: Locales.default_locale()
 
   defp text_body_organizer(appointment_details) do
     meeting_details =
-      TextBodyHelper.format_meeting_details(appointment_details, organizer_locale())
+      TextBodyHelper.format_meeting_details(
+        appointment_details,
+        organizer_locale(appointment_details)
+      )
 
-    attendee_info = TextBodyHelper.format_attendee_info(appointment_details, organizer_locale())
+    attendee_info =
+      TextBodyHelper.format_attendee_info(
+        appointment_details,
+        organizer_locale(appointment_details)
+      )
 
     """
     #{dgettext("emails", "Meeting Cancelled")}

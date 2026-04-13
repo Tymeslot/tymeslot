@@ -148,7 +148,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
             )
 
             # Send email notification to user
-            send_refund_email(subscription, total_refunded, should_revoke)
+            send_refund_email(subscription, total_refunded, should_revoke, charge)
 
             # Broadcast event for real-time UI updates
             broadcast_refund_event(subscription.user_id, event["id"], should_revoke)
@@ -244,12 +244,14 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     )
   end
 
-  defp send_refund_email(subscription, refund_amount_cents, _revoked) do
+  defp send_refund_email(subscription, refund_amount_cents, _revoked, charge) do
+    currency = Map.get(charge, "currency") || Map.get(charge, :currency) || "eur"
+
     WebhookUtils.deliver_user_email(
       subscription.user_id,
       :refund_processed_template,
       :refund_processed_email,
-      [refund_amount_cents],
+      [refund_amount_cents, currency],
       success_msg: "Refund notification sent to user #{subscription.user_id}",
       error_msg: "Failed to send refund notification: ",
       standalone_msg: "Refund processed template not configured (Standalone mode)"

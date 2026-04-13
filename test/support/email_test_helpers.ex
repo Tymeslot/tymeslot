@@ -6,7 +6,7 @@ defmodule Tymeslot.EmailTestHelpers do
   ensuring consistent test data across all email-related tests.
   """
 
-  alias Tymeslot.Emails.Shared.SharedHelpers
+  alias Tymeslot.Emails.Shared.Formatting
 
   @doc """
   Builds appointment details map for testing email templates.
@@ -129,7 +129,7 @@ defmodule Tymeslot.EmailTestHelpers do
   """
   @spec format_date_short(Date.t()) :: String.t()
   def format_date_short(date) do
-    SharedHelpers.format_date_short(date)
+    Formatting.format_date_short(date)
   end
 
   @doc """
@@ -137,7 +137,7 @@ defmodule Tymeslot.EmailTestHelpers do
   """
   @spec format_time(DateTime.t()) :: String.t()
   def format_time(datetime) do
-    SharedHelpers.format_time(datetime)
+    Formatting.format_time(datetime)
   end
 
   @doc """

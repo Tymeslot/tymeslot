@@ -4,10 +4,10 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
 
   alias Tymeslot.Emails.Templates.CalendarInvitation
 
-  describe "invitation_email/2" do
+  describe "render/2" do
     test "returns a valid Swoosh email" do
       details = build_invitation_details()
-      email = CalendarInvitation.invitation_email("guest@example.com", details)
+      email = CalendarInvitation.render("guest@example.com", details)
 
       assert %Swoosh.Email{} = email
       assert email.subject != nil
@@ -18,7 +18,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
 
     test "subject contains event title and formatted date" do
       details = build_invitation_details(%{event_title: "Sprint Planning"})
-      email = CalendarInvitation.invitation_email("guest@example.com", details)
+      email = CalendarInvitation.render("guest@example.com", details)
 
       assert email.subject =~ "Sprint Planning"
       assert email.subject =~ "Invitation"
@@ -26,7 +26,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
 
     test "sets recipient as plain email without name tuple" do
       email =
-        CalendarInvitation.invitation_email(
+        CalendarInvitation.render(
           "guest@example.com",
           build_invitation_details()
         )
@@ -41,7 +41,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
           event_title: "Architecture Review"
         })
 
-      email = CalendarInvitation.invitation_email("guest@example.com", details)
+      email = CalendarInvitation.render("guest@example.com", details)
 
       assert email.html_body =~ "Dr. Alice Chen"
       assert email.html_body =~ "Architecture Review"
@@ -49,14 +49,14 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
 
     test "HTML body contains invitation heading" do
       details = build_invitation_details()
-      email = CalendarInvitation.invitation_email("guest@example.com", details)
+      email = CalendarInvitation.render("guest@example.com", details)
 
       assert email.html_body =~ "Invited"
     end
 
     test "includes ICS calendar attachment" do
       details = build_invitation_details()
-      email = CalendarInvitation.invitation_email("guest@example.com", details)
+      email = CalendarInvitation.render("guest@example.com", details)
 
       assert length(email.attachments) == 1
       attachment = hd(email.attachments)
@@ -71,7 +71,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
           event_title: "Team Standup"
         })
 
-      email = CalendarInvitation.invitation_email("guest@example.com", details)
+      email = CalendarInvitation.render("guest@example.com", details)
 
       assert email.text_body =~ "Sarah Johnson"
       assert email.text_body =~ "Team Standup"
@@ -79,7 +79,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
 
     test "handles nil location gracefully" do
       details = build_invitation_details(%{location: nil})
-      email = CalendarInvitation.invitation_email("guest@example.com", details)
+      email = CalendarInvitation.render("guest@example.com", details)
 
       assert %Swoosh.Email{} = email
       assert email.html_body != nil
@@ -88,7 +88,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
 
     test "handles nil description gracefully" do
       details = build_invitation_details(%{description: nil})
-      email = CalendarInvitation.invitation_email("guest@example.com", details)
+      email = CalendarInvitation.render("guest@example.com", details)
 
       assert %Swoosh.Email{} = email
       assert email.html_body != nil
@@ -101,7 +101,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
           event_title: "<script>alert('xss')</script>Team Meeting"
         })
 
-      email = CalendarInvitation.invitation_email("guest@example.com", details)
+      email = CalendarInvitation.render("guest@example.com", details)
 
       refute email.html_body =~ "<script>"
     end
@@ -112,7 +112,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
           organizer_name: "<img onerror=alert(1)>Bob"
         })
 
-      email = CalendarInvitation.invitation_email("guest@example.com", details)
+      email = CalendarInvitation.render("guest@example.com", details)
 
       # The raw tag must be escaped — no unescaped <img> in the output
       refute email.html_body =~ "<img onerror"
@@ -123,7 +123,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
     test "handles various durations" do
       for duration <- [15, 30, 45, 60, 90, 120] do
         details = build_invitation_details(%{duration: duration})
-        email = CalendarInvitation.invitation_email("guest@example.com", details)
+        email = CalendarInvitation.render("guest@example.com", details)
 
         assert %Swoosh.Email{} = email
         assert email.html_body != nil
@@ -133,7 +133,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
     test "renders without error for all supported locales" do
       for locale <- ["en", "de", "uk", "fr"] do
         details = build_invitation_details(%{attendee_locale: locale})
-        email = CalendarInvitation.invitation_email("guest@example.com", details)
+        email = CalendarInvitation.render("guest@example.com", details)
 
         assert %Swoosh.Email{} = email,
                "Expected valid Swoosh email for locale #{locale}"

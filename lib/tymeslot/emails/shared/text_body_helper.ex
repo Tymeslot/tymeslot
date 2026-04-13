@@ -3,7 +3,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   Helper functions for generating consistent text body content in email templates.
   """
 
-  alias Tymeslot.Emails.Shared.SharedHelpers
+  alias Tymeslot.Emails.Shared.Formatting
 
   use Gettext, backend: TymeslotWeb.Gettext
 
@@ -20,7 +20,7 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
   def format_meeting_details(appointment_details, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       details = [
-        "#{dgettext("emails", "Date:")} #{SharedHelpers.format_date(appointment_details.date, locale)}",
+        "#{dgettext("emails", "Date:")} #{Formatting.format_date(appointment_details.date, locale)}",
         format_time_line(appointment_details, locale),
         format_location_line(appointment_details),
         format_meeting_type_line(appointment_details.meeting_type)
@@ -139,14 +139,14 @@ defmodule Tymeslot.Emails.Shared.TextBodyHelper do
       end
 
     if time_key && appointment_details[:duration] do
-      time_str = SharedHelpers.format_time(appointment_details[time_key], locale)
-      duration_str = SharedHelpers.format_duration(appointment_details.duration, locale)
+      time_str = Formatting.format_time(appointment_details[time_key], locale)
+      duration_str = Formatting.format_duration(appointment_details.duration, locale)
       "#{dgettext("emails", "Time:")} #{time_str} (#{duration_str})"
     end
   end
 
   defp format_location_line(details),
-    do: "#{dgettext("emails", "Location:")} #{SharedHelpers.format_location(details)}"
+    do: "#{dgettext("emails", "Location:")} #{Formatting.format_location(details)}"
 
   defp format_meeting_type_line(meeting_type) when is_binary(meeting_type) and meeting_type != "",
     do: "#{dgettext("emails", "Type:")} #{meeting_type}"

@@ -3,7 +3,12 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
   Email template for confirming a successful email change.
   Sent to BOTH the old and new email addresses after verification.
   """
-  alias Tymeslot.Emails.Shared.{Components, SharedHelpers, Styles, TemplateHelper}
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Tymeslot.Emails.Shared.{Callouts, Cards, Sanitise, TemplateHelper, Text}
+
+  # A positive confirmation that an account change succeeded.
+  @intent :confirmed
 
   @spec render(
           Tymeslot.Emails.EmailService.user_map(),
@@ -13,89 +18,56 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
           boolean()
         ) :: String.t()
   def render(user, old_email, new_email, confirmed_time, is_old_email \\ false) do
-    recipient_notice =
+    safe_name = Sanitise.sanitize_for_email(user.name || new_email)
+    safe_old_email = Sanitise.sanitize_for_email(old_email)
+    safe_new_email = Sanitise.sanitize_for_email(new_email)
+
+    intro =
       if is_old_email do
-        """
-        <mj-text font-size="14px" color="#{Styles.text_color(:muted)}" padding-bottom="24px" background-color="#fef3c7" padding="12px" border-radius="6px">
-          <strong>Note:</strong> This notification is being sent to your previous email address for security purposes.
-        </mj-text>
-        """
+        dgettext(
+          "emails",
+          "Hi %{name}, your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened.",
+          name: safe_name
+        )
       else
-        ""
+        dgettext(
+          "emails",
+          "Hi %{name}, your Tymeslot account email address has been successfully changed.",
+          name: safe_name
+        )
       end
 
     mjml_content = """
-    #{Components.title_section("Email Change Confirmed")}
+    #{Text.centered_text(intro, padding: "8px 0 20px 0")}
 
-    <mj-text font-size="16px" color="#{Styles.text_color(:secondary)}" line-height="24px" padding-bottom="24px">
-      Hi #{SharedHelpers.sanitize_for_email(user.name || new_email)},
-    </mj-text>
+    #{Callouts.alert_box(@intent, dgettext("emails", "Email change completed successfully."))}
 
-    #{recipient_notice}
+    #{Cards.contact_details_card(dgettext("emails", "Change details"), "", [%{label: dgettext("emails", "Previous email"), value: safe_old_email}, %{label: dgettext("emails", "New email"), value: safe_new_email}, %{label: dgettext("emails", "Changed at"), value: format_time(confirmed_time)}, %{label: dgettext("emails", "Status"), value: dgettext("emails", "Active")}])}
 
-    <mj-text font-size="16px" color="#{Styles.text_color(:secondary)}" line-height="24px" padding-bottom="24px">
-      Your Tymeslot account email address has been successfully changed.
-    </mj-text>
+    #{Text.section_title(dgettext("emails", "What you need to know"), padding: "24px 0 8px 0")}
 
-    #{Components.alert_box("success", "Email change completed successfully!")}
-
-    <mj-text font-size="15px" color="#{Styles.text_color(:secondary)}" line-height="22px" padding-top="24px" padding-bottom="16px">
-      <strong>Change Details:</strong>
-    </mj-text>
-
-    <mj-text font-size="14px" color="#{Styles.text_color(:muted)}" line-height="20px" padding-bottom="4px">
-      Previous Email:
-    </mj-text>
-    <mj-text font-size="14px" color="#{Styles.text_color(:primary)}" line-height="20px" padding-bottom="12px">
-      #{SharedHelpers.sanitize_for_email(old_email)}
-    </mj-text>
-
-    <mj-text font-size="14px" color="#{Styles.text_color(:muted)}" line-height="20px" padding-bottom="4px">
-      New Email:
-    </mj-text>
-    <mj-text font-size="14px" color="#{Styles.text_color(:primary)}" line-height="20px" padding-bottom="12px" font-weight="500">
-      #{SharedHelpers.sanitize_for_email(new_email)}
-    </mj-text>
-
-    <mj-text font-size="14px" color="#{Styles.text_color(:muted)}" line-height="20px" padding-bottom="4px">
-      Changed At:
-    </mj-text>
-    <mj-text font-size="14px" color="#{Styles.text_color(:primary)}" line-height="20px" padding-bottom="12px">
-      #{format_time(confirmed_time)}
-    </mj-text>
-
-    <mj-text font-size="14px" color="#{Styles.text_color(:muted)}" line-height="20px" padding-bottom="4px">
-      Status:
-    </mj-text>
-    <mj-text font-size="14px" color="#{Styles.text_color(:primary)}" line-height="20px" padding-bottom="16px">
-      Active
-    </mj-text>
-
-    <mj-text font-size="16px" color="#{Styles.text_color(:secondary)}" line-height="24px" padding-top="24px" padding-bottom="16px">
-      <strong>What you need to know:</strong>
-    </mj-text>
-
-    <mj-text font-size="15px" color="#{Styles.text_color(:secondary)}" line-height="22px" padding-bottom="24px">
-      • Use <strong>#{SharedHelpers.sanitize_for_email(new_email)}</strong> to sign in from now on<br/>
-      • All future emails will be sent to your new address<br/>
-      • Your meetings and settings remain unchanged<br/>
-      • You may need to sign in again on other devices
-    </mj-text>
+    #{bullet_list([dgettext("emails", "Use %{new_email} to sign in from now on", new_email: safe_new_email), dgettext("emails", "All future emails will be sent to your new address"), dgettext("emails", "Your meetings and settings remain unchanged"), dgettext("emails", "You may need to sign in again on other devices")])}
 
     #{if is_old_email do
-      Components.alert_box("warning", "If you did NOT authorize this change, please contact support immediately. You will no longer receive emails at this address.")
+      Callouts.alert_box(:alert,
+      dgettext("emails", "If you did not authorise this change, please contact support immediately. You will no longer receive emails at this address."),
+      title: dgettext("emails", "Didn't expect this?"))
     else
-      Components.alert_box("info", "For security reasons, we've also sent a copy of this confirmation to your previous email address.")
+      ""
     end}
 
-    #{Components.divider()}
-
-    <mj-text font-size="13px" color="#{Styles.text_color(:muted)}" line-height="20px" align="center">
-      This is a confirmation of changes made to your account. If you have any questions, please contact support.
-    </mj-text>
+    #{Text.system_footer_note(dgettext("emails", "This is a confirmation of changes made to your account. If you have any questions, please contact support."))}
     """
 
-    TemplateHelper.compile_system_template(mjml_content, "Account Update")
+    TemplateHelper.compile_system_template(
+      mjml_content,
+      dgettext("emails", "Account Update"),
+      dgettext("emails", "Your Tymeslot email address has been changed."),
+      intent: @intent,
+      eyebrow: dgettext("emails", "Confirmed"),
+      stage_title: dgettext("emails", "Email change complete"),
+      stage_subtitle: dgettext("emails", "Your account is now using the new address.")
+    )
   end
 
   @spec render_text(
@@ -108,44 +80,68 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmed do
   def render_text(user, old_email, new_email, confirmed_time, is_old_email \\ false) do
     name = user.name || new_email
 
-    recipient_notice =
+    intro =
       if is_old_email do
-        "\nNote: This notification is being sent to your previous email address for security purposes.\n"
+        dgettext(
+          "emails",
+          "Hi %{name}, your Tymeslot account email address has been successfully changed. This confirmation is being sent to your previous address so you know the switch happened.",
+          name: name
+        )
       else
-        ""
+        dgettext(
+          "emails",
+          "Hi %{name}, your Tymeslot account email address has been successfully changed.",
+          name: name
+        )
       end
 
     security_notice =
       if is_old_email do
-        "WARNING: If you did NOT authorize this change, please contact support immediately. You will no longer receive emails at this address."
+        "\n" <>
+          dgettext(
+            "emails",
+            "If you did not authorise this change, please contact support immediately. You will no longer receive emails at this address."
+          )
       else
-        "For security reasons, we've also sent a copy of this confirmation to your previous email address."
+        ""
       end
 
     """
-    Email Change Confirmed
+    #{dgettext("emails", "Email change complete")}
 
-    Hi #{name},
-    #{recipient_notice}
-    Your Tymeslot account email address has been successfully changed.
+    #{intro}
 
-    CHANGE DETAILS:
-    Previous Email: #{old_email}
-    New Email: #{new_email}
-    Changed At: #{format_time(confirmed_time)}
-    Status: Active
+    #{dgettext("emails", "CHANGE DETAILS:")}
+    #{dgettext("emails", "Previous email:")} #{old_email}
+    #{dgettext("emails", "New email:")} #{new_email}
+    #{dgettext("emails", "Changed at:")} #{format_time(confirmed_time)}
+    #{dgettext("emails", "Status:")} #{dgettext("emails", "Active")}
 
-    WHAT YOU NEED TO KNOW:
-    - Use #{new_email} to sign in from now on
-    - All future emails will be sent to your new address
-    - Your meetings and settings remain unchanged
-    - You may need to sign in again on other devices
-
+    #{dgettext("emails", "WHAT YOU NEED TO KNOW:")}
+    - #{dgettext("emails", "Use %{new_email} to sign in from now on", new_email: new_email)}
+    - #{dgettext("emails", "All future emails will be sent to your new address")}
+    - #{dgettext("emails", "Your meetings and settings remain unchanged")}
+    - #{dgettext("emails", "You may need to sign in again on other devices")}
     #{security_notice}
     """
   end
 
-  defp format_time(nil), do: "Just now"
+  defp bullet_list(items) do
+    bullets =
+      Enum.map_join(items, "<br/>\n", fn item -> "• #{item}" end)
+
+    """
+    <mj-section padding="0 0 8px 0">
+      <mj-column>
+        <mj-text font-size="15px" color="#{Tymeslot.Emails.Shared.Styles.ink_soft()}" line-height="1.7" padding="0">
+          #{bullets}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    """
+  end
+
+  defp format_time(nil), do: dgettext("emails", "Just now")
 
   defp format_time(datetime) do
     Calendar.strftime(datetime, "%B %d, %Y at %I:%M %p %Z")

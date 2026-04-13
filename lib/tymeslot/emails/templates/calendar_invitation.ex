@@ -9,9 +9,9 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
   import Swoosh.Email
 
   alias Tymeslot.Emails.Shared.{
-    Components,
+    Formatting,
+    MeetingComponents,
     MjmlEmail,
-    SharedHelpers,
     TemplateHelper,
     TextBodyHelper
   }
@@ -19,6 +19,8 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
   alias Tymeslot.Integrations.Calendar.IcsGenerator
 
   use Gettext, backend: TymeslotWeb.Gettext
+
+  @intent :confirmed
 
   @doc """
   Builds an invitation email for a calendar event.
@@ -28,8 +30,8 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
     - `attendee_email` — recipient email address (string)
     - `invitation_details` — map with event details (see module docs)
   """
-  @spec invitation_email(String.t(), map()) :: Swoosh.Email.t()
-  def invitation_email(attendee_email, invitation_details) do
+  @spec render(String.t(), map()) :: Swoosh.Email.t()
+  def render(attendee_email, invitation_details) do
     locale = Map.get(invitation_details, :attendee_locale, "en")
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
@@ -43,21 +45,26 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitation do
       }
 
       mjml_content = """
-      #{Components.title_section(dgettext("emails", "You're Invited"),
-      emoji: "📩",
-      subtitle: dgettext("emails", "%{name} has invited you to an event.", name: invitation_details.organizer_name),
-      align: "left")}
-
-      #{Components.meeting_details_table(meeting_details, locale)}
+      #{MeetingComponents.meeting_details_table(meeting_details, locale)}
       """
 
       details_for_organizer =
         Map.put_new(invitation_details, :organizer_title, nil)
 
-      organizer_details = TemplateHelper.build_organizer_details(details_for_organizer)
+      organizer_details =
+        TemplateHelper.build_organizer_details(details_for_organizer,
+          intent: @intent,
+          eyebrow: dgettext("emails", "Invited"),
+          stage_title: dgettext("emails", "You're Invited"),
+          stage_subtitle:
+            dgettext("emails", "%{name} has invited you to an event.",
+              name: invitation_details.organizer_name
+            )
+        )
+
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
-      date_short = SharedHelpers.format_date_short(invitation_details.date, locale)
+      date_short = Formatting.format_date_short(invitation_details.date, locale)
 
       ics_details = %{
         title: invitation_details.event_title,

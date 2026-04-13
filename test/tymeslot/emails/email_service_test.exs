@@ -9,10 +9,8 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
   alias Tymeslot.Emails.Templates.{
     AppointmentCancellation,
-    AppointmentConfirmationAttendee,
-    AppointmentConfirmationOrganizer,
-    AppointmentReminderAttendee,
-    AppointmentReminderOrganizer
+    AppointmentConfirmation,
+    AppointmentReminder
   }
 
   describe "send_appointment_confirmations/1" do
@@ -21,17 +19,8 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       {org_result, att_result} = EmailService.send_appointment_confirmations(details)
 
-      # Both should succeed (or fail gracefully)
-      assert is_tuple({org_result, att_result})
-    end
-
-    test "returns tuple of both results" do
-      details = build_appointment_details()
-
-      result = EmailService.send_appointment_confirmations(details)
-
-      assert is_tuple(result)
-      assert tuple_size(result) == 2
+      assert match?({:ok, _}, org_result)
+      assert match?({:ok, _}, att_result)
     end
   end
 
@@ -41,7 +30,8 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       {org_result, att_result} = EmailService.send_appointment_reminders(details)
 
-      assert is_tuple({org_result, att_result})
+      assert match?({:ok, _}, org_result)
+      assert match?({:ok, _}, att_result)
     end
 
     test "accepts custom time_until parameter" do
@@ -49,7 +39,8 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       {org_result, att_result} = EmailService.send_appointment_reminders(details, "1 hour")
 
-      assert is_tuple({org_result, att_result})
+      assert match?({:ok, _}, org_result)
+      assert match?({:ok, _}, att_result)
     end
   end
 
@@ -59,7 +50,8 @@ defmodule Tymeslot.Emails.EmailServiceTest do
 
       {org_result, att_result} = EmailService.send_cancellation_emails(details)
 
-      assert is_tuple({org_result, att_result})
+      assert match?({:ok, _}, org_result)
+      assert match?({:ok, _}, att_result)
     end
   end
 
@@ -136,7 +128,8 @@ defmodule Tymeslot.Emails.EmailServiceTest do
       {old_result, new_result} =
         EmailService.send_email_change_confirmations(user, old_email, new_email)
 
-      assert is_tuple({old_result, new_result})
+      assert match?({:ok, _}, old_result)
+      assert match?({:ok, _}, new_result)
     end
   end
 
@@ -164,26 +157,31 @@ defmodule Tymeslot.Emails.EmailServiceTest do
   end
 
   describe "template integration" do
-    test "confirmation templates create valid Swoosh emails" do
+    test "organizer confirmation template creates a valid Swoosh email" do
       details = build_appointment_details()
 
       org_email =
-        AppointmentConfirmationOrganizer.confirmation_email(details.organizer_email, details)
-
-      att_email =
-        AppointmentConfirmationAttendee.confirmation_email(details.attendee_email, details)
+        AppointmentConfirmation.render(:organizer, details.organizer_email, details)
 
       assert %Swoosh.Email{} = org_email
-      assert %Swoosh.Email{} = att_email
       assert org_email.subject != nil
+    end
+
+    test "attendee confirmation template creates a valid Swoosh email" do
+      details = build_appointment_details()
+
+      att_email =
+        AppointmentConfirmation.render(:attendee, details.attendee_email, details)
+
+      assert %Swoosh.Email{} = att_email
       assert att_email.subject != nil
     end
 
     test "reminder templates create valid Swoosh emails" do
       details = build_appointment_details()
 
-      org_email = AppointmentReminderOrganizer.reminder_email(details.organizer_email, details)
-      att_email = AppointmentReminderAttendee.reminder_email(details.attendee_email, details)
+      org_email = AppointmentReminder.render(:organizer, details.organizer_email, details)
+      att_email = AppointmentReminder.render(:attendee, details.attendee_email, details)
 
       assert %Swoosh.Email{} = org_email
       assert %Swoosh.Email{} = att_email
@@ -193,10 +191,10 @@ defmodule Tymeslot.Emails.EmailServiceTest do
       details = build_appointment_details()
 
       org_email =
-        AppointmentCancellation.cancellation_email_organizer(details.organizer_email, details)
+        AppointmentCancellation.render(:organizer, details.organizer_email, details)
 
       att_email =
-        AppointmentCancellation.cancellation_email_attendee(details.attendee_email, details)
+        AppointmentCancellation.render(:attendee, details.attendee_email, details)
 
       assert %Swoosh.Email{} = org_email
       assert %Swoosh.Email{} = att_email

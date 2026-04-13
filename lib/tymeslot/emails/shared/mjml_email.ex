@@ -1,29 +1,41 @@
 defmodule Tymeslot.Emails.Shared.MjmlEmail do
   @moduledoc """
-  Base module for MJML email templates.
+  Base MJML template for Tymeslot transactional emails (2026 redesign).
 
-  Provides structural design tokens and layout helpers that implement the
-  Tymeslot redesign (January 2026).
+  ## Anatomy
 
-  ## Layout Structure
-  - **Wrapper**: 24px horizontal padding on mobile, 12px gutter.
-  - **Container**: 12px border radius, white background.
-  - **Header**: 56px circular avatar, bold 20px organizer name.
-  - **Content**: 24px - 28px vertical padding for clear hierarchy.
-  - **Footer**: 12px bottom radius, subtle gray background, 13px text.
+  Every transactional email now opens with a **stage band** — a full-width
+  intent-coloured section whose gradient and eyebrow label tell the reader what
+  kind of email this is before they read a word. Underneath the stage band an
+  **organiser strip** shows the avatar, name, and title on a neutral surface.
+  Content flows below into a warm off-white card, and the email closes with a
+  quiet hairline footer carrying the wordmark.
 
-  ## Brand Assets
-  - Uses Google Fonts Inter with weights 400-800.
-  - Consistent SVG-based default avatars.
+  The intent is declared by the caller — `:intent` and `:eyebrow` are required
+  keys on `organizer_details`. There is no inference, no default, and no
+  fallback: an email that doesn't know its own intent fails to render.
   """
 
   import Swoosh.Email
-  alias Tymeslot.Emails.Shared.{AvatarHelper, SharedHelpers, Styles}
+
+  alias Tymeslot.Emails.Shared.{AvatarHelper, Frame, Sanitise, Stage, Styles, Urls}
+  alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Security.UrlValidation
 
-  @doc """
-  Compiles MJML template to HTML.
-  """
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  @type organizer_details :: %{
+          required(:intent) => Tokens.intent(),
+          required(:eyebrow) => String.t(),
+          optional(:name) => String.t() | nil,
+          optional(:avatar_url) => String.t() | nil,
+          optional(:title) => String.t() | nil,
+          optional(:stage_title) => String.t() | nil,
+          optional(:stage_subtitle) => String.t() | nil,
+          optional(atom()) => term()
+        }
+
+  @doc "Compiles MJML to HTML, raising on error."
   @spec compile_mjml(String.t()) :: String.t()
   def compile_mjml(mjml_content) do
     case Mjml.to_html(mjml_content) do
@@ -33,7 +45,9 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   end
 
   @doc """
-  Creates a base email with common settings.
+  Creates a base Swoosh email with tracking enabled and the Tymeslot logo
+  attached inline (CID `tymeslot-logo`) so the system layout's logo header
+  renders identically in every email client without needing an external URL.
   """
   @spec base_email() :: Swoosh.Email.t()
   def base_email do
@@ -41,23 +55,56 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     |> from({fetch_from_name(), fetch_from_email()})
     |> put_provider_option(:track_opens, true)
     |> put_provider_option(:track_links, "HtmlAndText")
+    |> attach_logo()
   end
 
+  @logo_cid "tymeslot-logo"
+
+  @doc "The Content-ID used for the inline Tymeslot logo attachment."
+  @spec logo_cid() :: String.t()
+  def logo_cid, do: @logo_cid
+
   @doc """
-  Gets the from email address.
+  Attaches the Tymeslot logo as an inline image. Swallowed silently if the
+  PNG can't be read — the email still sends, the logo simply won't render.
   """
+  @spec attach_logo(Swoosh.Email.t()) :: Swoosh.Email.t()
+  def attach_logo(email) do
+    case logo_bytes() do
+      {:ok, bytes} ->
+        Swoosh.Email.attachment(
+          email,
+          Swoosh.Attachment.new(
+            {:data, bytes},
+            filename: "tymeslot-logo.png",
+            content_type: "image/png",
+            type: :inline,
+            cid: @logo_cid
+          )
+        )
+
+      :error ->
+        email
+    end
+  end
+
+  @spec logo_bytes() :: {:ok, binary()} | :error
+  defp logo_bytes do
+    path = Application.app_dir(:tymeslot, "priv/static/images/brand/logo-with-text.png")
+
+    case File.read(path) do
+      {:ok, bytes} -> {:ok, bytes}
+      {:error, _reason} -> :error
+    end
+  end
+
+  @doc "Returns the configured from-email."
   @spec fetch_from_email() :: String.t()
-  def fetch_from_email do
-    get_config_email_setting(:from_email)
-  end
+  def fetch_from_email, do: get_config_email_setting(:from_email)
 
-  @doc """
-  Gets the from name.
-  """
+  @doc "Returns the configured from-name."
   @spec fetch_from_name() :: String.t()
-  def fetch_from_name do
-    get_config_email_setting(:from_name)
-  end
+  def fetch_from_name, do: get_config_email_setting(:from_name)
 
   defp get_config_email_setting(key) do
     case Application.get_env(:tymeslot, :email) do
@@ -67,132 +114,166 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   end
 
   @doc """
-  Modern MJML base template with 2026 design aesthetics.
+  Renders the full MJML document for a transactional email.
 
-  Features:
-  - Refined glassmorphism-inspired styling
-  - Better visual hierarchy with gradient accents
-  - Enhanced spacing and rounded corners
-  - Improved dark mode compatibility
-  - Professional header with larger avatar
+  `organizer_details` carries the sender identity (organizer name, avatar,
+  optional title) and, new in 2026, an optional `:intent` and `:eyebrow` to
+  drive the stage band.
   """
-  @spec base_mjml_template(
-          String.t(),
-          %{
-            optional(:name) => String.t() | nil,
-            optional(:avatar_url) => String.t() | nil,
-            optional(:title) => String.t() | nil,
-            optional(atom()) => term()
-          }
-          | nil
-        ) :: String.t()
-  def base_mjml_template(content, organizer_details \\ nil) do
-    # Use provided organizer details or fall back to defaults
+  @spec base_mjml_template(String.t(), organizer_details()) :: String.t()
+  def base_mjml_template(content, organizer_details) when is_map(organizer_details) do
+    intent = fetch_required!(organizer_details, :intent)
+    stage_eyebrow = fetch_required!(organizer_details, :eyebrow)
+
     organizer_name =
-      SharedHelpers.sanitize_for_email(organizer_details[:name] || fetch_from_name())
+      Sanitise.sanitize_for_email(organizer_details[:name] || fetch_from_name())
 
-    organizer_avatar_url =
-      case organizer_details[:avatar_url] do
-        nil ->
-          AvatarHelper.generate_default_avatar(organizer_name)
+    organizer_avatar_url = resolve_avatar(organizer_details[:avatar_url], organizer_name)
 
-        url when is_binary(url) ->
-          case UrlValidation.validate_http_url(url) do
-            :ok -> SharedHelpers.sanitize_for_email(url)
-            _other -> AvatarHelper.generate_default_avatar(organizer_name)
-          end
+    organizer_title =
+      Sanitise.sanitize_for_email(organizer_details[:title] || "Tymeslot")
 
-        _other ->
-          AvatarHelper.generate_default_avatar(organizer_name)
-      end
+    stage_title = organizer_details[:stage_title] || organizer_name
+    stage_subtitle = organizer_details[:stage_subtitle]
 
-    organizer_title = SharedHelpers.sanitize_for_email(organizer_details[:title] || "Tymeslot")
+    Frame.wrap(%{
+      title: "Message from #{organizer_name}",
+      preview: "#{organizer_name} via Tymeslot",
+      pre_card: logo_header(),
+      stage: Stage.stage_band(intent, stage_eyebrow, stage_title, stage_subtitle),
+      header: organizer_strip(organizer_avatar_url, organizer_name, organizer_title),
+      body: content,
+      footer: footer_strip()
+    })
+  end
 
+  @doc """
+  The shared inline-logo header rendered above the stage band. Used by both
+  the transactional and system layouts so every email references the
+  attached logo via `cid:#{@logo_cid}` and never falls back to a plain
+  attachment.
+  """
+  @spec logo_header() :: String.t()
+  def logo_header do
     """
-    <mjml>
-      <mj-head>
-        <mj-title>Message from #{organizer_name}</mj-title>
-        <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-        <mj-preview>#{organizer_name} sent you a message via Tymeslot</mj-preview>
-        #{Styles.mjml_base_attributes()}
-        <mj-breakpoint width="480px" />
-        #{Styles.email_css_styles()}
-      </mj-head>
-      <mj-body background-color="#f4f4f5" css-class="force-light-bg">
-        <mj-wrapper padding="12px 12px" background-color="#f4f4f5">
-          <mj-wrapper background-color="#ffffff" border-radius="16px" padding="0" css-class="glass-card force-light-bg">
-            <mj-section padding="16px 20px 8px 20px">
-              <mj-group>
-                <mj-column width="20%" vertical-align="middle">
-                  <mj-image
-                    src="#{organizer_avatar_url}"
-                    width="44px"
-                    height="44px"
-                    border-radius="22px"
-                    alt="#{organizer_name}"
-                    align="center"
-                    css-class="shadow-soft"
-                  />
-                </mj-column>
-                <mj-column width="80%" vertical-align="middle">
-                  <mj-text
-                    font-size="17px"
-                    font-weight="700"
-                    padding="0 0 2px 0"
-                    align="left"
-                    line-height="1.2"
-                    color="#18181b"
-                    css-class="force-light-text"
-                  >
-                    #{organizer_name}
-                  </mj-text>
-                  <mj-text
-                    font-size="12px"
-                    color="#71717a"
-                    padding="0"
-                    align="left"
-                    line-height="14px"
-                  >
-                    #{organizer_title}
-                  </mj-text>
-                </mj-column>
-              </mj-group>
-            </mj-section>
+    <mj-section
+      padding="4px 0 22px 0"
+      background-color="#{Styles.canvas()}"
+      css-class="email-canvas"
+    >
+      <mj-column>
+        <mj-image
+          src="cid:#{@logo_cid}"
+          alt="Tymeslot"
+          href="#{Urls.get_app_url()}"
+          width="150px"
+          align="center"
+          padding="0"
+          border="0"
+        />
+      </mj-column>
+    </mj-section>
+    """
+  end
 
-            <mj-section padding="0 20px">
-              <mj-column>
-                <mj-divider
-                  border-color="#e4e4e7"
-                  border-width="1px"
-                  padding="0"
-                />
-              </mj-column>
-            </mj-section>
+  @spec fetch_required!(map(), atom()) :: term()
+  defp fetch_required!(map, key) do
+    case Map.fetch(map, key) do
+      {:ok, value} ->
+        value
 
-            <mj-wrapper padding="12px 20px 20px 20px" background-color="#ffffff">
-              #{content}
-            </mj-wrapper>
+      :error ->
+        raise ArgumentError,
+              "Tymeslot.Emails.Shared.MjmlEmail: missing required organiser detail `#{inspect(key)}`. " <>
+                "Transactional emails must declare `:intent` and `:eyebrow` at the call site."
+    end
+  end
 
-            <mj-section
-              background-color="#f9fafb"
-              border-radius="0 0 16px 16px"
-              padding="12px 20px"
-            >
-              <mj-column>
-                <mj-text
-                  color="#71717a"
-                  font-size="13px"
-                  align="center"
-                  line-height="20px"
-                >
-                  Powered by <a href="#{SharedHelpers.get_app_url()}" style="color: #14b8a6; text-decoration: none; font-weight: 600;">Tymeslot</a>
-                </mj-text>
-              </mj-column>
-            </mj-section>
-          </mj-wrapper>
-        </mj-wrapper>
-      </mj-body>
-    </mjml>
+  defp resolve_avatar(nil, organizer_name),
+    do: AvatarHelper.generate_default_avatar(organizer_name)
+
+  defp resolve_avatar(url, organizer_name) when is_binary(url) do
+    case UrlValidation.validate_http_url(url) do
+      :ok -> Sanitise.sanitize_for_email(url)
+      _other -> AvatarHelper.generate_default_avatar(organizer_name)
+    end
+  end
+
+  defp resolve_avatar(_other, organizer_name),
+    do: AvatarHelper.generate_default_avatar(organizer_name)
+
+  defp organizer_strip(avatar_url, name, title) do
+    """
+    <mj-section
+      padding="18px 28px 14px 28px"
+      background-color="#{Styles.surface()}"
+      border-bottom="1px solid #{Styles.hairline()}"
+      css-class="email-surface email-hairline-bottom"
+    >
+      <mj-group>
+        <mj-column width="16%" vertical-align="middle">
+          <mj-image
+            src="#{avatar_url}"
+            width="44px"
+            height="44px"
+            border-radius="22px"
+            alt="#{name}"
+            align="left"
+            padding="0"
+          />
+        </mj-column>
+        <mj-column width="84%" vertical-align="middle">
+          <mj-text
+            font-size="15px"
+            font-weight="700"
+            padding="0 0 2px 8px"
+            align="left"
+            line-height="1.2"
+            color="#{Styles.ink()}"
+            css-class="email-ink"
+          >
+            #{name}
+          </mj-text>
+          <mj-text
+            font-size="12px"
+            color="#{Styles.ink_muted()}"
+            padding="0 0 0 8px"
+            align="left"
+            line-height="1.3"
+            letter-spacing="0.02em"
+            css-class="email-ink-muted"
+          >
+            #{title}
+          </mj-text>
+        </mj-column>
+      </mj-group>
+    </mj-section>
+    """
+  end
+
+  defp footer_strip do
+    """
+    <mj-section
+      background-color="#{Styles.canvas_soft()}"
+      border-radius="0 0 20px 20px"
+      padding="18px 28px"
+      css-class="email-canvas-soft"
+    >
+      <mj-column>
+        <mj-text
+          color="#{Styles.ink_muted()}"
+          font-size="12px"
+          align="center"
+          line-height="1.6"
+          letter-spacing="0.02em"
+          css-class="email-ink-muted"
+        >
+          #{dgettext("emails", "Sent with care by")}
+          <a href="#{Urls.get_app_url()}" class="wordmark email-ink-link" style="color: #{Styles.ink()}; text-decoration: none; font-weight: 800;">Tymeslot</a>
+          · #{dgettext("emails", "scheduling that respects your time")}
+        </mj-text>
+      </mj-column>
+    </mj-section>
     """
   end
 end

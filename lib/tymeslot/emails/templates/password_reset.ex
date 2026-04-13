@@ -2,34 +2,40 @@ defmodule Tymeslot.Emails.Templates.PasswordReset do
   @moduledoc """
   Email template for password reset requests.
   """
-  alias Tymeslot.Emails.Shared.{Components, SharedHelpers, TemplateHelper}
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Tymeslot.Emails.Shared.{Buttons, Sanitise, TemplateHelper, Text}
+
+  # A security-sensitive action that warrants the reader's attention.
+  @intent :alert
 
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t()) :: String.t()
   def render(user, reset_url) do
-    user_display_name = SharedHelpers.sanitize_for_email(user.name || user.email)
+    user_display_name = Sanitise.sanitize_for_email(user.name || user.email)
 
     mjml_content = """
-    #{Components.title_section("Reset Your Password", emoji: "🔒", align: "center")}
+    #{Text.centered_text(dgettext("emails", "Hi %{name},", name: user_display_name), padding: "8px 0 4px 0", font_size: "16px")}
 
-    #{Components.centered_text("Hi #{user_display_name},")}
+    #{Text.centered_text(dgettext("emails", "It happens to the best of us. Click the button below to choose a new password and pick up where you left off."), padding: "0 0 20px 0")}
 
-    #{Components.centered_text("It happens to the best of us! Click the button below to choose a new password and regain access to your account.", padding: "0 0 20px 0")}
+    #{Buttons.action_button(@intent, dgettext("emails", "Set New Password"), reset_url, full_width: true, size: :large)}
 
-    #{Components.action_button("Set New Password", reset_url, color: "primary", full_width: true)}
+    #{Text.system_footer_note(dgettext("emails", "This link is valid for the next 2 hours."))}
+    #{Text.system_footer_note(dgettext("emails", "If you didn't request this change, your account is still secure — you can simply delete this email."))}
 
-    #{Components.system_footer_note("This link is valid for the next 2 hours.")}
+    #{Text.divider(margin: "28px 0 16px 0")}
 
-    #{Components.system_footer_note("If you didn't request this change, your account is still secure—you can simply delete this email.")}
-
-    #{Components.divider(margin: "32px 0")}
-
-    #{Components.troubleshooting_link(reset_url)}
+    #{Text.troubleshooting_link(reset_url)}
     """
 
     TemplateHelper.compile_system_template(
       mjml_content,
-      "Account Security",
-      "Instructions to reset your Tymeslot password."
+      dgettext("emails", "Account Security"),
+      dgettext("emails", "Instructions to reset your Tymeslot password."),
+      intent: @intent,
+      eyebrow: dgettext("emails", "Security"),
+      stage_title: dgettext("emails", "Reset your password"),
+      stage_subtitle: dgettext("emails", "A fresh password and you're back in.")
     )
   end
 
@@ -38,18 +44,18 @@ defmodule Tymeslot.Emails.Templates.PasswordReset do
     name = user.name || user.email
 
     """
-    Reset Your Password
+    #{dgettext("emails", "Reset Your Password")}
 
-    Hi #{name},
+    #{dgettext("emails", "Hi %{name},", name: name)}
 
-    It happens to the best of us! Click the link below to choose a new password and regain access to your account.
+    #{dgettext("emails", "It happens to the best of us! Click the link below to choose a new password and regain access to your account.")}
 
-    Set New Password:
+    #{dgettext("emails", "Set New Password:")}
     #{reset_url}
 
-    This link is valid for the next 2 hours.
+    #{dgettext("emails", "This link is valid for the next 2 hours.")}
 
-    If you didn't request this change, your account is still secure — you can simply delete this email.
+    #{dgettext("emails", "If you didn't request this change, your account is still secure — you can simply delete this email.")}
     """
   end
 end
