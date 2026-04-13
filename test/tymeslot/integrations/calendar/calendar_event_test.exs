@@ -267,6 +267,33 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventTest do
       refute CalendarEvent.blocking?(event)
     end
 
+    # Plain maps produced by the OAuth fresh-fetch path (convert_events).
+    # These carry string-valued status/transparency fields and must not raise function_clause.
+    test "plain map with confirmed status blocks" do
+      event = %{uid: "x", status: "confirmed", transparency: nil, start_time: ~U[2026-04-13 09:00:00Z], end_time: ~U[2026-04-13 10:00:00Z]}
+      assert CalendarEvent.blocking?(event)
+    end
+
+    test "plain map with cancelled status does not block" do
+      event = %{uid: "x", status: "cancelled", transparency: nil, start_time: ~U[2026-04-13 09:00:00Z], end_time: ~U[2026-04-13 10:00:00Z]}
+      refute CalendarEvent.blocking?(event)
+    end
+
+    test "plain map with declined status does not block" do
+      event = %{uid: "x", status: "declined", transparency: nil, start_time: ~U[2026-04-13 09:00:00Z], end_time: ~U[2026-04-13 10:00:00Z]}
+      refute CalendarEvent.blocking?(event)
+    end
+
+    test "plain map with transparent transparency does not block" do
+      event = %{uid: "x", status: "confirmed", transparency: "transparent", start_time: ~U[2026-04-13 09:00:00Z], end_time: ~U[2026-04-13 10:00:00Z]}
+      refute CalendarEvent.blocking?(event)
+    end
+
+    test "plain map with opaque transparency blocks" do
+      event = %{uid: "x", status: "confirmed", transparency: "opaque", start_time: ~U[2026-04-13 09:00:00Z], end_time: ~U[2026-04-13 10:00:00Z]}
+      assert CalendarEvent.blocking?(event)
+    end
+
     defp build_timed_event(overrides) do
       base = %{
         uid: "blocking-test-#{System.unique_integer([:positive])}",

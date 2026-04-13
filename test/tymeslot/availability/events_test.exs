@@ -87,6 +87,59 @@ defmodule Tymeslot.Availability.EventsTest do
     end
   end
 
+  describe "convert_events_to_timezone/3 — OAuth fresh-fetch plain maps" do
+    # Plain maps from convert_events carry UTC start_time/end_time (no all_day/start_at/end_at).
+    # This is the shape that caused the AvailabilityCache crash.
+    test "converts a plain map event to the target timezone" do
+      event = %{
+        uid: "12tknqdsq0vh5ue9hqj5ak4ckp",
+        summary: "Paul <> Luka",
+        status: "confirmed",
+        transparency: nil,
+        start_time: ~U[2026-04-13 09:00:00Z],
+        end_time: ~U[2026-04-13 10:00:00Z]
+      }
+
+      [converted] = Events.convert_events_to_timezone([event], "Etc/UTC", "Europe/London")
+
+      assert %DateTime{} = converted.start_time
+      assert %DateTime{} = converted.end_time
+      assert converted.start_time.time_zone == "Europe/London"
+      assert converted.end_time.time_zone == "Europe/London"
+    end
+
+    test "drops a plain map event with nil start_time" do
+      event = %{uid: "x", status: "confirmed", start_time: nil, end_time: ~U[2026-04-13 10:00:00Z]}
+
+      result = Events.convert_events_to_timezone([event], "Etc/UTC", "Europe/London")
+
+      assert result == []
+    end
+
+    test "converts an all-day plain map event (Date values) anchored to the owner timezone" do
+      # Google/Outlook emit Date values for all-day events in the plain-map
+      # fresh-fetch path. The previous fix only handled DateTime values and
+      # crashed the AvailabilityCache task with a function_clause on shift_safe.
+      event = %{
+        uid: "all-day-evt",
+        summary: "Holiday",
+        status: "confirmed",
+        transparency: nil,
+        start_time: ~D[2026-04-16],
+        end_time: ~D[2026-04-17]
+      }
+
+      [converted] = Events.convert_events_to_timezone([event], "Europe/Tallinn", "Etc/UTC")
+
+      assert %DateTime{} = converted.start_time
+      assert %DateTime{} = converted.end_time
+      assert converted.start_time.time_zone == "Etc/UTC"
+      # Midnight in Tallinn (UTC+3 in April) == 21:00 UTC the previous day.
+      assert converted.start_time == ~U[2026-04-15 21:00:00Z]
+      assert converted.end_time == ~U[2026-04-16 21:00:00Z]
+    end
+  end
+
   describe "convert_events_to_timezone/3 — all-day events" do
     test "anchors all-day event dates to midnight in the owner's timezone" do
       events = [all_day_event(~D[2025-06-15], ~D[2025-06-16])]

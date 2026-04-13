@@ -108,10 +108,14 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
   An event blocks when it is opaque (not free/transparent) and has not been
   cancelled or declined.
   """
-  @spec blocking?(t()) :: boolean()
+  @spec blocking?(t() | map()) :: boolean()
   def blocking?(%__MODULE__{status: status}) when status in [:cancelled, :declined], do: false
   def blocking?(%__MODULE__{transparency: :transparent}), do: false
   def blocking?(%__MODULE__{}), do: true
+  # Plain maps from the OAuth fresh-fetch path (convert_events) carry string-valued fields.
+  def blocking?(%{status: status}) when status in ["cancelled", "declined"], do: false
+  def blocking?(%{transparency: "transparent"}), do: false
+  def blocking?(%{}), do: true
 
   # --- Validation helpers ---
 

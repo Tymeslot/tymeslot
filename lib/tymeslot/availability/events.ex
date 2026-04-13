@@ -25,36 +25,53 @@ defmodule Tymeslot.Availability.Events do
     |> Enum.reject(&is_nil/1)
   end
 
+  # Plain maps from the OAuth fresh-fetch path carry start_time/end_time directly.
+  # Timed events have DateTime values; all-day events have Date values (anchored
+  # to midnight in the owner's timezone before shifting to the target).
+  defp convert_event(%{start_time: start_time, end_time: end_time} = event, owner_timezone, target_timezone)
+       when not is_struct(event) do
+    with {:ok, s} <- shift_safe(start_time, owner_timezone, target_timezone),
+         {:ok, e} <- shift_safe(end_time, owner_timezone, target_timezone) do
+      %{start_time: s, end_time: e}
+    else
+      _other -> nil
+    end
+  end
+
   defp convert_event(%CalendarEvent{all_day: true} = event, owner_timezone, target_timezone) do
-    start_dt = DateTimeUtils.create_datetime_safe(event.start_date, ~T[00:00:00], owner_timezone)
-    end_dt = DateTimeUtils.create_datetime_safe(event.end_date, ~T[00:00:00], owner_timezone)
-
-    with {:ok, s} <- shift_safe(start_dt, target_timezone),
-         {:ok, e} <- shift_safe(end_dt, target_timezone) do
+    with {:ok, s} <- shift_safe(event.start_date, owner_timezone, target_timezone),
+         {:ok, e} <- shift_safe(event.end_date, owner_timezone, target_timezone) do
       %{start_time: s, end_time: e}
     else
       _other -> nil
     end
   end
 
-  defp convert_event(%CalendarEvent{all_day: false} = event, _owner_timezone, target_timezone) do
-    with {:ok, s} <- shift_safe(event.start_at, target_timezone),
-         {:ok, e} <- shift_safe(event.end_at, target_timezone) do
+  defp convert_event(%CalendarEvent{all_day: false} = event, owner_timezone, target_timezone) do
+    with {:ok, s} <- shift_safe(event.start_at, owner_timezone, target_timezone),
+         {:ok, e} <- shift_safe(event.end_at, owner_timezone, target_timezone) do
       %{start_time: s, end_time: e}
     else
       _other -> nil
     end
   end
 
-  defp shift_safe(nil, _timezone), do: {:error, nil}
+  defp shift_safe(nil, _owner_timezone, _target_timezone), do: {:error, nil}
 
-  defp shift_safe(%DateTime{} = dt, timezone) do
-    if dt.time_zone == timezone do
+  defp shift_safe(%DateTime{} = dt, _owner_timezone, target_timezone) do
+    if dt.time_zone == target_timezone do
       {:ok, dt}
     else
-      DateTime.shift_zone(dt, timezone)
+      DateTime.shift_zone(dt, target_timezone)
     end
   rescue
     _other -> {:error, :invalid_timezone}
+  end
+
+  defp shift_safe(%Date{} = date, owner_timezone, target_timezone) do
+    case DateTimeUtils.create_datetime_safe(date, ~T[00:00:00], owner_timezone) do
+      %DateTime{} = dt -> shift_safe(dt, owner_timezone, target_timezone)
+      _other -> {:error, :invalid_date}
+    end
   end
 end
