@@ -248,7 +248,9 @@ defmodule Tymeslot.Integrations.Calendar do
   # treat the end as exclusive for date-only events, so a single-day event
   # must have `end = start + 1`. Callers may pass `end = start` to express
   # "an event on that day"; this helper bridges the intent to the wire format.
-  defp normalise_event_attrs(%{start_time: %Date{} = start_date, end_time: %Date{} = end_date} = attrs) do
+  defp normalise_event_attrs(
+         %{start_time: %Date{} = start_date, end_time: %Date{} = end_date} = attrs
+       ) do
     if Date.compare(start_date, end_date) == :eq do
       %{attrs | end_time: Date.add(end_date, 1)}
     else

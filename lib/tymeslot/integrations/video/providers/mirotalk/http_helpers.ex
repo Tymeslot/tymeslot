@@ -8,7 +8,8 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpers do
   `fun` receives the fully-built URL and must return
   `{:ok, %Req.Response{}}` or `{:error, reason}`.
   """
-  @spec try_https_then_http(String.t(), String.t(), (String.t() -> {:ok, term()} | {:error, term()})) ::
+  @spec try_https_then_http(String.t(), String.t(), (String.t() ->
+                                                       {:ok, term()} | {:error, term()})) ::
           {:ok, term()} | {:error, term()}
   def try_https_then_http(base_url, path, fun) when is_binary(base_url) and is_binary(path) do
     https_url = force_https(base_url) <> path

@@ -35,7 +35,9 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpersTest do
       resp = %Req.Response{status: 200, body: "ok", headers: %{}}
 
       fun = fn url ->
-        if String.starts_with?(url, "https://"), do: {:ok, resp}, else: flunk("unexpected fallback")
+        if String.starts_with?(url, "https://"),
+          do: {:ok, resp},
+          else: flunk("unexpected fallback")
       end
 
       assert {:ok, ^resp} = HttpHelpers.try_https_then_http("http://example.com", "/api", fun)
@@ -92,5 +94,4 @@ defmodule Tymeslot.Integrations.Video.Providers.MiroTalk.HttpHelpersTest do
       HttpHelpers.try_https_then_http("https://example.com", "/join", fun)
     end
   end
-
 end

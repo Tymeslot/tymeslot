@@ -376,7 +376,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp build_exdate(_event), do: nil
 
-  defp build_attendee_lines(%{attendees: attendees}) when is_list(attendees) and attendees != [] do
+  defp build_attendee_lines(%{attendees: attendees})
+       when is_list(attendees) and attendees != [] do
     attendees
     |> Enum.map(&format_attendee/1)
     |> Enum.reject(&is_nil/1)
@@ -395,6 +396,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp format_attendee(%{email: email} = a) when is_binary(email) do
     cn = a[:name] || email
+
     "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;CN=#{escape_text(cn)}:mailto:#{sanitize_ical_value(email)}"
   end
 

@@ -73,10 +73,16 @@ defmodule Tymeslot.Integrations.Calendar.EventTimeFormatter do
 
     cond do
       context == :error and include_on_error? ->
-        %{"dateTime" => remove_trailing_z(iso_string), "timeZone" => timezone || default_timezone(opts)}
+        %{
+          "dateTime" => remove_trailing_z(iso_string),
+          "timeZone" => timezone || default_timezone(opts)
+        }
 
       context == :missing and include_when_missing? ->
-        %{"dateTime" => remove_trailing_z(iso_string), "timeZone" => timezone || default_timezone(opts)}
+        %{
+          "dateTime" => remove_trailing_z(iso_string),
+          "timeZone" => timezone || default_timezone(opts)
+        }
 
       true ->
         # No timeZone field is emitted, so dateTime must retain its offset/Z

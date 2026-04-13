@@ -294,7 +294,10 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
         "responseStatus" => %{"response" => "accepted", "time" => "2024-03-01T08:00:00Z"},
         "organizer" => %{"emailAddress" => %{"name" => "Alice", "address" => "alice@example.com"}},
         "attendees" => [
-          %{"emailAddress" => %{"name" => "Bob", "address" => "bob@example.com"}, "status" => %{"response" => "accepted"}}
+          %{
+            "emailAddress" => %{"name" => "Bob", "address" => "bob@example.com"},
+            "status" => %{"response" => "accepted"}
+          }
         ],
         "recurrence" => nil,
         "seriesMasterId" => nil
