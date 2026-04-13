@@ -65,12 +65,15 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   @sync_window_future_days ProviderConfig.sync_window_future_days()
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
+  def perform(%Oban.Job{args: args}) do
+    integration_id = Map.fetch!(args, "calendar_integration_id")
+    force_full_fetch? = Map.get(args, "force_full_fetch", false) == true
+
     Logger.metadata(calendar_integration_id: integration_id)
 
     case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
-        sync_integration(integration)
+        sync_integration(integration, force_full_fetch?)
 
       {:error, :not_found} ->
         Logger.warning("CalDAV integration not found, discarding sync job",
@@ -85,27 +88,91 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # Orchestration
   # ---------------------------------------------------------------------------
 
-  defp sync_integration(integration) do
+  defp sync_integration(integration, force_full_fetch?) do
     client = build_client(integration)
 
-    case maybe_detect_tier(integration, client) do
-      {:ok, tier, updated_integration} ->
-        case do_sync(updated_integration, client, tier) do
-          :ok ->
-            SyncBroadcast.broadcast_sync_complete(
-              updated_integration.user_id,
-              updated_integration.id
-            )
+    if force_full_fetch? do
+      case sync_forced_full_fetch(integration, client) do
+        :ok ->
+          SyncBroadcast.broadcast_sync_complete(integration.user_id, integration.id)
+          :ok
 
-            :ok
+        other ->
+          other
+      end
+    else
+      case maybe_detect_tier(integration, client) do
+        {:ok, tier, updated_integration} ->
+          case do_sync(updated_integration, client, tier) do
+            :ok ->
+              SyncBroadcast.broadcast_sync_complete(
+                updated_integration.user_id,
+                updated_integration.id
+              )
 
-          other ->
-            other
-        end
+              :ok
 
-      {:error, :unauthorized} ->
-        log_auth_error(integration)
-        :ok
+            other ->
+              other
+          end
+
+        {:error, :unauthorized} ->
+          log_auth_error(integration)
+          :ok
+      end
+    end
+  end
+
+  # Forced full fetch: runs a calendar-query REPORT against every configured
+  # calendar path, upserts all events, detects deletions, and on success resets
+  # the sync token to nil + updates last_full_sync_at. Never consults the tier.
+  #
+  # Rationale: Tier 1 delta sync and Tier 2 ctag checks can silently miss events
+  # that were present on the server when the initial sync ran. Running a plain
+  # calendar-query REPORT captures ground truth. Resetting the sync token means
+  # the next normal delta sync re-establishes state from scratch, which may
+  # self-heal the server's sync tracking.
+  defp sync_forced_full_fetch(integration, client) do
+    paths = client.calendar_paths
+
+    if Enum.empty?(paths) do
+      Logger.warning("No calendar paths configured; skipping forced full fetch",
+        calendar_integration_id: integration.id
+      )
+
+      :ok
+    else
+      result =
+        Enum.reduce_while(paths, :ok, fn path, _acc ->
+          case do_full_fetch(integration, client, path, []) do
+            :ok -> {:cont, :ok}
+            error -> {:halt, error}
+          end
+        end)
+
+      case result do
+        :ok ->
+          # do_full_fetch has already called persist_sync_state per path (without
+          # the new options). Now write the force-specific fields in one final
+          # update that takes precedence.
+          persist_sync_state(integration,
+            sync_token: nil,
+            last_full_sync_at: DateTime.utc_now(:second)
+          )
+
+          Logger.info("CalDAV forced full fetch completed",
+            calendar_integration_id: integration.id,
+            paths: length(paths)
+          )
+
+          :ok
+
+        {:error, reason} ->
+          # do_full_fetch handles :unauthorized internally (logs and returns :ok),
+          # so we only see real errors here.
+          log_sync_error(integration, "forced full fetch", reason)
+          {:error, reason}
+      end
     end
   end
 
@@ -376,10 +443,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
     base_attrs = %{last_external_sync_at: DateTime.utc_now(:second)}
 
     attrs =
-      case Keyword.fetch(opts, :sync_token) do
-        {:ok, token} -> Map.put(base_attrs, :caldav_sync_token, token)
-        :error -> base_attrs
-      end
+      base_attrs
+      |> maybe_put(opts, :sync_token, :caldav_sync_token)
+      |> maybe_put(opts, :last_full_sync_at, :last_full_sync_at)
 
     case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
@@ -392,6 +458,13 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         )
 
         :ok
+    end
+  end
+
+  defp maybe_put(attrs, opts, opt_key, attr_key) do
+    case Keyword.fetch(opts, opt_key) do
+      {:ok, value} -> Map.put(attrs, attr_key, value)
+      :error -> attrs
     end
   end
 

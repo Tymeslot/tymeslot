@@ -58,6 +58,14 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   @caldav_default_interval 900
   @max_delta_pages 100
 
+  # Forced full fetch: every 12 hours to recover events missed by Tier 1/2
+  # delta-based optimisations.
+  @forced_full_fetch_interval_seconds 12 * 3600
+
+  # Spread forced full-fetch jobs over the next 15 minutes to avoid thundering
+  # herd on CalDAV servers.
+  @forced_full_fetch_jitter_seconds 900
+
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
     by_provider = collect_integrations_by_provider()
@@ -70,6 +78,16 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     caldav_providers = Enum.map(ProviderConfig.caldav_based_providers(), &Atom.to_string/1)
     caldav_integrations = Enum.flat_map(caldav_providers, &Map.get(by_provider, &1, []))
 
+    # Enqueue forced full-fetch jobs first so that, for integrations needing
+    # both a normal sync and a forced full fetch, Oban's unique constraint on
+    # SyncCalDavCalendarWorker (keyed by calendar_integration_id) keeps the
+    # forced job rather than deduping it to a plain sync.
+    # The subsequent normal enqueue pass will hit Oban's unique conflict for
+    # those same integrations and be silently ignored, which is the desired
+    # outcome.
+    {forced_full_count, forced_full_conflicts} =
+      enqueue_caldav_forced_full_fetches(caldav_integrations)
+
     due_integrations = Enum.filter(caldav_integrations, &caldav_due?/1)
     caldav_count = enqueue_batched(due_integrations, SyncCalDavCalendarWorker)
     caldav_skipped = length(caldav_integrations) - length(due_integrations)
@@ -79,7 +97,9 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
       outlook_delta_fetched: outlook_delta_count,
       outlook_enqueued: outlook_enqueued_count,
       caldav_scheduled: caldav_count,
-      caldav_skipped: caldav_skipped
+      caldav_skipped: caldav_skipped,
+      caldav_forced_full_scheduled: forced_full_count,
+      caldav_forced_full_conflicts: forced_full_conflicts
     )
 
     :ok
@@ -103,45 +123,53 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   # ---------------------------------------------------------------------------
 
   # Processes `items` in batches of @batch_size, sleeping @batch_sleep_ms between
-  # batches. `per_item_fun` receives each item and must return `:ok` (counted) or
-  # `:error` (not counted). Returns the total number of successes.
+  # batches. `per_item_fun` receives each item and must return `:ok` (counted as
+  # scheduled), `:conflict` (counted as a deduplicated conflict), or `:error`
+  # (not counted in either total). Returns `{scheduled_count, conflict_count}`.
   defp process_in_batches(items, per_item_fun) do
     items
     |> Enum.chunk_every(@batch_size)
     |> Enum.with_index()
-    |> Enum.reduce(0, fn {batch, batch_index}, total ->
+    |> Enum.reduce({0, 0}, fn {batch, batch_index}, {total, conflicts} ->
       if batch_index > 0, do: Process.sleep(@batch_sleep_ms)
 
-      batch_count =
-        Enum.reduce(batch, 0, fn item, count ->
+      {batch_count, batch_conflicts} =
+        Enum.reduce(batch, {0, 0}, fn item, {count, confl} ->
           case per_item_fun.(item) do
-            :ok -> count + 1
-            :error -> count
+            :ok -> {count + 1, confl}
+            :conflict -> {count, confl + 1}
+            :error -> {count, confl}
           end
         end)
 
-      total + batch_count
+      {total + batch_count, conflicts + batch_conflicts}
     end)
   end
 
   defp enqueue_batched(integrations, worker_module) do
-    process_in_batches(integrations, fn integration ->
-      args = %{"calendar_integration_id" => integration.id}
+    {scheduled, _conflicts} =
+      process_in_batches(integrations, fn integration ->
+        args = %{"calendar_integration_id" => integration.id}
 
-      case Oban.insert(worker_module.new(args)) do
-        {:ok, _job} ->
-          :ok
+        case Oban.insert(worker_module.new(args)) do
+          {:ok, %Oban.Job{conflict?: true}} ->
+            :conflict
 
-        {:error, reason} ->
-          Logger.warning("Failed to enqueue worker in fallback sweep",
-            worker: worker_module,
-            calendar_integration_id: integration.id,
-            error: reason
-          )
+          {:ok, _job} ->
+            :ok
 
-          :error
-      end
-    end)
+          {:error, reason} ->
+            Logger.warning("Failed to enqueue worker in fallback sweep",
+              worker: worker_module,
+              calendar_integration_id: integration.id,
+              error: reason
+            )
+
+            :error
+        end
+      end)
+
+    scheduled
   end
 
   # ---------------------------------------------------------------------------
@@ -159,6 +187,48 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   end
 
   # ---------------------------------------------------------------------------
+  # Periodic forced full fetch (recovers events missed by Tier 1/2 optimisations)
+  # ---------------------------------------------------------------------------
+
+  defp enqueue_caldav_forced_full_fetches(integrations) do
+    now = DateTime.utc_now()
+    due = Enum.filter(integrations, &forced_full_fetch_due?(&1, now))
+
+    process_in_batches(due, fn integration ->
+      delay_seconds = :rand.uniform(@forced_full_fetch_jitter_seconds)
+      scheduled_at = DateTime.add(now, delay_seconds, :second)
+
+      args = %{
+        "calendar_integration_id" => integration.id,
+        "force_full_fetch" => true
+      }
+
+      case Oban.insert(SyncCalDavCalendarWorker.new(args, scheduled_at: scheduled_at)) do
+        {:ok, %Oban.Job{conflict?: true}} ->
+          :conflict
+
+        {:ok, _job} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Failed to enqueue forced full-fetch CalDAV job",
+            calendar_integration_id: integration.id,
+            error: reason
+          )
+
+          :error
+      end
+    end)
+  end
+
+  defp forced_full_fetch_due?(%{last_full_sync_at: nil}, _now), do: true
+
+  defp forced_full_fetch_due?(%{last_full_sync_at: last_full_sync_at}, now) do
+    cutoff = DateTime.add(now, -@forced_full_fetch_interval_seconds, :second)
+    DateTime.before?(last_full_sync_at, cutoff)
+  end
+
+  # ---------------------------------------------------------------------------
   # Outlook
   # ---------------------------------------------------------------------------
 
@@ -166,8 +236,8 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     {with_delta, without_delta} =
       Enum.split_with(integrations, fn i -> not is_nil(i.graph_delta_link) end)
 
-    delta_count = process_in_batches(with_delta, &fetch_outlook_delta/1)
-    enqueued_count = process_in_batches(without_delta, &seed_outlook_integration/1)
+    {delta_count, _} = process_in_batches(with_delta, &fetch_outlook_delta/1)
+    {enqueued_count, _} = process_in_batches(without_delta, &seed_outlook_integration/1)
 
     {delta_count, enqueued_count}
   end

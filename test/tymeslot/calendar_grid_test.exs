@@ -165,7 +165,7 @@ defmodule Tymeslot.CalendarGridTest do
 
       assert_enqueued(
         worker: SyncCalDavCalendarWorker,
-        args: %{"calendar_integration_id" => integration.id}
+        args: %{"calendar_integration_id" => integration.id, "force_full_fetch" => true}
       )
     end
 
@@ -177,7 +177,7 @@ defmodule Tymeslot.CalendarGridTest do
 
       assert_enqueued(
         worker: SyncCalDavCalendarWorker,
-        args: %{"calendar_integration_id" => integration.id}
+        args: %{"calendar_integration_id" => integration.id, "force_full_fetch" => true}
       )
     end
 
@@ -211,6 +211,71 @@ defmodule Tymeslot.CalendarGridTest do
 
       assert {:ok, %{enqueued: 0, skipped: 0, errors: []}} =
                CalendarGrid.refresh_events(user.id)
+    end
+
+    test "enqueues CalDAV sync job with force_full_fetch: true" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true
+        )
+
+      assert {:ok, %{enqueued: 1}} = CalendarGrid.refresh_events(user.id)
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.SyncCalDavCalendarWorker,
+        args: %{
+          "calendar_integration_id" => integration.id,
+          "force_full_fetch" => true
+        }
+      )
+    end
+
+    test "enqueues Radicale sync job with force_full_fetch: true" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "radicale",
+          is_active: true
+        )
+
+      assert {:ok, %{enqueued: 1}} = CalendarGrid.refresh_events(user.id)
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.SyncCalDavCalendarWorker,
+        args: %{
+          "calendar_integration_id" => integration.id,
+          "force_full_fetch" => true
+        }
+      )
+    end
+
+    test "Google refresh does NOT include force_full_fetch flag" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          is_active: true
+        )
+
+      assert {:ok, %{enqueued: 1}} = CalendarGrid.refresh_events(user.id)
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.SyncGoogleCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+
+      refute_enqueued(
+        worker: Tymeslot.Workers.SyncGoogleCalendarWorker,
+        args: %{"force_full_fetch" => true}
+      )
     end
   end
 

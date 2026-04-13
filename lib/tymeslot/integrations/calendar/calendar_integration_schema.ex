@@ -51,6 +51,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           caldav_sync_tier: integer() | nil,
           caldav_sync_token: String.t() | nil,
           last_external_sync_at: DateTime.t() | nil,
+          last_full_sync_at: DateTime.t() | nil,
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           calendar_events:
             [Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema.t()]
@@ -104,6 +105,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
 
     # Integration sync health
     field(:last_external_sync_at, :utc_datetime)
+    field(:last_full_sync_at, :utc_datetime)
 
     # Virtual fields for decrypted values
     field(:username, :string, virtual: true)
