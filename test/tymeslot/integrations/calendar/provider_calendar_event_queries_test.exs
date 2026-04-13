@@ -416,6 +416,34 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueriesTest do
 
       assert event.summary == "Updated"
     end
+
+    test "persists recurring events with recurrence_exceptions" do
+      # Regression: recurrence_exceptions is typed {:array, :date}, so events
+      # produced by the CalDAV event processor (which sources EXDATE from the
+      # iCal parser) must round-trip through insert_all without a type clash.
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      attrs =
+        build_event_attrs(integration, %{
+          uid: "recurring-with-exdate",
+          recurrence_rule: "FREQ=WEEKLY;COUNT=3",
+          recurrence_exceptions: [~D[2026-04-15], ~D[2026-04-22]]
+        })
+
+      assert {:ok, 1} = ProviderCalendarEventQueries.upsert_batch([attrs])
+
+      [event] =
+        Repo.all(
+          from(e in ProviderCalendarEventSchema,
+            where:
+              e.calendar_integration_id == ^integration.id and
+                e.uid == "recurring-with-exdate"
+          )
+        )
+
+      assert event.recurrence_exceptions == [~D[2026-04-15], ~D[2026-04-22]]
+    end
   end
 
   describe "get_by_uid/2" do

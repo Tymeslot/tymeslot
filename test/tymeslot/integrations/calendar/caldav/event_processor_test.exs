@@ -304,6 +304,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
       refute excluded in starts
     end
 
+    test "EXDATE values are normalised to Date structs for storage" do
+      # The iCal parser emits EXDATE as DateTime, but the canonical
+      # CalendarEvent schema stores recurrence_exceptions as {:array, :date}.
+      # Storing DateTimes here would crash insert_all at the DB boundary.
+      raw = %{
+        uid: "exdate-storage-001@example.com",
+        summary: "Weekly with exclusion",
+        dtstart: ~U[2026-04-08 10:00:00Z],
+        dtend: ~U[2026-04-08 11:00:00Z],
+        rrule: "FREQ=WEEKLY;COUNT=3",
+        exdate: [~U[2026-04-15 10:00:00Z]]
+      }
+
+      assert {:ok, [event | _]} = EventProcessor.normalise_events([raw], @context)
+      assert event.recurrence_exceptions == [~D[2026-04-15]]
+      assert Enum.all?(event.recurrence_exceptions, &match?(%Date{}, &1))
+    end
+
     test "skips event with invalid data and sends admin alert" do
       valid_raw = %{
         uid: "good-001@example.com",

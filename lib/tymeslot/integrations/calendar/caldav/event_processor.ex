@@ -127,6 +127,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
   defp parse_exdates(exdates) when is_list(exdates), do: exdates
   defp parse_exdates(_other), do: []
 
+  # The canonical CalendarEvent schema stores recurrence_exceptions as
+  # `{:array, :date}`, while EXDATE values from the iCal parser are DateTimes
+  # (the recurrence expander needs them as DateTimes for occurrence comparison).
+  # Convert at the storage boundary.
+  defp exdates_as_dates(exdates) do
+    exdates
+    |> parse_exdates()
+    |> Enum.map(fn
+      %DateTime{} = dt -> DateTime.to_date(dt)
+      %Date{} = d -> d
+    end)
+  end
+
   defp build_calendar_event(raw, context) do
     {all_day, start_val, end_val, timezone} = resolve_timing(raw)
 
@@ -148,7 +161,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
         attendees: map_attendees(raw[:attendee] || raw[:attendees]),
         reminders: map_reminders(raw[:valarm]),
         recurrence_rule: raw[:rrule] || raw[:recurrence_rule],
-        recurrence_exceptions: parse_exdates(raw[:exdate] || raw[:exdates] || []),
+        recurrence_exceptions: exdates_as_dates(raw[:exdate] || raw[:exdates] || []),
         etag: raw[:etag],
         provider_metadata: raw,
         created_by_tymeslot: tymeslot_origin?(raw)
