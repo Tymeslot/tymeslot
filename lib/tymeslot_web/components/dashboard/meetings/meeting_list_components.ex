@@ -223,8 +223,8 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
                 if(!Helpers.can_cancel?(@meeting), do: "opacity-50 cursor-not-allowed", else: "")
               ]}
             >
-              <span :if={@cancelling_meeting == @meeting.id}><CoreComponents.spinner class="h-4 w-4 mr-2" /> Processing...</span>
-              <span :if={@cancelling_meeting != @meeting.id}><Icons.icon name={:x_mark} class="w-4 h-4 mr-2 flex-shrink-0" /> Cancel</span>
+              <span :if={@cancelling_meeting == @meeting.id} class="flex items-center"><CoreComponents.spinner class="h-4 w-4 mr-2" /> Processing...</span>
+              <span :if={@cancelling_meeting != @meeting.id} class="flex items-center"><Icons.icon name={:x_mark} class="w-4 h-4 mr-2 flex-shrink-0" /> Cancel</span>
             </button>
           </div>
           <div :if={@meeting.status == "cancelled" or Helpers.past_meeting?(@meeting)} class="hidden lg:block">&nbsp;</div>
