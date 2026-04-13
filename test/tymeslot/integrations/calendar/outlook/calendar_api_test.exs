@@ -86,7 +86,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
          }}
       end)
 
-      assert {:ok, [%{id: "event1"}]} =
+      assert {:ok, [%{"id" => "event1"}]} =
                CalendarAPI.list_events(integration, "test-cal", start_time, end_time)
     end
   end
@@ -274,6 +274,120 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
 
       assert {:ok, {"new_access_token", "new_refresh_token", %DateTime{}}} =
                CalendarAPI.refresh_token(integration)
+    end
+  end
+
+  describe "convert_to_common_format/1" do
+    test "maps all Graph API string-keyed fields to atom-keyed internal format" do
+      raw_event = %{
+        "id" => "AAMkAGI=",
+        "iCalUId" => "040000008200E00074C5B7101A82E008",
+        "subject" => "All-hands meeting",
+        "body" => %{"content" => "Quarterly review", "contentType" => "text"},
+        "location" => %{"displayName" => "Main Conference Room"},
+        "start" => %{"dateTime" => "2024-03-15T14:00:00", "timeZone" => "UTC"},
+        "end" => %{"dateTime" => "2024-03-15T15:00:00", "timeZone" => "UTC"},
+        "isAllDay" => false,
+        "isCancelled" => false,
+        "showAs" => "busy",
+        "sensitivity" => "normal",
+        "responseStatus" => %{"response" => "accepted", "time" => "2024-03-01T08:00:00Z"},
+        "organizer" => %{"emailAddress" => %{"name" => "Alice", "address" => "alice@example.com"}},
+        "attendees" => [
+          %{"emailAddress" => %{"name" => "Bob", "address" => "bob@example.com"}, "status" => %{"response" => "accepted"}}
+        ],
+        "recurrence" => nil,
+        "seriesMasterId" => nil
+      }
+
+      [result] = CalendarAPI.convert_to_common_format([raw_event])
+
+      assert result.id == "AAMkAGI="
+      assert result.summary == "All-hands meeting"
+      assert result.description == "Quarterly review"
+      assert result.location == "Main Conference Room"
+      assert result.start == %{"dateTime" => "2024-03-15T14:00:00", "timeZone" => "UTC"}
+      assert result.end == %{"dateTime" => "2024-03-15T15:00:00", "timeZone" => "UTC"}
+      assert result.is_all_day == false
+      assert result.status == "confirmed"
+      assert result.show_as == "busy"
+      assert result.response_status == "accepted"
+    end
+
+    test "maps isCancelled: true to status: cancelled" do
+      raw_event = %{
+        "id" => "evt-cancelled",
+        "subject" => "Cancelled meeting",
+        "body" => %{"content" => nil},
+        "location" => %{"displayName" => nil},
+        "start" => %{"dateTime" => "2024-03-15T14:00:00"},
+        "end" => %{"dateTime" => "2024-03-15T15:00:00"},
+        "isAllDay" => false,
+        "isCancelled" => true,
+        "showAs" => "free",
+        "responseStatus" => %{"response" => "none"}
+      }
+
+      [result] = CalendarAPI.convert_to_common_format([raw_event])
+
+      assert result.status == "cancelled"
+    end
+
+    test "defaults is_all_day to false when isAllDay is absent" do
+      raw_event = %{
+        "id" => "evt-no-allday",
+        "subject" => "Quick sync",
+        "body" => %{"content" => nil},
+        "location" => %{"displayName" => nil},
+        "start" => %{"dateTime" => "2024-03-15T14:00:00"},
+        "end" => %{"dateTime" => "2024-03-15T15:00:00"},
+        "isCancelled" => false,
+        "showAs" => "busy",
+        "responseStatus" => %{"response" => "accepted"}
+      }
+
+      [result] = CalendarAPI.convert_to_common_format([raw_event])
+
+      assert result.is_all_day == false
+    end
+
+    test "handles missing optional fields gracefully" do
+      raw_event = %{
+        "id" => "evt-minimal",
+        "isCancelled" => false
+      }
+
+      [result] = CalendarAPI.convert_to_common_format([raw_event])
+
+      assert result.id == "evt-minimal"
+      assert result.summary == nil
+      assert result.description == nil
+      assert result.location == nil
+      assert result.start == nil
+      assert result.end == nil
+      assert result.is_all_day == false
+      assert result.status == "confirmed"
+      assert result.show_as == nil
+      assert result.response_status == nil
+    end
+
+    test "converts multiple events in one call" do
+      raw_events = [
+        %{"id" => "evt-1", "isCancelled" => false, "subject" => "First"},
+        %{"id" => "evt-2", "isCancelled" => true, "subject" => "Second"}
+      ]
+
+      results = CalendarAPI.convert_to_common_format(raw_events)
+
+      assert length(results) == 2
+      assert Enum.at(results, 0).id == "evt-1"
+      assert Enum.at(results, 0).status == "confirmed"
+      assert Enum.at(results, 1).id == "evt-2"
+      assert Enum.at(results, 1).status == "cancelled"
+    end
+
+    test "returns empty list for empty input" do
+      assert [] = CalendarAPI.convert_to_common_format([])
     end
   end
 

@@ -182,6 +182,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
     end
   end
 
+  # Prefer `originalStartTimeZone` from the Graph response — it preserves the
+  # event's native IANA zone regardless of the `Prefer: outlook.timezone="UTC"`
+  # header we send on list requests. Fall back to `start.timeZone` when Graph
+  # omits the original zone (e.g. externally-created events missing metadata).
+  defp maybe_put_timezone(attrs, %{"originalStartTimeZone" => tz})
+       when is_binary(tz) and tz != "",
+       do: Map.put(attrs, :timezone, tz)
+
   defp maybe_put_timezone(attrs, %{"start" => %{"timeZone" => tz}}),
     do: Map.put(attrs, :timezone, tz)
 

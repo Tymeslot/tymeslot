@@ -193,26 +193,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
     end
   end
 
-  describe "get_events/1" do
-    test "delegates to CaldavCommon" do
-      client = %{
-        base_url: "http://localhost:1",
-        username: "user",
-        password: "pass",
-        calendar_paths: ["/calendars/user/personal/"],
-        provider: :caldav
-      }
-
-      # Should fail immediately with econnrefused or similar, not time out
-      capture_log(fn ->
-        result = Provider.get_events(client)
-        assert match?({:error, _}, result) or match?({:ok, []}, result)
-      end)
-    end
-  end
-
-  describe "get_events/3" do
-    test "accepts start and end time parameters" do
+  describe "list_events/3" do
+    test "delegates to CaldavCommon with time range" do
       client = %{
         base_url: "http://localhost:1",
         username: "user",
@@ -225,10 +207,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ProviderTest do
       end_time = DateTime.add(start_time, 3600, :second)
 
       capture_log(fn ->
-        result = Provider.get_events(client, start_time, end_time)
-        # Should fail immediately
+        result = Provider.list_events(client, start_time: start_time, end_time: end_time)
+        # Should fail immediately with econnrefused or similar
         assert match?({:error, _}, result) or match?({:ok, []}, result)
       end)
+    end
+
+    test "returns error when time range is missing" do
+      client = %{
+        base_url: "http://localhost:1",
+        username: "user",
+        password: "pass",
+        calendar_paths: ["/calendars/user/personal/"],
+        provider: :caldav
+      }
+
+      assert Provider.list_events(client, []) == {:error, :missing_time_range}
     end
   end
 

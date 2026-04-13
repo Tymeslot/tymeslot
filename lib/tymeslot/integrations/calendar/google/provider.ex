@@ -6,8 +6,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   to fetch calendar events for availability calculation.
   """
 
-  @behaviour Tymeslot.Integrations.Calendar.Provider
-
   use Tymeslot.Integrations.Common.OAuthBase,
     provider_name: "google",
     display_name: "Google Calendar",

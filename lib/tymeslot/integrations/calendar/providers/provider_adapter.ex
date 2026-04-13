@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
 
@@ -39,41 +40,70 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
   end
 
   @doc """
-  Lists all events from the calendar.
+  Creates a new adapter client from a persisted `CalendarIntegrationSchema`.
+
+  Handles the CalDAV-vs-OAuth branching and credential decryption internally.
+  CalDAV providers decrypt credentials and create a real client via `ProviderRegistry`;
+  OAuth providers use the integration struct directly as the client.
+
+  Returns `{:ok, adapter_client()}` or `{:error, reason}`.
+  """
+  @spec new_client_from_integration(CalendarIntegrationSchema.t()) ::
+          {:ok, adapter_client()} | {:error, term()}
+  def new_client_from_integration(%CalendarIntegrationSchema{} = integration) do
+    with {:ok, provider_atom} <- ProviderConfig.validate_provider(integration.provider),
+         {:ok, provider_module} <- ProviderRegistry.get_provider(provider_atom) do
+      if ProviderConfig.caldav_based?(provider_atom) do
+        decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
+
+        config = %{
+          base_url: decrypted.base_url,
+          username: decrypted.username,
+          password: decrypted.password,
+          calendar_paths: decrypted.calendar_paths,
+          verify_ssl: decrypted.verify_ssl
+        }
+
+        case ProviderRegistry.create_client(provider_atom, config, skip_validation: true) do
+          {:ok, client} ->
+            {:ok,
+             %{
+               provider_type: provider_atom,
+               client: client,
+               provider_module: provider_module
+             }}
+
+          {:error, _reason} = error ->
+            error
+        end
+      else
+        {:ok,
+         %{
+           provider_type: provider_atom,
+           client: integration,
+           provider_module: provider_module
+         }}
+      end
+    end
+  end
+
+  @doc """
+  Lists all events from the calendar using a wide default range (30 days ago to 365 days ahead).
   """
   @spec get_events(adapter_client()) ::
           {:ok, list()} | {:error, atom(), term()} | {:error, term()}
   def get_events(adapter_client) do
-    Metrics.time_operation(:calendar_get_events, %{provider: adapter_client.provider_type}, fn ->
-      Logger.debug("Getting events from calendar", provider: adapter_client.provider_type)
+    start_time =
+      DateTime.utc_now()
+      |> DateTime.add(-30, :day)
+      |> DateTime.truncate(:second)
 
-      case adapter_client.provider_module.get_events(adapter_client.client) do
-        {:ok, events} = result ->
-          Logger.debug("Successfully retrieved events",
-            provider: adapter_client.provider_type,
-            event_count: length(events)
-          )
+    end_time =
+      DateTime.utc_now()
+      |> DateTime.add(365, :day)
+      |> DateTime.truncate(:second)
 
-          result
-
-        {:error, type, reason} = error ->
-          Logger.error("Failed to get events from calendar provider",
-            provider_type: adapter_client.provider_type,
-            error_type: type,
-            reason: inspect(reason)
-          )
-
-          error
-
-        {:error, reason} = error ->
-          Logger.error("Failed to get events from calendar provider",
-            provider_type: adapter_client.provider_type,
-            reason: inspect(reason)
-          )
-
-          error
-      end
-    end)
+    get_events(adapter_client, start_time, end_time)
   end
 
   @doc """
@@ -92,10 +122,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
           end_time: end_time
         )
 
-        case adapter_client.provider_module.get_events(
+        opts = [start_time: start_time, end_time: end_time]
+
+        case adapter_client.provider_module.list_events(
                adapter_client.client,
-               start_time,
-               end_time
+               opts
              ) do
           {:ok, events} = result ->
             Logger.debug("Successfully retrieved events in range",

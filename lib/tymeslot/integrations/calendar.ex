@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.OAuth
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
+  alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
@@ -177,6 +178,117 @@ defmodule Tymeslot.Integrations.Calendar do
     Connection.validate_connection(integration, user_id)
   end
 
+  # ---------------------------
+  # Public API: Provider facade (for developer tooling and diagnostics)
+  # ---------------------------
+
+  @doc """
+  Creates an event on the integration's calendar provider.
+
+  Returns `{:ok, event_id}` where `event_id` is a string identifier, or
+  `{:error, reason}`.
+  """
+  @spec create_provider_event(integration(), map()) :: {:ok, any()} | {:error, any()}
+  def create_provider_event(%CalendarIntegrationSchema{} = integration, event_attrs) do
+    with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
+      adapter_client.provider_module.create_event(
+        adapter_client.client,
+        normalise_event_attrs(event_attrs)
+      )
+    end
+  end
+
+  @doc """
+  Fetches raw events from the provider and normalises them into `CalendarEvent` structs.
+
+  Returns `{:ok, [CalendarEvent.t()]}` or `{:error, reason}`.
+  """
+  @spec fetch_and_normalise_provider_events(integration(), DateTime.t(), DateTime.t()) ::
+          {:ok, list()} | {:error, any()}
+  def fetch_and_normalise_provider_events(
+        %CalendarIntegrationSchema{} = integration,
+        range_start,
+        range_end
+      ) do
+    with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
+      context = %{
+        calendar_integration_id: integration.id,
+        provider_calendar_id: integration.default_booking_calendar_id || "",
+        synced_at: DateTime.utc_now(:microsecond)
+      }
+
+      opts = [start_time: range_start, end_time: range_end]
+
+      with {:ok, raw_events} <-
+             adapter_client.provider_module.list_events(adapter_client.client, opts) do
+        adapter_client.provider_module.normalise_events(raw_events, context)
+      end
+    end
+  end
+
+  @doc """
+  Updates an event on the integration's calendar provider.
+
+  Returns `:ok`, `{:ok, result}`, or `{:error, reason}`.
+  """
+  @spec update_provider_event(integration(), String.t(), map()) ::
+          :ok | {:ok, any()} | {:error, any()}
+  def update_provider_event(%CalendarIntegrationSchema{} = integration, event_id, event_attrs) do
+    with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
+      adapter_client.provider_module.update_event(
+        adapter_client.client,
+        event_id,
+        normalise_event_attrs(event_attrs)
+      )
+    end
+  end
+
+  # Normalizes outbound event attrs for provider dispatch. Currently handles
+  # the all-day `end_date == start_date` case: iCal, Google, and Outlook all
+  # treat the end as exclusive for date-only events, so a single-day event
+  # must have `end = start + 1`. Callers may pass `end = start` to express
+  # "an event on that day"; this helper bridges the intent to the wire format.
+  defp normalise_event_attrs(%{start_time: %Date{} = start_date, end_time: %Date{} = end_date} = attrs) do
+    if Date.compare(start_date, end_date) == :eq do
+      %{attrs | end_time: Date.add(end_date, 1)}
+    else
+      attrs
+    end
+  end
+
+  defp normalise_event_attrs(attrs), do: attrs
+
+  @doc """
+  Deletes an event from the integration's calendar provider.
+
+  Returns `:ok`, `{:ok, result}`, or `{:error, reason}`.
+  """
+  @spec delete_provider_event(integration(), String.t()) ::
+          :ok | {:ok, any()} | {:error, any()}
+  def delete_provider_event(%CalendarIntegrationSchema{} = integration, event_id) do
+    with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
+      adapter_client.provider_module.delete_event(adapter_client.client, event_id)
+    end
+  end
+
+  @doc """
+  Performs a quick connectivity probe against the integration's provider.
+
+  Delegates to the provider's `check_connectivity/1` callback. CalDAV providers
+  send a PROPFIND request with a short timeout to verify reachability and
+  authentication. OAuth providers return immediately since token validity is
+  checked lazily on the first real API call.
+
+  Returns `:ok` or `{:error, reason}`.
+  """
+  @spec check_provider_connectivity(integration()) :: :ok | {:error, any()}
+  def check_provider_connectivity(%CalendarIntegrationSchema{} = integration) do
+    with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration),
+         {:ok, _info} <- adapter_client.provider_module.check_connectivity(adapter_client.client) do
+      :ok
+    end
+  end
+
   @doc """
   Tests the connection and returns display-friendly message.
   Delegates to Connection.test_connection/1 to centralize provider resolution.
@@ -312,10 +424,6 @@ defmodule Tymeslot.Integrations.Calendar do
       when is_integer(user_id) and is_integer(integration_id) do
     OAuth.initiate_google_scope_upgrade(user_id, integration_id)
   end
-
-  # ---------------------------
-  # Public API: UI helpers
-  # ---------------------------
 
   @doc """
   Formats token expiry info into a human-readable string.

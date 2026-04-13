@@ -228,22 +228,22 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
     test "converts multiple Outlook events" do
       outlook_events = [
         %{
-          id: "event1",
-          summary: "Meeting 1",
-          description: nil,
-          location: nil,
-          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T15:00:00Z"},
-          status: nil
+          "id" => "event1",
+          "subject" => "Meeting 1",
+          "body" => %{"content" => nil},
+          "location" => %{"displayName" => nil},
+          "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T15:00:00Z"},
+          "isCancelled" => false
         },
         %{
-          id: "event2",
-          summary: "Meeting 2",
-          description: nil,
-          location: nil,
-          start: %{"dateTime" => "2024-03-15T16:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T17:00:00Z"},
-          status: nil
+          "id" => "event2",
+          "subject" => "Meeting 2",
+          "body" => %{"content" => nil},
+          "location" => %{"displayName" => nil},
+          "start" => %{"dateTime" => "2024-03-15T16:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T17:00:00Z"},
+          "isCancelled" => false
         }
       ]
 
@@ -261,22 +261,22 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
     test "converts events with varying data completeness" do
       outlook_events = [
         %{
-          id: "complete-event",
-          summary: "Complete",
-          description: "Full details",
-          location: "Office",
-          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T15:00:00Z"},
-          status: "confirmed"
+          "id" => "complete-event",
+          "subject" => "Complete",
+          "body" => %{"content" => "Full details"},
+          "location" => %{"displayName" => "Office"},
+          "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T15:00:00Z"},
+          "isCancelled" => false
         },
         %{
-          id: "minimal-event",
-          summary: nil,
-          description: nil,
-          location: nil,
-          start: %{"dateTime" => "2024-03-16T14:00:00Z"},
-          end: %{"dateTime" => "2024-03-16T15:00:00Z"},
-          status: nil
+          "id" => "minimal-event",
+          "subject" => nil,
+          "body" => %{"content" => nil},
+          "location" => %{"displayName" => nil},
+          "start" => %{"dateTime" => "2024-03-16T14:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-16T15:00:00Z"},
+          "isCancelled" => false
         }
       ]
 
@@ -290,45 +290,48 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
     test "filters out declined and cancelled events at the provider level" do
       outlook_events = [
         %{
-          id: "busy-event",
-          summary: "Busy",
-          description: "desc",
-          location: "loc",
-          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T15:00:00Z"},
-          status: "confirmed",
-          show_as: "busy"
+          "id" => "busy-event",
+          "subject" => "Busy",
+          "body" => %{"content" => "desc"},
+          "location" => %{"displayName" => "loc"},
+          "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T15:00:00Z"},
+          "isCancelled" => false,
+          "showAs" => "busy",
+          "responseStatus" => %{"response" => "accepted"}
         },
         %{
-          id: "free-event",
-          summary: "Free",
-          description: "desc",
-          location: "loc",
-          start: %{"dateTime" => "2024-03-15T16:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T17:00:00Z"},
-          status: "confirmed",
-          show_as: "free"
+          "id" => "free-event",
+          "subject" => "Free",
+          "body" => %{"content" => "desc"},
+          "location" => %{"displayName" => "loc"},
+          "start" => %{"dateTime" => "2024-03-15T16:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T17:00:00Z"},
+          "isCancelled" => false,
+          "showAs" => "free",
+          "responseStatus" => %{"response" => "accepted"}
         },
         %{
-          id: "declined-event",
-          summary: "Declined",
-          description: "desc",
-          location: "loc",
-          start: %{"dateTime" => "2024-03-15T18:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T19:00:00Z"},
-          status: "confirmed",
-          show_as: "busy",
-          response_status: "declined"
+          "id" => "declined-event",
+          "subject" => "Declined",
+          "body" => %{"content" => "desc"},
+          "location" => %{"displayName" => "loc"},
+          "start" => %{"dateTime" => "2024-03-15T18:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T19:00:00Z"},
+          "isCancelled" => false,
+          "showAs" => "busy",
+          "responseStatus" => %{"response" => "declined"}
         },
         %{
-          id: "cancelled-event",
-          summary: "Cancelled",
-          description: "desc",
-          location: "loc",
-          start: %{"dateTime" => "2024-03-15T20:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T21:00:00Z"},
-          status: "cancelled",
-          show_as: "busy"
+          "id" => "cancelled-event",
+          "subject" => "Cancelled",
+          "body" => %{"content" => "desc"},
+          "location" => %{"displayName" => "loc"},
+          "start" => %{"dateTime" => "2024-03-15T20:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T21:00:00Z"},
+          "isCancelled" => true,
+          "showAs" => "busy",
+          "responseStatus" => %{"response" => "accepted"}
         }
       ]
 
@@ -344,28 +347,32 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
     test "sets transparency: opaque for busy events and transparent for free events" do
       events = [
         %{
-          id: "busy",
-          show_as: "busy",
-          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T15:00:00Z"}
+          "id" => "busy",
+          "showAs" => "busy",
+          "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T15:00:00Z"},
+          "isCancelled" => false
         },
         %{
-          id: "tentative",
-          show_as: "tentative",
-          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T15:00:00Z"}
+          "id" => "tentative",
+          "showAs" => "tentative",
+          "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T15:00:00Z"},
+          "isCancelled" => false
         },
         %{
-          id: "oom",
-          show_as: "oom",
-          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T15:00:00Z"}
+          "id" => "oom",
+          "showAs" => "oom",
+          "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T15:00:00Z"},
+          "isCancelled" => false
         },
         %{
-          id: "free",
-          show_as: "free",
-          start: %{"dateTime" => "2024-03-15T14:00:00Z"},
-          end: %{"dateTime" => "2024-03-15T15:00:00Z"}
+          "id" => "free",
+          "showAs" => "free",
+          "start" => %{"dateTime" => "2024-03-15T14:00:00Z"},
+          "end" => %{"dateTime" => "2024-03-15T15:00:00Z"},
+          "isCancelled" => false
         }
       ]
 
@@ -465,6 +472,77 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.ProviderTest do
       end)
 
       assert {:ok, :deleted} = Provider.call_delete_event(integration, "event123")
+    end
+  end
+
+  describe "check_connectivity/1" do
+    test "returns skipped status for any input" do
+      assert {:ok, %{status: :skipped, reason: reason}} = Provider.check_connectivity(%{})
+      assert is_binary(reason)
+    end
+
+    test "returns skipped status when called with an integration struct" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "outlook"
+        )
+
+      assert {:ok, %{status: :skipped}} = Provider.check_connectivity(integration)
+    end
+  end
+
+  describe "list_events/3" do
+    test "extracts start_time and end_time from opts and delegates to primary events" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "outlook",
+          access_token: "test_token"
+        )
+
+      start_time = ~U[2024-03-15 09:00:00Z]
+      end_time = ~U[2024-03-15 17:00:00Z]
+
+      expect(OutlookCalendarAPIMock, :list_primary_events, fn _integration,
+                                                              ^start_time,
+                                                              ^end_time ->
+        {:ok, [%{"id" => "evt1", "subject" => "Stand-up"}]}
+      end)
+
+      assert {:ok, [%{"id" => "evt1"}]} =
+               Provider.list_events(integration,
+                 start_time: start_time,
+                 end_time: end_time
+               )
+    end
+
+    test "propagates errors from the underlying API call" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "outlook",
+          access_token: "test_token"
+        )
+
+      start_time = ~U[2024-03-15 09:00:00Z]
+      end_time = ~U[2024-03-15 17:00:00Z]
+
+      expect(OutlookCalendarAPIMock, :list_primary_events, fn _integration, _start, _end ->
+        {:error, :unauthorized, "Token expired"}
+      end)
+
+      assert {:error, :unauthorized, _msg} =
+               Provider.list_events(integration,
+                 start_time: start_time,
+                 end_time: end_time
+               )
     end
   end
 

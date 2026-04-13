@@ -160,8 +160,14 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
   def put_event(url, username, password, ical_data, opts \\ []) do
     headers = build_put_event_headers(username, password, opts)
-    # Default 60s gives buffer for slow CalDAV servers in background workers (90s timeout)
-    timeout = Keyword.get(opts, :timeout, 60_000)
+    # 45s is the sweet spot for CalDAV writes: long enough that transient
+    # slowness (backup running, GC pause, lock contention) completes cleanly
+    # without interrupting the server mid-write, short enough that a truly
+    # dead server is caught well inside the circuit breaker's 70s GenServer
+    # budget. Interrupting a CalDAV write mid-flight is the main way a
+    # healthy server (Radicale especially) gets wedged — orphan fcntl locks.
+    # Oban workers are async, so the user never waits on this timeout.
+    timeout = Keyword.get(opts, :timeout, 45_000)
 
     case http_client().put(url, ical_data, headers, receive_timeout: timeout) do
       {:ok, response} ->
@@ -181,8 +187,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
           {:ok, Req.Response.t()} | {:error, CalDAVBase.error_reason()}
   def delete_event(url, username, password, opts \\ []) do
     headers = build_headers(username, password, [])
-    # Default 60s for consistency with put_event in background workers
-    timeout = Keyword.get(opts, :timeout, 60_000)
+    # Matches put_event — see the note there for rationale.
+    timeout = Keyword.get(opts, :timeout, 45_000)
 
     case http_client().delete(url, headers, receive_timeout: timeout) do
       {:ok, %Req.Response{status: status} = response} when status in [200, 204, 404] ->
@@ -288,9 +294,28 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   defp handle_put_event_response(%Req.Response{status: status}),
     do: {:error, "Unexpected status: #{status}"}
 
+  defp handle_write_network_error(%Mint.TransportError{reason: :timeout}),
+    do: write_timeout_error()
+
+  defp handle_write_network_error(%Req.TransportError{reason: :timeout}),
+    do: write_timeout_error()
+
+  defp handle_write_network_error(%Mint.HTTPError{reason: :timeout}),
+    do: write_timeout_error()
+
   defp handle_write_network_error(reason) do
     Logger.debug("CalDAV PUT/DELETE network error", reason: inspect(reason))
     {:error, :network_error}
+  end
+
+  defp write_timeout_error do
+    Logger.warning(
+      "CalDAV server did not respond within the write timeout. The server is " <>
+        "likely stuck, overloaded, or blocked on a stale lock — check the " <>
+        "server's logs and restart it if the condition persists."
+    )
+
+    {:error, :server_unresponsive}
   end
 
   defp http_client do

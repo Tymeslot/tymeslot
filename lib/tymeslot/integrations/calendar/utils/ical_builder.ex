@@ -99,25 +99,46 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   Builds a minimal iCalendar document for quick event creation.
 
   Used for simple events without complex properties.
+
+  Timed events are always serialised in UTC with a `Z` suffix — Tymeslot
+  deliberately avoids TZID / VTIMEZONE emission because a spec-compliant
+  VTIMEZONE body (RFC 5545 §3.6.5) requires authored STANDARD/DAYLIGHT
+  subcomponents with real TZOFFSETFROM/TO and RRULE rules, which we don't
+  generate from our tzdata-backed clock. Stricter CalDAV servers (Radicale's
+  vobject) reject a VTIMEZONE without those subcomponents as HTTP 400. The
+  UTC wall-clock is preserved correctly, and the per-user timezone label is
+  reconstructed at display time from the user's profile timezone — the iCal
+  payload never drives user-facing labels.
   """
   @spec build_simple_event(String.t(), simple_event_data() | map()) :: String.t()
   def build_simple_event(uid, event_data) do
-    [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Tymeslot//CalDAV Client//EN",
-      "BEGIN:VEVENT",
-      "UID:#{uid}",
-      "DTSTART:#{format_datetime(event_data.start_time)}",
-      "DTEND:#{format_datetime(event_data.end_time)}",
-      "SUMMARY:#{escape_text(event_data.summary)}",
-      "DESCRIPTION:#{escape_text(event_data[:description] || "")}",
-      "LOCATION:#{escape_text(event_data[:location] || "")}",
-      "END:VEVENT",
-      "END:VCALENDAR"
-    ]
-    |> Enum.join("\r\n")
-    |> Kernel.<>("\r\n")
+    lines =
+      Enum.reject(
+        [
+          "BEGIN:VCALENDAR",
+          "VERSION:2.0",
+          "PRODID:-//Tymeslot//CalDAV Client//EN",
+          "BEGIN:VEVENT",
+          "UID:#{uid}",
+          "DTSTAMP:#{format_datetime(DateTime.utc_now())}",
+          build_dtstart(event_data),
+          build_dtend(event_data),
+          "SUMMARY:#{escape_text(Map.get(event_data, :summary) || "")}",
+          "DESCRIPTION:#{escape_text(event_data[:description] || "")}",
+          "LOCATION:#{escape_text(event_data[:location] || "")}",
+          build_transp(event_data),
+          build_status(event_data),
+          build_class(event_data),
+          build_rrule_line(event_data),
+          build_exdate(event_data),
+          build_attendee_lines(event_data),
+          "END:VEVENT",
+          "END:VCALENDAR"
+        ],
+        &(&1 == nil or &1 == "")
+      )
+
+    Enum.join(lines, "\r\n") <> "\r\n"
   end
 
   @doc """
@@ -238,15 +259,35 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     "RRULE:#{Enum.join(parts, ";")}"
   end
 
+  @valid_statuses ~w[TENTATIVE CONFIRMED CANCELLED]
+  @valid_transparencies ~w[OPAQUE TRANSPARENT]
+  @valid_visibilities ~w[PUBLIC PRIVATE CONFIDENTIAL]
+
   # Private helper functions
+
+  defp build_dtstart(%{start_time: %Date{} = date}) do
+    "DTSTART;VALUE=DATE:#{format_date(date)}"
+  end
 
   defp build_dtstart(%{all_day: true, start_time: start_time}) do
     date = DateTime.to_date(start_time)
     "DTSTART;VALUE=DATE:#{format_date(date)}"
   end
 
+  defp build_dtstart(%{start_time: %NaiveDateTime{} = ndt}) do
+    "DTSTART:#{format_naive_datetime(ndt)}"
+  end
+
+  defp build_dtstart(%{start_time: %DateTime{} = dt}) do
+    "DTSTART:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
+  end
+
   defp build_dtstart(%{start_time: start_time}) do
     "DTSTART:#{format_datetime(start_time)}"
+  end
+
+  defp build_dtend(%{end_time: %Date{} = date}) do
+    "DTEND;VALUE=DATE:#{format_date(date)}"
   end
 
   defp build_dtend(%{all_day: true, end_time: end_time}) do
@@ -254,8 +295,119 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     "DTEND;VALUE=DATE:#{format_date(date)}"
   end
 
+  defp build_dtend(%{end_time: %NaiveDateTime{} = ndt}) do
+    "DTEND:#{format_naive_datetime(ndt)}"
+  end
+
+  defp build_dtend(%{end_time: %DateTime{} = dt}) do
+    "DTEND:#{format_datetime(DateTime.shift_zone!(dt, "Etc/UTC"))}"
+  end
+
   defp build_dtend(%{end_time: end_time}) do
     "DTEND:#{format_datetime(end_time)}"
+  end
+
+  defp build_transp(%{transparency: t}) when t in [:transparent, "transparent", "TRANSPARENT"],
+    do: "TRANSP:TRANSPARENT"
+
+  defp build_transp(%{transparency: t}) when t in [:opaque, "opaque", "OPAQUE"],
+    do: "TRANSP:OPAQUE"
+
+  defp build_transp(_event), do: nil
+
+  defp build_status(%{status: s}) when s in [:tentative, "tentative", "TENTATIVE"],
+    do: "STATUS:TENTATIVE"
+
+  defp build_status(%{status: s}) when s in [:confirmed, "confirmed", "CONFIRMED"],
+    do: "STATUS:CONFIRMED"
+
+  defp build_status(%{status: s}) when s in [:cancelled, "cancelled", "CANCELLED"],
+    do: "STATUS:CANCELLED"
+
+  defp build_status(_event), do: nil
+
+  defp build_class(%{visibility: v}) when v in [:public, "public", "PUBLIC"], do: "CLASS:PUBLIC"
+
+  defp build_class(%{visibility: v}) when v in [:private, "private", "PRIVATE"],
+    do: "CLASS:PRIVATE"
+
+  defp build_class(%{visibility: v}) when v in [:confidential, "confidential", "CONFIDENTIAL"],
+    do: "CLASS:CONFIDENTIAL"
+
+  defp build_class(_event), do: nil
+
+  defp build_rrule_line(%{recurrence_rule: rrule}) when is_binary(rrule) and rrule != "",
+    do: "RRULE:#{rrule}"
+
+  defp build_rrule_line(_event), do: nil
+
+  # EXDATE's value type MUST match DTSTART's (RFC 5545 §3.8.5.1). If the
+  # master event is a DATE-TIME (timed event), bare Date exceptions are
+  # promoted to UTC DateTimes at DTSTART's time-of-day. If the master is a
+  # DATE (all-day event), we emit `;VALUE=DATE`.
+  defp build_exdate(%{recurrence_exceptions: dates, start_time: %DateTime{} = start_dt})
+       when is_list(dates) and dates != [] do
+    start_utc = DateTime.shift_zone!(start_dt, "Etc/UTC")
+    time_of_day = DateTime.to_time(start_utc)
+
+    formatted =
+      Enum.map_join(dates, ",", fn
+        %Date{} = d ->
+          d
+          |> DateTime.new!(time_of_day, "Etc/UTC")
+          |> format_datetime()
+
+        %DateTime{} = dt ->
+          dt |> DateTime.shift_zone!("Etc/UTC") |> format_datetime()
+      end)
+
+    "EXDATE:#{formatted}"
+  end
+
+  defp build_exdate(%{recurrence_exceptions: dates, start_time: %Date{}})
+       when is_list(dates) and dates != [] do
+    formatted =
+      Enum.map_join(dates, ",", fn
+        %Date{} = d -> format_date(d)
+      end)
+
+    "EXDATE;VALUE=DATE:#{formatted}"
+  end
+
+  defp build_exdate(_event), do: nil
+
+  defp build_attendee_lines(%{attendees: attendees}) when is_list(attendees) and attendees != [] do
+    attendees
+    |> Enum.map(&format_attendee/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join("\r\n")
+  end
+
+  defp build_attendee_lines(%{attendee_email: email} = event) when is_binary(email) do
+    name = Map.get(event, :attendee_name)
+    format_attendee(%{email: email, name: name})
+  end
+
+  defp build_attendee_lines(_event), do: nil
+
+  defp format_attendee(%{"email" => email} = a),
+    do: format_attendee(%{email: email, name: a["name"]})
+
+  defp format_attendee(%{email: email} = a) when is_binary(email) do
+    cn = a[:name] || email
+    "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;CN=#{escape_text(cn)}:mailto:#{sanitize_ical_value(email)}"
+  end
+
+  defp format_attendee(email) when is_binary(email) do
+    "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+  end
+
+  defp format_attendee(_other), do: nil
+
+  defp format_naive_datetime(%NaiveDateTime{} = ndt) do
+    ndt
+    |> NaiveDateTime.to_iso8601(:basic)
+    |> String.replace(~r/\.\d+/, "")
   end
 
   defp build_optional_properties(event_data) do
@@ -266,6 +418,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     |> maybe_add_property(:transparency, event_data)
     |> maybe_add_property(:categories, event_data)
     |> maybe_add_property(:url, event_data)
+    |> maybe_add_property(:visibility, event_data)
     |> maybe_add_property(:organizer, event_data)
     |> maybe_add_property(:recurrence, event_data)
     |> Enum.join("\r\n")
@@ -281,13 +434,26 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
     properties ++ ["LOCATION:#{escape_text(location)}"]
   end
 
-  defp maybe_add_property(properties, :status, %{status: status}) when is_binary(status) do
-    properties ++ ["STATUS:#{status}"]
+  defp maybe_add_property(properties, :status, %{status: status})
+       when is_binary(status) or is_atom(status) do
+    value = status |> to_string() |> String.upcase()
+
+    if value in @valid_statuses do
+      properties ++ ["STATUS:#{value}"]
+    else
+      properties
+    end
   end
 
   defp maybe_add_property(properties, :transparency, %{transparency: transparency})
-       when is_binary(transparency) do
-    properties ++ ["TRANSP:#{transparency}"]
+       when is_binary(transparency) or is_atom(transparency) do
+    value = transparency |> to_string() |> String.upcase()
+
+    if value in @valid_transparencies do
+      properties ++ ["TRANSP:#{value}"]
+    else
+      properties
+    end
   end
 
   defp maybe_add_property(properties, :categories, %{categories: categories})
@@ -298,6 +464,17 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp maybe_add_property(properties, :url, %{url: url}) when is_binary(url) do
     properties ++ ["URL:#{url}"]
+  end
+
+  defp maybe_add_property(properties, :visibility, %{visibility: visibility})
+       when is_binary(visibility) or is_atom(visibility) do
+    value = visibility |> to_string() |> String.upcase()
+
+    if value in @valid_visibilities do
+      properties ++ ["CLASS:#{value}"]
+    else
+      properties
+    end
   end
 
   defp maybe_add_property(properties, :organizer, %{organizer: organizer})

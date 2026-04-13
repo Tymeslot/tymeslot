@@ -190,6 +190,109 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapperTest do
     end
   end
 
+  describe "format_event_data/1 — transparency" do
+    test "includes transparency when provided as atom" do
+      event_data = %{
+        summary: "Free Block",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC",
+        transparency: :transparent
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["transparency"] == "transparent"
+    end
+
+    test "omits transparency when not provided" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "transparency")
+    end
+  end
+
+  describe "format_event_data/1 — visibility" do
+    test "includes visibility when provided as atom" do
+      event_data = %{
+        summary: "Private Meeting",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC",
+        visibility: :private
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["visibility"] == "private"
+    end
+
+    test "omits visibility when not provided" do
+      event_data = %{
+        summary: "Normal Meeting",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      refute Map.has_key?(result, "visibility")
+    end
+  end
+
+  describe "format_event_data/1 — status" do
+    test "accepts atom status and converts to string" do
+      event_data = %{
+        summary: "Tentative",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC",
+        status: :tentative
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["status"] == "tentative"
+    end
+
+    test "defaults to confirmed when status is nil" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2026-06-01 09:00:00Z],
+        end_time: ~U[2026-06-01 10:00:00Z],
+        timezone: "UTC"
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["status"] == "confirmed"
+    end
+  end
+
+  describe "format_event_data/1 — all-day events" do
+    test "produces date-only format for Date start/end" do
+      event_data = %{
+        summary: "Holiday",
+        start_time: ~D[2026-06-01],
+        end_time: ~D[2026-06-02],
+        timezone: nil
+      }
+
+      result = EventMapper.format_event_data(event_data)
+
+      assert result["start"] == %{"date" => "2026-06-01"}
+      assert result["end"] == %{"date" => "2026-06-02"}
+    end
+  end
+
   describe "add_tymeslot_fingerprint/1" do
     test "adds source and extendedProperties to an existing event body" do
       body = %{"summary" => "My Event"}

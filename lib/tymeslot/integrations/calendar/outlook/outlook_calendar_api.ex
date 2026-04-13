@@ -22,6 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   @base_url "https://graph.microsoft.com/v1.0"
   @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
   @silent_event_headers [
+    {"Content-Type", "application/json"},
     {"Prefer", "outlook.calendar-update.disableNotifications"}
   ]
   @token_url "https://login.microsoftonline.com/common/oauth2/v2.0/token"
@@ -425,7 +426,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
       "$orderby" => "start/dateTime",
       "$top" => "1000",
       "$select" =>
-        "id,subject,body,location,start,end,showAs,isCancelled,responseStatus,isAllDay",
+        "id,iCalUId,subject,body,location,start,end,showAs,sensitivity,isCancelled,responseStatus,isAllDay,organizer,attendees,reminderMinutesBeforeStart,recurrence,seriesMasterId,originalStartTimeZone,originalEndTimeZone",
       "$expand" =>
         "singleValueExtendedProperties($filter=id eq '#{@outlook_tymeslot_property_id}')"
     }
@@ -434,13 +435,17 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
   defp list_events_for_path(%CalendarIntegrationSchema{} = integration, path, params) do
     AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
       with {:ok, response} <- make_request(:get, path, token, params) do
-        events = response["value"] || []
-        {:ok, convert_to_common_format(events)}
+        {:ok, response["value"] || []}
       end
     end)
   end
 
-  defp convert_to_common_format(outlook_events) do
+  @doc """
+  Converts raw Graph API event maps (string keys) to the internal common
+  format (atom keys) used by `convert_event/1` in the Provider.
+  """
+  @spec convert_to_common_format([map()]) :: [map()]
+  def convert_to_common_format(outlook_events) do
     Enum.map(outlook_events, fn event ->
       %{
         id: event["id"],

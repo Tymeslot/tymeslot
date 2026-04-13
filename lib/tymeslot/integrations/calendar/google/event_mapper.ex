@@ -84,7 +84,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
           get_field_value(event_data, :end_time),
           timezone
         ),
-      "status" => get_field_value(event_data, :status) || "confirmed",
+      "status" => to_string_or_default(get_field_value(event_data, :status), "confirmed"),
+      "transparency" => map_transparency(get_field_value(event_data, :transparency)),
+      "visibility" => map_visibility(get_field_value(event_data, :visibility)),
       "attendees" => build_attendees(event_data)
     }
   end
@@ -118,6 +120,23 @@ defmodule Tymeslot.Integrations.Calendar.Google.EventMapper do
       uid -> Map.put(base_data, "id", uuid_to_google_event_id(uid))
     end
   end
+
+  defp to_string_or_default(nil, default), do: default
+  defp to_string_or_default(value, _default) when is_binary(value), do: value
+  defp to_string_or_default(value, _default) when is_atom(value), do: Atom.to_string(value)
+
+  defp map_transparency(nil), do: nil
+  defp map_transparency(:transparent), do: "transparent"
+  defp map_transparency(:opaque), do: "opaque"
+  defp map_transparency(value) when is_binary(value), do: value
+  defp map_transparency(_other), do: nil
+
+  defp map_visibility(nil), do: nil
+  defp map_visibility(:private), do: "private"
+  defp map_visibility(:public), do: "public"
+  defp map_visibility(:confidential), do: "confidential"
+  defp map_visibility(value) when is_binary(value), do: value
+  defp map_visibility(_other), do: nil
 
   defp get_field_value(map, key) do
     case Map.fetch(map, key) do

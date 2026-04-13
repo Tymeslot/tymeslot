@@ -6,8 +6,6 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   to fetch calendar events for availability calculation.
   """
 
-  @behaviour Tymeslot.Integrations.Calendar.Provider
-
   use Tymeslot.Integrations.Common.OAuthBase,
     provider_name: "outlook",
     display_name: "Outlook Calendar",
@@ -76,8 +74,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.Provider do
   # --- Legacy conversion (used by OAuthBase get_events / create_event / update_event) ---
 
   @spec convert_events(list(map())) :: list(converted_event())
-  def convert_events(outlook_events) do
-    outlook_events
+  def convert_events(raw_events) do
+    raw_events
+    |> CalendarAPI.convert_to_common_format()
     |> Enum.filter(&busy_event?/1)
     |> Enum.map(&convert_event/1)
   end

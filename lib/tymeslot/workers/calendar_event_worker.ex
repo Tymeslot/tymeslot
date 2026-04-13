@@ -173,6 +173,23 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     {:snooze, 120}
   end
 
+  defp handle_error_result(:server_unresponsive, _job) do
+    # The CalDAV server accepted the TCP connection but did not respond
+    # within the write deadline. Retrying immediately is actively harmful:
+    # each mid-flight interruption can leave the server holding a stale
+    # file lock, worsening the condition that's slowing it down in the
+    # first place. Back off for 10 minutes so the server has a real chance
+    # to recover (whatever was slowing it — backup, GC pause, lock
+    # contention from another client) before we touch it again. Oban's
+    # default max_attempts: 5 combined with this snooze gives ~50 minutes
+    # of graceful retry before the job is considered genuinely stuck.
+    Logger.warning(
+      "CalDAV server unresponsive on write, snoozing 10 minutes to avoid worsening wedge"
+    )
+
+    {:snooze, 600}
+  end
+
   defp handle_error_result(:connection_failed, _job) do
     # Network issues - use longer backoff
     # Retry in 1 minute

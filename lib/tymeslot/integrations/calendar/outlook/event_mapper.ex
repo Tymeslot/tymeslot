@@ -13,15 +13,23 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
   """
   @spec format_event_data(map()) :: map()
   def format_event_data(event_data) do
-    %{
+    base = %{
       "subject" => extract_field(event_data, :summary, "summary"),
       "body" => build_event_body(event_data),
       "location" => build_event_location(event_data),
       "start" => build_event_datetime(event_data, :start_time, "start_time"),
       "end" => build_event_datetime(event_data, :end_time, "end_time"),
-      "showAs" => "busy",
+      "showAs" => map_show_as(event_data),
+      "sensitivity" => map_sensitivity(event_data),
       "attendees" => build_attendees(event_data)
     }
+
+    base =
+      if all_day_event?(event_data),
+        do: Map.put(base, "isAllDay", true),
+        else: base
+
+    base
     |> Enum.reject(fn {_k, v} -> is_nil(v) or v == "" end)
     |> Map.new()
   end
@@ -95,11 +103,45 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventMapper do
     datetime = extract_field(event_data, atom_key, string_key)
     timezone = extract_field(event_data, :timezone, "timezone")
 
-    EventTimeFormatter.format_with_timezone(
-      datetime,
-      timezone,
-      include_when_missing?: true,
-      include_timezone_on_error?: true
-    )
+    case datetime do
+      %Date{} = date ->
+        # Outlook requires dateTime format even for all-day events
+        %{
+          "dateTime" => "#{Date.to_iso8601(date)}T00:00:00.0000000",
+          "timeZone" => timezone || "UTC"
+        }
+
+      _other ->
+        EventTimeFormatter.format_with_timezone(
+          datetime,
+          timezone,
+          include_when_missing?: true,
+          include_timezone_on_error?: true
+        )
+    end
+  end
+
+  defp map_show_as(event_data) do
+    transparency = extract_field(event_data, :transparency, "transparency")
+    status = extract_field(event_data, :status, "status")
+
+    cond do
+      transparency in [:transparent, "transparent"] -> "free"
+      status in [:tentative, "tentative"] -> "tentative"
+      true -> "busy"
+    end
+  end
+
+  defp map_sensitivity(event_data) do
+    case extract_field(event_data, :visibility, "visibility") do
+      v when v in [:private, "private"] -> "private"
+      v when v in [:confidential, "confidential"] -> "confidential"
+      _other -> nil
+    end
+  end
+
+  defp all_day_event?(event_data) do
+    start_time = extract_field(event_data, :start_time, "start_time")
+    match?(%Date{}, start_time)
   end
 end

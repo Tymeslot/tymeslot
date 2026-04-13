@@ -145,7 +145,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
         exdates: exdates,
         start_time: start_time,
         end_time: end_time,
-        transparency: normalize_transp(extract_property(lines, "TRANSP"))
+        transparency: normalize_transp(extract_property(lines, "TRANSP")),
+        status: extract_property(lines, "STATUS"),
+        class: extract_property(lines, "CLASS")
       }
     else
       Logger.debug("Skipping event with missing required fields",

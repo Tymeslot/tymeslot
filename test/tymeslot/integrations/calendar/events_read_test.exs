@@ -7,8 +7,8 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
   @base_time ~U[2024-01-01 12:00:00Z]
 
   defmodule SuccessfulProvider do
-    @spec get_events(any(), DateTime.t(), DateTime.t()) :: {:ok, list(map())}
-    def get_events(_client, _start_time, _end_time) do
+    @spec list_events(any(), keyword()) :: {:ok, list(map())}
+    def list_events(_client, _opts) do
       now = ~U[2024-01-01 12:00:00Z]
 
       {:ok,
@@ -27,99 +27,139 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
          }
        ]}
     end
-
-    @spec get_events(any()) :: {:ok, list(map())}
-    def get_events(_client) do
-      get_events(nil, ~U[2024-01-01 12:00:00Z], ~U[2024-01-01 13:00:00Z])
-    end
   end
 
+  # Simulates a provider that fails on narrow range queries but succeeds on wide-range
+  # (fallback) queries — distinguished by the range duration in opts.
   defmodule FallbackProvider do
-    @spec get_events(any(), DateTime.t(), DateTime.t()) :: {:error, :forced_failure}
-    def get_events(_client, _start_time, _end_time), do: {:error, :forced_failure}
+    @wide_range_days 300
 
-    @spec get_events(any()) :: {:ok, list(map())}
-    def get_events(_client) do
-      now = ~U[2024-01-01 12:00:00Z]
-      early = DateTime.add(now, -86_400, :second)
+    @spec list_events(any(), keyword()) ::
+            {:ok, list(map())} | {:error, :forced_failure}
+    def list_events(_client, opts) do
+      start_time = opts[:start_time]
+      end_time = opts[:end_time]
 
-      {:ok,
-       [
-         %{uid: "keep", start_time: now, end_time: DateTime.add(now, 3600, :second)},
-         %{uid: "filtered", start_time: early, end_time: early}
-       ]}
+      range_days =
+        if start_time && end_time do
+          DateTime.diff(end_time, start_time, :day)
+        else
+          0
+        end
+
+      if range_days >= @wide_range_days do
+        now = ~U[2024-01-01 12:00:00Z]
+        early = DateTime.add(now, -86_400, :second)
+
+        {:ok,
+         [
+           %{uid: "keep", start_time: now, end_time: DateTime.add(now, 3600, :second)},
+           %{uid: "filtered", start_time: early, end_time: early}
+         ]}
+      else
+        {:error, :forced_failure}
+      end
     end
   end
 
   defmodule ErroringProvider do
-    @spec get_events(any(), DateTime.t(), DateTime.t()) :: {:error, :fail}
-    def get_events(_client, _start_time, _end_time), do: {:error, :fail}
-
-    @spec get_events(any()) :: {:error, :fail}
-    def get_events(_client), do: {:error, :fail}
+    @spec list_events(any(), keyword()) :: {:error, :fail}
+    def list_events(_client, _opts), do: {:error, :fail}
   end
 
+  # Simulates a provider that fails on narrow range queries but succeeds on wide-range
+  # (fallback) queries — returns partial events with missing fields on wide range.
   defmodule PartialEventsProvider do
-    @spec get_events(any(), DateTime.t(), DateTime.t()) :: {:error, :trigger_fallback}
-    def get_events(_client, _start_time, _end_time), do: {:error, :trigger_fallback}
+    @wide_range_days 300
 
-    @spec get_events(any()) :: {:ok, list(map())}
-    def get_events(_client) do
-      now = ~U[2024-01-01 12:00:00Z]
+    @spec list_events(any(), keyword()) ::
+            {:ok, list(map())} | {:error, :trigger_fallback}
+    def list_events(_client, opts) do
+      start_time = opts[:start_time]
+      end_time = opts[:end_time]
 
-      {:ok,
-       [
-         # Event with all required fields
-         %{
-           uid: "complete-event",
-           start_time: now,
-           end_time: DateTime.add(now, 3600, :second)
-         },
-         # Event missing start_time (should be filtered out in fallback)
-         %{uid: "incomplete-1", end_time: DateTime.add(now, 3600, :second)},
-         # Event missing end_time (should be filtered out in fallback)
-         %{uid: "incomplete-2", start_time: now}
-       ]}
+      range_days =
+        if start_time && end_time do
+          DateTime.diff(end_time, start_time, :day)
+        else
+          0
+        end
+
+      if range_days >= @wide_range_days do
+        now = ~U[2024-01-01 12:00:00Z]
+
+        {:ok,
+         [
+           # Event with all required fields
+           %{
+             uid: "complete-event",
+             start_time: now,
+             end_time: DateTime.add(now, 3600, :second)
+           },
+           # Event missing start_time (should be filtered out in fallback)
+           %{uid: "incomplete-1", end_time: DateTime.add(now, 3600, :second)},
+           # Event missing end_time (should be filtered out in fallback)
+           %{uid: "incomplete-2", start_time: now}
+         ]}
+      else
+        {:error, :trigger_fallback}
+      end
     end
   end
 
+  # Simulates a provider that fails on narrow range queries but succeeds on wide-range
+  # (fallback) queries — returns events with various overlap scenarios on wide range.
   defmodule OverlapProvider do
-    @spec get_events(any(), DateTime.t(), DateTime.t()) :: {:error, :fallback}
-    def get_events(_client, _start, _end), do: {:error, :fallback}
+    @wide_range_days 300
 
-    @spec get_events(any()) :: {:ok, list(map())}
-    def get_events(_client) do
-      now = ~U[2024-01-01 12:00:00Z]
+    @spec list_events(any(), keyword()) ::
+            {:ok, list(map())} | {:error, :fallback}
+    def list_events(_client, opts) do
+      start_time = opts[:start_time]
+      end_time = opts[:end_time]
 
-      {:ok,
-       [
-         # Ends exactly at start_time (should be excluded if exclusive)
-         %{uid: "ends-at-start", start_time: DateTime.add(now, -3600), end_time: now},
-         # Overlaps start boundary
-         %{
-           uid: "overlaps-start",
-           start_time: DateTime.add(now, -1800),
-           end_time: DateTime.add(now, 1800)
-         },
-         # Fully inside
-         %{
-           uid: "fully-inside",
-           start_time: DateTime.add(now, 1800),
-           end_time: DateTime.add(now, 3600)
-         },
-         # Overlaps end boundary
-         %{
-           uid: "overlaps-end",
-           start_time: DateTime.add(now, 5400),
-           end_time: DateTime.add(now, 9000)
-         },
-         # Starts exactly at end_time (should be excluded)
-         %{
-           uid: "starts-at-end",
-           start_time: DateTime.add(now, 7200),
-           end_time: DateTime.add(now, 10_800)
-         }
-       ]}
+      range_days =
+        if start_time && end_time do
+          DateTime.diff(end_time, start_time, :day)
+        else
+          0
+        end
+
+      if range_days >= @wide_range_days do
+        now = ~U[2024-01-01 12:00:00Z]
+
+        {:ok,
+         [
+           # Ends exactly at start_time (should be excluded if exclusive)
+           %{uid: "ends-at-start", start_time: DateTime.add(now, -3600), end_time: now},
+           # Overlaps start boundary
+           %{
+             uid: "overlaps-start",
+             start_time: DateTime.add(now, -1800),
+             end_time: DateTime.add(now, 1800)
+           },
+           # Fully inside
+           %{
+             uid: "fully-inside",
+             start_time: DateTime.add(now, 1800),
+             end_time: DateTime.add(now, 3600)
+           },
+           # Overlaps end boundary
+           %{
+             uid: "overlaps-end",
+             start_time: DateTime.add(now, 5400),
+             end_time: DateTime.add(now, 9000)
+           },
+           # Starts exactly at end_time (should be excluded)
+           %{
+             uid: "starts-at-end",
+             start_time: DateTime.add(now, 7200),
+             end_time: DateTime.add(now, 10_800)
+           }
+         ]}
+      else
+        {:error, :fallback}
+      end
     end
   end
 

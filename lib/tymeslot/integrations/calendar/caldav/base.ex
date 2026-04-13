@@ -38,7 +38,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
 
   require Logger
 
-  @report_timeout_ms 15_000
+  # REPORTs can be expensive on servers without time-range indexes (e.g.
+  # Radicale's file backend walks every event in the collection to apply
+  # narrow filters). 20s per attempt × 1 retry = 40s worst case, which fits
+  # inside the 70s circuit breaker GenServer.call budget with headroom.
+  # Audit tooling prefers wide fetch ranges specifically to sidestep the
+  # narrow-filter slowness.
+  @report_timeout_ms 20_000
   @task_await_timeout_ms 45_000
   @coalescer_call_timeout_ms 50_000
 
@@ -78,6 +84,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
           | :network_error
           | :invalid_response
           | :server_error
+          | :server_unresponsive
+          | :timeout
           | String.t()
 
   # ---------------------------------------------------------------------------

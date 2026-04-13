@@ -10,7 +10,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
   accordingly for proper authentication and discovery.
   """
 
-  @behaviour Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
   @behaviour Tymeslot.Integrations.Calendar.Provider
 
   alias Tymeslot.Integrations.Calendar.CalDAV.EventProcessor
@@ -21,17 +20,17 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
 
   require Logger
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :caldav
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def display_name, do: "CalDAV"
 
   @doc "Returns the LiveComponent module for provider configuration UI"
   @spec setup_component() :: module()
   def setup_component, do: TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavConfig
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def config_schema do
     %{
       base_url: %{
@@ -57,7 +56,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
     }
   end
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
     with :ok <- ProviderCommon.validate_required_fields(config, [:base_url, :username, :password]),
          :ok <- ProviderCommon.validate_url(config[:base_url]),
@@ -68,7 +67,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
     end
   end
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def new(config) do
     base_url = config[:base_url] || config["base_url"]
 
@@ -133,28 +132,25 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Provider do
     end
   end
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
-  def get_events(client), do: CaldavCommon.get_events(client)
-
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
-  def get_events(client, start_time, end_time),
-    do: CaldavCommon.get_events(client, start_time, end_time)
-
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def create_event(client, event_data), do: CaldavCommon.create_event(client, event_data)
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def update_event(client, uid, event_data),
     do: CaldavCommon.update_event(client, uid, event_data)
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def delete_event(client, uid), do: CaldavCommon.delete_event(client, uid)
 
-  # --- Calendar.Provider behaviour ---
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def list_events(client, opts), do: CaldavCommon.list_events(client, opts)
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(raw_events, context),
     do: EventProcessor.normalise_events(raw_events, context)
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def check_connectivity(client), do: CaldavCommon.check_connectivity(client)
 
   # Private helper functions
 

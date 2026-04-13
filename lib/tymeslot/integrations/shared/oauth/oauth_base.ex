@@ -150,7 +150,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
     base_url = Keyword.fetch!(opts, :base_url)
 
     quote do
-      @behaviour Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+      @behaviour Tymeslot.Integrations.Calendar.Provider
 
       alias Tymeslot.Integrations.Common.OAuthBase
 
@@ -158,42 +158,26 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
       @display_name unquote(display_name)
       @base_url unquote(base_url)
 
-      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+      @impl Tymeslot.Integrations.Calendar.Provider
       def provider_type, do: String.to_existing_atom(@provider_name)
 
-      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+      @impl Tymeslot.Integrations.Calendar.Provider
       def display_name, do: @display_name
 
-      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+      @impl Tymeslot.Integrations.Calendar.Provider
       def config_schema, do: OAuthBase.config_schema()
 
-      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+      @impl Tymeslot.Integrations.Calendar.Provider
       def new(config) do
         OAuthBase.new(config, &validate_oauth_scope/1)
       end
 
-      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+      @impl Tymeslot.Integrations.Calendar.Provider
       def validate_config(config) do
         OAuthBase.validate_config(config, &validate_oauth_scope/1)
       end
 
-      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
-      def get_events(integration) do
-        get_events(integration, nil, nil)
-      end
-
-      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
-      def get_events(integration, start_time, end_time) do
-        start_time = start_time || default_start_time()
-        end_time = end_time || default_end_time()
-
-        OAuthBase.handle_api_call(
-          fn -> call_list_events(integration, start_time, end_time) end,
-          &convert_events/1
-        )
-      end
-
-      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+      @impl Tymeslot.Integrations.Calendar.Provider
       def create_event(integration, event_attrs) do
         OAuthBase.handle_api_call(
           fn -> call_create_event(integration, event_attrs) end,
@@ -201,7 +185,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         )
       end
 
-      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+      @impl Tymeslot.Integrations.Calendar.Provider
       def update_event(integration, event_id, event_attrs) do
         OAuthBase.handle_api_call(
           fn -> call_update_event(integration, event_id, event_attrs) end,
@@ -209,10 +193,27 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
         )
       end
 
-      @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+      @impl Tymeslot.Integrations.Calendar.Provider
       def delete_event(integration, event_id) do
         OAuthBase.handle_api_call(fn -> call_delete_event(integration, event_id) end)
       end
+
+      @impl Tymeslot.Integrations.Calendar.Provider
+      def check_connectivity(_client) do
+        {:ok, %{status: :skipped, reason: "OAuth providers use token-based auth"}}
+      end
+
+      @impl Tymeslot.Integrations.Calendar.Provider
+      def list_events(integration, opts) do
+        start_time = opts[:start_time]
+        end_time = opts[:end_time]
+        call_list_events(integration, start_time, end_time)
+      end
+
+      # normalise_events/2 is intentionally not defaulted here — it is
+      # provider-specific and must be implemented by each OAuth provider.
+
+      defoverridable check_connectivity: 1, list_events: 2
 
       # Provider-specific callbacks that must be implemented
       @callback validate_oauth_scope(config :: map()) :: :ok | {:error, String.t()}

@@ -320,6 +320,222 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
     end
   end
 
+  describe "build_event/1 — Date{} all-day path" do
+    test "emits VALUE=DATE for start_time as a Date struct" do
+      event_data = %{
+        summary: "All Day via Date",
+        start_time: ~D[2026-04-18],
+        end_time: ~D[2026-04-19]
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "DTSTART;VALUE=DATE:20260418")
+      assert String.contains?(ical, "DTEND;VALUE=DATE:20260419")
+    end
+
+    test "does not include a Z suffix in the date-only value" do
+      event_data = %{
+        summary: "Date Only Event",
+        start_time: ~D[2026-04-18],
+        end_time: ~D[2026-04-19]
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      refute String.contains?(ical, "DTSTART;VALUE=DATE:20260418T")
+      refute String.contains?(ical, "DTEND;VALUE=DATE:20260419T")
+    end
+  end
+
+  describe "build_event/1 — NaiveDateTime floating-time path" do
+    test "emits DTSTART and DTEND without Z suffix for NaiveDateTime" do
+      event_data = %{
+        summary: "Floating Time Event",
+        start_time: ~N[2026-04-18 10:00:00],
+        end_time: ~N[2026-04-18 11:00:00]
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "DTSTART:20260418T100000")
+      assert String.contains?(ical, "DTEND:20260418T110000")
+    end
+
+    test "does not include Z suffix for NaiveDateTime values" do
+      event_data = %{
+        summary: "No UTC marker",
+        start_time: ~N[2026-04-18 10:00:00],
+        end_time: ~N[2026-04-18 11:00:00]
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      refute String.contains?(ical, "DTSTART:20260418T100000Z")
+      refute String.contains?(ical, "DTEND:20260418T110000Z")
+    end
+
+    test "does not include TZID parameter for NaiveDateTime values" do
+      event_data = %{
+        summary: "Floating",
+        start_time: ~N[2026-04-18 10:00:00],
+        end_time: ~N[2026-04-18 11:00:00]
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      refute String.contains?(ical, "DTSTART;TZID=")
+      refute String.contains?(ical, "DTEND;TZID=")
+    end
+  end
+
+  describe "build_event/1 — atom status and transparency" do
+    test "upcases atom :tentative to STATUS:TENTATIVE" do
+      event_data = %{
+        summary: "Maybe",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        status: :tentative
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "STATUS:TENTATIVE")
+    end
+
+    test "upcases atom :confirmed to STATUS:CONFIRMED" do
+      event_data = %{
+        summary: "Confirmed",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        status: :confirmed
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "STATUS:CONFIRMED")
+    end
+
+    test "silently skips an invalid atom status" do
+      event_data = %{
+        summary: "Bad Status",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        status: :unknown_status
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      refute String.contains?(ical, "STATUS:")
+    end
+
+    test "upcases atom :opaque to TRANSP:OPAQUE" do
+      event_data = %{
+        summary: "Busy",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        transparency: :opaque
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "TRANSP:OPAQUE")
+    end
+
+    test "upcases atom :transparent to TRANSP:TRANSPARENT" do
+      event_data = %{
+        summary: "Free",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        transparency: :transparent
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "TRANSP:TRANSPARENT")
+    end
+
+    test "silently skips an invalid atom transparency" do
+      event_data = %{
+        summary: "Bad Transparency",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        transparency: :unknown_transparency
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      refute String.contains?(ical, "TRANSP:")
+    end
+  end
+
+  describe "build_event/1 — visibility producing CLASS property" do
+    test "emits CLASS:PRIVATE for :private visibility" do
+      event_data = %{
+        summary: "Private Event",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        visibility: :private
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "CLASS:PRIVATE")
+    end
+
+    test "emits CLASS:PUBLIC for :public visibility" do
+      event_data = %{
+        summary: "Public Event",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        visibility: :public
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "CLASS:PUBLIC")
+    end
+
+    test "emits CLASS:CONFIDENTIAL for :confidential visibility" do
+      event_data = %{
+        summary: "Confidential Event",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        visibility: :confidential
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "CLASS:CONFIDENTIAL")
+    end
+
+    test "accepts string visibility values" do
+      event_data = %{
+        summary: "String Visibility",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        visibility: "private"
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      assert String.contains?(ical, "CLASS:PRIVATE")
+    end
+
+    test "silently skips an invalid visibility value" do
+      event_data = %{
+        summary: "Bad Visibility",
+        start_time: ~U[2026-04-18 10:00:00Z],
+        end_time: ~U[2026-04-18 11:00:00Z],
+        visibility: :internal
+      }
+
+      ical = ICalBuilder.build_event(event_data)
+
+      refute String.contains?(ical, "CLASS:")
+    end
+  end
+
   describe "build_rrule/1" do
     test "returns nil for nil input" do
       assert ICalBuilder.build_rrule(nil) == nil

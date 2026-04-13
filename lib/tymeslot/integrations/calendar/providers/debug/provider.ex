@@ -6,9 +6,9 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   Only available in development mode.
   """
 
-  @behaviour Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @behaviour Tymeslot.Integrations.Calendar.Provider
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def new(config) when is_map(config) do
     case validate_config(config) do
       :ok -> {:ok, config}
@@ -16,41 +16,28 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     end
   end
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
-  def get_events(client) do
-    start_time = DateTime.add(DateTime.utc_now(), -7, :day)
-    end_time = DateTime.add(DateTime.utc_now(), 30, :day)
-    get_events(client, start_time, end_time)
-  end
-
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
-  def get_events(_client, start_time, end_time) do
-    events = generate_debug_events(start_time, end_time)
-    {:ok, events}
-  end
-
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def create_event(_client, _event_data) do
     {:error, "Debug calendar provider does not support event creation"}
   end
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def update_event(_client, _uid, _event_data) do
     {:error, "Debug calendar provider does not support event updates"}
   end
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def delete_event(_client, _uid) do
     {:error, "Debug calendar provider does not support event deletion"}
   end
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :debug
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def display_name, do: "Debug Calendar (Development Only)"
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def config_schema do
     %{
       user_id: %{
@@ -61,7 +48,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
     }
   end
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
     if Map.has_key?(config, :user_id) do
       :ok
@@ -69,6 +56,20 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
       {:error, "user_id is required for debug calendar provider"}
     end
   end
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def list_events(_client, opts) do
+    start_time = opts[:start_time] || DateTime.add(DateTime.utc_now(), -7, :day)
+    end_time = opts[:end_time] || DateTime.add(DateTime.utc_now(), 30, :day)
+    events = generate_debug_events(start_time, end_time)
+    {:ok, events}
+  end
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def normalise_events(_raw_events, _context), do: {:ok, []}
+
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def check_connectivity(_client), do: {:ok, %{status: :skipped, reason: "Debug provider"}}
 
   @doc """
   Tests the connection for the debug calendar provider.

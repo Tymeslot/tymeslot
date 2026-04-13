@@ -142,7 +142,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
         description: raw[:description],
         location: raw[:location],
         visibility: map_visibility(raw[:class]),
-        transparency: map_transparency(raw[:transp] || raw[:transparency]),
+        transparency: map_transparency(raw[:transparency]),
         status: map_status(raw[:status]),
         organiser: map_organiser(raw[:organizer]),
         attendees: map_attendees(raw[:attendee] || raw[:attendees]),

@@ -11,24 +11,25 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   - Individual calendars: /remote.php/dav/calendars/{username}/{calendar-name}/
   """
 
-  @behaviour Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @behaviour Tymeslot.Integrations.Calendar.Provider
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalDAV.XmlHandler
+  alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Security.RateLimiter
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def provider_type, do: :nextcloud
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def display_name, do: "Nextcloud"
 
   @doc "Returns the LiveComponent module for provider configuration UI"
   @spec setup_component() :: module()
   def setup_component, do: TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def config_schema do
     %{
       base_url: %{
@@ -54,7 +55,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
     }
   end
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
     # Extract username from URL if it's a calendar URL
     config = maybe_extract_username_from_url(config)
@@ -101,7 +102,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
     end
   end
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   def new(config) do
     # Extract username from URL if it's a calendar URL
     config = maybe_extract_username_from_url(config)
@@ -189,20 +190,22 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
     end
   end
 
-  # Delegate CalDAV operations to the generic CalDAV provider
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
-  defdelegate get_events(client), to: CalDAVProvider
+  @impl Tymeslot.Integrations.Calendar.Provider
+  defdelegate normalise_events(raw_events, context), to: CalDAVProvider
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
-  defdelegate get_events(client, start_time, end_time), to: CalDAVProvider
+  @impl Tymeslot.Integrations.Calendar.Provider
+  defdelegate check_connectivity(client), to: CaldavCommon
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
+  def list_events(client, opts), do: CaldavCommon.list_events(client, opts)
+
+  @impl Tymeslot.Integrations.Calendar.Provider
   defdelegate create_event(client, event_data), to: CalDAVProvider
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   defdelegate update_event(client, uid, event_data), to: CalDAVProvider
 
-  @impl Tymeslot.Integrations.Calendar.Providers.ProviderBehaviour
+  @impl Tymeslot.Integrations.Calendar.Provider
   defdelegate delete_event(client, uid), to: CalDAVProvider
 
   # Private helper functions
@@ -246,11 +249,18 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
     calendar_paths = config[:calendar_paths] || ["personal"]
 
     Enum.map(calendar_paths, fn calendar_name ->
-      # If it's already a full path, use it; otherwise build the path
-      if String.starts_with?(calendar_name, "/calendars/") do
-        calendar_name
-      else
-        "/calendars/#{username}/#{calendar_name}/"
+      cond do
+        # Already a full server-root-relative DAV path stored by discovery.
+        String.starts_with?(calendar_name, "/remote.php/dav/") ->
+          calendar_name
+
+        # Already an absolute calendar path relative to /remote.php/dav
+        String.starts_with?(calendar_name, "/calendars/") ->
+          calendar_name
+
+        # Bare calendar name — build the standard per-user path
+        true ->
+          "/calendars/#{username}/#{calendar_name}/"
       end
     end)
   end

@@ -316,25 +316,7 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
     end
   end
 
-  describe "get_events/1" do
-    test "delegates to CaldavCommon" do
-      client = %{
-        base_url: "http://localhost:1",
-        username: "user@example.com",
-        password: "pass",
-        calendar_paths: ["/dav/user@example.com/Calendar/"],
-        provider: :zimbra
-      }
-
-      capture_log(fn ->
-        # Circuit breaker may return error or empty list depending on state
-        result = Provider.get_events(client)
-        assert match?({:error, _}, result) or match?({:ok, []}, result)
-      end)
-    end
-  end
-
-  describe "get_events/3" do
+  describe "list_events/3" do
     test "delegates to CaldavCommon with time range" do
       client = %{
         base_url: "http://localhost:1",
@@ -349,9 +331,21 @@ defmodule Tymeslot.Integrations.Calendar.Zimbra.ProviderTest do
 
       capture_log(fn ->
         # Circuit breaker may return error or empty list depending on state
-        result = Provider.get_events(client, start_time, end_time)
+        result = Provider.list_events(client, start_time: start_time, end_time: end_time)
         assert match?({:error, _}, result) or match?({:ok, []}, result)
       end)
+    end
+
+    test "returns error when time range is missing" do
+      client = %{
+        base_url: "http://localhost:1",
+        username: "user@example.com",
+        password: "pass",
+        calendar_paths: ["/dav/user@example.com/Calendar/"],
+        provider: :zimbra
+      }
+
+      assert Provider.list_events(client, []) == {:error, :missing_time_range}
     end
   end
 

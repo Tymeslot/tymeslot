@@ -41,25 +41,33 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
   end
 
   @doc """
-  Ensures a URL has a proper scheme (https:// by default).
+  Ensures a URL has a proper `http://` or `https://` scheme.
+
+  Defensive against malformed scheme prefixes such as `https:/host` (single
+  slash), `https:host`, `//host`, or a bare host. Any of these are normalised
+  to `https://host` rather than being naively concatenated, which would
+  otherwise produce garbage like `https://https:/host`.
 
   ## Parameters
   - `url` - The URL to process
 
   ## Returns
-  - URL with scheme
+  - URL with a valid scheme
   """
   @spec ensure_scheme(String.t()) :: String.t()
-  def ensure_scheme(url) do
-    cond do
-      String.starts_with?(url, "http://") or String.starts_with?(url, "https://") ->
-        url
+  def ensure_scheme(url) when is_binary(url) do
+    trimmed = String.trim(url)
+    uri = URI.parse(trimmed)
 
-      String.starts_with?(url, "//") ->
-        "https:" <> url
+    if uri.scheme in ["http", "https"] and is_binary(uri.host) and uri.host != "" do
+      trimmed
+    else
+      stripped =
+        trimmed
+        |> String.replace(~r{^\s*https?:/*}i, "")
+        |> String.replace(~r{^/+}, "")
 
-      true ->
-        "https://" <> url
+      "https://" <> stripped
     end
   end
 

@@ -228,7 +228,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
         summary: "Out of Office",
         dtstart: ~U[2030-06-15 09:00:00Z],
         dtend: ~U[2030-06-15 17:00:00Z],
-        transp: "TRANSPARENT"
+        transparency: "TRANSPARENT"
       }
 
       assert {:ok, [%CalendarEvent{} = event]} = EventProcessor.normalise_events([raw], @context)

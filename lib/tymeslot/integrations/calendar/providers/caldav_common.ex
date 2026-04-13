@@ -6,8 +6,10 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   used by CalDAV-compatible providers (e.g., generic CalDAV, Radicale).
   """
 
-  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events}
+  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Discovery, Events, Http, UrlBuilder}
   alias Tymeslot.Integrations.Calendar.RecurrenceExpander
+
+  require Logger
 
   @type caldav_client :: %{
           required(:base_url) => String.t(),
@@ -47,6 +49,35 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
+  Quick connectivity probe via a PROPFIND request with a short timeout.
+
+  Sends a minimal PROPFIND to the first configured calendar path (or `/`) to
+  verify that the server is reachable and credentials are accepted. Intended
+  for use by the audit runner and diagnostic tooling; not a substitute for
+  `test_connection/2`, which performs a fuller discovery-based check.
+
+  Returns `{:ok, %{status: :ok}}` on success, or `{:error, reason}`.
+  """
+  @spec check_connectivity(caldav_client()) :: {:ok, map()} | {:error, term()}
+  def check_connectivity(client) do
+    path = List.first(client[:calendar_paths] || []) || "/"
+
+    # Use the same URL builder as create/read/delete so server-root-relative
+    # paths (e.g. Nextcloud's "/remote.php/dav/calendars/...") aren't
+    # double-prefixed when the client's base_url already contains a CalDAV
+    # principal path.
+    url = UrlBuilder.build_calendar_url(client[:base_url], path)
+
+    case Http.propfind(url, client[:username], client[:password],
+           depth: "0",
+           timeout: 5_000
+         ) do
+      {:ok, _response} -> {:ok, %{status: :ok}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
   Tests a connection using `Discovery.test_connection/2`.
   Returns `{:ok, message}` or `{:error, reason}` (reason is passed through).
   """
@@ -65,6 +96,24 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
           {:ok, list(map())} | {:error, term()}
   def discover_calendars(client, opts \\ []) do
     Discovery.discover_calendars(client, opts)
+  end
+
+  @doc """
+  Implements the `Provider` `list_events/2` contract for CalDAV-family providers.
+
+  Extracts `:start_time` and `:end_time` from `opts` and delegates to
+  `get_events/3`. Returns `{:error, :missing_time_range}` when either value is
+  absent or not a `DateTime`.
+  """
+  @spec list_events(caldav_client(), keyword()) :: {:ok, list()} | {:error, term()}
+  def list_events(client, opts) do
+    case {opts[:start_time], opts[:end_time]} do
+      {%DateTime{} = start_time, %DateTime{} = end_time} ->
+        get_events(client, start_time, end_time)
+
+      _missing_range ->
+        {:error, :missing_time_range}
+    end
   end
 
   @doc """
@@ -96,20 +145,55 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   defp do_fetch_events(client, paths, start_time, end_time) do
     tasks =
       Enum.map(paths, fn path ->
-        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
-          Events.fetch_events(client, path, start_time, end_time)
-        end)
+        {path,
+         Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+           Events.fetch_events(client, path, start_time, end_time)
+         end)}
       end)
 
-    results = Task.await_many(tasks, Base.task_await_timeout_ms())
+    results =
+      Enum.map(tasks, fn {path, task} ->
+        {path, Task.await(task, Base.task_await_timeout_ms())}
+      end)
+
+    {successes, errors} =
+      Enum.split_with(results, fn {_path, r} -> match?({:ok, _result}, r) end)
+
+    handle_fetch_results(successes, errors)
+  end
+
+  # If every calendar path errored, surface the first error — callers must be
+  # able to distinguish "no events in range" from "reads silently failed". A
+  # dropped error here was the cause of today's "event not found after create"
+  # mystery on Radicale: REPORT hit its timeout, the task errored, and we
+  # silently returned an empty list.
+  defp handle_fetch_results([], [_head | _tail] = errors) do
+    {_path, {:error, reason}} = List.first(errors)
+    {:error, reason}
+  end
+
+  # At least one path succeeded. Log any failures for visibility, then return
+  # the union of successful results. This keeps degraded multi-calendar
+  # setups working while still making errors observable in logs.
+  #
+  # We deliberately don't expand recurrences here — `event_processor.normalise_events`
+  # does its own expansion downstream. Expanding in both places produces N×N
+  # occurrences because each first-pass occurrence still carries the master
+  # RRULE and gets re-expanded.
+  defp handle_fetch_results(successes, errors) do
+    Enum.each(errors, fn {path, {:error, reason}} ->
+      Logger.warning("CalDAV fetch failed for one calendar path",
+        path: path,
+        reason: inspect(reason)
+      )
+    end)
 
     events =
-      results
-      |> Enum.filter(&match?({:ok, _result}, &1))
-      |> Enum.flat_map(fn {:ok, evs} -> evs end)
+      successes
+      |> Enum.flat_map(fn {_path, {:ok, evs}} -> evs end)
       |> Enum.uniq_by(& &1.uid)
 
-    {:ok, expand_recurring_events(events, start_time, end_time)}
+    {:ok, events}
   end
 
   @doc """

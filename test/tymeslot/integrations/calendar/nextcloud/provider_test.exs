@@ -270,25 +270,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
     end
   end
 
-  describe "get_events/1" do
-    test "delegates to CalDAV provider" do
-      client = %{
-        base_url: "https://cloud.example.com/remote.php/dav",
-        username: "user",
-        password: "pass",
-        calendar_paths: ["/calendars/user/personal/"],
-        provider: :nextcloud
-      }
-
-      capture_log(fn ->
-        result = Provider.get_events(client)
-        # May return error or empty list depending on circuit breaker state
-        assert match?({:error, _reason}, result) or match?({:ok, []}, result)
-      end)
-    end
-  end
-
-  describe "get_events/3" do
+  describe "list_events/3" do
     test "delegates to CalDAV provider with time range" do
       client = %{
         base_url: "https://cloud.example.com/remote.php/dav",
@@ -302,10 +284,22 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
       end_time = DateTime.add(start_time, 86_400, :second)
 
       capture_log(fn ->
-        result = Provider.get_events(client, start_time, end_time)
+        result = Provider.list_events(client, start_time: start_time, end_time: end_time)
         # May return error or empty list depending on circuit breaker state
         assert match?({:error, _reason}, result) or match?({:ok, []}, result)
       end)
+    end
+
+    test "returns error when time range is missing" do
+      client = %{
+        base_url: "https://cloud.example.com/remote.php/dav",
+        username: "user",
+        password: "pass",
+        calendar_paths: ["/calendars/user/personal/"],
+        provider: :nextcloud
+      }
+
+      assert Provider.list_events(client, []) == {:error, :missing_time_range}
     end
   end
 
