@@ -106,6 +106,7 @@ defmodule Tymeslot.Repo.Migrations.RecreateProviderCalendarEvents do
       add_if_not_exists :synced_at, :utc_datetime_usec
       add_if_not_exists :provider_updated_at, :utc_datetime_usec
       add_if_not_exists :provider_metadata, :map, default: %{}
+      add_if_not_exists :created_by_tymeslot, :boolean, null: false, default: false
     end
 
     flush()
