@@ -4,16 +4,6 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesQueries do
   alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
   alias Tymeslot.Repo
 
-  @updatable_fields [
-    :default_view,
-    :hidden_integration_ids,
-    :week_start_day,
-    :time_format,
-    :show_week_numbers,
-    :show_weekends,
-    :updated_at
-  ]
-
   @doc "Returns preferences for user, or a new empty struct if none exist."
   @spec get_or_create(integer()) :: CalendarPreferencesSchema.t()
   def get_or_create(user_id) do
@@ -27,10 +17,14 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesQueries do
   @spec upsert(integer(), map()) ::
           {:ok, CalendarPreferencesSchema.t()} | {:error, Ecto.Changeset.t()}
   def upsert(user_id, attrs) do
+    # Only replace fields the caller actually passed — otherwise the fresh
+    # struct's schema defaults would clobber existing columns on conflict.
+    replace_fields = [:updated_at | Map.keys(attrs)]
+
     %CalendarPreferencesSchema{user_id: user_id}
     |> CalendarPreferencesSchema.changeset(Map.put(attrs, :user_id, user_id))
     |> Repo.insert(
-      on_conflict: {:replace, @updatable_fields},
+      on_conflict: {:replace, replace_fields},
       conflict_target: :user_id
     )
   end

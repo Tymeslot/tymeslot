@@ -91,25 +91,32 @@ defmodule Tymeslot.Integrations.Calendar.CalendarPreferencesQueriesTest do
       assert %{time_format: [_msg]} = errors_on(changeset)
     end
 
-    test "preserves unspecified fields on update" do
+    test "preserves unspecified fields on partial update" do
       user = insert(:user)
 
       {:ok, _prefs} =
         CalendarPreferencesQueries.upsert(user.id, %{
+          default_view: "month",
           time_format: "24h",
-          default_view: "month"
+          week_start_day: "sunday",
+          show_week_numbers: true,
+          show_weekends: false,
+          hidden_integration_ids: [1, 2, 3]
         })
 
+      # Partial update touching only hidden_integration_ids must not
+      # reset the other columns to their schema defaults.
       {:ok, _prefs} =
-        CalendarPreferencesQueries.upsert(user.id, %{
-          default_view: "day",
-          time_format: "24h"
-        })
+        CalendarPreferencesQueries.upsert(user.id, %{hidden_integration_ids: [4]})
 
       prefs = CalendarPreferencesQueries.get_or_create(user.id)
 
-      assert prefs.default_view == "day"
+      assert prefs.hidden_integration_ids == [4]
+      assert prefs.default_view == "month"
       assert prefs.time_format == "24h"
+      assert prefs.week_start_day == "sunday"
+      assert prefs.show_week_numbers == true
+      assert prefs.show_weekends == false
     end
   end
 end
