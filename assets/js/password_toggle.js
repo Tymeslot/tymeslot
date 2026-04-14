@@ -11,7 +11,7 @@
  * @param {HTMLElement} button - The button element that was clicked
  */
 function togglePasswordVisibility(button) {
-  const container = button.closest('.password-container');
+  const container = button.closest('[data-password-container]');
   if (!container) return;
   
   const input = container.querySelector('input[type="password"], input[type="text"]');
@@ -22,8 +22,8 @@ function togglePasswordVisibility(button) {
   input.setAttribute('type', type);
   
   // Toggle eye icon visibility
-  const openEye = button.querySelector('.eye-open');
-  const closedEye = button.querySelector('.eye-closed');
+  const openEye = button.querySelector('[data-eye-open]');
+  const closedEye = button.querySelector('[data-eye-closed]');
   
   if (openEye && closedEye) {
     if (type === 'text') {

@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
                 icon="hero-envelope"
                 required
               />
-              <div>
+              <div data-password-container>
                 <.input
                   id="password-input"
                   name="password"
@@ -78,7 +78,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
                   </:trailing_icon>
                 </.input>
               </div>
-              <div class="text-fluid-xs sm:text-fluid-sm mt-1 mb-2 text-center">
+              <div class="text-xs sm:text-sm mt-1 mb-2 text-center">
                 <button
                   type="button"
                   phx-click="navigate_to"

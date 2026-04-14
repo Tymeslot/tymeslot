@@ -291,7 +291,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   @spec password_requirements(map()) :: Phoenix.LiveView.Rendered.t()
   def password_requirements(assigns) do
     ~H"""
-    <div id="password-requirements" class="mt-2 text-xs sm:text-sm space-y-1.5 password-requirements">
+    <div id="password-requirements" class="mt-2 text-xs sm:text-sm space-y-1.5">
       <p class="text-tymeslot-500 font-bold uppercase tracking-wider text-token-2xs">Password must contain:</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-x-4">
         <ul class="space-y-1">

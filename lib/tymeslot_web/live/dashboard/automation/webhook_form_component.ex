@@ -155,7 +155,7 @@ defmodule TymeslotWeb.Dashboard.Automation.WebhookFormComponent do
                   type="text"
                   value={@webhook.webhook_token}
                   readonly
-                  class="input-base font-mono text-token-sm flex-1 bg-tymeslot-50 text-tymeslot-600 cursor-default"
+                  class="font-mono text-token-sm flex-1 px-4 py-2.5 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-tymeslot-600 cursor-default"
                   id="webhook_token_display"
                 />
                 <button

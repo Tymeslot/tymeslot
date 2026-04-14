@@ -81,7 +81,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
                 phx-value-theme={theme_id}
                 phx-target={@myself}
               >
-                <div class="booking-flow-preview h-64 relative overflow-hidden">
+                <div class="h-64 relative overflow-hidden">
                   <ThemePreview.render theme_id={theme_id} />
 
                   <div class="absolute inset-0 bg-gradient-to-t from-tymeslot-900/60 via-transparent to-transparent opacity-60 group-hover/theme:opacity-40 transition-opacity">

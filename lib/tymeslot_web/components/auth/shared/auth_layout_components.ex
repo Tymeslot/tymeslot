@@ -71,7 +71,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
   def auth_container(assigns) do
     ~H"""
     <div class="min-h-screen bg-tymeslot-50 flex flex-col">
-      <div class="relative z-1 flex flex-col h-screen overflow-hidden">
+      <div class="relative z-10 flex flex-col h-screen overflow-hidden">
         <.auth_back_link />
         <div class="w-full flex flex-col items-center justify-center flex-grow py-6 sm:py-8 px-3 sm:px-6 md:px-8 overflow-y-auto min-h-screen max-w-full">
           <div class="mx-auto w-full max-w-[95%] sm:max-w-[36rem] md:max-w-[40rem] lg:max-w-[44rem]">

@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
                   src={"/videos/thumbnails/#{video.thumbnail}"}
                   alt={video.name}
                   class="video-thumbnail w-full h-full object-cover absolute inset-0 z-10 transition-transform duration-700 group-hover/video:scale-110"
-                  onerror="this.style.display='none'; this.parentElement.querySelector('.fallback-thumbnail').style.display='flex';"
+                  onerror="this.style.display='none'; this.parentElement.querySelector('[data-fallback-thumbnail]').style.display='flex';"
                 />
                 <video
                   src={"/videos/backgrounds/#{video.file}"}
@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.VideoPi
                   preload="metadata"
                 >
                 </video>
-                <div class="fallback-thumbnail absolute inset-0 bg-gradient-to-br from-tymeslot-800 to-tymeslot-900 items-center justify-center hidden z-10">
+                <div data-fallback-thumbnail class="absolute inset-0 bg-gradient-to-br from-tymeslot-800 to-tymeslot-900 items-center justify-center hidden z-10">
                   <svg class="w-12 h-12 text-tymeslot-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -50,7 +50,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
     <div class="scheduling-box" data-locale={@locale}>
       <div class="slide-container">
         <div class="slide active">
-          <div class="slide-content overview-slide">
+          <div class="slide-content">
             <h1 class="slide-title">
               {gettext("Schedule with %{name}", name: display_name(@organizer_profile))}
             </h1>

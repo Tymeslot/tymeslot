@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Wrapper do
     assigns = prepare_wrapper_assigns(assigns)
 
     ~H"""
-    <div class="rhythm-theme-wrapper theme-2" data-locale={assigns[:locale]}>
+    <div class="rhythm-theme-wrapper" data-locale={assigns[:locale]}>
       <%= if assigns[:custom_css] && assigns[:custom_css] != "" do %>
         <style type="text/css">
           :root {

@@ -27,7 +27,8 @@ defmodule TymeslotWeb.Shared.PasswordToggleButtonComponent do
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        class="h-4 w-4 sm:h-5 sm:w-5 eye-open"
+        class="h-4 w-4 sm:h-5 sm:w-5"
+        data-eye-open
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -47,7 +48,8 @@ defmodule TymeslotWeb.Shared.PasswordToggleButtonComponent do
       </svg>
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        class="h-4 w-4 sm:h-5 sm:w-5 eye-closed hidden"
+        class="h-4 w-4 sm:h-5 sm:w-5 hidden"
+        data-eye-closed
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
