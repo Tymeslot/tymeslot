@@ -1,0 +1,77 @@
+defmodule TymeslotWeb.E2E.DashboardCalendarTest do
+  use TymeslotWeb.BrowserCase, async: false
+
+  alias Tymeslot.Factory
+
+  @moduletag :e2e
+  @moduletag :calendar
+
+  # These browser tests exercise JS hook + LiveView server round-trips that
+  # unit tests can't reach: the CalendarCreate drag hook, the inline edit
+  # click handler, and the modal DOM wiring. They deliberately stop short of
+  # the full Task-based save path — that is covered by the LiveView tests in
+  # events_rendering_test.exs, which send the result message directly to
+  # bypass provider-layer HTTP. Here we assert on the immediate optimistic
+  # state, which is what regresses when hooks or modal templates break.
+
+  feature "user can open the create-event modal via the grid drag hook", %{
+    session: session
+  } do
+    {session, user} = log_in_via_browser(session)
+    _integration = Factory.insert(:calendar_integration, user: user, is_active: true)
+
+    session
+    |> visit("/dashboard/calendar")
+    |> wait_for_live()
+    |> assert_has(css("#calendar-create-zone"))
+    |> simulate_grid_drag()
+    |> assert_has(css("#create-event-modal"))
+    |> assert_has(css("#create-event-title"))
+  end
+
+  feature "user can rename an event inline from the detail modal", %{session: session} do
+    {session, user} = log_in_via_browser(session)
+    integration = Factory.insert(:calendar_integration, user: user, is_active: true)
+
+    today = Date.utc_today()
+
+    event =
+      Factory.insert(:provider_calendar_event, %{
+        calendar_integration: integration,
+        summary: "Original Title",
+        start_at: DateTime.new!(today, ~T[10:00:00], "Etc/UTC"),
+        end_at: DateTime.new!(today, ~T[11:00:00], "Etc/UTC"),
+        all_day: false
+      })
+
+    session
+    |> visit("/dashboard/calendar")
+    |> wait_for_live()
+    |> assert_has(css("body", text: "Original Title"))
+    |> execute_script("document.querySelector(\"[data-event-id='#{event.id}']\").click()")
+    |> assert_has(css("#event-title-input"))
+    |> fill_in(css("#event-title-input"), with: "Renamed In Browser")
+    |> assert_has(css("body", text: "Renamed In Browser"))
+  end
+
+  # Drag-to-create uses real mousedown/mousemove/mouseup events on an empty
+  # day column. We dispatch synthetic MouseEvents via execute_script rather
+  # than using Wallaby's cursor API because the CalendarCreate hook snaps
+  # coordinates to the grid geometry, which we can compute reliably from the
+  # column's bounding rect.
+  defp simulate_grid_drag(session) do
+    execute_script(session, """
+    const col = document.querySelector('[data-day-col]');
+    if (!col) { throw new Error('no data-day-col found'); }
+    const rect = col.getBoundingClientRect();
+    const x = rect.left + Math.floor(rect.width / 2);
+    const y = rect.top + 100;
+    const base = { bubbles: true, cancelable: true, view: window, button: 0 };
+    col.dispatchEvent(new MouseEvent('mousedown', { ...base, clientX: x, clientY: y }));
+    document.dispatchEvent(new MouseEvent('mousemove', { ...base, clientX: x, clientY: y + 30 }));
+    document.dispatchEvent(new MouseEvent('mouseup',   { ...base, clientX: x, clientY: y + 30 }));
+    """)
+
+    session
+  end
+end

@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.CalendarGrid
   alias Tymeslot.Profiles
 
   setup %{conn: conn} do
@@ -285,6 +286,170 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       # second render processes the event_created action and reloads events.
       render(lv)
       assert render(lv) =~ "Dashboard Created Event"
+    end
+  end
+
+  describe "async event move result" do
+    test "error path reverts event and flashes", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Move Me",
+          start_at: DateTime.new!(Date.utc_today(), ~T[09:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(lv.pid, {:event_move_result, {:error, original_event: event, reason: :api_error}})
+
+      html = render(lv)
+      assert html =~ "Failed to move event"
+      assert html =~ "Move Me"
+    end
+
+    test "success path keeps the grid rendering without errors", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Moved Event",
+          start_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(
+        lv.pid,
+        {:event_move_result, {:ok, uid: event.uid, integration_id: integration.id}}
+      )
+
+      render(lv)
+      html = render(lv)
+      refute html =~ "Failed to move event"
+      assert html =~ "Moved Event"
+    end
+  end
+
+  describe "async event delete result" do
+    test "success path removes event from cache and grid", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Delete Me",
+          start_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[12:00:00], "Etc/UTC"),
+          all_day: false
+        })
+
+      {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
+      assert html =~ "Delete Me"
+
+      send(
+        lv.pid,
+        {:delete_event_result, {:ok, %{uid: event.uid, integration_id: integration.id}}}
+      )
+
+      render(lv)
+      html = render(lv)
+      refute html =~ "Delete Me"
+
+      assert {:error, :not_found} = CalendarGrid.get_cached_event(integration.id, event.uid)
+    end
+
+    test "error path flashes failure message", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      insert_event(integration, %{
+        summary: "Stubborn Event",
+        start_at: DateTime.new!(Date.utc_today(), ~T[13:00:00], "Etc/UTC"),
+        end_at: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
+        all_day: false
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(lv.pid, {:delete_event_result, {:error, :api_error}})
+
+      html = render(lv)
+      assert html =~ "Failed to delete event"
+      assert html =~ "Stubborn Event"
+    end
+  end
+
+  describe "async ad-hoc meeting result" do
+    test "success path flashes confirmation", %{conn: conn, user: user} do
+      _integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(lv.pid, {:create_ad_hoc_meeting_result, {:ok, %{meeting_id: 1}}})
+
+      html = render(lv)
+      assert html =~ "Meeting created and invitation sent"
+    end
+
+    test "error path flashes the reason", %{conn: conn, user: user} do
+      _integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(lv.pid, {:create_ad_hoc_meeting_result, {:error, "Calendar unavailable"}})
+
+      html = render(lv)
+      assert html =~ "Calendar unavailable"
+    end
+  end
+
+  describe "PubSub calendar_sync_complete" do
+    test "refreshes the grid so newly-synced events appear", %{conn: conn, user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, html} = live(conn, ~p"/dashboard/calendar")
+      refute html =~ "Synced Event"
+
+      insert_event(integration, %{
+        summary: "Synced Event",
+        start_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
+        end_at: DateTime.new!(Date.utc_today(), ~T[17:00:00], "Etc/UTC"),
+        all_day: false
+      })
+
+      Phoenix.PubSub.broadcast(
+        Tymeslot.PubSub,
+        "calendar_events:#{user.id}",
+        {:calendar_sync_complete, user.id, integration.id}
+      )
+
+      render(lv)
+      assert render(lv) =~ "Synced Event"
+    end
+  end
+
+  describe "integration lifecycle messages" do
+    test "integration_added keeps the dashboard rendering", %{conn: conn, user: user} do
+      _integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(lv.pid, {:integration_added, nil})
+
+      assert render(lv) =~ "calendar"
+    end
+
+    test "integration_removed keeps the dashboard rendering", %{conn: conn, user: user} do
+      _integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      send(lv.pid, {:integration_removed, nil})
+
+      assert render(lv) =~ "calendar"
     end
   end
 
