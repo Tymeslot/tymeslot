@@ -109,7 +109,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
                 href="https://policies.google.com/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="text-primary-600 underline hover:text-primary-700"
+                class="text-turquoise-600 underline hover:text-turquoise-700"
               >
                 Privacy Policy
               </a>
@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Registration.SignupComponent do
                 href="https://policies.google.com/terms"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="text-primary-600 underline hover:text-primary-700"
+                class="text-turquoise-600 underline hover:text-turquoise-700"
               >
                 Terms of Service
               </a>
