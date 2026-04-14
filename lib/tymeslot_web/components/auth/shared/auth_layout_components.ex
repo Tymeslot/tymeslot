@@ -114,10 +114,10 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
         <% end %>
       </div>
 
+      <.auth_back_link />
+
       <%!-- Content Overlay --%>
       <div class="w-full max-w-[500px] relative z-10 animate-in fade-in zoom-in-95 duration-700">
-        <.auth_back_link />
-        
         <div class="auth-glass-card !max-w-none">
           <.auth_logo_header title={@title} subtitle={@subtitle} />
           
