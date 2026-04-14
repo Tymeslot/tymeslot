@@ -61,7 +61,7 @@ defmodule TymeslotWeb.Session.LoginComponent do
                 icon="hero-envelope"
                 required
               />
-              <div data-password-container>
+              <div id="login-password-toggle-container" phx-hook="PasswordToggle" data-password-container>
                 <.input
                   id="password-input"
                   name="password"

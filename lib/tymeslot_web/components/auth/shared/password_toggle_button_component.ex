@@ -20,8 +20,8 @@ defmodule TymeslotWeb.Shared.PasswordToggleButtonComponent do
     <button
       type="button"
       id={@id}
-      onclick="togglePasswordVisibility(this)"
-      class={"absolute top-1/2 -translate-y-1/2 right-2 sm:right-3 text-tymeslot-400 hover:text-purple-600 transition duration-300 ease-in-out focus:outline-none p-1 sm:p-0 bg-transparent border-none flex items-center justify-center #{@class}"}
+      data-password-toggle-button
+      class={"pointer-events-auto absolute top-1/2 -translate-y-1/2 right-2 sm:right-3 text-tymeslot-400 hover:text-purple-600 transition duration-300 ease-in-out focus:outline-none p-1 sm:p-0 bg-transparent border-none flex items-center justify-center #{@class}"}
       aria-label="Toggle password visibility"
       tabindex="-1"
     >

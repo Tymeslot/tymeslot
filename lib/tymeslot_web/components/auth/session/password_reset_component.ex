@@ -172,7 +172,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
           csrf_token={@csrf_token}
         >
           <input type="hidden" name="token" value={@reset_token} />
-          <div class="space-y-1.5" id="password-toggle-container" phx-hook="PasswordToggle" data-password-container>
+          <div class="space-y-1.5" id="reset-password-toggle-container" phx-hook="PasswordToggle" data-password-container>
             <.input
               id="password-input"
               name="password"
@@ -190,7 +190,7 @@ defmodule TymeslotWeb.Session.PasswordResetComponent do
             </.input>
             <.password_requirements />
           </div>
-          <div class="space-y-1.5">
+          <div class="space-y-1.5" id="reset-confirm-password-toggle-container" phx-hook="PasswordToggle" data-password-container>
             <.input
               id="confirm-password-input"
               name="password_confirmation"
