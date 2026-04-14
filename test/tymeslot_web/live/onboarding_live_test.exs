@@ -80,8 +80,8 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       |> element("button[phx-click='next_step']")
       |> render_click()
 
-      # Should redirect to event types page
-      assert_redirect(view, ~p"/dashboard/event-types")
+      # Should redirect to dashboard
+      assert_redirect(view, ~p"/dashboard")
 
       # Verify onboarding_completed_at is set
       user = Repo.reload!(user)
