@@ -1,4 +1,68 @@
 
+[0.100.0]
+* core: Unbreak dashboard event creation async result path
+* core: Redirect to /dashboard after onboarding and update e2e test for 7-step flow
+* core: Wire password toggle hook on every auth form and give each a unique id
+* core: Stop back-to-website button animating from inside auth card
+* core: Remove phantom css classes and migrate password toggle to data attributes
+* saas: Install tailwindcss-animate plugin
+* core: Install tailwindcss-animate plugin and remove dead animate classes
+* core: Remove phantom css classes with no definition
+* core: Style rhythm overview empty state
+* saas: Map multi-entry appointment email templates in coverage test
+* core: Register grid-cols-14 and grid-cols-16 in Tailwind config
+* core: Replace stale xs: breakpoint on automation card test buttons
+* core: Use turquoise scale for reCAPTCHA notice links
+* core: Remove unreachable clause in availability shift_safe
+* core: Harden 2026 email helpers against edge-case inputs
+* saas: Resolve runtime.exs paths from file location, not cwd
+* core: Render quill time slots in a responsive grid
+* core: Adapt rhythm schedule step to iframe height via flex
+* core: Preserve unspecified calendar preference fields on partial upsert
+* core: Re-centre dashboard calendar on current time after refresh
+* core: Keep cancel button icon and label on one line
+* core: Handle OAuth plain-map events in blocking? and convert_events_to_timezone
+* saas: Fix recurring event cleanup in calendar audit runner
+* core: Convert CalDAV EXDATE values to Date for cache storage
+* core: Fold created_by_tymeslot into recreate_provider_calendar_events migration
+* core: Normalize OAuth calendar events in EventsRead fetch path
+* core: Set stable field to current version string in CloudronVersions.json
+* core: Restore missing [0.99.39] section in Cloudron CHANGELOG
+* core: Replace fixed CSS values with fluid responsive equivalents
+* core: Resolve code review issues from module-splits deep review
+* core: Resolve architecture issues and add test coverage after code review
+* core: Harden event fingerprinting after code review
+* core: Add @spec to where_overlapping_range
+* core: Improve Google OAuth UX and deduplicate calendar callback rate limiting
+* saas: Address code review findings from SEO improvements
+* core: Scrub PII before logging, harden hostname fallback, trim emails
+* core: Address code review findings for canonical CalendarEvent
+* core: Validate calendar discovery input before rate-limiting
+* core: Use user-id for calendar rate limits and reset is_saving on throttle
+* core: Add missing rate limits to calendar event creation and connection tests
+* core: Restore real HealthCheck module in HealthCheckTest setup
+* saas: Move Repo calls out of EmailService and OnboardingEmailWorker
+* saas: Use domain language in documentation instead of schema module names
+* core: Update stale subscription schema reference in customer lookup test
+* core: Resolve Dialyzer warnings in Profiles module
+* core: Address review findings in co-location branch
+* core: Resolve rebase conflict artifacts in email worker and onboarding
+* core: Address review findings in bounded health check changes
+* core: Bound health check job execution to prevent 10+ minute runs
+* saas: Align SaaS email templates and testing with 2026 redesign
+* core: Redesign transactional and system emails for 2026
+* core: Add periodic forced full re-sync for CalDAV integrations
+* core: Fingerprint calendar events created by Tymeslot
+* saas: Add docs cross-links to profession page integration sections
+* saas: Redesign /for hub as categorised overview page with SEO copy and schema
+* saas: Strengthen profession page H1 headlines with profession-specific value props
+* saas: SEO improvements — llms.txt, og-image, schema markup
+* core: Add og-image.png social card for Open Graph meta tags
+* core: Enrich admin alerts with structured reason and PII scrubbing
+* core: Normalise all calendar providers through canonical CalendarEvent
+* core: Add canonical CalendarEvent struct and provider_calendar_events table
+* core: Add standardised admin alerts infrastructure
+* core: Add Credo check enforcing Repo call boundaries
 [0.99.40]
 * core: Extract shared Date-to-DateTime coercion into DateTimeUtils.to_datetime/1
 * saas: Exclude manual subscriptions from reconciliation discrepancy checks
