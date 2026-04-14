@@ -27,12 +27,16 @@ export const CalendarDrag = {
     document.addEventListener('mousemove', this._onMouseMove)
     document.addEventListener('mouseup', this._onMouseUp)
 
+    this._scrollToCurrentTime()
+    this.handleEvent('calendar:scroll-to-current', () => this._scrollToCurrentTime())
+  },
+
+  _scrollToCurrentTime() {
     // Scroll to 1 hour before the current time so appointments near now are visible
     const topRem = parseFloat(this.el.dataset.currentTopRem)
-    if (!isNaN(topRem)) {
-      const remInPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
-      this.el.scrollTop = Math.max(0, topRem * remInPx - HOUR_HEIGHT_PX)
-    }
+    if (isNaN(topRem)) return
+    const remInPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+    this.el.scrollTop = Math.max(0, topRem * remInPx - HOUR_HEIGHT_PX)
   },
 
   destroyed() {
