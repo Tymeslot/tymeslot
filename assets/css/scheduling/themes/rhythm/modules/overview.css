@@ -52,6 +52,26 @@
   color: var(--theme-text-secondary);
 }
 
+/* Empty state — shown when an organiser has no meeting types configured */
+.overview-empty-state {
+  margin-top: var(--space-lg);
+  padding: var(--space-lg);
+  text-align: center;
+  background: var(--surface-light);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-lg);
+}
+
+.overview-empty-title {
+  margin: 0 0 var(--space-2xs) 0;
+  color: var(--theme-text);
+}
+
+.overview-empty-subtitle {
+  margin: 0;
+  color: var(--theme-text-secondary);
+}
+
 /* Duration Cards */
 .duration-grid {
   display: grid;
