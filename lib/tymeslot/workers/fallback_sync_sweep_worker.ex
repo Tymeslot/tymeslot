@@ -236,8 +236,8 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     {with_delta, without_delta} =
       Enum.split_with(integrations, fn i -> not is_nil(i.graph_delta_link) end)
 
-    {delta_count, _} = process_in_batches(with_delta, &fetch_outlook_delta/1)
-    {enqueued_count, _} = process_in_batches(without_delta, &seed_outlook_integration/1)
+    {delta_count, _delta_errors} = process_in_batches(with_delta, &fetch_outlook_delta/1)
+    {enqueued_count, _enqueued_errors} = process_in_batches(without_delta, &seed_outlook_integration/1)
 
     {delta_count, enqueued_count}
   end

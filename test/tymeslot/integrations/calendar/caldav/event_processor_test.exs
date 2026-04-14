@@ -317,7 +317,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessorTest do
         exdate: [~U[2026-04-15 10:00:00Z]]
       }
 
-      assert {:ok, [event | _]} = EventProcessor.normalise_events([raw], @context)
+      assert {:ok, [event | _rest]} = EventProcessor.normalise_events([raw], @context)
       assert event.recurrence_exceptions == [~D[2026-04-15]]
       assert Enum.all?(event.recurrence_exceptions, &match?(%Date{}, &1))
     end
