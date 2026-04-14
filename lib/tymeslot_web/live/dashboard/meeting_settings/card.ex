@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
     ]}>
       <div class="flex items-center gap-3">
         <%!-- Drag Handle --%>
-        <div class="drag-handle cursor-grab active:cursor-grabbing text-tymeslot-400 flex-shrink-0">
+        <div class="cursor-grab active:cursor-grabbing text-tymeslot-400 flex-shrink-0">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"

@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Registration.VerifyEmailComponent do
     ~H"""
     <.auth_card_layout title="Verify Your Email">
       <:heading>
-        <h2 class="text-xl font-bold text-tymeslot-900 mb-6 font-heading tracking-tight text-center">
+        <h2 class="text-xl font-bold text-tymeslot-900 mb-6 tracking-tight text-center">
           Almost There!
         </h2>
       </:heading>
