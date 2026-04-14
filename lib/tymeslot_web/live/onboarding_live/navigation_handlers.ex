@@ -30,7 +30,7 @@ defmodule TymeslotWeb.OnboardingLive.NavigationHandlers do
         handle_profile_next(socket)
 
       :ready ->
-        handle_complete_onboarding(socket, redirect_to: ~p"/dashboard/event-types")
+        handle_complete_onboarding(socket, redirect_to: ~p"/dashboard")
 
       step ->
         {:noreply,

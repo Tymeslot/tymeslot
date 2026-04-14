@@ -24,13 +24,13 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
       |> fill_in(css("#password-input"), with: default_password())
       |> click(css("button[type='submit']"))
 
-    # Should be on onboarding page (welcome step)
-    session = assert_has(session, css("button[phx-click='next_step']"))
+    # Step 1: Welcome — click "Let's go"
+    session =
+      session
+      |> assert_has(css("button[phx-click='next_step']"))
+      |> click(css("button[phx-click='next_step']"))
 
-    # Step 1: Welcome — click Next
-    session = click(session, css("button[phx-click='next_step']"))
-
-    # Step 2: Basic Settings — fill name and username
+    # Step 2: Profile — fill name and username, then continue
     session =
       session
       |> assert_has(css("#full_name"))
@@ -38,13 +38,31 @@ defmodule TymeslotWeb.E2E.OnboardingTest do
       |> fill_in(css("#username"), with: "e2e-user-#{System.unique_integer([:positive])}")
       |> click(css("button[phx-click='next_step']"))
 
-    # Step 3: Scheduling Preferences — use defaults, advance to complete step
+    # Step 3: Connect Calendar — skip it
+    session =
+      session
+      |> assert_has(css("button[phx-click='skip_step']"))
+      |> click(css("button[phx-click='skip_step']"))
+
+    # Step 4: Buffer Time — use defaults, continue
     session =
       session
       |> assert_has(css("button[phx-click='next_step']"))
       |> click(css("button[phx-click='next_step']"))
 
-    # Step 4: Complete — click "Get Started" to finish onboarding and go to dashboard
+    # Step 5: Booking Window — use defaults, continue
+    session =
+      session
+      |> assert_has(css("button[phx-click='next_step']"))
+      |> click(css("button[phx-click='next_step']"))
+
+    # Step 6: Minimum Notice — use defaults, continue
+    session =
+      session
+      |> assert_has(css("button[phx-click='next_step']"))
+      |> click(css("button[phx-click='next_step']"))
+
+    # Step 7: Ready — click "Create your first meeting type" to finish and go to dashboard
     session
     |> assert_has(css("button[phx-click='next_step']"))
     |> click(css("button[phx-click='next_step']"))
