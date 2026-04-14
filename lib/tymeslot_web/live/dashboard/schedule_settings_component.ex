@@ -119,7 +119,7 @@ defmodule TymeslotWeb.Dashboard.ScheduleSettingsComponent do
         </div>
       </div>
 
-      <div class="animate-in fade-in duration-500">
+      <div>
         <%= if @input_mode == :list do %>
           <.live_component
             module={ListComponent}

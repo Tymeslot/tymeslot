@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
           <span class="text-token-sm text-tymeslot-500 italic">No reminders configured.</span>
         <% else %>
           <%= for reminder <- @reminders do %>
-            <span class="tag-semantic tag-semantic-teal animate-in zoom-in duration-300">
+            <span class="tag-semantic tag-semantic-teal">
               {ReminderUtils.format_reminder_label(reminder.value, reminder.unit)} before
               <button
                 type="button"
@@ -97,7 +97,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.Reminders do
           </button>
 
           <%= if @reminder_confirmation do %>
-            <span class="text-token-sm text-teal-600 font-bold animate-in fade-in slide-in-from-left-2 duration-500">
+            <span class="text-token-sm text-teal-600 font-bold">
               ✓ {@reminder_confirmation}
             </span>
           <% end %>

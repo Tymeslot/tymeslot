@@ -137,7 +137,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
             </p>
 
             <%= if @customization.color_scheme == scheme_id do %>
-              <div class="absolute top-2 right-2 w-6 h-6 bg-turquoise-500 text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
+              <div class="absolute top-2 right-2 w-6 h-6 bg-turquoise-500 text-white rounded-full flex items-center justify-center shadow-lg">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
@@ -185,7 +185,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
           <% end %>
         </div>
 
-        <div class="animate-in fade-in slide-in-from-top-4 duration-500">
+        <div>
           <%= case @browsing_type do %>
             <% "gradient" -> %>
               <.gradient_picker customization={@customization} presets={@presets} myself={@myself} />

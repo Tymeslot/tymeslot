@@ -9,7 +9,8 @@
     "test:ui": "vitest --ui"
   },
   "devDependencies": {
-    "vitest": "^1.2.0",
-    "jsdom": "^24.0.0"
+    "jsdom": "^24.0.0",
+    "tailwindcss-animate": "^1.0.7",
+    "vitest": "^1.2.0"
   }
 }

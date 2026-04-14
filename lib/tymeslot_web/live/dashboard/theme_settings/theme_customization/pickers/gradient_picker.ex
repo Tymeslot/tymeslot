@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.Gradien
           </div>
           
           <%= if @customization.background_value == gradient_id do %>
-            <div class="absolute top-3 right-3 w-6 h-6 bg-turquoise-500 text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
+            <div class="absolute top-3 right-3 w-6 h-6 bg-turquoise-500 text-white rounded-full flex items-center justify-center shadow-lg">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
               </svg>

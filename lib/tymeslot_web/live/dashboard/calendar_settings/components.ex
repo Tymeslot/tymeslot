@@ -39,7 +39,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       id="calendar-config-view"
       phx-hook="ScrollReset"
       data-action={@selected_provider}
-      class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+      class="space-y-8"
     >
       <div class="flex items-center gap-6 bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm">
         <button

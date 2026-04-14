@@ -188,7 +188,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
         <%!-- Upload progress --%>
         <%= if @uploads && @uploads[:avatar] do %>
           <%= for err <- upload_errors(@uploads.avatar) do %>
-            <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-1">
+            <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -197,7 +197,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
           <% end %>
 
           <%= for entry <- @uploads.avatar.entries do %>
-            <div class="mt-6 p-4 bg-turquoise-50 rounded-token-2xl border-2 border-turquoise-100 animate-in fade-in zoom-in">
+            <div class="mt-6 p-4 bg-turquoise-50 rounded-token-2xl border-2 border-turquoise-100">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-turquoise-700 font-black text-xs uppercase tracking-wider">
                   <%= if entry.progress == 100, do: "Processing...", else: "Uploading..." %>
@@ -213,7 +213,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettings.AvatarUploadComponent do
             </div>
 
             <%= for err <- upload_errors(@uploads.avatar, entry) do %>
-              <div class="mt-2 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-1">
+              <div class="mt-2 p-3 bg-red-50 border border-red-100 rounded-token-xl text-red-600 text-xs font-bold flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>

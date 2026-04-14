@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Dashboard.Availability.GridComponent do
   @impl Phoenix.LiveComponent
   def render(assigns) do
     ~H"""
-    <div class="space-y-8 animate-in fade-in duration-500">
+    <div class="space-y-8">
       <div class="card-glass relative shadow-2xl shadow-tymeslot-200/50">
         <div class="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
           <.section_header

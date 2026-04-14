@@ -318,7 +318,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
           id="meeting-type-config-view"
           phx-hook="ScrollReset"
           data-action={if @editing_type, do: "edit-#{@editing_type.id}", else: "new"}
-          class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+          class="space-y-8"
         >
           <div class="flex items-start justify-between bg-white p-6 rounded-token-3xl border-2 border-tymeslot-50 shadow-sm">
             <.section_header
@@ -369,7 +369,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
           </div>
 
     <%!-- Scheduling Settings --%>
-          <div class="animate-in fade-in duration-700">
+          <div>
             <.live_component
               module={SchedulingSettingsComponent}
               id="scheduling-settings"

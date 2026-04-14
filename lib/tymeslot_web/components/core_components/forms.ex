@@ -254,7 +254,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   def field_error(assigns) do
     ~H"""
     <%= if Enum.any?(@errors) do %>
-      <div class="mt-2 flex items-center gap-2 text-red-600 font-bold text-sm animate-in slide-in-from-top-1">
+      <div class="mt-2 flex items-center gap-2 text-red-600 font-bold text-sm">
         <TymeslotWeb.Components.CoreComponents.Icons.icon name="hero-exclamation-circle-solid" class="w-4 h-4" />
         <div class="flex flex-col">
           <%= for error <- @errors do %>

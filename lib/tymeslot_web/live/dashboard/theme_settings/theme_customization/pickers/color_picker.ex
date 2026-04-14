@@ -31,7 +31,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColorPi
             phx-target={@myself}
           >
             <%= if @customization.background_value == color do %>
-              <div class="bg-white rounded-full p-1 w-6 h-6 mx-auto flex items-center justify-center shadow-lg animate-in zoom-in ring-1 ring-tymeslot-100">
+              <div class="bg-white rounded-full p-1 w-6 h-6 mx-auto flex items-center justify-center shadow-lg ring-1 ring-tymeslot-100">
                 <svg class="w-4 h-4 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
