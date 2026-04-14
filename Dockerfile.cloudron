@@ -36,6 +36,10 @@ COPY . .
 RUN rm -rf priv/static/assets/
 RUN mix compile
 RUN mix assets.setup
+# Install node_modules for tailwind plugins (tailwindcss-animate) — the
+# standalone tailwind binary bundles @tailwindcss/forms but not third-party
+# plugins, so it resolves them from the assets dir's node_modules.
+RUN npm ci --prefix assets
 RUN mix assets.deploy
 
 # Create the release, then copy runtime config into it.

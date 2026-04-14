@@ -53,6 +53,11 @@ RUN for i in 1 2 3 4 5; do \
         mix do tailwind.install + esbuild.install && break || sleep 5; \
     done  
 
+# Install node_modules for tailwind plugins (tailwindcss-animate) — the
+# standalone tailwind binary bundles @tailwindcss/forms but not third-party
+# plugins, so it resolves them from the assets dir's node_modules.
+RUN npm ci --prefix assets
+
 # Compile assets
 RUN mix assets.deploy
 
