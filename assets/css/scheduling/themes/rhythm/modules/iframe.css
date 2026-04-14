@@ -24,7 +24,50 @@ html.rhythm-theme[data-embedded] body.rhythm-theme {
 }
 
 /* ---------------------------------------------------------------------------
-   2. Modal Mode — size to content for measurement
+   2. Inline Mode — bind the scheduling box to the iframe viewport
+   ---------------------------------------------------------------------------
+   In inline mode the iframe has a fixed height set by the host page. The
+   scheduling-box would otherwise grow to intrinsic content size, which means
+   the schedule step's .schedule-grid has no bounded parent, so its flex:1
+   child (.time-slots-section) can't adapt and the slot list overflows.
+
+   Chain height:100% + min-height:0 from <html> down to .slide-container so
+   the box fills the iframe exactly. Content inside that adapts via the
+   existing flex/min-height rules in each component's CSS.
+*/
+html.rhythm-theme[data-embedded][data-embed-mode="inline"],
+html.rhythm-theme[data-embedded][data-embed-mode="inline"] body.rhythm-theme {
+  height: 100%;
+  min-height: 0;
+}
+
+html.rhythm-theme[data-embedded][data-embed-mode="inline"] .video-background-theme,
+html.rhythm-theme[data-embedded][data-embed-mode="inline"] .video-background-theme.theme-grid {
+  min-height: 100%;
+  height: 100%;
+  padding: 0;
+  grid-template-rows: 1fr;
+}
+
+html.rhythm-theme[data-embedded][data-embed-mode="inline"] .video-background-theme.theme-grid .content-area {
+  padding: 0;
+  min-height: 0;
+  height: 100%;
+  align-items: stretch;
+}
+
+html.rhythm-theme[data-embedded][data-embed-mode="inline"] .scheduling-box {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+
+html.rhythm-theme[data-embedded][data-embed-mode="inline"] .slide-container {
+  min-height: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   3. Modal Mode — size to content for measurement
    --------------------------------------------------------------------------- */
 html.rhythm-theme[data-embedded][data-embed-mode="modal"] body.rhythm-theme {
   height: max-content;
@@ -56,7 +99,7 @@ html.rhythm-theme[data-embedded][data-embed-mode="modal"] .schedule-grid {
 }
 
 /* ---------------------------------------------------------------------------
-   3. Background and Branding (both modes)
+   4. Background and Branding (both modes)
    --------------------------------------------------------------------------- */
 
 /* Keep background container visible (it carries var(--theme-background)),
@@ -79,11 +122,12 @@ html.rhythm-theme[data-embedded] .scheduling-box {
   border: none;
 }
 
-/* Time slots — prevent double-scrolling in embedded mode.
-   Height media queries in time-slots.css cap .time-slots-grid with max-height
-   based on iframe viewport, creating an internal scroll + page scroll.
-   Let slots flow naturally so only the page body scrolls. */
-html.rhythm-theme[data-embedded] .time-slots-grid {
+/* Time slots — only release the max-height cap in modal mode, where the
+   iframe body sizes to content and a single page scroll is desired.
+   In inline mode the iframe height is fixed, so the cap from time-slots.css
+   must stay in place and the grid must scroll internally — otherwise slots
+   overflow the bottom of the iframe and get cut off. */
+html.rhythm-theme[data-embedded][data-embed-mode="modal"] .time-slots-grid {
   max-height: none;
   overflow-y: visible;
   height: auto;

@@ -3,7 +3,8 @@
 .time-slots-section {
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
+  flex: 1 1 auto;   /* fill remaining space in .schedule-grid so the grid adapts */
+  min-height: 0;    /* allow children to shrink below their intrinsic content */
 }
 
 .time-slots-section-heading {
@@ -97,29 +98,15 @@
 }
 
 /* ============================================================================
-   HEIGHT MEDIA QUERIES — kept as @media (viewport height has no container equivalent)
+   HEIGHT MEDIA QUERIES — at short viewports, stop pinning the grid to a fixed
+   pixel height. Let it fill whatever space .schedule-grid has left after the
+   calendar section and scroll internally when the slot list is taller than
+   the remaining space. The flex chain (.schedule-grid → .time-slots-section
+   → .time-slots-grid, each with min-height: 0) handles the adaptation.
    ============================================================================ */
 
 @media (max-height: 600px) {
   .time-slots-grid {
-    max-height: 180px;
-  }
-}
-
-@media (max-height: 500px) {
-  .time-slots-grid {
-    max-height: 160px;
-  }
-}
-
-@media (max-height: 400px) {
-  .time-slots-grid {
-    max-height: 120px;
-  }
-}
-
-@media (max-height: 350px) {
-  .time-slots-grid {
-    max-height: 100px;
+    max-height: 100%;
   }
 }
