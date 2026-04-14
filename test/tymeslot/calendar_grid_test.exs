@@ -503,4 +503,34 @@ defmodule Tymeslot.CalendarGridTest do
       assert CalendarGrid.oldest_sync_at(integrations) == timestamp
     end
   end
+
+  describe "cache_created_event/1" do
+    test "accepts second-precision DateTimes from the dashboard create flow" do
+      # Regression: the in-dashboard create handler builds start_at/end_at via
+      # DateTime.new!/Time.new!, which yields second precision. The cached events
+      # schema uses :utc_datetime_usec, so the cache path must upcast or tolerate
+      # the lower precision instead of crashing in insert_all.
+      integration = insert(:calendar_integration)
+
+      start_at = DateTime.new!(~D[2026-04-14], ~T[15:45:00], "Etc/UTC")
+      end_at = DateTime.new!(~D[2026-04-14], ~T[16:15:00], "Etc/UTC")
+
+      assert :ok =
+               CalendarGrid.cache_created_event(%{
+                 uid: "regression-second-precision",
+                 calendar_integration_id: integration.id,
+                 provider: "nextcloud",
+                 provider_calendar_id: "primary",
+                 summary: "Test",
+                 start_at: start_at,
+                 end_at: end_at,
+                 all_day: false
+               })
+
+      assert {:ok, cached} =
+               CalendarGrid.get_cached_event(integration.id, "regression-second-precision")
+
+      assert cached.summary == "Test"
+    end
+  end
 end

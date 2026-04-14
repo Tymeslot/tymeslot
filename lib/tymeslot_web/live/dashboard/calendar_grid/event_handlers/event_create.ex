@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
 
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Security.UniversalSanitizer
@@ -253,26 +254,44 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
     result = EventOperations.create_event(event_data, {creating.integration_id, user_id})
 
     case result do
-      {:ok, created} ->
-        uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
+      {:ok, created} -> build_create_success(created, creating, user_id, start_at, end_at)
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
-        Orchestrator.schedule_calendar_invitations(
-          user_id,
-          creating[:attendees] || [],
-          %{
-            title: creating.title,
-            uid: uid,
-            start_at: start_at,
-            end_at: end_at,
-            location: creating[:location],
-            description: creating[:description]
-          }
-        )
+  defp build_create_success(created, creating, user_id, start_at, end_at) do
+    uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
 
-        {:ok, %{uid: uid, creating: creating, start_at: start_at, end_at: end_at}}
+    Orchestrator.schedule_calendar_invitations(
+      user_id,
+      creating[:attendees] || [],
+      %{
+        title: creating.title,
+        uid: uid,
+        start_at: start_at,
+        end_at: end_at,
+        location: creating[:location],
+        description: creating[:description]
+      }
+    )
 
-      {:error, reason} ->
-        {:error, reason}
+    {provider, default_booking_calendar_id} = lookup_integration_metadata(creating.integration_id)
+
+    {:ok,
+     %{
+       uid: uid,
+       creating: creating,
+       start_at: start_at,
+       end_at: end_at,
+       provider: provider,
+       default_booking_calendar_id: default_booking_calendar_id
+     }}
+  end
+
+  defp lookup_integration_metadata(integration_id) do
+    case CalendarIntegrationQueries.get(integration_id) do
+      {:ok, integration} -> {integration.provider, integration.default_booking_calendar_id}
+      {:error, _reason} -> {nil, nil}
     end
   end
 
@@ -305,18 +324,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
   @spec handle_create_result({:ok, map()} | {:error, term()}, Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_create_result(
-        {:ok, %{uid: uid, creating: creating, start_at: start_at, end_at: end_at}},
+        {:ok,
+         %{
+           uid: uid,
+           creating: creating,
+           start_at: start_at,
+           end_at: end_at,
+           provider: provider,
+           default_booking_calendar_id: default_booking_calendar_id
+         }},
         socket
       ) do
-    integration =
-      Enum.find(socket.assigns.integrations, &(&1.id == creating.integration_id))
-
-    provider = integration && integration.provider
-
     provider_calendar_id =
-      creating[:calendar_id] ||
-        (integration && integration.default_booking_calendar_id) ||
-        "primary"
+      creating[:calendar_id] || default_booking_calendar_id || "primary"
 
     CalendarGrid.cache_created_event(%{
       uid: uid,

@@ -231,6 +231,63 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
     end
   end
 
+  describe "async event create result" do
+    test "caches new event and refreshes grid when task reports success", %{
+      conn: conn,
+      user: user
+    } do
+      # Regression: the dashboard create flow runs in a Task that sends
+      # {:create_event_result, ...} back to the LiveView pid. Two historical bugs
+      # crashed this path:
+      #
+      # 1. EventCreate.handle_create_result/2 looked up integrations on the
+      #    parent LiveView socket, which never carries the :integrations assign.
+      # 2. CalendarGrid.cache_created_event/1 received second-precision
+      #    DateTimes built from DateTime.new!, but the schema requires
+      #    microsecond precision.
+      integration = insert(:calendar_integration, user: user, is_active: true)
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      start_at = DateTime.new!(Date.utc_today(), ~T[15:45:00], "Etc/UTC")
+      end_at = DateTime.new!(Date.utc_today(), ~T[16:15:00], "Etc/UTC")
+
+      creating = %{
+        date: Date.to_iso8601(Date.utc_today()),
+        end_date: Date.to_iso8601(Date.utc_today()),
+        title: "Dashboard Created Event",
+        integration_id: integration.id,
+        calendar_id: "primary",
+        attendees: [],
+        attendee_input: "",
+        video_integration_id: nil,
+        start_hour: 15,
+        start_minute: 45,
+        end_hour: 16,
+        end_minute: 15
+      }
+
+      send(
+        lv.pid,
+        {:create_event_result,
+         {:ok,
+          %{
+            uid: "dashboard-created-uid",
+            creating: creating,
+            start_at: start_at,
+            end_at: end_at,
+            provider: "google",
+            default_booking_calendar_id: "primary"
+          }}}
+      )
+
+      # First render flushes handle_info and the send_update to the component;
+      # second render processes the event_created action and reloads events.
+      render(lv)
+      assert render(lv) =~ "Dashboard Created Event"
+    end
+  end
+
   describe "graceful rendering of sparse event data" do
     test "renders events with nil summary gracefully", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)

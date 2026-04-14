@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   # coordinates are in that timezone and must be converted back to UTC for storage.
   @spec to_utc(Date.t(), non_neg_integer(), non_neg_integer(), String.t()) :: DateTime.t()
   def to_utc(date, hour, minute, timezone) do
-    local_dt = DateTime.new!(date, Time.new!(hour, minute, 0), timezone)
+    local_dt = DateTime.new!(date, Time.new!(hour, minute, 0, {0, 6}), timezone)
     DateTime.shift_zone!(local_dt, "Etc/UTC")
   end
 

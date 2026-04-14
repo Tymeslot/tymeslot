@@ -140,7 +140,7 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec cache_created_event(map()) :: :ok
   def cache_created_event(attrs) do
-    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([attrs])
+    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([normalise_cache_attrs(attrs)])
     :ok
   end
 
@@ -151,9 +151,26 @@ defmodule Tymeslot.CalendarGrid do
   """
   @spec update_cached_event(map()) :: :ok
   def update_cached_event(attrs) do
-    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([attrs])
+    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch([normalise_cache_attrs(attrs)])
     :ok
   end
+
+  # The cached events schema stores start/end/synced_at as :utc_datetime_usec
+  # and requires synced_at NOT NULL. Dashboard-originated create/update flows
+  # build datetimes at second precision and don't supply synced_at — they're
+  # writing what they just committed, so "now" is the correct sync timestamp.
+  defp normalise_cache_attrs(attrs) do
+    now = DateTime.utc_now(:microsecond)
+
+    attrs
+    |> Map.update(:start_at, nil, &to_usec/1)
+    |> Map.update(:end_at, nil, &to_usec/1)
+    |> Map.put_new(:synced_at, now)
+  end
+
+  defp to_usec(%DateTime{microsecond: {_value, 6}} = dt), do: dt
+  defp to_usec(%DateTime{} = dt), do: %{dt | microsecond: {elem(dt.microsecond, 0), 6}}
+  defp to_usec(other), do: other
 
   @doc "Fetches a single cached event by integration ID and UID."
   @spec get_cached_event(integer(), String.t()) ::
