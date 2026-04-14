@@ -69,9 +69,8 @@ defmodule Tymeslot.Availability.Events do
   end
 
   defp shift_safe(%Date{} = date, owner_timezone, target_timezone) do
-    case DateTimeUtils.create_datetime_safe(date, ~T[00:00:00], owner_timezone) do
-      %DateTime{} = dt -> shift_safe(dt, owner_timezone, target_timezone)
-      _other -> {:error, :invalid_date}
-    end
+    date
+    |> DateTimeUtils.create_datetime_safe(~T[00:00:00], owner_timezone)
+    |> shift_safe(owner_timezone, target_timezone)
   end
 end
