@@ -64,10 +64,10 @@ defmodule Tymeslot.Emails.Shared.MeetingComponentsTest do
     end
   end
 
-  describe "video_meeting_section/2" do
+  describe "video_meeting_section/3" do
     test "sanitizes meeting URL" do
       malicious_url = "https://meet.example.com/<script>alert('xss')</script>"
-      html = MeetingComponents.video_meeting_section(malicious_url)
+      html = MeetingComponents.video_meeting_section(:confirmed, malicious_url)
 
       # URL should be sanitized in href attribute
       refute html =~ "<script>"
@@ -75,17 +75,17 @@ defmodule Tymeslot.Emails.Shared.MeetingComponentsTest do
 
     test "includes meeting URL in button" do
       url = "https://meet.example.com/room123"
-      html = MeetingComponents.video_meeting_section(url)
+      html = MeetingComponents.video_meeting_section(:confirmed, url)
 
       assert html =~ url
       assert html =~ "Join Meeting"
     end
 
-    test "supports different styles" do
+    test "supports different intents" do
       url = "https://meet.example.com/room123"
 
-      for style <- [:reminder, :confirmation, :subtle, :default] do
-        html = MeetingComponents.video_meeting_section(url, style: style)
+      for intent <- [:confirmed, :alert, :cancelled] do
+        html = MeetingComponents.video_meeting_section(intent, url)
         assert is_binary(html)
         assert html =~ url
       end
@@ -95,7 +95,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponentsTest do
       url = "https://meet.example.com/room123"
 
       html =
-        MeetingComponents.video_meeting_section(url,
+        MeetingComponents.video_meeting_section(:confirmed, url,
           title: "Custom Title",
           button_text: "Custom Button"
         )
@@ -105,24 +105,24 @@ defmodule Tymeslot.Emails.Shared.MeetingComponentsTest do
     end
   end
 
-  describe "time_alert_badge/2" do
+  describe "time_alert_badge/3" do
     test "sanitizes time text" do
-      html = MeetingComponents.time_alert_badge("<script>alert('xss')</script>30 minutes")
+      html = MeetingComponents.time_alert_badge(:alert, "<script>alert('xss')</script>30 minutes")
 
       refute html =~ "<script>"
       assert html =~ "30 minutes"
     end
 
     test "supports custom icon" do
-      html = MeetingComponents.time_alert_badge("Starting soon", icon: "⏰")
+      html = MeetingComponents.time_alert_badge(:confirmed, "Starting soon", icon: "⏰")
 
       assert html =~ "⏰"
       assert html =~ "Starting soon"
     end
 
-    test "supports different colors" do
-      for color <- [:blue, :green, :red] do
-        html = MeetingComponents.time_alert_badge("Time text", color: color)
+    test "supports different intents" do
+      for intent <- [:confirmed, :alert, :cancelled] do
+        html = MeetingComponents.time_alert_badge(intent, "Time text")
         assert is_binary(html)
         assert html =~ "Time text"
       end

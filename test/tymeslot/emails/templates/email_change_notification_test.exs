@@ -93,7 +93,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotificationTest do
       assert text =~ "Eve Davis"
       assert text =~ new_email
       assert text =~ "eve@example.com"
-      assert text =~ "did NOT request"
+      assert text =~ "did not request"
     end
 
     test "handles nil request_time" do

@@ -72,9 +72,15 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
   end
 
   describe "base_mjml_template/2" do
-    test "generates valid MJML with default organizer details" do
+    test "generates valid MJML with organizer details" do
       content = "<mj-text>Test Content</mj-text>"
-      mjml = MjmlEmail.base_mjml_template(content)
+
+      organizer_details = %{
+        intent: :confirmed,
+        eyebrow: "Confirmed"
+      }
+
+      mjml = MjmlEmail.base_mjml_template(content, organizer_details)
 
       assert is_binary(mjml)
       assert mjml =~ "<mjml>"
@@ -89,7 +95,9 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       organizer_details = %{
         name: "John Doe",
         email: "john@example.com",
-        title: "CEO"
+        title: "CEO",
+        intent: :confirmed,
+        eyebrow: "Confirmed"
       }
 
       mjml = MjmlEmail.base_mjml_template(content, organizer_details)
@@ -102,7 +110,9 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       content = "<mj-text>Test</mj-text>"
 
       organizer_details = %{
-        name: "Jane Smith"
+        name: "Jane Smith",
+        intent: :confirmed,
+        eyebrow: "Confirmed"
       }
 
       mjml = MjmlEmail.base_mjml_template(content, organizer_details)
@@ -116,7 +126,9 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
 
       organizer_details = %{
         name: "John Doe",
-        avatar_url: "https://example.com/avatar.jpg"
+        avatar_url: "https://example.com/avatar.jpg",
+        intent: :confirmed,
+        eyebrow: "Confirmed"
       }
 
       mjml = MjmlEmail.base_mjml_template(content, organizer_details)
@@ -126,7 +138,13 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
 
     test "includes standard email sections" do
       content = "<mj-text>Body Content</mj-text>"
-      mjml = MjmlEmail.base_mjml_template(content)
+
+      organizer_details = %{
+        intent: :confirmed,
+        eyebrow: "Confirmed"
+      }
+
+      mjml = MjmlEmail.base_mjml_template(content, organizer_details)
 
       # Check for header, content, and footer sections
       assert mjml =~ "<mj-head>"
@@ -137,10 +155,47 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
 
     test "includes Inter font" do
       content = "<mj-text>Test</mj-text>"
-      mjml = MjmlEmail.base_mjml_template(content)
+
+      organizer_details = %{
+        intent: :confirmed,
+        eyebrow: "Confirmed"
+      }
+
+      mjml = MjmlEmail.base_mjml_template(content, organizer_details)
 
       assert mjml =~ "Inter"
       assert mjml =~ "fonts.googleapis.com"
+    end
+
+    test "escapes ampersand in organizer name exactly once when stage_title is absent" do
+      content = "<mj-text>Test</mj-text>"
+
+      organizer_details = %{
+        name: "Tom & Jerry",
+        intent: :confirmed,
+        eyebrow: "Confirmed"
+      }
+
+      mjml = MjmlEmail.base_mjml_template(content, organizer_details)
+
+      assert mjml =~ "Tom &amp; Jerry"
+      refute mjml =~ "Tom &amp;amp; Jerry"
+    end
+
+    test "escapes ampersand in explicit stage_title exactly once" do
+      content = "<mj-text>Test</mj-text>"
+
+      organizer_details = %{
+        name: "Tom & Jerry",
+        stage_title: "R&D",
+        intent: :confirmed,
+        eyebrow: "Confirmed"
+      }
+
+      mjml = MjmlEmail.base_mjml_template(content, organizer_details)
+
+      assert mjml =~ "R&amp;D"
+      refute mjml =~ "R&amp;amp;D"
     end
   end
 end

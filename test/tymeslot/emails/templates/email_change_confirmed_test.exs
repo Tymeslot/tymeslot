@@ -55,7 +55,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
 
       html = EmailChangeConfirmed.render(user, old_email, new_email, confirmed_time, is_old_email)
 
-      assert html =~ "previous email" || html =~ "old email"
+      assert html =~ "Previous email" || html =~ "previous address"
     end
 
     test "handles nil confirmed_time" do
@@ -129,7 +129,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeConfirmedTest do
       user = build_user_data()
       text = EmailChangeConfirmed.render_text(user, "old@x.com", "new@x.com", nil, true)
 
-      assert text =~ "previous email address"
+      assert text =~ "previous address"
     end
 
     test "handles nil confirmed_time" do

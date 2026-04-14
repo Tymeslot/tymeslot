@@ -82,6 +82,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
   @spec build_cancellation_details(%{atom() => term()}) :: %{atom() => term()}
   def build_cancellation_details(meeting) do
     organizer_timezone = Recipients.get_organizer_timezone(meeting)
+    attendee_timezone = Recipients.get_attendee_timezone(meeting)
 
     %{
       # Meeting identification
@@ -92,6 +93,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       attendee_name: meeting.attendee_name,
       attendee_email: meeting.attendee_email,
       attendee_locale: meeting.attendee_locale || "en",
+      attendee_timezone: attendee_timezone,
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
       organizer_title: meeting.organizer_title,
@@ -100,6 +102,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       date: meeting.start_time,
       start_time: meeting.start_time,
       start_time_owner_tz: convert_to_timezone(meeting.start_time, organizer_timezone),
+      start_time_attendee_tz: convert_to_timezone(meeting.start_time, attendee_timezone),
       duration: meeting.duration,
 
       # Meeting details

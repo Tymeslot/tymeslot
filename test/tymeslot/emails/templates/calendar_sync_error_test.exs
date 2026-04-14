@@ -34,7 +34,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       html = CalendarSyncError.render(meeting, error_reason)
 
-      assert html =~ "Conference Room A" || html =~ "Meeting Details"
+      assert html =~ "Conference Room A"
     end
 
     test "handles missing organizer_user_id with fallback timezone" do
@@ -65,7 +65,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       html = CalendarSyncError.render(meeting, error_reason)
 
-      assert html =~ "Action" || html =~ "action" || html =~ "manually"
+      assert html =~ "Action Required"
     end
 
     test "includes common causes section" do
@@ -74,7 +74,7 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
 
       html = CalendarSyncError.render(meeting, error_reason)
 
-      assert html =~ "Common" || html =~ "causes" || html =~ "CalDAV"
+      assert html =~ "Common causes:"
     end
 
     test "handles various error reasons" do
@@ -93,6 +93,18 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncErrorTest do
         assert is_binary(html)
         assert String.length(html) > 500
       end
+    end
+  end
+
+  describe "CalendarSyncError.render_both/2" do
+    test "returns a {html, text} tuple equivalent to calling render/2 and render_text/2 separately" do
+      meeting = insert(:meeting)
+      error_reason = :network_error
+
+      {html, text} = CalendarSyncError.render_both(meeting, error_reason)
+
+      assert html == CalendarSyncError.render(meeting, error_reason)
+      assert text == CalendarSyncError.render_text(meeting, error_reason)
     end
   end
 

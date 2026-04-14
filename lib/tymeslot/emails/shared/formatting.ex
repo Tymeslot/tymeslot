@@ -152,11 +152,24 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   @doc """
   Formats a meeting duration in a locale-aware way.
   Example (en): "30 minutes", "1 hour"; (de): "30 Minuten", "1 Stunde"
+
+  Unparseable strings are returned verbatim so callers see the raw input
+  instead of a silent "0 minutes" — loud is better than wrong.
   """
   @spec format_duration(integer() | String.t(), String.t()) :: String.t()
   def format_duration(duration, locale) do
-    minutes = parse_duration_minutes(duration)
-    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn -> format_localized_duration(minutes) end)
+    case parse_duration_minutes(duration) do
+      {:ok, minutes} ->
+        Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+          format_localized_duration(minutes)
+        end)
+
+      :error when is_binary(duration) ->
+        duration
+
+      :error ->
+        ""
+    end
   end
 
   @doc """
@@ -174,21 +187,40 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   def format_location(details), do: details[:location] || dgettext("emails", "TBD")
 
   @doc """
-  Formats currency based on cents and currency code.
-  Defaults to EUR (€) if currency is not provided or recognized.
+  Formats currency based on cents (or raw units for zero-decimal currencies) and currency code.
+  Falls back to prefixing with the ISO code for unrecognised currencies (e.g. "XYZ 12.34").
+
+  # TODO: locale-specific thousands/decimal separators are not yet implemented —
+  #       that requires threading a locale through all call sites and is a larger refactor.
   """
   @spec format_currency(integer(), String.t() | nil) :: String.t()
   def format_currency(cents, currency \\ "eur") do
+    normalised = String.downcase(currency || "eur")
+
     symbol =
-      case String.downcase(currency || "eur") do
+      case normalised do
         "usd" -> "$"
         "gbp" -> "£"
+        "eur" -> "€"
         "jpy" -> "¥"
-        _other -> "€"
+        "krw" -> "₩"
+        "cad" -> "CA$"
+        "aud" -> "A$"
+        "chf" -> "CHF "
+        other -> String.upcase(other) <> " "
       end
 
-    amount = cents / 100
-    "#{symbol}#{:erlang.float_to_binary(amount / 1, decimals: 2)}"
+    if zero_decimal_currency?(normalised) do
+      "#{symbol}#{cents}"
+    else
+      amount = cents / 100
+      "#{symbol}#{:erlang.float_to_binary(amount / 1, decimals: 2)}"
+    end
+  end
+
+  # ISO 4217 zero-decimal currencies — amounts are already in the major unit.
+  defp zero_decimal_currency?(currency) do
+    currency in ~w(jpy krw vnd bif clp djf gnf isk kmf mga pyg rwf ugx vuv xaf xof xpf)
   end
 
   @doc """
@@ -213,16 +245,19 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   defp weekday_name(6), do: dgettext("emails", "Saturday")
   defp weekday_name(7), do: dgettext("emails", "Sunday")
 
-  defp parse_duration_minutes(minutes) when is_integer(minutes) and minutes > 0, do: minutes
+  defp parse_duration_minutes(minutes) when is_integer(minutes) and minutes > 0,
+    do: {:ok, minutes}
+
+  defp parse_duration_minutes(0), do: {:ok, 0}
 
   defp parse_duration_minutes(str) when is_binary(str) do
     case Regex.run(~r/^\s*(\d+)\s*(?:-?\s*min(?:utes?)?)?\s*$/i, str) do
-      [_full, m] -> String.to_integer(m)
-      _no_match -> 0
+      [_full, m] -> {:ok, String.to_integer(m)}
+      _no_match -> :error
     end
   end
 
-  defp parse_duration_minutes(_other), do: 0
+  defp parse_duration_minutes(_other), do: :error
 
   defp format_localized_duration(0), do: ""
 

@@ -19,34 +19,44 @@ defmodule Tymeslot.Emails.Shared.Stage do
 
   alias Tymeslot.Emails.Shared.{Sanitise, Styles}
 
+  # Decorative divider overlay — a translucent white line at the top of
+  # coloured stage bands. Keeps visual separation on any intent background.
+  @band_border_overlay "rgba(255, 255, 255, 0.14)"
+
   @doc """
   Renders a stage band section.
 
   `intent` is an atom — see `Styles.intent/1`.
+
+  String arguments (eyebrow, title, subtitle) are sanitised inside this
+  function — callers do not need to pre-sanitise them.
   """
   @spec stage_band(atom(), String.t(), String.t(), String.t() | nil) :: String.t()
   def stage_band(intent, eyebrow, title, subtitle \\ nil) do
     tokens = Styles.intent(intent)
     safe_eyebrow = Sanitise.sanitize_for_email(eyebrow)
     safe_title = Sanitise.sanitize_for_email(title)
-    safe_subtitle = if subtitle, do: Sanitise.sanitize_for_email(subtitle)
 
     subtitle_block =
-      if safe_subtitle do
-        """
-        <mj-text
-          padding="12px 0 0 0"
-          color="#{tokens.band_text}"
-          font-size="15px"
-          line-height="1.55"
-          align="left"
-          css-class="mobile-text"
-        >
-          <span style="opacity: 0.92;">#{safe_subtitle}</span>
-        </mj-text>
-        """
-      else
-        ""
+      case subtitle do
+        nil ->
+          ""
+
+        s ->
+          safe_subtitle = Sanitise.sanitize_for_email(s)
+
+          """
+          <mj-text
+            padding="12px 0 0 0"
+            color="#{tokens.band_text}"
+            font-size="15px"
+            line-height="1.55"
+            align="left"
+            css-class="mobile-text"
+          >
+            <span style="opacity: 0.92;">#{safe_subtitle}</span>
+          </mj-text>
+          """
       end
 
     """
@@ -54,7 +64,7 @@ defmodule Tymeslot.Emails.Shared.Stage do
       background-color="#{tokens.band_color}"
       padding="32px 32px 28px 32px"
       border-radius="20px 20px 0 0"
-      border-top="1px solid rgba(255, 255, 255, 0.14)"
+      border-top="1px solid #{@band_border_overlay}"
       css-class="stage-band"
     >
       <mj-column>
@@ -73,7 +83,7 @@ defmodule Tymeslot.Emails.Shared.Stage do
         <mj-text
           padding="0"
           color="#{tokens.band_text}"
-          font-size="32px"
+          font-size="#{Styles.font_size(:display)}"
           font-weight="800"
           align="left"
           line-height="1.08"

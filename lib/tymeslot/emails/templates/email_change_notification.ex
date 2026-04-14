@@ -5,7 +5,7 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotification do
   """
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Emails.Shared.{Callouts, Cards, Sanitise, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{Callouts, Cards, TemplateHelper, Text}
 
   # A security-sensitive notification about a potentially unauthorised change.
   @intent :alert
@@ -13,24 +13,22 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotification do
   @spec render(Tymeslot.Emails.EmailService.user_map(), String.t(), DateTime.t() | nil) ::
           String.t()
   def render(user, new_email, request_time) do
-    safe_name = Sanitise.sanitize_for_email(user.name || user.email)
-    safe_new_email = Sanitise.sanitize_for_email(new_email)
-    safe_current_email = Sanitise.sanitize_for_email(user.email)
+    name = user.name || user.email
 
     mjml_content = """
     #{Text.centered_text(dgettext("emails",
     "Hi %{name}, a request has been made to change the email address on your Tymeslot account. We're letting you know so you can confirm it was you.",
-    name: safe_name),
+    name: name),
     padding: "8px 0 20px 0")}
 
     #{Callouts.alert_box(@intent,
-    dgettext("emails", "Email change requested to: %{new_email}", new_email: safe_new_email))}
+    dgettext("emails", "Email change requested to: %{new_email}", new_email: new_email))}
 
-    #{Cards.contact_details_card(dgettext("emails", "Request details"), "", [%{label: dgettext("emails", "New email"), value: safe_new_email}, %{label: dgettext("emails", "Current email"), value: safe_current_email}, %{label: dgettext("emails", "Requested at"), value: format_time(request_time)}, %{label: dgettext("emails", "Status"), value: dgettext("emails", "Pending verification")}])}
+    #{Cards.contact_details_card(dgettext("emails", "Request details"), [%{label: dgettext("emails", "New email"), value: new_email}, %{label: dgettext("emails", "Current email"), value: user.email}, %{label: dgettext("emails", "Requested at"), value: format_time(request_time)}, %{label: dgettext("emails", "Status"), value: dgettext("emails", "Pending verification")}])}
 
     #{Text.section_title(dgettext("emails", "What happens next"), padding: "24px 0 8px 0")}
 
-    #{bullet_list([dgettext("emails", "A verification email has been sent to the new address"), dgettext("emails", "The change will only be completed after verification"), dgettext("emails", "The verification link expires in 24 hours"), dgettext("emails", "Your current email remains active until the change is confirmed")])}
+    #{Text.bullet_list([dgettext("emails", "A verification email has been sent to the new address"), dgettext("emails", "The change will only be completed after verification"), dgettext("emails", "The verification link expires in 24 hours"), dgettext("emails", "Your current email remains active until the change is confirmed")])}
 
     #{Callouts.alert_box(:cancelled,
     dgettext("emails", "If you did not request this change, your account may be compromised. Please sign in to your account immediately and change your password."),
@@ -75,21 +73,6 @@ defmodule Tymeslot.Emails.Templates.EmailChangeNotification do
     - #{dgettext("emails", "Your current email remains active until the change is confirmed")}
 
     #{dgettext("emails", "If you did not request this change, your account may be compromised. Please sign in to your account immediately and change your password.")}
-    """
-  end
-
-  defp bullet_list(items) do
-    bullets =
-      Enum.map_join(items, "<br/>\n", fn item -> "• #{item}" end)
-
-    """
-    <mj-section padding="0 0 8px 0">
-      <mj-column>
-        <mj-text font-size="15px" color="#{Tymeslot.Emails.Shared.Styles.ink_soft()}" line-height="1.7" padding="0">
-          #{bullets}
-        </mj-text>
-      </mj-column>
-    </mj-section>
     """
   end
 

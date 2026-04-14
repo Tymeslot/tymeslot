@@ -76,7 +76,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       details = build_appointment_details()
       email = AppointmentReminder.render(:organizer, "organizer@example.com", details)
 
-      assert email.html_body =~ details.reschedule_url || email.html_body =~ details.cancel_url
+      assert email.html_body =~ details.reschedule_url
+      assert email.html_body =~ details.cancel_url
     end
 
     test "generates valid email with video meeting URL" do
@@ -179,7 +180,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       details = build_appointment_details()
       email = AppointmentReminder.render(:attendee, "attendee@example.com", details)
 
-      assert email.html_body =~ details.reschedule_url || email.html_body =~ details.cancel_url
+      assert email.html_body =~ details.reschedule_url
+      assert email.html_body =~ details.cancel_url
     end
 
     test "generates valid email with video meeting URL" do

@@ -36,4 +36,48 @@ defmodule Tymeslot.Emails.Shared.TextTest do
       assert html =~ "Copy and paste this link"
     end
   end
+
+  describe "bullet_list/1" do
+    test "sanitises items to prevent XSS" do
+      html = Text.bullet_list(["<script>alert(1)</script>"])
+
+      refute html =~ "<script>"
+      assert html =~ "&lt;script&gt;"
+    end
+
+    test "renders each item prefixed with a bullet" do
+      html = Text.bullet_list(["First item", "Second item"])
+
+      assert html =~ "• First item"
+      assert html =~ "• Second item"
+    end
+  end
+
+  describe "title_section/2 icon option" do
+    test "renders an mj-image when a valid https icon URL is provided" do
+      html = Text.title_section("Hello", icon: "https://cdn.example.com/icon.png")
+
+      assert html =~ "mj-image"
+      assert html =~ "https://cdn.example.com/icon.png"
+    end
+
+    test "drops the icon when the URL uses a disallowed scheme" do
+      html = Text.title_section("Hello", icon: "javascript:alert(1)")
+
+      refute html =~ "mj-image"
+      refute html =~ "javascript:"
+    end
+
+    test "drops the icon when the URL is malformed" do
+      html = Text.title_section("Hello", icon: "not a url")
+
+      refute html =~ "mj-image"
+    end
+
+    test "renders nothing icon-related when the option is omitted" do
+      html = Text.title_section("Hello")
+
+      refute html =~ "mj-image"
+    end
+  end
 end

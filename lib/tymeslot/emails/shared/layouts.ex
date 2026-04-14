@@ -53,14 +53,15 @@ defmodule Tymeslot.Emails.Shared.Layouts do
   def system_layout(content, opts) do
     intent = fetch_required!(opts, :intent)
     eyebrow = fetch_required!(opts, :eyebrow)
-    title = Sanitise.sanitize_for_email(Keyword.get(opts, :title, "Tymeslot"))
+    raw_title = Keyword.get(opts, :title, "Tymeslot")
+    title = Sanitise.sanitize_for_email(raw_title)
 
     preview =
       Sanitise.sanitize_for_email(
         Keyword.get(opts, :preview, "Important notification from Tymeslot")
       )
 
-    stage_title = Keyword.get(opts, :stage_title, title)
+    stage_title = Keyword.get(opts, :stage_title, raw_title)
     stage_subtitle = Keyword.get(opts, :stage_subtitle)
 
     Frame.wrap(%{
@@ -86,15 +87,17 @@ defmodule Tymeslot.Emails.Shared.Layouts do
   def simple_layout(content, opts) do
     intent = fetch_required!(opts, :intent)
     eyebrow = fetch_required!(opts, :eyebrow)
-    title = Sanitise.sanitize_for_email(fetch_required!(opts, :title))
-    header = Keyword.get(opts, :header)
-    safe_header = if header, do: Sanitise.sanitize_for_email(header)
+    raw_title = fetch_required!(opts, :title)
+    safe_title = Sanitise.sanitize_for_email(raw_title)
 
     header_block =
-      if header,
-        do:
-          ~s(<mj-text font-size="18px" font-weight="700" padding-bottom="12px" color="#{Styles.ink()}">#{safe_header}</mj-text>),
-        else: ""
+      case Keyword.get(opts, :header) do
+        nil ->
+          ""
+
+        h ->
+          ~s(<mj-text font-size="18px" font-weight="700" padding-bottom="12px" color="#{Styles.ink()}">#{Sanitise.sanitize_for_email(h)}</mj-text>)
+      end
 
     body = """
     <mj-section padding="0">
@@ -108,9 +111,9 @@ defmodule Tymeslot.Emails.Shared.Layouts do
     """
 
     Frame.wrap(%{
-      title: title,
-      preview: title,
-      stage: Stage.stage_band(intent, eyebrow, title, nil),
+      title: safe_title,
+      preview: safe_title,
+      stage: Stage.stage_band(intent, eyebrow, raw_title, nil),
       header: "",
       body: body,
       footer: system_footer()

@@ -53,7 +53,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       #{Text.section_title(dgettext("emails", "Need to change plans?"))}
 
-      #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Reschedule"), url: appointment_details.reschedule_url, style: :secondary}, %{text: dgettext("emails", "Cancel"), url: appointment_details.cancel_url, style: :danger}])}
+      #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Reschedule"), url: Map.get(appointment_details, :reschedule_url, "#"), style: :secondary}, %{text: dgettext("emails", "Cancel"), url: Map.get(appointment_details, :cancel_url, "#"), style: :danger}])}
 
       #{Text.centered_text(dgettext("emails", "See you %{time_until}!", time_until: appointment_details.time_until_friendly || dgettext("emails", "soon")), padding: "18px 0 0 0", font_size: "15px")}
       """
@@ -84,7 +84,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
   end
 
   def render(:organizer, organizer_email, appointment_details) do
-    Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(), fn ->
+    Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(appointment_details), fn ->
       meeting_details = %{
         date: appointment_details.date,
         start_time: appointment_details.start_time_owner_tz,
@@ -95,7 +95,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       }
 
       mjml_content = """
-      #{MeetingComponents.meeting_details_table(meeting_details, organizer_locale())}
+      #{MeetingComponents.meeting_details_table(meeting_details, organizer_locale(appointment_details))}
 
       #{MeetingComponents.attendee_info_section(@intent, %{name: appointment_details.attendee_name, email: appointment_details.attendee_email})}
 
@@ -109,16 +109,11 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       #{Text.section_title(dgettext("emails", "Quick actions"))}
 
-      #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Reschedule"), url: appointment_details.reschedule_url, style: :secondary}, %{text: dgettext("emails", "Cancel"), url: appointment_details.cancel_url, style: :danger}])}
+      #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Reschedule"), url: Map.get(appointment_details, :reschedule_url, "#"), style: :secondary}, %{text: dgettext("emails", "Cancel"), url: Map.get(appointment_details, :cancel_url, "#"), style: :danger}])}
       """
 
-      html_body =
-        TemplateHelper.compile_system_template(
-          mjml_content,
-          dgettext("emails", "Meeting with %{name}", name: appointment_details.attendee_name),
-          dgettext("emails", "Starting in %{time_until}",
-            time_until: appointment_details.time_until
-          ),
+      organizer_details =
+        TemplateHelper.build_organizer_details(appointment_details,
           intent: @intent,
           eyebrow: dgettext("emails", "Starting soon"),
           stage_title:
@@ -128,6 +123,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
               time_until: appointment_details.time_until
             )
         )
+
+      html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
       MjmlEmail.base_email()
       |> to({appointment_details.organizer_name, organizer_email})
@@ -144,7 +141,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
   defp build_attendee_text_body(appointment_details, locale) do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
-    video_section = TextBodyHelper.format_video_section(appointment_details.meeting_url, locale)
+
+    video_section =
+      TextBodyHelper.format_video_section(Map.get(appointment_details, :meeting_url), locale)
+
     action_links = TextBodyHelper.format_action_links(appointment_details, locale)
 
     """
@@ -167,17 +167,28 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
   defp build_organizer_text_body(appointment_details) do
     meeting_details =
-      TextBodyHelper.format_meeting_details(appointment_details, organizer_locale())
+      TextBodyHelper.format_meeting_details(
+        appointment_details,
+        organizer_locale(appointment_details)
+      )
 
-    attendee_info = TextBodyHelper.format_attendee_info(appointment_details, organizer_locale())
+    attendee_info =
+      TextBodyHelper.format_attendee_info(
+        appointment_details,
+        organizer_locale(appointment_details)
+      )
 
     video_section =
       TextBodyHelper.format_video_section(
         Map.get(appointment_details, :meeting_url),
-        organizer_locale()
+        organizer_locale(appointment_details)
       )
 
-    action_links = TextBodyHelper.format_action_links(appointment_details, organizer_locale())
+    action_links =
+      TextBodyHelper.format_action_links(
+        appointment_details,
+        organizer_locale(appointment_details)
+      )
 
     """
     #{dgettext("emails", "STARTING IN %{time_until}", time_until: appointment_details.time_until)}
@@ -197,5 +208,5 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     """
   end
 
-  defp organizer_locale, do: Locales.default_locale()
+  defp organizer_locale(_appointment_details), do: Locales.default_locale()
 end

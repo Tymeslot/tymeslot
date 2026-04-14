@@ -16,8 +16,11 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   fallback: an email that doesn't know its own intent fails to render.
   """
 
+  require Logger
+
   import Swoosh.Email
 
+  alias Swoosh.Attachment
   alias Tymeslot.Emails.Shared.{AvatarHelper, Frame, Sanitise, Stage, Styles, Urls}
   alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Security.UrlValidation
@@ -72,9 +75,9 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
   def attach_logo(email) do
     case logo_bytes() do
       {:ok, bytes} ->
-        Swoosh.Email.attachment(
+        attachment(
           email,
-          Swoosh.Attachment.new(
+          Attachment.new(
             {:data, bytes},
             filename: "tymeslot-logo.png",
             content_type: "image/png",
@@ -84,6 +87,11 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
         )
 
       :error ->
+        Logger.warning(
+          "Tymeslot logo not found — emails will render without inline logo",
+          path: Application.app_dir(:tymeslot, "priv/static/images/brand/logo-with-text.png")
+        )
+
         email
     end
   end
@@ -125,15 +133,15 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     intent = fetch_required!(organizer_details, :intent)
     stage_eyebrow = fetch_required!(organizer_details, :eyebrow)
 
-    organizer_name =
-      Sanitise.sanitize_for_email(organizer_details[:name] || fetch_from_name())
+    raw_organizer_name = organizer_details[:name] || fetch_from_name()
+    organizer_name = Sanitise.sanitize_for_email(raw_organizer_name)
 
     organizer_avatar_url = resolve_avatar(organizer_details[:avatar_url], organizer_name)
 
     organizer_title =
       Sanitise.sanitize_for_email(organizer_details[:title] || "Tymeslot")
 
-    stage_title = organizer_details[:stage_title] || organizer_name
+    stage_title = organizer_details[:stage_title] || raw_organizer_name
     stage_subtitle = organizer_details[:stage_subtitle]
 
     Frame.wrap(%{

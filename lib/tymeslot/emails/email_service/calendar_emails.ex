@@ -44,8 +44,7 @@ defmodule Tymeslot.Emails.EmailService.CalendarEmails do
       }
     )
 
-    html_body = CalendarSyncError.render(meeting, error_reason)
-    text_body = CalendarSyncError.render_text(meeting, error_reason)
+    {html_body, text_body} = CalendarSyncError.render_both(meeting, error_reason)
 
     email =
       MjmlEmail.base_email()

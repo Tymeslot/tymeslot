@@ -77,7 +77,7 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
                 accent_ink: family.ink,
                 tint: family.tint,
                 band_color: family.deep,
-                band_text: "#ffffff"
+                band_text: "#f8f8f5"
               }}
            end)
 
@@ -108,7 +108,8 @@ defmodule Tymeslot.Emails.Shared.Styles.Tokens do
     xl: "20px",
     "2xl": "24px",
     "3xl": "30px",
-    display: "38px"
+    display: "32px",
+    hero: "34px"
   }
 
   # ============================================================================

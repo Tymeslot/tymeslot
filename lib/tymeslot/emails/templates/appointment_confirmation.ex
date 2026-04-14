@@ -33,6 +33,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     locale = Map.get(appointment_details, :attendee_locale, "en")
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
+      attendee_video_url = Map.get(appointment_details, :attendee_video_url)
+
       meeting_details = %{
         date: appointment_details.date,
         start_time: appointment_details.start_time_attendee_tz,
@@ -40,7 +42,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         location: appointment_details.location,
         location_type: Map.get(appointment_details, :location_type),
         meeting_type: appointment_details.meeting_type,
-        video_url: appointment_details.attendee_video_url,
+        video_url: attendee_video_url,
         video_url_role: "attendee"
       }
 
@@ -56,15 +58,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
-      #{if appointment_details.attendee_video_url do
-        MeetingComponents.video_meeting_section(@intent, appointment_details.attendee_video_url,
+      #{if attendee_video_url do
+        MeetingComponents.video_meeting_section(@intent, attendee_video_url,
         title: dgettext("emails", "Ready to join when it's time?"),
         button_text: dgettext("emails", "Join Video Meeting"))
       end}
 
       #{Text.section_title(dgettext("emails", "Need to make changes?"))}
 
-      #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Reschedule"), url: appointment_details.reschedule_url, style: :secondary}, %{text: dgettext("emails", "Cancel Appointment"), url: appointment_details.cancel_url, style: :danger}])}
+      #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Reschedule"), url: Map.get(appointment_details, :reschedule_url, "#"), style: :secondary}, %{text: dgettext("emails", "Cancel Appointment"), url: Map.get(appointment_details, :cancel_url, "#"), style: :danger}])}
 
       #{if appointment_details.organizer_contact_info do
         Text.centered_text(dgettext("emails", "Questions? %{contact_info}", contact_info: appointment_details.organizer_contact_info), font_size: "14px", padding: "16px 0 0 0")
@@ -111,13 +113,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   def render(:organizer, organizer_email, appointment_details) do
     Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(appointment_details), fn ->
       mjml_content = """
-      #{MeetingComponents.attendee_info_section(@intent, %{name: appointment_details.attendee_name, email: appointment_details.attendee_email, notes: appointment_details.attendee_message})}
+      #{MeetingComponents.attendee_info_section(@intent, %{name: appointment_details.attendee_name, email: appointment_details.attendee_email})}
+
+      #{MeetingComponents.attendee_message_box(@intent, appointment_details[:attendee_message])}
 
       #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type, video_url: Map.get(appointment_details, :meeting_url), video_url_role: "host"}, organizer_locale(appointment_details))}
 
       #{Text.section_title(dgettext("emails", "Need to make changes?"))}
 
-      #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Reschedule"), url: appointment_details.reschedule_url, style: :secondary}, %{text: dgettext("emails", "Cancel Appointment"), url: appointment_details.cancel_url, style: :danger}])}
+      #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Reschedule"), url: Map.get(appointment_details, :reschedule_url, "#"), style: :secondary}, %{text: dgettext("emails", "Cancel Appointment"), url: Map.get(appointment_details, :cancel_url, "#"), style: :danger}])}
       """
 
       organizer_details =
@@ -161,7 +165,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     meeting_details = TextBodyHelper.format_meeting_details(appointment_details, locale)
 
     video_section =
-      TextBodyHelper.format_video_section(appointment_details.attendee_video_url, locale)
+      TextBodyHelper.format_video_section(
+        Map.get(appointment_details, :attendee_video_url),
+        locale
+      )
 
     action_links = TextBodyHelper.format_action_links(appointment_details, locale)
 

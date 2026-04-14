@@ -236,6 +236,15 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
     Application.get_env(:tymeslot, :refund_revocation_threshold_percent, 90.0)
   end
 
+  # Extracts the currency from a charge object, supporting both string and atom keys.
+  # Defaults to "eur" when the field is absent.
+  # Made public for testing purposes but should be considered internal API.
+  @doc false
+  @spec extract_charge_currency(map()) :: String.t()
+  def extract_charge_currency(charge) do
+    Map.get(charge, "currency") || Map.get(charge, :currency) || "eur"
+  end
+
   defp broadcast_refund_event(user_id, event_id, access_revoked) do
     Phoenix.PubSub.broadcast(
       Tymeslot.PubSub,
@@ -245,7 +254,7 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandler do
   end
 
   defp send_refund_email(subscription, refund_amount_cents, _revoked, charge) do
-    currency = Map.get(charge, "currency") || Map.get(charge, :currency) || "eur"
+    currency = extract_charge_currency(charge)
 
     WebhookUtils.deliver_user_email(
       subscription.user_id,

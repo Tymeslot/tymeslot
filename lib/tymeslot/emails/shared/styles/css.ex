@@ -78,7 +78,9 @@ defmodule Tymeslot.Emails.Shared.Styles.CSS do
       opacity: 0.78;
     }
     .stage-band-title {
-      font-size: 30px;
+      /* 32px matches Tokens.font_size(:display); this CSS rule is a fallback
+         for clients that strip MJML inline attributes. */
+      font-size: 32px;
       font-weight: 800;
       letter-spacing: -0.02em;
       line-height: 1.1;

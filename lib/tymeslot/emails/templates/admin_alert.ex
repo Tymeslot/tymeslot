@@ -9,7 +9,7 @@ defmodule Tymeslot.Emails.Templates.AdminAlert do
   verbatim into an issue tracker.
   """
 
-  alias Tymeslot.Emails.Shared.{Callouts, Styles, TemplateHelper, Text}
+  alias Tymeslot.Emails.Shared.{Callouts, Sanitise, Styles, TemplateHelper, Text}
 
   @intent :alert
 
@@ -112,8 +112,8 @@ defmodule Tymeslot.Emails.Templates.AdminAlert do
   defp metadata_row({key, value}) do
     """
     <tr>
-      <td style="vertical-align: top; padding: 4px 12px 4px 0; color: #{Styles.ink_muted()}; font-weight: 600; white-space: nowrap;">#{html_escape(to_string(key))}</td>
-      <td style="vertical-align: top; padding: 4px 0; color: #{Styles.ink()}; word-break: break-word;"><code style="font-size: 13px;">#{html_escape(format_value(value))}</code></td>
+      <td style="vertical-align: top; padding: 4px 12px 4px 0; color: #{Styles.ink_muted()}; font-weight: 600; white-space: nowrap;">#{Sanitise.sanitize_for_email(to_string(key))}</td>
+      <td style="vertical-align: top; padding: 4px 0; color: #{Styles.ink()}; word-break: break-word;"><code style="font-size: 13px;">#{Sanitise.sanitize_for_email(format_value(value))}</code></td>
     </tr>
     """
   end
@@ -130,12 +130,4 @@ defmodule Tymeslot.Emails.Templates.AdminAlert do
   defp format_value(value) when is_atom(value), do: Atom.to_string(value)
   defp format_value(value) when is_number(value), do: to_string(value)
   defp format_value(value), do: inspect(value)
-
-  defp html_escape(string) do
-    string
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
-  end
 end

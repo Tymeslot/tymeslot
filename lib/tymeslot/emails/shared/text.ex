@@ -34,9 +34,14 @@ defmodule Tymeslot.Emails.Shared.Text do
     safe_emoji = if emoji, do: Sanitise.sanitize_for_email(emoji)
 
     icon_block =
-      if icon,
-        do: ~s(<mj-image src="#{icon}" width="40px" padding="0 0 10px 0" align="#{align}" />),
-        else: ""
+      case icon && UrlValidation.validate_http_url(icon) do
+        :ok ->
+          safe_icon = Sanitise.sanitize_for_email(icon)
+          ~s(<mj-image src="#{safe_icon}" width="40px" padding="0 0 10px 0" align="#{align}" />)
+
+        _invalid_or_missing ->
+          ""
+      end
 
     title_html =
       if safe_emoji,
@@ -113,19 +118,31 @@ defmodule Tymeslot.Emails.Shared.Text do
     """
   end
 
-  @doc "Centered body text — for intros, closings, questions."
+  @doc """
+  Centered body text — for intros, closings, questions.
+
+  Options:
+  - `:font_size` — CSS font size (default: `"16px"`)
+  - `:font_weight` — CSS font weight (default: not emitted, inherits global)
+  - `:color` — text colour (default: `Styles.ink_soft()`)
+  - `:padding` — section padding (default: `"4px 0 12px 0"`)
+  """
   @spec centered_text(String.t(), keyword()) :: String.t()
   def centered_text(text, opts \\ []) do
     font_size = Keyword.get(opts, :font_size, "16px")
+    font_weight = Keyword.get(opts, :font_weight)
     color = Keyword.get(opts, :color, Styles.ink_soft())
     padding = Keyword.get(opts, :padding, "4px 0 12px 0")
     safe_text = Sanitise.sanitize_for_email(text)
+
+    font_weight_attr =
+      if font_weight, do: ~s( font-weight="#{font_weight}"), else: ""
 
     """
     <mj-section padding="#{padding}">
       <mj-column>
         <mj-text
-          font-size="#{font_size}"
+          font-size="#{font_size}"#{font_weight_attr}
           color="#{color}"
           line-height="1.6"
           align="center"
@@ -176,6 +193,26 @@ defmodule Tymeslot.Emails.Shared.Text do
   end
 
   @doc """
+  A bullet list rendered as an MJML text block. Items are joined with `<br/>`
+  and prefixed with a bullet character.
+  """
+  @spec bullet_list([String.t()]) :: String.t()
+  def bullet_list(items) do
+    bullets =
+      Enum.map_join(items, "<br/>\n", fn item -> "• #{Sanitise.sanitize_for_email(item)}" end)
+
+    """
+    <mj-section padding="0 0 8px 0">
+      <mj-column>
+        <mj-text font-size="15px" color="#{Styles.ink_soft()}" line-height="1.7" padding="0">
+          #{bullets}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    """
+  end
+
+  @doc """
   A troubleshooting link — shown below a button to help users who can't
   click it. URL is sanitised.
   """
@@ -184,7 +221,7 @@ defmodule Tymeslot.Emails.Shared.Text do
     safe_url =
       case UrlValidation.validate_http_url(url) do
         :ok -> Sanitise.sanitize_for_email(url)
-        {:error, _reason} -> Sanitise.sanitize_for_email(url)
+        {:error, _reason} -> "#"
       end
 
     """

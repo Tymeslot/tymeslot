@@ -142,6 +142,27 @@ defmodule Tymeslot.Payments.Webhooks.RefundHandlerTest do
     end
   end
 
+  describe "extract_charge_currency/1" do
+    test "extracts currency from string-keyed charge" do
+      charge = %{"currency" => "usd", "amount" => 5000}
+      assert RefundHandler.extract_charge_currency(charge) == "usd"
+    end
+
+    test "extracts currency from atom-keyed charge" do
+      charge = %{currency: "gbp", amount: 5000}
+      assert RefundHandler.extract_charge_currency(charge) == "gbp"
+    end
+
+    test "defaults to eur when currency key is absent" do
+      charge = %{"amount" => 5000}
+      assert RefundHandler.extract_charge_currency(charge) == "eur"
+    end
+
+    test "defaults to eur when currency value is nil" do
+      assert RefundHandler.extract_charge_currency(%{"currency" => nil}) == "eur"
+    end
+  end
+
   describe "can_handle?/1" do
     test "handles charge.refunded events" do
       assert RefundHandler.can_handle?("charge.refunded") == true

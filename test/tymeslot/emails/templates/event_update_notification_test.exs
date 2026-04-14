@@ -48,7 +48,10 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       details = build_event_update_details()
       email = EventUpdateNotification.render("a@example.com", details)
 
-      assert [attachment] = email.attachments
+      ics_attachments =
+        Enum.filter(email.attachments, &(&1.content_type =~ "text/calendar"))
+
+      assert [attachment] = ics_attachments
       assert attachment.filename =~ ".ics"
       assert attachment.content_type =~ "text/calendar"
       assert attachment.data =~ "SEQUENCE:1"
@@ -69,7 +72,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       details = build_event_update_details(%{changes: [{:description, "Old text", "New text"}]})
       email = EventUpdateNotification.render("a@example.com", details)
 
-      assert email.html_body =~ "Description updated"
+      assert email.html_body =~ "(updated)"
       refute email.html_body =~ "Old text"
     end
 
@@ -87,7 +90,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
       assert email.html_body =~ "Old Title"
       assert email.html_body =~ "New Title"
       assert email.html_body =~ "Room A"
-      assert email.html_body =~ "Description updated"
+      assert email.html_body =~ "(updated)"
     end
 
     test "renders without error for all supported locales" do
@@ -99,6 +102,20 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
         assert email.html_body != nil, "No HTML body for locale: #{locale}"
         assert email.text_body != nil, "No text body for locale: #{locale}"
       end
+    end
+
+    test "omits the 'What changed' block when no recognised changes are present" do
+      details = build_event_update_details(%{changes: []})
+      email = EventUpdateNotification.render("a@example.com", details)
+
+      refute email.html_body =~ "What changed"
+    end
+
+    test "omits the 'What changed' block when every change is filtered out" do
+      details = build_event_update_details(%{changes: [{:unknown_field, "a", "b"}]})
+      email = EventUpdateNotification.render("a@example.com", details)
+
+      refute email.html_body =~ "What changed"
     end
 
     test "sanitises HTML in organiser name" do

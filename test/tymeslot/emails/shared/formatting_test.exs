@@ -292,5 +292,122 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       assert Formatting.format_duration(60, "uk") == "1 година"
       assert Formatting.format_duration(120, "uk") == "2 години"
     end
+
+    test "parses simple numeric strings" do
+      assert Formatting.format_duration("30", "en") == "30 minutes"
+      assert Formatting.format_duration("30 minutes", "en") == "30 minutes"
+    end
+
+    test "returns the raw string for unparseable input instead of '0 minutes'" do
+      assert Formatting.format_duration("1h30", "en") == "1h30"
+      assert Formatting.format_duration("garbage", "en") == "garbage"
+      refute Formatting.format_duration("garbage", "en") =~ "minute"
+    end
+
+    test "returns empty string for nil or non-string, non-integer input" do
+      assert Formatting.format_duration(nil, "en") == ""
+      assert Formatting.format_duration(-15, "en") == ""
+    end
+  end
+
+  describe "format_date/2" do
+    test "formats Date in German locale" do
+      assert Formatting.format_date(~D[2024-11-25], "de") == "25. November 2024"
+      assert Formatting.format_date(~D[2024-01-15], "de") == "15. Januar 2024"
+    end
+
+    test "formats Date in French locale" do
+      assert Formatting.format_date(~D[2024-11-25], "fr") == "25 novembre 2024"
+      assert Formatting.format_date(~D[2024-01-15], "fr") == "15 janvier 2024"
+    end
+
+    test "formats Date in English locale" do
+      assert Formatting.format_date(~D[2024-11-25], "en") == "November 25, 2024"
+    end
+
+    test "formats DateTime in German locale" do
+      assert Formatting.format_date(~U[2024-11-25 14:30:00Z], "de") == "25. November 2024"
+    end
+
+    test "formats NaiveDateTime in German locale" do
+      assert Formatting.format_date(~N[2024-11-25 14:30:00], "de") == "25. November 2024"
+    end
+  end
+
+  describe "format_weekday/2" do
+    test "returns uppercased English weekday for English locale" do
+      # 2025-01-06 is a Monday
+      assert Formatting.format_weekday(~D[2025-01-06], "en") == "MONDAY"
+      # 2025-01-08 is a Wednesday
+      assert Formatting.format_weekday(~D[2025-01-08], "en") == "WEDNESDAY"
+      # 2025-01-11 is a Saturday
+      assert Formatting.format_weekday(~D[2025-01-11], "en") == "SATURDAY"
+    end
+
+    test "returns uppercased weekday for non-English locale (falls back to English when untranslated)" do
+      # German translations are empty so the msgid (English) is returned uppercased
+      assert Formatting.format_weekday(~D[2025-01-06], "de") == "MONDAY"
+    end
+
+    test "works with DateTime input" do
+      assert Formatting.format_weekday(~U[2025-01-06 09:00:00Z], "en") == "MONDAY"
+    end
+
+    test "works with NaiveDateTime input" do
+      assert Formatting.format_weekday(~N[2025-01-06 09:00:00], "en") == "MONDAY"
+    end
+  end
+
+  describe "format_location/1" do
+    test "returns video label for location_type :video" do
+      assert Formatting.format_location(%{location_type: :video}) == "Video Call"
+    end
+
+    test "returns phone label for location_type :phone" do
+      assert Formatting.format_location(%{location_type: :phone}) == "Phone Call"
+    end
+
+    test "returns the raw location string for other location types" do
+      assert Formatting.format_location(%{location: "Room 42"}) == "Room 42"
+
+      assert Formatting.format_location(%{location_type: :in_person, location: "Office"}) ==
+               "Office"
+    end
+
+    test "returns TBD when location is nil" do
+      assert Formatting.format_location(%{}) == "TBD"
+      assert Formatting.format_location(%{location: nil}) == "TBD"
+    end
+  end
+
+  describe "format_currency/2" do
+    test "formats standard currencies in cents" do
+      assert Formatting.format_currency(1000, "eur") == "€10.00"
+      assert Formatting.format_currency(1250, "usd") == "$12.50"
+      assert Formatting.format_currency(999, "gbp") == "£9.99"
+    end
+
+    test "formats zero-decimal currencies without division" do
+      assert Formatting.format_currency(1500, "jpy") == "¥1500"
+      assert Formatting.format_currency(1000, "krw") == "₩1000"
+    end
+
+    test "defaults to EUR when currency is nil" do
+      assert Formatting.format_currency(500, nil) == "€5.00"
+    end
+
+    test "handles zero amounts" do
+      assert Formatting.format_currency(0, "usd") == "$0.00"
+      assert Formatting.format_currency(0, "jpy") == "¥0"
+    end
+
+    test "handles negative amounts (refunds)" do
+      assert Formatting.format_currency(-1000, "eur") == "€-10.00"
+      assert Formatting.format_currency(-500, "jpy") == "¥-500"
+    end
+
+    test "falls back to upper-cased ISO code for unknown currencies" do
+      assert Formatting.format_currency(1234, "xyz") == "XYZ 12.34"
+    end
   end
 end

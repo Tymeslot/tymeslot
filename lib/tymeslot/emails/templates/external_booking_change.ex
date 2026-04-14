@@ -16,6 +16,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     Formatting,
     MeetingComponents,
     MjmlEmail,
+    Sanitise,
     Styles,
     TemplateHelper,
     Text,
@@ -41,11 +42,12 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   @spec render(Meeting.t(), String.t(), discrepancy(), String.t()) :: Swoosh.Email.t()
   def render(%Meeting{} = meeting, organizer_email, discrepancy, owner_timezone)
       when discrepancy in [:deleted, :modified] do
-    locale = organizer_locale(%{})
+    locale = organizer_locale()
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       owner_time = TimezoneHelper.convert_to_timezone(meeting.start_time, owner_timezone)
       date_short = Formatting.format_date_short(owner_time, locale)
+      meeting = %{meeting | title: meeting.title || dgettext("emails", "Meeting")}
 
       html_body = render_html(meeting, owner_time, discrepancy, locale)
       text_body = render_text(meeting, owner_time, discrepancy, locale)
@@ -67,7 +69,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
     view_url = meeting.view_url || dashboard_url
 
     {alert_intent, alert_message, alert_title} = alert_parts(discrepancy, meeting)
-    safe_title = escape_html(meeting.title) || dgettext("emails", "Meeting")
+    safe_title = Sanitise.sanitize_for_email(meeting.title)
 
     mjml_content = """
     #{Callouts.alert_box(alert_intent, alert_message, title: alert_title)}
@@ -98,7 +100,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   end
 
   defp alert_parts(:deleted, meeting) do
-    title = escape_html(meeting.title)
+    title = Sanitise.sanitize_for_email(meeting.title)
 
     {
       :cancelled,
@@ -112,7 +114,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
   end
 
   defp alert_parts(:modified, meeting) do
-    title = escape_html(meeting.title)
+    title = Sanitise.sanitize_for_email(meeting.title)
 
     {
       :alert,
@@ -207,9 +209,7 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
 
   # Organizer locale — currently the system default. When per-user locale
   # preferences are added, resolve from the meeting's organizer_user_id.
-  defp organizer_locale(appointment_details) do
-    Map.get(appointment_details, :organizer_locale) || Locales.default_locale()
-  end
+  defp organizer_locale, do: Locales.default_locale()
 
   defp email_subject(:deleted, title, date_short),
     do:
@@ -228,15 +228,4 @@ defmodule Tymeslot.Emails.Templates.ExternalBookingChange do
         title: title,
         date: date_short
       )
-
-  defp escape_html(text) when is_binary(text) do
-    text
-    |> String.replace("&", "&amp;")
-    |> String.replace("<", "&lt;")
-    |> String.replace(">", "&gt;")
-    |> String.replace("\"", "&quot;")
-    |> String.replace("'", "&#39;")
-  end
-
-  defp escape_html(nil), do: nil
 end

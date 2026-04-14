@@ -9,19 +9,18 @@ defmodule Tymeslot.Emails.Shared.Styles do
   - `Tymeslot.Emails.Shared.Styles.CSS` — MJML attribute defaults and the
     embedded CSS stylesheet, including mobile and dark-mode variants.
 
-  This module re-exports the common public API plus a small set of legacy
-  helpers still used by `Tymeslot.Emails.Shared.UiComponents` and friends
-  (old-vocabulary button and table helpers, kept as shims while the call
-  sites are migrated to intents).
+  This module re-exports the common public API plus a small set of
+  legacy-vocabulary helpers used by `Buttons`, `Cards`, `MeetingComponents`,
+  and `event_update_notification` (old-name button and table helpers kept as
+  thin wrappers over the token system).
 
   ## Redesign notes
 
   The palette is **inversion-survivable**: no pure whites, no near-blacks.
-  Every base value is chosen so that a client-forced colour inversion still
-  produces a coherent, warm result. Dark mode for clients that honour
-  `prefers-color-scheme` is handled by data-driven attribute-selector swaps
-  in `Styles.CSS`, so changing a token automatically updates both light and
-  dark rules.
+  Every base value is chosen so that a client-forced colour inversion (as
+  performed by Thunderbird and some mobile clients) still produces a coherent,
+  warm result. There is no separate dark-mode stylesheet — the single palette
+  carries both light and inverted clients coherently.
 
   ## Intents
 
@@ -64,10 +63,10 @@ defmodule Tymeslot.Emails.Shared.Styles do
   defdelegate email_css_styles, to: CSS
 
   # ============================================================================
-  # LEGACY SHIMS — old-vocabulary helpers still used by UiComponents and
-  # friends. Kept as thin wrappers over tokens so call sites don't have to
-  # change during the redesign. Deletable once those components move to the
-  # intent system.
+  # LEGACY VOCABULARY — old-name helpers that remain the live public API for
+  # Buttons, Cards, MeetingComponents, and event_update_notification. Kept as
+  # thin wrappers over tokens so these call sites don't need to be rewritten.
+  # These are not shims — they are the stable API; do not delete them.
   # ============================================================================
 
   @doc "Text colour by semantic role (legacy vocabulary)."
@@ -101,7 +100,7 @@ defmodule Tymeslot.Emails.Shared.Styles do
   @spec card_radius() :: String.t()
   def card_radius, do: Tokens.radius(:lg)
 
-  @doc "Legacy turquoise link colour, used by `UiComponents` section links."
+  @doc "Legacy turquoise link colour, used by section links in `MeetingComponents` and similar."
   @spec component_color(:link) :: String.t()
   def component_color(:link), do: Tokens.intent_accent_deep(:confirmed)
 

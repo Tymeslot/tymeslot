@@ -73,6 +73,23 @@ defmodule Tymeslot.Emails.ExternalBookingChangeTest do
       assert [{"Jane Smith", "jane@example.com"}] = email.to
     end
 
+    test "falls back to 'Meeting' when title is nil" do
+      meeting = build_meeting(%{title: nil})
+
+      email =
+        ExternalBookingChange.render(
+          meeting,
+          "john@example.com",
+          :deleted,
+          "UTC"
+        )
+
+      refute email.subject =~ "nil"
+      refute email.html_body =~ ~s("nil")
+      refute email.text_body =~ ~s("nil")
+      assert email.subject =~ "Meeting"
+    end
+
     test "falls back to email when organizer_name is nil" do
       meeting = build_meeting(%{organizer_name: nil})
 

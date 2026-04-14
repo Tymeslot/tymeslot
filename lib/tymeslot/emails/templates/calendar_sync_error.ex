@@ -19,10 +19,6 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   # A sync failure the user needs to act on.
   @intent :alert
 
-  @doc """
-  Returns `{html_body, text_body}`, computing the owner's local start time only once.
-  Prefer this over calling `render/2` and `render_text/2` separately when both bodies are needed.
-  """
   @type meeting_map :: %{
           required(:start_time) => DateTime.t(),
           required(:duration) => integer(),
@@ -30,6 +26,19 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
           optional(:organizer_user_id) => term(),
           optional(atom()) => term()
         }
+
+  @doc """
+  Returns `{html_body, text_body}`, computing the owner's local start time only once.
+  Prefer this over calling `render/2` and `render_text/2` separately when both bodies are needed.
+  """
+  @spec render_both(meeting_map(), any()) :: {String.t(), String.t()}
+  def render_both(meeting, error_reason) do
+    error_details = TemplateHelper.format_error_reason(error_reason)
+    owner_start_time = owner_start_time(meeting)
+
+    {do_render_html(error_details, owner_start_time, meeting),
+     do_render_text(error_details, owner_start_time, meeting)}
+  end
 
   @spec render(meeting_map(), any()) :: String.t()
   def render(meeting, error_reason) do

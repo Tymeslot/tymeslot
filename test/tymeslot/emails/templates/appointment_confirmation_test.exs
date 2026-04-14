@@ -2,6 +2,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
+  alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Emails.Templates.AppointmentConfirmation
   import Tymeslot.EmailTestHelpers
 
@@ -26,11 +27,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
       details = build_appointment_details()
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-      assert length(email.attachments) == 1
-      attachment = hd(email.attachments)
-      assert attachment.filename =~ ".ics"
-      assert attachment.filename =~ details.uid
-      assert attachment.content_type =~ "text/calendar"
+      ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+      assert ics
+      assert ics.filename =~ ".ics"
+      assert ics.filename =~ details.uid
     end
 
     test "includes both HTML and text bodies" do
@@ -114,9 +114,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
 
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-      assert email.html_body != nil
       assert is_binary(email.html_body)
-      assert String.length(email.html_body) > 1000
+      assert email.html_body =~ "https://meet.example.com/room-456"
+      assert email.html_body =~ "https://meet.example.com/room-456?role=guest"
     end
 
     test "text body contains key information" do
@@ -250,8 +250,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
         email =
           AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-        assert email.html_body != nil
-        assert String.length(email.html_body) > 0
+        assert email.html_body =~ meeting_type,
+               "Expected html_body to contain meeting type #{meeting_type}"
       end
     end
 
@@ -264,8 +264,13 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
         email =
           AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
 
-        assert email.html_body != nil
-        assert email.text_body != nil
+        formatted = Formatting.format_duration(duration)
+
+        assert email.html_body =~ formatted,
+               "Expected html_body to contain duration #{formatted} for #{duration} minutes"
+
+        assert email.text_body =~ formatted,
+               "Expected text_body to contain duration #{formatted} for #{duration} minutes"
       end
     end
   end
@@ -351,11 +356,10 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
       email =
         AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
 
-      assert length(email.attachments) == 1
-      attachment = hd(email.attachments)
-      assert attachment.filename =~ ".ics"
-      assert attachment.filename =~ details.uid
-      assert attachment.content_type =~ "text/calendar"
+      ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+      assert ics
+      assert ics.filename =~ ".ics"
+      assert ics.filename =~ details.uid
     end
 
     test "includes both HTML and text bodies" do

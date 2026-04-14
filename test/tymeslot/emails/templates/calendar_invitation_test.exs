@@ -58,10 +58,9 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
       details = build_invitation_details()
       email = CalendarInvitation.render("guest@example.com", details)
 
-      assert length(email.attachments) == 1
-      attachment = hd(email.attachments)
-      assert attachment.filename =~ ".ics"
-      assert attachment.content_type =~ "text/calendar"
+      ics_attachment = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+      assert ics_attachment
+      assert ics_attachment.filename =~ ".ics"
     end
 
     test "text body contains organiser name and event title" do

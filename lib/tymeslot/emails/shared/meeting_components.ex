@@ -294,7 +294,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
 
     """
     <mj-text
-      font-size="34px"
+      font-size="#{Styles.font_size(:hero)}"
       font-weight="800"
       color="#{Styles.ink()}"
       letter-spacing="-0.028em"
@@ -395,10 +395,12 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
 
   # Action link colouring. `:danger` is always rose (cancel is cancel), `:secondary`
   # is always muted ink, and `:primary` inherits the surrounding email intent.
-  @spec action_link_color(Tokens.intent(), :primary | :secondary | :danger) :: String.t()
+  @spec action_link_color(Tokens.intent(), :primary | :secondary | :danger | atom()) ::
+          String.t()
   defp action_link_color(_intent, :danger), do: Styles.intent_accent_deep(:cancelled)
   defp action_link_color(_intent, :secondary), do: Styles.ink_muted()
   defp action_link_color(intent, :primary), do: Styles.intent_accent_deep(intent)
+  defp action_link_color(_intent, _other), do: Styles.ink_muted()
 
   defp sanitize_url(url) do
     case UrlValidation.validate_http_url(url) do
@@ -545,10 +547,12 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   def attendee_message_box(intent, _message) when is_atom(intent), do: ""
 
   defp calendar_button(url, label) do
+    safe_url = sanitize_url(url)
+
     """
     <mj-column>
       <mj-button
-        href="#{url}"
+        href="#{safe_url}"
         background-color="#{Styles.surface()}"
         color="#{Styles.ink_soft()}"
         border="1px solid #{Styles.hairline()}"
