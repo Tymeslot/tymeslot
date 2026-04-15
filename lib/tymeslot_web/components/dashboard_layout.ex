@@ -84,12 +84,12 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   @spec top_navigation(map()) :: Phoenix.LiveView.Rendered.t()
   def top_navigation(assigns) do
     ~H"""
-    <div class="w-full px-4 py-6">
+    <div class="w-full px-2 sm:px-4 py-4 sm:py-6">
       <nav class="brand-nav relative" style="z-index: 50;">
-        <div class="w-full px-2 sm:px-4">
-          <div class="flex items-center justify-between h-16">
+        <div class="w-full px-1 sm:px-4">
+          <div class="flex items-center justify-between gap-2 h-16">
             <%!-- Left side: Logo and Mobile Menu Button --%>
-            <div class="flex items-center space-x-4 -ml-2 sm:-ml-4 flex-1 min-w-0">
+            <div class="flex items-center space-x-2 sm:space-x-4 sm:-ml-4 flex-1 min-w-0">
               <%= if @show_sidebar_toggle do %>
                 <%!-- Mobile Menu Button --%>
                 <button
@@ -118,10 +118,10 @@ defmodule TymeslotWeb.Components.DashboardLayout do
               <% end %>
 
     <%!-- Logo with Icon and Text --%>
-              <div class="flex items-center space-x-3 flex-shrink-0">
+              <div class="flex items-center space-x-3 min-w-0">
                 <TymeslotWeb.Components.CoreComponents.logo
                   mode={:full}
-                  img_class="h-14 sm:h-16 flex-shrink-0"
+                  img_class="h-10 sm:h-16 flex-shrink min-w-0"
                 />
               </div>
             </div>
