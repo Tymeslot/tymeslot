@@ -50,6 +50,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalDAV.Events, as: CalDAVEvents
+  alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport
   alias Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler
   alias Tymeslot.Integrations.Calendar.CalDAV.TierDetector
@@ -90,6 +91,12 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   defp sync_integration(integration, force_full_fetch?) do
     client = build_client(integration)
+
+    # Replay any pending local changes BEFORE fetching remote changes.
+    # This ordering is what preserves local edits across transient network
+    # failures — a subsequent pull cannot clobber a local change that
+    # hasn't reached the server yet if we push first.
+    OfflineQueue.flush(integration, client)
 
     if force_full_fetch? do
       case sync_forced_full_fetch(integration, client) do

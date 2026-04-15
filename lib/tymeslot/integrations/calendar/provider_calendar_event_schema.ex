@@ -51,6 +51,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
           provider_updated_at: DateTime.t() | nil,
           provider_metadata: map(),
           raw_ical: String.t() | nil,
+          sync_state: String.t(),
+          sync_attempts: integer(),
+          sync_last_attempt_at: DateTime.t() | nil,
+          sync_last_error: String.t() | nil,
           created_by_tymeslot: boolean(),
           calendar_integration:
             CalendarIntegrationSchema.t()
@@ -108,6 +112,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     field :raw_ical, :string
     field :created_by_tymeslot, :boolean, default: false
 
+    # Offline write queue bookkeeping. See
+    # AddSyncStateToProviderCalendarEvents migration for semantics.
+    field :sync_state, :string, default: "synced"
+    field :sync_attempts, :integer, default: 0
+    field :sync_last_attempt_at, :utc_datetime_usec
+    field :sync_last_error, :string
+
     belongs_to :calendar_integration, CalendarIntegrationSchema
 
     timestamps()
@@ -142,6 +153,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     :provider_updated_at,
     :provider_metadata,
     :raw_ical,
+    :sync_state,
+    :sync_attempts,
+    :sync_last_attempt_at,
+    :sync_last_error,
     :created_by_tymeslot
   ]
 

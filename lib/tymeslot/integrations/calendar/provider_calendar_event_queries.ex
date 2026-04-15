@@ -208,6 +208,93 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
+  Lists cache rows with a pending local change for the given integration.
+
+  Used by `OfflineQueue.flush/2` at the start of each sync cycle to
+  replay local creates / updates / deletes against the remote server
+  before pulling remote changes.
+
+  Returned in ascending `updated_at` order so the oldest pending change
+  is replayed first — preserves FIFO semantics across edits to the same
+  cached row.
+  """
+  @spec list_pending(integer()) :: [ProviderCalendarEventSchema.t()]
+  def list_pending(calendar_integration_id) do
+    ProviderCalendarEventSchema
+    |> where([e], e.calendar_integration_id == ^calendar_integration_id)
+    |> where([e], e.sync_state != "synced")
+    |> order_by([e], asc: e.updated_at)
+    |> Repo.all()
+  end
+
+  @doc """
+  Marks a cache row as successfully replayed to the server.
+
+  Clears `sync_state`, resets `sync_attempts`, records the attempt time,
+  and optionally updates the persisted `etag` with the value the server
+  returned on the successful write.
+
+  Returns `{:ok, :updated}` if the row existed; `{:ok, :not_found}`
+  if no row matched (the row was deleted between `list_pending/1`
+  and `mark_synced/3`, which is benign).
+  """
+  @spec mark_synced(integer(), String.t(), String.t() | nil) ::
+          {:ok, :updated | :not_found}
+  def mark_synced(calendar_integration_id, uid, new_etag) do
+    now = DateTime.utc_now(:microsecond)
+
+    set =
+      maybe_put_etag(
+        [
+          sync_state: "synced",
+          sync_attempts: 0,
+          sync_last_attempt_at: now,
+          sync_last_error: nil,
+          updated_at: now
+        ],
+        new_etag
+      )
+
+    {count, _rows} =
+      ProviderCalendarEventSchema
+      |> where(
+        [e],
+        e.calendar_integration_id == ^calendar_integration_id and e.uid == ^uid
+      )
+      |> Repo.update_all(set: set)
+
+    if count > 0, do: {:ok, :updated}, else: {:ok, :not_found}
+  end
+
+  @doc """
+  Records a failed replay attempt for a pending cache row.
+
+  Increments `sync_attempts`, stamps `sync_last_attempt_at`, and stores
+  the formatted error in `sync_last_error`. Does not change
+  `sync_state` — the row stays in the queue and will be retried on
+  the next sync cycle.
+  """
+  @spec mark_sync_failed(integer(), String.t(), String.t()) :: :ok
+  def mark_sync_failed(calendar_integration_id, uid, reason) when is_binary(reason) do
+    now = DateTime.utc_now(:microsecond)
+
+    ProviderCalendarEventSchema
+    |> where(
+      [e],
+      e.calendar_integration_id == ^calendar_integration_id and e.uid == ^uid
+    )
+    |> Repo.update_all(
+      inc: [sync_attempts: 1],
+      set: [sync_last_attempt_at: now, sync_last_error: reason]
+    )
+
+    :ok
+  end
+
+  defp maybe_put_etag(set, nil), do: set
+  defp maybe_put_etag(set, etag) when is_binary(etag), do: Keyword.put(set, :etag, etag)
+
+  @doc """
   Deletes all cached events belonging to inactive integrations.
 
   Returns the number of deleted rows.
@@ -227,6 +314,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   # and the identity fields :provider and :provider_calendar_id (which are set at
   # insert time from the integration and must never be overwritten with EXCLUDED
   # values from partial cache-update maps that may omit them).
+  #
+  # The :sync_state, :sync_attempts, :sync_last_attempt_at and :sync_last_error
+  # columns are also deliberately excluded: they track the offline write queue
+  # and must survive a server-sourced upsert so OfflineQueue can still
+  # replay the local change after the cache row has been refreshed from the
+  # server's view.
   defp replace_fields do
     [
       :provider_event_id,
