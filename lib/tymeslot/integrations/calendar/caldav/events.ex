@@ -146,7 +146,25 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
     put_opts = Keyword.merge(base_put_opts, Keyword.take(opts, [:timeout]))
 
-    case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
+    put_fun = fn ->
+      Http.put_event(url, client.username, client.password, ical_data, put_opts)
+    end
+
+    # Retrying a PUT is only safe when If-Match is set: the ETag gives the
+    # server an at-most-once guarantee — a successful retry reaches a server
+    # that either accepted the first attempt (412 on retry, handled below)
+    # or never saw it. Without If-Match, a retry could create duplicate
+    # events on servers that answered slowly, so unconditional PUTs fail
+    # fast.
+    raw_result =
+      if etag do
+        retry_opts = Keyword.get(opts, :retry_opts, Base.default_retry_opts())
+        RetryLogic.with_retry(put_fun, retry_opts)
+      else
+        put_fun.()
+      end
+
+    case raw_result do
       {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->
         :ok
 
@@ -172,9 +190,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   # falls through to If-Match: *, which is the CalDAV "unconditional
   # overwrite" marker.
   defp handle_precondition_failed(client, url, ical_data, :keep_local, opts) do
-    put_opts =
-      [operation: :update]
-      |> Keyword.merge(Keyword.take(opts, [:timeout]))
+    put_opts = Keyword.merge([operation: :update], Keyword.take(opts, [:timeout]))
 
     case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
       {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->

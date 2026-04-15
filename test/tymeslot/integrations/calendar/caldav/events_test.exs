@@ -363,6 +363,85 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                )
     end
 
+    test "retries PUT on 502 when If-Match is set" do
+      counter = :counters.new(1, [])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT"
+        :counters.add(counter, 1, 1)
+
+        case :counters.get(counter, 1) do
+          1 -> Conn.send_resp(conn, 502, "Bad Gateway")
+          _second_attempt -> Conn.send_resp(conn, 204, "")
+        end
+      end)
+
+      event_data = %{
+        summary: "Resilient",
+        start_time: ~U[2026-02-24 10:00:00Z],
+        end_time: ~U[2026-02-24 11:00:00Z]
+      }
+
+      assert :ok =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "retry-uid",
+                 event_data,
+                 etag: "\"cached\"",
+                 retry_opts: [
+                   max_retries: 1,
+                   base_delay_ms: 1,
+                   max_delay_ms: 5,
+                   jitter_factor: 0.0,
+                   retryable_errors: [:network_error, :timeout, :server_error]
+                 ],
+                 skip_breaker: true
+               )
+
+      assert :counters.get(counter, 1) == 2
+    end
+
+    test "does not retry PUT when :etag is absent" do
+      counter = :counters.new(1, [])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        # HEAD fails → PUT goes unconditional → must NOT retry
+        case conn.method do
+          "HEAD" ->
+            Conn.send_resp(conn, 404, "")
+
+          "PUT" ->
+            :counters.add(counter, 1, 1)
+            Conn.send_resp(conn, 502, "Bad Gateway")
+        end
+      end)
+
+      event_data = %{
+        summary: "Unconditional",
+        start_time: ~U[2026-02-24 10:00:00Z],
+        end_time: ~U[2026-02-24 11:00:00Z]
+      }
+
+      assert {:error, :server_error} =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "no-etag-uid",
+                 event_data,
+                 retry_opts: [
+                   max_retries: 1,
+                   base_delay_ms: 1,
+                   max_delay_ms: 5,
+                   jitter_factor: 0.0,
+                   retryable_errors: [:network_error, :timeout, :server_error]
+                 ],
+                 skip_breaker: true
+               )
+
+      assert :counters.get(counter, 1) == 1
+    end
+
     test "conflict_resolution :keep_local retries without If-Match after 412" do
       counter = :counters.new(1, [])
 
