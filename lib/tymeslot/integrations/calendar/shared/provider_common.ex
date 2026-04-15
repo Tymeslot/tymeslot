@@ -99,7 +99,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       password: integration.password,
       calendar_paths: integration.calendar_paths || [],
       verify_ssl: true,
-      provider: integration.provider
+      provider: normalize_provider(integration.provider)
     }
 
     case CaldavCommon.test_connection(client, ip_address: ip_address) do
@@ -126,4 +126,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
 
   defp default_caldav_error({:error, message}) when is_binary(message), do: message
   defp default_caldav_error(reason), do: "Connection failed: #{inspect(reason)}"
+
+  defp normalize_provider(provider) when is_atom(provider), do: provider
+
+  defp normalize_provider(provider) when is_binary(provider),
+    do: String.to_existing_atom(provider)
 end
