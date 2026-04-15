@@ -309,7 +309,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                )
     end
 
-    test "returns error on 412 Precondition Failed (concurrent modification)" do
+    test "returns :precondition_failed on 412 with default :fail policy" do
       ReqTest.stub(:tymeslot_http, fn conn ->
         case conn.method do
           "HEAD" ->
@@ -329,7 +329,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
         end_time: ~U[2026-02-24 11:00:00Z]
       }
 
-      assert {:error, _reason} =
+      assert {:error, :precondition_failed} =
                Events.update_calendar_event(
                  @caldav_client,
                  "/calendars/user/personal/",
@@ -337,6 +337,71 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                  event_data,
                  skip_breaker: true
                )
+    end
+
+    test "conflict_resolution :keep_server swallows 412 and returns :ok" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT"
+        Conn.send_resp(conn, 412, "Precondition Failed")
+      end)
+
+      event_data = %{
+        summary: "Conflict",
+        start_time: ~U[2026-02-24 10:00:00Z],
+        end_time: ~U[2026-02-24 11:00:00Z]
+      }
+
+      assert :ok =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "conflict-uid",
+                 event_data,
+                 etag: "\"stale\"",
+                 conflict_resolution: :keep_server,
+                 skip_breaker: true
+               )
+    end
+
+    test "conflict_resolution :keep_local retries without If-Match after 412" do
+      counter = :counters.new(1, [])
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT"
+        :counters.add(counter, 1, 1)
+        attempt = :counters.get(counter, 1)
+        if_match = Conn.get_req_header(conn, "if-match")
+
+        case attempt do
+          1 ->
+            assert if_match == ["\"stale\""]
+            Conn.send_resp(conn, 412, "Precondition Failed")
+
+          2 ->
+            # Retry uses If-Match: * (the "unconditional overwrite" marker)
+            assert if_match == ["*"]
+            Conn.send_resp(conn, 204, "")
+        end
+      end)
+
+      event_data = %{
+        summary: "Override",
+        start_time: ~U[2026-02-24 10:00:00Z],
+        end_time: ~U[2026-02-24 11:00:00Z]
+      }
+
+      assert :ok =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "owned-uid",
+                 event_data,
+                 etag: "\"stale\"",
+                 conflict_resolution: :keep_local,
+                 skip_breaker: true
+               )
+
+      assert :counters.get(counter, 1) == 2
     end
   end
 

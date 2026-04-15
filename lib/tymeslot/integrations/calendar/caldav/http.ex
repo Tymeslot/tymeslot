@@ -286,7 +286,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
   defp handle_put_event_response(%Req.Response{status: 404}), do: {:error, :not_found}
 
   defp handle_put_event_response(%Req.Response{status: 412}),
-    do: {:error, "Precondition failed - event may already exist"}
+    do: {:error, :precondition_failed}
 
   defp handle_put_event_response(%Req.Response{status: status}) when status >= 500,
     do: {:error, :server_error}

@@ -214,12 +214,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
                )
     end
 
-    test "maps 412 Precondition Failed to an error string" do
+    test "maps 412 Precondition Failed to :precondition_failed atom" do
       ReqTest.stub(:tymeslot_http, fn conn ->
         Conn.send_resp(conn, 412, "Precondition Failed")
       end)
 
-      assert {:error, message} =
+      assert {:error, :precondition_failed} =
                Http.put_event(
                  "https://caldav.example.com/calendars/user/personal/event.ics",
                  "user",
@@ -227,8 +227,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
                  "BEGIN:VCALENDAR\nEND:VCALENDAR",
                  operation: :create
                )
-
-      assert is_binary(message)
     end
   end
 

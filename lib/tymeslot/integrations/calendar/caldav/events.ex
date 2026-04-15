@@ -4,18 +4,32 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   Owns the full lifecycle of calendar event CRUD:
 
-  - **ETag-conditional updates**: HEAD → extract ETag → PUT with `If-Match`,
-    preventing lost updates when two parties edit the same event concurrently.
+  - **ETag-conditional updates**: callers pass the cached ETag via `:etag`
+    in `opts` for a direct conditional PUT with `If-Match`. When no cached
+    ETag is available, the module falls back to a HEAD probe, and finally
+    to `If-Match: *` if HEAD also fails. Prevents lost updates on
+    concurrent edits.
+  - **Conflict resolution policy**: on `412 Precondition Failed`, the
+    caller chooses one of `:fail | :keep_server | :keep_local` via
+    `:conflict_resolution` in `opts`. See `ConflictResolution` for the
+    semantics of each value.
   - **iCal construction**: builds valid RFC 5545 event payloads from domain maps.
-  - **Per-operation retry policies**: reads retry on transient failures; writes
-    do not (retrying a write without idempotency guarantees is unsafe).
+  - **Per-operation retry policies**: reads retry on transient failures.
   - **Circuit breaker protection** for all operations.
 
   Callers receive parsed domain types — never raw HTTP responses, XML, or iCal.
   """
 
   alias Tymeslot.Infrastructure.{CalendarCircuitBreaker, RetryLogic}
-  alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Http, UrlBuilder, XmlHandler}
+
+  alias Tymeslot.Integrations.Calendar.CalDAV.{
+    Base,
+    ConflictResolution,
+    Http,
+    UrlBuilder,
+    XmlHandler
+  }
+
   alias Tymeslot.Integrations.Calendar.ICalBuilder
 
   require Logger
@@ -120,17 +134,55 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       url = event_url_from_data(client, calendar_path, uid, event_data)
       ical_data = ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
       etag = resolve_etag(url, client, opts)
+      policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
 
-      base_put_opts =
-        if etag, do: [operation: :update, if_match: etag], else: [operation: :update]
-
-      put_opts = Keyword.merge(base_put_opts, Keyword.take(opts, [:timeout]))
-
-      case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
-        {:ok, %Req.Response{status: status}} when status in [200, 201, 204] -> :ok
-        {:error, reason} -> {:error, reason}
-      end
+      do_conditional_put(client, url, ical_data, etag, policy, opts)
     end)
+  end
+
+  defp do_conditional_put(client, url, ical_data, etag, policy, opts) do
+    base_put_opts =
+      if etag, do: [operation: :update, if_match: etag], else: [operation: :update]
+
+    put_opts = Keyword.merge(base_put_opts, Keyword.take(opts, [:timeout]))
+
+    case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
+      {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->
+        :ok
+
+      {:error, :precondition_failed} ->
+        handle_precondition_failed(client, url, ical_data, policy, opts)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # :fail — surface the conflict to the caller.
+  defp handle_precondition_failed(_client, _url, _ical, :fail, _opts),
+    do: {:error, :precondition_failed}
+
+  # :keep_server — silently accept the server's version; next sync will
+  # refresh the local cache.
+  defp handle_precondition_failed(_client, _url, _ical, :keep_server, _opts),
+    do: :ok
+
+  # :keep_local — force-overwrite by repeating the PUT without If-Match.
+  # We do not supply an :etag here, so add_conditional_headers/2 in Http
+  # falls through to If-Match: *, which is the CalDAV "unconditional
+  # overwrite" marker.
+  defp handle_precondition_failed(client, url, ical_data, :keep_local, opts) do
+    put_opts =
+      [operation: :update]
+      |> Keyword.merge(Keyword.take(opts, [:timeout]))
+
+    case Http.put_event(url, client.username, client.password, ical_data, put_opts) do
+      {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """
