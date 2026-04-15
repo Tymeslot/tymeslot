@@ -208,6 +208,20 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
+  Diagnostic-only: PUT a hand-crafted iCalendar payload into the primary
+  calendar. The caller is responsible for producing a valid RFC 5545 document
+  and for cleaning up afterwards. Used by `mix calendar_audit`.
+  """
+  @spec put_raw_event(caldav_client(), String.t(), String.t()) ::
+          {:ok, String.t()} | {:error, term()}
+  def put_raw_event(client, uid, ical_data) do
+    case primary_calendar_path(client) do
+      nil -> {:error, "No calendar configured for creating events"}
+      path -> Events.put_raw_event(client, path, uid, ical_data)
+    end
+  end
+
+  @doc """
   Update an event by UID in the primary configured calendar.
   """
   @spec update_event(caldav_client(), String.t(), map()) :: :ok | {:error, term()}

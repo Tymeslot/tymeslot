@@ -20,7 +20,8 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.OAuth
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
-  alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.Calendar.Providers.{CaldavCommon, ProviderAdapter}
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
@@ -195,6 +196,32 @@ defmodule Tymeslot.Integrations.Calendar do
         adapter_client.client,
         normalise_event_attrs(event_attrs)
       )
+    end
+  end
+
+  @doc """
+  Diagnostic-only: PUTs a pre-built iCalendar payload into a CalDAV-family
+  integration's primary calendar, bypassing `ICalBuilder`.
+
+  Used by `mix calendar_audit` to exercise adversarial server-generated
+  payloads (e.g. Zimbra-style `TZID="Europe/Brussels"`) that Tymeslot's own
+  writer never produces, so the audit can verify our parser handles them.
+  Not intended for application use.
+  """
+  @spec put_raw_caldav_ical(integration(), String.t(), String.t()) ::
+          {:ok, String.t()} | {:error, any()}
+  def put_raw_caldav_ical(
+        %CalendarIntegrationSchema{provider: provider} = integration,
+        uid,
+        ical_content
+      ) do
+    with {:ok, provider_atom} <- ProviderConfig.validate_provider(provider),
+         {:caldav?, true} <- {:caldav?, ProviderConfig.caldav_based?(provider_atom)},
+         {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
+      CaldavCommon.put_raw_event(adapter_client.client, uid, ical_content)
+    else
+      {:caldav?, false} -> {:error, :unsupported_provider}
+      other -> other
     end
   end
 

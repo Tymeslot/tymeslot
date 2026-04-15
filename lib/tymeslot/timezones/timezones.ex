@@ -12,6 +12,7 @@ defmodule Tymeslot.Timezones do
   defdelegate search(term), to: Data
   defdelegate country_code(timezone_id), to: Data
   defdelegate normalize(timezone_id), to: Data
+  defdelegate sanitize(timezone), to: Data
   defdelegate valid?(timezone_id), to: Data
   defdelegate valid_ids(), to: Data
   defdelegate flag_exists?(country_code), to: Data

@@ -221,6 +221,54 @@ defmodule Tymeslot.TimezonesTest do
     end
   end
 
+  describe "sanitize/1" do
+    test "returns nil for nil, non-binary, or blank input" do
+      assert Timezones.sanitize(nil) == nil
+      assert Timezones.sanitize("") == nil
+      assert Timezones.sanitize("   ") == nil
+      assert Timezones.sanitize(~s("")) == nil
+      assert Timezones.sanitize(42) == nil
+    end
+
+    test "strips surrounding double quotes (Zimbra-style quoted TZID)" do
+      assert Timezones.sanitize(~s("Europe/Brussels")) == "Europe/Brussels"
+      assert Timezones.sanitize(~s("Europe/Paris")) == "Europe/Paris"
+    end
+
+    test "trims whitespace outside and inside quotes" do
+      assert Timezones.sanitize("  Europe/Brussels  ") == "Europe/Brussels"
+      assert Timezones.sanitize(~s(  "Europe/Brussels"  )) == "Europe/Brussels"
+      assert Timezones.sanitize(~s(" Europe/Brussels ")) == "Europe/Brussels"
+    end
+
+    test "leaves plain IANA timezone strings untouched" do
+      assert Timezones.sanitize("Europe/Paris") == "Europe/Paris"
+      assert Timezones.sanitize("America/New_York") == "America/New_York"
+      assert Timezones.sanitize("Etc/UTC") == "Etc/UTC"
+    end
+
+    test "applies legacy IANA normalisation" do
+      assert Timezones.sanitize("Europe/Kiev") == "Europe/Kyiv"
+      assert Timezones.sanitize(~s("Europe/Kiev")) == "Europe/Kyiv"
+    end
+
+    test "maps Windows zone names to IANA" do
+      assert Timezones.sanitize("Romance Standard Time") == "Europe/Paris"
+      assert Timezones.sanitize("W. Europe Standard Time") == "Europe/Berlin"
+      assert Timezones.sanitize("GMT Standard Time") == "Europe/London"
+      assert Timezones.sanitize("Pacific Standard Time") == "America/Los_Angeles"
+      assert Timezones.sanitize("Eastern Standard Time") == "America/New_York"
+      assert Timezones.sanitize("Tokyo Standard Time") == "Asia/Tokyo"
+      assert Timezones.sanitize("FLE Standard Time") == "Europe/Kyiv"
+      assert Timezones.sanitize("UTC") == "Etc/UTC"
+    end
+
+    test "leaves unrecognised strings as-is (validation is downstream)" do
+      assert Timezones.sanitize("not-a-real-zone") == "not-a-real-zone"
+      assert Timezones.sanitize("Mars/Olympus_Mons") == "Mars/Olympus_Mons"
+    end
+  end
+
   describe "flag_exists?/1" do
     test "returns true for known flag" do
       assert Timezones.flag_exists?(:usa)

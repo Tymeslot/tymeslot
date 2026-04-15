@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Timezones
   alias Tymeslot.Utils.DateTimeUtils
 
   @doc """
@@ -268,9 +269,14 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
     end
   end
 
+  # RFC 5545 §3.2.18 permits both quoted (`TZID="Europe/Brussels"`) and
+  # unquoted (`TZID=Europe/Brussels`) forms. Zimbra emits the quoted form;
+  # Sabre/vobject, Radicale pass-through, and Tymeslot's own writer emit
+  # unquoted. `Timezones.sanitize/1` handles both, plus Windows zone names
+  # that can leak in through user-imported ICS files.
   defp extract_timezone_param(line) do
     case Regex.run(~r/TZID=([^;:]+)/, line) do
-      [_match, timezone] -> timezone
+      [_match, timezone] -> Timezones.sanitize(timezone)
       nil -> nil
     end
   end

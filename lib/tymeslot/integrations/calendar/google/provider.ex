@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch
+  alias Tymeslot.Timezones
 
   @typep converted_event :: %{
            required(:uid) => String.t() | nil,
@@ -222,8 +223,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   defp parse_timing(_other), do: %{all_day: false, start_at: nil, end_at: nil}
 
-  defp maybe_put_timezone(attrs, %{"start" => %{"timeZone" => tz}}),
-    do: Map.put(attrs, :timezone, tz)
+  defp maybe_put_timezone(attrs, %{"start" => %{"timeZone" => tz}}) do
+    case Timezones.sanitize(tz) do
+      nil -> attrs
+      clean -> Map.put(attrs, :timezone, clean)
+    end
+  end
 
   defp maybe_put_timezone(attrs, _raw), do: attrs
 

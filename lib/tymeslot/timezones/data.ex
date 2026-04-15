@@ -4,7 +4,7 @@ defmodule Tymeslot.Timezones.Data do
   Builds all lookup maps and search indexes at compile time for O(1) access.
   """
 
-  alias Tymeslot.Timezones.{CountryCodes, Formatting}
+  alias Tymeslot.Timezones.{CountryCodes, Formatting, WindowsZones}
 
   alias Tymeslot.Timezones.Cities.{
     Africa,
@@ -193,6 +193,50 @@ defmodule Tymeslot.Timezones.Data do
 
   def normalize(nil), do: nil
   def normalize(other), do: other
+
+  @doc """
+  Cleans a raw timezone string from an external source (iCal TZID parameter,
+  Outlook Graph `originalStartTimeZone`, etc.) into a canonical IANA ID.
+
+  Applies, in order:
+
+    1. Whitespace trim
+    2. Surrounding double-quote strip (RFC 5545 §3.2.18 permits quoted TZID
+       parameter values — Zimbra, for example, emits `TZID="Europe/Brussels"`)
+    3. Second whitespace trim (in case the quotes wrapped padded content)
+    4. Windows zone → IANA mapping (Microsoft Graph's `originalStartTimeZone`
+       frequently carries Windows zone names like `"Romance Standard Time"`)
+    5. Legacy IANA rename (`Europe/Kiev` → `Europe/Kyiv`)
+
+  Returns `nil` for nil, non-binary, or empty input. Does **not** validate the
+  result against the curated city list — callers that need validation should
+  check `valid?/1` separately, or pass the result to `DateTime.from_naive/2`
+  and handle its `{:error, _}` return.
+  """
+  @spec sanitize(term()) :: String.t() | nil
+  def sanitize(nil), do: nil
+
+  def sanitize(timezone) when is_binary(timezone) do
+    cleaned =
+      timezone
+      |> String.trim()
+      |> String.trim("\"")
+      |> String.trim()
+
+    case cleaned do
+      "" -> nil
+      other -> other |> windows_to_iana() |> normalize()
+    end
+  end
+
+  def sanitize(_other), do: nil
+
+  defp windows_to_iana(tz) do
+    case WindowsZones.to_iana(tz) do
+      nil -> tz
+      iana -> iana
+    end
+  end
 
   @spec valid?(term()) :: boolean()
   def valid?(timezone_id) when is_binary(timezone_id) do

@@ -74,11 +74,28 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   @spec create_calendar_event(Base.client(), String.t(), map(), keyword()) ::
           {:ok, String.t()} | {:error, Base.error_reason()}
   def create_calendar_event(client, calendar_path, event_data, opts \\ []) do
-    with_events_breaker(client, opts, fn ->
-      uid = event_data[:uid] || ICalBuilder.generate_uid()
-      url = UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
-      ical_data = ICalBuilder.build_simple_event(uid, event_data)
+    uid = event_data[:uid] || ICalBuilder.generate_uid()
+    ical_data = ICalBuilder.build_simple_event(uid, event_data)
+    put_ical(client, calendar_path, uid, ical_data, opts)
+  end
 
+  @doc """
+  Creates a new event in the calendar from a pre-built iCalendar payload.
+
+  Skips `ICalBuilder` entirely — the caller is responsible for producing a
+  valid RFC 5545 document. Used by `mix calendar_audit` to exercise
+  adversarial server-generated payloads (e.g. Zimbra-style quoted TZIDs)
+  that Tymeslot's own writer never produces.
+  """
+  @spec put_raw_event(Base.client(), String.t(), String.t(), String.t(), keyword()) ::
+          {:ok, String.t()} | {:error, Base.error_reason()}
+  def put_raw_event(client, calendar_path, uid, ical_data, opts \\ []) do
+    put_ical(client, calendar_path, uid, ical_data, opts)
+  end
+
+  defp put_ical(client, calendar_path, uid, ical_data, opts) do
+    with_events_breaker(client, opts, fn ->
+      url = UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
       put_opts = Keyword.merge([operation: :create], Keyword.take(opts, [:timeout]))
 
       case Http.put_event(url, client.username, client.password, ical_data, put_opts) do

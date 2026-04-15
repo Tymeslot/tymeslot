@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
 
   alias Tymeslot.Infrastructure.AdminAlerts
   alias Tymeslot.Integrations.Calendar.CalendarEvent
+  alias Tymeslot.Timezones
 
   @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
 
@@ -183,15 +184,28 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliser do
   end
 
   # Prefer `originalStartTimeZone` from the Graph response — it preserves the
-  # event's native IANA zone regardless of the `Prefer: outlook.timezone="UTC"`
+  # event's native zone regardless of the `Prefer: outlook.timezone="UTC"`
   # header we send on list requests. Fall back to `start.timeZone` when Graph
   # omits the original zone (e.g. externally-created events missing metadata).
+  # Graph's `originalStartTimeZone` may be a Windows zone name
+  # (`"Romance Standard Time"`) rather than IANA, so we route through
+  # `Timezones.sanitize/1`, which performs the Windows→IANA conversion.
   defp maybe_put_timezone(attrs, %{"originalStartTimeZone" => tz})
-       when is_binary(tz) and tz != "",
-       do: Map.put(attrs, :timezone, tz)
+       when is_binary(tz) and tz != "" do
+    put_sanitized_timezone(attrs, tz)
+  end
 
-  defp maybe_put_timezone(attrs, %{"start" => %{"timeZone" => tz}}),
-    do: Map.put(attrs, :timezone, tz)
+  defp maybe_put_timezone(attrs, %{"start" => %{"timeZone" => tz}})
+       when is_binary(tz) and tz != "" do
+    put_sanitized_timezone(attrs, tz)
+  end
 
   defp maybe_put_timezone(attrs, _raw), do: attrs
+
+  defp put_sanitized_timezone(attrs, tz) do
+    case Timezones.sanitize(tz) do
+      nil -> attrs
+      clean -> Map.put(attrs, :timezone, clean)
+    end
+  end
 end

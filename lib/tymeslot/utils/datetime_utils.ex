@@ -6,6 +6,8 @@ defmodule Tymeslot.Utils.DateTimeUtils do
 
   require Logger
 
+  alias Tymeslot.Timezones
+
   @doc """
   Parses a time string in AM/PM format. Supports both string and map input (for demo data).
 
@@ -345,17 +347,46 @@ defmodule Tymeslot.Utils.DateTimeUtils do
     end
   end
 
-  def convert_to_utc(naive_dt, timezone) do
-    case DateTime.from_naive(naive_dt, timezone) do
+  def convert_to_utc(naive_dt, timezone) when is_binary(timezone) do
+    case Timezones.sanitize(timezone) do
+      nil ->
+        Logger.warning("Timezone string is empty after sanitization; assuming UTC",
+          original_timezone: timezone
+        )
+
+        convert_to_utc(naive_dt, nil)
+
+      clean ->
+        do_convert_to_utc(naive_dt, clean, timezone)
+    end
+  end
+
+  def convert_to_utc(naive_dt, _other), do: convert_to_utc(naive_dt, nil)
+
+  defp do_convert_to_utc(naive_dt, clean, original) do
+    case DateTime.from_naive(naive_dt, clean) do
       {:ok, dt} ->
         case DateTime.shift_zone(dt, "Etc/UTC") do
-          {:ok, utc_dt} -> {:ok, utc_dt}
-          # Fallback to UTC
-          {:error, _shift_error} -> convert_to_utc(naive_dt, nil)
+          {:ok, utc_dt} ->
+            {:ok, utc_dt}
+
+          {:error, reason} ->
+            Logger.warning("Failed to shift DateTime to UTC; falling back to naive UTC",
+              timezone: clean,
+              original_timezone: original,
+              reason: inspect(reason)
+            )
+
+            convert_to_utc(naive_dt, nil)
         end
 
-      {:error, _naive_error} ->
-        # Fallback to UTC
+      {:error, reason} ->
+        Logger.warning("Unknown timezone when parsing external datetime; falling back to UTC",
+          timezone: clean,
+          original_timezone: original,
+          reason: inspect(reason)
+        )
+
         convert_to_utc(naive_dt, nil)
     end
   end

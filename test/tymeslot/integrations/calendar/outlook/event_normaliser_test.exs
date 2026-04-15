@@ -60,7 +60,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliserTest do
       assert event.all_day == false
       assert %DateTime{} = event.start_at
       assert %DateTime{} = event.end_at
-      assert event.timezone == "UTC"
+      # Graph's `"UTC"` (a Windows zone name) is normalised to canonical IANA.
+      assert event.timezone == "Etc/UTC"
       assert event.organiser == %{email: "boss@example.com", display_name: "The Boss"}
       assert [%{method: :popup, minutes_before: 15}] = event.reminders
       assert event.provider_metadata["id"] == "graph-id-1"
@@ -243,6 +244,40 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.EventNormaliserTest do
 
       assert {:ok, [event]} = EventNormaliser.normalise_events([raw], @context)
       assert %DateTime{} = event.start_at
+      assert event.timezone == "Europe/Berlin"
+    end
+
+    test "Windows zone name in originalStartTimeZone is normalised to IANA" do
+      # Microsoft Graph returns Windows zone names like `"Romance Standard Time"`
+      # for events created by native Outlook clients. Stored unsanitised, these
+      # strings are not valid inputs for DateTime.from_naive and corrupt any
+      # downstream calculation that tries to use them. We map them to IANA at
+      # the normaliser boundary.
+      raw =
+        build_raw_event(%{
+          "start" => %{"dateTime" => "2024-03-15T14:00:00Z", "timeZone" => "UTC"},
+          "end" => %{"dateTime" => "2024-03-15T15:00:00Z", "timeZone" => "UTC"},
+          "originalStartTimeZone" => "Romance Standard Time"
+        })
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events([raw], @context)
+      assert event.timezone == "Europe/Paris"
+    end
+
+    test "Windows zone name in start.timeZone is normalised when originalStartTimeZone is absent" do
+      raw =
+        build_raw_event(%{
+          "start" => %{
+            "dateTime" => "2024-03-15T14:00:00Z",
+            "timeZone" => "W. Europe Standard Time"
+          },
+          "end" => %{
+            "dateTime" => "2024-03-15T15:00:00Z",
+            "timeZone" => "W. Europe Standard Time"
+          }
+        })
+
+      assert {:ok, [event]} = EventNormaliser.normalise_events([raw], @context)
       assert event.timezone == "Europe/Berlin"
     end
   end
