@@ -195,8 +195,12 @@ defmodule Tymeslot.Security.UniversalSanitizer do
   end
 
   defp sanitize_html(input, false) do
-    # Strip all HTML tags for regular fields
-    HtmlSanitizeEx.strip_tags(input)
+    # Plain-text fields: strip anything that looks like an HTML tag and leave
+    # the rest alone. We deliberately don't use HtmlSanitizeEx.strip_tags/1
+    # here — it entity-encodes `&`, `<`, `>`, `"`, `'` in its output, which
+    # corrupts plain text round-tripping through Phoenix templates (which
+    # already escape on render).
+    String.replace(input, ~r/<[^>]*>/, "")
   end
 
   defp remove_sql_injection_patterns(input, log_events, metadata) do

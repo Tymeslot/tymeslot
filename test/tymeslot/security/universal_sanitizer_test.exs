@@ -128,6 +128,38 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
       assert sanitized == zimbra_path
     end
 
+    test "preserves ampersands and other plain-text characters unchanged" do
+      # Plain-text fields round-trip through the sanitizer into LiveView form
+      # values and back — entity-encoding `&`, `<`, `>`, `"`, `'` here causes
+      # double-escaping at render time. Values without any HTML tags must come
+      # out byte-identical so "Paul & Luka" does not become "Paul &amp; Luka".
+      inputs = [
+        "Paul & Luka",
+        "Terms & Conditions",
+        "R&D Update",
+        ~s(She said "hello"),
+        "It's fine"
+      ]
+
+      for input <- inputs do
+        assert {:ok, ^input} =
+                 UniversalSanitizer.sanitize_and_validate(input, log_events: false),
+               "Expected #{inspect(input)} to round-trip unchanged"
+      end
+    end
+
+    test "strips HTML tags without entity-encoding surrounding text" do
+      assert {:ok, "XSSLabel"} =
+               UniversalSanitizer.sanitize_and_validate("<script>XSS</script>Label",
+                 log_events: false
+               )
+
+      assert {:ok, "Hello & goodbye"} =
+               UniversalSanitizer.sanitize_and_validate("<b>Hello</b> & goodbye",
+                 log_events: false
+               )
+    end
+
     test "preserves Nextcloud CalDAV paths" do
       # Nextcloud uses a different path structure
       nextcloud_path = "/remote.php/dav/calendars/user@nextcloud.com/personal/"
