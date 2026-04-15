@@ -166,6 +166,43 @@ defmodule Tymeslot.Bookings.CreateTest do
                Create.execute(meeting_params, form_data, skip_calendar_check: false)
     end
 
+    test "succeeds when the only overlapping event is TRANSP:TRANSPARENT", %{
+      meeting_params: meeting_params,
+      form_data: form_data
+    } do
+      # Regression for the "Joep vakantie" bug: an all-day transparent vacation
+      # was blocking every booking during its span because the submit path
+      # didn't filter events through CalendarEvent.blocking?/1.
+      transparent_event =
+        meeting_params
+        |> create_conflicting_event()
+        |> Map.merge(%{status: "confirmed", transparency: "transparent"})
+
+      set_calendar_events([transparent_event])
+
+      assert {:ok, meeting} =
+               Create.execute(meeting_params, form_data, skip_calendar_check: false)
+
+      assert meeting.uid != nil
+    end
+
+    test "succeeds when the only overlapping event is cancelled", %{
+      meeting_params: meeting_params,
+      form_data: form_data
+    } do
+      cancelled_event =
+        meeting_params
+        |> create_conflicting_event()
+        |> Map.merge(%{status: "cancelled", transparency: "opaque"})
+
+      set_calendar_events([cancelled_event])
+
+      assert {:ok, meeting} =
+               Create.execute(meeting_params, form_data, skip_calendar_check: false)
+
+      assert meeting.uid != nil
+    end
+
     test "succeeds when calendar check times out (transport error)", %{
       meeting_params: meeting_params,
       form_data: form_data

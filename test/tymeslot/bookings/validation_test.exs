@@ -112,5 +112,167 @@ defmodule Tymeslot.Bookings.ValidationTest do
                  15
                )
     end
+
+    test "ignores TRANSP:TRANSPARENT events (free/busy = free)" do
+      events = [
+        %{
+          start_time: ~U[2026-04-07 10:00:00Z],
+          end_time: ~U[2026-04-07 11:00:00Z],
+          status: "confirmed",
+          transparency: "transparent"
+        }
+      ]
+
+      assert :ok =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 10:30:00Z],
+                 ~U[2026-04-07 11:30:00Z],
+                 events,
+                 0
+               )
+    end
+
+    test "ignores cancelled events" do
+      events = [
+        %{
+          start_time: ~U[2026-04-07 10:00:00Z],
+          end_time: ~U[2026-04-07 11:00:00Z],
+          status: "cancelled",
+          transparency: "opaque"
+        }
+      ]
+
+      assert :ok =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 10:30:00Z],
+                 ~U[2026-04-07 11:30:00Z],
+                 events,
+                 0
+               )
+    end
+
+    test "ignores declined events" do
+      events = [
+        %{
+          start_time: ~U[2026-04-07 10:00:00Z],
+          end_time: ~U[2026-04-07 11:00:00Z],
+          status: "declined",
+          transparency: "opaque"
+        }
+      ]
+
+      assert :ok =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 10:30:00Z],
+                 ~U[2026-04-07 11:30:00Z],
+                 events,
+                 0
+               )
+    end
+
+    test "ignores all-day transparent events spanning multiple days" do
+      # Regression: a TRANSP:TRANSPARENT vacation spanning two weeks was
+      # blocking every booking on every day during the vacation, even though
+      # the display path correctly showed slots as available.
+      events = [
+        %{
+          start_time: ~D[2026-04-22],
+          end_time: ~D[2026-05-06],
+          status: "confirmed",
+          transparency: "transparent"
+        }
+      ]
+
+      assert :ok =
+               Validation.check_slot_availability(
+                 ~U[2026-04-29 14:00:00Z],
+                 ~U[2026-04-29 15:00:00Z],
+                 events,
+                 15
+               )
+    end
+
+    test "still blocks opaque all-day events (normal vacation)" do
+      events = [
+        %{
+          start_time: ~D[2026-04-22],
+          end_time: ~D[2026-05-06],
+          status: "confirmed",
+          transparency: "opaque"
+        }
+      ]
+
+      assert {:error, :slot_unavailable} =
+               Validation.check_slot_availability(
+                 ~U[2026-04-29 14:00:00Z],
+                 ~U[2026-04-29 15:00:00Z],
+                 events,
+                 0
+               )
+    end
+
+    test "filters transparent events while keeping blocking ones in a mixed list" do
+      events = [
+        %{
+          start_time: ~U[2026-04-07 09:00:00Z],
+          end_time: ~U[2026-04-07 10:00:00Z],
+          status: "confirmed",
+          transparency: "transparent"
+        },
+        %{
+          start_time: ~U[2026-04-07 14:00:00Z],
+          end_time: ~U[2026-04-07 15:00:00Z],
+          status: "confirmed",
+          transparency: "opaque"
+        }
+      ]
+
+      # 10:30 slot is clear — the 9-10 transparent event doesn't block
+      assert :ok =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 10:30:00Z],
+                 ~U[2026-04-07 11:00:00Z],
+                 events,
+                 0
+               )
+
+      # 14:30 slot overlaps the opaque event — still blocked
+      assert {:error, :slot_unavailable} =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 14:30:00Z],
+                 ~U[2026-04-07 15:30:00Z],
+                 events,
+                 0
+               )
+    end
+
+    test "accepts %CalendarEvent{} structs with atom-valued status and transparency" do
+      alias Tymeslot.Integrations.Calendar.CalendarEvent
+
+      transparent_event = %CalendarEvent{
+        uid: "vacation-1",
+        calendar_integration_id: 1,
+        provider: :caldav,
+        provider_calendar_id: "cal-1",
+        all_day: false,
+        synced_at: ~U[2026-04-01 00:00:00Z],
+        start_at: ~U[2026-04-07 10:00:00Z],
+        end_at: ~U[2026-04-07 11:00:00Z],
+        status: :confirmed,
+        transparency: :transparent
+      }
+
+      # Struct path: blocking?/1 checks :transparency == :transparent
+      # The struct's start_at/end_at aren't under :start_time, but the filter
+      # happens before normalisation — so a transparent struct is dropped
+      # regardless of its timing field names.
+      assert :ok =
+               Validation.check_slot_availability(
+                 ~U[2026-04-07 10:30:00Z],
+                 ~U[2026-04-07 11:30:00Z],
+                 [transparent_event],
+                 0
+               )
+    end
   end
 end

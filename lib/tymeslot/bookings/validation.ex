@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.Validation do
   """
 
   alias Tymeslot.Availability.TimeSlots
+  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Utils.{DateTimeUtils, TimeRange}
 
   @typedoc "A calendar event with start and optional end time, used for conflict checking."
@@ -86,14 +87,18 @@ defmodule Tymeslot.Bookings.Validation do
   @doc """
   Checks if a time slot has conflicts with existing events.
 
-  This is a pure function that takes events as a parameter rather than
-  fetching them from the database.
+  Events are first filtered through `CalendarEvent.blocking?/1` so that
+  cancelled, declined, and `TRANSP:TRANSPARENT` (free/busy = free) events
+  never block a booking — matching the contract that `Availability.Conflicts`
+  enforces for the display path.
   """
   @spec check_slot_availability(DateTime.t(), DateTime.t(), [calendar_event()], non_neg_integer()) ::
           :ok | {:error, :slot_unavailable}
   def check_slot_availability(start_datetime, end_datetime, events, buffer_minutes \\ 0) do
     normalized_events =
-      Enum.map(events, fn event ->
+      events
+      |> Enum.filter(&CalendarEvent.blocking?/1)
+      |> Enum.map(fn event ->
         start_time = DateTimeUtils.to_datetime(event.start_time)
 
         end_time =
