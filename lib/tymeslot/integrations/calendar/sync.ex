@@ -38,6 +38,11 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   2. Upsert the batch in a single query.
   3. Broadcast a cache update so live grids refresh.
   4. Reconcile any linked Tymeslot meetings whose times changed externally.
+
+  This function is a convenience wrapper around `upsert_cache/2` and
+  `post_commit_reconciliation/2` — callers that need to run the cache
+  write inside a `Repo.transaction` alongside other DB work (e.g. the
+  CalDAV atomic reconciler) should call those two halves separately.
   """
   @spec persist_normalised_events(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) ::
           :ok | {:error, term()}
@@ -45,10 +50,50 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   def persist_normalised_events(%CalendarIntegrationSchema{} = integration, calendar_events)
       when is_list(calendar_events) do
+    with {:ok, _count} <- upsert_cache(integration, calendar_events) do
+      post_commit_reconciliation(integration, calendar_events)
+      :ok
+    end
+  end
+
+  @doc """
+  Writes a batch of normalised events to the local cache.
+
+  Pure DB write — no broadcast, no meeting reconciliation. Safe to call
+  inside a `Repo.transaction`; a rollback unwinds the upsert cleanly.
+  """
+  @spec upsert_cache(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  def upsert_cache(_integration, []), do: {:ok, 0}
+
+  def upsert_cache(%CalendarIntegrationSchema{} = integration, calendar_events)
+      when is_list(calendar_events) do
     attrs_list = Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
+    ProviderCalendarEventQueries.upsert_batch(attrs_list)
+  rescue
+    e ->
+      Logger.error("Calendar event cache upsert raised an exception",
+        calendar_integration_id: integration.id,
+        event_count: length(calendar_events),
+        reason: Exception.message(e)
+      )
 
-    {:ok, _count} = ProviderCalendarEventQueries.upsert_batch(attrs_list)
+      {:error, Exception.message(e)}
+  end
 
+  @doc """
+  Side effects that must run after the cache upsert transaction commits:
+  the PubSub broadcast and the linked-meeting time-change reconciliation.
+
+  Safe to call outside any transaction. Idempotent — a PubSub re-broadcast
+  is harmless and time-change reconciliation is conditional on an actual
+  change.
+  """
+  @spec post_commit_reconciliation(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) :: :ok
+  def post_commit_reconciliation(_integration, []), do: :ok
+
+  def post_commit_reconciliation(%CalendarIntegrationSchema{} = integration, calendar_events)
+      when is_list(calendar_events) do
     uids = Enum.map(calendar_events, & &1.uid)
     SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
 
@@ -59,15 +104,6 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
     Enum.each(calendar_events, &maybe_reconcile_time_change(integration, &1, meetings_by_id))
     :ok
-  rescue
-    e ->
-      Logger.error("Calendar event cache upsert raised an exception",
-        calendar_integration_id: integration.id,
-        event_count: length(calendar_events),
-        reason: Exception.message(e)
-      )
-
-      {:error, Exception.message(e)}
   end
 
   defp maybe_reconcile_time_change(

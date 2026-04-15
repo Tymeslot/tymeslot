@@ -247,7 +247,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           deleted_count: length(deleted_hrefs)
         )
 
-        case SyncReconciler.safe_process_events(integration, events, deleted_hrefs) do
+        case SyncReconciler.process_tier1(integration, events, deleted_hrefs) do
           :ok ->
             persist_sync_state(integration, sync_token: new_sync_token)
             :ok
@@ -380,17 +380,15 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           calendar_path: calendar_path
         )
 
-        case SyncReconciler.safe_process_events(integration, events) do
+        case SyncReconciler.process_full_fetch(
+               integration,
+               events,
+               start_time,
+               end_time,
+               range_now,
+               calendar_path
+             ) do
           :ok ->
-            SyncReconciler.detect_deletions(
-              integration,
-              events,
-              start_time,
-              end_time,
-              range_now,
-              calendar_path
-            )
-
             sync_token_opt =
               case Keyword.get(opts, :new_ctag) do
                 nil -> []
