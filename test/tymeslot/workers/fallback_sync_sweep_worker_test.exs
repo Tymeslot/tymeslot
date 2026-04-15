@@ -328,7 +328,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       integration = insert(:calendar_integration, provider: "google", is_active: true)
       user_id = integration.user_id
 
-      {:ok, _} =
+      {:ok, _upserted} =
         IntegrationHealthStateQueries.upsert(:calendar, integration.id, %{
           user_id: user_id,
           status: "unhealthy",
@@ -352,7 +352,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       gated = insert(:calendar_integration, provider: "google", is_active: true)
       healthy = insert(:calendar_integration, provider: "google", is_active: true)
 
-      {:ok, _} =
+      {:ok, _upserted} =
         IntegrationHealthStateQueries.upsert(:calendar, gated.id, %{
           user_id: gated.user_id,
           status: "unhealthy",
