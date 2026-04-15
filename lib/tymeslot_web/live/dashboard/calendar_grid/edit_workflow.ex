@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Notifications.Orchestrator
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -187,6 +188,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
           end
 
         {:error, reason} ->
+          tag_update_for_offline_retry(original_event, event_data)
+
           send(
             lv_pid,
             {:event_update_result, {:error, original_event: original_event, reason: reason}}
@@ -224,6 +227,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
           end
 
         {:error, reason} ->
+          tag_update_for_offline_retry(original_event, event_data)
+
           send(
             lv_pid,
             {:event_update_result, {:error, original_event: original_event, reason: reason}}
@@ -369,6 +374,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
           send(lv_pid, {:event_update_result, :ok})
 
         {:error, reason} ->
+          tag_update_for_offline_retry(event, event_data)
+
           send(
             lv_pid,
             {:event_update_result, {:error, original_event: event, reason: reason}}
@@ -377,6 +384,19 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
     end)
 
     socket
+  end
+
+  # Tags the event's cache row as "locally_modified" so OfflineQueue.flush/2
+  # retries the write on the next sync cycle. No-op for non-CalDAV
+  # integrations — those have no offline queue and fall back to the
+  # existing hard-error path.
+  defp tag_update_for_offline_retry(event, event_data) do
+    meeting = %{
+      uid: event.uid,
+      calendar_integration_id: event.calendar_integration_id
+    }
+
+    QueueWiring.tag(meeting, :update, event_data)
   end
 
   defp build_field_event_data(event, field, new_value) do
