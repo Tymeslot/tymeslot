@@ -1,5 +1,6 @@
 defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
@@ -73,6 +74,11 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
       assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
       assert integration.user_id == user.id
       assert integration.provider == "google"
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.SyncGoogleCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
 
       integration =
         CalendarIntegrationSchema.decrypt_credentials(integration)

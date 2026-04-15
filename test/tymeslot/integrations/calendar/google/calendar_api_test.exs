@@ -199,6 +199,127 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
     end
   end
 
+  describe "bootstrap_sync/1" do
+    # bootstrap_sync/1 passes the HTTP call through CalendarCircuitBreaker, which
+    # runs the function inside the GenServer process. Mox expectations are
+    # process-scoped, so we must explicitly allow the circuit breaker process to
+    # use the mock before each test in this describe block.
+    setup do
+      breaker_pid = Process.whereis(:calendar_breaker_google)
+      Mox.allow(Tymeslot.HTTPClientMock, self(), breaker_pid)
+      :ok
+    end
+
+    test "single-page response returns events and sync token with correct time params" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+          default_booking_calendar_id: "work@example.com"
+        )
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+        assert String.starts_with?(
+                 url,
+                 "https://www.googleapis.com/calendar/v3/calendars/work@example.com/events"
+               )
+
+        assert String.contains?(url, "timeMin=")
+        assert String.contains?(url, "timeMax=")
+        assert String.contains?(url, "singleEvents=true")
+        assert String.contains?(url, "maxResults=2500")
+        refute String.contains?(url, "pageToken=")
+        refute String.contains?(url, "syncToken=")
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "items" => [
+                 %{"id" => "evt1", "summary" => "Standup"},
+                 %{"id" => "evt2", "summary" => "Review"}
+               ],
+               "nextSyncToken" => "sync_abc123"
+             })
+         }}
+      end)
+
+      assert {:ok, %{events: events, next_sync_token: "sync_abc123"}} =
+               CalendarAPI.bootstrap_sync(integration)
+
+      assert length(events) == 2
+      assert Enum.map(events, & &1["id"]) == ["evt1", "evt2"]
+    end
+
+    test "multi-page response accumulates events across pages in order" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      # First call returns a nextPageToken; second call returns the final page.
+      expect(Tymeslot.HTTPClientMock, :request, 2, fn :get, url, _body, _headers, _opts ->
+        if String.contains?(url, "pageToken=page2") do
+          {:ok,
+           %Req.Response{
+             status: 200,
+             body:
+               Jason.encode!(%{
+                 "items" => [%{"id" => "evt3"}, %{"id" => "evt4"}],
+                 "nextSyncToken" => "sync_final"
+               })
+           }}
+        else
+          {:ok,
+           %Req.Response{
+             status: 200,
+             body:
+               Jason.encode!(%{
+                 "items" => [%{"id" => "evt1"}, %{"id" => "evt2"}],
+                 "nextPageToken" => "page2"
+               })
+           }}
+        end
+      end)
+
+      assert {:ok, %{events: events, next_sync_token: "sync_final"}} =
+               CalendarAPI.bootstrap_sync(integration)
+
+      assert Enum.map(events, & &1["id"]) == ["evt1", "evt2", "evt3", "evt4"]
+    end
+
+    test "propagates {:error, :circuit_open} when circuit breaker is open" do
+      alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      # Trip the Google circuit breaker (threshold is 5)
+      for _i <- 1..5 do
+        CalendarCircuitBreaker.call(:google, fn -> {:error, :api_failure} end)
+      end
+
+      assert {:error, :circuit_open} = CalendarAPI.bootstrap_sync(integration)
+    end
+  end
+
   describe "refresh_token/1" do
     test "calls Google token endpoint and returns new tokens" do
       user = insert(:user)

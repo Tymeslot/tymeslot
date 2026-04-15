@@ -33,6 +33,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour do
               {:ok, %{events: [map()], next_sync_token: String.t() | nil}}
               | {:error, :gone, String.t()}
               | api_error()
+  @callback bootstrap_sync(CalendarIntegrationSchema.t()) ::
+              {:ok, %{events: [map()], next_sync_token: String.t() | nil}}
+              | api_error()
   @callback register_push_channel(CalendarIntegrationSchema.t()) ::
               {:ok, CalendarIntegrationSchema.t()}
               | {:error, :webhook_base_url_not_configured}

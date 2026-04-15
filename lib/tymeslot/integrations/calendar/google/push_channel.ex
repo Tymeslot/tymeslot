@@ -1,10 +1,17 @@
 defmodule Tymeslot.Integrations.Calendar.Google.PushChannel do
   @moduledoc """
-  Manages Google Calendar push notification channel registration.
+  Manages Google Calendar push notification channel subscriptions.
 
-  Handles subscribing to calendar event changes via Google's push notification
-  API, fetching the initial sync token, and persisting channel state to the
-  database.
+  Subscribes the integration to calendar change notifications via Google's
+  watch API and persists the channel's identifier, expiry, and secret. This
+  module has no responsibility for the event cache or for seeding sync tokens
+  — both of those happen in `Tymeslot.Workers.SyncGoogleCalendarWorker` via
+  the `bootstrap_sync/1` path, which works independently of whether a push
+  channel has been subscribed.
+
+  Push subscription is a bonus on top of polling: it only fires on deployments
+  that expose a public webhook URL. Self-hosted deployments without one still
+  get correct sync via the Oban fallback sweep.
   """
 
   alias Ecto.UUID
@@ -15,12 +22,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannel do
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
 
   @doc """
-  Registers a Google Calendar push notification channel for the integration,
-  fetches an initial sync token, and persists all channel state to the database.
-
-  Returns `{:ok, updated_integration}` on success, or an error tuple on failure.
-
-  Requires `:webhook_base_url` to be configured in the `:tymeslot` application env.
+  Subscribes the integration to Google Calendar push notifications and persists
+  the channel state. Requires `:webhook_base_url` to be configured — callers
+  that may run without one should guard the call.
   """
   @spec register_push_channel(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()}
@@ -52,9 +56,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannel do
                channel_id,
                channel_secret,
                webhook_base_url
-             ),
-           {:ok, sync_token} <- fetch_initial_sync_token(token, calendar_id) do
-        persist_push_channel(integration, Map.put(channel_attrs, :google_sync_token, sync_token))
+             ) do
+        persist_push_channel(integration, channel_attrs)
       end
     end)
   end
@@ -115,51 +118,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.PushChannel do
         error
     end
   end
-
-  defp fetch_initial_sync_token(token, calendar_id) do
-    fetch_sync_token_page(token, calendar_id, nil)
-  end
-
-  defp fetch_sync_token_page(token, calendar_id, page_token) do
-    params =
-      maybe_put_page_token(
-        %{"maxResults" => "250", "fields" => "nextPageToken,nextSyncToken"},
-        page_token
-      )
-
-    result =
-      CalendarCircuitBreaker.call(:google, fn ->
-        CalendarAPI.make_request(
-          :get,
-          "/calendars/#{URI.encode(calendar_id)}/events",
-          token,
-          params
-        )
-      end)
-
-    case result do
-      {:ok, response} when is_map(response) ->
-        cond do
-          sync_token = response["nextSyncToken"] ->
-            {:ok, sync_token}
-
-          next_page = response["nextPageToken"] ->
-            fetch_sync_token_page(token, calendar_id, next_page)
-
-          true ->
-            {:ok, nil}
-        end
-
-      {:ok, error} ->
-        error
-
-      {:error, :circuit_open} = error ->
-        error
-    end
-  end
-
-  defp maybe_put_page_token(params, nil), do: params
-  defp maybe_put_page_token(params, token), do: Map.put(params, "pageToken", token)
 
   defp persist_push_channel(integration, attrs) do
     case CalendarIntegrationWebhookQueries.update_push_channel(integration, attrs) do

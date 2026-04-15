@@ -109,7 +109,12 @@ defmodule Tymeslot.Availability.EventsTest do
     end
 
     test "drops a plain map event with nil start_time" do
-      event = %{uid: "x", status: "confirmed", start_time: nil, end_time: ~U[2026-04-13 10:00:00Z]}
+      event = %{
+        uid: "x",
+        status: "confirmed",
+        start_time: nil,
+        end_time: ~U[2026-04-13 10:00:00Z]
+      }
 
       result = Events.convert_events_to_timezone([event], "Etc/UTC", "Europe/London")
 

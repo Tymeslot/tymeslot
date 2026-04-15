@@ -28,7 +28,11 @@ defmodule Tymeslot.Availability.Events do
   # Plain maps from the OAuth fresh-fetch path carry start_time/end_time directly.
   # Timed events have DateTime values; all-day events have Date values (anchored
   # to midnight in the owner's timezone before shifting to the target).
-  defp convert_event(%{start_time: start_time, end_time: end_time} = event, owner_timezone, target_timezone)
+  defp convert_event(
+         %{start_time: start_time, end_time: end_time} = event,
+         owner_timezone,
+         target_timezone
+       )
        when not is_struct(event) do
     with {:ok, s} <- shift_safe(start_time, owner_timezone, target_timezone),
          {:ok, e} <- shift_safe(end_time, owner_timezone, target_timezone) do

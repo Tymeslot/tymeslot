@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
   alias Tymeslot.Integrations.Calendar.Google.EventMapper
   alias Tymeslot.Integrations.Calendar.Google.PushChannel
   alias Tymeslot.Integrations.Calendar.HTTP
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
@@ -189,6 +190,72 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPI do
       end
     end)
   end
+
+  @doc """
+  Performs an initial (full) sync for a fresh integration or after sync-token
+  expiry. Paginates `GET /events` with no sync token, returning every event in
+  the configured sync window together with the `nextSyncToken` that represents
+  the state after the listing — the exact value callers should persist so that
+  subsequent `list_events_incremental/1` calls return deltas only.
+
+  This is the one path that always works on self-hosted deployments: it has no
+  dependency on `:webhook_base_url` and no dependency on an existing sync token.
+  """
+  @impl CalendarAPIBehaviour
+  @spec bootstrap_sync(CalendarIntegrationSchema.t()) ::
+          {:ok, %{events: [map()], next_sync_token: String.t() | nil}} | api_error()
+  def bootstrap_sync(%CalendarIntegrationSchema{} = integration) do
+    calendar_id = integration.default_booking_calendar_id || "primary"
+    now = DateTime.utc_now()
+    start_time = DateTime.add(now, -ProviderConfig.sync_window_past_days(), :day)
+    end_time = DateTime.add(now, ProviderConfig.sync_window_future_days(), :day)
+
+    AccessToken.with_access_token(integration, &__MODULE__.refresh_token/1, fn token ->
+      fetch_bootstrap_page(token, calendar_id, start_time, end_time, nil, [])
+    end)
+  end
+
+  defp fetch_bootstrap_page(token, calendar_id, start_time, end_time, page_token, acc) do
+    base = %{
+      "timeMin" => DateTime.to_iso8601(start_time),
+      "timeMax" => DateTime.to_iso8601(end_time),
+      "singleEvents" => "true",
+      "maxResults" => "2500"
+    }
+
+    params = maybe_put_page_token(base, page_token)
+
+    result =
+      CalendarCircuitBreaker.call(:google, fn ->
+        make_request(:get, "/calendars/#{URI.encode(calendar_id)}/events", token, params)
+      end)
+
+    case result do
+      {:ok, response} when is_map(response) ->
+        items = response["items"] || []
+        acc = Enum.reverse(items, acc)
+
+        case response["nextPageToken"] do
+          nil ->
+            {:ok, %{events: Enum.reverse(acc), next_sync_token: response["nextSyncToken"]}}
+
+          next_page ->
+            fetch_bootstrap_page(token, calendar_id, start_time, end_time, next_page, acc)
+        end
+
+      {:ok, error} ->
+        error
+
+      {:error, :circuit_open} = error ->
+        error
+
+      other ->
+        other
+    end
+  end
+
+  defp maybe_put_page_token(params, nil), do: params
+  defp maybe_put_page_token(params, token), do: Map.put(params, "pageToken", token)
 
   @doc """
   Refreshes the access token using the refresh token.

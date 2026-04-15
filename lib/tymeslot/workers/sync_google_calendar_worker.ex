@@ -71,51 +71,19 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
       {:error, :gone, _message} ->
         Logger.warning(
-          "Google Calendar sync token expired; re-registering push channel for full resync",
+          "Google Calendar sync token expired; performing full bootstrap resync",
           calendar_integration_id: integration.id
         )
 
-        case google_calendar_api().register_push_channel(integration) do
-          {:ok, _updated} ->
-            :ok
-
-          {:error, :webhook_base_url_not_configured} ->
-            Logger.warning("Webhook base URL not configured; skipping channel re-registration",
-              calendar_integration_id: integration.id
-            )
-
-            :ok
-
-          {:error, reason} ->
-            Logger.error("Failed to re-register Google Calendar push channel",
-              calendar_integration_id: integration.id,
-              error: inspect(reason)
-            )
-
-            {:error, reason}
-        end
+        bootstrap_integration(integration)
 
       {:error, :no_sync_token} ->
-        Logger.warning(
-          "Google Calendar integration has no sync token; re-registering push channel",
+        Logger.info(
+          "Google Calendar integration has no sync token; performing initial bootstrap",
           calendar_integration_id: integration.id
         )
 
-        case google_calendar_api().register_push_channel(integration) do
-          {:ok, _updated} ->
-            :ok
-
-          {:error, :webhook_base_url_not_configured} ->
-            Logger.warning(
-              "Webhook base URL not configured; skipping channel re-registration",
-              calendar_integration_id: integration.id
-            )
-
-            :ok
-
-          {:error, reason} ->
-            {:error, reason}
-        end
+        bootstrap_integration(integration)
 
       {:error, :unauthorized, _message} ->
         Logger.warning("Google Calendar sync unauthorised; discarding job",
@@ -133,6 +101,40 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
 
       {:error, reason} ->
         Logger.error("Google Calendar incremental sync failed",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        {:error, reason}
+    end
+  end
+
+  defp bootstrap_integration(integration) do
+    case google_calendar_api().bootstrap_sync(integration) do
+      {:ok, %{events: events, next_sync_token: next_sync_token}} ->
+        Logger.info("Google Calendar bootstrap fetched events",
+          calendar_integration_id: integration.id,
+          event_count: length(events)
+        )
+
+        process_incremental_sync(integration, events, next_sync_token)
+
+      {:error, :unauthorized, _message} ->
+        Logger.warning("Google Calendar bootstrap unauthorised; skipping",
+          calendar_integration_id: integration.id
+        )
+
+        :ok
+
+      {:error, :circuit_open} ->
+        Logger.warning("Google Calendar circuit breaker open during bootstrap; snoozing",
+          calendar_integration_id: integration.id
+        )
+
+        {:snooze, 120}
+
+      {:error, _type, reason} ->
+        Logger.error("Google Calendar bootstrap failed",
           calendar_integration_id: integration.id,
           error: inspect(reason)
         )

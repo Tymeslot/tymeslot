@@ -45,7 +45,13 @@ defmodule Tymeslot.Emails.Shared.FrameTest do
     end
 
     test "includes pre_card content when optional key is present" do
-      sections = Map.put(@base_sections, :pre_card, "<mj-section><mj-column><mj-text>Announcement</mj-text></mj-column></mj-section>")
+      sections =
+        Map.put(
+          @base_sections,
+          :pre_card,
+          "<mj-section><mj-column><mj-text>Announcement</mj-text></mj-column></mj-section>"
+        )
+
       mjml = Frame.wrap(sections)
 
       assert mjml =~ "Announcement"

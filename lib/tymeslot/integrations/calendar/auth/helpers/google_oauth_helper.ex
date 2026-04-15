@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
+  alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
   @doc """
   Generates the OAuth authorization URL for Google Calendar.
@@ -203,10 +204,15 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   end
 
   defp register_push_channel_async(integration) do
+    # Always enqueue a sync job so the initial event backfill happens — this
+    # path is independent of the webhook URL and works on self-hosted. The
+    # worker detects the nil sync token and calls `bootstrap_sync/1`.
+    enqueue_initial_sync(integration)
+
     case Application.get_env(:tymeslot, :webhook_base_url) do
       nil ->
-        Logger.warning(
-          "Google push channel registration skipped: WEBHOOK_BASE_URL not configured",
+        Logger.info(
+          "Google push channel subscription skipped: WEBHOOK_BASE_URL not configured",
           integration_id: integration.id
         )
 
@@ -225,6 +231,26 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
               )
           end
         end)
+    end
+  end
+
+  defp enqueue_initial_sync(integration) do
+    result =
+      %{"calendar_integration_id" => integration.id}
+      |> SyncGoogleCalendarWorker.new()
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to enqueue initial Google Calendar sync",
+          integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        :ok
     end
   end
 
