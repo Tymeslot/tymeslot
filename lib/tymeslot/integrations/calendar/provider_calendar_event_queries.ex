@@ -255,6 +255,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
       :synced_at,
       :provider_updated_at,
       :provider_metadata,
+      :raw_ical,
       :updated_at
     ]
   end

@@ -38,6 +38,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
           synced_at: DateTime.t(),
           provider_updated_at: DateTime.t() | nil,
           provider_metadata: map(),
+          raw_ical: String.t() | nil,
           created_by_tymeslot: boolean()
         }
 
@@ -73,6 +74,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEvent do
     :etag,
     :synced_at,
     :provider_updated_at,
+    :raw_ical,
     transparency: :opaque,
     status: :confirmed,
     attendees: [],

@@ -151,7 +151,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
           {:ok, event_data} ->
             Map.merge(event_data, %{
               href: event.href,
-              etag: clean_etag(event.etag)
+              etag: clean_etag(event.etag),
+              # Preserve the raw VCALENDAR body so it can be stored alongside
+              # the parsed fields and re-parsed in place after a parser fix.
+              raw_ical: event.calendar_data
             })
 
           {:error, _reason} ->

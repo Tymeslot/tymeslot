@@ -164,6 +164,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
         recurrence_exceptions: exdates_as_dates(raw[:exdate] || raw[:exdates] || []),
         etag: raw[:etag],
         provider_metadata: raw,
+        raw_ical: raw[:raw_ical],
         created_by_tymeslot: tymeslot_origin?(raw)
       }
       |> Map.merge(timing_fields(all_day, start_val, end_val))

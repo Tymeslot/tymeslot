@@ -43,6 +43,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
           synced_at: ~U[2026-04-15 00:00:00.000000Z]
         )
 
+      raw_ical_body = """
+      BEGIN:VCALENDAR
+      VERSION:2.0
+      BEGIN:VEVENT
+      UID:fresh-uid
+      SUMMARY:Fresh event
+      END:VEVENT
+      END:VCALENDAR
+      """
+
       # Server response contains one new event; "stale-uid" is absent and
       # should be deleted.
       raw_events = [
@@ -62,7 +72,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
           organiser: nil,
           recurrence_rule: nil,
           recurrence_exceptions: [],
-          etag: "\"fresh-etag\""
+          etag: "\"fresh-etag\"",
+          raw_ical: raw_ical_body
         }
       ]
 
@@ -84,8 +95,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
       assert {:error, :not_found} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "stale-uid")
 
-      assert {:ok, %ProviderCalendarEventSchema{summary: "Fresh event"}} =
+      assert {:ok, %ProviderCalendarEventSchema{summary: "Fresh event", raw_ical: persisted}} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "fresh-uid")
+
+      assert persisted == raw_ical_body
 
       # The original row has really been deleted, not just shadowed.
       refute Repo.reload(stale)
