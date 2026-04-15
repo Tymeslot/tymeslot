@@ -247,6 +247,70 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
     end
   end
 
+  describe "convert_to_utc/2" do
+    test "converts naive datetime with valid IANA timezone to UTC" do
+      # Europe/Brussels is UTC+2 in summer (CEST)
+      naive = ~N[2024-07-15 14:00:00]
+      assert {:ok, utc} = DateTimeUtils.convert_to_utc(naive, "Europe/Brussels")
+      assert utc.time_zone == "Etc/UTC"
+      assert utc.hour == 12
+      assert utc.day == 15
+    end
+
+    test "strips surrounding double-quotes from TZID before converting (regression #38)" do
+      # Zimbra and some CalDAV clients emit TZID="Europe/Brussels"
+      naive = ~N[2024-07-15 14:00:00]
+      assert {:ok, utc_quoted} = DateTimeUtils.convert_to_utc(naive, ~s("Europe/Brussels"))
+      assert {:ok, utc_plain} = DateTimeUtils.convert_to_utc(naive, "Europe/Brussels")
+      assert utc_quoted == utc_plain
+    end
+
+    test "normalises Windows zone name to IANA and converts correctly" do
+      # "Romance Standard Time" maps to "Europe/Paris" (UTC+2 in summer)
+      naive = ~N[2024-07-15 14:00:00]
+      assert {:ok, utc} = DateTimeUtils.convert_to_utc(naive, "Romance Standard Time")
+      assert utc.time_zone == "Etc/UTC"
+      # Europe/Paris is CEST (UTC+2) in July
+      assert utc.hour == 12
+    end
+
+    test "falls back to UTC when timezone is nil" do
+      naive = ~N[2024-01-01 10:00:00]
+      assert {:ok, utc} = DateTimeUtils.convert_to_utc(naive, nil)
+      assert utc.time_zone == "Etc/UTC"
+      assert utc.hour == 10
+    end
+
+    test "falls back to UTC and logs a warning for empty timezone string" do
+      naive = ~N[2024-01-01 10:00:00]
+      assert {:ok, utc} = DateTimeUtils.convert_to_utc(naive, "   ")
+      assert utc.time_zone == "Etc/UTC"
+      assert utc.hour == 10
+    end
+
+    test "DST fall-back: ambiguous local time returns ok with the earlier (pre-clock-change) UTC offset" do
+      # 2024-10-27 01:30 Europe/London is ambiguous: exists as both BST (+01:00) and GMT (+00:00)
+      # The earlier occurrence is BST, so UTC result should be 00:30
+      naive = ~N[2024-10-27 01:30:00]
+      assert {:ok, utc} = DateTimeUtils.convert_to_utc(naive, "Europe/London")
+      assert utc.time_zone == "Etc/UTC"
+      # BST is UTC+1, so 01:30 BST → 00:30 UTC
+      assert utc.hour == 0
+      assert utc.minute == 30
+    end
+
+    test "DST spring-forward: gap time returns ok resolving to just_after" do
+      # 2024-03-31 01:30 Europe/London does not exist — clocks jumped from 01:00 GMT to 02:00 BST
+      # just_after is 02:00:00 BST (UTC+1), i.e. 01:00 UTC
+      naive = ~N[2024-03-31 01:30:00]
+      assert {:ok, utc} = DateTimeUtils.convert_to_utc(naive, "Europe/London")
+      assert utc.time_zone == "Etc/UTC"
+      # just_after is 02:00 BST = 01:00 UTC
+      assert utc.hour == 1
+      assert utc.minute == 0
+    end
+  end
+
   describe "to_datetime/1" do
     test "passes DateTime through unchanged" do
       dt = ~U[2026-04-07 14:30:00Z]

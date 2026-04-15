@@ -211,6 +211,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   Diagnostic-only: PUT a hand-crafted iCalendar payload into the primary
   calendar. The caller is responsible for producing a valid RFC 5545 document
   and for cleaning up afterwards. Used by `mix calendar_audit`.
+
+  Because the PUT uses `If-None-Match: *`, sending an existing UID returns
+  `{:error, "Precondition failed - event may already exist"}` (HTTP 412).
+  Callers must either delete the event before re-using a UID or generate a
+  fresh UID per attempt.
   """
   @spec put_raw_event(caldav_client(), String.t(), String.t()) ::
           {:ok, String.t()} | {:error, term()}

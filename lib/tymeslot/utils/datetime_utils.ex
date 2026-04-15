@@ -366,22 +366,34 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   defp do_convert_to_utc(naive_dt, clean, original) do
     case DateTime.from_naive(naive_dt, clean) do
       {:ok, dt} ->
-        case DateTime.shift_zone(dt, "Etc/UTC") do
-          {:ok, utc_dt} ->
-            {:ok, utc_dt}
+        shift_to_utc(dt, naive_dt, clean, original)
 
-          {:error, reason} ->
-            Logger.warning("Failed to shift DateTime to UTC; falling back to naive UTC",
-              timezone: clean,
-              original_timezone: original,
-              reason: inspect(reason)
-            )
+      {:ambiguous, first, _second} ->
+        # DST fall-back: two valid local times exist — resolve to the earlier one (first)
+        shift_to_utc(first, naive_dt, clean, original)
 
-            convert_to_utc(naive_dt, nil)
-        end
+      {:gap, _just_before, just_after} ->
+        # DST spring-forward: local time does not exist — resolve to just_after
+        shift_to_utc(just_after, naive_dt, clean, original)
 
       {:error, reason} ->
         Logger.warning("Unknown timezone when parsing external datetime; falling back to UTC",
+          timezone: clean,
+          original_timezone: original,
+          reason: inspect(reason)
+        )
+
+        convert_to_utc(naive_dt, nil)
+    end
+  end
+
+  defp shift_to_utc(dt, naive_dt, clean, original) do
+    case DateTime.shift_zone(dt, "Etc/UTC") do
+      {:ok, utc_dt} ->
+        {:ok, utc_dt}
+
+      {:error, reason} ->
+        Logger.warning("Failed to shift DateTime to UTC; falling back to naive UTC",
           timezone: clean,
           original_timezone: original,
           reason: inspect(reason)
