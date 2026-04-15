@@ -50,6 +50,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       user_id: user_id,
       status: "healthy",
       failures: 0,
+      consecutive_hard_failures: 0,
       successes: 0,
       backoff_ms: 1_800_000
     }
@@ -138,6 +139,10 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   `threshold` consecutive hard failures. Used by
   `Tymeslot.Integrations.HealthCheck.SyncGating` to pause periodic sync
   work for integrations whose OAuth token is clearly broken.
+
+  Filters on `consecutive_hard_failures` (resets to 0 on any success or
+  transient error) so that a mixed history of transient and hard failures
+  does not incorrectly pause an integration.
   """
   @spec list_ids_with_sustained_hard_failures(String.t() | atom(), non_neg_integer()) ::
           [integer()]
@@ -149,7 +154,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
       [s],
       s.integration_type == ^type_str and
         s.last_error_class == "hard" and
-        s.failures >= ^threshold
+        s.consecutive_hard_failures >= ^threshold
     )
     |> select([s], s.integration_id)
     |> Repo.all()

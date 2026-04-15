@@ -71,35 +71,35 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   defp seed_delta_async(integration) do
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       case OutlookCalendarAPI.bootstrap_sync(integration) do
-        {:ok, _updated} ->
+        {:ok, updated} ->
           Logger.info("Outlook initial delta seeded after OAuth",
             integration_id: integration.id
           )
+
+          case Application.get_env(:tymeslot, :webhook_base_url) do
+            nil ->
+              :ok
+
+            _url ->
+              case OutlookCalendarAPI.register_graph_subscription(updated) do
+                {:ok, _registered} ->
+                  Logger.info("Outlook Graph subscription registered",
+                    integration_id: integration.id
+                  )
+
+                {:error, reason} ->
+                  Logger.error("Outlook Graph subscription registration failed",
+                    integration_id: integration.id,
+                    reason: inspect(reason)
+                  )
+              end
+          end
 
         {:error, reason} ->
           Logger.error("Outlook initial delta seed failed after OAuth",
             integration_id: integration.id,
             reason: inspect(reason)
           )
-      end
-
-      case Application.get_env(:tymeslot, :webhook_base_url) do
-        nil ->
-          :ok
-
-        _url ->
-          case OutlookCalendarAPI.register_graph_subscription(integration) do
-            {:ok, _updated} ->
-              Logger.info("Outlook Graph subscription registered",
-                integration_id: integration.id
-              )
-
-            {:error, reason} ->
-              Logger.error("Outlook Graph subscription registration failed",
-                integration_id: integration.id,
-                reason: inspect(reason)
-              )
-          end
       end
     end)
   end

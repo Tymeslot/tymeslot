@@ -11,6 +11,8 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
   require Logger
 
   alias Ecto.Query
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck.SyncGating
   alias Tymeslot.Workers.FallbackSyncSweepWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
@@ -318,6 +320,61 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
 
       assert length(jobs) == 1
       assert hd(jobs).args["force_full_fetch"] == true
+    end
+  end
+
+  describe "perform/1 - sync gating" do
+    test "does not enqueue a job for a Google integration with enough consecutive hard failures" do
+      integration = insert(:calendar_integration, provider: "google", is_active: true)
+      user_id = integration.user_id
+
+      {:ok, _} =
+        IntegrationHealthStateQueries.upsert(:calendar, integration.id, %{
+          user_id: user_id,
+          status: "unhealthy",
+          failures: SyncGating.threshold(),
+          consecutive_hard_failures: SyncGating.threshold(),
+          successes: 0,
+          backoff_ms: 1_800_000,
+          last_check_at: DateTime.utc_now(),
+          last_error_class: "hard"
+        })
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      refute_enqueued(
+        worker: SyncGoogleCalendarWorker,
+        args: %{"calendar_integration_id" => integration.id}
+      )
+    end
+
+    test "still enqueues a non-gated integration when a gated one is present" do
+      gated = insert(:calendar_integration, provider: "google", is_active: true)
+      healthy = insert(:calendar_integration, provider: "google", is_active: true)
+
+      {:ok, _} =
+        IntegrationHealthStateQueries.upsert(:calendar, gated.id, %{
+          user_id: gated.user_id,
+          status: "unhealthy",
+          failures: SyncGating.threshold(),
+          consecutive_hard_failures: SyncGating.threshold(),
+          successes: 0,
+          backoff_ms: 1_800_000,
+          last_check_at: DateTime.utc_now(),
+          last_error_class: "hard"
+        })
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+
+      refute_enqueued(
+        worker: SyncGoogleCalendarWorker,
+        args: %{"calendar_integration_id" => gated.id}
+      )
+
+      assert_enqueued(
+        worker: SyncGoogleCalendarWorker,
+        args: %{"calendar_integration_id" => healthy.id}
+      )
     end
   end
 

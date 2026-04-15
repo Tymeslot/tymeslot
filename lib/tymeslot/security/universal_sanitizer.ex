@@ -46,7 +46,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     metadata = Keyword.get(opts, :metadata, %{})
     field = Keyword.get(opts, :field, :unknown)
 
-    with :ok <- validate_utf8(input, log_events, metadata),
+    with :ok <- validate_utf8(input, log_events, field, metadata),
          {:ok, bounded} <-
            enforce_max_input_bytes(input, max_input_bytes, on_too_long, log_events, metadata),
          {:ok, sanitized} <- sanitize_input(bounded, allow_html, log_events, field, metadata),
@@ -87,12 +87,12 @@ defmodule Tymeslot.Security.UniversalSanitizer do
 
   # Private functions
 
-  defp validate_utf8(input, log_events, metadata) do
+  defp validate_utf8(input, log_events, field, metadata) do
     if String.valid?(input) do
       :ok
     else
       if log_events do
-        SecurityLogger.log_blocked_input(:universal, "invalid_encoding", metadata)
+        SecurityLogger.log_blocked_input(field, "invalid_encoding", metadata)
       end
 
       {:error, "Invalid text encoding"}

@@ -71,6 +71,7 @@ defmodule Tymeslot.Repo.Migrations.CleanupCalendarEventDuplicatesAndAddStatusCon
        WHERE all_day = true
          AND summary IS NOT NULL
          AND start_date IS NOT NULL
+         AND end_date IS NOT NULL
     )
     DELETE FROM provider_calendar_events
      WHERE id IN (SELECT id FROM ranked WHERE rn > 1)

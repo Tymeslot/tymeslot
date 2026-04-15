@@ -19,6 +19,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
           user_id: integer() | nil,
           status: String.t(),
           failures: non_neg_integer(),
+          consecutive_hard_failures: non_neg_integer(),
           successes: non_neg_integer(),
           backoff_ms: pos_integer(),
           last_check_at: DateTime.t() | nil,
@@ -35,6 +36,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
     belongs_to(:user, Tymeslot.Auth.UserSchema)
     field(:status, :string, default: "healthy")
     field(:failures, :integer, default: 0)
+    field(:consecutive_hard_failures, :integer, default: 0)
     field(:successes, :integer, default: 0)
     field(:backoff_ms, :integer, default: 1_800_000)
     field(:last_check_at, :utc_datetime_usec)
@@ -55,6 +57,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
       :user_id,
       :status,
       :failures,
+      :consecutive_hard_failures,
       :successes,
       :backoff_ms,
       :last_check_at,
@@ -79,6 +82,7 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema do
       :user_id,
       :status,
       :failures,
+      :consecutive_hard_failures,
       :successes,
       :backoff_ms,
       :last_check_at,

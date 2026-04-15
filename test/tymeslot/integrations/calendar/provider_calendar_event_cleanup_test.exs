@@ -54,6 +54,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
      WHERE all_day = true
        AND summary IS NOT NULL
        AND start_date IS NOT NULL
+       AND end_date IS NOT NULL
   )
   DELETE FROM provider_calendar_events
    WHERE id IN (SELECT id FROM ranked WHERE rn > 1)
@@ -171,6 +172,33 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventCleanupTest do
         )
 
       assert survivors == ["allday-new"]
+    end
+
+    test "preserves all-day rows with NULL end_date — cannot safely merge them",
+         %{integration: integration} do
+      # Two rows share (integration, summary, start_date) but both have NULL
+      # end_date. Before the fix the PARTITION BY grouped them together and
+      # deleted one. After the fix both must survive.
+      Repo.query!(
+        """
+        INSERT INTO provider_calendar_events
+          (calendar_integration_id, provider, provider_calendar_id, uid,
+           summary, start_date, end_date, status, transparency, all_day,
+           synced_at, inserted_at, updated_at)
+        VALUES ($1, 'caldav', 'cal-1', 'null-end-a',
+                'No End Event', '2026-06-01', NULL,
+                'confirmed', 'opaque', true, now(), now(), now()),
+               ($1, 'caldav', 'cal-1', 'null-end-b',
+                'No End Event', '2026-06-01', NULL,
+                'confirmed', 'opaque', true, now(), now(), now())
+        """,
+        [integration.id]
+      )
+
+      Repo.query!(@dedupe_all_day_sql)
+
+      assert Repo.get_by(ProviderCalendarEventSchema, uid: "null-end-a")
+      assert Repo.get_by(ProviderCalendarEventSchema, uid: "null-end-b")
     end
 
     test "leaves non-duplicate rows untouched", %{integration: integration} do

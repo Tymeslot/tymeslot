@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
          %{user: user, integration: integration} do
       upsert_health(user.id, integration.id,
         failures: SyncGating.threshold(),
+        consecutive_hard_failures: SyncGating.threshold(),
         last_error_class: "hard"
       )
 
@@ -34,6 +35,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
          %{user: user, integration: integration} do
       upsert_health(user.id, integration.id,
         failures: SyncGating.threshold() * 5,
+        consecutive_hard_failures: 0,
         last_error_class: "transient"
       )
 
@@ -47,6 +49,23 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
          %{user: user, integration: integration} do
       upsert_health(user.id, integration.id,
         failures: SyncGating.threshold() - 1,
+        consecutive_hard_failures: SyncGating.threshold() - 1,
+        last_error_class: "hard"
+      )
+
+      refute MapSet.member?(
+               SyncGating.paused_integration_ids(:calendar),
+               integration.id
+             )
+    end
+
+    test "does not gate an integration with high failures but low consecutive hard failures",
+         %{user: user, integration: integration} do
+      # Regression: an integration with many accumulated failures (transient history)
+      # and only 2 consecutive hard failures must not be paused at a threshold of 10.
+      upsert_health(user.id, integration.id,
+        failures: 10,
+        consecutive_hard_failures: 2,
         last_error_class: "hard"
       )
 
@@ -68,7 +87,11 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
         end
       end)
 
-      upsert_health(user.id, integration.id, failures: 3, last_error_class: "hard")
+      upsert_health(user.id, integration.id,
+        failures: 3,
+        consecutive_hard_failures: 3,
+        last_error_class: "hard"
+      )
 
       assert MapSet.member?(
                SyncGating.paused_integration_ids(:calendar),
@@ -82,10 +105,11 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
       refute SyncGating.paused?(:calendar, integration.id)
     end
 
-    test "returns true once the integration's failures exceed the threshold",
+    test "returns true once the integration's consecutive hard failures exceed the threshold",
          %{user: user, integration: integration} do
       upsert_health(user.id, integration.id,
         failures: SyncGating.threshold() + 1,
+        consecutive_hard_failures: SyncGating.threshold() + 1,
         last_error_class: "hard"
       )
 
@@ -100,6 +124,7 @@ defmodule Tymeslot.Integrations.HealthCheck.SyncGatingTest do
           user_id: user_id,
           status: "unhealthy",
           failures: 0,
+          consecutive_hard_failures: 0,
           successes: 0,
           backoff_ms: 1_800_000,
           last_check_at: DateTime.utc_now()

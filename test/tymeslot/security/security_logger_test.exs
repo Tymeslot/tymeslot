@@ -198,6 +198,31 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
     end
   end
 
+  describe "log_blocked_input/3" do
+    test "emits a warning log with the expected message" do
+      original_level = Logger.level()
+      Logger.configure(level: :warning)
+
+      log =
+        capture_log(fn ->
+          SecurityLogger.log_blocked_input(:email, "sql_injection", %{ip: "1.2.3.4"})
+        end)
+
+      Logger.configure(level: original_level)
+
+      assert log =~ "Malicious input blocked"
+    end
+
+    test "returns :ok" do
+      assert :ok =
+               SecurityLogger.log_blocked_input(:email, "sql_injection", %{ip: "1.2.3.4"})
+    end
+
+    test "accepts a string field name" do
+      assert :ok = SecurityLogger.log_blocked_input("email", "path_traversal", %{})
+    end
+  end
+
   describe "log_session_event/4 (smoke)" do
     test "accepts long and short session ids" do
       assert :ok =

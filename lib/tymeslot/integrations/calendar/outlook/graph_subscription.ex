@@ -42,13 +42,11 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   def bootstrap_sync(%CalendarIntegrationSchema{} = integration) do
     AccessToken.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
       with {:ok, {events, delta_link}} <- fetch_initial_delta(token),
-           {:ok, calendar_events} <- normalise_delta_events(events, integration) do
-        cache_attrs =
-          Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
-
-        with {:ok, _count} <- ProviderCalendarEventQueries.upsert_batch(cache_attrs) do
-          persist_subscription(integration, %{graph_delta_link: delta_link})
-        end
+           {:ok, calendar_events} <- normalise_delta_events(events, integration),
+           cache_attrs =
+             Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1),
+           {:ok, _count} <- ProviderCalendarEventQueries.upsert_batch(cache_attrs) do
+        persist_subscription(integration, %{graph_delta_link: delta_link})
       end
     end)
   end

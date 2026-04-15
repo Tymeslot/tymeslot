@@ -48,6 +48,26 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
       assert log =~ "Malicious input blocked"
     end
 
+    test "invalid UTF-8 log carries the caller-supplied field name" do
+      invalid = <<0xC3, 0x28>>
+
+      {events, _log} =
+        with_captured_warnings(fn ->
+          UniversalSanitizer.sanitize_and_validate(invalid,
+            log_events: true,
+            field: :name,
+            metadata: %{ip: "127.0.0.1"}
+          )
+        end)
+
+      assert Enum.any?(events, fn event ->
+               event.message == "Malicious input blocked" and
+                 event.metadata[:field] == :name and
+                 event.metadata[:check] == "invalid_encoding"
+             end),
+             "expected a warning with field=:name and check=\"invalid_encoding\", got: #{inspect(events)}"
+    end
+
     test "enforces max_input_bytes with error by default" do
       input = String.duplicate("a", 11)
 

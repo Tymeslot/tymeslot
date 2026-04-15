@@ -27,6 +27,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   @type health_state :: %{
           user_id: integer() | nil,
           failures: non_neg_integer(),
+          consecutive_hard_failures: non_neg_integer(),
           successes: non_neg_integer(),
           last_check_at: DateTime.t() | nil,
           status: health_status(),
@@ -48,6 +49,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     %{
       user_id: nil,
       failures: 0,
+      consecutive_hard_failures: 0,
       successes: 0,
       last_check_at: nil,
       status: :healthy,
@@ -90,6 +92,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     %{
       health_state
       | failures: 0,
+        consecutive_hard_failures: 0,
         successes: health_state.successes + 1,
         last_check_at: DateTime.utc_now(),
         status: determine_status(0, health_state.successes + 1),
@@ -117,6 +120,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
       %{
         health_state
         | failures: failures,
+          consecutive_hard_failures: 0,
           successes: 0,
           last_check_at: DateTime.utc_now(),
           status: new_status,
@@ -127,7 +131,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     else
       %{
         health_state
-        | last_check_at: DateTime.utc_now(),
+        | consecutive_hard_failures: 0,
+          last_check_at: DateTime.utc_now(),
           backoff_ms: new_backoff,
           last_error_class: :transient
       }
@@ -136,6 +141,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
 
   def update_health(health_state, {:error, _error_reason, :hard}) do
     failures = health_state.failures + 1
+    consecutive_hard_failures = health_state.consecutive_hard_failures + 1
     new_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :hard)
     new_status = determine_status(failures, 0)
 
@@ -147,6 +153,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     %{
       health_state
       | failures: failures,
+        consecutive_hard_failures: consecutive_hard_failures,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: new_status,
@@ -258,6 +265,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     %{
       user_id: record.user_id,
       failures: record.failures,
+      consecutive_hard_failures: record.consecutive_hard_failures,
       successes: record.successes,
       last_check_at: record.last_check_at,
       status: safe_to_status(record.status),
@@ -274,6 +282,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
     base = %{
       status: Atom.to_string(health_state.status),
       failures: health_state.failures,
+      consecutive_hard_failures: health_state.consecutive_hard_failures,
       successes: health_state.successes,
       backoff_ms: health_state.backoff_ms,
       last_check_at: health_state.last_check_at,

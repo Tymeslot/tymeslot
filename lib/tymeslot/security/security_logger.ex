@@ -59,7 +59,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   @doc """
   Logs validation failures that may indicate attack attempts.
   """
-  @spec log_validation_failure(atom(), String.t(), security_metadata()) :: :ok
+  @spec log_validation_failure(atom() | String.t(), String.t(), security_metadata()) :: :ok
   def log_validation_failure(field, error_type, metadata \\ %{}) do
     sanitized_metadata = sanitize_metadata(metadata)
 
@@ -74,7 +74,7 @@ defmodule Tymeslot.Security.SecurityLogger do
   @doc """
   Logs successful validation for security monitoring.
   """
-  @spec log_successful_validation(atom(), security_metadata()) :: :ok
+  @spec log_successful_validation(atom() | String.t(), security_metadata()) :: :ok
   def log_successful_validation(field, metadata \\ %{}) do
     sanitized_metadata = sanitize_metadata(metadata)
 
