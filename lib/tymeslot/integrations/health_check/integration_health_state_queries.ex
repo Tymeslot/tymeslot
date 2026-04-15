@@ -133,6 +133,28 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
     |> Repo.all()
   end
 
+  @doc """
+  Returns integration IDs of the given type that have hit at least
+  `threshold` consecutive hard failures. Used by
+  `Tymeslot.Integrations.HealthCheck.SyncGating` to pause periodic sync
+  work for integrations whose OAuth token is clearly broken.
+  """
+  @spec list_ids_with_sustained_hard_failures(String.t() | atom(), non_neg_integer()) ::
+          [integer()]
+  def list_ids_with_sustained_hard_failures(type, threshold) do
+    type_str = to_string(type)
+
+    IntegrationHealthStateSchema
+    |> where(
+      [s],
+      s.integration_type == ^type_str and
+        s.last_error_class == "hard" and
+        s.failures >= ^threshold
+    )
+    |> select([s], s.integration_id)
+    |> Repo.all()
+  end
+
   defp delete_orphaned_by_type(type_str, integration_schema) do
     orphaned_query =
       from(s in IntegrationHealthStateSchema,

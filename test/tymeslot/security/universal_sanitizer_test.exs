@@ -6,6 +6,32 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
 
   alias Tymeslot.Security.UniversalSanitizer
 
+  defmodule LoggerForwarder do
+    @moduledoc false
+    # Erlang :logger handler that forwards each log event to a test process
+    # as `{tag, message, metadata}`, so tests can assert on structured
+    # metadata that Logger's default format does not surface.
+
+    @spec log(map(), map()) :: :ok
+    def log(%{msg: msg, meta: meta}, %{config: %{target: target, tag: tag}}) do
+      message = normalise_msg(msg)
+      send(target, {tag, message, meta})
+      :ok
+    end
+
+    defp normalise_msg({:string, str}), do: IO.iodata_to_binary(str)
+    defp normalise_msg({:report, report}) when is_map(report), do: report[:message] || ""
+
+    defp normalise_msg({:report, report}) when is_list(report),
+      do: to_string(report[:message] || "")
+
+    defp normalise_msg({format, args}) when is_list(format) do
+      IO.iodata_to_binary(:io_lib.format(format, args))
+    end
+
+    defp normalise_msg(other), do: inspect(other)
+  end
+
   describe "sanitize_and_validate/2" do
     test "rejects invalid UTF-8 input without raising" do
       invalid = <<0xC3, 0x28>>
@@ -168,6 +194,80 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
                UniversalSanitizer.sanitize_and_validate(nextcloud_path, log_events: false)
 
       assert sanitized == nextcloud_path
+    end
+
+    test "logs the caller-supplied field name and the specific check that fired" do
+      {events, _log} =
+        with_captured_warnings(fn ->
+          UniversalSanitizer.sanitize_and_validate("bob' OR '1'='1",
+            log_events: true,
+            field: :email,
+            metadata: %{ip: "127.0.0.1"}
+          )
+        end)
+
+      assert Enum.any?(events, fn event ->
+               event.message == "Malicious input blocked" and
+                 event.metadata[:field] == :email and
+                 event.metadata[:check] == "sql_injection"
+             end),
+             "expected a warning with field=:email and check=\"sql_injection\", got: #{inspect(events)}"
+
+      # Must not regress to the old pattern where the check was logged as the field.
+      refute Enum.any?(events, fn event ->
+               event.metadata[:field] == :sql_injection
+             end)
+    end
+
+    test "defaults field to :unknown when caller omits it" do
+      {events, _log} =
+        with_captured_warnings(fn ->
+          UniversalSanitizer.sanitize_and_validate("bob' OR '1'='1", log_events: true)
+        end)
+
+      assert Enum.any?(events, fn event ->
+               event.metadata[:field] == :unknown and
+                 event.metadata[:check] == "sql_injection"
+             end)
+    end
+  end
+
+  # Captures Logger.warning calls with their metadata by attaching a temporary
+  # :logger handler that forwards every log event to the test process. Returns
+  # the list of captured events along with the text-level log output so
+  # assertions can match on metadata (which Logger's default format does not
+  # surface through `capture_log`).
+  defp with_captured_warnings(fun) do
+    test_pid = self()
+
+    # :logger handler ids must be atoms. Each test invocation needs its own id
+    # so async tests don't collide, hence the runtime atom creation. Safe here
+    # because the test suite runs in a bounded process and the id set is tiny.
+    # credo:disable-for-next-line Credo.Check.Warning.UnsafeToAtom
+    handler_id = String.to_atom("captured_warnings_#{System.unique_integer([:positive])}")
+
+    config = %{
+      level: :warning,
+      config: %{target: test_pid, tag: handler_id}
+    }
+
+    :ok = :logger.add_handler(handler_id, LoggerForwarder, config)
+
+    try do
+      log = capture_log(fun)
+      events = collect_warnings(handler_id, [])
+      {Enum.reverse(events), log}
+    after
+      :logger.remove_handler(handler_id)
+    end
+  end
+
+  defp collect_warnings(handler_id, acc) do
+    receive do
+      {^handler_id, message, metadata} ->
+        collect_warnings(handler_id, [%{message: message, metadata: metadata} | acc])
+    after
+      0 -> acc
     end
   end
 end

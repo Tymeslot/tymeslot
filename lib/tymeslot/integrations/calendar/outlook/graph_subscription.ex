@@ -1,7 +1,17 @@
 defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   @moduledoc """
-  Manages Microsoft Graph change-notification subscriptions for Outlook
-  Calendar integrations: creation, initial delta fetch, and persistence.
+  Manages Microsoft Graph change-notification subscriptions and initial delta
+  bootstraps for Outlook Calendar integrations.
+
+  Two independent concerns live here:
+
+  - `bootstrap_sync/1` — paginated `events/delta` call that populates the cache
+    and seeds `graph_delta_link`. Has **no webhook dependency**: it's plain
+    HTTP and works on every deployment, self-hosted or managed.
+  - `register/1` — creates a Graph push subscription so changes are pushed to
+    our webhook. Requires `:webhook_base_url` because the subscription payload
+    needs a `notificationUrl`. Deployments without a public webhook address
+    still sync correctly via the fallback sweep polling `bootstrap_sync`.
   """
 
   require Logger
@@ -19,13 +29,35 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   @max_delta_pages 50
 
   @doc """
-  Registers a Microsoft Graph change notification subscription for the
-  integration, fetches an initial delta snapshot, and persists all
-  subscription state to the database.
+  Fetches the initial `events/delta` snapshot, normalises and persists the
+  events to the cache, and stores the returned delta link on the integration
+  so subsequent sweeps can fetch incremental changes.
 
-  Returns `{:ok, updated_integration}` on success, or an error tuple on failure.
+  Works on every deployment — no webhook URL required.
+  """
+  @spec bootstrap_sync(CalendarIntegrationSchema.t()) ::
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, :circuit_open}
+          | CalendarAPI.api_error()
+  def bootstrap_sync(%CalendarIntegrationSchema{} = integration) do
+    AccessToken.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
+      with {:ok, {events, delta_link}} <- fetch_initial_delta(token),
+           {:ok, calendar_events} <- normalise_delta_events(events, integration) do
+        cache_attrs =
+          Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
 
-  Requires `:webhook_base_url` to be configured in the `:tymeslot` application env.
+        with {:ok, _count} <- ProviderCalendarEventQueries.upsert_batch(cache_attrs) do
+          persist_subscription(integration, %{graph_delta_link: delta_link})
+        end
+      end
+    end)
+  end
+
+  @doc """
+  Creates a Microsoft Graph push subscription for the integration and persists
+  the subscription id, expiry, and client state. Requires `:webhook_base_url`.
+
+  Does **not** touch `graph_delta_link` — that's `bootstrap_sync/1`'s job.
   """
   @spec register(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()}
@@ -54,29 +86,19 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
 
     AccessToken.with_access_token(integration, &CalendarAPI.refresh_token/1, fn token ->
       with {:ok, subscription_attrs} <-
-             create_subscription(token, client_state, expiration, webhook_base_url),
-           {:ok, {events, delta_link}} <- fetch_initial_delta(token),
-           {:ok, calendar_events} <- normalise_delta_events(events, integration.id) do
-        cache_attrs =
-          Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
-
-        with {:ok, _count} <- ProviderCalendarEventQueries.upsert_batch(cache_attrs) do
-          persist_subscription(
-            integration,
-            Map.merge(subscription_attrs, %{
-              graph_delta_link: delta_link,
-              graph_client_state: client_state
-            })
-          )
-        end
+             create_subscription(token, client_state, expiration, webhook_base_url) do
+        persist_subscription(
+          integration,
+          Map.put(subscription_attrs, :graph_client_state, client_state)
+        )
       end
     end)
   end
 
-  defp normalise_delta_events(events, calendar_integration_id) do
+  defp normalise_delta_events(events, %CalendarIntegrationSchema{} = integration) do
     context = %{
-      calendar_integration_id: calendar_integration_id,
-      provider_calendar_id: nil,
+      calendar_integration_id: integration.id,
+      provider_calendar_id: integration.default_booking_calendar_id || "primary",
       synced_at: DateTime.utc_now(:microsecond)
     }
 

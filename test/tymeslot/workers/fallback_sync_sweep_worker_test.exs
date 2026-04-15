@@ -322,13 +322,18 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
   end
 
   describe "perform/1 - Outlook integration without delta link" do
-    test "calls register_graph_subscription to seed the integration" do
+    test "calls bootstrap_sync to seed the integration and then attempts subscription registration" do
       integration =
         insert(:calendar_integration,
           provider: "outlook",
           is_active: true,
           graph_delta_link: nil
         )
+
+      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn received ->
+        assert received.id == integration.id
+        {:ok, %{integration | graph_delta_link: "fresh-delta-link"}}
+      end)
 
       expect(OutlookCalendarAPIMock, :register_graph_subscription, fn _integration ->
         {:ok, integration}
@@ -337,17 +342,37 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       assert :ok = perform_job(FallbackSyncSweepWorker, %{})
     end
 
-    test "returns :ok and skips gracefully when WEBHOOK_BASE_URL is not configured" do
+    test "bootstrap_sync runs even when subscription registration is skipped without webhook URL" do
       insert(:calendar_integration,
         provider: "outlook",
         is_active: true,
         graph_delta_link: nil
       )
 
+      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn integration ->
+        {:ok, %{integration | graph_delta_link: "bootstrap-delta-link"}}
+      end)
+
       expect(OutlookCalendarAPIMock, :register_graph_subscription, fn _integration ->
         {:error, :webhook_base_url_not_configured}
       end)
 
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+    end
+
+    test "reports the integration as errored when bootstrap_sync itself fails" do
+      insert(:calendar_integration,
+        provider: "outlook",
+        is_active: true,
+        graph_delta_link: nil
+      )
+
+      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :circuit_open}
+      end)
+
+      # register_graph_subscription must NOT be called when bootstrap failed —
+      # Mox will raise if it is.
       assert :ok = perform_job(FallbackSyncSweepWorker, %{})
     end
   end

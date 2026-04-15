@@ -73,15 +73,19 @@ defmodule Tymeslot.Security.InputProcessor do
   def validate_field(value, type_or_module, opts \\ []) do
     metadata = Keyword.get(opts, :metadata, %{})
     universal_opts = Keyword.get(opts, :universal_opts, [])
+    field = Keyword.get(opts, :field, type_or_module)
     validator_module = resolve_validator(type_or_module)
 
-    with {:ok, sanitized} <- UniversalSanitizer.sanitize_and_validate(value, universal_opts),
+    universal_opts_with_field = Keyword.put(universal_opts, :field, field)
+
+    with {:ok, sanitized} <-
+           UniversalSanitizer.sanitize_and_validate(value, universal_opts_with_field),
          :ok <- validator_module.validate(sanitized, opts) do
-      SecurityLogger.log_successful_validation(:single_field, metadata)
+      SecurityLogger.log_successful_validation(field, metadata)
       {:ok, sanitized}
     else
       {:error, reason} ->
-        SecurityLogger.log_validation_failure(:single_field, reason, metadata)
+        SecurityLogger.log_validation_failure(field, reason, metadata)
         {:error, reason}
     end
   end
@@ -89,15 +93,17 @@ defmodule Tymeslot.Security.InputProcessor do
   # Private functions
 
   defp sanitize_all_fields(params, universal_opts, metadata) when is_map(params) do
-    sanitization_opts = Keyword.merge(universal_opts, metadata: metadata)
+    base_opts = Keyword.merge(universal_opts, metadata: metadata)
 
     Enum.reduce_while(params, {:ok, %{}}, fn {key, value}, {:ok, acc} ->
-      case UniversalSanitizer.sanitize_and_validate(value, sanitization_opts) do
+      field_key = safe_field_key(key)
+      opts_for_field = Keyword.put(base_opts, :field, field_key)
+
+      case UniversalSanitizer.sanitize_and_validate(value, opts_for_field) do
         {:ok, sanitized_value} ->
           {:cont, {:ok, Map.put(acc, key, sanitized_value)}}
 
         {:error, reason} ->
-          field_key = safe_field_key(key)
           SecurityLogger.log_validation_failure(field_key, reason, metadata)
           {:halt, {:error, %{field_key => reason}}}
       end

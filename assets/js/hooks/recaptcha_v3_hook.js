@@ -12,6 +12,15 @@ export const RecaptchaV3Hook = {
     this.paramRoot = this.el.dataset.recaptchaParamRoot || 'contact';
     this.currentToken = null;
     this.tokenRefreshTimer = null;
+    // Each reCAPTCHA v3 token is single-use. The form may re-submit if the
+    // first attempt errors (validation, slot conflict, transient failure), so
+    // we regenerate the token on every submit event. By the time LiveView
+    // re-renders the form with the error message, `currentToken` already
+    // holds a fresh, unused token and `updated()` writes it back into the
+    // hidden field — so the retry carries a different token and doesn't hit
+    // Google's "timeout-or-duplicate" rejection.
+    this.handleSubmit = () => this.fetchToken();
+    this.el.addEventListener('submit', this.handleSubmit);
     this.loadRecaptcha();
   },
 
@@ -25,6 +34,10 @@ export const RecaptchaV3Hook = {
   destroyed() {
     if (this.tokenRefreshTimer) {
       clearTimeout(this.tokenRefreshTimer);
+    }
+
+    if (this.handleSubmit) {
+      this.el.removeEventListener('submit', this.handleSubmit);
     }
   },
 

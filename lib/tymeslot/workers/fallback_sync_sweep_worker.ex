@@ -42,6 +42,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Integrations.HealthCheck.SyncGating
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
 
@@ -68,7 +69,8 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    by_provider = collect_integrations_by_provider()
+    paused_ids = SyncGating.paused_integration_ids(:calendar)
+    by_provider = drop_paused_integrations(collect_integrations_by_provider(), paused_ids)
 
     google_count = enqueue_batched(Map.get(by_provider, "google", []), SyncGoogleCalendarWorker)
 
@@ -116,6 +118,30 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     CalendarIntegrationQueries.stream_all_active(@batch_size, %{}, fn integration, acc ->
       Map.update(acc, integration.provider, [integration], &[integration | &1])
     end)
+  end
+
+  # Drop integrations whose health state indicates sustained hard failures
+  # (typically `invalid_grant` after a revoked token). They stay in the DB
+  # with `is_active = true` so the dashboard still shows them, but periodic
+  # sync stops hammering them until the next successful health check clears
+  # the failure counter — which will only happen after the user reauthorises.
+  defp drop_paused_integrations(by_provider, paused_ids) do
+    if MapSet.size(paused_ids) == 0 do
+      by_provider
+    else
+      Map.new(by_provider, fn {provider, integrations} ->
+        kept = Enum.reject(integrations, fn i -> MapSet.member?(paused_ids, i.id) end)
+
+        if length(kept) < length(integrations) do
+          Logger.info("Sync gating paused integrations in fallback sweep",
+            provider: provider,
+            paused_count: length(integrations) - length(kept)
+          )
+        end
+
+        {provider, kept}
+      end)
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -248,27 +274,48 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
     Application.get_env(:tymeslot, :outlook_calendar_api_module, OutlookCalendarAPI)
   end
 
+  # Seed path runs whenever an Outlook integration has no `graph_delta_link`.
+  # Uses `bootstrap_sync` so the delta baseline + cache land on every
+  # deployment — webhook subscription is a separate, opportunistic step that
+  # only fires when `webhook_base_url` is configured.
   defp seed_outlook_integration(integration) do
+    case outlook_calendar_api().bootstrap_sync(integration) do
+      {:ok, updated} ->
+        maybe_register_subscription(updated)
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "Outlook bootstrap delta fetch failed in fallback sweep",
+          calendar_integration_id: integration.id,
+          error: inspect(reason)
+        )
+
+        :error
+    end
+  end
+
+  defp maybe_register_subscription(integration) do
     case outlook_calendar_api().register_graph_subscription(integration) do
       {:ok, _updated} ->
         :ok
 
       {:error, :webhook_base_url_not_configured} ->
-        Logger.warning(
-          "Webhook base URL not configured; skipping Outlook delta seed in fallback sweep",
+        Logger.debug(
+          "Webhook base URL not configured; skipping Outlook subscription registration",
           calendar_integration_id: integration.id
         )
 
-        :error
+        :ok
 
       {:error, reason} ->
         Logger.warning(
-          "Failed to re-register Outlook Graph subscription in fallback sweep",
+          "Failed to register Outlook Graph subscription after bootstrap",
           calendar_integration_id: integration.id,
-          error: reason
+          error: inspect(reason)
         )
 
-        :error
+        :ok
     end
   end
 

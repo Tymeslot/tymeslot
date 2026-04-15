@@ -28,22 +28,28 @@ defmodule Tymeslot.Security.SecurityLogger do
   Logs blocked malicious input attempts.
 
   ## Parameters
-  - `field` - The input field or context (atom)
-  - `pattern_type` - Type of malicious pattern detected (string)
+  - `field` - The form/input field that matched (atom or string — e.g. `:name`, `:email`, `:message`)
+  - `check` - Which detection rule fired (string — e.g. `"sql_injection"`, `"path_traversal"`, `"dangerous_protocol"`)
   - `metadata` - Additional context (map)
 
   ## Examples
 
       SecurityLogger.log_blocked_input(:email, "sql_injection", %{ip: "192.168.1.1"})
-      SecurityLogger.log_blocked_input(:message, "xss_attempt", %{user_id: 123})
+      SecurityLogger.log_blocked_input(:message, "dangerous_protocol", %{user_id: 123})
+
+  The `field` is the specific form field whose value tripped the detection,
+  not the detection rule itself. When debugging a false-positive log line you
+  need both the form field (so you know where to look in the request) and
+  the check (so you know which regex fired) — this function carries them as
+  separate Logger metadata keys.
   """
-  @spec log_blocked_input(atom(), String.t(), security_metadata()) :: :ok
-  def log_blocked_input(field, pattern_type, metadata \\ %{}) do
+  @spec log_blocked_input(atom() | String.t(), String.t(), security_metadata()) :: :ok
+  def log_blocked_input(field, check, metadata \\ %{}) do
     sanitized_metadata = sanitize_metadata(metadata)
 
     Logger.warning("Malicious input blocked",
       field: field,
-      pattern_type: pattern_type,
+      check: check,
       ip_address: sanitized_metadata[:ip],
       user_id: sanitized_metadata[:user_id],
       user_agent: sanitized_metadata[:user_agent]

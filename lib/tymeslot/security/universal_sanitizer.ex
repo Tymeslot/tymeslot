@@ -44,11 +44,12 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     allow_html = Keyword.get(opts, :allow_html, false)
     log_events = Keyword.get(opts, :log_events, true)
     metadata = Keyword.get(opts, :metadata, %{})
+    field = Keyword.get(opts, :field, :unknown)
 
     with :ok <- validate_utf8(input, log_events, metadata),
          {:ok, bounded} <-
            enforce_max_input_bytes(input, max_input_bytes, on_too_long, log_events, metadata),
-         {:ok, sanitized} <- sanitize_input(bounded, allow_html, log_events, metadata),
+         {:ok, sanitized} <- sanitize_input(bounded, allow_html, log_events, field, metadata),
          {:ok, validated} <-
            validate_length(sanitized, max_length, on_too_long, log_events, metadata) do
       {:ok, String.trim(validated)}
@@ -167,14 +168,14 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     })
   end
 
-  defp sanitize_input(input, allow_html, log_events, metadata) do
+  defp sanitize_input(input, allow_html, log_events, field, metadata) do
     input
     |> decode_url_recursive(3)
     |> remove_null_bytes()
     |> sanitize_html(allow_html)
-    |> remove_sql_injection_patterns(log_events, metadata)
-    |> prevent_path_traversal(log_events, metadata)
-    |> remove_dangerous_protocols(log_events, metadata)
+    |> remove_sql_injection_patterns(log_events, field, metadata)
+    |> prevent_path_traversal(log_events, field, metadata)
+    |> remove_dangerous_protocols(log_events, field, metadata)
     |> then(&{:ok, &1})
   end
 
@@ -203,7 +204,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     String.replace(input, ~r/<[^>]*>/, "")
   end
 
-  defp remove_sql_injection_patterns(input, log_events, metadata) do
+  defp remove_sql_injection_patterns(input, log_events, field, metadata) do
     original = input
 
     sanitized =
@@ -223,13 +224,13 @@ defmodule Tymeslot.Security.UniversalSanitizer do
       |> recursive_replace(~r/(0x[0-9a-fA-F]+|CHAR\s*\(\s*\d+)/i, "")
 
     if log_events and sanitized != original do
-      SecurityLogger.log_blocked_input(:sql_injection, "pattern_removed", metadata)
+      SecurityLogger.log_blocked_input(field, "sql_injection", metadata)
     end
 
     sanitized
   end
 
-  defp prevent_path_traversal(input, log_events, metadata) do
+  defp prevent_path_traversal(input, log_events, field, metadata) do
     original = input
 
     sanitized =
@@ -244,7 +245,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
       |> recursive_replace(~r/%00|\\x00/, "")
 
     if log_events and sanitized != original do
-      SecurityLogger.log_blocked_input(:path_traversal, "pattern_removed", metadata)
+      SecurityLogger.log_blocked_input(field, "path_traversal", metadata)
     end
 
     sanitized
@@ -294,7 +295,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
     Enum.any?(dangerous_patterns, &Regex.match?(&1, path))
   end
 
-  defp remove_dangerous_protocols(input, log_events, metadata) do
+  defp remove_dangerous_protocols(input, log_events, field, metadata) do
     original = input
 
     sanitized =
@@ -306,7 +307,7 @@ defmodule Tymeslot.Security.UniversalSanitizer do
       |> recursive_replace(~r/base64[^,]*,/i, "")
 
     if log_events and sanitized != original do
-      SecurityLogger.log_blocked_input(:dangerous_protocol, "protocol_removed", metadata)
+      SecurityLogger.log_blocked_input(field, "dangerous_protocol", metadata)
     end
 
     sanitized

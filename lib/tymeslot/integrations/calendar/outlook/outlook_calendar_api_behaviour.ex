@@ -36,4 +36,8 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPIBehaviour do
               | {:error, :webhook_base_url_not_configured}
               | {:error, :circuit_open}
               | api_error()
+  @callback bootstrap_sync(CalendarIntegrationSchema.t()) ::
+              {:ok, CalendarIntegrationSchema.t()}
+              | {:error, :circuit_open}
+              | api_error()
 end

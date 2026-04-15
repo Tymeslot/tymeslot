@@ -278,6 +278,22 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPI do
     GraphSubscription.register(integration)
   end
 
+  @doc """
+  Performs the initial delta fetch for the integration, populating the cache
+  and seeding `graph_delta_link`. Works without a webhook URL — this is the
+  bootstrap path that lets self-hosted deployments sync correctly.
+
+  Delegates to `Tymeslot.Integrations.Calendar.Outlook.GraphSubscription.bootstrap_sync/1`.
+  """
+  @impl CalendarAPIBehaviour
+  @spec bootstrap_sync(CalendarIntegrationSchema.t()) ::
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, :circuit_open}
+          | api_error()
+  def bootstrap_sync(%CalendarIntegrationSchema{} = integration) do
+    GraphSubscription.bootstrap_sync(integration)
+  end
+
   @doc false
   @spec tymeslot_property_id() :: String.t()
   def tymeslot_property_id, do: @outlook_tymeslot_property_id

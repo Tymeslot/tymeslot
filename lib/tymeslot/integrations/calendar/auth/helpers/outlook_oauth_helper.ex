@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
@@ -60,10 +61,47 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
     with {:ok, %{user_id: user_id, integration_id: integration_id}} <- verify_state(state),
          {:ok, tokens} <- exchange_code_for_tokens(code, redirect_uri),
          {:ok, integration} <- create_calendar_integration(user_id, tokens, integration_id) do
+      seed_delta_async(integration)
       {:ok, integration}
     else
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  defp seed_delta_async(integration) do
+    Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+      case OutlookCalendarAPI.bootstrap_sync(integration) do
+        {:ok, _updated} ->
+          Logger.info("Outlook initial delta seeded after OAuth",
+            integration_id: integration.id
+          )
+
+        {:error, reason} ->
+          Logger.error("Outlook initial delta seed failed after OAuth",
+            integration_id: integration.id,
+            reason: inspect(reason)
+          )
+      end
+
+      case Application.get_env(:tymeslot, :webhook_base_url) do
+        nil ->
+          :ok
+
+        _url ->
+          case OutlookCalendarAPI.register_graph_subscription(integration) do
+            {:ok, _updated} ->
+              Logger.info("Outlook Graph subscription registered",
+                integration_id: integration.id
+              )
+
+            {:error, reason} ->
+              Logger.error("Outlook Graph subscription registration failed",
+                integration_id: integration.id,
+                reason: inspect(reason)
+              )
+          end
+      end
+    end)
   end
 
   @doc """
