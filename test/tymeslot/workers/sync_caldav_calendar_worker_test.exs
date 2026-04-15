@@ -538,9 +538,13 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
       assert "event-from-path1@test" in cached_uids
       assert "event-from-path2@test" in cached_uids
 
-      # Integration state: sync token cleared, last_full_sync_at set.
+      # Integration state: sync token cleared, last_full_sync_at set,
+      # and the detected tier is reset to nil so the next normal sync
+      # re-probes the server's capabilities (handles e.g. a server
+      # upgrade that enabled sync-collection support).
       reloaded = Repo.reload!(integration)
       assert is_nil(reloaded.caldav_sync_token)
+      assert is_nil(reloaded.caldav_sync_tier)
       assert not is_nil(reloaded.last_full_sync_at)
       assert not is_nil(reloaded.last_external_sync_at)
     end

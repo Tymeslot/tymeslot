@@ -155,9 +155,14 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           # do_full_fetch has already called persist_sync_state per path (without
           # the new options). Now write the force-specific fields in one final
           # update that takes precedence.
+          #
+          # Resetting caldav_sync_tier to nil triggers re-detection on the next
+          # normal sync. Tier detection is otherwise one-shot and would never
+          # notice a server upgrade that enables sync-collection support.
           persist_sync_state(integration,
             sync_token: nil,
-            last_full_sync_at: DateTime.utc_now(:second)
+            last_full_sync_at: DateTime.utc_now(:second),
+            sync_tier: nil
           )
 
           Logger.info("CalDAV forced full fetch completed",
@@ -444,6 +449,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       base_attrs
       |> maybe_put(opts, :sync_token, :caldav_sync_token)
       |> maybe_put(opts, :last_full_sync_at, :last_full_sync_at)
+      |> maybe_put(opts, :sync_tier, :caldav_sync_tier)
 
     case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
       {:ok, _updated} ->
