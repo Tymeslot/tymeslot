@@ -59,9 +59,12 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   @caldav_default_interval 900
   @max_delta_pages 100
 
-  # Forced full fetch: every 12 hours to recover events missed by Tier 1/2
-  # delta-based optimisations.
-  @forced_full_fetch_interval_seconds 12 * 3600
+  # Forced full fetch: every 24 hours to recover events missed by Tier 1/2
+  # delta-based optimisations. Was 12 hours before the reconcile transaction
+  # was made atomic (see SyncReconciler.process_full_fetch/6) — with the
+  # cache now guaranteed to commit cleanly, the safety-net cadence can be
+  # slower without increasing the risk of persistent drift.
+  @forced_full_fetch_interval_seconds 24 * 3600
 
   # Spread forced full-fetch jobs over the next 15 minutes to avoid thundering
   # herd on CalDAV servers.

@@ -157,8 +157,8 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       )
     end
 
-    test "enqueues force_full_fetch job when last_full_sync_at is older than 12 hours" do
-      stale = DateTime.add(DateTime.utc_now(), -13 * 3600, :second)
+    test "enqueues force_full_fetch job when last_full_sync_at is older than 24 hours" do
+      stale = DateTime.add(DateTime.utc_now(), -25 * 3600, :second)
 
       integration =
         insert(:calendar_integration,
@@ -178,7 +178,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       )
     end
 
-    test "does not enqueue force_full_fetch job when last_full_sync_at is within 12 hours" do
+    test "does not enqueue force_full_fetch job when last_full_sync_at is within 24 hours" do
       fresh = DateTime.add(DateTime.utc_now(), -3600, :second)
 
       integration =
