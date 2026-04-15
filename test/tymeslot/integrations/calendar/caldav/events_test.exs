@@ -281,6 +281,34 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                )
     end
 
+    test "uses supplied etag via opts and skips HEAD" do
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        assert conn.method == "PUT",
+               "update_calendar_event must not issue HEAD when etag is supplied (got #{conn.method})"
+
+        [if_match | _rest] = Conn.get_req_header(conn, "if-match")
+        assert if_match == "\"cached-etag\""
+
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      event_data = %{
+        summary: "Updated",
+        start_time: ~U[2026-02-24 10:00:00Z],
+        end_time: ~U[2026-02-24 11:00:00Z]
+      }
+
+      assert :ok =
+               Events.update_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "some-uid",
+                 event_data,
+                 etag: "\"cached-etag\"",
+                 skip_breaker: true
+               )
+    end
+
     test "returns error on 412 Precondition Failed (concurrent modification)" do
       ReqTest.stub(:tymeslot_http, fn conn ->
         case conn.method do

@@ -108,10 +108,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   @doc """
   Updates an existing event.
 
-  Fetches the current ETag via HEAD to enable a conditional `If-Match` write,
-  preventing lost updates when two parties edit the same event concurrently.
-  Falls back to `If-Match: *` if the HEAD request fails or times out, which
-  is safe but allows unconditional overwrite.
+  Uses a conditional `If-Match` write to prevent lost updates when two
+  parties edit the same event concurrently. The caller should supply the
+  cached ETag via `opts[:etag]`; when absent, the function falls back to a
+  HEAD probe, and finally to `If-Match: *` if HEAD also fails.
   """
   @spec update_calendar_event(Base.client(), String.t(), String.t(), map(), keyword()) ::
           :ok | {:error, Base.error_reason()}
@@ -119,7 +119,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     with_events_breaker(client, opts, fn ->
       url = event_url_from_data(client, calendar_path, uid, event_data)
       ical_data = ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
-      etag = fetch_current_etag(url, client, opts)
+      etag = resolve_etag(url, client, opts)
 
       base_put_opts =
         if etag, do: [operation: :update, if_match: etag], else: [operation: :update]
@@ -160,6 +160,16 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
       _missing ->
         UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
+    end
+  end
+
+  # Prefer the caller-supplied ETag (cached on provider_calendar_events.etag).
+  # Fall back to a HEAD probe only when the caller does not know the current
+  # ETag — typically for legacy paths or ad-hoc scripts.
+  defp resolve_etag(url, client, opts) do
+    case Keyword.get(opts, :etag) do
+      etag when is_binary(etag) and etag != "" -> etag
+      _missing -> fetch_current_etag(url, client, opts)
     end
   end
 

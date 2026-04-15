@@ -228,12 +228,16 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   @doc """
   Update an event by UID in the primary configured calendar.
+
+  `opts` may carry `:etag` (the caller's cached ETag for the event, used
+  directly as `If-Match` without a HEAD probe) and any options accepted by
+  `Events.update_calendar_event/5`.
   """
-  @spec update_event(caldav_client(), String.t(), map()) :: :ok | {:error, term()}
-  def update_event(client, uid, event_data) do
+  @spec update_event(caldav_client(), String.t(), map(), keyword()) :: :ok | {:error, term()}
+  def update_event(client, uid, event_data, opts \\ []) do
     case primary_calendar_path(client) do
       nil -> {:error, "Event not found"}
-      path -> Events.update_calendar_event(client, path, uid, event_data)
+      path -> Events.update_calendar_event(client, path, uid, event_data, opts)
     end
   end
 
