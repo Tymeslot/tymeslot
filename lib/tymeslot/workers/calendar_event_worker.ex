@@ -22,6 +22,7 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
     priority: 1
 
   alias Ecto.UUID
+  alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalendarEventBuilder
   alias Tymeslot.Meetings.MeetingQueries
   require Logger
@@ -107,12 +108,15 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
   defp handle_result(result, job) do
     case result do
       :ok ->
+        clear_offline_queue_tag(job)
         :ok
 
       {:error, error_type} ->
+        tag_for_offline_queue(job, error_type)
         handle_error_result(error_type, job)
 
       {:error, error_type, message} when is_binary(message) ->
+        tag_for_offline_queue(job, error_type)
         handle_error_result(error_type, job, message)
 
       {:discard, reason} ->
@@ -122,6 +126,41 @@ defmodule Tymeslot.Workers.CalendarEventWorker do
         handle_unexpected_result(result)
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Offline queue integration (CalDAV only)
+  # ---------------------------------------------------------------------------
+
+  # Errors that cannot be recovered by a later retry — tagging them would
+  # only keep a dead row in the queue forever.
+  @non_queueable_errors [:unauthorized, :not_found, :meeting_not_found, :rate_limited]
+
+  defp tag_for_offline_queue(_job, error_type) when error_type in @non_queueable_errors, do: :ok
+
+  defp tag_for_offline_queue(%Oban.Job{args: args}, _error_type) do
+    action = args["action"]
+    meeting_id = args["meeting_id"]
+
+    with {:ok, meeting} <- MeetingQueries.get_meeting(meeting_id),
+         action_atom when action_atom in [:create, :update, :delete] <- action_to_atom(action) do
+      event_data = CalendarEventBuilder.build_event_data(meeting)
+      QueueWiring.tag(meeting, action_atom, event_data)
+    else
+      _other -> :ok
+    end
+  end
+
+  defp clear_offline_queue_tag(%Oban.Job{args: args}) do
+    case MeetingQueries.get_meeting(args["meeting_id"]) do
+      {:ok, meeting} -> QueueWiring.clear(meeting, nil)
+      {:error, _reason} -> :ok
+    end
+  end
+
+  defp action_to_atom("create"), do: :create
+  defp action_to_atom("update"), do: :update
+  defp action_to_atom("delete"), do: :delete
+  defp action_to_atom(_other), do: nil
 
   # Group all handle_error_result/2 clauses together
   defp handle_error_result(:rate_limited, job) do

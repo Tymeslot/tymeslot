@@ -208,6 +208,41 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   @doc """
+  Upserts a row to tag it for the offline write queue.
+
+  Unlike `upsert_batch/1`, this helper also updates the queue-tracking
+  columns (`sync_state`, `sync_attempts`, `sync_last_attempt_at`,
+  `sync_last_error`) on conflict. Used exclusively by
+  `CalDAV.QueueWiring.tag/3` when a local write has failed and needs
+  to be replayed later — the caller's latest intent must take effect.
+
+  Regular server-sourced upserts go through `upsert_batch/1`, which
+  deliberately protects the queue-tracking columns to avoid clobbering
+  pending local changes with a fresh server-view sync.
+
+  Returns `{:ok, 1}` on success.
+  """
+  @spec upsert_queue_entry(map()) :: {:ok, 1}
+  def upsert_queue_entry(attrs) when is_map(attrs) do
+    now = DateTime.utc_now(:microsecond)
+
+    entry =
+      attrs
+      |> Map.put_new(:inserted_at, now)
+      |> Map.put(:updated_at, now)
+
+    {1, _rows} =
+      Repo.insert_all(
+        ProviderCalendarEventSchema,
+        [entry],
+        on_conflict: {:replace, queue_entry_replace_fields()},
+        conflict_target: [:calendar_integration_id, :uid]
+      )
+
+    {:ok, 1}
+  end
+
+  @doc """
   Lists cache rows with a pending local change for the given integration.
 
   Used by `OfflineQueue.flush/2` at the start of each sync cycle to
@@ -351,5 +386,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
       :raw_ical,
       :updated_at
     ]
+  end
+
+  # Queue-entry upserts update the same content columns as replace_fields/0
+  # PLUS the sync_state bookkeeping columns, because the caller
+  # (CalDAV.QueueWiring) is declaring a new local intent and the latest
+  # tag must win over any stale queue marker.
+  defp queue_entry_replace_fields do
+    replace_fields() ++
+      [:sync_state, :sync_attempts, :sync_last_attempt_at, :sync_last_error, :created_by_tymeslot]
   end
 end
