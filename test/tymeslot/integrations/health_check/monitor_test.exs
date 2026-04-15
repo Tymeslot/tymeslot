@@ -44,6 +44,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "resets failures and increments successes" do
       old_state = %{
         failures: 2,
+        consecutive_hard_failures: 0,
         successes: 0,
         last_check_at: nil,
         status: :degraded,
@@ -66,6 +67,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "sets status to healthy after 2 consecutive successes" do
       old_state = %{
         failures: 0,
+        consecutive_hard_failures: 0,
         successes: 1,
         last_check_at: DateTime.utc_now(),
         status: :degraded,
@@ -98,6 +100,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "preserves existing status" do
       old_state = %{
         failures: 1,
+        consecutive_hard_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :degraded,
@@ -118,6 +121,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "increments failures and resets successes" do
       old_state = %{
         failures: 0,
+        consecutive_hard_failures: 0,
         successes: 1,
         last_check_at: DateTime.utc_now(),
         status: :healthy,
@@ -139,6 +143,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "sets status to unhealthy after 3 consecutive hard failures" do
       old_state = %{
         failures: 2,
+        consecutive_hard_failures: 2,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :degraded,
@@ -160,6 +165,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
 
       old_state = %{
         failures: 3,
+        consecutive_hard_failures: 3,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :unhealthy,
@@ -180,6 +186,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "does not increment failures while backoff is below max" do
       old_state = %{
         failures: 0,
+        consecutive_hard_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :healthy,
@@ -198,6 +205,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "starts incrementing failures when backoff reaches max" do
       old_state = %{
         failures: 0,
+        consecutive_hard_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :healthy,
@@ -217,6 +225,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
     test "reaches unhealthy after sustained transient failures at max backoff" do
       old_state = %{
         failures: 2,
+        consecutive_hard_failures: 0,
         successes: 0,
         last_check_at: DateTime.utc_now(),
         status: :degraded,
