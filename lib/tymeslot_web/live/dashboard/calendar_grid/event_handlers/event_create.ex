@@ -6,7 +6,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
 
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Notifications.Orchestrator
   alias Tymeslot.Security.UniversalSanitizer
@@ -233,13 +235,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
   end
 
   @doc false
-  @spec run_create_event(map()) :: {:ok, map()} | {:error, term()}
+  @spec run_create_event(map()) :: {:ok, map()} | {:error, term(), map()}
   def run_create_event(payload) do
     %{creating: creating, user_id: user_id, start_at: start_at, end_at: end_at} = payload
+
+    # Generate the UID upfront so both the provider write AND the offline
+    # queue tag (on failure) reference the same identifier. CalDAV PUTs
+    # with a caller-supplied UID are addressed by that UID server-side,
+    # so a retry targets the same event.
+    uid = ICalBuilder.generate_uid()
 
     attendees = Enum.map(creating[:attendees] || [], fn email -> %{"email" => email} end)
 
     base_data = %{
+      uid: uid,
       summary: creating.title,
       start_time: start_at,
       end_time: end_at,
@@ -251,11 +260,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
     event_data =
       if attendees != [], do: Map.put(base_data, :attendees, attendees), else: base_data
 
-    result = EventOperations.create_event(event_data, {creating.integration_id, user_id})
+    case EventOperations.create_event(event_data, {creating.integration_id, user_id}) do
+      {:ok, created} ->
+        build_create_success(created, creating, user_id, start_at, end_at)
 
-    case result do
-      {:ok, created} -> build_create_success(created, creating, user_id, start_at, end_at)
-      {:error, reason} -> {:error, reason}
+      {:error, reason} ->
+        # Carry context so the LiveView can tag the cache row for offline
+        # retry. Use the pre-generated UID so a later retry reconciles to
+        # the same cache entry.
+        {:error, reason,
+         %{
+           uid: uid,
+           calendar_integration_id: creating.integration_id,
+           summary: creating.title,
+           start_time: start_at,
+           end_time: end_at,
+           location: creating[:location],
+           description: creating[:description]
+         }}
     end
   end
 
@@ -321,8 +343,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
   end
 
   @doc false
-  @spec handle_create_result({:ok, map()} | {:error, term()}, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
+  @spec handle_create_result(
+          {:ok, map()} | {:error, term()} | {:error, term(), map()},
+          Phoenix.LiveView.Socket.t()
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_create_result(
         {:ok,
          %{
@@ -357,7 +381,34 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
     {:noreply, socket}
   end
 
+  def handle_create_result({:error, _reason, context}, socket) when is_map(context) do
+    # For CalDAV integrations, tag a placeholder cache row so the next
+    # OfflineQueue flush retries the create. A :ok return means the row
+    # is queued; :ignored means the integration is non-CalDAV and has
+    # no offline queue support, so the failure is final.
+    meeting = %{
+      uid: context.uid,
+      calendar_integration_id: context.calendar_integration_id
+    }
+
+    queue_result = QueueWiring.tag(meeting, :create, context)
+
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :event_create_failed
+    )
+
+    flash_message =
+      case queue_result do
+        :ok -> "Create failed — queued to retry on next sync"
+        :ignored -> "Failed to create event"
+      end
+
+    {:noreply, put_flash(socket, :error, flash_message)}
+  end
+
   def handle_create_result({:error, _reason}, socket) do
+    # Fallback for contextless failures.
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :event_create_failed

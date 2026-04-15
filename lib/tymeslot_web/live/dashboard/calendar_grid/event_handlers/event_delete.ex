@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -73,24 +74,34 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   end
 
   @doc false
-  @spec run_delete_event(map()) :: {:ok, map()} | {:error, term()}
+  @spec run_delete_event(map()) :: {:ok, map()} | {:error, term(), map()}
   def run_delete_event(payload) do
     %{uid: uid, calendar_integration_id: integration_id, user_id: user_id} = payload
 
     opts =
       if payload[:provider_event_id], do: [provider_event_id: payload.provider_event_id], else: []
 
-    EventOperations.delete_event_and_reconcile(
-      uid,
-      payload[:provider_event_id],
-      {integration_id, user_id},
-      opts
-    )
+    case EventOperations.delete_event_and_reconcile(
+           uid,
+           payload[:provider_event_id],
+           {integration_id, user_id},
+           opts
+         ) do
+      {:ok, result} ->
+        {:ok, result}
+
+      {:error, reason} ->
+        # Carry the uid + integration_id into the failure branch so the
+        # LiveView can tag the cache row for offline retry.
+        {:error, reason, %{uid: uid, calendar_integration_id: integration_id}}
+    end
   end
 
   @doc false
-  @spec handle_delete_result({:ok, map()} | {:error, term()}, Phoenix.LiveView.Socket.t()) ::
-          {:noreply, Phoenix.LiveView.Socket.t()}
+  @spec handle_delete_result(
+          {:ok, map()} | {:error, term()} | {:error, term(), map()},
+          Phoenix.LiveView.Socket.t()
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_delete_result({:ok, %{uid: uid, integration_id: integration_id} = result}, socket) do
     CalendarGrid.delete_cached_event(integration_id, uid)
 
@@ -118,7 +129,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     {:noreply, socket}
   end
 
+  def handle_delete_result({:error, _reason, context}, socket) do
+    # For CalDAV integrations, tag the cache row so OfflineQueue.flush/2
+    # retries the delete on the next sync cycle. QueueWiring is a no-op
+    # for non-CalDAV providers, so this is safe to call unconditionally.
+    queue_result = QueueWiring.tag(context, :delete, %{})
+
+    send_update(CalendarGridComponent,
+      id: "calendar",
+      action: :event_delete_failed
+    )
+
+    flash_message =
+      case queue_result do
+        :ok -> "Delete failed — queued to retry on next sync"
+        :ignored -> "Failed to delete event"
+      end
+
+    {:noreply, put_flash(socket, :error, flash_message)}
+  end
+
   def handle_delete_result({:error, _reason}, socket) do
+    # Fallback: contextless failure (e.g. from tests or older call sites).
     send_update(CalendarGridComponent,
       id: "calendar",
       action: :event_delete_failed
