@@ -41,7 +41,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
       <%!-- Dashboard Grid --%>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <%!-- Upcoming Meetings --%>
-        <div class="card-glass h-full">
+        <div class="card-glass h-full min-w-0">
           <div class="flex items-center justify-between mb-8">
             <.section_header
               level={2}
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
         </div>
 
     <%!-- Quick Actions --%>
-        <div class="card-glass h-full">
+        <div class="card-glass h-full min-w-0">
           <.section_header
             level={2}
             title="Quick Actions"
@@ -142,7 +142,7 @@ defmodule TymeslotWeb.Dashboard.DashboardOverviewComponent do
 
   defp action_link(assigns) do
     ~H"""
-    <.link patch={@patch} class="block group">
+    <.link patch={@patch} class="block group min-w-0">
       <div class="flex items-center p-4 rounded-token-2xl bg-tymeslot-50/50 border-2 border-tymeslot-50 hover:bg-white hover:border-turquoise-100 hover:shadow-xl hover:shadow-turquoise-500/5 transition-all">
         <div class="flex-shrink-0 mr-4">
           <div class={["w-12 h-12 rounded-token-xl flex items-center justify-center transition-all shadow-sm", @color_class]}>
