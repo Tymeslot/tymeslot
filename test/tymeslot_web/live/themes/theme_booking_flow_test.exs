@@ -365,6 +365,64 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
     end
   end
 
+  describe "meeting types ordering" do
+    for {theme_id, meta} <- @themes do
+      @tag :capture_log
+      test "preserves user-configured sort_order on the overview step with #{meta.name} theme",
+           %{conn: conn} do
+        user = insert(:user)
+
+        profile =
+          insert(:profile,
+            user: user,
+            username: "order-#{unquote(meta.name)}",
+            booking_theme: unquote(theme_id),
+            timezone: "America/New_York",
+            advance_booking_days: 30,
+            min_advance_hours: 0,
+            buffer_minutes: 0
+          )
+
+        _integration = insert(:calendar_integration, user: user, is_active: true)
+
+        insert(:meeting_type,
+          user: user,
+          name: "Zebra Session",
+          duration_minutes: 45,
+          sort_order: 0,
+          is_active: true
+        )
+
+        insert(:meeting_type,
+          user: user,
+          name: "Alpha Session",
+          duration_minutes: 15,
+          sort_order: 1,
+          is_active: true
+        )
+
+        insert(:meeting_type,
+          user: user,
+          name: "Middle Session",
+          duration_minutes: 30,
+          sort_order: 2,
+          is_active: true
+        )
+
+        {:ok, _view, html} = live(conn, ~p"/#{profile.username}?timezone=America/New_York")
+
+        rendered_slugs =
+          html
+          |> Floki.parse_document!()
+          |> Floki.find("button[data-testid='duration-option']")
+          |> Enum.map(&Floki.attribute(&1, "data-duration"))
+          |> List.flatten()
+
+        assert rendered_slugs == ["zebra-session", "alpha-session", "middle-session"]
+      end
+    end
+  end
+
   describe "meeting cancel flow (feature-level)" do
     for {theme_id, meta} <- @themes do
       @tag :capture_log

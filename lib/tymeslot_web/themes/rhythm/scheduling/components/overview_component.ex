@@ -16,12 +16,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.OverviewComponent do
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
     filtered_assigns = Map.drop(assigns, [:flash, :socket])
-
-    # Sort meeting types alphabetically using natural sort (numbers compare numerically)
-    sorted_meeting_types =
-      LocalizationHelpers.sort_meeting_types(Map.get(filtered_assigns, :meeting_types))
-
-    {:ok, assign(socket, Map.put(filtered_assigns, :meeting_types, sorted_meeting_types))}
+    {:ok, assign(socket, filtered_assigns)}
   end
 
   @impl Phoenix.LiveComponent

@@ -260,40 +260,5 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
     gettext("%{hour_text} %{minute_text}", hour_text: hour_text, minute_text: minute_text)
   end
 
-  @doc """
-  Sorts meeting types alphabetically using natural sort so numeric prefixes
-  (e.g. "15 min", "30 min") are ordered numerically rather than lexicographically.
-  """
-  @spec sort_meeting_types(list()) :: list()
-  def sort_meeting_types(meeting_types) when is_list(meeting_types) do
-    Enum.sort_by(meeting_types, fn mt -> natural_key(meeting_title(mt)) end)
-  end
-
-  def sort_meeting_types(other), do: other
-
-  defp natural_key(string) do
-    normalized = String.downcase(String.trim(string))
-
-    Enum.map(Regex.scan(~r/\d+|\D+/u, normalized), fn [seg] ->
-      if String.match?(seg, ~r/^\d+$/) do
-        {:num, String.to_integer(seg)}
-      else
-        {:str, seg}
-      end
-    end)
-  end
-
-  defp meeting_title(%{name: name, duration_minutes: duration}) do
-    trimmed = String.trim(name)
-    if trimmed != "", do: trimmed, else: "#{duration} minutes"
-  end
-
-  defp meeting_title(%{name: name}) do
-    trimmed = String.trim(name)
-    if trimmed != "", do: trimmed, else: "Untitled"
-  end
-
-  defp meeting_title(_other), do: "Untitled"
-
   defp parse_date(date) when is_binary(date), do: Date.from_iso8601(date)
 end
