@@ -9,9 +9,16 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
   alias Tymeslot.Security.{InputProcessor, UniversalSanitizer}
   alias Tymeslot.Validation.Constraints
 
+  # See IntegrationNameValidator for the rationale behind this character set.
+  @invisible_chars ~r/[\x{200B}-\x{200F}\x{2028}-\x{202F}\x{205F}-\x{206F}\x{FEFF}\x{00AD}]/u
+
   @spec validate_integration_name(String.t()) :: {:ok, String.t()} | {:error, %{name: String.t()}}
   def validate_integration_name(name) when is_binary(name) do
-    cleaned = String.trim(name)
+    cleaned =
+      name
+      |> String.trim()
+      |> String.replace(@invisible_chars, "")
+
     range = Constraints.integration_name_length_range()
 
     cond do
@@ -45,8 +52,11 @@ defmodule Tymeslot.Integrations.Shared.InputValidators do
            universal_opts: [allow_html: false],
            metadata: metadata
          ) do
-      {:ok, sanitized} -> {:ok, String.trim(sanitized)}
-      {:error, reason} -> {:error, %{name: reason}}
+      {:ok, sanitized} ->
+        {:ok, sanitized |> String.trim() |> String.replace(@invisible_chars, "")}
+
+      {:error, reason} ->
+        {:error, %{name: reason}}
     end
   end
 

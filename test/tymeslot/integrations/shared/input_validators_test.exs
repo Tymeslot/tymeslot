@@ -42,6 +42,17 @@ defmodule Tymeslot.Integrations.Shared.InputValidatorsTest do
     test "rejects empty name with metadata" do
       assert {:error, %{name: _error}} = InputValidators.validate_integration_name("", %{})
     end
+
+    test "strips leading zero-width space and returns clean value" do
+      # U+200B is a Unicode Cf-category character that String.trim/1 does not remove.
+      assert {:ok, "Gmail"} = InputValidators.validate_integration_name("\u200BGmail", %{})
+    end
+
+    test "rejects a name that is only invisible characters" do
+      # After stripping U+200B and U+200C the value is empty — too short to be valid.
+      assert {:error, %{name: _error}} =
+               InputValidators.validate_integration_name("\u200B\u200C", %{})
+    end
   end
 
   describe "normalize_url_protocol/1" do

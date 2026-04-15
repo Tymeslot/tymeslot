@@ -40,7 +40,7 @@ defmodule Tymeslot.Security.Encryption do
   def decrypt(nil), do: nil
 
   @spec decrypt(binary()) :: binary() | nil
-  def decrypt(encrypted) when is_binary(encrypted) and byte_size(encrypted) > 28 do
+  def decrypt(encrypted) when is_binary(encrypted) and byte_size(encrypted) >= 28 do
     secret_key = get_secret_key()
 
     # Extract components

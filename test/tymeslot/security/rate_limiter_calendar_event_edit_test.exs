@@ -37,4 +37,22 @@ defmodule Tymeslot.Security.RateLimiterCalendarEventEditTest do
                RateLimiter.check_calendar_event_edit_rate_limit(-1)
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # check_calendar_webhook_rate_limit/1 — rejects non-positive integration ids
+  # ---------------------------------------------------------------------------
+
+  describe "check_calendar_webhook_rate_limit/1" do
+    test "allows valid integration id" do
+      assert :ok = RateLimiter.check_calendar_webhook_rate_limit(42_001)
+    end
+
+    test "rejects id=0, negative, and non-integer values instead of sharing a bucket" do
+      for bad <- [0, -1, nil, "abc", 1.5] do
+        assert {:error, :rate_limited} =
+                 RateLimiter.check_calendar_webhook_rate_limit(bad),
+               "expected #{inspect(bad)} to be rejected"
+      end
+    end
+  end
 end

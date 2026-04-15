@@ -51,6 +51,21 @@ defmodule Tymeslot.Security.SecurityTest do
       assert {:error, "Time outside business hours"} =
                Security.validate_business_hours(time, "UTC")
     end
+
+    test "rescues unexpected exceptions and logs a warning" do
+      import ExUnit.CaptureLog
+
+      # Passing a non-Time value as the first argument causes DateTime.new/3 to
+      # raise a FunctionClauseError (it pattern-matches on %Time{}), exercising
+      # the rescue branch that surfaces timezone-fuzzing attempts in the security log.
+      log =
+        capture_log(fn ->
+          assert {:error, "Time validation failed"} =
+                   Security.validate_business_hours("not_a_time", "UTC")
+        end)
+
+      assert log =~ "validate_business_hours"
+    end
   end
 
   describe "validate_calendar_access/2" do

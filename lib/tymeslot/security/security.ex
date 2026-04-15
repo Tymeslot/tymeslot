@@ -188,7 +188,15 @@ defmodule Tymeslot.Security.Security do
           {:error, "Invalid time"}
       end
     rescue
-      _exception -> {:error, "Time validation failed"}
+      exception ->
+        # Log the exception so timezone-fuzzing enumeration is visible —
+        # the caller still gets a generic error message.
+        Logger.warning("validate_business_hours raised",
+          error: inspect(exception),
+          kind: exception.__struct__
+        )
+
+        {:error, "Time validation failed"}
     end
   end
 

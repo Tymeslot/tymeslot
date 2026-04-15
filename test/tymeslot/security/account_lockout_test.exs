@@ -162,6 +162,51 @@ defmodule Tymeslot.Security.AccountLockoutTest do
       assert AccountLockout.get_failed_attempt_count(email_a) == 15
       assert AccountLockout.get_failed_attempt_count(email_b) == 3
     end
+
+    test "identifier case variants share one counter" do
+      base = "case_#{System.unique_integer([:positive])}@example.com"
+      upper = String.upcase(base)
+      mixed = String.capitalize(base)
+
+      on_exit(fn -> AccountLockout.clear_failed_attempts(base) end)
+
+      for _i <- 1..5, do: AccountLockout.check_and_record_attempt(base, false)
+      for _i <- 1..5, do: AccountLockout.check_and_record_attempt(upper, false)
+      for _i <- 1..5, do: AccountLockout.check_and_record_attempt(mixed, false)
+
+      assert AccountLockout.get_failed_attempt_count(base) == 15
+      assert AccountLockout.get_failed_attempt_count(upper) == 15
+      assert AccountLockout.get_failed_attempt_count(mixed) == 15
+    end
+
+    test "clearing via one case variant clears all variants" do
+      base = "clear_#{System.unique_integer([:positive])}@example.com"
+
+      for _i <- 1..5, do: AccountLockout.check_and_record_attempt(base, false)
+      assert AccountLockout.get_failed_attempt_count(base) == 5
+
+      :ok = AccountLockout.clear_failed_attempts(String.upcase(base))
+      assert AccountLockout.get_failed_attempt_count(base) == 0
+    end
+
+    test "whitespace-padded variants share one counter with the canonical form" do
+      base = "ws_#{System.unique_integer([:positive])}@example.com"
+      leading = " #{base}"
+      trailing = "#{base} "
+      both = "  #{String.upcase(base)}  "
+
+      on_exit(fn -> AccountLockout.clear_failed_attempts(base) end)
+
+      for _i <- 1..3, do: AccountLockout.check_and_record_attempt(base, false)
+      for _i <- 1..3, do: AccountLockout.check_and_record_attempt(leading, false)
+      for _i <- 1..3, do: AccountLockout.check_and_record_attempt(trailing, false)
+      for _i <- 1..3, do: AccountLockout.check_and_record_attempt(both, false)
+
+      assert AccountLockout.get_failed_attempt_count(base) == 12
+      assert AccountLockout.get_failed_attempt_count(leading) == 12
+      assert AccountLockout.get_failed_attempt_count(trailing) == 12
+      assert AccountLockout.get_failed_attempt_count(both) == 12
+    end
   end
 
   describe "concurrent writes" do

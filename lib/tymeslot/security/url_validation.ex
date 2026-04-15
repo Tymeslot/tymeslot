@@ -3,6 +3,10 @@ defmodule Tymeslot.Security.UrlValidation do
   Shared HTTP/HTTPS URL validation helpers for security-sensitive inputs.
   """
 
+  import Bitwise, only: [band: 2, bsr: 2]
+
+  alias Tymeslot.Security.PrivateIPv4
+
   @default_invalid_message "Must be a valid HTTP or HTTPS URL (e.g., https://example.com)"
   @default_length_error "URL must be 2000 characters or less"
   @default_scheme_error "Only HTTP and HTTPS URLs are allowed"
@@ -78,110 +82,89 @@ defmodule Tymeslot.Security.UrlValidation do
   defp run_extra_checks(fun, context) when is_function(fun, 1), do: fun.(context)
 
   defp local_or_private_host?(host) do
-    host == "localhost" or
-      String.starts_with?(host, [
-        "127.",
-        "10.",
-        "192.168.",
-        "169.254.",
-        "172.16.",
-        "172.17.",
-        "172.18.",
-        "172.19.",
-        "172.20.",
-        "172.21.",
-        "172.22.",
-        "172.23.",
-        "172.24.",
-        "172.25.",
-        "172.26.",
-        "172.27.",
-        "172.28.",
-        "172.29.",
-        "172.30.",
-        "172.31."
-      ]) or
-      ipv6_local_or_private?(host)
-  end
+    host = String.downcase(host)
 
-  defp ipv6_local_or_private?(host) do
-    # Normalize to lowercase for case-insensitive comparison
-    # This prevents SSRF bypass via uppercase IPv6 addresses (e.g., FE80::1)
-    host_lower = String.downcase(host)
-
-    # Strip zone ID if present (e.g., %eth0, %1)
-    # Zone IDs are used for link-local addresses and indicate network interface
-    host_without_zone = host_lower |> String.split("%") |> hd()
-
-    # Check for IPv6 localhost and private ranges
-    # ::1 (localhost), fe80::/10 (link-local), fc00::/7 (unique local)
-    # Also check for IPv4-mapped IPv6 addresses (::ffff:x.x.x.x)
     cond do
-      # IPv4-mapped IPv6 addresses (::ffff:x.x.x.x)
-      # Critical: Prevents SSRF bypass via ::ffff:169.254.169.254 (AWS metadata)
-      String.contains?(host_without_zone, "::ffff:") ->
-        ipv4_mapped_is_private?(host_without_zone)
-
-      # IPv6 localhost
-      host_without_zone in ["::1", "[::1]"] ->
-        true
-
-      # IPv6 link-local (fe80::/10)
-      String.starts_with?(host_without_zone, ["fe80:", "[fe80:"]) ->
-        true
-
-      # IPv6 unique local addresses (fc00::/7)
-      # This includes fc00: through fdff:
-      ipv6_unique_local?(host_without_zone) ->
-        true
-
-      true ->
-        false
+      host == "localhost" -> true
+      ambiguous_numeric_host?(host) -> true
+      ipv4_tuple_private?(host) -> true
+      ipv6_local_or_private?(host) -> true
+      true -> false
     end
   end
 
-  defp ipv6_unique_local?(host) do
-    # Unique local addresses are fc00::/7
-    # This means the first 7 bits are 1111110, which includes:
-    # - fc (11111100) - fc00: through fcff:
-    # - fd (11111101) - fd00: through fdff:
-    String.starts_with?(host, ["fc", "[fc", "fd", "[fd"])
+  # Parse canonical dotted IPv4 via Erlang and check numerically.
+  # Catches 127.0.0.1, 10.0.0.0, etc. even when they aren't caught by a
+  # string prefix (e.g., 0.0.0.0 bound to all interfaces).
+  defp ipv4_tuple_private?(host) do
+    case :inet.parse_strict_address(to_charlist(host)) do
+      {:ok, {_a, _b, _c, _d} = tuple} -> PrivateIPv4.private?(tuple)
+      _other -> false
+    end
   end
 
-  defp ipv4_mapped_is_private?(host) do
-    # Extract IPv4 address from ::ffff:x.x.x.x format
-    # Handles both [::ffff:x.x.x.x] and ::ffff:x.x.x.x
-    # Note: Regex matches format but doesn't validate octets are ≤255.
-    # This is acceptable because Elixir's URI parser will reject invalid IPs,
-    # and invalid addresses would fail connection anyway.
-    case Regex.run(~r/::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/, host) do
-      [_full_match, ipv4] ->
-        # Check if the IPv4 part is localhost or private
-        ipv4 == "127.0.0.1" or
-          String.starts_with?(ipv4, [
-            "127.",
-            "10.",
-            "192.168.",
-            "169.254.",
-            "172.16.",
-            "172.17.",
-            "172.18.",
-            "172.19.",
-            "172.20.",
-            "172.21.",
-            "172.22.",
-            "172.23.",
-            "172.24.",
-            "172.25.",
-            "172.26.",
-            "172.27.",
-            "172.28.",
-            "172.29.",
-            "172.30.",
-            "172.31."
-          ])
+  # Non-canonical numeric hostnames are resolved inconsistently by HTTP
+  # clients — 2130706433, 0x7f000001, 0177.0.0.1, and 127.1 all reach
+  # 127.0.0.1 in most stacks. We cannot know what each client will do,
+  # so treat any numeric-looking host that isn't canonical dotted IPv4
+  # as unsafe under block_private_ips.
+  defp ambiguous_numeric_host?(host) do
+    cond do
+      # Pure decimal integer (e.g. 2130706433).
+      Regex.match?(~r/^\d+$/, host) -> true
+      # Hex segment anywhere (e.g. 0x7f000001 or 0x7f.0x0.0x0.0x1).
+      Regex.match?(~r/(^|\.)0x/i, host) -> true
+      # Octal leading zero with dots (e.g. 0177.0.0.1).
+      Regex.match?(~r/^0\d+\./, host) -> true
+      # Dotted shorthand with fewer than 4 all-numeric parts (e.g. 127.1).
+      numeric_shorthand?(host) -> true
+      true -> false
+    end
+  end
 
-      _no_match ->
+  defp numeric_shorthand?(host) do
+    parts = String.split(host, ".")
+
+    length(parts) in [2, 3] and
+      Enum.all?(parts, &Regex.match?(~r/^\d+$/, &1))
+  end
+
+  defp ipv6_local_or_private?(host) do
+    # host is already lowercased by local_or_private_host?/1.
+    # Strip brackets (e.g. [::1] → ::1) and zone ID (e.g. fe80::1%eth0 → fe80::1).
+    bare =
+      host
+      |> String.trim_leading("[")
+      |> String.trim_trailing("]")
+      |> String.split("%")
+      |> hd()
+
+    case :inet.parse_strict_address(to_charlist(bare)) do
+      {:ok, {0, 0, 0, 0, 0, 0, 0, 1}} ->
+        # ::1 loopback
+        true
+
+      {:ok, {0, 0, 0, 0, 0, 0xFFFF, hi, lo}} ->
+        # IPv4-mapped ::ffff:x.x.x.x — classify the embedded IPv4 numerically
+        a = bsr(hi, 8)
+        b = band(hi, 0xFF)
+        c = bsr(lo, 8)
+        d = band(lo, 0xFF)
+        PrivateIPv4.private?({a, b, c, d})
+
+      {:ok, {s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} when band(s1, 0xFFC0) == 0xFE80 ->
+        # fe80::/10 link-local
+        true
+
+      {:ok, {s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} when band(s1, 0xFE00) == 0xFC00 ->
+        # fc00::/7 unique local
+        true
+
+      {:ok, _tuple} ->
+        false
+
+      {:error, _reason} ->
+        # Not a parseable IPv6 literal — it's a domain name; let DNS resolution handle it
         false
     end
   end

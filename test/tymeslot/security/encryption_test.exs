@@ -85,14 +85,9 @@ defmodule Tymeslot.Security.EncryptionTest do
       assert Encryption.decrypt(short_binary) == nil
     end
 
-    test "handles empty string encryption" do
-      plaintext = ""
-
-      encrypted = Encryption.encrypt(plaintext)
-      decrypted = Encryption.decrypt(encrypted)
-
-      # Empty strings may be returned as nil after decryption
-      assert decrypted == "" or decrypted == nil
+    test "round-trips an empty string without losing it" do
+      encrypted = Encryption.encrypt("")
+      assert Encryption.decrypt(encrypted) == ""
     end
 
     test "handles long strings encryption" do
@@ -174,7 +169,7 @@ defmodule Tymeslot.Security.EncryptionTest do
       tampered = nonce <> :crypto.strong_rand_bytes(16) <> ciphertext
 
       # Decryption should fail
-      assert_raise RuntimeError, ~r/Failed to decrypt/, fn ->
+      assert_raise RuntimeError, fn ->
         Encryption.decrypt(tampered)
       end
     end

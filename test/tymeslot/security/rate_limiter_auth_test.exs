@@ -27,6 +27,46 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
       assert {:error, :rate_limited, _msg} = RateLimiter.check_auth_rate_limit(email_a, nil)
       assert :ok = RateLimiter.check_auth_rate_limit(email_b, nil)
     end
+
+    test "case variants of the same email share one bucket" do
+      base = "case-bucket-#{System.unique_integer([:positive])}@example.com"
+      upper = String.upcase(base)
+      mixed = String.capitalize(base)
+
+      # 10 allowed attempts split across three case variants should hit the
+      # limit on the 11th, proving they all share one bucket.
+      for email <- [base, upper, mixed, base, upper, mixed, base, upper, mixed, base] do
+        assert :ok = RateLimiter.check_auth_rate_limit(email, nil)
+      end
+
+      assert {:error, :rate_limited, _msg} = RateLimiter.check_auth_rate_limit(upper, nil)
+    end
+
+    test "whitespace-padded variants share one bucket with the canonical form" do
+      base = "ws-bucket-#{System.unique_integer([:positive])}@example.com"
+      leading = " #{base}"
+      trailing = "#{base} "
+      padded_upper = "  #{String.upcase(base)}  "
+
+      # 10 attempts spread across padded variants should exhaust the budget.
+      for email <- [
+            base,
+            leading,
+            trailing,
+            padded_upper,
+            base,
+            leading,
+            trailing,
+            padded_upper,
+            base,
+            leading
+          ] do
+        assert :ok = RateLimiter.check_auth_rate_limit(email, nil)
+      end
+
+      assert {:error, :rate_limited, _msg} =
+               RateLimiter.check_auth_rate_limit(trailing, nil)
+    end
   end
 
   describe "check_auth_rate_limit/2 — IP bucket" do
@@ -100,6 +140,26 @@ defmodule Tymeslot.Security.RateLimiterAuthTest do
 
       RateLimiter.record_auth_attempt(email, false)
       assert AccountLockout.get_failed_attempt_count(email) == 2
+    end
+  end
+
+  describe "case-normalisation across record/check boundary" do
+    # Attempts are recorded via Authentication using the DB-lowercased email, but
+    # check_auth receives the raw user-submitted value. Verify that a mixed-case
+    # submission is still blocked when enough failures were recorded under the
+    # lowercase form.
+    test "mixed-case check_auth is blocked when failures were recorded lowercase" do
+      base = "lockout-case-#{System.unique_integer([:positive])}@example.com"
+      mixed_case = String.upcase(base)
+
+      on_exit(fn -> AccountLockout.clear_failed_attempts(base) end)
+
+      # Simulate the server-side recording path (uses the DB-normalised email).
+      for _i <- 1..20, do: RateLimiter.record_auth_attempt(base, false)
+
+      # The attacker now tries with the original mixed-case value.
+      assert {:error, :rate_limited, message} = RateLimiter.check_auth_rate_limit(mixed_case, nil)
+      assert message =~ "locked"
     end
   end
 end

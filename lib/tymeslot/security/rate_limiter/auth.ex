@@ -31,14 +31,18 @@ defmodule Tymeslot.Security.RateLimiter.Auth do
 
   @spec check_auth(String.t(), String.t() | nil) :: :ok | {:error, :rate_limited, String.t()}
   def check_auth(email, ip \\ nil) do
-    with :ok <- AccountLockout.check_lockout_status(email),
+    # Normalise so whitespace-padded and case-variant emails share one bucket,
+    # preventing " User@X.com " / "user@x.com" bypasses of the login limit.
+    downcased_email = email |> String.trim() |> String.downcase()
+
+    with :ok <- AccountLockout.check_lockout_status(downcased_email),
          :ok <-
            Helpers.check_with_logging(
-             "login:#{email}",
+             "login:#{downcased_email}",
              10,
              1_800_000,
              "authentication",
-             email
+             downcased_email
            ),
          :ok <- check_auth_ip_bucket(ip) do
       :ok

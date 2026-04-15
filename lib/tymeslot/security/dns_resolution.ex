@@ -10,6 +10,8 @@ defmodule Tymeslot.Security.DnsResolution do
   use `Tymeslot.Security.UrlValidation` with `block_private_ips: true`.
   """
 
+  alias Tymeslot.Security.PrivateIPv4
+
   @default_error "URL resolves to a private or local network address"
 
   @spec check_private_ip(String.t(), keyword()) :: :ok | {:error, String.t()}
@@ -46,24 +48,29 @@ defmodule Tymeslot.Security.DnsResolution do
 
   defp ipv4_private?(host_charlist) do
     case :inet.getaddr(host_charlist, :inet) do
-      {:ok, {127, _b, _c, _d}} -> true
-      {:ok, {10, _b, _c, _d}} -> true
-      {:ok, {172, b, _c, _d}} when b >= 16 and b <= 31 -> true
-      {:ok, {192, 168, _c, _d}} -> true
-      {:ok, {169, 254, _c, _d}} -> true
-      {:ok, {0, 0, 0, 0}} -> true
+      {:ok, tuple} -> PrivateIPv4.private?(tuple)
       _other -> false
     end
   end
 
   defp ipv6_private?(host_charlist) do
     case :inet.getaddr(host_charlist, :inet6) do
-      {:ok, {0, 0, 0, 0, 0, 0, 0, 1}} -> true
-      {:ok, {0xFE80, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} -> true
-      {:ok, {0xFC00, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} -> true
-      {:ok, {0xFD00, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} -> true
-      {:ok, {0, 0, 0, 0, 0, 0xFFFF, hi, lo}} -> ipv4_mapped_private?(hi, lo)
-      _other -> false
+      {:ok, {0, 0, 0, 0, 0, 0, 0, 1}} ->
+        true
+
+      # fe80::/10 — link-local (first hextet 0xFE80..0xFEBF)
+      {:ok, {s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} when Bitwise.band(s1, 0xFFC0) == 0xFE80 ->
+        true
+
+      # fc00::/7 — unique local (first hextet 0xFC00..0xFDFF)
+      {:ok, {s1, _s2, _s3, _s4, _s5, _s6, _s7, _s8}} when Bitwise.band(s1, 0xFE00) == 0xFC00 ->
+        true
+
+      {:ok, {0, 0, 0, 0, 0, 0xFFFF, hi, lo}} ->
+        ipv4_mapped_private?(hi, lo)
+
+      _other ->
+        false
     end
   end
 

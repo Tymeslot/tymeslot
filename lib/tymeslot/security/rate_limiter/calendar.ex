@@ -34,9 +34,12 @@ defmodule Tymeslot.Security.RateLimiter.Calendar do
 
   def check_event_move(user_id), do: Helpers.invalid_user_id("calendar event move", user_id)
 
-  @spec check_webhook(integer()) :: :ok | {:error, :rate_limited}
+  @spec check_webhook(integer() | any()) :: :ok | {:error, :rate_limited}
   def check_webhook(id) when is_integer(id) and id > 0,
     do: Helpers.check_rate_limit("calendar_webhook:#{id}", 60, 60_000)
 
+  # Reject 0, negative, non-integer, and nil ids rather than collapsing
+  # them into a shared `calendar_webhook:0` bucket that any caller could
+  # hammer through.
   def check_webhook(_id), do: {:error, :rate_limited}
 end

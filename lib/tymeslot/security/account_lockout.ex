@@ -35,8 +35,9 @@ defmodule Tymeslot.Security.AccountLockout do
   end
 
   def check_and_record_attempt(identifier, false) do
-    GenServer.call(__MODULE__, {:record_failed_attempt, identifier})
-    check_lockout_status(identifier)
+    key = normalize(identifier)
+    GenServer.call(__MODULE__, {:record_failed_attempt, key})
+    check_lockout_status(key)
   end
 
   @doc """
@@ -44,8 +45,10 @@ defmodule Tymeslot.Security.AccountLockout do
   """
   @spec check_lockout_status(String.t()) :: :ok | {:error, atom(), String.t()}
   def check_lockout_status(identifier) do
-    case :ets.lookup(@lockout_table, identifier) do
-      [{^identifier, attempts}] ->
+    key = normalize(identifier)
+
+    case :ets.lookup(@lockout_table, key) do
+      [{^key, attempts}] ->
         now = System.system_time(:second)
 
         # Filter attempts from last hour for lockout calculation
@@ -79,7 +82,7 @@ defmodule Tymeslot.Security.AccountLockout do
   """
   @spec clear_failed_attempts(String.t()) :: :ok
   def clear_failed_attempts(identifier) do
-    :ets.delete(@lockout_table, identifier)
+    :ets.delete(@lockout_table, normalize(identifier))
     :ok
   end
 
@@ -88,8 +91,10 @@ defmodule Tymeslot.Security.AccountLockout do
   """
   @spec get_failed_attempt_count(String.t()) :: integer()
   def get_failed_attempt_count(identifier) do
-    case :ets.lookup(@lockout_table, identifier) do
-      [{^identifier, attempts}] ->
+    key = normalize(identifier)
+
+    case :ets.lookup(@lockout_table, key) do
+      [{^key, attempts}] ->
         now = System.system_time(:second)
         # Count attempts from last 24 hours
         recent_attempts =
@@ -113,6 +118,11 @@ defmodule Tymeslot.Security.AccountLockout do
   end
 
   # Private functions
+
+  # Lockout keys are normalised so attackers cannot reset the counter by
+  # varying the case (user@x.com vs USER@x.com) or padding with whitespace.
+  defp normalize(identifier) when is_binary(identifier),
+    do: identifier |> String.trim() |> String.downcase()
 
   defp do_record_failed_attempt(identifier) do
     now = System.system_time(:second)

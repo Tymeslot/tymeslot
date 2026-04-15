@@ -120,12 +120,18 @@ defmodule Tymeslot.Security.SecurityLogger do
 
   @doc """
   Logs a general security event with structured metadata.
+
+  If `details[:email]` is present it is masked before logging so no raw
+  email (PII) reaches Logger sinks or the monitoring webhook.
   """
   @spec log_security_event(String.t(), event_metadata()) :: :ok
   def log_security_event(event_type, details \\ %{}) do
+    masked_email = mask_email(details[:email])
+
     Logger.info("Security event",
       event_type: event_type,
       user_id: details[:user_id],
+      email_masked: masked_email,
       ip_address: details[:ip_address],
       user_agent: details[:user_agent],
       session_id: details[:session_id]
@@ -136,6 +142,7 @@ defmodule Tymeslot.Security.SecurityLogger do
       send_to_monitoring_service(%{
         event_type: event_type,
         user_id: details[:user_id],
+        email_masked: masked_email,
         ip_address: details[:ip_address],
         user_agent: details[:user_agent],
         session_id: details[:session_id],
@@ -145,6 +152,24 @@ defmodule Tymeslot.Security.SecurityLogger do
 
     :ok
   end
+
+  # Mask an email so it is useful for correlating events without leaking
+  # the full address. "john.doe@example.com" -> "j***@example.com".
+  # Anything that isn't a parseable email is dropped entirely.
+  @spec mask_email(term()) :: String.t() | nil
+  defp mask_email(nil), do: nil
+
+  defp mask_email(email) when is_binary(email) do
+    case email |> String.trim() |> String.downcase() |> String.split("@", parts: 2) do
+      [local, domain] when local != "" and domain != "" ->
+        "#{String.first(local)}***@#{domain}"
+
+      _other ->
+        nil
+    end
+  end
+
+  defp mask_email(_other), do: nil
 
   @doc """
   Logs authentication attempts with success/failure details.

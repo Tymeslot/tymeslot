@@ -386,5 +386,93 @@ defmodule Tymeslot.Security.UrlValidationTest do
                  private_ip_error_message: "No local URLs"
                )
     end
+
+    test "rejects 0.0.0.0 (bound to all interfaces)" do
+      assert {:error, "Private or local network addresses are not allowed"} =
+               UrlValidation.validate_http_url("http://0.0.0.0/admin", @private_ip_opts)
+    end
+
+    test "rejects alternate IPv4 notations that resolve to private addresses" do
+      # Decimal (2130706433 == 127.0.0.1), hex, octal, dotted shorthand.
+      # HTTP clients resolve these inconsistently — treat any non-canonical
+      # numeric host as unsafe when private IPs are blocked.
+      for url <- [
+            "http://2130706433/",
+            "http://0x7f000001/",
+            "http://0x7f.0x0.0x0.0x1/",
+            "http://0177.0.0.1/",
+            "http://127.1/",
+            "http://127.0.1/"
+          ] do
+        assert {:error, "Private or local network addresses are not allowed"} =
+                 UrlValidation.validate_http_url(url, @private_ip_opts),
+               "expected #{url} to be rejected"
+      end
+    end
+
+    test "still allows canonical dotted public IPv4 addresses" do
+      assert :ok = UrlValidation.validate_http_url("https://8.8.8.8/hook", @private_ip_opts)
+      assert :ok = UrlValidation.validate_http_url("https://1.1.1.1/hook", @private_ip_opts)
+    end
+
+    test "rejects LOCALHOST regardless of case" do
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://LOCALHOST/", @private_ip_opts)
+
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://LocalHost/", @private_ip_opts)
+
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://LOCALHOST/", @private_ip_opts)
+    end
+
+    test "rejects full fe80::/10 link-local range (not just fe80: prefix)" do
+      # fe80::/10 covers 0xFE80–0xFEBF in the first hextet
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://[fe80::1]/", @private_ip_opts)
+
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://[fe90::1]/", @private_ip_opts)
+
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://[fea0::1]/", @private_ip_opts)
+
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://[feb0::1]/", @private_ip_opts)
+    end
+
+    test "rejects full fc00::/7 unique-local range (fc and fd blocks)" do
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://[fc00::1]/", @private_ip_opts)
+
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://[fcab::1]/", @private_ip_opts)
+
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://[fd12::1]/", @private_ip_opts)
+
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://[fdff::1]/", @private_ip_opts)
+    end
+
+    test "rejects IPv6 loopback and IPv4-mapped loopback" do
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://[::1]/", @private_ip_opts)
+
+      assert {:error, _reason} =
+               UrlValidation.validate_http_url("http://[::ffff:127.0.0.1]/", @private_ip_opts)
+    end
+
+    test "does not over-block real domain names with fc/fd/fe prefix" do
+      # These are valid public domain names, not IPv6 addresses
+      assert :ok = UrlValidation.validate_http_url("https://fcc.gov/", @private_ip_opts)
+      assert :ok = UrlValidation.validate_http_url("https://fd-bakery.com/", @private_ip_opts)
+    end
+
+    test "does not over-block real domain names that start with IPv4-like prefixes" do
+      # These are valid public domain names, not private IPs
+      assert :ok = UrlValidation.validate_http_url("http://10.com/", @private_ip_opts)
+      assert :ok = UrlValidation.validate_http_url("http://127.net/", @private_ip_opts)
+    end
   end
 end
