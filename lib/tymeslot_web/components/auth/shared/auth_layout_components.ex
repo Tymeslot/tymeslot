@@ -38,7 +38,7 @@ defmodule TymeslotWeb.Shared.Auth.LayoutComponents do
     <%= if Config.logo_links_to_marketing?() do %>
       <a
         href={Config.site_home_path()}
-        class="flex fixed top-6 left-6 items-center px-6 py-3 text-base font-bold bg-gradient-to-br from-turquoise-600 to-cyan-600 text-white rounded-token-2xl shadow-lg shadow-turquoise-500/20 hover:from-turquoise-700 hover:to-cyan-700 hover:-translate-y-1 hover:shadow-xl hover:shadow-turquoise-500/40 transition-glass duration-300 group z-50"
+        class="hidden sm:flex fixed top-6 left-6 items-center px-6 py-3 text-base font-bold bg-gradient-to-br from-turquoise-600 to-cyan-600 text-white rounded-token-2xl shadow-lg shadow-turquoise-500/20 hover:from-turquoise-700 hover:to-cyan-700 hover:-translate-y-1 hover:shadow-xl hover:shadow-turquoise-500/40 transition-glass duration-300 group z-50"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
