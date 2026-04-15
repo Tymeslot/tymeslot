@@ -1,5 +1,25 @@
 
+[0.100.1]
+* core: Add consecutive_hard_failures to monitor test state fixtures
+* core: Rename bare _ bindings to _upserted in sync sweep worker test
+* core: Address deep review findings for Outlook sync bootstrap refactor
+* core: Decouple Outlook sync bootstrap from push subscription and land cache/security cleanups
+* saas: Populate start_time/end_time on quoted-TZID audit scenario
+* core: Handle DST transitions in convert_to_utc and expand TZID coverage
+* core: Strip quoted TZID and normalise provider timezones (closes #38)
+* core: Align booking conflict check with canonical blocking predicate
+* core: Harden security module against edge-case bypasses
+* core: Honour configured meeting type order on public booking page
+* core: Normalise provider to atom in CalDAV health check client
+* Resolve umbrella root from RELEASE_ROOT in runtime config
+* core: Stop entity-encoding plain-text fields in UniversalSanitizer
+* core: Prevent Quick Actions card overflow on mobile dashboard
+* core: Prevent logo and user dropdown overlap on mobile dashboard
+* core: Hide back-to-website button on mobile auth pages
+* saas: Audit quoted TZID handling in calendar_audit
 [0.100.0]
+* Install node_modules before building assets in umbrella Docker image
+* core: Install node_modules before building assets in Docker
 * core: Unbreak dashboard event creation async result path
 * core: Redirect to /dashboard after onboarding and update e2e test for 7-step flow
 * core: Wire password toggle hook on every auth form and give each a unique id

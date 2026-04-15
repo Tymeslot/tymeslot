@@ -1,5 +1,5 @@
 {
-  "stable": "0.100.0",
+  "stable": "0.100.1",
   "versions": {
     "0.100.0": {
       "creationDate": "Tue, 14 Apr 2026 14:41:13 GMT",
@@ -46,6 +46,52 @@
       },
       "publishState": "published",
       "ts": "Tue, 14 Apr 2026 14:41:13 GMT"
+    },
+    "0.100.1": {
+      "creationDate": "Wed, 15 Apr 2026 20:13:06 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* core: Add consecutive_hard_failures to monitor test state fixtures\n* core: Rename bare _ bindings to _upserted in sync sweep worker test\n* core: Address deep review findings for Outlook sync bootstrap refactor\n* core: Decouple Outlook sync bootstrap from push subscription and land cache/security cleanups\n* saas: Populate start_time/end_time on quoted-TZID audit scenario\n* core: Handle DST transitions in convert_to_utc and expand TZID coverage\n* core: Strip quoted TZID and normalise provider timezones (closes #38)\n* core: Align booking conflict check with canonical blocking predicate\n* core: Harden security module against edge-case bypasses\n* core: Honour configured meeting type order on public booking page\n* core: Normalise provider to atom in CalDAV health check client\n* Resolve umbrella root from RELEASE_ROOT in runtime config\n* core: Stop entity-encoding plain-text fields in UniversalSanitizer\n* core: Prevent Quick Actions card overflow on mobile dashboard\n* core: Prevent logo and user dropdown overlap on mobile dashboard\n* core: Hide back-to-website button on mobile auth pages\n* saas: Audit quoted TZID handling in calendar_audit",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:0.100.1",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "0.100.1",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Wed, 15 Apr 2026 20:13:06 GMT"
     },
     "0.99.24": {
       "creationDate": "Thu, 12 Mar 2026 09:57:44 GMT",
