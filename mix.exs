@@ -12,7 +12,10 @@ defmodule Tymeslot.MixProject do
       aliases: aliases(),
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
-      dialyzer: [ignore_warnings: ".dialyzer_ignore.exs"],
+      dialyzer: [
+        ignore_warnings: ".dialyzer_ignore.exs",
+        plt_add_apps: [:mix]
+      ],
       releases: [
         tymeslot: [
           applications: [tymeslot: :permanent]
