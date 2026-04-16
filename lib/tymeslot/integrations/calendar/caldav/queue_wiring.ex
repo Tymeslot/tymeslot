@@ -57,7 +57,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
 
   def tag(%{calendar_integration_id: integration_id} = meeting, action, event_data) do
     with {:ok, integration} <- fetch_integration(integration_id),
-         true <- caldav_provider?(integration) do
+         true <- caldav_provider?(integration),
+         [_ | _] <- integration.calendar_paths || [] do
       attrs = build_attrs(meeting, integration, action, event_data)
       _result = ProviderCalendarEventQueries.upsert_queue_entry(attrs)
 
