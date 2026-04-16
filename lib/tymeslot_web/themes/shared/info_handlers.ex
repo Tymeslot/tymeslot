@@ -18,10 +18,16 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_calendar_events_updated(socket) do
     socket =
-      socket
-      |> assign(:available_slots, nil)
-      |> assign(:selected_time, nil)
-      |> Helpers.fetch_month_availability_async()
+      case socket.assigns[:current_state] do
+        state when state in [:overview, :schedule, nil] ->
+          socket
+          |> assign(:available_slots, nil)
+          |> assign(:selected_time, nil)
+          |> Helpers.fetch_month_availability_async()
+
+        _committed ->
+          Helpers.fetch_month_availability_async(socket)
+      end
 
     {:noreply, socket}
   end

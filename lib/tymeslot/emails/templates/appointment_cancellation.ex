@@ -88,7 +88,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
       #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type}, organizer_locale(appointment_details))}
 
-      #{Text.system_footer_note(dgettext("emails", "Your calendar has been updated to reflect this cancellation."))}
       #{Text.system_footer_note(dgettext("emails", "The attendee has been notified of the cancellation."))}
       """
 
@@ -166,7 +165,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
     #{dgettext("emails", "CANCELLED APPOINTMENT DETAILS:")}
     #{meeting_details}#{attendee_info}
 
-    #{dgettext("emails", "Your calendar has been updated to reflect this cancellation.")}
     #{dgettext("emails", "The attendee has been notified of the cancellation.")}
     """
   end
