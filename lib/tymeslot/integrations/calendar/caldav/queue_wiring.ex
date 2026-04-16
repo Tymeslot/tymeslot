@@ -116,12 +116,6 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
     atom in ProviderConfig.caldav_based_providers()
   end
 
-  defp caldav_provider?(%{provider: provider}) when is_atom(provider) do
-    provider in ProviderConfig.caldav_based_providers()
-  end
-
-  defp caldav_provider?(_other), do: false
-
   defp build_attrs(meeting, integration, action, event_data) do
     now = DateTime.utc_now(:microsecond)
     sync_state = sync_state_for(action)
@@ -131,7 +125,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
       uid: meeting.uid,
       calendar_integration_id: integration.id,
       provider: integration.provider,
-      provider_calendar_id: List.first(integration.calendar_paths || []),
+      provider_calendar_id: List.first(integration.calendar_paths),
       summary: event_data[:summary] || event_data["summary"],
       description: event_data[:description] || event_data["description"],
       location: event_data[:location] || event_data["location"],

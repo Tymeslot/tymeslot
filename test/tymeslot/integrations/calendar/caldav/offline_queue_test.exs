@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
   @moduletag :integrations
   @moduletag :unit
 
+  alias Ecto.Adapters.SQL
   alias Plug.Conn
   alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalDAV.OfflineQueue
@@ -191,13 +192,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       newer = insert_pending_row(integration, uid: "newer", sync_state: "locally_created")
 
       # Force an ordering difference independent of insert order
-      Ecto.Adapters.SQL.query!(
+      SQL.query!(
         Repo,
         "UPDATE provider_calendar_events SET updated_at = $1 WHERE id = $2",
         [~U[2026-04-14 00:00:00.000000Z], older.id]
       )
 
-      Ecto.Adapters.SQL.query!(
+      SQL.query!(
         Repo,
         "UPDATE provider_calendar_events SET updated_at = $1 WHERE id = $2",
         [~U[2026-04-15 00:00:00.000000Z], newer.id]
