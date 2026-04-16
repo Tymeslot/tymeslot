@@ -96,6 +96,16 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       end
 
       @impl Phoenix.LiveView
+      def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket) do
+        InfoHandlers.handle_calendar_events_updated(socket)
+      end
+
+      @impl Phoenix.LiveView
+      def handle_info({:calendar_sync_complete, _user_id, _integration_id}, socket) do
+        InfoHandlers.handle_calendar_events_updated(socket)
+      end
+
+      @impl Phoenix.LiveView
       def handle_info(:close_dropdown, socket), do: InfoHandlers.handle_close_dropdown(socket)
 
       @impl Phoenix.LiveView
