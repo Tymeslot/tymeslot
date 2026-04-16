@@ -1,4 +1,9 @@
 
+[0.100.3]
+* core: Add local icon path to manifest and use boolean stable field
+* core: Populate empty 0.99.32 changelog and correct install URL
+* core: Remove dead nil guard and fix bare underscore patterns in CalDAV queue wiring
+* core: Add :mix to child app Dialyzer PLT
 [0.100.2]
 * core: Guard against nil calendar_paths in CalDAV queue wiring
 * core: Retain etag in provider_metadata for CalDAV events
