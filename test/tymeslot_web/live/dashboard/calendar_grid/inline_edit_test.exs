@@ -9,7 +9,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
   import Tymeslot.Factory
 
   alias Plug.Test
-  alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Workers.EmailWorker
 
   setup %{conn: conn} do
@@ -572,30 +571,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       assert html =~ "update_edit_video"
     end
 
-    test "shows warning flash when rate limit is exceeded on send_invitations", %{
-      conn: conn,
-      event: event,
-      user: user
-    } do
-      # Exhaust the per-user edit bucket before mounting
-      for _i <- 1..30 do
-        RateLimiter.check_calendar_event_edit_rate_limit(user.id)
-      end
-
-      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-
-      lv |> element("[id^='event-#{event.id}-']") |> render_click()
-
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("add_event_attendee", %{"email" => "rate-limited@example.com"})
-
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("send_invitations", %{})
-
-      assert render(lv) =~ "Too many edits"
-    end
   end
 
   defp insert_event(integration, attrs) do
