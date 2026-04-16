@@ -12,7 +12,8 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
   overlap, allowing us to verify that only ONE refresh actually occurs.
   """
 
-  # async: false because we use set_mox_global()
+  # async: false because this test intentionally uses Process.sleep to create
+  # timing windows for concurrency testing, which would slow down async test workers.
   use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
@@ -23,11 +24,6 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   setup :verify_on_exit!
-
-  setup do
-    set_mox_global()
-    :ok
-  end
 
   describe "token refresh concurrency" do
     test "Google Meet token refresh is only called once even with multiple concurrent requests" do
@@ -75,13 +71,28 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
          }}
       end)
 
-      # Start 10 concurrent requests
+      parent = self()
+
+      # Start 10 concurrent requests, then allow each task to use the parent's mocks
+      # before signalling them to proceed — avoids the need for set_mox_global().
+      barrier = make_ref()
+
       tasks =
         for _i <- 1..10 do
           Task.async(fn ->
+            receive do
+              {^barrier, :go} -> :ok
+            end
+
             Rooms.create_meeting_room(user.id, integration_id: integration.id)
           end)
         end
+
+      for task <- tasks do
+        Mox.allow(Tymeslot.GoogleOAuthHelperMock, parent, task.pid)
+        Mox.allow(Tymeslot.HTTPClientMock, parent, task.pid)
+        send(task.pid, {barrier, :go})
+      end
 
       # Wait for all to finish
       results = Task.await_many(tasks, 5000)
@@ -146,13 +157,25 @@ defmodule Tymeslot.Integrations.Video.TokenRefreshConcurrencyTest do
          }}
       end)
 
-      # Start 10 concurrent requests
+      parent = self()
+      barrier = make_ref()
+
       tasks =
         for _i <- 1..10 do
           Task.async(fn ->
+            receive do
+              {^barrier, :go} -> :ok
+            end
+
             Rooms.create_meeting_room(user.id, integration_id: integration.id)
           end)
         end
+
+      for task <- tasks do
+        Mox.allow(Tymeslot.TeamsOAuthHelperMock, parent, task.pid)
+        Mox.allow(Tymeslot.HTTPClientMock, parent, task.pid)
+        send(task.pid, {barrier, :go})
+      end
 
       # Wait for all to finish
       results = Task.await_many(tasks, 5000)
