@@ -519,7 +519,7 @@
           "sendmail": {}
         },
         "author": "Luka Karsten Breitig",
-        "changelog": "",
+        "changelog": "* core: Resolve WebSocket and OAuth failures on Cloudron deployment\n* core: Check max length against trimmed name in meeting type validation\n* core: Strengthen clear_calendar_references test isolation\n* core: Harden meeting types edge cases — booking validation, reorder integrity, input guards\n* themes: Scope container margin removal to modal embed mode only\n* core: Add @deprecated attrs, non-raising profile lookup, duration guard\n* core: Harden availability edge cases — IDOR protection, cache invalidation, input guards\n* core: Point tzdata at writable directory on Cloudron",
         "contactEmail": "hello@tymeslot.app",
         "description": "A meeting scheduler application with CalDAV integration",
         "dockerImage": "luka1thb/tymeslot-cloudron:0.99.32",

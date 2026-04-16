@@ -36,7 +36,7 @@ Install via Cloudron's [community package system](https://forum.cloudron.io/topi
 2. Click **Install via URL**
 3. Paste the following URL:
    ```
-   https://raw.githubusercontent.com/Tymeslot/tymeslot/main/apps/tymeslot/CloudronVersions.json
+   https://raw.githubusercontent.com/Tymeslot/tymeslot/main/CloudronVersions.json
    ```
 4. Choose a location (e.g. `tymeslot.yourdomain.com`) and click **Install**
 
