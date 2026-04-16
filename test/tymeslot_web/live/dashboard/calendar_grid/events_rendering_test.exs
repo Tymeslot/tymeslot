@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
 
   alias Plug.Test
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Profiles
 
   setup %{conn: conn} do
@@ -503,6 +504,83 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       # Open the event detail modal — empty attendees list must not crash
       html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
       assert html =~ "Solo Meeting"
+    end
+  end
+
+  describe "async create failure with CalDAV offline queue" do
+    test "tags cache row for retry and shows queued flash", %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          is_active: true,
+          provider: "caldav",
+          calendar_paths: ["/cal/"]
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      uid = "offline-create-#{System.unique_integer([:positive])}"
+
+      send(
+        lv.pid,
+        {:create_event_result,
+         {:error, :server_error,
+          %{
+            uid: uid,
+            calendar_integration_id: integration.id,
+            summary: "Offline Create",
+            start_time: DateTime.new!(Date.utc_today(), ~T[14:00:00], "Etc/UTC"),
+            end_time: DateTime.new!(Date.utc_today(), ~T[15:00:00], "Etc/UTC"),
+            location: nil,
+            description: nil,
+            timezone: "Etc/UTC"
+          }}}
+      )
+
+      html = render(lv)
+      assert html =~ "queued to retry on next sync"
+
+      assert {:ok, cached} = ProviderCalendarEventQueries.get_by_uid(integration.id, uid)
+      assert cached.sync_state == "locally_created"
+      assert cached.summary == "Offline Create"
+    end
+  end
+
+  describe "async delete failure with CalDAV offline queue" do
+    test "tags cache row for retry and shows queued flash", %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          is_active: true,
+          provider: "caldav",
+          calendar_paths: ["/cal/"]
+        )
+
+      event =
+        insert_event(integration, %{
+          uid: "offline-delete-#{System.unique_integer([:positive])}",
+          summary: "Offline Delete",
+          start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
+          all_day: false,
+          provider: "caldav",
+          provider_calendar_id: "/cal/"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      # The delete error path passes the context directly (uid + calendar_integration_id)
+      context = %{uid: event.uid, calendar_integration_id: integration.id}
+
+      send(lv.pid, {:delete_event_result, {:error, :server_error, context}})
+
+      html = render(lv)
+      assert html =~ "queued to retry on next sync"
+
+      assert {:ok, cached} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, event.uid)
+
+      assert cached.sync_state == "locally_deleted"
     end
   end
 
