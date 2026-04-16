@@ -106,7 +106,7 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
            CalendarGrid.get_cached_event(integration_id, event_uid),
          {:ok, changes} <- compute_changes(current_event, args),
          false <- changes == [] do
-      details = build_update_details(user, current_event, changes)
+      details = build_update_details(user, current_event, changes, args)
 
       results =
         Enum.map(args["attendee_emails"], fn email ->
@@ -232,11 +232,15 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
     end
   end
 
+  defp parse_method("cancel"), do: :cancel
+  defp parse_method("request"), do: :request
+  defp parse_method(_other), do: :request
+
   defp normalise_blank(nil), do: nil
   defp normalise_blank(""), do: nil
   defp normalise_blank(val), do: val
 
-  defp build_update_details(user, current_event, changes) do
+  defp build_update_details(user, current_event, changes, args) do
     duration = DateTime.diff(current_event.end_at, current_event.start_at, :minute)
 
     %{
@@ -250,7 +254,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
       description: current_event.description,
       organizer_name: user.name || user.email,
       organizer_email: user.email,
-      changes: changes
+      changes: changes,
+      method: parse_method(args["method"]),
+      sequence: args["sequence"]
     }
   end
 

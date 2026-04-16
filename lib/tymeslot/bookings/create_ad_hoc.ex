@@ -12,6 +12,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.CalendarJobs
+  alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Profiles.ProfileQueries
@@ -143,19 +144,33 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
   end
 
   defp schedule_notifications(meeting) do
-    case Events.meeting_created(meeting) do
-      {:ok, _result} ->
-        :ok
+    result =
+      case Events.meeting_created(meeting) do
+        {:ok, _result} ->
+          :ok
 
-      {:error, reason} ->
-        Logger.error("Failed to schedule notifications for ad-hoc meeting",
-          meeting_id: meeting.id,
-          error: inspect(reason)
-        )
+        {:error, reason} ->
+          Logger.error("Failed to schedule notifications for ad-hoc meeting",
+            meeting_id: meeting.id,
+            error: inspect(reason)
+          )
 
-        :ok
-    end
+          :ok
+      end
+
+    # After event creation, also route the attendee-facing calendar invitation
+    # through AttendeeNotifications so last_notified_state / ical_sequence are
+    # initialised correctly.
+    {:ok, _job} = AttendeeNotifications.event_created(meeting, attendees_for(meeting))
+
+    result
   end
+
+  defp attendees_for(%{attendee_email: email}) when is_binary(email) and email != "" do
+    [%{email: email}]
+  end
+
+  defp attendees_for(_meeting), do: []
 
   defp map_result({:ok, meeting}), do: {:ok, meeting}
   defp map_result({:error, reason}) when is_binary(reason), do: {:error, reason}

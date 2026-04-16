@@ -190,3 +190,27 @@ SELECT 'seed-evt-null-status@example.com',
        NOW(),
        NOW(),
        NOW();
+
+-- Regression: add_attendee_notification_tracking backfill must survive rows
+-- where every field the backfill references is NULL or degenerate. title,
+-- description, location are all NULL (so the rename migration leaves summary
+-- NULL too); start_at equals end_at (zero-duration); attendees contains one
+-- entry with whitespace-padded email to prove to_jsonb(attendees) copes with
+-- any valid jsonb array content. The backfill uses COALESCE(to_jsonb(col),
+-- 'null'::jsonb) on every scalar column, so NULLs must become JSON null and
+-- not raise.
+INSERT INTO calendar_events (uid, calendar_integration_id, calendar_path, title, description, location, start_at, end_at, all_day, attendees, status, synced_at, inserted_at, updated_at)
+SELECT 'seed-evt-attnotif-adversarial@example.com',
+       (SELECT id FROM calendar_integrations WHERE name = 'CalDAV Server 1' LIMIT 1),
+       '/calendars/user1/default/',
+       NULL,
+       NULL,
+       NULL,
+       TIMESTAMP '2099-12-31 23:59:59',
+       TIMESTAMP '2099-12-31 23:59:59',
+       false,
+       ARRAY['{"email":"  dirty@example.com  ","name":null}'::jsonb],
+       'confirmed',
+       NOW(),
+       NOW(),
+       NOW();

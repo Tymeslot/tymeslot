@@ -40,7 +40,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModalTest do
         time_format: "24h",
         myself: %Phoenix.LiveComponent.CID{cid: 1},
         editable: false,
-        attendee_input: ""
+        attendee_input: "",
+        video_integrations: []
       },
       overrides
     )
@@ -192,6 +193,60 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModalTest do
       )
 
     assert html =~ "Created by Tymeslot"
+  end
+
+  describe "video integration selector" do
+    @video_integration %{id: 42, provider: "mirotalk", name: "Team Video"}
+
+    test "renders selector in editable mode when video integrations are available" do
+      html =
+        render_component(
+          &EventDetailModal.event_detail_modal/1,
+          base_assigns(%{editable: true, video_integrations: [@video_integration]})
+        )
+
+      assert html =~ "Video"
+      assert html =~ "Team Video"
+      assert html =~ "None"
+      assert html =~ "update_edit_video"
+    end
+
+    test "hides selector when no video integrations are available" do
+      html =
+        render_component(
+          &EventDetailModal.event_detail_modal/1,
+          base_assigns(%{editable: true, video_integrations: []})
+        )
+
+      refute html =~ "update_edit_video"
+    end
+
+    test "hides selector in read-only mode" do
+      html =
+        render_component(
+          &EventDetailModal.event_detail_modal/1,
+          base_assigns(%{editable: false, video_integrations: [@video_integration]})
+        )
+
+      refute html =~ "update_edit_video"
+    end
+
+    test "marks the currently selected integration as active" do
+      event = Map.put(@event, :video_integration_id, 42)
+
+      html =
+        render_component(
+          &EventDetailModal.event_detail_modal/1,
+          base_assigns(%{
+            editable: true,
+            selected_event: event,
+            video_integrations: [@video_integration]
+          })
+        )
+
+      # The active button has the turquoise-400 border class.
+      assert html =~ "border-turquoise-400"
+    end
   end
 
   test "does not show 'Created by Tymeslot' badge when created_by_tymeslot is false" do

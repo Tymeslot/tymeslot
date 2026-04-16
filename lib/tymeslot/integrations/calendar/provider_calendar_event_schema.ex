@@ -56,6 +56,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
           sync_last_attempt_at: DateTime.t() | nil,
           sync_last_error: String.t() | nil,
           created_by_tymeslot: boolean(),
+          ical_sequence: integer(),
+          last_notified_state: map(),
+          video_link: String.t() | nil,
+          video_integration_id: integer() | nil,
+          video_integration:
+            Tymeslot.Integrations.Video.VideoIntegrationSchema.t()
+            | Ecto.Association.NotLoaded.t()
+            | nil,
           calendar_integration:
             CalendarIntegrationSchema.t()
             | Ecto.Association.NotLoaded.t(),
@@ -119,7 +127,18 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     field :sync_last_attempt_at, :utc_datetime_usec
     field :sync_last_error, :string
 
+    # Notification tracking
+    field :ical_sequence, :integer, default: 0
+    field :last_notified_state, :map, default: %{}
+
+    # Video conferencing
+    field :video_link, :string
+
     belongs_to :calendar_integration, CalendarIntegrationSchema
+
+    belongs_to :video_integration,
+               Tymeslot.Integrations.Video.VideoIntegrationSchema,
+               type: :id
 
     timestamps()
   end
@@ -157,7 +176,11 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema do
     :sync_attempts,
     :sync_last_attempt_at,
     :sync_last_error,
-    :created_by_tymeslot
+    :created_by_tymeslot,
+    :ical_sequence,
+    :last_notified_state,
+    :video_link,
+    :video_integration_id
   ]
 
   @doc false

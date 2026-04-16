@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   use TymeslotWeb, :html
 
   alias Phoenix.LiveView.JS
+  alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker
 
@@ -16,6 +17,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
   attr :editable, :boolean, default: false
   attr :attendee_input, :string, default: ""
   attr :pending_attendees, :list, default: []
+  attr :video_integrations, :list, default: []
+  attr :pending_notification, :boolean, default: false
 
   @spec event_detail_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def event_detail_modal(assigns) do
@@ -26,6 +29,24 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       on_cancel={JS.push("close_event_detail", target: @myself)}
       size={:medium}
     >
+      <%!-- Pending-notification banner --%>
+      <div
+        :if={@pending_notification}
+        class="rounded-lg bg-turquoise-50 border border-turquoise-200 p-2 mb-3 flex items-center justify-between"
+      >
+        <span class="text-token-sm text-turquoise-900">
+          Attendees will be notified of pending changes.
+        </span>
+        <button
+          type="button"
+          phx-click="cancel_pending_notification"
+          phx-target={@myself}
+          class="text-token-sm text-turquoise-800 hover:text-turquoise-900 underline"
+        >
+          Cancel
+        </button>
+      </div>
+
       <%!-- Custom header: title gets full width, close button is absolute top-right --%>
       <div class="relative mb-1">
         <button
@@ -263,6 +284,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         </div>
       </div>
 
+      <%!-- Video integration --%>
+      <div :if={@editable and @video_integrations != []} class="flex items-start gap-3 mb-3">
+        <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Video">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        <div class="flex-1">
+          <p class="text-token-xs font-medium text-tymeslot-400 mb-1.5">Video</p>
+          <.video_integration_selector
+            video_integrations={@video_integrations}
+            selected_id={Map.get(@selected_event, :video_integration_id)}
+            target={@myself}
+            phx_event="update_edit_video"
+          />
+        </div>
+      </div>
+
       <%!-- Calendar picker --%>
       <div :if={@editable} class="flex items-start gap-3 mb-3">
         <svg class="w-4 h-4 text-tymeslot-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Calendar">
@@ -281,7 +318,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
       </div>
 
       <%!-- Footer actions --%>
-      <div :if={@editable} class="mt-4 pt-3 border-t border-tymeslot-100 flex items-center justify-between">
+      <div :if={@editable} class="mt-4 pt-3 border-t border-tymeslot-100 flex items-center">
         <button
           type="button"
           phx-click="request_delete_event"
@@ -290,17 +327,40 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal do
         >
           Delete event
         </button>
-        <button
-          :if={@pending_attendees != []}
-          type="button"
-          phx-click="send_invitations"
-          phx-target={@myself}
-          class="px-3 py-1.5 rounded-md bg-turquoise-600 text-white text-token-xs font-medium hover:bg-turquoise-700 transition-colors"
-        >
-          Send invitations (<%= length(@pending_attendees) %>)
-        </button>
       </div>
     </.modal>
+    """
+  end
+
+  attr :video_integrations, :list, required: true
+  attr :selected_id, :any, default: nil
+  attr :target, :any, required: true
+  attr :phx_event, :string, required: true
+
+  defp video_integration_selector(assigns) do
+    ~H"""
+    <div class="flex flex-wrap gap-1.5">
+      <button
+        type="button"
+        phx-click={@phx_event}
+        phx-value-video_integration_id=""
+        phx-target={@target}
+        class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if is_nil(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+      >
+        None
+      </button>
+      <button
+        :for={vi <- @video_integrations}
+        type="button"
+        phx-click={@phx_event}
+        phx-value-video_integration_id={vi.id}
+        phx-target={@target}
+        class={"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-token-xs transition-all #{if to_string(vi.id) == to_string(@selected_id), do: "border-turquoise-400 bg-turquoise-50 text-turquoise-800 shadow-sm font-semibold", else: "border-tymeslot-200 text-tymeslot-600 hover:border-tymeslot-300 hover:bg-tymeslot-50"}"}
+      >
+        <ProviderIcon.provider_icon provider={vi.provider} type="video" size="mini" />
+        <span class="truncate max-w-[10rem]"><%= vi.name %></span>
+      </button>
+    </div>
     """
   end
 end

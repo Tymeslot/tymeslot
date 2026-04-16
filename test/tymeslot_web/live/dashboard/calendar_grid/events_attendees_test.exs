@@ -278,25 +278,27 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsAttendeesTest do
       refute html =~ "border-dashed"
     end
 
-    test "rejects duplicate pending attendee", %{conn: conn, event: event} do
+    test "rejects duplicate of newly-added attendee", %{conn: conn, event: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
-      lv
-      |> element("#calendar-grid")
-      |> render_hook("add_event_attendee", %{"email" => "unique-new@example.com"})
-
-      # Adding the same email again should not increase the pending count
-      html_before = render(lv)
-      before_count = length(String.split(html_before, "unique-new@example.com")) - 1
-
-      html =
+      # First add: attendee is added to selected_event.attendees and rendered
+      html_after_first =
         lv
         |> element("#calendar-grid")
         |> render_hook("add_event_attendee", %{"email" => "unique-new@example.com"})
 
-      after_count = length(String.split(html, "unique-new@example.com")) - 1
-      assert after_count == before_count
+      first_count = length(String.split(html_after_first, "unique-new@example.com")) - 1
+      assert first_count >= 1
+
+      # Second add with the same email must be rejected — count must not grow
+      html_after_second =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("add_event_attendee", %{"email" => "unique-new@example.com"})
+
+      second_count = length(String.split(html_after_second, "unique-new@example.com")) - 1
+      assert second_count == first_count
     end
   end
 

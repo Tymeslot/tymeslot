@@ -6,7 +6,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias Tymeslot.Meetings.AttendeeNotifications
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGridComponent
 
@@ -52,24 +54,54 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
       event ->
         case Shared.check_edit_rate_limit(socket) do
           :ok ->
-            send(
-              self(),
-              {:execute_delete_event,
-               %{
-                 uid: event.uid,
-                 provider_event_id: event.provider_event_id,
-                 calendar_integration_id: event.calendar_integration_id,
-                 user_id: socket.assigns.current_user.id
-               }}
-            )
-
-            {:noreply, assign(socket, :deleting_event, true)}
+            proceed_with_delete(socket, event)
 
           {:error, :rate_limited, _message} ->
             send(self(), {:flash, {:warning, "Too many edits. Please wait a moment."}})
             {:noreply, assign(socket, :confirm_delete_event, nil)}
         end
     end
+  end
+
+  defp proceed_with_delete(socket, event) do
+    attendees = normalise_attendees(event)
+
+    case AttendeeNotifications.event_deleted(event, attendees) do
+      {:ok, :no_attendees} ->
+        user_id = socket.assigns.current_user.id
+
+        send(
+          self(),
+          {:execute_delete_event, InlineEdit.build_delete_payload(event, user_id, false)}
+        )
+
+        {:noreply,
+         socket
+         |> assign(:confirm_delete_event, nil)
+         |> assign(:deleting_event, true)}
+
+      {:needs_confirmation, _count} ->
+        {:noreply,
+         socket
+         |> assign(:confirm_delete_event, nil)
+         |> assign(:notify_prompt, %{
+           kind: :delete,
+           summary: nil,
+           event: event,
+           attendees: attendees
+         })}
+    end
+  end
+
+  defp normalise_attendees(event) do
+    (Map.get(event, :attendees) || [])
+    |> Enum.map(fn attendee ->
+      %{
+        email: Map.get(attendee, "email") || Map.get(attendee, :email),
+        name: Map.get(attendee, "name") || Map.get(attendee, :name)
+      }
+    end)
+    |> Enum.reject(&(is_nil(&1.email) or &1.email == ""))
   end
 
   @doc false
@@ -109,6 +141,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
       action: :event_deleted
     )
 
+    notify_on_delete = Map.get(socket.assigns, :pending_delete_notify, false)
+    socket = assign(socket, :pending_delete_notify, false)
+
     socket =
       case result do
         %{reconcile_result: :ok, meeting_attendee_email: _email_ok} ->
@@ -122,7 +157,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
           )
 
         _no_meeting ->
-          socket
+          put_flash(socket, :info, delete_success_flash(notify_on_delete))
       end
 
     {:noreply, socket}
@@ -157,6 +192,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
 
     {:noreply, put_flash(socket, :error, "Failed to delete event")}
   end
+
+  defp delete_success_flash(true), do: "Event deleted. Attendees have been notified."
+  defp delete_success_flash(false), do: "Event deleted."
 
   @spec handle_cancel_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

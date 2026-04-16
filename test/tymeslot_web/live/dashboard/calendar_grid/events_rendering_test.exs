@@ -279,7 +279,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
             start_at: start_at,
             end_at: end_at,
             provider: "google",
-            default_booking_calendar_id: "primary"
+            default_booking_calendar_id: "primary",
+            attendees: [],
+            meeting_url: nil,
+            description: nil
           }}}
       )
 

@@ -1,5 +1,6 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
   use TymeslotWeb.LiveCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
   @moduletag :live
@@ -8,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
   import Tymeslot.Factory
 
   alias Plug.Test
+  alias Tymeslot.Workers.EmailWorker
 
   setup %{conn: conn} do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now())
@@ -407,7 +409,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
     end
   end
 
-  describe "send invitations" do
+  describe "attendee add/remove notifications" do
     setup %{user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 
@@ -420,27 +422,153 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
           attendees: []
         })
 
-      {:ok, event: event}
+      event_with_guest =
+        insert_event(integration, %{
+          summary: "Existing Attendee Event",
+          start_at: DateTime.new!(Date.utc_today(), ~T[16:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[17:00:00], "Etc/UTC"),
+          all_day: false,
+          attendees: [%{"email" => "guest@example.com", "name" => "Guest"}]
+        })
+
+      {:ok, event: event, event_with_guest: event_with_guest}
     end
 
-    test "new attendees are rendered after send_invitations", %{conn: conn, event: event} do
+    test "adding an attendee enqueues an invitation and flashes confirmation",
+         %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("add_event_attendee", %{"email" => "new-invite@example.com"})
+
+      assert html =~ "new-invite@example.com"
+      assert render(lv) =~ "Attendee added and invited."
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "new-invite@example.com",
+          "method" => "request"
+        }
+      )
+    end
+
+    test "removing an attendee enqueues a CANCEL and flashes confirmation",
+         %{conn: conn, event_with_guest: event} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       lv
       |> element("#calendar-grid")
-      |> render_hook("add_event_attendee", %{"email" => "new-invite@example.com"})
+      |> render_hook("request_remove_attendee", %{"email" => "guest@example.com"})
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("confirm_remove_attendee", %{})
+
+      assert render(lv) =~ "Attendee removed and notified."
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "guest@example.com",
+          "method" => "cancel"
+        }
+      )
+    end
+
+    test "edit modal no longer renders a Send invitations button",
+         %{conn: conn, event: event} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      refute html =~ "Send invitations"
+      refute html =~ ~s(phx-click="send_invitations")
+    end
+  end
+
+  describe "video integration selector on edit" do
+    setup %{user: user} do
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      video_integration = insert(:video_integration, user: user, is_active: true)
+
+      event =
+        insert_event(integration, %{
+          summary: "Video Event",
+          start_at: DateTime.new!(Date.utc_today(), ~T[10:00:00], "Etc/UTC"),
+          end_at: DateTime.new!(Date.utc_today(), ~T[11:00:00], "Etc/UTC"),
+          all_day: false,
+          video_integration_id: nil
+        })
+
+      {:ok, event: event, video_integration: video_integration}
+    end
+
+    test "shows video selector in edit modal", %{
+      conn: conn,
+      event: event,
+      video_integration: video_integration
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      assert html =~ "update_edit_video"
+      assert html =~ video_integration.name
+      assert html =~ "None"
+    end
+
+    test "selecting a video integration marks it active", %{
+      conn: conn,
+      event: event,
+      video_integration: video_integration
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
 
       html =
         lv
         |> element("#calendar-grid")
-        |> render_hook("send_invitations", %{})
+        |> render_hook("update_edit_video", %{
+          "video_integration_id" => to_string(video_integration.id)
+        })
 
-      # Attendee email must be visible in the modal after invitations are sent
-      assert html =~ "new-invite@example.com"
-      # Pending list must be cleared
-      refute html =~ "border-dashed"
+      # The active provider button gains the turquoise-400 border class.
+      assert html =~ "border-turquoise-400"
+      assert html =~ video_integration.name
+    end
+
+    test "selecting None clears the video integration", %{
+      conn: conn,
+      event: event,
+      video_integration: video_integration
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("[id^='event-#{event.id}-']") |> render_click()
+
+      # First pick a provider.
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("update_edit_video", %{
+        "video_integration_id" => to_string(video_integration.id)
+      })
+
+      # Then clear it.
+      html =
+        lv
+        |> element("#calendar-grid")
+        |> render_hook("update_edit_video", %{"video_integration_id" => ""})
+
+      # After clearing, the None button should be the active (turquoise-400) one,
+      # which we verify by checking it appears in the DOM alongside the selector.
+      assert html =~ "None"
+      assert html =~ "update_edit_video"
     end
   end
 

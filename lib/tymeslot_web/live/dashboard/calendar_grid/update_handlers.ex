@@ -206,6 +206,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers do
     {:ok, socket}
   end
 
+  @spec handle_video_link_updated(map(), Phoenix.LiveView.Socket.t()) ::
+          {:ok, Phoenix.LiveView.Socket.t()}
+  def handle_video_link_updated(%{event_id: event_id, video_link: video_link}, socket) do
+    updated_events =
+      Enum.map(socket.assigns.events, fn e ->
+        if e.id == event_id, do: Map.put(e, :video_link, video_link), else: e
+      end)
+
+    selected = socket.assigns.selected_event
+
+    socket =
+      socket
+      |> assign(:events, updated_events)
+      |> then(fn s ->
+        if selected && selected.id == event_id,
+          do: assign(s, :selected_event, Map.put(selected, :video_link, video_link)),
+          else: s
+      end)
+
+    {:ok, socket}
+  end
+
   @spec handle_initial(map(), Phoenix.LiveView.Socket.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def handle_initial(assigns, socket) do

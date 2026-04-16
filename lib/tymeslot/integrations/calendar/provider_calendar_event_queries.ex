@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
 
@@ -109,6 +110,29 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     escaped = String.replace(calendar_path, ~r/[\\%_]/, "\\\\\\0")
     prefix = escaped <> "%"
     where(query, [e], like(e.provider_event_id, ^prefix))
+  end
+
+  @doc "Fetches a single cached event by its primary key."
+  @spec fetch(integer()) ::
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
+  def fetch(id) when is_integer(id) do
+    case Repo.get(ProviderCalendarEventSchema, id) do
+      nil -> {:error, :not_found}
+      event -> {:ok, event}
+    end
+  end
+
+  @doc """
+  Writes a new attendee-notification baseline for an event, updating both the
+  serialised `last_notified_state` snapshot and `ical_sequence` atomically.
+  """
+  @spec update_notification_baseline(ProviderCalendarEventSchema.t(), map(), non_neg_integer()) ::
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, Changeset.t()}
+  def update_notification_baseline(%ProviderCalendarEventSchema{} = event, state, sequence)
+      when is_map(state) and is_integer(sequence) do
+    event
+    |> Changeset.change(last_notified_state: state, ical_sequence: sequence)
+    |> Repo.update()
   end
 
   @doc "Fetches a single cached event by integration ID and UID."
@@ -346,15 +370,14 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   # Fields updated on conflict — everything except the surrogate key, inserted_at,
-  # and the identity fields :provider and :provider_calendar_id (which are set at
-  # insert time from the integration and must never be overwritten with EXCLUDED
-  # values from partial cache-update maps that may omit them).
-  #
-  # The :sync_state, :sync_attempts, :sync_last_attempt_at and :sync_last_error
-  # columns are also deliberately excluded: they track the offline write queue
-  # and must survive a server-sourced upsert so OfflineQueue can still
-  # replay the local change after the cache row has been refreshed from the
-  # server's view.
+  # the identity fields :provider and :provider_calendar_id (set at insert time from
+  # the integration and must never be overwritten with EXCLUDED values from partial
+  # cache-update maps that may omit them), Tymeslot-owned fields that are written
+  # independently of provider data (:ical_sequence, :last_notified_state,
+  # :video_link, :video_integration_id), and the offline write queue columns
+  # (:sync_state, :sync_attempts, :sync_last_attempt_at, :sync_last_error) which
+  # must survive a server-sourced upsert so OfflineQueue can still replay the
+  # local change after the cache row has been refreshed.
   defp replace_fields do
     [
       :provider_event_id,

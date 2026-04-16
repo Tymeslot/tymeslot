@@ -4,12 +4,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
+  require Logger
+
   alias Tymeslot.Bookings.CreateAdHoc
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
-  alias Tymeslot.Notifications.Orchestrator
+  alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
+  alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -244,7 +247,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
     # so a retry targets the same event.
     uid = ICalBuilder.generate_uid()
 
+    # Provision a video room first (if requested) so its URL can be attached
+    # to the calendar event description before the provider writes it out.
+    video_context = provision_video_room(creating[:video_integration_id], user_id)
+
     attendees = Enum.map(creating[:attendees] || [], fn email -> %{"email" => email} end)
+    description = build_description(creating[:description], video_context)
 
     base_data = %{
       uid: uid,
@@ -253,15 +261,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
       end_time: end_at,
       all_day: false,
       calendar_integration_id: creating.integration_id,
-      calendar_id: creating[:calendar_id]
+      calendar_id: creating[:calendar_id],
+      description: description
     }
 
     event_data =
       if attendees != [], do: Map.put(base_data, :attendees, attendees), else: base_data
 
-    case EventOperations.create_event(event_data, {creating.integration_id, user_id}) do
+    result =
+      calendar_operations_module().create_event(
+        event_data,
+        {creating.integration_id, user_id}
+      )
+
+    case result do
       {:ok, created} ->
-        build_create_success(created, creating, user_id, start_at, end_at)
+        build_create_success(created, creating, user_id, start_at, end_at, video_context)
 
       {:error, reason} ->
         # Carry context so the LiveView can tag the cache row for offline
@@ -280,23 +295,30 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
     end
   end
 
-  defp build_create_success(created, creating, user_id, start_at, end_at) do
+  defp build_create_success(created, creating, user_id, start_at, end_at, video_context) do
     uid = if is_binary(created), do: created, else: created[:uid] || created["uid"]
 
-    Orchestrator.schedule_calendar_invitations(
-      user_id,
-      creating[:attendees] || [],
-      %{
-        title: creating.title,
-        uid: uid,
-        start_at: start_at,
-        end_at: end_at,
-        location: creating[:location],
-        description: creating[:description]
-      }
-    )
-
     {provider, default_booking_calendar_id} = lookup_integration_metadata(creating.integration_id)
+    meeting_url = video_context[:meeting_url]
+    video_room_id = video_context[:room_id]
+
+    notify_event = %{
+      uid: uid,
+      summary: creating.title,
+      start_at: start_at,
+      end_at: end_at,
+      location: creating[:location],
+      description: build_description(creating[:description], video_context),
+      video_link: meeting_url,
+      attendee_video_url: meeting_url,
+      ical_sequence: 0,
+      calendar_integration: %{user_id: user_id}
+    }
+
+    attendees =
+      Enum.map(creating[:attendees] || [], fn email -> %{email: email} end)
+
+    {:ok, _status} = AttendeeNotifications.event_created(notify_event, attendees)
 
     {:ok,
      %{
@@ -305,8 +327,54 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
        start_at: start_at,
        end_at: end_at,
        provider: provider,
-       default_booking_calendar_id: default_booking_calendar_id
+       default_booking_calendar_id: default_booking_calendar_id,
+       attendees: attendees,
+       meeting_url: meeting_url,
+       video_room_id: video_room_id,
+       description: notify_event.description
      }}
+  end
+
+  defp calendar_operations_module do
+    Application.get_env(:tymeslot, :event_create_operations_module, EventOperations)
+  end
+
+  defp provision_video_room(nil, _user_id), do: %{}
+
+  defp provision_video_room(integration_id, user_id) when is_integer(integration_id) do
+    case VideoRooms.create_meeting_room(user_id, integration_id: integration_id) do
+      {:ok, %{room_data: room_data}} ->
+        %{
+          meeting_url: room_data[:meeting_url] || room_data[:join_url],
+          room_id: room_data[:room_id],
+          video_integration_id: integration_id
+        }
+
+      {:error, reason} ->
+        Logger.warning("Failed to provision video room for new event",
+          user_id: user_id,
+          video_integration_id: integration_id,
+          reason: inspect(reason)
+        )
+
+        %{}
+    end
+  end
+
+  defp build_description(existing, video_context) do
+    case video_context[:meeting_url] do
+      nil ->
+        existing
+
+      url when is_binary(url) ->
+        line = "Join video call: #{url}"
+
+        case existing do
+          nil -> line
+          "" -> line
+          text -> text <> "\n\n" <> line
+        end
+    end
   end
 
   defp lookup_integration_metadata(integration_id) do
@@ -346,18 +414,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
           {:ok, map()} | {:error, term()} | {:error, term(), map()},
           Phoenix.LiveView.Socket.t()
         ) :: {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_create_result(
-        {:ok,
-         %{
-           uid: uid,
-           creating: creating,
-           start_at: start_at,
-           end_at: end_at,
-           provider: provider,
-           default_booking_calendar_id: default_booking_calendar_id
-         }},
-        socket
-      ) do
+  def handle_create_result({:ok, result}, socket) do
+    %{
+      uid: uid,
+      creating: creating,
+      start_at: start_at,
+      end_at: end_at,
+      provider: provider,
+      default_booking_calendar_id: default_booking_calendar_id,
+      attendees: attendees,
+      meeting_url: meeting_url,
+      description: description
+    } = result
+
+
     provider_calendar_id =
       creating[:calendar_id] || default_booking_calendar_id || "primary"
 
@@ -367,9 +437,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
       provider: provider,
       provider_calendar_id: provider_calendar_id,
       summary: creating.title,
+      description: description,
       start_at: start_at,
       end_at: end_at,
-      all_day: false
+      all_day: false,
+      video_link: meeting_url,
+      video_integration_id: creating[:video_integration_id]
     })
 
     send_update(CalendarGridComponent,
@@ -377,7 +450,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
       action: :event_created
     )
 
-    {:noreply, socket}
+    {:noreply, put_flash(socket, :info, flash_for_create(attendees))}
   end
 
   def handle_create_result({:error, _reason, context}, socket) when is_map(context) do
@@ -445,6 +518,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
   end
 
   defp maybe_update_time(creating, _time_str, _hour_key, _minute_key), do: creating
+
+  defp flash_for_create([]), do: "Event created."
+  defp flash_for_create(_attendees), do: "Event created. Attendees have been invited."
 
   defp maybe_put_int(map, _key, nil), do: map
   defp maybe_put_int(map, key, ""), do: Map.put(map, key, nil)

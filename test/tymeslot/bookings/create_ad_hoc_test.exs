@@ -81,6 +81,21 @@ defmodule Tymeslot.Bookings.CreateAdHocTest do
       assert_enqueued(worker: Tymeslot.Workers.EmailWorker)
     end
 
+    test "routes attendee invitation through AttendeeNotifications with defaults",
+         %{base_params: params} do
+      assert {:ok, meeting} = CreateAdHoc.execute(params)
+
+      # Meeting is persisted with default notification-tracking columns
+      assert meeting.ical_sequence == 0
+      assert meeting.last_notified_state == %{}
+
+      # An EmailWorker job for the attendee calendar invitation is enqueued
+      assert_enqueued(
+        worker: Tymeslot.Workers.EmailWorker,
+        args: %{"attendee_email" => "jane@example.com"}
+      )
+    end
+
     test "schedules video room creation when video_integration_id is set", %{
       base_params: params,
       user: user

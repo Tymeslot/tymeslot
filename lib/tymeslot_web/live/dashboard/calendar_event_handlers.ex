@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   `{:noreply, socket}` so the caller can delegate directly.
   """
 
+  import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
@@ -172,17 +173,41 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     {:noreply, put_flash(socket, :error, reason)}
   end
 
+  @doc "Applies the result of an async video room provisioning to the calendar grid."
+  @spec handle_video_sync_result(
+          integer() | nil,
+          {:ok, String.t() | nil} | {:error, term()},
+          Phoenix.LiveView.Socket.t()
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_video_sync_result(_event_id, {:error, _reason}, socket) do
+    {:noreply, put_flash(socket, :error, "Failed to provision video room — link not updated")}
+  end
+
+  def handle_video_sync_result(event_id, {:ok, video_link}, socket) do
+    if socket.assigns.live_action == :calendar do
+      send_update(CalendarGridComponent,
+        id: "calendar",
+        action: :video_link_updated,
+        event_id: event_id,
+        video_link: video_link
+      )
+    end
+
+    {:noreply, socket}
+  end
+
   @doc "Spawns a supervised task to delete a calendar event."
   @spec handle_execute_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_execute_delete_event(payload, socket) do
     lv_pid = self()
+    notify_on_delete = Map.get(payload, :notify_on_delete, false)
 
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       send(lv_pid, {:delete_event_result, EventCrud.run_delete_event(payload)})
     end)
 
-    {:noreply, socket}
+    {:noreply, assign(socket, :pending_delete_notify, notify_on_delete)}
   end
 
   @doc "Delegates the delete-event result to `EventCrud`."

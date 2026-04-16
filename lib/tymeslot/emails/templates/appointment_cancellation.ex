@@ -5,6 +5,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
   import Swoosh.Email
 
+  alias Tymeslot.Integrations.Calendar.IcsGenerator
   alias Tymeslot.Locales
 
   alias Tymeslot.Emails.Shared.{
@@ -78,6 +79,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
       )
       |> html_body(html_body)
       |> text_body(text_body_attendee(appointment_details, locale))
+      |> attachment(cancel_ics_attachment(appointment_details, locale))
     end)
   end
 
@@ -144,6 +146,20 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
   end
 
   defp organizer_locale(_appointment_details), do: Locales.default_locale()
+
+  # Builds a METHOD:CANCEL ICS attachment so the attendee's calendar client
+  # removes the event automatically. Sequence bumps the last-known value so the
+  # cancellation supersedes any prior REQUEST/UPDATE entry in their calendar.
+  defp cancel_ics_attachment(appointment_details, locale) do
+    current_sequence = Map.get(appointment_details, :ical_sequence) || 0
+
+    IcsGenerator.generate_ics_cancel_attachment(
+      appointment_details,
+      current_sequence + 1,
+      locale,
+      "appointment-#{appointment_details.uid}.ics"
+    )
+  end
 
   defp text_body_organizer(appointment_details) do
     meeting_details =

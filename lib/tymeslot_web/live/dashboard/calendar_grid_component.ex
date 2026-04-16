@@ -31,6 +31,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.ConfirmRemoveAttendeeModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.CreateEventModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.EventDetailModal
+  alias TymeslotWeb.Dashboard.CalendarGrid.Modals.NotifyPromptModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.RecurrencePromptModal
   alias TymeslotWeb.Dashboard.CalendarGrid.Modals.SettingsModal
   alias TymeslotWeb.Dashboard.CalendarGrid.UpdateHandlers
@@ -63,6 +64,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
       |> assign(:pending_attendees, [])
       |> assign(:confirm_discard_attendees, false)
       |> assign(:attendee_input, "")
+      |> assign(:notify_prompt, nil)
+      |> assign(:pending_notification, false)
       |> assign(:owned_integration_ids, MapSet.new())
       |> assign(:visible_events, [])
       |> assign(:visible_days, [])
@@ -126,6 +129,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: UpdateHandlers.handle_events_updated(assigns, socket)
 
   @impl Phoenix.LiveComponent
+  def update(%{action: :video_link_updated} = assigns, socket),
+    do: UpdateHandlers.handle_video_link_updated(assigns, socket)
+
+  @impl Phoenix.LiveComponent
   def update(%{action: :integration_synced} = assigns, socket),
     do: UpdateHandlers.handle_integration_synced(assigns, socket)
 
@@ -158,6 +165,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("update_event_calendar", params, socket),
     do: InlineEdit.handle_update_event_calendar(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("update_edit_video", params, socket),
+    do: InlineEdit.handle_update_edit_video(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("update_event_time", params, socket),
@@ -260,10 +271,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: InlineEdit.handle_cancel_remove_attendee(params, socket)
 
   @impl Phoenix.LiveComponent
-  def handle_event("send_invitations", params, socket),
-    do: InlineEdit.handle_send_invitations(params, socket)
-
-  @impl Phoenix.LiveComponent
   def handle_event("remove_pending_attendee", params, socket),
     do: InlineEdit.handle_remove_pending_attendee(params, socket)
 
@@ -338,6 +345,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("navigate_swipe", params, socket),
     do: Navigation.handle_navigate_swipe(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("notify_prompt_confirm", params, socket),
+    do: InlineEdit.handle_notify_prompt_confirm(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("notify_prompt_cancel", params, socket),
+    do: InlineEdit.handle_notify_prompt_cancel(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("cancel_pending_notification", params, socket),
+    do: InlineEdit.handle_cancel_pending_notification(params, socket)
 
   # --- Render ---
 
@@ -423,6 +442,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
           editable={MapSet.member?(@owned_integration_ids, @selected_event.calendar_integration_id)}
           attendee_input={@attendee_input}
           pending_attendees={@pending_attendees}
+          video_integrations={@video_integrations}
+          pending_notification={@pending_notification}
+        />
+        <NotifyPromptModal.notify_prompt_modal
+          :if={@notify_prompt}
+          notify_prompt={@notify_prompt}
+          kind={@notify_prompt.kind}
+          myself={@myself}
         />
         <ConfirmDeleteModal.confirm_delete_modal
           :if={@confirm_delete_event}

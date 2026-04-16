@@ -175,6 +175,15 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
+  # Note: the cancellation email produced by this pipeline carries the
+  # METHOD:CANCEL ICS attachment (see `Tymeslot.Emails.Templates.AppointmentCancellation`)
+  # so the attendee's calendar client removes the event automatically. We deliberately
+  # do NOT route bookings cancellation through
+  # `Tymeslot.Meetings.AttendeeNotifications.event_deleted_confirm/2`: the bookings
+  # cancellation email carries user-facing context (cancellation reason, custom copy)
+  # that the calendar-update template cannot replicate, and double-routing would
+  # deliver two cancellation emails. Sequence tracking on `Meeting` rows is handled
+  # directly by the template via `ical_sequence` when needed.
   defp send_cancellation_notifications(meeting) do
     case Events.meeting_cancelled(meeting) do
       {:ok, _result} ->

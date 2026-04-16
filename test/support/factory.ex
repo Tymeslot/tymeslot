@@ -52,7 +52,9 @@ defmodule Tymeslot.Factory do
       attendee_timezone: "America/New_York",
       attendee_locale: "en",
       reschedule_url: sequence(:reschedule_url, &"https://example.com/reschedule/token#{&1}"),
-      status: "confirmed"
+      status: "confirmed",
+      ical_sequence: 0,
+      last_notified_state: %{}
     }
   end
 
@@ -179,6 +181,9 @@ defmodule Tymeslot.Factory do
       status: "confirmed",
       synced_at: now,
       provider_metadata: %{},
+      ical_sequence: 0,
+      last_notified_state: %{},
+      video_link: nil,
       calendar_integration: build(:calendar_integration)
     }
   end
