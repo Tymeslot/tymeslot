@@ -301,6 +301,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
     test "propagates {:error, :circuit_open} when circuit breaker is open" do
       alias Tymeslot.Infrastructure.CalendarCircuitBreaker
 
+      # The :calendar_breaker_google GenServer is shared global state across
+      # async tests. Reset before use so prior tests can't leave the breaker in
+      # an unexpected state, and reset on exit so we don't poison siblings.
+      CalendarCircuitBreaker.reset(:google)
+      on_exit(fn -> CalendarCircuitBreaker.reset(:google) end)
+
       user = insert(:user)
 
       integration =
@@ -311,11 +317,12 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
           token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
         )
 
-      # Trip the Google circuit breaker (threshold is 5)
-      for _i <- 1..5 do
+      # Trip the Google circuit breaker (threshold is 5).
+      Enum.each(1..5, fn _ ->
         CalendarCircuitBreaker.call(:google, fn -> {:error, :api_failure} end)
-      end
+      end)
 
+      assert %{status: :open} = CalendarCircuitBreaker.status(:google)
       assert {:error, :circuit_open} = CalendarAPI.bootstrap_sync(integration)
     end
   end
