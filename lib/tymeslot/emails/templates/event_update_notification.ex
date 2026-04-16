@@ -105,15 +105,30 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotification do
       )
       |> html_body(html_body)
       |> text_body(build_text_body(details, locale))
-      |> attachment(
-        IcsGenerator.generate_ics_update_attachment(
-          ics_details,
-          1,
-          locale,
-          "update-#{details.event_uid}.ics"
-        )
-      )
+      |> attachment(build_ics_attachment(ics_details, details, locale))
     end)
+  end
+
+  defp build_ics_attachment(ics_details, details, locale) do
+    method = Map.get(details, :method, :request)
+    sequence = Map.get(details, :sequence)
+    filename = "update-#{details.event_uid}.ics"
+
+    case method do
+      :cancel ->
+        IcsGenerator.generate_ics_cancel_attachment(
+          ics_details,
+          sequence || 0,
+          locale,
+          filename
+        )
+
+      :request when is_integer(sequence) ->
+        IcsGenerator.generate_ics_update_attachment(ics_details, sequence, locale, filename)
+
+      _other ->
+        IcsGenerator.generate_ics_update_attachment(ics_details, 1, locale, filename)
+    end
   end
 
   defp build_changes_table(changes) do

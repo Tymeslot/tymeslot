@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Changeset
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Repo
 
@@ -109,6 +110,29 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
     escaped = String.replace(calendar_path, ~r/[\\%_]/, "\\\\\\0")
     prefix = escaped <> "%"
     where(query, [e], like(e.provider_event_id, ^prefix))
+  end
+
+  @doc "Fetches a single cached event by its primary key."
+  @spec fetch(integer()) ::
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, :not_found}
+  def fetch(id) when is_integer(id) do
+    case Repo.get(ProviderCalendarEventSchema, id) do
+      nil -> {:error, :not_found}
+      event -> {:ok, event}
+    end
+  end
+
+  @doc """
+  Writes a new attendee-notification baseline for an event, updating both the
+  serialised `last_notified_state` snapshot and `ical_sequence` atomically.
+  """
+  @spec update_notification_baseline(ProviderCalendarEventSchema.t(), map(), non_neg_integer()) ::
+          {:ok, ProviderCalendarEventSchema.t()} | {:error, Changeset.t()}
+  def update_notification_baseline(%ProviderCalendarEventSchema{} = event, state, sequence)
+      when is_map(state) and is_integer(sequence) do
+    event
+    |> Changeset.change(last_notified_state: state, ical_sequence: sequence)
+    |> Repo.update()
   end
 
   @doc "Fetches a single cached event by integration ID and UID."
@@ -255,6 +279,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
       :synced_at,
       :provider_updated_at,
       :provider_metadata,
+      :video_link,
       :updated_at
     ]
   end

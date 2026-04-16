@@ -123,6 +123,19 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     |> Repo.update()
   end
 
+  @doc """
+  Writes a new attendee-notification baseline for a meeting, updating both the
+  serialised `last_notified_state` snapshot and `ical_sequence` atomically.
+  """
+  @spec update_notification_baseline(Meeting.t(), map(), non_neg_integer()) ::
+          {:ok, Meeting.t()} | {:error, Changeset.t()}
+  def update_notification_baseline(%Meeting{} = meeting, state, sequence)
+      when is_map(state) and is_integer(sequence) do
+    meeting
+    |> Changeset.change(last_notified_state: state, ical_sequence: sequence)
+    |> Repo.update()
+  end
+
   @doc "Deletes a meeting."
   @spec delete_meeting(Meeting.t()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def delete_meeting(%Meeting{} = meeting) do

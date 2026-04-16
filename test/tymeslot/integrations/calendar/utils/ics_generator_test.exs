@@ -328,4 +328,25 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       assert attachment.content_type == "text/calendar; charset=utf-8; method=REQUEST"
     end
   end
+
+  describe "generate_ics_cancel_attachment/4" do
+    test "produces a METHOD:CANCEL attachment with the given SEQUENCE" do
+      meeting_details = %{
+        title: "Cancelled Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "cancel-me-123",
+        organizer_email: "organizer@example.com",
+        attendee_email: "jane@example.com"
+      }
+
+      attachment = IcsGenerator.generate_ics_cancel_attachment(meeting_details, 3)
+
+      assert %Swoosh.Attachment{} = attachment
+      assert attachment.content_type == "text/calendar; charset=utf-8; method=CANCEL"
+      assert attachment.data =~ "METHOD:CANCEL"
+      assert attachment.data =~ "SEQUENCE:3"
+      assert attachment.data =~ "STATUS:CANCELLED"
+    end
+  end
 end

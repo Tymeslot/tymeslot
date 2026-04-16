@@ -58,6 +58,8 @@ defmodule Tymeslot.Meetings.MeetingSchema do
           calendar_sync_status: String.t() | nil,
           calendar_sync_status_dismissed_at: DateTime.t() | nil,
           provider_event_id: String.t() | nil,
+          ical_sequence: integer(),
+          last_notified_state: map(),
           organizer_user: any() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integration: any() | Ecto.Association.NotLoaded.t() | nil,
           video_integration: any() | Ecto.Association.NotLoaded.t() | nil,
@@ -148,6 +150,10 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     field(:calendar_sync_status_dismissed_at, :utc_datetime)
     field(:provider_event_id, :string)
 
+    # Attendee notification tracking
+    field(:ical_sequence, :integer, default: 0)
+    field(:last_notified_state, :map, default: %{})
+
     timestamps(type: :utc_datetime)
   end
 
@@ -201,7 +207,9 @@ defmodule Tymeslot.Meetings.MeetingSchema do
     :cancellation_reason,
     :calendar_sync_status,
     :calendar_sync_status_dismissed_at,
-    :provider_event_id
+    :provider_event_id,
+    :ical_sequence,
+    :last_notified_state
   ]
 
   @valid_statuses ["pending", "confirmed", "cancelled", "completed", "reschedule_requested"]

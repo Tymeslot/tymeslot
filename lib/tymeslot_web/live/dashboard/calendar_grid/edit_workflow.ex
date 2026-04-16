@@ -1,11 +1,15 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   @moduledoc "Drag, resize, create, and inline-edit workflow functions for CalendarGridComponent."
 
+  require Logger
+
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
-  alias Tymeslot.Notifications.Orchestrator
+  alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
+  alias Tymeslot.Meetings.AttendeeNotifications
+  alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec default_integration_id(Phoenix.LiveView.Socket.t()) :: integer() | nil
@@ -182,10 +186,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
           send(lv_pid, {:event_update_result, :ok})
 
-          if (original_event.attendees || []) != [] do
-            Orchestrator.schedule_event_update_notification(user_id, original_event)
-          end
-
         {:error, reason} ->
           send(
             lv_pid,
@@ -218,10 +218,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
         :ok ->
           CalendarGrid.update_cached_event(cache_row)
           send(lv_pid, {:event_update_result, :ok})
-
-          if (original_event.attendees || []) != [] do
-            Orchestrator.schedule_event_update_notification(user_id, original_event)
-          end
 
         {:error, reason} ->
           send(
@@ -422,5 +418,124 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       })
 
     Map.put(base, field, new_value)
+  end
+
+  @doc """
+  Routes an event edit through `Tymeslot.Meetings.AttendeeNotifications`.
+
+  Returns one of:
+
+    * `{:ok, :no_changes}` — nothing notifiable changed, or the event has no
+      attendees. Caller should flash "Changes saved."
+    * `{:ok, :already_pending}` — changes were notifiable, but a Worker job is
+      already queued inside the debounce window. This call re-confirmed into
+      the existing job (replacing `scheduled_at`). Caller should flash
+      "Changes saved. Attendees will be notified shortly."
+    * `{:needs_confirmation, ChangeSummary.t}` — notifiable changes, nothing
+      pending. Caller should stash the summary and show the confirmation modal.
+  """
+  @spec notify_event_updated(map(), map(), [map()]) ::
+          {:ok, :no_changes}
+          | {:ok, :already_pending}
+          | {:needs_confirmation, ChangeSummary.t()}
+  def notify_event_updated(original_event, updated_event, attendees) do
+    case AttendeeNotifications.event_updated(original_event, updated_event, attendees) do
+      {:ok, :no_changes} ->
+        {:ok, :no_changes}
+
+      {:needs_confirmation, summary} ->
+        if AttendeeNotifications.pending?(updated_event.id) do
+          {:ok, :sent} =
+            AttendeeNotifications.event_updated_confirm(updated_event, summary, attendees)
+
+          {:ok, :already_pending}
+        else
+          {:needs_confirmation, summary}
+        end
+    end
+  end
+
+  @doc """
+  Synchronises the video integration selection for an event.
+
+  Compares the `:video_integration_id` on `updated_event` against
+  `original_event`. When the value is set or changed, provisions a meeting
+  room via `Tymeslot.Integrations.Video.Rooms.create_meeting_room/2` and
+  persists the new `:video_link` to the cached event row. When it is cleared,
+  the `:video_link` column is cleared (the provider room is left in place).
+
+  Returns `{:ok, :unchanged}` when there is nothing to do, `{:ok, url}` when a
+  new link was persisted (or `nil` if the link was cleared), and
+  `{:error, reason}` when provisioning failed. Callers treat `:error` as a
+  graceful degradation — the rest of the edit save proceeds regardless.
+  """
+  @spec maybe_sync_video_integration(map(), map(), integer()) ::
+          {:ok, :unchanged} | {:ok, String.t() | nil} | {:error, term()}
+  def maybe_sync_video_integration(original_event, updated_event, user_id) do
+    old_id = Map.get(original_event, :video_integration_id)
+    new_id = Map.get(updated_event, :video_integration_id)
+
+    cond do
+      old_id == new_id ->
+        {:ok, :unchanged}
+
+      is_nil(new_id) ->
+        persist_video_link(updated_event, nil)
+        {:ok, nil}
+
+      true ->
+        provision_and_persist(updated_event, new_id, user_id)
+    end
+  end
+
+  defp provision_and_persist(event, integration_id, user_id) do
+    case video_rooms_module().create_meeting_room(user_id, integration_id: integration_id) do
+      {:ok, %{room_data: room_data}} ->
+        url = room_data[:meeting_url] || room_data[:join_url]
+        persist_video_link(event, url)
+        {:ok, url}
+
+      {:error, reason} = error ->
+        Logger.warning("Failed to provision video room for event edit",
+          user_id: user_id,
+          event_id: Map.get(event, :id),
+          video_integration_id: integration_id,
+          reason: inspect(reason)
+        )
+
+        error
+    end
+  end
+
+  defp persist_video_link(event, url) do
+    timing =
+      if event.all_day do
+        %{start_date: event.start_date, end_date: event.end_date}
+      else
+        %{start_at: event.start_at, end_at: event.end_at}
+      end
+
+    CalendarGrid.update_cached_event(
+      Map.merge(timing, %{
+        uid: event.uid,
+        calendar_integration_id: event.calendar_integration_id,
+        provider: event.provider,
+        provider_calendar_id: event.provider_calendar_id,
+        provider_event_id: event.provider_event_id,
+        summary: event.summary,
+        all_day: event.all_day,
+        location: event.location,
+        description: event.description,
+        attendees: event.attendees || [],
+        status: event.status,
+        provider_metadata: event.provider_metadata,
+        video_link: url,
+        synced_at: DateTime.utc_now(:microsecond)
+      })
+    )
+  end
+
+  defp video_rooms_module do
+    Application.get_env(:tymeslot, :video_rooms_module, VideoRooms)
   end
 end

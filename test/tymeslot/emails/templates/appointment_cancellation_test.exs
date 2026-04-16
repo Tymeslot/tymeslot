@@ -389,6 +389,44 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
     end
   end
 
+  describe "attendee cancellation email METHOD:CANCEL attachment" do
+    test "includes a text/calendar attachment with method=CANCEL" do
+      details = build_appointment_details()
+
+      email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
+
+      ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+
+      assert %Swoosh.Attachment{} = ics, "expected a text/calendar attachment"
+      assert ics.content_type =~ "method=CANCEL"
+      assert ics.filename =~ ".ics"
+    end
+
+    test "attachment body is a METHOD:CANCEL VCALENDAR with a SEQUENCE line" do
+      details = build_appointment_details(%{ical_sequence: 3})
+
+      email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
+
+      ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+
+      assert ics.data =~ "BEGIN:VCALENDAR"
+      assert ics.data =~ "METHOD:CANCEL"
+      assert ics.data =~ ~r/SEQUENCE:\d+/
+      # Sequence should bump to (current + 1) = 4
+      assert ics.data =~ "SEQUENCE:4"
+    end
+
+    test "defaults SEQUENCE to 1 when appointment_details has no ical_sequence" do
+      details = build_appointment_details()
+
+      email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
+
+      ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+
+      assert ics.data =~ "SEQUENCE:1"
+    end
+  end
+
   describe "cancellation emails for both roles" do
     test "organizer and attendee emails have different recipients" do
       details = build_appointment_details()

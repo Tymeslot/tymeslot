@@ -101,6 +101,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       # Meeting timing
       date: meeting.start_time,
       start_time: meeting.start_time,
+      end_time: meeting.end_time,
       start_time_owner_tz: convert_to_timezone(meeting.start_time, organizer_timezone),
       start_time_attendee_tz: convert_to_timezone(meeting.start_time, attendee_timezone),
       duration: meeting.duration,
@@ -108,6 +109,9 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       # Meeting details
       location: meeting.location,
       meeting_type: meeting.meeting_type,
+
+      # iCal sequence for METHOD:CANCEL attachments (bumped at render time)
+      ical_sequence: Map.get(meeting, :ical_sequence) || 0,
 
       # Cancellation context
       cancelled_at: meeting.cancelled_at || DateTime.utc_now(),

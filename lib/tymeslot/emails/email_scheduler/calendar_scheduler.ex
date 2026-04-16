@@ -15,6 +15,9 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   """
   @spec schedule_calendar_invitation(map()) :: :ok | {:error, String.t()}
   def schedule_calendar_invitation(params) do
+    method = Map.get(params, :method, :request)
+    sequence = Map.get(params, :sequence)
+
     result =
       %{
         "action" => "send_calendar_invitation",
@@ -25,7 +28,9 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
         "event_start_at" => params.event_start_at,
         "event_end_at" => params.event_end_at,
         "event_location" => params[:event_location],
-        "event_description" => params[:event_description]
+        "event_description" => params[:event_description],
+        "method" => Atom.to_string(method),
+        "sequence" => sequence
       }
       |> EmailWorker.new(
         queue: :emails,
@@ -74,6 +79,9 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
   """
   @spec schedule_event_update_notification(map()) :: :ok | {:error, String.t()}
   def schedule_event_update_notification(params) do
+    method = Map.get(params, :method, :request)
+    sequence = Map.get(params, :sequence)
+
     result =
       %{
         "action" => "send_event_update_notification",
@@ -86,7 +94,9 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
         "before_description" => params.before_description,
         "before_start_at" =>
           params.before_start_at && DateTime.to_iso8601(params.before_start_at),
-        "before_end_at" => params.before_end_at && DateTime.to_iso8601(params.before_end_at)
+        "before_end_at" => params.before_end_at && DateTime.to_iso8601(params.before_end_at),
+        "method" => Atom.to_string(method),
+        "sequence" => sequence
       }
       |> EmailWorker.new(
         queue: :emails,

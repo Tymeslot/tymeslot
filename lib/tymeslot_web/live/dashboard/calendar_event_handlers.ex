@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
   `{:noreply, socket}` so the caller can delegate directly.
   """
 
+  import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCrud
@@ -177,12 +178,13 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_execute_delete_event(payload, socket) do
     lv_pid = self()
+    notify_on_delete = Map.get(payload, :notify_on_delete, false)
 
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       send(lv_pid, {:delete_event_result, EventCrud.run_delete_event(payload)})
     end)
 
-    {:noreply, socket}
+    {:noreply, assign(socket, :pending_delete_notify, notify_on_delete)}
   end
 
   @doc "Delegates the delete-event result to `EventCrud`."

@@ -80,7 +80,8 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
       location: format_location(meeting),
       location_type: determine_location_type(meeting),
       location_details: format_location_details(meeting),
-      meeting_type: meeting.meeting_type
+      meeting_type: meeting.meeting_type,
+      ical_sequence: Map.get(meeting, :ical_sequence) || 0
     }
   end
 

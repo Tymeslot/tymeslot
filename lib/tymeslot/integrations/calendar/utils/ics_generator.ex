@@ -14,11 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   """
   @spec generate_ics(map(), String.t()) :: String.t()
   def generate_ics(meeting_details, locale \\ "en") do
-    Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      meeting_details
-      |> build_event()
-      |> generate_basic_ics()
-    end)
+    generate_ics_with(meeting_details, :request, nil, locale)
   end
 
   @doc """
@@ -26,13 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   """
   @spec generate_ics_attachment(map(), String.t(), String.t()) :: Swoosh.Attachment.t()
   def generate_ics_attachment(meeting_details, locale \\ "en", filename \\ "meeting.ics") do
-    ics_content = generate_ics(meeting_details, locale)
-
-    %Swoosh.Attachment{
-      filename: filename,
-      content_type: "text/calendar; charset=utf-8; method=REQUEST",
-      data: ics_content
-    }
+    build_attachment(meeting_details, :request, nil, locale, filename)
   end
 
   @doc """
@@ -47,20 +37,45 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
         locale \\ "en",
         filename \\ "meeting.ics"
       ) do
-    ics_content = generate_ics_with_sequence(meeting_details, sequence, locale)
+    build_attachment(meeting_details, :request, sequence, locale, filename)
+  end
+
+  @doc """
+  Generates a METHOD:CANCEL ICS attachment for cancelling an existing event.
+
+  The `sequence` should be the next value after the last sent invitation so
+  calendar clients recognise the cancellation as more recent than the event
+  they already have on file.
+  """
+  @spec generate_ics_cancel_attachment(map(), non_neg_integer(), String.t(), String.t()) ::
+          Swoosh.Attachment.t()
+  def generate_ics_cancel_attachment(
+        meeting_details,
+        sequence,
+        locale \\ "en",
+        filename \\ "meeting.ics"
+      ) do
+    build_attachment(meeting_details, :cancel, sequence, locale, filename)
+  end
+
+  defp build_attachment(meeting_details, method, sequence, locale, filename) do
+    ics_content = generate_ics_with(meeting_details, method, sequence, locale)
 
     %Swoosh.Attachment{
       filename: filename,
-      content_type: "text/calendar; charset=utf-8; method=REQUEST",
+      content_type: content_type_for(method),
       data: ics_content
     }
   end
 
-  defp generate_ics_with_sequence(meeting_details, sequence, locale) do
+  defp content_type_for(:request), do: "text/calendar; charset=utf-8; method=REQUEST"
+  defp content_type_for(:cancel), do: "text/calendar; charset=utf-8; method=CANCEL"
+
+  defp generate_ics_with(meeting_details, method, sequence, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
       meeting_details
       |> build_event()
-      |> generate_basic_ics_update(sequence)
+      |> render_vcalendar(method, sequence)
     end)
   end
 
@@ -79,13 +94,15 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     }
   end
 
-  defp generate_basic_ics_update(event, sequence) do
+  defp render_vcalendar(event, method, sequence) do
     attendee_line = if event.attendee, do: "ATTENDEE:#{event.attendee}\n", else: ""
+    sequence_line = if is_integer(sequence), do: "SEQUENCE:#{sequence}\n", else: ""
+    status = status_for(method, event.status)
 
     """
     BEGIN:VCALENDAR
     VERSION:2.0
-    METHOD:REQUEST
+    METHOD:#{method_token(method)}
     PRODID:-//Tymeslot//Tymeslot 1.0//EN
     CALSCALE:GREGORIAN
     BEGIN:VEVENT
@@ -93,16 +110,21 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     DTSTAMP:#{format_datetime_utc(DateTime.utc_now())}
     DTSTART:#{format_datetime_utc(event.dtstart)}
     DTEND:#{format_datetime_utc(event.dtend)}
-    SEQUENCE:#{sequence}
-    SUMMARY:#{escape_ical_text(event.summary || dgettext("emails", "Meeting"))}
+    #{sequence_line}SUMMARY:#{escape_ical_text(event.summary || dgettext("emails", "Meeting"))}
     DESCRIPTION:#{escape_ical_text(event.description)}
     LOCATION:#{escape_ical_text(event.location)}
     ORGANIZER:#{event.organizer}
-    #{attendee_line}STATUS:#{event.status}
+    #{attendee_line}STATUS:#{status}
     END:VEVENT
     END:VCALENDAR
     """
   end
+
+  defp method_token(:request), do: "REQUEST"
+  defp method_token(:cancel), do: "CANCEL"
+
+  defp status_for(:cancel, _status), do: "CANCELLED"
+  defp status_for(:request, status), do: status
 
   defp format_organizer(meeting_details) do
     organizer_name = Map.get(meeting_details, :organizer_name)
@@ -193,29 +215,6 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
       true ->
         ""
     end
-  end
-
-  defp generate_basic_ics(event) do
-    attendee_line = if event.attendee, do: "ATTENDEE:#{event.attendee}\n", else: ""
-
-    """
-    BEGIN:VCALENDAR
-    VERSION:2.0
-    PRODID:-//Tymeslot//Tymeslot 1.0//EN
-    CALSCALE:GREGORIAN
-    BEGIN:VEVENT
-    UID:#{event.uid}
-    DTSTAMP:#{format_datetime_utc(DateTime.utc_now())}
-    DTSTART:#{format_datetime_utc(event.dtstart)}
-    DTEND:#{format_datetime_utc(event.dtend)}
-    SUMMARY:#{escape_ical_text(event.summary || dgettext("emails", "Meeting"))}
-    DESCRIPTION:#{escape_ical_text(event.description)}
-    LOCATION:#{escape_ical_text(event.location)}
-    ORGANIZER:#{event.organizer}
-    #{attendee_line}STATUS:#{event.status}
-    END:VEVENT
-    END:VCALENDAR
-    """
   end
 
   defp escape_ical_text(text) when is_binary(text) do

@@ -30,7 +30,8 @@
         "dev_support/credo_checks/use_p_sigil.ex",
         "dev_support/credo_checks/test_module_tag_required.ex",
         "dev_support/credo_checks/migration_constraint_safety.ex",
-        "dev_support/credo_checks/repo_call_boundary.ex"
+        "dev_support/credo_checks/repo_call_boundary.ex",
+        "dev_support/credo_checks/attendee_notifications_boundary.ex"
       ],
       strict: false,
       parse_timeout: 5000,
@@ -118,6 +119,7 @@
           {CredoChecks.NoMapMetadataInLogger, [priority: :high]},
           {CredoChecks.MigrationConstraintSafety, [priority: :high, enforce_after: "20260329"]},
           {CredoChecks.RepoCallBoundary, [priority: :normal]},
+          {CredoChecks.AttendeeNotificationsBoundary, []},
 
           #
           ## Additional Maintainability Checks (low priority, only visible with --strict)
