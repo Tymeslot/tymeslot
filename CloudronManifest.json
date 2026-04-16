@@ -23,6 +23,7 @@
   "memoryLimit": 1073741824,
   "minBoxVersion": "9.1.0",
   "changelog": "file://CHANGELOG",
+  "icon": "priv/static/images/brand/icon.png",
   "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
   "website": "https://tymeslot.app",
   "contactEmail": "hello@tymeslot.app",

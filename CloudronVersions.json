@@ -1,5 +1,5 @@
 {
-  "stable": "0.100.2",
+  "stable": true,
   "versions": {
     "0.100.0": {
       "creationDate": "Tue, 14 Apr 2026 14:41:13 GMT",
