@@ -67,14 +67,19 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarPubSubTest do
 
       {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=America/New_York")
 
+      # Clear cache so any re-fetch is detectable
+      AvailabilityCache.clear_all()
+
       Phoenix.PubSub.broadcast(
         Tymeslot.PubSub,
         "calendar_events:#{user.id}",
         {:calendar_events_updated, user.id, []}
       )
 
-      # The LiveView should process the message and still render
+      # render/1 drains the LiveView message queue; assert the view still renders
+      # and that availability was re-fetched (cache populated from sync fetch in test env)
       assert render(view) =~ "Quick Chat"
+      assert :ets.info(:availability_cache, :size) > 0
     end
 
     @tag :capture_log
@@ -83,13 +88,17 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarPubSubTest do
 
       {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=America/New_York")
 
+      AvailabilityCache.clear_all()
+
       Phoenix.PubSub.broadcast(
         Tymeslot.PubSub,
         "calendar_events:#{user.id}",
         {:calendar_sync_complete, user.id, 1}
       )
 
+      # Both PubSub messages trigger the same handler; verify availability was re-fetched
       assert render(view) =~ "Quick Chat"
+      assert :ets.info(:availability_cache, :size) > 0
     end
 
     @tag :capture_log
@@ -97,6 +106,9 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarPubSubTest do
       {_user, profile} = create_organiser()
 
       {:ok, view, _html} = live(conn, ~p"/#{profile.username}?timezone=America/New_York")
+
+      # Clear cache after initial mount fetch to isolate the broadcast's effect
+      AvailabilityCache.clear_all()
 
       # Broadcast for a different user — should be a no-op
       Phoenix.PubSub.broadcast(
@@ -106,6 +118,8 @@ defmodule TymeslotWeb.Live.Scheduling.CalendarPubSubTest do
       )
 
       assert render(view) =~ "Quick Chat"
+      # No re-fetch should have occurred for a different user's calendar topic
+      assert :ets.info(:availability_cache, :size) == 0
     end
   end
 end
