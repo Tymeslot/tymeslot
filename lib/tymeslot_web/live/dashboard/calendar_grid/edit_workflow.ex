@@ -4,7 +4,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
-  alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Notifications.Orchestrator
@@ -381,7 +380,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       calendar_integration_id: ctx.new_integration_id
     }
 
-    QueueWiring.tag(meeting, :create, ctx.event_attrs)
+    EventOperations.tag_for_offline_retry(meeting, :create, ctx.event_attrs)
   end
 
   @spec update_attendees_async(Phoenix.LiveView.Socket.t(), map(), [map()]) ::
@@ -460,7 +459,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
       calendar_integration_id: event.calendar_integration_id
     }
 
-    QueueWiring.tag(meeting, :update, event_data)
+    EventOperations.tag_for_offline_retry(meeting, :update, event_data)
   end
 
   defp build_field_event_data(event, field, new_value) do

@@ -340,7 +340,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
     end
 
     test "conflict_resolution :keep_server swallows 412 and returns :ok" do
+      # etag is supplied so HEAD is skipped; exactly one PUT should be issued
+      # (the conflict resolution swallows the 412 without a retry)
+      counter = :counters.new(1, [])
+
       ReqTest.stub(:tymeslot_http, fn conn ->
+        :counters.add(counter, 1, 1)
         assert conn.method == "PUT"
         Conn.send_resp(conn, 412, "Precondition Failed")
       end)
@@ -361,6 +366,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                  conflict_resolution: :keep_server,
                  skip_breaker: true
                )
+
+      assert :counters.get(counter, 1) == 1
     end
 
     test "retries PUT on 502 when If-Match is set" do
@@ -402,11 +409,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
       assert :counters.get(counter, 1) == 2
     end
 
-    test "does not retry PUT when :etag is absent" do
+    test "retries PUT with If-Match: * when no ETag is available" do
       counter = :counters.new(1, [])
 
       ReqTest.stub(:tymeslot_http, fn conn ->
-        # HEAD fails → PUT goes unconditional → must NOT retry
+        # HEAD fails → PUT goes unconditional with If-Match: * → safe to retry
         case conn.method do
           "HEAD" ->
             Conn.send_resp(conn, 404, "")
@@ -439,7 +446,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                  skip_breaker: true
                )
 
-      assert :counters.get(counter, 1) == 1
+      assert :counters.get(counter, 1) == 2
     end
 
     test "conflict_resolution :keep_local retries without If-Match after 412" do

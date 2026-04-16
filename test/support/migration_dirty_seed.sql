@@ -170,6 +170,13 @@ SELECT 'seed-evt-null-title@example.com',
        NOW(),
        NOW();
 
+-- 20260415185057_add_sync_state_to_provider_calendar_events adds four columns
+-- to provider_calendar_events: sync_state NOT NULL DEFAULT 'synced',
+-- sync_attempts NOT NULL DEFAULT 0, sync_last_attempt_at (nullable), and
+-- sync_last_error (nullable). All have constant or nullable defaults — no
+-- explicit values are required in the seed INSERTs, and the column defaults
+-- backfill all pre-existing rows automatically when the migration runs.
+
 -- Regression: status IS NULL — existing UPDATE must default to 'confirmed'.
 INSERT INTO calendar_events (uid, calendar_integration_id, calendar_path, title, start_at, end_at, all_day, status, synced_at, inserted_at, updated_at)
 SELECT 'seed-evt-null-status@example.com',

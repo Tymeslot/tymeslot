@@ -327,8 +327,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
         )
 
       # Pre-populate cache with an event from the primary path (path1)
-      Repo.insert!(%ProviderCalendarEventSchema{
-        calendar_integration_id: integration.id,
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
         uid: "pre-existing-path1@test",
         provider: "caldav",
         provider_calendar_id: @path1,
@@ -339,7 +339,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
         all_day: false,
         synced_at:
           DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:microsecond)
-      })
+      )
 
       ical1 = future_ical("path1-delta@test", "Path1 Delta Event")
       ical2 = future_ical("path2-event@test", "Path2 Meeting")
@@ -396,8 +396,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
         )
 
       # Pre-populate cache with an event on path1 that the server will NOT return
-      Repo.insert!(%ProviderCalendarEventSchema{
-        calendar_integration_id: integration.id,
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
         uid: "deleted-on-server@test",
         provider: "caldav",
         provider_calendar_id: @path1,
@@ -408,7 +408,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
         all_day: false,
         synced_at:
           DateTime.utc_now() |> DateTime.add(-3600, :second) |> DateTime.truncate(:microsecond)
-      })
+      )
 
       ical1 = future_ical("surviving-event@test", "Still on Server")
 

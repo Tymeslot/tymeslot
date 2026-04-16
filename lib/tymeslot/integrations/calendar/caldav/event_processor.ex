@@ -163,7 +163,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventProcessor do
         recurrence_rule: raw[:rrule] || raw[:recurrence_rule],
         recurrence_exceptions: exdates_as_dates(raw[:exdate] || raw[:exdates] || []),
         etag: raw[:etag],
-        provider_metadata: raw,
+        provider_metadata: Map.drop(raw, [:raw_ical, :etag, :href, :_occ_start, :_occ_end, :_recurring]),
         raw_ical: raw[:raw_ical],
         created_by_tymeslot: tymeslot_origin?(raw)
       }

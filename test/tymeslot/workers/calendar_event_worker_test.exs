@@ -11,6 +11,7 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.UUID
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Workers.CalendarEventWorker
 
@@ -387,6 +388,115 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
         Application.put_env(:tymeslot, :test_mode, original_test_mode)
         Mox.set_mox_private()
       end
+    end
+  end
+
+  describe "perform/1 - offline queue integration" do
+    # These tests require the integration to have at least one calendar_paths entry
+    # so that QueueWiring.tag/3 can write a non-null provider_calendar_id to the
+    # provider_calendar_events table.
+
+    test "failed create job tags the cache row as locally_created" do
+      %{integration: integration, meeting: meeting} =
+        setup_calendar_scenario_with_paths()
+
+      expect(Tymeslot.CalendarMock, :create_event, fn _event_data, _context ->
+        {:error, :server_error}
+      end)
+
+      # A non-final attempt so no email notification mock is needed
+      assert {:error, :server_error} =
+               perform_job(
+                 CalendarEventWorker,
+                 %{"action" => "create", "meeting_id" => meeting.id},
+                 attempt: 1
+               )
+
+      assert {:ok, cache_row} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, meeting.uid)
+
+      assert cache_row.sync_state == "locally_created"
+    end
+
+    test "failed update job tags the cache row as locally_modified" do
+      %{integration: integration, meeting: meeting} =
+        setup_calendar_scenario_with_paths()
+
+      uid = meeting.uid
+
+      expect(Tymeslot.CalendarMock, :update_event, fn ^uid, _data, _meeting ->
+        {:error, :server_error}
+      end)
+
+      assert {:error, :server_error} =
+               perform_job(
+                 CalendarEventWorker,
+                 %{"action" => "update", "meeting_id" => meeting.id},
+                 attempt: 1
+               )
+
+      assert {:ok, cache_row} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, meeting.uid)
+
+      assert cache_row.sync_state == "locally_modified"
+    end
+
+    test "failed delete job tags the cache row as locally_deleted" do
+      %{integration: integration, meeting: meeting} =
+        setup_calendar_scenario_with_paths()
+
+      uid = meeting.uid
+
+      expect(Tymeslot.CalendarMock, :delete_event, fn ^uid, _meeting ->
+        {:error, :server_error}
+      end)
+
+      assert {:error, :server_error} =
+               perform_job(
+                 CalendarEventWorker,
+                 %{"action" => "delete", "meeting_id" => meeting.id},
+                 attempt: 1
+               )
+
+      assert {:ok, cache_row} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, meeting.uid)
+
+      assert cache_row.sync_state == "locally_deleted"
+    end
+
+    test "successful create job clears a pre-existing offline queue row" do
+      # The create mock returns this external uid, which persist_calendar_mapping
+      # writes back to the meeting.  clear_offline_queue_tag then fetches the
+      # updated meeting (uid = external_uid) and clears the matching cache row.
+      external_uid = "caldav-event-clear-test"
+
+      %{integration: integration, meeting: meeting} =
+        setup_calendar_scenario_with_paths()
+
+      # Pre-seed the queue row using the external uid that the create mock will
+      # return — this simulates a failed write from a previous sync cycle.
+      # The factory defaults to provider "google" so we override provider and
+      # provider_calendar_id to satisfy the NOT NULL constraint.
+      insert(:provider_calendar_event,
+        uid: external_uid,
+        calendar_integration: integration,
+        provider: "caldav",
+        provider_calendar_id: "primary",
+        sync_state: "locally_created"
+      )
+
+      expect_calendar_create_success(integration.id, external_uid)
+
+      assert :ok =
+               perform_job(CalendarEventWorker, %{
+                 "action" => "create",
+                 "meeting_id" => meeting.id
+               })
+
+      assert {:ok, cache_row} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, external_uid)
+
+      assert cache_row.sync_state == "synced"
     end
   end
 

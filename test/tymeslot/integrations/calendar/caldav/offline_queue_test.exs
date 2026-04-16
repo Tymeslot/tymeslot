@@ -224,5 +224,74 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.OfflineQueueTest do
       assert reloaded.sync_last_error == nil
       assert reloaded.etag == "\"fresh\""
     end
+
+    test "mark_sync_failed increments sync_attempts and sets sync_last_error without changing sync_state",
+         %{integration: integration} do
+      row = insert_pending_row(integration, sync_state: "locally_modified")
+
+      assert :ok =
+               ProviderCalendarEventQueries.mark_sync_failed(
+                 integration.id,
+                 row.uid,
+                 "502 Bad Gateway"
+               )
+
+      after_first = Repo.reload!(row)
+      assert after_first.sync_state == "locally_modified"
+      assert after_first.sync_attempts == 1
+      assert after_first.sync_last_error == "502 Bad Gateway"
+
+      assert :ok =
+               ProviderCalendarEventQueries.mark_sync_failed(
+                 integration.id,
+                 row.uid,
+                 "503 Service Unavailable"
+               )
+
+      after_second = Repo.reload!(row)
+      assert after_second.sync_state == "locally_modified"
+      assert after_second.sync_attempts == 2
+      assert after_second.sync_last_error == "503 Service Unavailable"
+    end
+
+    test "upsert_queue_entry applies on-conflict update — second call's sync_state wins",
+         %{integration: integration} do
+      base_attrs = %{
+        calendar_integration_id: integration.id,
+        uid: "upsert-test-uid",
+        provider: "caldav",
+        provider_calendar_id: "/cal/",
+        provider_event_id: "/cal/upsert-test-uid.ics",
+        summary: "Upsert Test",
+        start_at: ~U[2026-04-15 14:00:00.000000Z],
+        end_at: ~U[2026-04-15 15:00:00.000000Z],
+        all_day: false,
+        timezone: "UTC",
+        synced_at: ~U[2026-04-15 00:00:00.000000Z],
+        etag: "\"etag-v1\"",
+        sync_state: "locally_created"
+      }
+
+      assert {:ok, 1} = ProviderCalendarEventQueries.upsert_queue_entry(base_attrs)
+
+      first =
+        Repo.get_by!(ProviderCalendarEventSchema,
+          uid: "upsert-test-uid",
+          calendar_integration_id: integration.id
+        )
+
+      assert first.sync_state == "locally_created"
+
+      updated_attrs = Map.put(base_attrs, :sync_state, "locally_modified")
+      assert {:ok, 1} = ProviderCalendarEventQueries.upsert_queue_entry(updated_attrs)
+
+      second =
+        Repo.get_by!(ProviderCalendarEventSchema,
+          uid: "upsert-test-uid",
+          calendar_integration_id: integration.id
+        )
+
+      assert second.sync_state == "locally_modified"
+    end
   end
 end

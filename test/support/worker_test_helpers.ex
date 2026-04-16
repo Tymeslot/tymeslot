@@ -47,6 +47,34 @@ defmodule Tymeslot.WorkerTestHelpers do
   end
 
   @doc """
+  Sets up a complete calendar scenario with user, CalDAV integration with calendar_paths
+  populated, and meeting.
+
+  Use this variant when the test exercises code that writes to provider_calendar_events,
+  which requires a non-null provider_calendar_id — derived from `integration.calendar_paths`.
+  """
+  @spec setup_calendar_scenario_with_paths(keyword()) :: %{
+          user: UserSchema.t(),
+          integration: CalendarIntegrationSchema.t(),
+          meeting: MeetingSchema.t()
+        }
+  def setup_calendar_scenario_with_paths(opts \\ []) do
+    user = insert(:user)
+    integration = insert(:calendar_integration, user: user, calendar_paths: ["primary"])
+
+    meeting_attrs = %{
+      organizer_user_id: user.id,
+      calendar_integration_id: integration.id,
+      calendar_path: "primary",
+      uid: Keyword.get(opts, :uid, UUID.generate())
+    }
+
+    meeting = insert(:meeting, meeting_attrs)
+
+    %{user: user, integration: integration, meeting: meeting}
+  end
+
+  @doc """
   Sets up a video integration scenario with user and meeting.
   """
   @spec setup_video_scenario(keyword()) :: %{

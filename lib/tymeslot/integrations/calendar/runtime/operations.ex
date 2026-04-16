@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
   """
 
   @behaviour Tymeslot.Integrations.Calendar.CalendarBehaviour
+  alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Runtime.EventOperations
   alias Tymeslot.Integrations.Calendar.Runtime.EventQueries
@@ -75,5 +76,17 @@ defmodule Tymeslot.Integrations.Calendar.Operations do
   @impl Tymeslot.Integrations.Calendar.CalendarBehaviour
   def get_booking_integration_info(context) do
     ClientManager.get_booking_integration_info(context)
+  end
+
+  @doc """
+  Tags a calendar event cache row for offline retry on the next sync cycle.
+
+  Delegates to `QueueWiring.tag/3`. Returns `:ok` when the row is queued,
+  or `:ignored` when the meeting's integration is not a CalDAV-family provider.
+  """
+  @spec tag_for_offline_retry(QueueWiring.meeting(), QueueWiring.action(), map()) ::
+          :ok | :ignored
+  def tag_for_offline_retry(meeting, action, event_data) do
+    QueueWiring.tag(meeting, action, event_data)
   end
 end

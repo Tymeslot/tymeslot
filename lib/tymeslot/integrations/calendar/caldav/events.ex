@@ -130,14 +130,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
   @spec update_calendar_event(Base.client(), String.t(), String.t(), map(), keyword()) ::
           :ok | {:error, Base.error_reason()}
   def update_calendar_event(client, calendar_path, uid, event_data, opts \\ []) do
-    with_events_breaker(client, opts, fn ->
-      url = event_url_from_data(client, calendar_path, uid, event_data)
-      ical_data = ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
-      etag = resolve_etag(url, client, opts)
-      policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
+    policy = Keyword.get(opts, :conflict_resolution, ConflictResolution.default())
 
-      do_conditional_put(client, url, ical_data, etag, policy, opts)
-    end)
+    if ConflictResolution.valid?(policy) do
+      with_events_breaker(client, opts, fn ->
+        url = event_url_from_data(client, calendar_path, uid, event_data)
+        ical_data = ICalBuilder.build_simple_event(uid, Map.put(event_data, :uid, uid))
+        etag = resolve_etag(url, client, opts)
+
+        do_conditional_put(client, url, ical_data, etag, policy, opts)
+      end)
+    else
+      {:error, :invalid_conflict_resolution_policy}
+    end
   end
 
   defp do_conditional_put(client, url, ical_data, etag, policy, opts) do
@@ -150,19 +155,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
       Http.put_event(url, client.username, client.password, ical_data, put_opts)
     end
 
-    # Retrying a PUT is only safe when If-Match is set: the ETag gives the
-    # server an at-most-once guarantee — a successful retry reaches a server
-    # that either accepted the first attempt (412 on retry, handled below)
-    # or never saw it. Without If-Match, a retry could create duplicate
-    # events on servers that answered slowly, so unconditional PUTs fail
-    # fast.
-    raw_result =
-      if etag do
-        retry_opts = Keyword.get(opts, :retry_opts, Base.default_retry_opts())
-        RetryLogic.with_retry(put_fun, retry_opts)
-      else
-        put_fun.()
-      end
+    # If-Match PUTs (with a specific ETag or with *) are safe to retry: the
+    # server will either apply the write or reject it with 412. The
+    # duplicate-creation risk only applies to If-None-Match: * creates, which
+    # go through put_ical/5, not this function. So we always apply retry here,
+    # regardless of whether we have a specific ETag or fell back to If-Match: *.
+    retry_opts = Keyword.get(opts, :retry_opts, Base.default_retry_opts())
+    raw_result = RetryLogic.with_retry(put_fun, retry_opts)
 
     case raw_result do
       {:ok, %Req.Response{status: status}} when status in [200, 201, 204] ->

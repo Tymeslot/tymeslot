@@ -104,7 +104,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
       refute Repo.reload(stale)
     end
 
-    test "rolls cache upserts back when delete_by_uid raises",
+    test "rolls back the entire transaction when the upsert batch fails",
          %{integration: integration} do
       _stale =
         insert(:provider_calendar_event,
@@ -118,6 +118,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
           synced_at: ~U[2026-04-15 00:00:00.000000Z]
         )
 
+      # Passing two events with the same uid in a single batch causes Postgres to
+      # raise "ON CONFLICT DO UPDATE command cannot affect row a second time",
+      # which upsert_cache rescues and returns as {:error, reason}, triggering
+      # Repo.rollback inside the transaction and rolling the whole batch back.
       raw_events = [
         %{
           uid: "fresh-uid",
@@ -136,34 +140,40 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
           recurrence_rule: nil,
           recurrence_exceptions: [],
           etag: "\"fresh-etag\""
+        },
+        %{
+          uid: "fresh-uid",
+          summary: "Duplicate of Fresh event",
+          provider_event_id: "/cal/fresh-uid-dup.ics",
+          start_time: ~U[2026-04-15 14:00:00Z],
+          end_time: ~U[2026-04-15 15:00:00Z],
+          description: nil,
+          location: nil,
+          all_day: false,
+          timezone: "UTC",
+          status: "confirmed",
+          transparency: "opaque",
+          attendees: [],
+          organiser: nil,
+          recurrence_rule: nil,
+          recurrence_exceptions: [],
+          etag: "\"fresh-etag-dup\""
         }
       ]
 
-      # Intercept delete_by_uid and raise so the transaction must roll back
-      :meck.new(ProviderCalendarEventQueries, [:passthrough])
-
-      :meck.expect(ProviderCalendarEventQueries, :delete_by_uid, fn _id, _uid ->
-        raise "simulated delete failure"
-      end)
-
-      try do
-        assert_raise RuntimeError, "simulated delete failure", fn ->
-          SyncReconciler.process_full_fetch(
-            integration,
-            raw_events,
-            ~U[2026-04-01 00:00:00Z],
-            ~U[2026-04-30 00:00:00Z],
-            ~U[2026-04-15 12:00:00.000000Z],
-            "/cal/"
-          )
-        end
-      after
-        :meck.unload(ProviderCalendarEventQueries)
-      end
+      assert {:error, _reason} =
+               SyncReconciler.process_full_fetch(
+                 integration,
+                 raw_events,
+                 ~U[2026-04-01 00:00:00Z],
+                 ~U[2026-04-30 00:00:00Z],
+                 ~U[2026-04-15 12:00:00.000000Z],
+                 "/cal/"
+               )
 
       # Neither the upsert nor the delete took effect:
-      # * fresh-uid is NOT present (upsert rolled back)
-      # * stale-uid IS still present (delete never ran to completion)
+      # * fresh-uid is NOT present (upsert was rolled back)
+      # * stale-uid IS still present (delete step was never reached)
       assert {:error, :not_found} =
                ProviderCalendarEventQueries.get_by_uid(integration.id, "fresh-uid")
 

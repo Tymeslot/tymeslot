@@ -5,7 +5,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
   import Phoenix.LiveView, only: [put_flash: 3, send_update: 2]
 
   alias Tymeslot.CalendarGrid
-  alias Tymeslot.Integrations.Calendar.CalDAV.QueueWiring
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
@@ -133,7 +132,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventDelete do
     # For CalDAV integrations, tag the cache row so OfflineQueue.flush/2
     # retries the delete on the next sync cycle. QueueWiring is a no-op
     # for non-CalDAV providers, so this is safe to call unconditionally.
-    queue_result = QueueWiring.tag(context, :delete, %{})
+    queue_result = EventOperations.tag_for_offline_retry(context, :delete, %{})
 
     send_update(CalendarGridComponent,
       id: "calendar",
