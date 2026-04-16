@@ -18,10 +18,12 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.Calendar.Deletion
   alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Integrations.Calendar.EventsRead
   alias Tymeslot.Integrations.Calendar.OAuth
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.{CaldavCommon, ProviderAdapter}
+  alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
@@ -250,6 +252,35 @@ defmodule Tymeslot.Integrations.Calendar do
              adapter_client.provider_module.list_events(adapter_client.client, opts) do
         adapter_client.provider_module.normalise_events(raw_events, context)
       end
+    end
+  end
+
+  @doc """
+  Fetches events via the fresh-fetch path — the same code path the availability
+  calculator uses at runtime. Returns plain maps (not `CalendarEvent` structs).
+
+  This is the counterpart to `fetch_and_normalise_provider_events/3`, which goes
+  through the sync/normalisation pipeline. Comparing results between the two
+  paths catches divergence bugs (e.g. one expands recurring events, the other
+  does not).
+  """
+  @spec fetch_fresh_events(integration(), DateTime.t(), DateTime.t()) ::
+          {:ok, [map()]} | {:error, term()}
+  def fetch_fresh_events(%CalendarIntegrationSchema{} = integration, range_start, range_end) do
+    clients = ClientManager.clients_for_integration(integration)
+
+    results =
+      Enum.map(clients, fn client ->
+        EventsRead.fetch_events_with_fallback(client, range_start, range_end)
+      end)
+
+    successes = for {:ok, events, _path} <- results, event <- events, do: event
+    success_count = Enum.count(results, &match?({:ok, _events, _path}, &1))
+
+    if success_count == 0 and results != [] do
+      {:error, :all_clients_failed}
+    else
+      {:ok, Enum.uniq_by(successes, &{&1[:uid], &1[:start_time]})}
     end
   end
 

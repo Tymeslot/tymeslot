@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalDAV.Base
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
+  alias Tymeslot.Integrations.Calendar.RecurrenceExpander
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
 
   @doc """
@@ -63,7 +64,10 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   def fetch_events_with_fallback(client, start_utc, end_utc) do
     case ProviderAdapter.get_events(client, start_utc, end_utc) do
       {:ok, events} ->
-        wrap_events_result(client, {:ok, normalize_events(client, events)})
+        normalized = normalize_events(client, events)
+        expanded = expand_recurring_events(normalized, start_utc, end_utc)
+
+        wrap_events_result(client, {:ok, expanded})
 
       error ->
         Logger.warning("Failed to fetch from calendar, trying fallback",
@@ -80,8 +84,11 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   defp fallback_list_events_for_client(client, start_utc, end_utc, _original_error) do
     case ProviderAdapter.get_events(client) do
       {:ok, all_events} ->
+        # Expand recurring events first so their occurrences can be range-filtered
+        expanded = expand_recurring_events(all_events, start_utc, end_utc)
+
         filtered =
-          Enum.filter(all_events, fn event ->
+          Enum.filter(expanded, fn event ->
             start_time = Map.get(event, :start_time)
             end_time = Map.get(event, :end_time)
 
@@ -93,7 +100,7 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
         Logger.info("Fallback filtering applied",
           calendar_path: get_calendar_path(client),
           filtered_count: length(filtered),
-          total_count: length(all_events)
+          total_count: length(expanded)
         )
 
         {:ok, filtered}
@@ -116,7 +123,14 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
   def fetch_events_without_range(client) do
     case ProviderAdapter.get_events(client) do
       {:ok, events} ->
-        wrap_events_result(client, {:ok, normalize_events(client, events)})
+        now = DateTime.utc_now()
+        range_start = DateTime.add(now, -30, :day)
+        range_end = DateTime.add(now, 365, :day)
+
+        normalized = normalize_events(client, events)
+        expanded = expand_recurring_events(normalized, range_start, range_end)
+
+        wrap_events_result(client, {:ok, expanded})
 
       error ->
         wrap_events_result(client, error, :error)
@@ -133,6 +147,42 @@ defmodule Tymeslot.Integrations.Calendar.EventsRead do
       events
     end
   end
+
+  # Expands recurring events (those with a recurrence_rule) into individual
+  # occurrences within the requested date range. Non-recurring events pass
+  # through unchanged. Each occurrence replaces start_time/end_time with the
+  # concrete occurrence times so downstream availability checking sees them
+  # as distinct events.
+  defp expand_recurring_events(events, range_start, range_end) do
+    Enum.flat_map(events, &expand_event(&1, range_start, range_end))
+  end
+
+  defp expand_event(event, range_start, range_end) do
+    rrule = event[:rrule] || event[:recurrence_rule]
+
+    if rrule && rrule != "" do
+      expander_event = %{
+        start_time: event[:dtstart] || event[:start_time],
+        end_time: event[:dtend] || event[:end_time],
+        recurrence_rule: rrule
+      }
+
+      exdates = parse_exdates(event[:exdate] || event[:exdates] || [])
+
+      expander_event
+      |> RecurrenceExpander.expand(range_start, range_end, exdates: exdates)
+      |> Enum.map(fn occurrence ->
+        event
+        |> Map.put(:start_time, occurrence.start_time)
+        |> Map.put(:end_time, occurrence.end_time)
+      end)
+    else
+      [event]
+    end
+  end
+
+  defp parse_exdates(exdates) when is_list(exdates), do: exdates
+  defp parse_exdates(_other), do: []
 
   defp ensure_utc(%DateTime{time_zone: "Etc/UTC"} = dt), do: {:ok, dt}
 

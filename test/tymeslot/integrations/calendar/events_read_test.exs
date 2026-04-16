@@ -285,6 +285,165 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
     end
   end
 
+  # Provider returning a recurring event (FREQ=DAILY;COUNT=5) starting on Jan 1.
+  # The fresh-fetch path must expand this into individual occurrences within the
+  # requested range, not return the master event alone.
+  defmodule RecurringProvider do
+    @spec list_events(any(), keyword()) :: {:ok, list(map())}
+    def list_events(_client, _opts) do
+      {:ok,
+       [
+         %{
+           uid: "recurring-daily",
+           summary: "Daily standup",
+           start_time: ~U[2024-01-01 09:45:00Z],
+           end_time: ~U[2024-01-01 10:00:00Z],
+           recurrence_rule: "FREQ=DAILY;COUNT=5"
+         },
+         %{
+           uid: "one-off",
+           summary: "One-off meeting",
+           start_time: ~U[2024-01-02 14:00:00Z],
+           end_time: ~U[2024-01-02 15:00:00Z]
+         }
+       ]}
+    end
+  end
+
+  # Provider returning a recurring event with an EXDATE that should be excluded.
+  defmodule RecurringWithExdateProvider do
+    @spec list_events(any(), keyword()) :: {:ok, list(map())}
+    def list_events(_client, _opts) do
+      {:ok,
+       [
+         %{
+           uid: "recurring-with-exdate",
+           summary: "Weekday standup",
+           start_time: ~U[2024-01-01 09:45:00Z],
+           end_time: ~U[2024-01-01 10:00:00Z],
+           recurrence_rule: "FREQ=DAILY;COUNT=3",
+           exdates: [~U[2024-01-02 09:45:00Z]]
+         }
+       ]}
+    end
+  end
+
+  describe "recurring event expansion in fetch_events_with_fallback/3" do
+    test "expands recurring events into individual occurrences" do
+      adapter_client = %{
+        provider_type: :fake,
+        provider_module: RecurringProvider,
+        client: %{calendar_path: "/cal/recurring"}
+      }
+
+      # Range covers Jan 1-5 (all 5 occurrences of the daily event)
+      start_dt = ~U[2024-01-01 00:00:00Z]
+      end_dt = ~U[2024-01-06 00:00:00Z]
+
+      assert {:ok, events, "/cal/recurring"} =
+               EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
+
+      # Should have 5 expanded occurrences + 1 one-off = 6 events
+      assert length(events) == 6
+
+      recurring_events = Enum.filter(events, &(&1.uid == "recurring-daily"))
+      assert length(recurring_events) == 5
+
+      # Each occurrence should have the correct start/end times shifted by day
+      start_times =
+        recurring_events
+        |> Enum.map(& &1.start_time)
+        |> Enum.sort(DateTime)
+
+      assert start_times == [
+               ~U[2024-01-01 09:45:00Z],
+               ~U[2024-01-02 09:45:00Z],
+               ~U[2024-01-03 09:45:00Z],
+               ~U[2024-01-04 09:45:00Z],
+               ~U[2024-01-05 09:45:00Z]
+             ]
+
+      # One-off event should be unchanged
+      assert Enum.any?(events, &(&1.uid == "one-off"))
+    end
+
+    test "respects EXDATE exclusions during expansion" do
+      adapter_client = %{
+        provider_type: :fake,
+        provider_module: RecurringWithExdateProvider,
+        client: %{calendar_path: "/cal/exdate"}
+      }
+
+      start_dt = ~U[2024-01-01 00:00:00Z]
+      end_dt = ~U[2024-01-04 00:00:00Z]
+
+      assert {:ok, events, "/cal/exdate"} =
+               EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
+
+      # COUNT=3 would give Jan 1, 2, 3 but Jan 2 is excluded by EXDATE
+      assert length(events) == 2
+
+      start_times =
+        events
+        |> Enum.map(& &1.start_time)
+        |> Enum.sort(DateTime)
+
+      assert start_times == [
+               ~U[2024-01-01 09:45:00Z],
+               ~U[2024-01-03 09:45:00Z]
+             ]
+    end
+
+    test "only expands occurrences within the requested range" do
+      adapter_client = %{
+        provider_type: :fake,
+        provider_module: RecurringProvider,
+        client: %{calendar_path: "/cal/partial-range"}
+      }
+
+      # Range only covers Jan 3-4 (should get 2 of the 5 daily occurrences)
+      start_dt = ~U[2024-01-03 00:00:00Z]
+      end_dt = ~U[2024-01-05 00:00:00Z]
+
+      assert {:ok, events, "/cal/partial-range"} =
+               EventsRead.fetch_events_with_fallback(adapter_client, start_dt, end_dt)
+
+      recurring_events = Enum.filter(events, &(&1.uid == "recurring-daily"))
+      assert length(recurring_events) == 2
+
+      start_times =
+        recurring_events
+        |> Enum.map(& &1.start_time)
+        |> Enum.sort(DateTime)
+
+      assert start_times == [
+               ~U[2024-01-03 09:45:00Z],
+               ~U[2024-01-04 09:45:00Z]
+             ]
+    end
+  end
+
+  # Provider returning a recurring event relative to "now" so it falls within
+  # the hardcoded range used by fetch_events_without_range (now-30d to now+365d).
+  defmodule NowRelativeRecurringProvider do
+    @spec list_events(any(), keyword()) :: {:ok, list(map())}
+    def list_events(_client, _opts) do
+      now = DateTime.utc_now()
+      start = DateTime.add(now, -1, :day)
+
+      {:ok,
+       [
+         %{
+           uid: "recurring-now",
+           summary: "Daily recurring",
+           start_time: start,
+           end_time: DateTime.add(start, 900, :second),
+           recurrence_rule: "FREQ=DAILY;COUNT=3"
+         }
+       ]}
+    end
+  end
+
   describe "fetch_events_without_range/1" do
     test "successfully fetches all events without time range" do
       adapter_client = %{
@@ -297,6 +456,23 @@ defmodule Tymeslot.Integrations.Calendar.EventsReadTest do
 
       assert length(events) == 2
       assert Enum.all?(events, &Map.has_key?(&1, :uid))
+    end
+
+    test "expands recurring events within the default range" do
+      adapter_client = %{
+        provider_type: :fake,
+        provider_module: NowRelativeRecurringProvider,
+        client: %{calendar_path: "/cal/recurring-no-range"}
+      }
+
+      assert {:ok, events, "/cal/recurring-no-range"} =
+               EventsRead.fetch_events_without_range(adapter_client)
+
+      # COUNT=3 starting yesterday — all 3 occurrences fall within now-30d..now+365d
+      assert length(events) == 3
+
+      recurring = Enum.filter(events, &(&1[:uid] == "recurring-now"))
+      assert length(recurring) == 3
     end
 
     test "returns error tuple when provider fails" do

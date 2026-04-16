@@ -48,6 +48,15 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   end
 
   @doc """
+  Gets configured calendar clients for a single integration.
+  Returns a list of adapter clients, one for each configured calendar path.
+  """
+  @spec clients_for_integration(map()) :: [client()]
+  def clients_for_integration(integration) do
+    create_clients_from_integration(integration)
+  end
+
+  @doc """
   Gets a single configured calendar client (for backward compatibility).
   Uses the first configured calendar path.
   """
