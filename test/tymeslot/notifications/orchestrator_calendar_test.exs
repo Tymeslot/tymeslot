@@ -11,6 +11,12 @@ defmodule Tymeslot.Notifications.OrchestratorCalendarTest do
       send(self(), {:scheduled_invitation, params})
       :ok
     end
+
+    @spec schedule_event_update_notification(map()) :: :ok
+    def schedule_event_update_notification(params) do
+      send(self(), {:scheduled_event_update, params})
+      :ok
+    end
   end
 
   defmodule FailingWorker do
@@ -22,6 +28,13 @@ defmodule Tymeslot.Notifications.OrchestratorCalendarTest do
     def schedule_calendar_invitation(params) do
       send(self(), {:scheduled_invitation, params})
       :ok
+    end
+  end
+
+  defmodule FailingUpdateWorker do
+    @spec schedule_event_update_notification(map()) :: {:error, String.t()}
+    def schedule_event_update_notification(_params) do
+      {:error, "Failed to schedule update job"}
     end
   end
 
@@ -49,6 +62,73 @@ defmodule Tymeslot.Notifications.OrchestratorCalendarTest do
       },
       overrides
     )
+  end
+
+  defp original_event(overrides) do
+    Map.merge(
+      %{
+        uid: "event-uid-123",
+        calendar_integration_id: 42,
+        summary: "Team Sync",
+        location: "Room 1",
+        description: "Agenda TBD",
+        start_at: ~U[2026-04-10 10:00:00Z],
+        end_at: ~U[2026-04-10 11:00:00Z],
+        attendees: nil
+      },
+      overrides
+    )
+  end
+
+  describe "schedule_event_update_notification/2" do
+    test "returns :ok immediately when attendees is nil" do
+      Application.put_env(:tymeslot, :email_worker_module, MockWorker)
+      event = original_event(%{attendees: nil})
+
+      assert :ok = Orchestrator.schedule_event_update_notification(1, event)
+      refute_received {:scheduled_event_update, _}
+    end
+
+    test "returns :ok immediately when attendees is empty list" do
+      Application.put_env(:tymeslot, :email_worker_module, MockWorker)
+      event = original_event(%{attendees: []})
+
+      assert :ok = Orchestrator.schedule_event_update_notification(1, event)
+      refute_received {:scheduled_event_update, _}
+    end
+
+    test "delegates to worker with correct params when attendees are present" do
+      Application.put_env(:tymeslot, :email_worker_module, MockWorker)
+
+      event =
+        original_event(%{
+          attendees: [%{"email" => "alice@example.com"}, %{"email" => "bob@example.com"}]
+        })
+
+      assert :ok = Orchestrator.schedule_event_update_notification(7, event)
+
+      assert_received {:scheduled_event_update,
+                       %{
+                         user_id: 7,
+                         event_uid: "event-uid-123",
+                         integration_id: 42,
+                         attendee_emails: ["alice@example.com", "bob@example.com"],
+                         before_title: "Team Sync",
+                         before_location: "Room 1",
+                         before_description: "Agenda TBD",
+                         before_start_at: ~U[2026-04-10 10:00:00Z],
+                         before_end_at: ~U[2026-04-10 11:00:00Z]
+                       }}
+    end
+
+    test "returns :ok even when the worker returns an error" do
+      Application.put_env(:tymeslot, :email_worker_module, FailingUpdateWorker)
+
+      event =
+        original_event(%{attendees: [%{"email" => "carol@example.com"}]})
+
+      assert :ok = Orchestrator.schedule_event_update_notification(3, event)
+    end
   end
 
   describe "schedule_calendar_invitations/3" do

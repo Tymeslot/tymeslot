@@ -6,6 +6,31 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   require Logger
 
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
+  alias TymeslotWeb.Live.Scheduling.Helpers
+
+  @doc """
+  Handles calendar events updated via PubSub.
+
+  Re-fetches the month availability map and clears any cached slot data
+  so the scheduling page reflects the latest calendar state.
+  """
+  @spec handle_calendar_events_updated(Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_calendar_events_updated(socket) do
+    socket =
+      case socket.assigns[:current_state] do
+        state when state in [:overview, :schedule, nil] ->
+          socket
+          |> assign(:available_slots, nil)
+          |> assign(:selected_time, nil)
+          |> Helpers.fetch_month_availability_async()
+
+        _committed ->
+          Helpers.fetch_month_availability_async(socket)
+      end
+
+    {:noreply, socket}
+  end
 
   @doc """
   Handles month availability fetch completion (success).

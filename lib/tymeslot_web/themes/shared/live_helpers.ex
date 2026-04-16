@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     statics: TymeslotWeb.static_paths()
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [put_flash: 3, redirect: 2]
+  import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
 
   alias Tymeslot.Bookings.SubmissionToken
   alias Tymeslot.MeetingTypes
@@ -48,6 +48,9 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
 
     # Apply theme customization after organizer is resolved
     socket = maybe_assign_customization(socket)
+
+    # Subscribe to calendar event updates for the organiser so availability refreshes on sync
+    socket = maybe_subscribe_to_calendar_events(socket)
 
     # Finally setup initial state
     socket = setup_initial_state_fun.(socket, initial_state, params)
@@ -292,5 +295,17 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     |> assign(:client_ip, client_ip)
     |> assign(:submission_token, submission_token)
     |> assign(:submission_processed, false)
+  end
+
+  defp maybe_subscribe_to_calendar_events(socket) do
+    organizer_user_id = socket.assigns[:organizer_user_id]
+
+    if connected?(socket) && is_integer(organizer_user_id) &&
+         !socket.assigns[:calendar_pubsub_subscribed] do
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "calendar_events:#{organizer_user_id}")
+      assign(socket, :calendar_pubsub_subscribed, true)
+    else
+      socket
+    end
   end
 end
