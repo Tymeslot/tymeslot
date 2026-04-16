@@ -427,7 +427,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
       description: description
     } = result
 
-
     provider_calendar_id =
       creating[:calendar_id] || default_booking_calendar_id || "primary"
 

@@ -570,7 +570,6 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.InlineEditTest do
       assert html =~ "None"
       assert html =~ "update_edit_video"
     end
-
   end
 
   defp insert_event(integration, attrs) do
