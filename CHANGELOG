@@ -1,4 +1,7 @@
 
+[0.100.4]
+* saas: Write boolean stable field in set_version task
+* core: Use boolean stable field in CloudronVersions.json
 [0.100.3]
 * core: Add local icon path to manifest and use boolean stable field
 * core: Populate empty 0.99.32 changelog and correct install URL
