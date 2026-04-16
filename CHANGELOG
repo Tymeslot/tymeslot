@@ -1,4 +1,24 @@
 
+[0.100.2]
+* core: Guard against nil calendar_paths in CalDAV queue wiring
+* core: Retain etag in provider_metadata for CalDAV events
+* core: Address deep review findings for scheduling availability refresh
+* core: Refresh scheduling page availability on calendar sync
+* core: Address deep review findings for attendee notifications
+* core: Resolve Dialyzer warnings in CalDAV queue wiring
+* core: Address deep review findings for CalDAV reliability branch
+* core: Make CalDAV full-fetch reconciliation atomic
+* core: Centralise attendee notifications with change detection and ICS sequencing
+* core: Centralise attendee notifications with change detection and ICS sequencing
+* core: Handle move_event_async failures via offline queue
+* core: Wire dashboard direct edit into CalDAV offline queue
+* core: Wire dashboard create/delete into CalDAV offline queue
+* core: Wire CalendarEventWorker into CalDAV offline queue
+* core: CalDAV offline write queue
+* core: Persist raw iCal body alongside parsed CalDAV events
+* core: Re-probe CalDAV sync tier on forced full fetch
+* core: Retry CalDAV conditional PUTs on transient errors
+* core: CalDAV conflict-resolution policy on 412
 [0.100.1]
 * core: Add consecutive_hard_failures to monitor test state fixtures
 * core: Rename bare _ bindings to _upserted in sync sweep worker test

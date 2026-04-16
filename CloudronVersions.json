@@ -1,5 +1,5 @@
 {
-  "stable": "0.100.1",
+  "stable": "0.100.2",
   "versions": {
     "0.100.0": {
       "creationDate": "Tue, 14 Apr 2026 14:41:13 GMT",
@@ -92,6 +92,52 @@
       },
       "publishState": "published",
       "ts": "Wed, 15 Apr 2026 20:13:06 GMT"
+    },
+    "0.100.2": {
+      "creationDate": "Thu, 16 Apr 2026 09:35:32 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* core: Guard against nil calendar_paths in CalDAV queue wiring\n* core: Retain etag in provider_metadata for CalDAV events\n* core: Address deep review findings for scheduling availability refresh\n* core: Refresh scheduling page availability on calendar sync\n* core: Address deep review findings for attendee notifications\n* core: Resolve Dialyzer warnings in CalDAV queue wiring\n* core: Address deep review findings for CalDAV reliability branch\n* core: Make CalDAV full-fetch reconciliation atomic\n* core: Centralise attendee notifications with change detection and ICS sequencing\n* core: Centralise attendee notifications with change detection and ICS sequencing\n* core: Handle move_event_async failures via offline queue\n* core: Wire dashboard direct edit into CalDAV offline queue\n* core: Wire dashboard create/delete into CalDAV offline queue\n* core: Wire CalendarEventWorker into CalDAV offline queue\n* core: CalDAV offline write queue\n* core: Persist raw iCal body alongside parsed CalDAV events\n* core: Re-probe CalDAV sync tier on forced full fetch\n* core: Retry CalDAV conditional PUTs on transient errors\n* core: CalDAV conflict-resolution policy on 412",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:0.100.2",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "0.100.2",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Thu, 16 Apr 2026 09:35:32 GMT"
     },
     "0.99.24": {
       "creationDate": "Thu, 12 Mar 2026 09:57:44 GMT",
