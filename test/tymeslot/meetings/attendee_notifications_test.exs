@@ -37,6 +37,22 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
         args: %{"action" => "send_calendar_invitation", "attendee_email" => "b@x.com"}
       )
     end
+
+    test "enqueues a :request invitation for a MeetingSchema attendee" do
+      meeting = insert(:meeting, attendee_email: "guest@example.com")
+      attendees = [%{email: "guest@example.com"}]
+
+      assert {:ok, :sent} = AttendeeNotifications.event_created(meeting, attendees)
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_calendar_invitation",
+          "attendee_email" => "guest@example.com",
+          "method" => "request"
+        }
+      )
+    end
   end
 
   describe "event_updated/3" do
@@ -185,14 +201,14 @@ defmodule Tymeslot.Meetings.AttendeeNotificationsTest do
       event = insert(:provider_calendar_event)
       refute AttendeeNotifications.pending?(event.id)
 
-      :ok = Dispatcher.schedule_update(event.id, :provider_calendar_event)
+      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
       assert AttendeeNotifications.pending?(event.id)
     end
 
     test "cancel_pending/1 removes scheduled jobs for the event" do
       event = insert(:provider_calendar_event)
-      :ok = Dispatcher.schedule_update(event.id, :provider_calendar_event)
-      :ok = Dispatcher.schedule_delete(event.id, :provider_calendar_event)
+      {:ok, :scheduled} = Dispatcher.schedule_update(event.id, :provider_calendar_event)
+      {:ok, :scheduled} = Dispatcher.schedule_delete(event.id, :provider_calendar_event)
 
       :ok = AttendeeNotifications.cancel_pending(event)
 

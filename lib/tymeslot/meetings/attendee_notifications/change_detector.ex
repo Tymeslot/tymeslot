@@ -20,8 +20,8 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeDetector do
     {added, removed, retained} =
       diff_attendees(Map.get(old, :attendees, []), Map.get(new, :attendees, []))
 
-    next_sequence =
-      if changed_fields == [], do: current_sequence, else: current_sequence + 1
+    has_changes = changed_fields != [] or added != [] or removed != []
+    next_sequence = if has_changes, do: current_sequence + 1, else: current_sequence
 
     %ChangeSummary{
       changed_fields: changed_fields,

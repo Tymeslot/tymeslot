@@ -70,10 +70,13 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     end
   end
 
-  @spec event_updated_confirm(event, ChangeSummary.t(), [attendee]) :: {:ok, :sent}
+  @spec event_updated_confirm(event, ChangeSummary.t(), [attendee]) ::
+          {:ok, :sent} | {:error, term}
   def event_updated_confirm(event, %ChangeSummary{} = _summary, _attendees) do
-    :ok = Dispatcher.schedule_update(event_id(event), event_kind(event))
-    {:ok, :sent}
+    case Dispatcher.schedule_update(event_id(event), event_kind(event)) do
+      {:ok, :scheduled} -> {:ok, :sent}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @spec attendees_added(event, [attendee]) :: {:ok, :sent | :noop}
@@ -106,10 +109,12 @@ defmodule Tymeslot.Meetings.AttendeeNotifications do
     {:needs_confirmation, length(attendees)}
   end
 
-  @spec event_deleted_confirm(event, [attendee]) :: {:ok, :sent}
+  @spec event_deleted_confirm(event, [attendee]) :: {:ok, :sent} | {:error, term}
   def event_deleted_confirm(event, _attendees) do
-    :ok = Dispatcher.schedule_delete(event_id(event), event_kind(event))
-    {:ok, :sent}
+    case Dispatcher.schedule_delete(event_id(event), event_kind(event)) do
+      {:ok, :scheduled} -> {:ok, :sent}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @spec pending?(integer | binary) :: boolean

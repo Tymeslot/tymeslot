@@ -173,6 +173,29 @@ defmodule TymeslotWeb.Dashboard.CalendarEventHandlers do
     {:noreply, put_flash(socket, :error, reason)}
   end
 
+  @doc "Applies the result of an async video room provisioning to the calendar grid."
+  @spec handle_video_sync_result(
+          integer() | nil,
+          {:ok, String.t() | nil} | {:error, term()},
+          Phoenix.LiveView.Socket.t()
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_video_sync_result(_event_id, {:error, _reason}, socket) do
+    {:noreply, put_flash(socket, :error, "Failed to provision video room — link not updated")}
+  end
+
+  def handle_video_sync_result(event_id, {:ok, video_link}, socket) do
+    if socket.assigns.live_action == :calendar do
+      send_update(CalendarGridComponent,
+        id: "calendar",
+        action: :video_link_updated,
+        event_id: event_id,
+        video_link: video_link
+      )
+    end
+
+    {:noreply, socket}
+  end
+
   @doc "Spawns a supervised task to delete a calendar event."
   @spec handle_execute_delete_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

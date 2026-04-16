@@ -443,27 +443,47 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
         {:noreply, socket}
 
       %{kind: :update, summary: summary, event: event, attendees: attendees} ->
-        {:ok, :sent} = AttendeeNotifications.event_updated_confirm(event, summary, attendees)
-        send(self(), {:flash, {:info, "Changes saved. Attendees will be notified shortly."}})
+        case AttendeeNotifications.event_updated_confirm(event, summary, attendees) do
+          {:ok, :sent} ->
+            send(self(), {:flash, {:info, "Changes saved. Attendees will be notified shortly."}})
 
-        {:noreply,
-         socket
-         |> assign(:notify_prompt, nil)
-         |> assign(:pending_notification, true)}
+            {:noreply,
+             socket
+             |> assign(:notify_prompt, nil)
+             |> assign(:pending_notification, true)}
+
+          {:error, _reason} ->
+            send(
+              self(),
+              {:flash, {:warning, "Could not schedule notification. Changes were saved."}}
+            )
+
+            {:noreply, assign(socket, :notify_prompt, nil)}
+        end
 
       %{kind: :delete, event: event, attendees: attendees} ->
-        {:ok, :sent} = AttendeeNotifications.event_deleted_confirm(event, attendees)
-        user_id = socket.assigns.current_user.id
+        case AttendeeNotifications.event_deleted_confirm(event, attendees) do
+          {:ok, :sent} ->
+            user_id = socket.assigns.current_user.id
 
-        send(
-          self(),
-          {:execute_delete_event, build_delete_payload(event, user_id, true)}
-        )
+            send(
+              self(),
+              {:execute_delete_event, build_delete_payload(event, user_id, true)}
+            )
 
-        {:noreply,
-         socket
-         |> assign(:notify_prompt, nil)
-         |> assign(:deleting_event, true)}
+            {:noreply,
+             socket
+             |> assign(:notify_prompt, nil)
+             |> assign(:deleting_event, true)}
+
+          {:error, _reason} ->
+            send(
+              self(),
+              {:flash, {:warning, "Could not schedule notification. Please try again."}}
+            )
+
+            {:noreply, assign(socket, :notify_prompt, nil)}
+        end
     end
   end
 
@@ -508,10 +528,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   end
 
   defp apply_notify_result(socket, original_event, updated_event) do
-    user_id = socket.assigns.current_user.id
-
-    _video_sync =
-      EditWorkflow.maybe_sync_video_integration(original_event, updated_event, user_id)
+    socket = EditWorkflow.sync_video_integration_async(socket, original_event, updated_event)
 
     attendees = updated_event.attendees || original_event.attendees || []
 

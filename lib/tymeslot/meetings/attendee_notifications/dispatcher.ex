@@ -35,10 +35,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
   @type event_kind :: :meeting | :provider_calendar_event
   @type action :: :update | :delete
 
-  @spec schedule_update(integer, event_kind) :: :ok
+  @spec schedule_update(integer, event_kind) :: {:ok, :scheduled} | {:error, term}
   def schedule_update(event_id, kind), do: enqueue(event_id, kind, :update)
 
-  @spec schedule_delete(integer, event_kind) :: :ok
+  @spec schedule_delete(integer, event_kind) :: {:ok, :scheduled} | {:error, term}
   def schedule_delete(event_id, kind), do: enqueue(event_id, kind, :delete)
 
   @spec cancel_pending(integer, event_kind) :: :ok
@@ -52,7 +52,7 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
     DispatcherQueries.pending?(event_id, Atom.to_string(kind))
   end
 
-  @spec enqueue(integer, event_kind, action) :: :ok
+  @spec enqueue(integer, event_kind, action) :: {:ok, :scheduled} | {:error, term}
   defp enqueue(event_id, kind, action) when is_integer(event_id) do
     args = %{
       "event_id" => event_id,
@@ -60,19 +60,19 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Dispatcher do
       "action" => Atom.to_string(action)
     }
 
-    {:ok, _job} =
-      args
-      |> Worker.new(
-        schedule_in: @debounce_seconds,
-        unique: [
-          period: :infinity,
-          states: [:available, :scheduled],
-          keys: [:event_id, :kind, :action]
-        ],
-        replace: [scheduled: [:scheduled_at]]
-      )
-      |> Oban.insert()
-
-    :ok
+    case args
+         |> Worker.new(
+           schedule_in: @debounce_seconds,
+           unique: [
+             period: :infinity,
+             states: [:available, :scheduled],
+             keys: [:event_id, :kind, :action]
+           ],
+           replace: [scheduled: [:scheduled_at]]
+         )
+         |> Oban.insert() do
+      {:ok, _job} -> {:ok, :scheduled}
+      {:error, reason} -> {:error, reason}
+    end
   end
 end

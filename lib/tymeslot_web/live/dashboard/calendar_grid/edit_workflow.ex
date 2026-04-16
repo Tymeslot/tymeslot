@@ -456,39 +456,51 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   end
 
   @doc """
-  Synchronises the video integration selection for an event.
+  Asynchronously synchronises the video integration selection for an event.
 
   Compares the `:video_integration_id` on `updated_event` against
-  `original_event`. When the value is set or changed, provisions a meeting
-  room via `Tymeslot.Integrations.Video.Rooms.create_meeting_room/2` and
-  persists the new `:video_link` to the cached event row. When it is cleared,
-  the `:video_link` column is cleared (the provider room is left in place).
+  `original_event`. When unchanged, returns the socket immediately with no
+  side effects. When changed, spawns a supervised task that provisions a
+  meeting room via `Tymeslot.Integrations.Video.Rooms.create_meeting_room/2`
+  (or clears the link when the new ID is `nil`), persists the result to the
+  cached event row, then sends `{:video_sync_result, event_id, result}` to
+  the LiveView process, where `result` is `{:ok, url_or_nil}` or
+  `{:error, reason}`.
 
-  Returns `{:ok, :unchanged}` when there is nothing to do, `{:ok, url}` when a
-  new link was persisted (or `nil` if the link was cleared), and
-  `{:error, reason}` when provisioning failed. Callers treat `:error` as a
-  graceful degradation — the rest of the edit save proceeds regardless.
+  Returns the (unchanged) socket immediately so callers are never blocked by
+  the network round-trip to the video provider.
   """
-  @spec maybe_sync_video_integration(map(), map(), integer()) ::
-          {:ok, :unchanged} | {:ok, String.t() | nil} | {:error, term()}
-  def maybe_sync_video_integration(original_event, updated_event, user_id) do
+  @spec sync_video_integration_async(
+          Phoenix.LiveView.Socket.t(),
+          map(),
+          map()
+        ) :: Phoenix.LiveView.Socket.t()
+  def sync_video_integration_async(socket, original_event, updated_event) do
     old_id = Map.get(original_event, :video_integration_id)
     new_id = Map.get(updated_event, :video_integration_id)
 
-    cond do
-      old_id == new_id ->
-        {:ok, :unchanged}
+    if old_id == new_id do
+      socket
+    else
+      user_id = socket.assigns.current_user.id
+      event_id = Map.get(updated_event, :id)
+      lv_pid = self()
 
-      is_nil(new_id) ->
-        persist_video_link(updated_event, nil)
-        {:ok, nil}
+      Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+        result = provision_video_link(updated_event, new_id, user_id)
+        send(lv_pid, {:video_sync_result, event_id, result})
+      end)
 
-      true ->
-        provision_and_persist(updated_event, new_id, user_id)
+      socket
     end
   end
 
-  defp provision_and_persist(event, integration_id, user_id) do
+  defp provision_video_link(event, nil, _user_id) do
+    persist_video_link(event, nil)
+    {:ok, nil}
+  end
+
+  defp provision_video_link(event, integration_id, user_id) do
     case video_rooms_module().create_meeting_room(user_id, integration_id: integration_id) do
       {:ok, %{room_data: room_data}} ->
         url = room_data[:meeting_url] || room_data[:join_url]

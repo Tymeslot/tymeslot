@@ -14,7 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   """
   @spec generate_ics(map(), String.t()) :: String.t()
   def generate_ics(meeting_details, locale \\ "en") do
-    generate_ics_with(meeting_details, :request, nil, locale)
+    generate_ics_with(meeting_details, :none, nil, locale)
   end
 
   @doc """
@@ -97,13 +97,13 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   defp render_vcalendar(event, method, sequence) do
     attendee_line = if event.attendee, do: "ATTENDEE:#{event.attendee}\n", else: ""
     sequence_line = if is_integer(sequence), do: "SEQUENCE:#{sequence}\n", else: ""
+    method_line = if method == :none, do: "", else: "METHOD:#{method_token(method)}\n"
     status = status_for(method, event.status)
 
     """
     BEGIN:VCALENDAR
     VERSION:2.0
-    METHOD:#{method_token(method)}
-    PRODID:-//Tymeslot//Tymeslot 1.0//EN
+    #{method_line}PRODID:-//Tymeslot//Tymeslot 1.0//EN
     CALSCALE:GREGORIAN
     BEGIN:VEVENT
     UID:#{event.uid}
@@ -124,7 +124,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   defp method_token(:cancel), do: "CANCEL"
 
   defp status_for(:cancel, _status), do: "CANCELLED"
-  defp status_for(:request, status), do: status
+  defp status_for(_method, status), do: status
 
   defp format_organizer(meeting_details) do
     organizer_name = Map.get(meeting_details, :organizer_name)

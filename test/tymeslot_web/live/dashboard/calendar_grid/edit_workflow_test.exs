@@ -2,8 +2,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
   @moduledoc """
   Tests for the Task 15 refactor: `notify_event_updated/3` routes edit-flow
   notifications through `Tymeslot.Meetings.AttendeeNotifications`, and
-  `maybe_sync_video_integration/3` provisions a video room and persists the
-  resulting `video_link` onto the event row when the video selector changes.
+  `sync_video_integration_async/3` provisions a video room asynchronously
+  and persists the resulting `video_link` onto the event row when the video
+  selector changes.
   """
 
   use Tymeslot.DataCase, async: false
@@ -14,11 +15,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Phoenix.Component
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
-  alias Tymeslot.Repo
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest.FakeRooms
 
@@ -110,14 +110,20 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
     end
   end
 
-  describe "maybe_sync_video_integration/3" do
+  describe "sync_video_integration_async/3" do
     setup do
       original = Application.get_env(:tymeslot, :video_rooms_module)
       on_exit(fn -> restore_env(:video_rooms_module, original) end)
-      :ok
+
+      user = insert(:user)
+
+      socket = Component.assign(%Phoenix.LiveView.Socket{}, :current_user, user)
+
+      {:ok, socket: socket, user: user}
     end
 
-    test "provisions a room and persists the link when video_integration_id becomes set" do
+    test "provisions a room and sends result when video_integration_id becomes set",
+         %{socket: socket} do
       event = build_event(attendees: [])
       integration_id = 42
 
@@ -133,28 +139,29 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
          }}
       )
 
-      original_event = event
       updated_event = %{event | video_integration_id: integration_id}
 
-      assert {:ok, "https://video.example.com/join/abc"} =
-               EditWorkflow.maybe_sync_video_integration(original_event, updated_event, 1)
+      _socket = EditWorkflow.sync_video_integration_async(socket, event, updated_event)
 
-      reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
-      assert reloaded.video_link == "https://video.example.com/join/abc"
+      assert_receive {:video_sync_result, event_id, {:ok, "https://video.example.com/join/abc"}}
+      assert event_id == event.id
     end
 
-    test "returns {:ok, :unchanged} when the integration id did not change" do
+    test "returns socket unchanged when the integration id did not change",
+         %{socket: socket} do
       video_integration = insert(:video_integration)
       event = build_event(video_integration_id: video_integration.id)
-      # no fake needed — the code path returns early
+
       Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
       FakeRooms.set_response({:error, :should_not_be_called})
 
-      assert {:ok, :unchanged} =
-               EditWorkflow.maybe_sync_video_integration(event, event, 1)
+      returned_socket = EditWorkflow.sync_video_integration_async(socket, event, event)
+
+      assert returned_socket == socket
+      refute_receive {:video_sync_result, _, _}
     end
 
-    test "clears video_link when the integration id is removed" do
+    test "clears video_link when the integration id is removed", %{socket: socket} do
       video_integration = insert(:video_integration)
 
       event =
@@ -168,13 +175,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
       Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
       FakeRooms.set_response({:error, :should_not_be_called})
 
-      assert {:ok, nil} = EditWorkflow.maybe_sync_video_integration(event, updated, 1)
+      _socket = EditWorkflow.sync_video_integration_async(socket, event, updated)
 
-      reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
-      assert reloaded.video_link == nil
+      assert_receive {:video_sync_result, event_id, {:ok, nil}}
+      assert event_id == event.id
     end
 
-    test "returns error tuple and does not persist when provisioning fails" do
+    test "sends error result and does not persist when provisioning fails", %{socket: socket} do
       video_integration = insert(:video_integration)
       event = build_event(video_integration_id: nil, video_link: nil)
       updated = %{event | video_integration_id: video_integration.id}
@@ -182,11 +189,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
       Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
       FakeRooms.set_response({:error, :provider_down})
 
-      assert {:error, :provider_down} =
-               EditWorkflow.maybe_sync_video_integration(event, updated, 1)
+      _socket = EditWorkflow.sync_video_integration_async(socket, event, updated)
 
-      reloaded = Repo.get!(ProviderCalendarEventSchema, event.id)
-      assert reloaded.video_link == nil
+      assert_receive {:video_sync_result, event_id, {:error, :provider_down}}
+      assert event_id == event.id
     end
   end
 

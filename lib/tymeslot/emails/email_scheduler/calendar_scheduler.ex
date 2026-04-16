@@ -38,7 +38,7 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
         unique: [
           period: 300,
           fields: [:args, :queue],
-          keys: [:action, :attendee_email, :event_uid]
+          keys: [:action, :attendee_email, :event_uid, :method]
         ]
       )
       |> Oban.insert()
@@ -105,7 +105,7 @@ defmodule Tymeslot.Emails.EmailScheduler.CalendarScheduler do
         unique: [
           period: 300,
           fields: [:args, :queue],
-          keys: [:action, :event_uid]
+          keys: [:action, :event_uid, :method]
         ]
       )
       |> Oban.insert()

@@ -78,10 +78,10 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.ChangeDetectorTest do
     assert s.next_sequence == 5
   end
 
-  test "next_sequence unchanged when only attendees changed" do
+  test "next_sequence bumps by 1 when only attendees changed" do
     old = event(%{attendees: [%{email: "a@x"}]})
     new = event(%{attendees: [%{email: "a@x"}, %{email: "b@x"}]})
     s = ChangeDetector.diff(old, new, current_sequence: 4)
-    assert s.next_sequence == 4
+    assert s.next_sequence == 5
   end
 end

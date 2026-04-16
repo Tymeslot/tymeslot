@@ -129,6 +129,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
     do: UpdateHandlers.handle_events_updated(assigns, socket)
 
   @impl Phoenix.LiveComponent
+  def update(%{action: :video_link_updated} = assigns, socket),
+    do: UpdateHandlers.handle_video_link_updated(assigns, socket)
+
+  @impl Phoenix.LiveComponent
   def update(%{action: :integration_synced} = assigns, socket),
     do: UpdateHandlers.handle_integration_synced(assigns, socket)
 

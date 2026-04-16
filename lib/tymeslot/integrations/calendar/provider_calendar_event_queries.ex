@@ -248,9 +248,12 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   end
 
   # Fields updated on conflict — everything except the surrogate key, inserted_at,
-  # and the identity fields :provider and :provider_calendar_id (which are set at
-  # insert time from the integration and must never be overwritten with EXCLUDED
-  # values from partial cache-update maps that may omit them).
+  # the identity fields :provider and :provider_calendar_id (set at insert time from
+  # the integration and must never be overwritten with EXCLUDED values from partial
+  # cache-update maps that may omit them), and Tymeslot-owned fields that are written
+  # independently of provider data: :ical_sequence, :last_notified_state,
+  # :video_link, and :video_integration_id. Excluding these prevents sync upserts
+  # from NULLing out data that Tymeslot manages itself.
   defp replace_fields do
     [
       :provider_event_id,
@@ -279,7 +282,6 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
       :synced_at,
       :provider_updated_at,
       :provider_metadata,
-      :video_link,
       :updated_at
     ]
   end
