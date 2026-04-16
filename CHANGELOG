@@ -1,4 +1,8 @@
 
+[0.100.5]
+* core: Isolate shared breaker state in bootstrap_sync circuit test
+* core: Expand recurring events in fresh-fetch availability path
+* saas: Add fresh-fetch path verification to calendar audit
 [0.100.4]
 * saas: Write boolean stable field in set_version task
 * core: Use boolean stable field in CloudronVersions.json
