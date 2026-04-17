@@ -227,7 +227,7 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
         "frame-src 'self' https://www.google.com https://accounts.google.com https://js.stripe.com https://hooks.stripe.com",
         "frame-ancestors #{frame_ancestors}",
         "base-uri 'self'",
-        "form-action 'self'"
+        "form-action 'self' https://billing.stripe.com https://checkout.stripe.com"
       ],
       "; "
     )
