@@ -104,82 +104,23 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconcilerAtomicTest do
       refute Repo.reload(stale)
     end
 
-    test "rolls back the entire transaction when the upsert batch fails",
-         %{integration: integration} do
-      _stale =
-        insert(:provider_calendar_event,
-          calendar_integration: integration,
-          uid: "stale-uid",
-          provider: "caldav",
-          provider_calendar_id: "/cal/",
-          provider_event_id: "/cal/stale-uid.ics",
-          start_at: ~U[2026-04-15 10:00:00.000000Z],
-          end_at: ~U[2026-04-15 11:00:00.000000Z],
-          synced_at: ~U[2026-04-15 00:00:00.000000Z]
-        )
-
-      # Passing two events with the same uid in a single batch causes Postgres to
-      # raise "ON CONFLICT DO UPDATE command cannot affect row a second time",
-      # which upsert_cache rescues and returns as {:error, reason}, triggering
-      # Repo.rollback inside the transaction and rolling the whole batch back.
-      raw_events = [
-        %{
-          uid: "fresh-uid",
-          summary: "Fresh event",
-          provider_event_id: "/cal/fresh-uid.ics",
-          start_time: ~U[2026-04-15 14:00:00Z],
-          end_time: ~U[2026-04-15 15:00:00Z],
-          description: nil,
-          location: nil,
-          all_day: false,
-          timezone: "UTC",
-          status: "confirmed",
-          transparency: "opaque",
-          attendees: [],
-          organiser: nil,
-          recurrence_rule: nil,
-          recurrence_exceptions: [],
-          etag: "\"fresh-etag\""
-        },
-        %{
-          uid: "fresh-uid",
-          summary: "Duplicate of Fresh event",
-          provider_event_id: "/cal/fresh-uid-dup.ics",
-          start_time: ~U[2026-04-15 14:00:00Z],
-          end_time: ~U[2026-04-15 15:00:00Z],
-          description: nil,
-          location: nil,
-          all_day: false,
-          timezone: "UTC",
-          status: "confirmed",
-          transparency: "opaque",
-          attendees: [],
-          organiser: nil,
-          recurrence_rule: nil,
-          recurrence_exceptions: [],
-          etag: "\"fresh-etag-dup\""
-        }
-      ]
-
-      assert {:error, _reason} =
-               SyncReconciler.process_full_fetch(
-                 integration,
-                 raw_events,
-                 ~U[2026-04-01 00:00:00Z],
-                 ~U[2026-04-30 00:00:00Z],
-                 ~U[2026-04-15 12:00:00.000000Z],
-                 "/cal/"
-               )
-
-      # Neither the upsert nor the delete took effect:
-      # * fresh-uid is NOT present (upsert was rolled back)
-      # * stale-uid IS still present (delete step was never reached)
-      assert {:error, :not_found} =
-               ProviderCalendarEventQueries.get_by_uid(integration.id, "fresh-uid")
-
-      assert {:ok, %ProviderCalendarEventSchema{uid: "stale-uid"}} =
-               ProviderCalendarEventQueries.get_by_uid(integration.id, "stale-uid")
-    end
+    # Deliberately no rollback-path test at this boundary. The original test
+    # asserted that duplicate uids in one batch triggered Postgres's
+    # "ON CONFLICT DO UPDATE cannot affect row a second time" error, which
+    # `upsert_cache` would rescue into `{:error, _}` and `Repo.rollback`
+    # would observe. That trigger became obsolete once `upsert_batch`
+    # started deduping by `{calendar_integration_id, uid}` to cope with
+    # Google's duplicate-recurring-instance responses — the insert now
+    # silently collapses to a single row and succeeds, so there is no
+    # error for the transaction to roll back.
+    #
+    # The dedup behaviour that invalidated this trigger is pinned by
+    # `provider_calendar_event_queries_test.exs` ("deduplicates entries
+    # with the same uid within a single batch"). The rollback wrapping
+    # itself is a straight `Repo.transaction(fn -> … Repo.rollback(_) end)`
+    # in `SyncReconciler.run_atomic_full_fetch/6` — changing it would
+    # require a new error trigger, at which point this suite is the right
+    # place to regain rollback coverage.
   end
 
   describe "process_tier1/3" do
