@@ -100,7 +100,7 @@ defmodule TymeslotWeb.OnboardingLive.ConnectCalendarStep do
       <div class="onboarding-form-group">
         <label for="caldav_url" class="label">Server URL</label>
         <input
-          type="url"
+          type="text"
           id="caldav_url"
           name="url"
           value={Map.get(@caldav_form_data, "url", "")}

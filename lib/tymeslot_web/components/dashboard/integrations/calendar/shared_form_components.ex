@@ -95,7 +95,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
               errors={FormValidationHelpers.field_errors(@form_errors, :url)}
               target={@target}
               field="url"
-              type="url"
+              icon="hero-globe-alt"
             />
 
             <.text_field
@@ -107,6 +107,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
               errors={FormValidationHelpers.field_errors(@form_errors, :username)}
               target={@target}
               field="username"
+              icon="hero-user"
             />
 
             <.password_field
@@ -212,6 +213,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   attr :target, :any, default: nil
   attr :field, :string, required: true
   attr :type, :string, default: "text"
+  attr :icon, :string, default: nil
 
   defp text_field(assigns) do
     ~H"""
@@ -225,6 +227,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
       phx-blur={JS.push("validate_field", value: %{"field" => @field}, target: @target)}
       placeholder={@placeholder}
       errors={if @error, do: [@error], else: @errors}
+      icon={@icon}
     />
     """
   end
