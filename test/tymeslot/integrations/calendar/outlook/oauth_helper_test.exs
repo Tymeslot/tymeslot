@@ -89,6 +89,15 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
            })
        }}
     end)
+
+    # handle_callback/3 spawns a supervised task (seed_delta_async) that inherits
+    # the test process's Mox context via $callers and calls HTTPClient.request/5
+    # with :get against the Graph delta endpoint. Mox's expect/4 wipes any prior
+    # stub on the same MFA, so we re-establish a fallback stub here to keep that
+    # background call from overflowing the expect counter.
+    stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+      {:error, %Mint.TransportError{reason: :timeout}}
+    end)
   end
 
   describe "token operations" do
