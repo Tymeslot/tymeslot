@@ -444,6 +444,30 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueriesTest do
 
       assert event.recurrence_exceptions == [~D[2026-04-15], ~D[2026-04-22]]
     end
+
+    test "deduplicates entries with the same uid within a single batch" do
+      # Regression: Google can return multiple instances of a recurring event
+      # series (all sharing the same iCalUID) in one incremental sync response.
+      # PostgreSQL rejects ON CONFLICT DO UPDATE when two rows in the same
+      # command target the same constrained key; we must deduplicate first.
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      attrs_first = build_event_attrs(integration, %{uid: "dup-uid", summary: "First"})
+      attrs_last = build_event_attrs(integration, %{uid: "dup-uid", summary: "Last"})
+
+      assert {:ok, _} =
+               ProviderCalendarEventQueries.upsert_batch([attrs_first, attrs_last])
+
+      [event] =
+        Repo.all(
+          from(e in ProviderCalendarEventSchema,
+            where: e.calendar_integration_id == ^integration.id and e.uid == "dup-uid"
+          )
+        )
+
+      assert event.summary == "Last"
+    end
   end
 
   describe "get_by_uid/2" do

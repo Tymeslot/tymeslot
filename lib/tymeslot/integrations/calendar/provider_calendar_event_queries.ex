@@ -46,12 +46,22 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
   def upsert_batch(events_attrs) do
     now = DateTime.utc_now(:microsecond)
 
+    # Deduplicate by the conflict key before inserting. Google (and potentially
+    # other providers) can return multiple instances of the same recurring event
+    # series in a single sync response — all sharing the same iCalUID. PostgreSQL
+    # rejects an ON CONFLICT DO UPDATE that targets the same row twice in one
+    # command, so we keep the last entry per (calendar_integration_id, uid).
     entries =
-      Enum.map(events_attrs, fn attrs ->
+      events_attrs
+      |> Enum.map(fn attrs ->
         attrs
         |> Map.put_new(:inserted_at, now)
         |> Map.put(:updated_at, now)
       end)
+      |> Enum.reduce(%{}, fn entry, acc ->
+        Map.put(acc, {entry.calendar_integration_id, entry.uid}, entry)
+      end)
+      |> Map.values()
 
     {count, _rows} =
       Repo.insert_all(
