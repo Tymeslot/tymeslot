@@ -131,6 +131,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
           build_class(event_data),
           build_rrule_line(event_data),
           build_exdate(event_data),
+          build_organizer_line(event_data),
           build_attendee_lines(event_data),
           "END:VEVENT",
           "END:VCALENDAR"
@@ -397,14 +398,37 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   defp format_attendee(%{email: email} = a) when is_binary(email) do
     cn = a[:name] || email
 
-    "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;CN=#{escape_text(cn)}:mailto:#{sanitize_ical_value(email)}"
+    "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;CN=#{escape_text(cn)}:mailto:#{sanitize_ical_value(email)}"
   end
 
   defp format_attendee(email) when is_binary(email) do
-    "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+    "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
   end
 
   defp format_attendee(_other), do: nil
+
+  # RFC 6638 §7.1: `SCHEDULE-AGENT=CLIENT` tells a CalDAV scheduling-aware
+  # server (Zimbra, Nextcloud/Sabre, Apple iCloud) that the client handles
+  # all scheduling; the server must not auto-send iTIP invitations.
+  # Tymeslot sends its own notification emails, so server-side scheduling
+  # would duplicate every invitation.
+  #
+  # Without an explicit ORGANIZER, scheduling-aware servers infer the
+  # calendar owner and inject one — which also triggers the iTIP pipeline.
+  # We always emit the meeting organiser so the server has no reason to
+  # guess.
+  defp build_organizer_line(%{organizer_email: email} = event)
+       when is_binary(email) and email != "" do
+    case Map.get(event, :organizer_name) do
+      name when is_binary(name) and name != "" ->
+        "ORGANIZER;SCHEDULE-AGENT=CLIENT;CN=#{escape_text(name)}:mailto:#{sanitize_ical_value(email)}"
+
+      _missing ->
+        "ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:#{sanitize_ical_value(email)}"
+    end
+  end
+
+  defp build_organizer_line(_event), do: nil
 
   defp format_naive_datetime(%NaiveDateTime{} = ndt) do
     ndt
@@ -481,7 +505,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp maybe_add_property(properties, :organizer, %{organizer: organizer})
        when is_binary(organizer) do
-    properties ++ ["ORGANIZER:mailto:#{organizer}"]
+    properties ++ ["ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:#{organizer}"]
   end
 
   defp maybe_add_property(properties, :recurrence, %{recurrence: recurrence})
@@ -497,13 +521,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   defp build_attendees(%{attendees: attendees}) when is_list(attendees) do
     Enum.map_join(attendees, "\r\n", fn
       %{"email" => email} ->
-        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+        "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
 
       %{email: email} ->
-        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+        "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
 
       email when is_binary(email) ->
-        "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+        "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
     end)
   end
 

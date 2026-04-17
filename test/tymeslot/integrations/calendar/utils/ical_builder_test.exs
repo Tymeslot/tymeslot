@@ -99,7 +99,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
       assert String.contains?(ical, "LOCATION:Conference Room A")
     end
 
-    test "includes organizer when provided" do
+    test "includes organizer with SCHEDULE-AGENT=CLIENT when provided" do
       event_data = %{
         summary: "Meeting",
         organizer: "organizer@example.com",
@@ -109,10 +109,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
 
       ical = ICalBuilder.build_event(event_data)
 
-      assert String.contains?(ical, "ORGANIZER:mailto:organizer@example.com")
+      assert String.contains?(
+               ical,
+               "ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:organizer@example.com"
+             )
     end
 
-    test "includes attendees when provided" do
+    test "tags attendees with SCHEDULE-AGENT=CLIENT when provided" do
       event_data = %{
         summary: "Meeting",
         attendees: ["john@example.com", "jane@example.com"],
@@ -122,7 +125,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
 
       ical = ICalBuilder.build_event(event_data)
 
-      assert String.contains?(ical, "ATTENDEE")
+      assert String.contains?(ical, "ATTENDEE;SCHEDULE-AGENT=CLIENT")
       assert String.contains?(ical, "john@example.com")
       assert String.contains?(ical, "jane@example.com")
     end
@@ -216,6 +219,71 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
 
       assert String.contains?(ical, "DESCRIPTION:Test description")
       assert String.contains?(ical, "LOCATION:Test location")
+    end
+
+    # Regression: prior to v0.100.0, build_simple_event/2 emitted neither
+    # ORGANIZER nor ATTENDEE. The v0.100.0 refactor added ATTENDEE but not
+    # ORGANIZER, which caused scheduling-aware CalDAV servers (Zimbra,
+    # Nextcloud/Sabre, Apple iCloud) to inject their own ORGANIZER and fire
+    # the iTIP pipeline — duplicating every invitation. The RFC 6638 §7.1
+    # fix is `SCHEDULE-AGENT=CLIENT` on both properties.
+    test "emits ORGANIZER with SCHEDULE-AGENT=CLIENT when organizer_email is present" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z],
+        organizer_name: "Host Person",
+        organizer_email: "host@example.com"
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-1", event_data)
+
+      assert String.contains?(
+               ical,
+               "ORGANIZER;SCHEDULE-AGENT=CLIENT;CN=Host Person:mailto:host@example.com"
+             )
+    end
+
+    test "omits CN from ORGANIZER when organizer_name is missing" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z],
+        organizer_email: "host@example.com"
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-2", event_data)
+
+      assert String.contains?(ical, "ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:host@example.com")
+    end
+
+    test "does not emit ORGANIZER when organizer_email is missing" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-3", event_data)
+
+      refute String.contains?(ical, "ORGANIZER")
+    end
+
+    test "tags ATTENDEE with SCHEDULE-AGENT=CLIENT when attendee_email is present" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z],
+        attendee_name: "Guest Person",
+        attendee_email: "guest@example.com"
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-4", event_data)
+
+      assert String.contains?(
+               ical,
+               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;CN=Guest Person:mailto:guest@example.com"
+             )
     end
   end
 

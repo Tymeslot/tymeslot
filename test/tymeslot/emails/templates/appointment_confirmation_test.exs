@@ -350,16 +350,22 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
       assert email.to == [{"John Organizer", "organizer@test.com"}]
     end
 
-    test "includes ICS calendar attachment" do
+    # Regression: the organiser email used to attach an iTIP
+    # `METHOD:REQUEST` ICS. iMIP-aware mail servers (Zimbra, Exchange,
+    # iCloud Mail) auto-imported that attachment as a new invitation,
+    # producing a duplicate calendar event and re-firing the server-side
+    # scheduling pipeline — which emailed the attendee a second time.
+    # The host's own calendar is already populated via the CalDAV/OAuth
+    # write path; no iMIP attachment is needed.
+    test "does not attach an ICS invitation to the organiser email" do
       details = build_appointment_details()
 
       email =
         AppointmentConfirmation.render(:organizer, "organizer@example.com", details)
 
-      ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
-      assert ics
-      assert ics.filename =~ ".ics"
-      assert ics.filename =~ details.uid
+      assert Enum.all?(email.attachments, fn att ->
+               not (att.content_type =~ "text/calendar")
+             end)
     end
 
     test "includes both HTML and text bodies" do

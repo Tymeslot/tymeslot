@@ -11,8 +11,14 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   Builds a calendar event data map from a meeting record.
 
   Returns a map with `:uid`, `:summary`, `:description`, `:start_time`,
-  `:end_time`, `:timezone`, `:location`, `:attendee_name`, and
-  `:attendee_email` keys.
+  `:end_time`, `:timezone`, `:location`, `:organizer_name`,
+  `:organizer_email`, `:attendee_name`, and `:attendee_email` keys.
+
+  The organiser fields are emitted so `ICalBuilder` can tag the resulting
+  `ORGANIZER` line with `SCHEDULE-AGENT=CLIENT` (RFC 6638 §7.1) — without
+  them, scheduling-aware CalDAV servers (Zimbra, Nextcloud/Sabre, Apple
+  iCloud) inject their own ORGANIZER and fire the iTIP pipeline, which
+  duplicates the invitation email Tymeslot already sends.
   """
   @spec build_event_data(map()) :: map()
   def build_event_data(meeting) do
@@ -24,6 +30,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       end_time: meeting.end_time,
       timezone: meeting.attendee_timezone,
       location: meeting.meeting_url || meeting.location || "To be determined",
+      organizer_name: meeting.organizer_name,
+      organizer_email: meeting.organizer_email,
       attendee_name: meeting.attendee_name,
       attendee_email: meeting.attendee_email
     }

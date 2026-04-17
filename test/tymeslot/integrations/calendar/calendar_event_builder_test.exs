@@ -14,6 +14,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
     attendee_timezone: "Europe/London",
     meeting_url: nil,
     location: nil,
+    organizer_name: "Bob",
+    organizer_email: "bob@example.com",
     attendee_name: "Alice",
     attendee_email: "alice@example.com",
     attendee_message: nil
@@ -30,6 +32,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
       assert result.start_time == ~U[2026-05-01 10:00:00Z]
       assert result.end_time == ~U[2026-05-01 11:00:00Z]
       assert result.timezone == "Europe/London"
+      assert result.organizer_name == "Bob"
+      assert result.organizer_email == "bob@example.com"
       assert result.attendee_name == "Alice"
       assert result.attendee_email == "alice@example.com"
     end
