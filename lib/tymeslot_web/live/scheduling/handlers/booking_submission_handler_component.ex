@@ -26,7 +26,6 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   """
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [put_flash: 3]
 
   alias Phoenix.Component
   alias Tymeslot.Availability.TimeSlots
@@ -37,6 +36,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.BookingConfig
+  alias TymeslotWeb.Live.Shared.Flash
 
   require Logger
 
@@ -84,7 +84,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
             socket
             |> assign(:form, Component.to_form(booking_params))
             |> assign(:validation_errors, errors)
-            |> put_flash(:error, "Please correct the errors below.")
+            |> Flash.put_flash(:error, "Please correct the errors below.")
 
           {:error, socket}
       end
@@ -112,7 +112,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         socket =
           socket
           |> assign(:submitting, false)
-          |> put_flash(:error, "Too many booking attempts. Please try again later.")
+          |> Flash.put_flash(:error, "Too many booking attempts. Please try again later.")
 
         {:error, socket}
     end
@@ -138,7 +138,11 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       Logger.warning("Duplicate submission attempt detected")
 
       socket =
-        put_flash(socket, :warning, "Your booking is already being processed. Please wait...")
+        Flash.put_flash(
+          socket,
+          :warning,
+          "Your booking is already being processed. Please wait..."
+        )
 
       {:error, socket}
     else
@@ -189,7 +193,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:meeting_uid, meeting.uid)
       |> assign(:name, validated_data["name"])
       |> assign(:email, validated_data["email"])
-      |> put_flash(:info, success_message)
+      |> Flash.put_flash(:info, success_message)
 
     {:ok, socket}
   end
@@ -230,7 +234,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       socket
       |> assign(:submitting, false)
       |> assign(:submission_processed, false)
-      |> put_flash(:error, error_message)
+      |> Flash.put_flash(:error, error_message)
 
     Logger.error("Failed to create meeting appointment", reason: inspect(reason))
 
@@ -255,7 +259,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     socket =
       socket
       |> assign(:submitting, false)
-      |> put_flash(
+      |> Flash.put_flash(
         :info,
         "Booking submitted successfully! You'll receive a confirmation email shortly."
       )
@@ -288,7 +292,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         socket =
           socket
           |> assign(:submitting, false)
-          |> put_flash(:error, "Security verification failed. Please try again.")
+          |> Flash.put_flash(:error, "Security verification failed. Please try again.")
 
         {:error, socket}
 
@@ -296,7 +300,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
         socket =
           socket
           |> assign(:submitting, false)
-          |> put_flash(
+          |> Flash.put_flash(
             :error,
             "Security verification is currently unavailable. This may be caused by JavaScript being disabled, browser privacy extensions (Privacy Badger, uBlock Origin, etc.), or network security policies. Please adjust your settings or contact support if the problem persists."
           )
@@ -347,7 +351,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
           |> assign(:validation_errors, error_map)
           |> assign(:submitting, false)
           |> assign(:submission_processed, false)
-          |> put_flash(:error, "Please correct the errors below before submitting.")
+          |> Flash.put_flash(:error, "Please correct the errors below before submitting.")
 
         {:error, socket}
 

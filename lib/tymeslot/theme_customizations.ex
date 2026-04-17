@@ -315,7 +315,7 @@ defmodule Tymeslot.ThemeCustomizations do
           theme_id(),
           ThemeCustomizationSchema.t() | map(),
           String.t() | atom()
-        ) :: {:ok, ThemeCustomizationSchema.t()} | {:error, term()}
+        ) :: {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
   def apply_color_scheme_change(profile_id, theme_id, current_customization, scheme_id) do
     with :ok <- Validation.validate_color_scheme(scheme_id),
          :ok <- validate_theme_capability(theme_id, %{"color_scheme" => scheme_id}),
@@ -324,13 +324,15 @@ defmodule Tymeslot.ThemeCustomizations do
              color_scheme: scheme_id
            }),
          save_attrs <- DataTransform.extract_save_attributes(new_customization) do
-      upsert_theme_customization(profile_id, theme_id, save_attrs)
+      profile_id
+      |> upsert_theme_customization(theme_id, save_attrs)
+      |> format_persistence_error()
     end
   end
 
   # Backward-compatible wrapper (to be removed after callers migrate)
   @spec apply_color_scheme_change(map(), String.t() | atom()) ::
-          {:ok, ThemeCustomizationSchema.t()} | {:error, term()}
+          {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
   def apply_color_scheme_change(socket_assigns, scheme_id) do
     profile_id = socket_assigns.profile.id
     theme_id = socket_assigns.theme_id
@@ -348,7 +350,7 @@ defmodule Tymeslot.ThemeCustomizations do
           ThemeCustomizationSchema.t() | map(),
           String.t(),
           String.t() | nil
-        ) :: {:ok, ThemeCustomizationSchema.t()} | {:error, term()}
+        ) :: {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
   def apply_background_change(profile_id, theme_id, current_customization, type, value) do
     presets = Presets.get_all_presets()
 
@@ -359,7 +361,10 @@ defmodule Tymeslot.ThemeCustomizations do
          cleanup_files <-
            Backgrounds.determine_cleanup_files(current_customization, new_customization),
          save_attrs <- DataTransform.extract_save_attributes(new_customization),
-         {:ok, saved} <- upsert_theme_customization(profile_id, theme_id, save_attrs) do
+         {:ok, saved} <-
+           profile_id
+           |> upsert_theme_customization(theme_id, save_attrs)
+           |> format_persistence_error() do
       Enum.each(cleanup_files, &cleanup_old_backgrounds/1)
 
       {:ok, saved}
@@ -368,7 +373,7 @@ defmodule Tymeslot.ThemeCustomizations do
 
   # Backward-compatible wrapper (to be removed after callers migrate)
   @spec apply_background_change(map(), String.t(), String.t() | nil) ::
-          {:ok, ThemeCustomizationSchema.t()} | {:error, term()}
+          {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
   def apply_background_change(socket_assigns, type, value) do
     profile_id = socket_assigns.profile.id
     theme_id = socket_assigns.theme_id
@@ -462,4 +467,14 @@ defmodule Tymeslot.ThemeCustomizations do
       {:error, reasons} -> {:error, Enum.join(reasons, "; ")}
     end
   end
+
+  # Converts unexpected changeset errors from persistence into a user-safe
+  # string. Callers flash the returned message, and `Flash.error/1` guards on
+  # binaries — a raw changeset would crash the component.
+  @spec format_persistence_error(persistence_result()) ::
+          {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
+  defp format_persistence_error({:ok, _} = ok), do: ok
+
+  defp format_persistence_error({:error, %Changeset{}}),
+    do: {:error, "Could not save your theme customization. Please try again."}
 end

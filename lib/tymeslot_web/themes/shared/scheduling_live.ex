@@ -96,6 +96,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       end
 
       @impl Phoenix.LiveView
+      def handle_info({:flash, {type, message}}, socket) do
+        {:noreply, put_flash(socket, type, message)}
+      end
+
+      @impl Phoenix.LiveView
       def handle_info({:calendar_events_updated, _user_id, _changed_uids}, socket) do
         InfoHandlers.handle_calendar_events_updated(socket)
       end

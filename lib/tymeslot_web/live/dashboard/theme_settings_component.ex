@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
   alias Tymeslot.Themes.Theme
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent
   alias TymeslotWeb.Dashboard.ThemeSettings.ThemePreview
+  alias TymeslotWeb.Live.Shared.Flash
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -242,13 +243,13 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsComponent do
           {:noreply,
            socket
            |> assign(profile: updated_profile)
-           |> put_flash(:info, "Theme updated to #{theme_name}")}
+           |> Flash.put_flash(:info, "Theme updated to #{theme_name}")}
 
         {:error, _changeset} ->
-          {:noreply, put_flash(socket, :error, "Failed to update theme")}
+          {:noreply, Flash.put_flash(socket, :error, "Failed to update theme")}
       end
     else
-      {:noreply, put_flash(socket, :error, "Invalid theme selection")}
+      {:noreply, Flash.put_flash(socket, :error, "Invalid theme selection")}
     end
   end
 end
