@@ -1,4 +1,11 @@
 
+[0.100.7]
+* core: Prevent calendar grid crash on invalid user timezone
+* core: Extend IDOR prevention to booking-form reschedule paths
+* core: Prevent IDOR on meeting cancel/reschedule
+* core: Emit METHOD:PUBLISH cancellations and harden ICS parameters
+* core: Allow Stripe billing and checkout hosts in CSP form-action
+* core: Create default weekly schedule for OAuth users
 [0.100.6]
 * saas: Prevent duplicate Stripe customers and subscriptions on repeated checkout
 * core: Suppress CalDAV/iMIP auto-scheduling for booked events
