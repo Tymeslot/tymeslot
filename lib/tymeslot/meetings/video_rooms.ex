@@ -6,9 +6,19 @@ defmodule Tymeslot.Meetings.VideoRooms do
   - Adding video rooms to existing meetings
   - Creating secure join URLs for organizers and participants
   - Managing video room lifecycle and expiration
-  - Coordinating with video providers (MiroTalk, Teams, etc.)
+  - Coordinating with video providers (MiroTalk, Meet, Teams, etc.)
 
   Video rooms can be added after a meeting is created, typically by an async worker.
+
+  ## Transaction boundaries
+
+  The external HTTP call to the video provider is made **outside** any database
+  transaction. Only the final "attach the generated room to the meeting" write is
+  wrapped in a short transaction that re-locks the meeting row and re-checks the
+  idempotency condition, so that a concurrent worker that already attached a room
+  is detected and the second caller receives `{:ok, meeting}` without a duplicate
+  provider call affecting the database. This prevents a slow video provider from
+  holding a database connection for the duration of the remote request.
   """
 
   require Logger
@@ -30,11 +40,12 @@ defmodule Tymeslot.Meetings.VideoRooms do
   Adds a secure video room to an existing meeting.
 
   This function:
-  1. Retrieves the meeting
-  2. Verifies the organizer has video integration enabled
-  3. Creates a video room via the configured provider
-  4. Generates secure join URLs for organizer and participant
-  5. Updates the meeting with video room details
+  1. Retrieves the meeting (no transaction) and checks idempotency
+  2. Verifies the organizer has video integration enabled (no transaction)
+  3. Creates a video room via the configured provider (no transaction — external HTTP)
+  4. Generates secure join URLs for organizer and participant (no transaction)
+  5. Inside a short transaction: re-locks the meeting, re-checks idempotency,
+     and persists the video room attributes
   6. Schedules a calendar event update
 
   ## Parameters
@@ -42,12 +53,14 @@ defmodule Tymeslot.Meetings.VideoRooms do
 
   ## Returns
     - {:ok, meeting} on success with video room attached
+    - {:ok, meeting} if the meeting already has a room attached (idempotent)
     - {:error, :meeting_not_found} if meeting doesn't exist
     - {:error, :organizer_not_found} if organizer lookup fails
     - {:error, :video_disabled} if video provider is set to "none"
     - {:error, :video_integration_missing} if no video integration configured
-  - {:error, :video_integration_inactive} if integration is disabled
-  - {:error, :unknown_provider} if provider is unsupported
+    - {:error, :video_integration_inactive} if integration is disabled
+    - {:error, :unknown_provider} if provider is unsupported
+    - {:error, :database_update_failed} if the final write fails
     - {:error, reason} on other failures
 
   ## Examples
@@ -60,47 +73,32 @@ defmodule Tymeslot.Meetings.VideoRooms do
   """
   @spec add_video_room_to_meeting(String.t()) :: {:ok, MeetingSchema.t()} | {:error, term()}
   def add_video_room_to_meeting(meeting_id) do
-    Repo.transaction(fn ->
-      case get_meeting_for_update(meeting_id) do
-        {:ok, meeting} ->
-          case check_already_attached(meeting) do
-            {:ok, :already_attached} ->
-              meeting
-
-            {:ok, :not_attached} ->
-              with {:ok, user_id} <- get_meeting_organizer_user_id(meeting),
-                   {:ok, :proceed} <- should_create_video_room(meeting, user_id) do
-                create_and_attach_video_room(meeting, user_id)
-              else
-                {:error, reason} ->
-                  Repo.rollback(reason)
-              end
-          end
-
-        {:error, reason} ->
-          Repo.rollback(reason)
-      end
-    end)
+    with {:ok, meeting} <- fetch_meeting(meeting_id),
+         :not_attached <- attached_status(meeting),
+         {:ok, user_id} <- get_meeting_organizer_user_id(meeting),
+         {:ok, :proceed} <- should_create_video_room(meeting, user_id),
+         {:ok, meeting_context} <- create_provider_meeting_room(meeting, user_id),
+         {:ok, video_room_attrs} <- build_video_room_attrs(meeting, meeting_context) do
+      persist_video_room(meeting, video_room_attrs)
+    else
+      {:already_attached, meeting} -> {:ok, meeting}
+      {:error, _reason} = error -> error
+    end
   end
 
   # =====================================
   # Private Helper Functions
   # =====================================
 
-  defp get_meeting_for_update(meeting_id) do
-    case MeetingQueries.get_meeting_for_update(meeting_id) do
+  defp fetch_meeting(meeting_id) do
+    case MeetingQueries.get_meeting(meeting_id) do
       {:ok, meeting} -> {:ok, meeting}
       {:error, :not_found} -> {:error, :meeting_not_found}
     end
   end
 
-  defp check_already_attached(meeting) do
-    if meeting.video_room_id do
-      {:ok, :already_attached}
-    else
-      {:ok, :not_attached}
-    end
-  end
+  defp attached_status(%MeetingSchema{video_room_id: nil}), do: :not_attached
+  defp attached_status(%MeetingSchema{} = meeting), do: {:already_attached, meeting}
 
   defp get_meeting_organizer_user_id(meeting) do
     # First try to use organizer_user_id if available
@@ -137,40 +135,25 @@ defmodule Tymeslot.Meetings.VideoRooms do
     end
   end
 
-  @spec create_and_attach_video_room(MeetingSchema.t(), integer() | nil) ::
-          MeetingSchema.t() | no_return()
-  defp create_and_attach_video_room(meeting, user_id) do
-    Logger.info("Adding video room to meeting", meeting_id: meeting.id)
+  @spec create_provider_meeting_room(MeetingSchema.t(), integer() | nil) ::
+          {:ok, map()} | {:error, term()}
+  defp create_provider_meeting_room(meeting, user_id) do
+    Logger.info("Requesting video room from provider", meeting_id: meeting.id)
 
-    # Use the specific video integration ID stored in the meeting if available
     case video_module().create_meeting_room(user_id,
            integration_id: meeting.video_integration_id,
            meeting_id: meeting.id
          ) do
       {:ok, meeting_context} ->
-        with {:ok, video_room_attrs} <- build_video_room_attrs(meeting, meeting_context),
-             {:ok, updated_meeting} <- update_meeting_with_video_room(meeting, video_room_attrs) do
-          # After attaching the video room, update the calendar event so Google/other calendars
-          # include the meeting link in description/location.
-          _job = CalendarEventScheduler.schedule_calendar_update(updated_meeting.id)
-          updated_meeting
-        else
-          {:error, reason} ->
-            Logger.error("Failed to process video room attributes",
-              meeting_id: meeting.id,
-              reason: inspect(reason)
-            )
+        {:ok, meeting_context}
 
-            Repo.rollback(reason)
-        end
-
-      {:error, reason} ->
+      {:error, reason} = error ->
         Logger.error("Failed to create video room",
           meeting_id: meeting.id,
           reason: inspect(reason)
         )
 
-        Repo.rollback(reason)
+        error
     end
   end
 
@@ -203,6 +186,64 @@ defmodule Tymeslot.Meetings.VideoRooms do
         end
 
       {:ok, attrs}
+    end
+  end
+
+  @spec persist_video_room(MeetingSchema.t(), map()) ::
+          {:ok, MeetingSchema.t()} | {:error, term()}
+  defp persist_video_room(meeting, video_room_attrs) do
+    transaction_result =
+      Repo.transaction(fn ->
+        case MeetingQueries.get_meeting_for_update(meeting.id) do
+          {:ok, %MeetingSchema{video_room_id: nil} = locked_meeting} ->
+            case update_meeting_with_video_room(locked_meeting, video_room_attrs) do
+              {:ok, updated_meeting} -> {:attached, updated_meeting}
+              {:error, reason} -> Repo.rollback(reason)
+            end
+
+          {:ok, %MeetingSchema{} = already_attached} ->
+            # Another worker won the race; keep the existing attachment.
+            {:already_attached, already_attached}
+
+          {:error, :not_found} ->
+            Repo.rollback(:meeting_not_found)
+        end
+      end)
+
+    case transaction_result do
+      {:ok, {:attached, updated_meeting}} ->
+        # Schedule the calendar update only once we have definitively attached the
+        # video room in this call path.
+        case CalendarEventScheduler.schedule_calendar_update(updated_meeting.id) do
+          {:ok, _job} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning("Failed to schedule calendar update after video room attachment",
+              meeting_id: updated_meeting.id,
+              reason: inspect(reason)
+            )
+        end
+
+        {:ok, updated_meeting}
+
+      {:ok, {:already_attached, existing_meeting}} ->
+        Logger.info(
+          "Video room already attached by a concurrent writer; discarding provider response",
+          meeting_id: existing_meeting.id
+        )
+
+        {:ok, existing_meeting}
+
+      {:error, reason} = error ->
+        Logger.error("Failed to persist video room attachment",
+          meeting_id: meeting.id,
+          reason: inspect(reason),
+          orphaned_video_room_id: Map.get(video_room_attrs, :video_room_id),
+          orphaned_meeting_url: Map.get(video_room_attrs, :meeting_url)
+        )
+
+        error
     end
   end
 
