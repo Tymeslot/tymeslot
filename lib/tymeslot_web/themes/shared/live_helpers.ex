@@ -286,9 +286,10 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     client_ip = ClientIP.get(socket)
     submission_token = SubmissionToken.generate()
 
-    # Pre-fill form if rescheduling
+    # Pre-fill form if rescheduling, scoped to the organizer to prevent PII leaks
     reschedule_uid = socket.assigns[:reschedule_meeting_uid]
-    form_data = ThemeFlow.build_booking_form_data(reschedule_uid)
+    organizer_user_id = socket.assigns[:organizer_user_id]
+    form_data = ThemeFlow.build_booking_form_data(reschedule_uid, organizer_user_id)
 
     socket
     |> Helpers.setup_form_state(form_data, as: :booking)

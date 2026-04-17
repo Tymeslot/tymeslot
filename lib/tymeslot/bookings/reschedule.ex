@@ -31,12 +31,17 @@ defmodule Tymeslot.Bookings.Reschedule do
   4. Creating new calendar event
   5. Sending rescheduling notifications
 
+  The `organizer_user_id` is required. The meeting lookup is scoped to that
+  owner, preventing IDOR attacks from the public booking flow.
+
   Returns {:ok, meeting} or {:error, reason}
   """
-  @spec execute(String.t(), reschedule_params(), any()) ::
+  @spec execute(String.t(), reschedule_params(), any(), integer()) ::
           {:ok, Ecto.Schema.t()} | {:error, term()}
-  def execute(meeting_uid, new_params, _form_data) when is_binary(meeting_uid) do
-    with {:ok, original_meeting} <- MeetingQueries.get_meeting_by_uid(meeting_uid),
+  def execute(meeting_uid, new_params, _form_data, organizer_user_id)
+      when is_binary(meeting_uid) and is_integer(organizer_user_id) do
+    with {:ok, original_meeting} <-
+           MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id),
          :ok <- validate_can_reschedule(original_meeting),
          {:ok, new_times} <- prepare_new_times(new_params, original_meeting.organizer_user_id),
          {:ok, updated_meeting} <- apply_time_update_and_schedule_job(original_meeting, new_times) do

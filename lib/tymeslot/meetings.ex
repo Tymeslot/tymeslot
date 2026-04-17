@@ -113,11 +113,14 @@ defmodule Tymeslot.Meetings do
   Reschedules an existing meeting.
 
   Delegates to Bookings.Reschedule module.
+
+  The `organizer_user_id` is required. The meeting lookup is scoped to that
+  owner, preventing IDOR attacks from the public booking flow.
   """
-  @spec reschedule_meeting(String.t(), Reschedule.reschedule_params(), map()) ::
+  @spec reschedule_meeting(String.t(), Reschedule.reschedule_params(), map(), integer()) ::
           {:ok, Ecto.Schema.t()} | {:error, term()}
-  def reschedule_meeting(meeting_uid, new_params, form_data) do
-    Reschedule.execute(meeting_uid, new_params, form_data)
+  def reschedule_meeting(meeting_uid, new_params, form_data, organizer_user_id) do
+    Reschedule.execute(meeting_uid, new_params, form_data, organizer_user_id)
   end
 
   @doc """

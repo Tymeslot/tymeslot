@@ -30,14 +30,16 @@ defmodule Tymeslot.Bookings.Orchestrator do
       form_data: form_data,
       meeting_params: meeting_params,
       is_rescheduling: is_rescheduling,
-      reschedule_uid: reschedule_uid
+      reschedule_uid: reschedule_uid,
+      organizer_user_id: organizer_user_id
     } = normalize_params(params, opts)
 
     case create_or_reschedule_meeting(
            is_rescheduling,
            reschedule_uid,
            meeting_params,
-           form_data
+           form_data,
+           organizer_user_id
          ) do
       {:ok, meeting} ->
         {:ok, meeting}
@@ -62,11 +64,16 @@ defmodule Tymeslot.Bookings.Orchestrator do
 
   @doc """
   Fetches a meeting by UID and validates it is eligible for rescheduling.
+
+  The `organizer_user_id` is required. The lookup is scoped to that owner,
+  preventing IDOR pre-fill of attendee PII from the public booking form.
   """
-  @spec get_meeting_for_reschedule(String.t()) ::
+  @spec get_meeting_for_reschedule(String.t(), integer()) ::
           {:ok, Ecto.Schema.t()} | {:error, String.t()}
-  def get_meeting_for_reschedule(meeting_uid) do
-    with {:ok, meeting} <- MeetingQueries.get_meeting_by_uid(meeting_uid),
+  def get_meeting_for_reschedule(meeting_uid, organizer_user_id)
+      when is_integer(organizer_user_id) do
+    with {:ok, meeting} <-
+           MeetingQueries.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id),
          {:ok, meeting} <- Validation.validate_meeting_for_reschedule(meeting) do
       {:ok, meeting}
     else
@@ -82,7 +89,8 @@ defmodule Tymeslot.Bookings.Orchestrator do
       form_data: Map.get(params, :form_data, %{}),
       meeting_params: Map.get(params, :meeting_params, %{}),
       is_rescheduling: Keyword.get(opts, :is_rescheduling, false),
-      reschedule_uid: Keyword.get(opts, :reschedule_uid)
+      reschedule_uid: Keyword.get(opts, :reschedule_uid),
+      organizer_user_id: Keyword.get(opts, :organizer_user_id)
     }
   end
 
@@ -90,17 +98,19 @@ defmodule Tymeslot.Bookings.Orchestrator do
          true,
          reschedule_uid,
          meeting_params,
-         sanitized_data
+         sanitized_data,
+         organizer_user_id
        ) do
     # Rescheduling flow
-    reschedule_meeting(reschedule_uid, meeting_params, sanitized_data)
+    reschedule_meeting(reschedule_uid, meeting_params, sanitized_data, organizer_user_id)
   end
 
   defp create_or_reschedule_meeting(
          false,
          _reschedule_uid,
          meeting_params,
-         sanitized_data
+         sanitized_data,
+         _organizer_user_id
        ) do
     # New booking flow
     create_meeting(meeting_params, sanitized_data)
@@ -115,7 +125,11 @@ defmodule Tymeslot.Bookings.Orchestrator do
     end
   end
 
-  defp reschedule_meeting(meeting_uid, meeting_params, sanitized_data) do
-    Meetings.reschedule_meeting(meeting_uid, meeting_params, sanitized_data)
+  defp reschedule_meeting(_meeting_uid, _meeting_params, _sanitized_data, nil),
+    do: {:error, "Meeting not found"}
+
+  defp reschedule_meeting(meeting_uid, meeting_params, sanitized_data, organizer_user_id)
+       when is_integer(organizer_user_id) do
+    Meetings.reschedule_meeting(meeting_uid, meeting_params, sanitized_data, organizer_user_id)
   end
 end

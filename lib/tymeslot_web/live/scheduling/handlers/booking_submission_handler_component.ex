@@ -328,7 +328,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
 
     opts = [
       is_rescheduling: socket.assigns[:is_rescheduling] || false,
-      reschedule_uid: socket.assigns[:reschedule_meeting_uid]
+      reschedule_uid: socket.assigns[:reschedule_meeting_uid],
+      organizer_user_id: socket.assigns[:organizer_user_id]
     ]
 
     orchestrator = Demo.get_orchestrator(socket)

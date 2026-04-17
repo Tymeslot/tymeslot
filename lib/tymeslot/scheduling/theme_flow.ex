@@ -20,11 +20,16 @@ defmodule Tymeslot.Scheduling.ThemeFlow do
     MeetingTypes.find_by_slug(user_id, slug)
   end
 
-  @spec build_booking_form_data(String.t() | nil) :: map()
-  def build_booking_form_data(nil), do: default_booking_form_data()
+  @spec build_booking_form_data(String.t() | nil, integer() | nil) :: map()
+  def build_booking_form_data(reschedule_uid, organizer_user_id \\ nil)
 
-  def build_booking_form_data(reschedule_uid) when is_binary(reschedule_uid) do
-    case Orchestrator.get_meeting_for_reschedule(reschedule_uid) do
+  def build_booking_form_data(nil, _organizer_user_id), do: default_booking_form_data()
+
+  def build_booking_form_data(_reschedule_uid, nil), do: default_booking_form_data()
+
+  def build_booking_form_data(reschedule_uid, organizer_user_id)
+      when is_binary(reschedule_uid) and is_integer(organizer_user_id) do
+    case Orchestrator.get_meeting_for_reschedule(reschedule_uid, organizer_user_id) do
       {:ok, meeting} ->
         %{
           "name" => meeting.attendee_name,
