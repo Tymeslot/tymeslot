@@ -280,6 +280,53 @@
       "publishState": "published",
       "ts": "Thu, 16 Apr 2026 15:33:28 GMT"
     },
+    "0.100.6": {
+      "creationDate": "Fri, 17 Apr 2026 08:00:21 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* saas: Prevent duplicate Stripe customers and subscriptions on repeated checkout\n* core: Suppress CalDAV/iMIP auto-scheduling for booked events\n* core: Widen provider_calendar_events text columns to unbounded text\n* core: Handle 3-tuple api_error in Outlook fallback sync sweep\n* core: Deduplicate upsert batch by uid to prevent cardinality violation\n* core: Accept calendar server URLs without an explicit scheme\n* saas: Broaden subscription dashboard to past_due/unpaid and add post-checkout polling",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:0.100.6",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "0.100.6",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Fri, 17 Apr 2026 08:00:21 GMT"
+    },
     "0.99.24": {
       "creationDate": "Thu, 12 Mar 2026 09:57:44 GMT",
       "manifest": {
