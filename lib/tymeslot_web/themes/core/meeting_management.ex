@@ -11,10 +11,17 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Themes.Core.MountHelpers
 
-  @doc "Loads and validates a meeting by UID for the given action."
-  @spec validate_and_load_meeting(String.t(), atom()) :: {:ok, map()} | {:error, String.t()}
-  def validate_and_load_meeting(meeting_uid, action) do
-    case Meetings.get_meeting_by_uid(meeting_uid) do
+  @doc """
+  Loads and validates a meeting by UID for the given action.
+
+  The `organizer_user_id` from the resolved profile is used to scope the lookup,
+  ensuring that only the meeting belonging to the profile owner can be accessed.
+  This prevents IDOR attacks on the cancel and reschedule routes.
+  """
+  @spec validate_and_load_meeting(String.t(), atom(), integer()) ::
+          {:ok, map()} | {:error, String.t()}
+  def validate_and_load_meeting(meeting_uid, action, organizer_user_id) do
+    case Meetings.get_meeting_by_uid_for_organizer(meeting_uid, organizer_user_id) do
       {:ok, meeting} ->
         case validate_meeting_action(meeting, action) do
           :ok -> {:ok, meeting}

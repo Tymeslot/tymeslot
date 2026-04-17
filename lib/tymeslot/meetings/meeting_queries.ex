@@ -115,6 +115,28 @@ defmodule Tymeslot.Meetings.MeetingQueries do
     end
   end
 
+  @doc """
+  Fetches a meeting by UID only if the given `organizer_user_id` owns it.
+
+  Returns `{:ok, meeting}` when a matching meeting is found.
+  Returns `{:error, :not_found}` when no meeting exists with that UID, or when
+  the meeting exists but belongs to a different organizer.
+  """
+  @spec get_meeting_by_uid_for_organizer(String.t(), integer()) ::
+          {:ok, Meeting.t()} | {:error, :not_found}
+  def get_meeting_by_uid_for_organizer(uid, organizer_user_id)
+      when is_integer(organizer_user_id) do
+    query =
+      from(m in Meeting,
+        where: m.uid == ^uid and m.organizer_user_id == ^organizer_user_id
+      )
+
+    case Repo.one(query) do
+      nil -> {:error, :not_found}
+      meeting -> {:ok, meeting}
+    end
+  end
+
   @doc "Updates a meeting."
   @spec update_meeting(Meeting.t(), map()) :: {:ok, Meeting.t()} | {:error, Changeset.t()}
   def update_meeting(%Meeting{} = meeting, attrs) when is_map(attrs) do

@@ -118,7 +118,7 @@ defmodule TymeslotWeb.Themes.Core.MountHelpers do
     theme_id = profile.booking_theme || socket.assigns[:theme_id] || Registry.default_theme_id()
     meeting_uid = params["meeting_uid"]
 
-    case MeetingManagement.validate_and_load_meeting(meeting_uid, action) do
+    case MeetingManagement.validate_and_load_meeting(meeting_uid, action, profile.user_id) do
       {:ok, meeting} ->
         socket =
           setup_meeting_management_socket(

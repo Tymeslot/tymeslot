@@ -408,6 +408,22 @@ defmodule Tymeslot.Meetings do
   end
 
   @doc """
+  Fetches a meeting by UID only if the given `organizer_user_id` owns it.
+
+  Returns `{:ok, meeting}` when a matching meeting is found.
+  Returns `{:error, :not_found}` when no meeting exists with that UID, or when
+  the meeting exists but belongs to a different organizer.
+
+  Use this instead of `get_meeting_by_uid/1` on any user-facing route that
+  accepts a meeting UID from the URL, to prevent IDOR attacks.
+  """
+  @spec get_meeting_by_uid_for_organizer(String.t(), integer()) ::
+          {:ok, MeetingSchema.t()} | {:error, :not_found}
+  def get_meeting_by_uid_for_organizer(uid, organizer_user_id) do
+    MeetingQueries.get_meeting_by_uid_for_organizer(uid, organizer_user_id)
+  end
+
+  @doc """
   Updates a meeting for a specific user.
   Only the organizer can update a meeting.
   Returns {:ok, meeting} if authorized and updated, {:error, :unauthorized} if not authorized.
