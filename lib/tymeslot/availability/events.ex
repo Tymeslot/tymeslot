@@ -25,17 +25,28 @@ defmodule Tymeslot.Availability.Events do
     |> Enum.reject(&is_nil/1)
   end
 
-  # Plain maps from the OAuth fresh-fetch path carry start_time/end_time directly.
-  # Timed events have DateTime values; all-day events have Date values (anchored
-  # to midnight in the owner's timezone before shifting to the target).
+  # Plain maps from the OAuth / CalDAV fresh-fetch path carry start_time/end_time
+  # directly. Timed events have DateTime values; all-day events typically have
+  # Date values (anchored to midnight in the owner's timezone before shifting).
+  #
+  # Some CalDAV servers (Radicale, Zimbra) emit all-day events as a pair of
+  # VALUE=DATE-TIME DTSTART/DTEND values at UTC midnight rather than VALUE=DATE.
+  # Treating those as genuine timed events would offset the 24h block by the
+  # owner's UTC offset (e.g. 12h wrong for Pacific/Fiji). When the provider
+  # explicitly sets `all_day: true` on the plain map, detect the pattern and
+  # re-anchor to owner-local midnight instead. Events without `all_day: true`
+  # (or with `all_day: false`) are passed through as timed events so that a
+  # genuine 24-hour timed slot starting at UTC midnight is never mis-classified.
   defp convert_event(
-         %{start_time: start_time, end_time: end_time} = event,
+         %{start_time: _start_time, end_time: _end_time} = event,
          owner_timezone,
          target_timezone
        )
        when not is_struct(event) do
-    with {:ok, s} <- shift_safe(start_time, owner_timezone, target_timezone),
-         {:ok, e} <- shift_safe(end_time, owner_timezone, target_timezone) do
+    {start_val, end_val} = maybe_reanchor_utc_midnight(event)
+
+    with {:ok, s} <- shift_safe(start_val, owner_timezone, target_timezone),
+         {:ok, e} <- shift_safe(end_val, owner_timezone, target_timezone) do
       %{start_time: s, end_time: e}
     else
       _other -> nil
@@ -77,4 +88,36 @@ defmodule Tymeslot.Availability.Events do
     |> DateTimeUtils.create_datetime_safe(~T[00:00:00], owner_timezone)
     |> shift_safe(owner_timezone, target_timezone)
   end
+
+  # Recognises the Radicale/Zimbra all-day-as-UTC-midnight convention: a pair
+  # of UTC DateTimes where both sides sit exactly on a whole-day boundary and
+  # the span is an integer number of days. Re-anchoring is gated on the
+  # provider having explicitly set `all_day: true` on the plain map — without
+  # that flag a UTC-midnight pair is treated as a genuine timed event (e.g.
+  # a 24-hour maintenance window scheduled from 00:00Z to 00:00Z next day).
+  defp maybe_reanchor_utc_midnight(%{
+         all_day: true,
+         start_time: %DateTime{} = s,
+         end_time: %DateTime{} = e
+       }) do
+    if utc_midnight?(s) and utc_midnight?(e) and DateTime.compare(e, s) == :gt do
+      {DateTime.to_date(s), DateTime.to_date(e)}
+    else
+      {s, e}
+    end
+  end
+
+  defp maybe_reanchor_utc_midnight(%{start_time: start_val, end_time: end_val}),
+    do: {start_val, end_val}
+
+  defp utc_midnight?(%DateTime{
+         time_zone: "Etc/UTC",
+         hour: 0,
+         minute: 0,
+         second: 0,
+         microsecond: {0, _precision}
+       }),
+       do: true
+
+  defp utc_midnight?(_other), do: false
 end

@@ -143,6 +143,129 @@ defmodule Tymeslot.Availability.EventsTest do
       assert converted.start_time == ~U[2026-04-15 21:00:00Z]
       assert converted.end_time == ~U[2026-04-16 21:00:00Z]
     end
+
+    test "re-anchors UTC-midnight DateTime pair (Radicale/Zimbra all-day convention) to owner tz" do
+      # Some CalDAV servers (Radicale, Zimbra) emit all-day events via the
+      # fresh-fetch path as a pair of `DTSTART;VALUE=DATE-TIME` values at
+      # UTC midnight — e.g. `20251015T000000Z` for "Oct 15 all day". The
+      # iCal parser returns these as %DateTime{} at UTC midnight rather than
+      # %Date{}, so the naïve zone-shift path would treat them as timed events
+      # anchored to UTC midnight. For an owner in Pacific/Fiji (UTC+12) that
+      # incorrectly blocks 12:00–12:00 next day in local time, shifting the
+      # 24h block by half a day. Detect the pattern and anchor to owner-local
+      # midnight instead.
+      event = %{
+        uid: "radicale-holiday",
+        summary: "Fiji Day",
+        status: "confirmed",
+        transparency: nil,
+        all_day: true,
+        start_time: ~U[2025-10-15 00:00:00Z],
+        end_time: ~U[2025-10-16 00:00:00Z]
+      }
+
+      [converted] = Events.convert_events_to_timezone([event], "Pacific/Fiji", "Etc/UTC")
+
+      assert %DateTime{} = converted.start_time
+      assert %DateTime{} = converted.end_time
+      # Oct 15 00:00 Fiji (UTC+12) == Oct 14 12:00 UTC.
+      # Oct 16 00:00 Fiji (UTC+12) == Oct 15 12:00 UTC.
+      assert converted.start_time == ~U[2025-10-14 12:00:00Z]
+      assert converted.end_time == ~U[2025-10-15 12:00:00Z]
+    end
+
+    test "leaves non-midnight UTC timed events alone (no false positive on midnight detection)" do
+      # A genuine timed event at UTC midnight for a minute-long slot must NOT
+      # trigger the all-day re-anchoring heuristic.
+      event = %{
+        uid: "timed-midnight",
+        summary: "Server restart",
+        status: "confirmed",
+        transparency: nil,
+        start_time: ~U[2025-10-15 00:00:00Z],
+        end_time: ~U[2025-10-15 00:01:00Z]
+      }
+
+      [converted] = Events.convert_events_to_timezone([event], "Pacific/Fiji", "Etc/UTC")
+
+      assert converted.start_time == ~U[2025-10-15 00:00:00Z]
+      assert converted.end_time == ~U[2025-10-15 00:01:00Z]
+    end
+
+    test "genuine 24h UTC-midnight timed event (all_day absent) is NOT re-anchored" do
+      # A legitimate timed event that happens to run exactly 00:00Z → 00:00Z
+      # the next day (e.g. a 24-hour maintenance window) must pass through as
+      # a timed event. Without `all_day: true` the re-anchoring heuristic must
+      # not fire, even though both endpoints are UTC midnight.
+      event = %{
+        uid: "maintenance-window",
+        summary: "24h maintenance",
+        status: "confirmed",
+        start_time: ~U[2025-10-15 00:00:00Z],
+        end_time: ~U[2025-10-16 00:00:00Z]
+      }
+
+      [converted] = Events.convert_events_to_timezone([event], "Pacific/Fiji", "Etc/UTC")
+
+      # No re-anchoring: times pass through as-is (already in Etc/UTC).
+      assert converted.start_time == ~U[2025-10-15 00:00:00Z]
+      assert converted.end_time == ~U[2025-10-16 00:00:00Z]
+    end
+
+    test "genuine 48h UTC-midnight timed event (all_day: false) is NOT re-anchored" do
+      # Same as above but spanning two days, with explicit all_day: false.
+      event = %{
+        uid: "maintenance-48h",
+        summary: "48h maintenance",
+        status: "confirmed",
+        all_day: false,
+        start_time: ~U[2025-10-15 00:00:00Z],
+        end_time: ~U[2025-10-17 00:00:00Z]
+      }
+
+      [converted] = Events.convert_events_to_timezone([event], "Pacific/Fiji", "Etc/UTC")
+
+      assert converted.start_time == ~U[2025-10-15 00:00:00Z]
+      assert converted.end_time == ~U[2025-10-17 00:00:00Z]
+    end
+
+    test "Radicale-style all-day plain map (all_day: true) IS re-anchored to owner-local midnight" do
+      # When a provider explicitly marks a plain-map event as all_day: true with
+      # UTC-midnight DateTimes (Radicale/Zimbra convention), it must be re-anchored
+      # to the owner's local midnight.
+      event = %{
+        uid: "radicale-fiji-day",
+        summary: "Fiji Day (explicit all_day)",
+        status: "confirmed",
+        all_day: true,
+        start_time: ~U[2025-10-15 00:00:00Z],
+        end_time: ~U[2025-10-16 00:00:00Z]
+      }
+
+      [converted] = Events.convert_events_to_timezone([event], "Pacific/Fiji", "Etc/UTC")
+
+      # Oct 15 00:00 Fiji (UTC+12) == Oct 14 12:00 UTC.
+      # Oct 16 00:00 Fiji (UTC+12) == Oct 15 12:00 UTC.
+      assert converted.start_time == ~U[2025-10-14 12:00:00Z]
+      assert converted.end_time == ~U[2025-10-15 12:00:00Z]
+    end
+
+    test "Radicale-style 48h all-day plain map (all_day: true) IS re-anchored to owner-local midnight" do
+      # Multi-day variant: two-day all-day event via the UTC-midnight convention.
+      event = %{
+        uid: "radicale-fiji-2day",
+        summary: "Two-day event",
+        status: "confirmed",
+        all_day: true,
+        start_time: ~U[2025-10-15 00:00:00Z],
+        end_time: ~U[2025-10-17 00:00:00Z]
+      }
+
+      [converted] = Events.convert_events_to_timezone([event], "Pacific/Fiji", "Etc/UTC")
+
+      assert converted.start_time == ~U[2025-10-14 12:00:00Z]
+      assert converted.end_time == ~U[2025-10-16 12:00:00Z]
+    end
   end
 
   describe "convert_events_to_timezone/3 — all-day events" do

@@ -26,6 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
            required(:summary) => String.t() | nil,
            required(:description) => String.t() | nil,
            required(:location) => String.t() | nil,
+           required(:all_day) => boolean(),
            required(:start_time) => DateTime.t() | Date.t() | nil,
            required(:end_time) => DateTime.t() | Date.t() | nil,
            required(:status) => String.t() | nil,
@@ -246,6 +247,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
       summary: google_event["summary"],
       description: google_event["description"],
       location: google_event["location"],
+      all_day: all_day_google_event?(google_event),
       start_time: parse_datetime(google_event["start"]),
       end_time: parse_datetime(google_event["end"]),
       status: google_event["status"],
@@ -339,6 +341,9 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
   defp api_module do
     Application.get_env(:tymeslot, :google_calendar_api_module, CalendarAPI)
   end
+
+  defp all_day_google_event?(%{"start" => %{"date" => _date}}), do: true
+  defp all_day_google_event?(_other), do: false
 
   defp parse_datetime(%{"dateTime" => datetime_str}) do
     case DateTime.from_iso8601(datetime_str) do
