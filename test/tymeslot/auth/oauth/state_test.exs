@@ -113,10 +113,12 @@ defmodule Tymeslot.Auth.OAuth.StateTest do
       assert {:error, :invalid_state} = State.validate_state(conn, state)
     end
 
-    test "accepts state at exactly 600 seconds (not yet expired)" do
+    test "accepts state just within TTL (599 seconds ago)" do
       conn = build_conn()
       state = "boundary-state"
-      timestamp = System.system_time(:second) - 600
+      # 599 seconds ago — one second of slack to survive a wall-clock tick
+      # during validation, which would otherwise push the delta to 601.
+      timestamp = System.system_time(:second) - 599
 
       conn = Conn.put_session(conn, "_oauth_state", {state, timestamp})
 
