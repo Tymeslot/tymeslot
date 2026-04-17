@@ -20,6 +20,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessorTest do
   end
 
   defmodule CrashingClock do
+    @spec utc_now() :: no_return()
     def utc_now do
       if pid = Application.get_env(:tymeslot, :crashing_clock_test_pid) do
         send(pid, {:task_pid, self()})
@@ -158,7 +159,7 @@ defmodule Tymeslot.Payments.Webhooks.WebhookProcessorTest do
           # which is after the crash report has been emitted into the logger handler.
           assert_receive {:task_pid, task_pid}, 500
           ref = Process.monitor(task_pid)
-          assert_receive {:DOWN, ^ref, :process, _, _}, 500
+          assert_receive {:DOWN, ^ref, :process, _pid, _reason}, 500
         end)
 
       assert log =~ "simulated recorder failure"

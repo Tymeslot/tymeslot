@@ -57,7 +57,7 @@ defmodule Tymeslot.Auth.AuthRuntimeIsolationTest do
           # which is after the crash report has been emitted into the logger.
           assert_receive {:task_pid, task_pid}, 500
           ref = Process.monitor(task_pid)
-          assert_receive {:DOWN, ^ref, :process, _, _}, 500
+          assert_receive {:DOWN, ^ref, :process, _pid, _reason}, 500
         end)
 
       assert log =~ "simulated broadcast failure"
