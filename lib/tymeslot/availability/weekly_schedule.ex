@@ -97,11 +97,15 @@ defmodule Tymeslot.Availability.WeeklySchedule do
   @doc """
   Creates default weekly schedule for a new profile.
   Weekdays 11AM-7:30PM, weekends unavailable.
+
+  Accepts an optional `repo` argument so callers inside an existing database
+  transaction can pass their transaction-scoped repo, ensuring the inserts are
+  part of the same transaction rather than a separate connection.
   """
-  @spec create_default_weekly_schedule(integer()) ::
+  @spec create_default_weekly_schedule(integer(), Ecto.Repo.t()) ::
           {:ok, non_neg_integer()} | {:error, term()}
-  def create_default_weekly_schedule(profile_id) do
-    WeeklyAvailabilityQueries.create_default_weekly_schedule(profile_id)
+  def create_default_weekly_schedule(profile_id, repo \\ Repo) do
+    WeeklyAvailabilityQueries.create_default_weekly_schedule(profile_id, repo)
   end
 
   # Private functions

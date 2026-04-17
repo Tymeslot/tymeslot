@@ -191,10 +191,14 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
 
   @doc """
   Creates default weekly schedule for a new profile.
+
+  Accepts an optional `repo` argument so callers inside an existing database
+  transaction can pass their transaction-scoped repo, ensuring the inserts are
+  part of the same transaction rather than a separate connection.
   """
-  @spec create_default_weekly_schedule(integer()) ::
+  @spec create_default_weekly_schedule(integer(), Ecto.Repo.t()) ::
           {:ok, non_neg_integer()} | {:error, :failed_to_create_schedule}
-  def create_default_weekly_schedule(profile_id) do
+  def create_default_weekly_schedule(profile_id, repo \\ Repo) do
     now = NaiveDateTime.utc_now(:second)
 
     # Build all entries at once
@@ -224,8 +228,13 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueries do
           }
         end)
 
-    # Bulk insert all 7 days at once
-    case Repo.insert_all(WeeklyAvailabilitySchema, entries) do
+    # Bulk insert all 7 days at once. on_conflict: :nothing ensures that a
+    # pre-existing row for the same (profile_id, day_of_week) silently skips
+    # rather than raising — the count check below then surfaces the mismatch.
+    case repo.insert_all(WeeklyAvailabilitySchema, entries,
+           on_conflict: :nothing,
+           conflict_target: [:profile_id, :day_of_week]
+         ) do
       {count, _value} when count == 7 -> {:ok, count}
       {_count, _value} -> {:error, :failed_to_create_schedule}
     end

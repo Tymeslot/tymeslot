@@ -28,6 +28,24 @@ defmodule Tymeslot.Availability.WeeklyAvailabilityQueriesTest do
       assert length(weekends) == 2
       assert Enum.all?(weekends, &(&1.is_available == false))
     end
+
+    test "returns error when pre-existing rows prevent full schedule creation" do
+      profile = insert(:profile)
+
+      # Pre-seed one of the seven days so the bulk insert can only place 6 rows.
+      # insert_all uses on_conflict: :nothing, so the conflict is silently skipped
+      # and the returned count (6) triggers the :failed_to_create_schedule path.
+      WeeklyAvailabilityQueries.create_weekly_availability(%{
+        profile_id: profile.id,
+        day_of_week: 1,
+        is_available: true,
+        start_time: ~T[09:00:00],
+        end_time: ~T[17:00:00]
+      })
+
+      assert {:error, :failed_to_create_schedule} =
+               WeeklyAvailabilityQueries.create_default_weekly_schedule(profile.id)
+    end
   end
 
   describe "availability validation (prevents booking issues)" do

@@ -11,6 +11,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.{UserQueries, UserSchema}
+  alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
 
@@ -66,8 +67,16 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
     create_profile(repo, user, profile_params)
   end
 
-  defp ensure_profile(_repo, _user, false, _profile_params), do: {:ok, :existing}
+  defp ensure_profile(repo, user, false, profile_params) do
+    case ProfileQueries.get_by_user_id_in_transaction(repo, user.id) do
+      {:ok, _profile} -> {:ok, :existing}
+      {:error, :not_found} -> create_profile(repo, user, profile_params)
+    end
+  end
 
+  # Both signup paths (standard registration and OAuth) must create a default
+  # weekly schedule immediately after the profile. Keep these in sync;
+  # see Task 1 in the composition test plan for drift regression.
   defp create_profile(repo, user, profile_params) do
     # Use the repo passed in to ensure we're in the same transaction
     profile_attrs = %{user_id: user.id}
@@ -82,13 +91,21 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
           profile_attrs
       end
 
-    case ProfileQueries.create_profile_in_transaction(repo, profile_attrs) do
-      {:ok, profile} ->
-        Logger.info("Created profile", user_id: user.id)
-        {:ok, profile}
+    with {:ok, profile} <- ProfileQueries.create_profile_in_transaction(repo, profile_attrs),
+         {:ok, _count} <- WeeklySchedule.create_default_weekly_schedule(profile.id, repo) do
+      Logger.info("Created profile", user_id: user.id)
+      {:ok, profile}
+    else
+      {:error, %Ecto.Changeset{} = changeset} ->
+        Logger.error("Profile insert failed", user_id: user.id, reason: inspect(changeset))
+        {:error, {:create_profile, changeset}}
 
       {:error, reason} ->
-        Logger.error("Profile creation failed", user_id: user.id, reason: inspect(reason))
+        Logger.error("Default schedule creation failed",
+          user_id: user.id,
+          reason: inspect(reason)
+        )
+
         {:error, {:create_profile, reason}}
     end
   end

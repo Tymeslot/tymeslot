@@ -144,6 +144,23 @@ defmodule Tymeslot.Profiles.ProfileQueries do
   end
 
   @doc """
+  Gets a profile by user ID within a transaction.
+
+  Accepts a repo argument so the lookup participates in the same transaction
+  as its callers, ensuring it sees uncommitted parent-transaction state.
+
+  Returns `{:ok, profile}` if found, `{:error, :not_found}` otherwise.
+  """
+  @spec get_by_user_id_in_transaction(Ecto.Repo.t(), integer()) ::
+          {:ok, ProfileSchema.t()} | {:error, :not_found}
+  def get_by_user_id_in_transaction(repo, user_id) do
+    case repo.one(from(p in ProfileSchema, where: p.user_id == ^user_id)) do
+      nil -> {:error, :not_found}
+      profile -> {:ok, profile}
+    end
+  end
+
+  @doc """
   Creates a profile within a transaction.
 
   This function accepts a repo argument to ensure it runs within the same
