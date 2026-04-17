@@ -44,8 +44,10 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
       victim_meeting = future_meeting(organizer_user: victim_user)
 
       # The attacker visits their own username URL but injects the victim's meeting UID.
-      assert {:error, {:redirect, %{to: "/"}}} =
+      assert {:error, {:redirect, %{to: "/", flash: flash}}} =
                live(conn, ~p"/#{attacker_profile.username}/meeting/#{victim_meeting.uid}/cancel")
+
+      assert flash["error"] =~ "not found"
     end
 
     test "allows the legitimate owner to visit their own cancel URL", %{conn: conn} do
@@ -73,11 +75,13 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
       victim_user = insert(:user)
       victim_meeting = future_meeting(organizer_user: victim_user)
 
-      assert {:error, {:redirect, %{to: "/"}}} =
+      assert {:error, {:redirect, %{to: "/", flash: flash}}} =
                live(
                  conn,
                  ~p"/#{attacker_profile.username}/meeting/#{victim_meeting.uid}/reschedule"
                )
+
+      assert flash["error"] =~ "not found"
     end
 
     test "allows the legitimate owner to visit their own reschedule URL", %{conn: conn} do
@@ -91,6 +95,84 @@ defmodule TymeslotWeb.Live.Themes.MeetingIdorTest do
                  conn,
                  ~p"/#{owner_profile.username}/meeting/#{owner_meeting.uid}/reschedule"
                )
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # IDOR: cancel-confirmed route
+  # ---------------------------------------------------------------------------
+
+  describe "cancel-confirmed route — ownership enforcement" do
+    test "rejects an attempt to view cancel-confirmed for another user's meeting",
+         %{conn: conn} do
+      attacker_user = insert(:user)
+      attacker_profile = insert(:profile, user: attacker_user, username: "attacker3")
+      insert(:theme_customization, profile: attacker_profile, theme_id: "1")
+
+      victim_user = insert(:user)
+      victim_meeting = future_meeting(organizer_user: victim_user)
+
+      assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+               live(
+                 conn,
+                 ~p"/#{attacker_profile.username}/meeting/#{victim_meeting.uid}/cancel-confirmed"
+               )
+
+      assert flash["error"] =~ "not found"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Policy failure: legitimate owner, disallowed meeting state
+  # ---------------------------------------------------------------------------
+
+  describe "policy enforcement — action not allowed for meeting state" do
+    test "visiting cancel URL for an already-cancelled meeting redirects with flash error",
+         %{conn: conn} do
+      owner_user = insert(:user)
+      owner_profile = insert(:profile, user: owner_user, username: "owner3")
+      insert(:theme_customization, profile: owner_profile, theme_id: "1")
+
+      cancelled_meeting =
+        insert(
+          :meeting,
+          organizer_user: owner_user,
+          status: "cancelled",
+          start_time: DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second),
+          end_time: DateTime.utc_now() |> DateTime.add(7200) |> DateTime.truncate(:second)
+        )
+
+      assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+               live(
+                 conn,
+                 ~p"/#{owner_profile.username}/meeting/#{cancelled_meeting.uid}/cancel"
+               )
+
+      assert flash["error"] =~ "cancelled"
+    end
+
+    test "visiting reschedule URL for a past meeting redirects with flash error",
+         %{conn: conn} do
+      owner_user = insert(:user)
+      owner_profile = insert(:profile, user: owner_user, username: "owner4")
+      insert(:theme_customization, profile: owner_profile, theme_id: "1")
+
+      past_meeting =
+        insert(
+          :meeting,
+          organizer_user: owner_user,
+          status: "confirmed",
+          start_time: DateTime.utc_now() |> DateTime.add(-7200) |> DateTime.truncate(:second),
+          end_time: DateTime.utc_now() |> DateTime.add(-3600) |> DateTime.truncate(:second)
+        )
+
+      assert {:error, {:redirect, %{to: "/", flash: flash}}} =
+               live(
+                 conn,
+                 ~p"/#{owner_profile.username}/meeting/#{past_meeting.uid}/reschedule"
+               )
+
+      assert flash["error"] =~ "occurred"
     end
   end
 end

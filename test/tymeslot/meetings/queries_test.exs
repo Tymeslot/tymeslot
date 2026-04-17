@@ -57,6 +57,42 @@ defmodule Tymeslot.Meetings.QueriesTest do
     end
   end
 
+  describe "get_meeting_by_uid_for_organizer/2" do
+    test "returns meeting when organizer_user_id matches" do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user_id: user.id)
+
+      assert {:ok, found} = Meetings.get_meeting_by_uid_for_organizer(meeting.uid, user.id)
+      assert found.uid == meeting.uid
+    end
+
+    test "returns error when organizer_user_id does not match" do
+      user = insert(:user)
+      other_user = insert(:user)
+      meeting = insert(:meeting, organizer_user_id: user.id)
+
+      assert {:error, :not_found} =
+               Meetings.get_meeting_by_uid_for_organizer(meeting.uid, other_user.id)
+    end
+
+    test "returns error for non-existent UID" do
+      user = insert(:user)
+
+      assert {:error, :not_found} =
+               Meetings.get_meeting_by_uid_for_organizer("nonexistent-uid", user.id)
+    end
+  end
+
+  describe "get_meeting_by_uid_for_organizer/2 (context)" do
+    test "delegates to MeetingQueries and returns meeting for correct organizer" do
+      user = insert(:user)
+      meeting = insert(:meeting, organizer_user_id: user.id)
+
+      assert {:ok, found} = Meetings.get_meeting_by_uid_for_organizer(meeting.uid, user.id)
+      assert found.uid == meeting.uid
+    end
+  end
+
   describe "meetings_needing_reminders/0" do
     test "filters meetings based on reminder rules" do
       now = DateTime.utc_now()
