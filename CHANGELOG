@@ -1,4 +1,11 @@
 
+[0.100.8]
+* core: Prevent Docker first-run failure when PostgreSQL volume is root-owned
+* core: Supervise fire-and-forget tasks in auth and webhook paths
+* core: Isolate per-request state on reused worker processes
+* core: Move video-room HTTP call outside DB transaction
+* core: Invalidate availability cache after calendar sync persists
+* core: Re-anchor UTC-midnight all-day events to owner tz in availability
 [0.100.7]
 * core: Prevent calendar grid crash on invalid user timezone
 * core: Extend IDOR prevention to booking-form reschedule paths
