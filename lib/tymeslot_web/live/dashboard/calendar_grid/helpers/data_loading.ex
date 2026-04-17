@@ -57,7 +57,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   @spec precompute_derived(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def precompute_derived(socket) do
     assigns = socket.assigns
-    tz = get_in(assigns, [:profile, Access.key(:timezone)]) || "UTC"
+    raw_tz = get_in(assigns, [:profile, Access.key(:timezone)]) || "Etc/UTC"
+    user_id = get_in(assigns, [:current_user, Access.key(:id)])
+    tz = Timezones.validate_or_utc(raw_tz, user_id: user_id)
     v_events = do_visible_events(assigns.events, assigns.hidden_integration_ids)
     v_days = visible_days(assigns)
 

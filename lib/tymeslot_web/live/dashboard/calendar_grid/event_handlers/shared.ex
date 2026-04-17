@@ -17,6 +17,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared do
   # Constructs a UTC DateTime from a date and time in the user's display timezone.
   # The calendar grid renders events in the user's timezone, so drag/drop/create
   # coordinates are in that timezone and must be converted back to UTC for storage.
+  # The timezone is validated at mount time (DataLoading.precompute_derived/1), so
+  # it is safe to use the bang variant here.
   @spec to_utc(Date.t(), non_neg_integer(), non_neg_integer(), String.t()) :: DateTime.t()
   def to_utc(date, hour, minute, timezone) do
     local_dt = DateTime.new!(date, Time.new!(hour, minute, 0, {0, 6}), timezone)

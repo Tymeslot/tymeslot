@@ -6,6 +6,8 @@ defmodule Tymeslot.Timezones do
   Callers should alias this single module.
   """
 
+  require Logger
+
   alias Tymeslot.Timezones.{Data, Formatting}
 
   defdelegate all_options(), to: Data
@@ -20,4 +22,40 @@ defmodule Tymeslot.Timezones do
   defdelegate format(timezone_id), to: Formatting
   defdelegate utc_offset(timezone_id), to: Formatting
   defdelegate format_utc_offset(seconds), to: Formatting
+
+  @doc """
+  Validates a timezone string at the LiveView edge, returning it unchanged if valid
+  or `"Etc/UTC"` if invalid.
+
+  Validity is determined by attempting an actual `DateTime.shift_zone/2` against a
+  known UTC instant, so the check reflects the runtime time-zone database rather
+  than just the curated city list.
+
+  Emits one `Logger.warning` on fallback. Supply `metadata` (a keyword list) to
+  include contextual fields — e.g. `[user_id: user.id]` — so operators can surface
+  affected accounts from logs.
+
+  ## Examples
+
+      iex> Tymeslot.Timezones.validate_or_utc("Europe/London")
+      "Europe/London"
+
+      iex> Tymeslot.Timezones.validate_or_utc("Not/Real")
+      "Etc/UTC"
+  """
+  @spec validate_or_utc(String.t(), keyword()) :: String.t()
+  def validate_or_utc(timezone, metadata \\ []) when is_binary(timezone) do
+    case DateTime.shift_zone(DateTime.utc_now(), timezone) do
+      {:ok, _shifted} ->
+        timezone
+
+      {:error, _reason} ->
+        Logger.warning(
+          "Invalid user timezone; falling back to UTC for calendar rendering",
+          Keyword.merge([timezone: timezone], metadata)
+        )
+
+        "Etc/UTC"
+    end
+  end
 end
