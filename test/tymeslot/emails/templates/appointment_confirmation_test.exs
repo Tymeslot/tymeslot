@@ -33,6 +33,26 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
       assert ics.filename =~ details.uid
     end
 
+    # Issue #41: a METHOD:REQUEST attachment with untagged ORGANIZER/ATTENDEE
+    # triggers recipient-side iMIP handling on scheduling-aware mail servers
+    # (Zimbra, Nextcloud, iCloud), which auto-imports the event and auto-RSVPs,
+    # producing duplicate calendar entries and extra notification emails. The
+    # attendee ICS must advertise METHOD:PUBLISH and tag both ORGANIZER and
+    # ATTENDEE with SCHEDULE-AGENT=CLIENT to suppress that pipeline.
+    test "attendee ICS advertises METHOD:PUBLISH with SCHEDULE-AGENT=CLIENT" do
+      details = build_appointment_details()
+      email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
+
+      ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+
+      assert ics.content_type =~ "method=PUBLISH"
+      refute ics.content_type =~ "method=REQUEST"
+      assert ics.data =~ "METHOD:PUBLISH"
+      refute ics.data =~ "METHOD:REQUEST"
+      assert ics.data =~ ~r/^ORGANIZER;SCHEDULE-AGENT=CLIENT[;:]/m
+      assert ics.data =~ ~r/^ATTENDEE;SCHEDULE-AGENT=CLIENT[;:]/m
+    end
+
     test "includes both HTML and text bodies" do
       details = build_appointment_details()
       email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)

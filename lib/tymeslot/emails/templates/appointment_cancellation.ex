@@ -146,9 +146,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellation do
 
   defp organizer_locale(_appointment_details), do: Locales.default_locale()
 
-  # Builds a METHOD:CANCEL ICS attachment so the attendee's calendar client
-  # removes the event automatically. Sequence bumps the last-known value so the
-  # cancellation supersedes any prior REQUEST/UPDATE entry in their calendar.
+  # Builds a `METHOD:PUBLISH` + `STATUS:CANCELLED` ICS attachment so the
+  # attendee's calendar client shows the event as cancelled. We avoid iTIP
+  # `METHOD:CANCEL` on the wire to keep recipient MTAs (Zimbra, Nextcloud,
+  # iCloud) from auto-processing the attachment and firing extra notifications
+  # — see issue #41. Sequence bumps the last-known value so the cancellation
+  # supersedes any prior entry in the calendar.
   defp cancel_ics_attachment(appointment_details, locale) do
     current_sequence = Map.get(appointment_details, :ical_sequence) || 0
 

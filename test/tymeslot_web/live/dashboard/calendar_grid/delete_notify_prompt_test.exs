@@ -1,7 +1,7 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.DeleteNotifyPromptTest do
   @moduledoc """
   Task 18 — asserts that the delete flow opens the notify-prompt modal when the
-  event has attendees, and that confirming the prompt enqueues a METHOD:CANCEL
+  event has attendees, and that confirming the prompt enqueues a cancellation
   Worker job while cancelling dispatches the delete without notifying.
   """
 

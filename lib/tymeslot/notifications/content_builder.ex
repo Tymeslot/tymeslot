@@ -110,7 +110,7 @@ defmodule Tymeslot.Notifications.ContentBuilder do
       location: meeting.location,
       meeting_type: meeting.meeting_type,
 
-      # iCal sequence for METHOD:CANCEL attachments (bumped at render time)
+      # iCal sequence for cancellation attachments (bumped at render time)
       ical_sequence: Map.get(meeting, :ical_sequence) || 0,
 
       # Cancellation context

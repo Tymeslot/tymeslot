@@ -175,9 +175,9 @@ defmodule Tymeslot.Bookings.Cancel do
     end
   end
 
-  # Note: the cancellation email produced by this pipeline carries the
-  # METHOD:CANCEL ICS attachment (see `Tymeslot.Emails.Templates.AppointmentCancellation`)
-  # so the attendee's calendar client removes the event automatically. We deliberately
+  # Note: the cancellation email produced by this pipeline carries a
+  # `STATUS:CANCELLED` ICS attachment (see `Tymeslot.Emails.Templates.AppointmentCancellation`)
+  # so the attendee's calendar client marks the event as cancelled. We deliberately
   # do NOT route bookings cancellation through
   # `Tymeslot.Meetings.AttendeeNotifications.event_deleted_confirm/2`: the bookings
   # cancellation email carries user-facing context (cancellation reason, custom copy)

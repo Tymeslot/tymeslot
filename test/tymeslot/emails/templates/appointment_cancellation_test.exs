@@ -389,8 +389,14 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
     end
   end
 
-  describe "attendee cancellation email METHOD:CANCEL attachment" do
-    test "includes a text/calendar attachment with method=CANCEL" do
+  # The attendee cancellation email used to advertise METHOD:CANCEL via both
+  # the content-type and the VCALENDAR body, which caused recipient mail
+  # servers (Zimbra, Nextcloud, iCloud Mail) to auto-process the attachment
+  # as an iTIP cancellation and fire an extra round of notifications. We
+  # now emit METHOD:PUBLISH + STATUS:CANCELLED instead — clients still see
+  # the event as cancelled, but MTAs leave it alone. See issue #41.
+  describe "attendee cancellation email ICS attachment" do
+    test "includes a text/calendar attachment with method=PUBLISH" do
       details = build_appointment_details()
 
       email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
@@ -398,11 +404,12 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
 
       assert %Swoosh.Attachment{} = ics, "expected a text/calendar attachment"
-      assert ics.content_type =~ "method=CANCEL"
+      assert ics.content_type =~ "method=PUBLISH"
+      refute ics.content_type =~ "method=CANCEL"
       assert ics.filename =~ ".ics"
     end
 
-    test "attachment body is a METHOD:CANCEL VCALENDAR with a SEQUENCE line" do
+    test "attachment body conveys cancellation via STATUS:CANCELLED with a SEQUENCE line" do
       details = build_appointment_details(%{ical_sequence: 3})
 
       email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
@@ -410,7 +417,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
 
       assert ics.data =~ "BEGIN:VCALENDAR"
-      assert ics.data =~ "METHOD:CANCEL"
+      assert ics.data =~ "METHOD:PUBLISH"
+      refute ics.data =~ "METHOD:CANCEL"
+      assert ics.data =~ "STATUS:CANCELLED"
       assert ics.data =~ ~r/SEQUENCE:\d+/
       # Sequence should bump to (current + 1) = 4
       assert ics.data =~ "SEQUENCE:4"
@@ -424,6 +433,21 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
 
       assert ics.data =~ "SEQUENCE:1"
+    end
+
+    # Issue #41: defence-in-depth — even with METHOD:PUBLISH, tagging
+    # ORGANIZER/ATTENDEE with SCHEDULE-AGENT=CLIENT prevents any remaining
+    # scheduling-aware server from re-routing the attachment as an iTIP
+    # cancellation.
+    test "ORGANIZER and ATTENDEE lines carry SCHEDULE-AGENT=CLIENT" do
+      details = build_appointment_details()
+
+      email = AppointmentCancellation.render(:attendee, "attendee@example.com", details)
+
+      ics = Enum.find(email.attachments, &(&1.content_type =~ "text/calendar"))
+
+      assert ics.data =~ ~r/^ORGANIZER;SCHEDULE-AGENT=CLIENT[;:]/m
+      assert ics.data =~ ~r/^ATTENDEE;SCHEDULE-AGENT=CLIENT[;:]/m
     end
   end
 

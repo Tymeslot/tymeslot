@@ -41,7 +41,9 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
   end
 
   @doc """
-  Generates a METHOD:CANCEL ICS attachment for cancelling an existing event.
+  Generates an ICS attachment that cancels an existing event
+  (`METHOD:PUBLISH` + `STATUS:CANCELLED`). We deliberately avoid
+  `METHOD:CANCEL` here — see the note on `render_vcalendar/3`.
 
   The `sequence` should be the next value after the last sent invitation so
   calendar clients recognise the cancellation as more recent than the event
@@ -63,13 +65,10 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
     %Swoosh.Attachment{
       filename: filename,
-      content_type: content_type_for(method),
+      content_type: "text/calendar; charset=utf-8; method=PUBLISH",
       data: ics_content
     }
   end
-
-  defp content_type_for(:request), do: "text/calendar; charset=utf-8; method=REQUEST"
-  defp content_type_for(:cancel), do: "text/calendar; charset=utf-8; method=CANCEL"
 
   defp generate_ics_with(meeting_details, method, sequence, locale) do
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
@@ -94,10 +93,19 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     }
   end
 
+  # Tymeslot emails always advertise METHOD:PUBLISH (not REQUEST/CANCEL). The
+  # organiser's calendar is already updated via the CalDAV/OAuth write path and
+  # attendee RSVP is handled by booking URLs in the email body — iTIP on the
+  # wire would cause recipient-side mail servers (Zimbra, Nextcloud/Sabre,
+  # Apple iCloud Mail) to auto-import the attachment and emit extra
+  # notifications. See issue #41.
+  #
+  # `SCHEDULE-AGENT=CLIENT` on ORGANIZER/ATTENDEE is defence-in-depth per
+  # RFC 6638 §7.1 for the same reason.
   defp render_vcalendar(event, method, sequence) do
-    attendee_line = if event.attendee, do: "ATTENDEE:#{event.attendee}\n", else: ""
+    attendee_line = if event.attendee, do: "ATTENDEE;#{event.attendee}\n", else: ""
     sequence_line = if is_integer(sequence), do: "SEQUENCE:#{sequence}\n", else: ""
-    method_line = if method == :none, do: "", else: "METHOD:#{method_token(method)}\n"
+    method_line = if method == :none, do: "", else: "METHOD:PUBLISH\n"
     status = status_for(method, event.status)
 
     """
@@ -113,15 +121,12 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     #{sequence_line}SUMMARY:#{escape_ical_text(event.summary || dgettext("emails", "Meeting"))}
     DESCRIPTION:#{escape_ical_text(event.description)}
     LOCATION:#{escape_ical_text(event.location)}
-    ORGANIZER:#{event.organizer}
+    ORGANIZER;#{event.organizer}
     #{attendee_line}STATUS:#{status}
     END:VEVENT
     END:VCALENDAR
     """
   end
-
-  defp method_token(:request), do: "REQUEST"
-  defp method_token(:cancel), do: "CANCEL"
 
   defp status_for(:cancel, _status), do: "CANCELLED"
   defp status_for(_method, status), do: status
@@ -136,14 +141,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
         Application.get_env(:tymeslot, :email)[:from_email]
       )
 
-    case organizer_name do
-      name when is_binary(name) and name != "" ->
-        quoted_name = String.replace(name, "\"", "'")
-        "CN=\"#{quoted_name}\":mailto:#{organizer_email}"
-
-      _other ->
-        "mailto:#{organizer_email}"
-    end
+    "SCHEDULE-AGENT=CLIENT#{cn_param(organizer_name)}:mailto:#{organizer_email}"
   end
 
   defp format_attendees(meeting_details) do
@@ -152,20 +150,23 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     case attendee_email do
       email when is_binary(email) and email != "" ->
         attendee_name = Map.get(meeting_details, :attendee_name)
-
-        case attendee_name do
-          name when is_binary(name) and name != "" ->
-            quoted_name = String.replace(name, "\"", "'")
-            "CN=\"#{quoted_name}\":mailto:#{email}"
-
-          _other ->
-            "mailto:#{email}"
-        end
+        "SCHEDULE-AGENT=CLIENT#{cn_param(attendee_name)}:mailto:#{email}"
 
       _other ->
         nil
     end
   end
+
+  defp cn_param(name) when is_binary(name) and name != "" do
+    quoted_name =
+      name
+      |> String.replace(~r/[\r\n]/, " ")
+      |> String.replace("\"", "'")
+
+    ";CN=\"#{quoted_name}\""
+  end
+
+  defp cn_param(_other), do: ""
 
   defp build_ics_description(meeting_details) do
     parts = [

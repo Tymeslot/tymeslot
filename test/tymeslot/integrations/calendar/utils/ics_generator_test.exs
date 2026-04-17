@@ -294,7 +294,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       assert %Swoosh.Attachment{} = attachment
       assert attachment.filename == "meeting.ics"
       assert attachment.content_type =~ "text/calendar"
-      assert attachment.content_type =~ "method=REQUEST"
+      assert attachment.content_type =~ "method=PUBLISH"
       assert is_binary(attachment.data)
       assert attachment.data =~ "BEGIN:VCALENDAR"
     end
@@ -314,7 +314,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       assert attachment.filename == "custom-invite.ics"
     end
 
-    test "sets correct content type with charset and method" do
+    test "advertises METHOD:PUBLISH (not REQUEST) to suppress recipient-side iMIP auto-import" do
       meeting_details = %{
         title: "Meeting",
         start_time: ~U[2026-01-15 14:00:00Z],
@@ -325,12 +325,14 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
 
       attachment = IcsGenerator.generate_ics_attachment(meeting_details)
 
-      assert attachment.content_type == "text/calendar; charset=utf-8; method=REQUEST"
+      assert attachment.content_type == "text/calendar; charset=utf-8; method=PUBLISH"
+      assert attachment.data =~ "METHOD:PUBLISH"
+      refute attachment.data =~ "METHOD:REQUEST"
     end
   end
 
   describe "generate_ics_cancel_attachment/4" do
-    test "produces a METHOD:CANCEL attachment with the given SEQUENCE" do
+    test "emits METHOD:PUBLISH + STATUS:CANCELLED with the given SEQUENCE" do
       meeting_details = %{
         title: "Cancelled Meeting",
         start_time: ~U[2026-01-15 14:00:00Z],
@@ -343,10 +345,166 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       attachment = IcsGenerator.generate_ics_cancel_attachment(meeting_details, 3)
 
       assert %Swoosh.Attachment{} = attachment
-      assert attachment.content_type == "text/calendar; charset=utf-8; method=CANCEL"
-      assert attachment.data =~ "METHOD:CANCEL"
+      assert attachment.content_type == "text/calendar; charset=utf-8; method=PUBLISH"
+      assert attachment.data =~ "METHOD:PUBLISH"
+      refute attachment.data =~ "METHOD:CANCEL"
       assert attachment.data =~ "SEQUENCE:3"
       assert attachment.data =~ "STATUS:CANCELLED"
+    end
+  end
+
+  describe "generate_ics_update_attachment/4" do
+    test "advertises METHOD:PUBLISH (not REQUEST) in content-type and data" do
+      meeting_details = %{
+        title: "Updated Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "update-me-123",
+        organizer_email: "organizer@example.com"
+      }
+
+      attachment = IcsGenerator.generate_ics_update_attachment(meeting_details, 1)
+
+      assert attachment.content_type =~ "method=PUBLISH"
+      assert attachment.data =~ "METHOD:PUBLISH"
+      refute attachment.data =~ "METHOD:REQUEST"
+    end
+
+    test "includes SEQUENCE line reflecting the given sequence number" do
+      meeting_details = %{
+        title: "Updated Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "update-me-123",
+        organizer_email: "organizer@example.com"
+      }
+
+      attachment = IcsGenerator.generate_ics_update_attachment(meeting_details, 2)
+
+      assert attachment.data =~ "SEQUENCE:2"
+    end
+
+    test "retains STATUS:CONFIRMED on an update" do
+      meeting_details = %{
+        title: "Updated Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "update-me-123",
+        organizer_email: "organizer@example.com"
+      }
+
+      attachment = IcsGenerator.generate_ics_update_attachment(meeting_details, 1)
+
+      assert attachment.data =~ "STATUS:CONFIRMED"
+      refute attachment.data =~ "STATUS:CANCELLED"
+    end
+
+    test "ORGANIZER and ATTENDEE lines carry SCHEDULE-AGENT=CLIENT" do
+      meeting_details = %{
+        title: "Updated Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "update-me-123",
+        organizer_email: "organizer@example.com",
+        organizer_name: "Alice",
+        attendee_email: "bob@example.com",
+        attendee_name: "Bob"
+      }
+
+      attachment = IcsGenerator.generate_ics_update_attachment(meeting_details, 1)
+
+      assert attachment.data =~ ~r/^ORGANIZER;SCHEDULE-AGENT=CLIENT[;:]/m
+      assert attachment.data =~ ~r/^ATTENDEE;SCHEDULE-AGENT=CLIENT[;:]/m
+    end
+  end
+
+  describe "CN parameter sanitisation" do
+    test "prevents CRLF injection from attendee name from creating new property lines" do
+      meeting_details = %{
+        title: "Injection Test",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "inject-123",
+        organizer_email: "org@example.com",
+        attendee_email: "victim@example.com",
+        attendee_name: "Jane\r\nX-INJECTED:malicious"
+      }
+
+      attachment = IcsGenerator.generate_ics_attachment(meeting_details)
+
+      # The CRLF must not produce a bare new property line in the output.
+      refute attachment.data =~ ~r/^X-INJECTED:malicious/m
+      refute attachment.data =~ "\r\nX-INJECTED"
+      refute attachment.data =~ "\nX-INJECTED"
+    end
+
+    test "prevents CRLF injection from organizer name from creating new property lines" do
+      meeting_details = %{
+        title: "Injection Test",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "inject-org-123",
+        organizer_email: "org@example.com",
+        organizer_name: "Alice\r\nX-INJECTED:malicious"
+      }
+
+      attachment = IcsGenerator.generate_ics_attachment(meeting_details)
+
+      refute attachment.data =~ ~r/^X-INJECTED:malicious/m
+      refute attachment.data =~ "\r\nX-INJECTED"
+      refute attachment.data =~ "\nX-INJECTED"
+    end
+  end
+
+  # RFC 6638 §7.1: tagging ORGANIZER/ATTENDEE with SCHEDULE-AGENT=CLIENT
+  # signals to scheduling-aware CalDAV servers and iMIP-aware mail servers
+  # that the client handles all scheduling — they must not fire their own
+  # iTIP pipeline. Without this, Zimbra/Nextcloud/iCloud auto-generate a
+  # second set of notifications (see issue #41).
+  describe "SCHEDULE-AGENT=CLIENT suppression of recipient-side iTIP" do
+    test "ORGANIZER line carries SCHEDULE-AGENT=CLIENT" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        organizer_name: "John Smith"
+      }
+
+      ics = IcsGenerator.generate_ics(meeting_details)
+
+      assert ics =~ ~r/^ORGANIZER;SCHEDULE-AGENT=CLIENT[;:]/m
+    end
+
+    test "ATTENDEE line carries SCHEDULE-AGENT=CLIENT when present" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com",
+        attendee_email: "jane@example.com",
+        attendee_name: "Jane Doe"
+      }
+
+      ics = IcsGenerator.generate_ics(meeting_details)
+
+      assert ics =~ ~r/^ATTENDEE;SCHEDULE-AGENT=CLIENT[;:]/m
+    end
+
+    test "ORGANIZER without a name still carries SCHEDULE-AGENT=CLIENT" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "meeting-123",
+        organizer_email: "john@example.com"
+      }
+
+      ics = IcsGenerator.generate_ics(meeting_details)
+
+      assert ics =~ "ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:john@example.com"
     end
   end
 end
