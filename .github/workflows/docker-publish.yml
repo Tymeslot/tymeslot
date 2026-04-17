@@ -50,5 +50,5 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=luka1thb/tymeslot:buildcache
-          cache-to: type=registry,ref=luka1thb/tymeslot:buildcache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
