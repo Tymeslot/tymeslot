@@ -432,5 +432,51 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       # Mox will raise if it is.
       assert :ok = perform_job(FallbackSyncSweepWorker, %{})
     end
+
+    test "logs and continues when bootstrap_sync returns an api_error 3-tuple" do
+      insert(:calendar_integration,
+        provider: "outlook",
+        is_active: true,
+        graph_delta_link: nil
+      )
+
+      expect(OutlookCalendarAPIMock, :bootstrap_sync, fn _integration ->
+        {:error, :network_error, "HTTP 400 (see logs for details)"}
+      end)
+
+      # Without the 3-tuple fix, this raises CaseClauseError and crashes the
+      # entire sweep — `perform_job` would return `{:error, exception}`.
+      log =
+        capture_log(fn ->
+          assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+        end)
+
+      assert log =~ "Outlook bootstrap delta fetch failed in fallback sweep"
+    end
+  end
+
+  describe "perform/1 - Outlook integration with delta link" do
+    test "logs and continues when token refresh returns an api_error 3-tuple" do
+      insert(:calendar_integration,
+        provider: "outlook",
+        is_active: true,
+        graph_delta_link:
+          "https://graph.microsoft.com/v1.0/me/events/delta?$skiptoken=fake-skiptoken",
+        token_expires_at: nil
+      )
+
+      expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
+        {:error, :unauthorized, "Token refresh failed"}
+      end)
+
+      # Same regression: 3-tuple from refresh_token used to escape the case
+      # clause in fetch_outlook_delta and crash the whole sweep.
+      log =
+        capture_log(fn ->
+          assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+        end)
+
+      assert log =~ "Outlook token refresh failed during fallback sweep"
+    end
   end
 end

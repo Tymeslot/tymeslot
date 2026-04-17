@@ -287,11 +287,11 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
         maybe_register_subscription(updated)
         :ok
 
-      {:error, reason} ->
+      error ->
         Logger.warning(
           "Outlook bootstrap delta fetch failed in fallback sweep",
           calendar_integration_id: integration.id,
-          error: inspect(reason)
+          error: format_error(error)
         )
 
         :error
@@ -345,10 +345,10 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
         :error
 
-      {:ok, {:error, reason}} ->
+      {:ok, api_error} ->
         Logger.warning("Outlook delta fetch failed during fallback sweep",
           calendar_integration_id: integration.id,
-          error: reason
+          error: format_error(api_error)
         )
 
         :error
@@ -360,15 +360,28 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
 
         :error
 
-      {:error, reason} ->
+      refresh_error ->
         Logger.warning("Outlook token refresh failed during fallback sweep",
           calendar_integration_id: integration.id,
-          error: reason
+          error: format_error(refresh_error)
         )
 
         :error
     end
   end
+
+  # Normalises both 2-tuple (`{:error, reason}`) and 3-tuple
+  # (`{:error, type, reason}` — the `api_error()` shape returned by the
+  # Outlook/Graph client and token refresh helpers) error shapes into a
+  # single printable string. Without this, a 3-tuple leaking up through
+  # `with_access_token/3` or `bootstrap_sync/1` crashes the sweep with a
+  # `CaseClauseError` instead of being logged and skipped.
+  defp format_error({:error, type, reason}) when is_atom(type),
+    do: "#{type}: #{inspect(reason)}"
+
+  defp format_error({:error, reason}), do: inspect(reason)
+
+  defp format_error(other), do: inspect(other)
 
   defp apply_outlook_delta(integration, events, new_delta_link) do
     {removed, changed} = Enum.split_with(events, &Map.has_key?(&1, "@removed"))
