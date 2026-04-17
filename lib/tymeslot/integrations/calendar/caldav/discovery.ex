@@ -20,7 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
 
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalDAV.{Base, Http, UrlBuilder, XmlHandler}
-  alias Tymeslot.Security.{CredentialManager, RateLimiter, UrlValidation}
+  alias Tymeslot.Security.{RateLimiter, UrlValidation}
 
   require Logger
 
@@ -39,31 +39,28 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
   def test_connection(client, opts \\ []) do
     ip_address = Keyword.get(opts, :ip_address, "127.0.0.1")
 
-    with :ok <- check_rate_limit(:connection, ip_address),
-         {:ok, secure_client} <- CredentialManager.encrypt_client_credentials(client) do
+    with :ok <- check_rate_limit(:connection, ip_address) do
       discovery_url = UrlBuilder.build_discovery_url(client)
 
       result =
-        CredentialManager.with_decrypted_credentials(secure_client, fn decrypted ->
-          case Http.propfind(discovery_url, decrypted.username, decrypted.password,
-                 depth: "0",
-                 max_retries: 0
-               ) do
-            {:ok, _response} = success ->
-              success
+        case Http.propfind(discovery_url, client.username, client.password,
+               depth: "0",
+               max_retries: 0
+             ) do
+          {:ok, _response} = success ->
+            success
 
-            {:error, reason} when reason in [:not_found, :server_error] ->
-              Logger.debug("CalDAV discovery path not found; falling back to RFC 4791 probe",
-                reason: reason,
-                base_url: client.base_url
-              )
+          {:error, reason} when reason in [:not_found, :server_error] ->
+            Logger.debug("CalDAV discovery path not found; falling back to RFC 4791 probe",
+              reason: reason,
+              base_url: client.base_url
+            )
 
-              rfc4791_probe(client.base_url, decrypted.username, decrypted.password)
+            rfc4791_probe(client.base_url, client.username, client.password)
 
-            {:error, _reason} = error ->
-              error
-          end
-        end)
+          {:error, _reason} = error ->
+            error
+        end
 
       case result do
         {:ok, %Req.Response{}} -> {:ok, "CalDAV connection successful"}

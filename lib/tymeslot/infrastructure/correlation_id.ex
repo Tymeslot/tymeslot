@@ -171,6 +171,12 @@ defmodule Tymeslot.Infrastructure.CorrelationId do
 
   @spec call(Conn.t(), any()) :: Conn.t()
   def call(conn, _options) do
+    # Clear any stale per-request state left behind by a previous request on
+    # the same reused worker process. A fresh correlation ID is derived from
+    # the incoming headers/assigns below, never from the process dictionary.
+    Process.delete(@correlation_id_key)
+    Logger.metadata(correlation_id: nil)
+
     {updated_conn, correlation_id} = ensure(conn)
 
     # Add to logger metadata for this request

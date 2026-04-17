@@ -21,6 +21,10 @@ defmodule TymeslotWeb.Hooks.LoggerMetadataHook do
   @spec on_mount(atom(), map(), map(), Phoenix.LiveView.Socket.t()) ::
           {:cont, Phoenix.LiveView.Socket.t()}
   def on_mount(:default, _params, _session, socket) do
+    # Reset per-mount keys so a reused LiveView process cannot inherit the
+    # previous mount's user_id or correlation_id.
+    Logger.metadata(user_id: nil, correlation_id: nil)
+
     {socket, correlation_id} = CorrelationId.ensure(socket)
 
     CorrelationId.put_in_process(correlation_id)
