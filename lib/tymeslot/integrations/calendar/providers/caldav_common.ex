@@ -60,20 +60,22 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   """
   @spec check_connectivity(caldav_client()) :: {:ok, map()} | {:error, term()}
   def check_connectivity(client) do
-    path = List.first(client[:calendar_paths] || []) || "/"
+    with :ok <- validate_credentials(client) do
+      path = List.first(client[:calendar_paths] || []) || "/"
 
-    # Use the same URL builder as create/read/delete so server-root-relative
-    # paths (e.g. Nextcloud's "/remote.php/dav/calendars/...") aren't
-    # double-prefixed when the client's base_url already contains a CalDAV
-    # principal path.
-    url = UrlBuilder.build_calendar_url(client[:base_url], path)
+      # Use the same URL builder as create/read/delete so server-root-relative
+      # paths (e.g. Nextcloud's "/remote.php/dav/calendars/...") aren't
+      # double-prefixed when the client's base_url already contains a CalDAV
+      # principal path.
+      url = UrlBuilder.build_calendar_url(client[:base_url], path)
 
-    case Http.propfind(url, client[:username], client[:password],
-           depth: "0",
-           timeout: 5_000
-         ) do
-      {:ok, _response} -> {:ok, %{status: :ok}}
-      {:error, reason} -> {:error, reason}
+      case Http.propfind(url, client[:username], client[:password],
+             depth: "0",
+             timeout: 5_000
+           ) do
+        {:ok, _response} -> {:ok, %{status: :ok}}
+        {:error, reason} -> {:error, reason}
+      end
     end
   end
 
@@ -83,9 +85,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   """
   @spec test_connection(caldav_client(), keyword()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(client, opts \\ []) do
-    case Discovery.test_connection(client, opts) do
-      {:ok, _result} -> {:ok, success_message(client.provider)}
-      {:error, reason} -> {:error, reason}
+    with :ok <- validate_credentials(client) do
+      case Discovery.test_connection(client, opts) do
+        {:ok, _result} -> {:ok, success_message(client.provider)}
+        {:error, reason} -> {:error, reason}
+      end
     end
   end
 
@@ -95,7 +99,9 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   @spec discover_calendars(caldav_client(), keyword()) ::
           {:ok, list(map())} | {:error, term()}
   def discover_calendars(client, opts \\ []) do
-    Discovery.discover_calendars(client, opts)
+    with :ok <- validate_credentials(client) do
+      Discovery.discover_calendars(client, opts)
+    end
   end
 
   @doc """
@@ -280,4 +286,15 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
 
   defp success_message(:radicale), do: "Radicale connection successful"
   defp success_message(_arg), do: "CalDAV connection successful"
+
+  defp validate_credentials(client) do
+    username = client[:username] || Map.get(client, :username)
+    password = client[:password] || Map.get(client, :password)
+
+    if is_binary(username) and username != "" and is_binary(password) and password != "" do
+      :ok
+    else
+      {:error, :invalid_credentials}
+    end
+  end
 end

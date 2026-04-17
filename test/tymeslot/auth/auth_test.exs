@@ -4,7 +4,9 @@ defmodule Tymeslot.AuthTest do
   @moduletag :auth
 
   alias Tymeslot.Auth
+  alias Tymeslot.Auth.UserTokenQueries
   alias Tymeslot.Security.Password
+  alias Tymeslot.Security.Token
 
   import Tymeslot.Factory
 
@@ -107,6 +109,22 @@ defmodule Tymeslot.AuthTest do
     test "oauth users cannot reset passwords" do
       oauth_user = insert(:user, provider: "google", password_hash: nil)
       assert {:error, :oauth_user, _reason} = Auth.initiate_password_reset(oauth_user.email)
+    end
+  end
+
+  describe "verify_user_email/1" do
+    test "verifies email, returns the user, and broadcasts :user_registered" do
+      user = insert(:unverified_user)
+      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      {:ok, _updated} = UserTokenQueries.set_verification_token(user, token)
+
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "auth:user_registered")
+
+      assert {:ok, verified_user} = Auth.verify_user_email(token)
+      assert verified_user.id == user.id
+
+      user_id = user.id
+      assert_receive {:user_registered, %{user: %{id: ^user_id}}}, 500
     end
   end
 end

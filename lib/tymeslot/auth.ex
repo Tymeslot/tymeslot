@@ -7,6 +7,8 @@ defmodule Tymeslot.Auth do
   It encapsulates the business logic and provides a clean interface for the web layer.
   """
 
+  require Logger
+
   alias Tymeslot.Auth.{
     AuthActions,
     Authentication,
@@ -20,7 +22,7 @@ defmodule Tymeslot.Auth do
     Verification
   }
 
-  alias Tymeslot.Infrastructure.{Config, PubSub}
+  alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Security.Token
 
   @doc """
@@ -174,10 +176,17 @@ defmodule Tymeslot.Auth do
   @spec verify_user_email(String.t()) :: {:ok, Ecto.Schema.t()} | {:error, any()}
   def verify_user_email(token) do
     with {:ok, user} <- Verification.verify_user(token) do
-      # Broadcast verification event
-      Task.start(fn ->
-        PubSub.broadcast_user_registered(user)
-      end)
+      # Broadcast verification event asynchronously under a supervisor so that
+      # a broadcast failure cannot take down the caller.
+      case Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
+             user_broadcaster().broadcast_user_registered(user)
+           end) do
+        {:ok, _pid} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.error("Failed to start user-registered broadcast task", reason: inspect(reason))
+      end
 
       {:ok, user}
     end
@@ -268,5 +277,9 @@ defmodule Tymeslot.Auth do
   @spec get_user!(integer()) :: Ecto.Schema.t()
   def get_user!(id) do
     UserQueries.get_user!(id)
+  end
+
+  defp user_broadcaster do
+    Application.get_env(:tymeslot, :user_broadcaster, Tymeslot.Infrastructure.PubSub)
   end
 end

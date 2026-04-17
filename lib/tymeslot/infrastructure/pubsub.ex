@@ -5,6 +5,9 @@ defmodule Tymeslot.Infrastructure.PubSub do
   This module provides a centralized way to broadcast authentication events
   within the Tymeslot application.
   """
+
+  @behaviour Tymeslot.Auth.Behaviours.UserBroadcaster
+
   require Logger
 
   @doc """
@@ -17,6 +20,7 @@ defmodule Tymeslot.Infrastructure.PubSub do
   ## Example
       Tymeslot.Infrastructure.PubSub.broadcast_user_registered(user, %{source: "signup"})
   """
+  @impl Tymeslot.Auth.Behaviours.UserBroadcaster
   @spec broadcast_user_registered(struct(), map()) :: :ok
   def broadcast_user_registered(user, metadata \\ %{}) do
     message = {:user_registered, %{user: user, metadata: metadata}}
