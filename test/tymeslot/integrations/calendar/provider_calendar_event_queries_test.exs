@@ -456,7 +456,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventCacheQueriesTest do
       attrs_first = build_event_attrs(integration, %{uid: "dup-uid", summary: "First"})
       attrs_last = build_event_attrs(integration, %{uid: "dup-uid", summary: "Last"})
 
-      assert {:ok, _} =
+      assert {:ok, _result} =
                ProviderCalendarEventQueries.upsert_batch([attrs_first, attrs_last])
 
       [event] =
