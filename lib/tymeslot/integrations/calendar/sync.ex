@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
 
   alias Tymeslot.Bookings.Cancel
   alias Tymeslot.Emails.EmailService
+  alias Tymeslot.Infrastructure.AvailabilityCache
   alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
@@ -36,8 +37,10 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   Steps:
   1. Convert each event to cache attrs via `from_calendar_event/1`.
   2. Upsert the batch in a single query.
-  3. Broadcast a cache update so live grids refresh.
-  4. Reconcile any linked Tymeslot meetings whose times changed externally.
+  3. Invalidate the user's availability cache so subsequent slot lookups
+     reflect the newly persisted events.
+  4. Broadcast a cache update so live grids refresh.
+  5. Reconcile any linked Tymeslot meetings whose times changed externally.
 
   This function is a convenience wrapper around `upsert_cache/2` and
   `post_commit_reconciliation/2` — callers that need to run the cache
@@ -82,18 +85,47 @@ defmodule Tymeslot.Integrations.Calendar.Sync do
   end
 
   @doc """
-  Side effects that must run after the cache upsert transaction commits:
-  the PubSub broadcast and the linked-meeting time-change reconciliation.
+  Invalidates all cached availability data for a user after any sync mutation.
 
-  Safe to call outside any transaction. Idempotent — a PubSub re-broadcast
-  is harmless and time-change reconciliation is conditional on an actual
-  change.
+  Best-effort — if the cache GenServer is mid-restart and the ETS table is
+  temporarily absent, the error is logged as a warning and `:ok` is returned.
+  A committed sync transaction must not be unwound because of a transient
+  cache state.
+  """
+  @spec invalidate_cache_for_user(CalendarIntegrationSchema.t()) :: :ok
+  def invalidate_cache_for_user(%CalendarIntegrationSchema{} = integration) do
+    AvailabilityCache.invalidate_for_user(integration.user_id)
+    :ok
+  rescue
+    e ->
+      Logger.warning("Availability cache invalidation failed — cache may be mid-restart",
+        calendar_integration_id: integration.id,
+        user_id: integration.user_id,
+        reason: Exception.message(e)
+      )
+
+      :ok
+  end
+
+  @doc """
+  Side effects that must run after the cache upsert transaction commits:
+  invalidating the availability cache, the PubSub broadcast, and the
+  linked-meeting time-change reconciliation.
+
+  Safe to call outside any transaction. Idempotent — availability cache
+  invalidation, a PubSub re-broadcast, and time-change reconciliation are
+  all safe to repeat.
   """
   @spec post_commit_reconciliation(CalendarIntegrationSchema.t(), [CalendarEvent.t()]) :: :ok
   def post_commit_reconciliation(_integration, []), do: :ok
 
   def post_commit_reconciliation(%CalendarIntegrationSchema{} = integration, calendar_events)
       when is_list(calendar_events) do
+    # Invalidate any cached availability for this user first, so subscribers
+    # reacting to the PubSub broadcast below recompute against fresh events
+    # instead of returning stale pre-sync slots.
+    invalidate_cache_for_user(integration)
+
     uids = Enum.map(calendar_events, & &1.uid)
     SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
 

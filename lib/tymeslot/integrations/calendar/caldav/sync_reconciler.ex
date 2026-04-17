@@ -225,6 +225,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
     case txn_result do
       {:ok, deleted_uids} ->
         Sync.post_commit_reconciliation(integration, calendar_events)
+
+        # post_commit_reconciliation is a no-op when calendar_events is empty.
+        # Ensure the cache is invalidated even when the sync only deleted events.
+        if calendar_events == [] and deleted_uids != [] do
+          Sync.invalidate_cache_for_user(integration)
+        end
+
         reconcile_missing_uids(integration, deleted_uids)
         :ok
 
@@ -252,6 +259,13 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncReconciler do
     case txn_result do
       {:ok, hrefs} ->
         Sync.post_commit_reconciliation(integration, calendar_events)
+
+        # post_commit_reconciliation is a no-op when calendar_events is empty.
+        # Ensure the cache is invalidated even when the sync only deleted events.
+        if calendar_events == [] and hrefs != [] do
+          Sync.invalidate_cache_for_user(integration)
+        end
+
         reconcile_deleted_hrefs(integration, hrefs)
         :ok
 
