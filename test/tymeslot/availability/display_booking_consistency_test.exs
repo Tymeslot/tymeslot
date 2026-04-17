@@ -1,0 +1,200 @@
+defmodule Tymeslot.Availability.DisplayBookingConsistencyTest do
+  @moduledoc """
+  Invariant tests asserting that the availability-display path and the
+  booking-validation path agree.
+
+  `Calculate.available_slots/6` (display) and `Validation.check_slot_availability/4`
+  (booking) both rely on `CalendarEvent.blocking?/1` to decide whether a calendar
+  event should prevent a slot from being offered/booked. Nothing in the type
+  system keeps the two codepaths in sync, so these tests pin the end-to-end
+  invariant: if the display shows a slot, the booking API must accept it; if
+  the display hides a slot because a blocking event covers it, the booking API
+  must reject attempts to book that time.
+  """
+
+  use Tymeslot.DataCase, async: false
+
+  @moduletag :availability
+  @moduletag :integration
+
+  import Mox
+
+  alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.WeeklySchedule
+  alias Tymeslot.Bookings.Create
+  alias Tymeslot.CalendarMock
+  alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.TestMocks
+
+  setup :verify_on_exit!
+
+  setup do
+    TestMocks.setup_all_mocks()
+    :ok
+  end
+
+  describe "availability-display ↔ booking-validation invariant" do
+    test "a slot shown as available can be booked successfully" do
+      %{user: user, target_date: target_date, timezone: timezone} =
+        setup_bookable_profile()
+
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:ok, []}
+      end)
+
+      # Display path
+      {:ok, slots} =
+        Calculate.available_slots(
+          target_date,
+          30,
+          timezone,
+          timezone,
+          [],
+          %{profile_id: user_profile_id(user)}
+        )
+
+      # Sanity check: with no conflicts the weekday schedule should surface slots.
+      assert slots != [], "expected at least one available slot on a weekday"
+
+      chosen_slot = List.first(slots)
+
+      meeting_params = %{
+        date: target_date,
+        time: chosen_slot,
+        duration: "30min",
+        user_timezone: timezone,
+        organizer_user_id: user.id
+      }
+
+      form_data = %{
+        "name" => "Invariant Attendee",
+        "email" => "invariant-attendee@example.com",
+        "message" => "Booking a slot the display said was available"
+      }
+
+      # Booking path
+      assert {:ok, %MeetingSchema{} = meeting} = Create.execute(meeting_params, form_data)
+      assert meeting.organizer_user_id == user.id
+      assert meeting.status == "confirmed"
+    end
+
+    test "a slot hidden by a blocking event is rejected by the booking API" do
+      %{user: user, target_date: target_date, timezone: timezone} =
+        setup_bookable_profile()
+
+      # The plain-map shape used by provider runtime adapters (Google, Outlook, CalDAV) —
+      # this is what both the display and booking codepaths encounter in production.
+      # Covers the entire working day so every offered slot on `target_date` is blocked.
+      blocking_event = %{
+        uid: "blocking-#{System.unique_integer([:positive])}",
+        start_time: DateTime.new!(target_date, ~T[00:00:00], timezone),
+        end_time: DateTime.new!(target_date, ~T[23:59:59], timezone),
+        status: "confirmed",
+        transparency: "opaque",
+        summary: "All-day focus block"
+      }
+
+      stub(CalendarMock, :get_events_for_range_fresh, fn _user_id, _start, _end ->
+        {:ok, [blocking_event]}
+      end)
+
+      profile_id = user_profile_id(user)
+
+      # Display path without the blocking event — establishes the baseline set.
+      {:ok, slots_without_block} =
+        Calculate.available_slots(
+          target_date,
+          30,
+          timezone,
+          timezone,
+          [],
+          %{profile_id: profile_id}
+        )
+
+      assert slots_without_block != [],
+             "expected at least one slot before the blocking event was introduced"
+
+      # Display path with the blocking event — every slot must disappear.
+      {:ok, slots_with_block} =
+        Calculate.available_slots(
+          target_date,
+          30,
+          timezone,
+          timezone,
+          [blocking_event],
+          %{profile_id: profile_id}
+        )
+
+      assert slots_with_block == [],
+             "expected all slots to be hidden by the blocking event, got: #{inspect(slots_with_block)}"
+
+      # The diff is load-bearing: it proves the block actually caused the removal.
+      blocked_slots = slots_without_block -- slots_with_block
+
+      assert blocked_slots != [],
+             "expected blocking event to hide at least one slot"
+
+      # Booking path — each slot the display hid must be rejected by the booking API.
+      Enum.each(blocked_slots, fn blocked_slot ->
+        meeting_params = %{
+          date: target_date,
+          time: blocked_slot,
+          duration: "30min",
+          user_timezone: timezone,
+          organizer_user_id: user.id
+        }
+
+        form_data = %{
+          "name" => "Invariant Attendee",
+          "email" => "invariant-attendee@example.com",
+          "message" => "Attempting a time the display hid"
+        }
+
+        assert {:error, message} = Create.execute(meeting_params, form_data)
+
+        assert message =~ "no longer available",
+               "expected rejection for blocked slot #{blocked_slot}, got: #{inspect(message)}"
+      end)
+    end
+  end
+
+  # Creates a user + profile with a weekday schedule that is guaranteed to have
+  # slots on the target date. The target date is far enough in the future that
+  # `min_advance_hours` / `max_advance_booking_days` never interfere.
+  defp setup_bookable_profile do
+    timezone = "Etc/UTC"
+    user = insert(:user)
+    profile = insert(:profile, user: user, timezone: timezone)
+
+    # Weekdays 11:00-17:00 — covers the 14:00 slot used by the blocked-slot test.
+    for day_of_week <- 1..5 do
+      {:ok, _day} =
+        WeeklySchedule.create_day_availability(profile.id, day_of_week, %{
+          is_available: true,
+          start_time: ~T[11:00:00],
+          end_time: ~T[17:00:00]
+        })
+    end
+
+    %{user: user, profile: profile, target_date: next_weekday(10), timezone: timezone}
+  end
+
+  # Picks a weekday at least `offset` days from today. Avoids both weekends and
+  # the narrow "today" window that `min_advance_hours` would clip.
+  defp next_weekday(offset) do
+    date = Date.add(Date.utc_today(), offset)
+
+    case Date.day_of_week(date) do
+      # Saturday -> skip to Monday
+      6 -> Date.add(date, 2)
+      # Sunday -> skip to Monday
+      7 -> Date.add(date, 1)
+      _weekday -> date
+    end
+  end
+
+  defp user_profile_id(user) do
+    user = Repo.preload(user, :profile)
+    user.profile.id
+  end
+end
