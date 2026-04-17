@@ -89,6 +89,12 @@ echo ""
 # SKIP this section if using an external database
 if [ "$USING_EXTERNAL_DB" = false ] && [ ! -f /var/lib/postgresql/data/postgresql.conf ]; then
     echo "PostgreSQL not initialized. Running first-time setup..."
+    # A freshly-mounted volume (named or bind) can land as root:root
+    # regardless of the image's build-time ownership — especially under
+    # userns-remap, rootless Docker, or host bind-mounts. Reclaim it for
+    # postgres before initdb tries to chmod 700 the directory.
+    chown -R postgres:postgres /var/lib/postgresql/data
+    chmod 700 /var/lib/postgresql/data
     # Run initdb to create the initial database cluster
     if su - postgres -c "/usr/lib/postgresql/*/bin/initdb -D /var/lib/postgresql/data"; then
         echo "✓ PostgreSQL initialized successfully"
