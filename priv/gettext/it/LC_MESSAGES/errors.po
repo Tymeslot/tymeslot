@@ -1,0 +1,49 @@
+msgid ""
+msgstr ""
+"Language: it\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Project-Id-Version: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+
+#: Error Messages
+msgid "something_went_wrong"
+msgstr "qualcosa è andato storto"
+
+msgid "try_again_later"
+msgstr "riprova più tardi"
+
+msgid "invalid_meeting_link"
+msgstr "link dell'appuntamento non valido"
+
+msgid "slot_no_longer_available"
+msgstr "lo slot non è più disponibile"
+
+msgid "name_required"
+msgstr "nome obbligatorio"
+
+msgid "email_required"
+msgstr "email obbligatoria"
+
+msgid "email_invalid"
+msgstr "email non valida"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:31
+#, elixir-autogen
+msgid "calendar_setup_required"
+msgstr "configurazione del calendario richiesta"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:44
+#, elixir-autogen
+msgid "connect_calendar_first"
+msgstr "collega prima il calendario"
+
+#: Status
+msgid "loading"
+msgstr "caricamento..."
+
+msgid "submitting"
+msgstr "invio in corso..."

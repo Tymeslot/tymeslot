@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       "de" -> "#{date.day}. #{month_name} #{date.year}"
       "uk" -> "#{date.day} #{month_name} #{date.year}"
       "fr" -> "#{date.day} #{month_name} #{date.year}"
+      "it" -> "#{date.day} #{month_name} #{date.year}"
       _other_locale -> "#{month_name} #{day_padded}, #{date.year}"
     end
   end
@@ -37,6 +38,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       "de" -> Calendar.strftime(time, "%H:%M")
       "uk" -> Calendar.strftime(time, "%H:%M")
       "fr" -> Calendar.strftime(time, "%H:%M")
+      "it" -> Calendar.strftime(time, "%H:%M")
       _other_locale -> Calendar.strftime(time, "%I:%M %p")
     end
   end
@@ -95,6 +97,22 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
           "décembre"
         ]
 
+      "it" ->
+        [
+          "gennaio",
+          "febbraio",
+          "marzo",
+          "aprile",
+          "maggio",
+          "giugno",
+          "luglio",
+          "agosto",
+          "settembre",
+          "ottobre",
+          "novembre",
+          "dicembre"
+        ]
+
       _other_locale ->
         [
           "January",
@@ -146,6 +164,15 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
 
       {"fr", :narrow} ->
         ["D", "L", "M", "M", "J", "V", "S"]
+
+      {"it", :full} ->
+        ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato"]
+
+      {"it", :short} ->
+        ["dom", "lun", "mar", "mer", "gio", "ven", "sab"]
+
+      {"it", :narrow} ->
+        ["D", "L", "M", "M", "G", "V", "S"]
 
       {_other_locale, :full} ->
         ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -212,11 +239,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   end
 
   defp thousand_separator("de"), do: "."
+  defp thousand_separator("it"), do: "."
   defp thousand_separator("uk"), do: " "
   defp thousand_separator("fr"), do: " "
   defp thousand_separator(_other_locale), do: ","
 
   defp decimal_separator("de"), do: ","
+  defp decimal_separator("it"), do: ","
   defp decimal_separator("uk"), do: ","
   defp decimal_separator("fr"), do: ","
   defp decimal_separator(_other_locale), do: "."

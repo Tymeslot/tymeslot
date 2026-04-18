@@ -72,6 +72,10 @@ defmodule TymeslotWeb.Helpers.LocaleCompletenessTest do
             assert result =~ ".", "German should use period as thousand separator"
             assert result =~ ",", "German should use comma as decimal separator"
 
+          "it" ->
+            assert result =~ ".", "Italian should use period as thousand separator"
+            assert result =~ ",", "Italian should use comma as decimal separator"
+
           "uk" ->
             assert result =~ " ", "Ukrainian should use space as thousand separator"
             assert result =~ ",", "Ukrainian should use comma as decimal separator"
