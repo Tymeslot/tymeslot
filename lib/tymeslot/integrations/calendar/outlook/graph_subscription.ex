@@ -25,8 +25,13 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
 
-  @outlook_tymeslot_property_id "String {00020329-0000-0000-C000-000000000046} Name createdBy"
   @max_delta_pages 50
+
+  # Microsoft Graph rejects these query parameters on the `events/delta`
+  # change-tracking resource with HTTP 400 `ErrorInvalidUrlQuery`. They must
+  # never appear on either the initial request or on any follow-up URL
+  # (`@odata.nextLink`, `@odata.deltaLink`) that we reuse.
+  @unsupported_delta_params ~w($orderby $filter $select $expand $search)
 
   @doc """
   Fetches the initial `events/delta` snapshot, normalises and persists the
@@ -137,16 +142,9 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
   end
 
   defp fetch_initial_delta(token) do
-    params = %{
-      "$select" =>
-        "id,subject,start,end,iCalUId,location,body,attendees,recurrence,seriesMasterId,type,isAllDay,showAs",
-      "$expand" =>
-        "singleValueExtendedProperties($filter=id eq '#{@outlook_tymeslot_property_id}')"
-    }
-
     result =
       CalendarCircuitBreaker.call(:outlook, fn ->
-        fetch_delta_page(token, "/me/events/delta", params, [])
+        fetch_delta_page(token, "/me/events/delta", %{}, [])
       end)
 
     case result do
@@ -175,8 +173,19 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
 
           next_link = response["@odata.nextLink"] ->
             next_uri = URI.parse(next_link)
-            next_params = URI.decode_query(next_uri.query || "")
-            fetch_delta_page(token, next_uri.path, next_params, events, page + 1)
+
+            next_params =
+              (next_uri.query || "")
+              |> URI.decode_query()
+              |> drop_unsupported_delta_params()
+
+            fetch_delta_page(
+              token,
+              strip_api_version_prefix(next_uri.path),
+              next_params,
+              events,
+              page + 1
+            )
 
           true ->
             {:ok, events, nil}
@@ -184,6 +193,20 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscription do
       end
     end
   end
+
+  defp drop_unsupported_delta_params(params) do
+    Map.reject(params, fn {key, _value} ->
+      String.downcase(to_string(key)) in @unsupported_delta_params
+    end)
+  end
+
+  # `@odata.nextLink` comes back as an absolute URL whose path starts with the
+  # Graph API version segment (`/v1.0` or `/beta`). `CalendarAPI.make_request/4`
+  # already prepends the full base URL including the version, so we must strip
+  # it from the path to avoid hitting `/v1.0/v1.0/...`.
+  defp strip_api_version_prefix("/v1.0/" <> rest), do: "/" <> rest
+  defp strip_api_version_prefix("/beta/" <> rest), do: "/" <> rest
+  defp strip_api_version_prefix(path), do: path
 
   defp parse_iso8601_datetime(nil), do: nil
 

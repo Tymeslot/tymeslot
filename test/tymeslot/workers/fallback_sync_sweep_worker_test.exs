@@ -478,5 +478,41 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
 
       assert log =~ "Outlook token refresh failed during fallback sweep"
     end
+
+    test "strips unsupported query parameters from a stale stored delta link" do
+      # A stored delta link written before the fix may still carry
+      # $select/$expand query params. Microsoft Graph now rejects these on
+      # events/delta with HTTP 400 — the worker must strip them before reuse.
+      stale_delta_link =
+        "https://graph.microsoft.com/v1.0/me/events/delta?" <>
+          "$deltatoken=stale-token&$select=id,subject&$expand=extendedProperties"
+
+      insert(:calendar_integration,
+        provider: "outlook",
+        is_active: true,
+        access_token_encrypted: Tymeslot.Security.Encryption.encrypt("valid-token"),
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+        graph_delta_link: stale_delta_link
+      )
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+        assert String.contains?(url, "$deltatoken=stale-token")
+        refute String.contains?(String.downcase(url), "$select")
+        refute String.contains?(String.downcase(url), "$expand")
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [],
+               "@odata.deltaLink" =>
+                 "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=fresh"
+             })
+         }}
+      end)
+
+      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
+    end
   end
 end

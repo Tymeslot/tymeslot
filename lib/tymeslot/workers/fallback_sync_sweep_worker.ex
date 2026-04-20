@@ -49,6 +49,11 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   @batch_size 50
   @batch_sleep_ms 1_000
 
+  # Microsoft Graph rejects these query parameters on the `events/delta`
+  # change-tracking resource. Stored `graph_delta_link` URLs written before
+  # this was known may still carry them — strip before reuse.
+  @unsupported_delta_params ~w($orderby $filter $select $expand $search)
+
   # Sync interval per CalDAV tier (in seconds).
   # Tier 1 and 2 are lightweight; Tier 3 does a full fetch every time.
   @caldav_tier_intervals %{
@@ -437,7 +442,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
   end
 
   defp fetch_delta_page(token, url, accumulated, page) do
-    uri = URI.parse(url)
+    uri = url |> strip_unsupported_delta_params() |> URI.parse()
     path = uri.path <> if(uri.query, do: "?#{uri.query}", else: "")
 
     headers = [
@@ -504,6 +509,29 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorker do
         )
 
         {:error, :delta_link_persistence_failed}
+    end
+  end
+
+  defp strip_unsupported_delta_params(url) do
+    uri = URI.parse(url)
+
+    case uri.query do
+      query when query in [nil, ""] ->
+        url
+
+      query ->
+        cleaned =
+          query
+          |> URI.decode_query()
+          |> Map.reject(fn {key, _value} ->
+            String.downcase(to_string(key)) in @unsupported_delta_params
+          end)
+
+        new_query = if cleaned == %{}, do: nil, else: URI.encode_query(cleaned)
+
+        uri
+        |> Map.put(:query, new_query)
+        |> URI.to_string()
     end
   end
 end

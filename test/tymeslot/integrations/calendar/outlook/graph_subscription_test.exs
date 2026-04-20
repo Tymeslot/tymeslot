@@ -76,6 +76,78 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.GraphSubscriptionTest do
       assert reloaded.graph_delta_link =~ "deltatoken=seeded"
     end
 
+    test "does not send unsupported query parameters to /me/events/delta",
+         %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
+        assert String.contains?(url, "/me/events/delta")
+
+        # Microsoft Graph rejects $orderby, $filter, $select, $expand, $search
+        # on the events/delta change-tracking resource with HTTP 400.
+        refute String.contains?(String.downcase(url), "$select")
+        refute String.contains?(String.downcase(url), "$expand")
+        refute String.contains?(String.downcase(url), "$filter")
+        refute String.contains?(String.downcase(url), "$orderby")
+        refute String.contains?(String.downcase(url), "$search")
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [],
+               "@odata.deltaLink" =>
+                 "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=first"
+             })
+         }}
+      end)
+
+      assert {:ok, _updated} = GraphSubscription.bootstrap_sync(integration)
+    end
+
+    test "strips unsupported params from @odata.nextLink before paginating",
+         %{integration: integration} do
+      # Graph sometimes echoes the requested $select/$expand back in nextLink.
+      # The pagination follow-up must still be clean.
+      next_link =
+        "https://graph.microsoft.com/v1.0/me/events/delta?" <>
+          "$skiptoken=page2&$select=id,subject&$expand=extendedProperties"
+
+      Tymeslot.HTTPClientMock
+      |> expect(:request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [],
+               "@odata.nextLink" => next_link
+             })
+         }}
+      end)
+      |> expect(:request, fn :get, url, _body, _headers, _opts ->
+        # URI.encode_query percent-encodes the leading `$`, so the
+        # skiptoken key is serialised as either `$skiptoken` or `%24skiptoken`.
+        decoded = URI.decode(url)
+        assert String.contains?(decoded, "$skiptoken=page2")
+        refute String.contains?(String.downcase(decoded), "$select")
+        refute String.contains?(String.downcase(decoded), "$expand")
+
+        {:ok,
+         %Req.Response{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "value" => [],
+               "@odata.deltaLink" =>
+                 "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=done"
+             })
+         }}
+      end)
+
+      assert {:ok, updated} = GraphSubscription.bootstrap_sync(integration)
+      assert updated.graph_delta_link =~ "deltatoken=done"
+    end
+
     test "does not require :webhook_base_url to be configured",
          %{integration: integration} do
       original = Application.get_env(:tymeslot, :webhook_base_url)
