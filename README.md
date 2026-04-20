@@ -38,7 +38,7 @@ docker run --name tymeslot \
   -e PHX_HOST=localhost \
   -v tymeslot_data:/app/data \
   -v tymeslot_pg:/var/lib/postgresql/data \
-  youruser/tymeslot:latest
+  luka1thb/tymeslot:latest
 ```
 
 Open [http://localhost:4000](http://localhost:4000) — your scheduling platform is running. For SMTP, TLS, and reverse proxy setup, see the [Docker guide](README-Docker.md).
