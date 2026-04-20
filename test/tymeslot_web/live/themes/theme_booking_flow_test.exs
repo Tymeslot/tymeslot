@@ -175,6 +175,12 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
       })
       |> render_submit()
 
+      # The flash is delivered to the parent LiveView via
+      # `send(self(), {:flash, _})` from the submission handler, which is
+      # processed after `render_submit/1` returns. Drain the mailbox via a
+      # synchronous `:sys.get_state/1` before asserting on the render.
+      _drain = :sys.get_state(view.pid)
+
       # Should show error and NOT redirect to confirmation
       assert render(view) =~ "Booking time must be in the future"
       refute has_element?(view, "[data-testid='confirmation-heading']")
@@ -536,6 +542,12 @@ defmodule TymeslotWeb.Live.Themes.ThemeBookingFlowTest do
         "booking" => %{"name" => "Second", "email" => "second@example.com"}
       })
       |> render_submit()
+
+      # The flash is delivered to the parent LiveView via
+      # `send(self(), {:flash, _})` from the submission handler, which is
+      # processed after `render_submit/1` returns. Drain the mailbox via a
+      # synchronous `:sys.get_state/1` before asserting on the render.
+      _drain = :sys.get_state(view2.pid)
 
       # Second one should fail because the slot is now taken
       assert render(view2) =~ "This time slot is no longer available"
