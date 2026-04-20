@@ -4,11 +4,25 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   Handles validation of color schemes, background types, values, and file inputs.
   """
 
+  require Logger
+
   alias Tymeslot.ThemeCustomizations.Presets
   alias TymeslotWeb.Helpers.UploadConstraints
 
   @valid_background_types ~w(gradient color image video)
-  @valid_hex_color_regex ~r/^#[0-9A-Fa-f]{6}$/
+  # CSS `#RGB`, `#RRGGBB`, `#RRGGBBAA` — 3, 6 or 8 hex digits, case-insensitive.
+  @valid_hex_color_regex ~r/^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/
+
+  # Tokens that, if present in generated theme CSS, indicate a `</style>` break-out
+  # or loader-based injection. Match case-insensitively — attackers try `</STYLE>`,
+  # mixed-case `JavaScript:` etc.
+  @css_breakout_patterns [
+    ~r/<\s*\/\s*style/i,
+    ~r/@\s*import/i,
+    ~r/expression\s*\(/i,
+    ~r/javascript\s*:/i,
+    ~r/url\s*\(\s*["']?\s*data:/i
+  ]
   @type validation_result :: :ok | {:error, String.t()}
   @type scheme_id :: String.t() | atom()
   @type background_type :: String.t()
@@ -193,17 +207,50 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
 
   @doc """
   Validates a hex color value.
+
+  Accepts the three CSS hex-colour shapes — `#RGB`, `#RRGGBB`, `#RRGGBBAA` —
+  case-insensitively, with surrounding whitespace trimmed.
   """
   @spec validate_hex_color(term()) :: validation_result()
   def validate_hex_color(color) when is_binary(color) do
-    if Regex.match?(@valid_hex_color_regex, color) do
+    if Regex.match?(@valid_hex_color_regex, String.trim(color)) do
       :ok
     else
-      {:error, "Invalid hex color format. Must be #RRGGBB"}
+      {:error, "Invalid hex color format. Must be #RGB, #RRGGBB or #RRGGBBAA"}
     end
   end
 
   def validate_hex_color(_value), do: {:error, "Color must be a string"}
+
+  @doc """
+  Defence-in-depth filter for generated theme CSS.
+
+  The individual validators above already restrict each field, but this runs
+  at the output boundary so that — even if a new customisation field is added
+  and forgets its own validator — a payload that tries to break out of the
+  surrounding `<style>` tag can never reach the browser. Returns the CSS
+  unchanged when safe, or the empty string when any break-out pattern matches.
+  """
+  @spec sanitize_css(term()) :: String.t()
+  def sanitize_css(css) when is_binary(css) do
+    if Enum.any?(@css_breakout_patterns, &Regex.match?(&1, css)) do
+      Logger.warning("theme custom CSS blocked by sanitize_css breakout pattern",
+        css_byte_size: byte_size(css)
+      )
+
+      ""
+    else
+      css
+    end
+  end
+
+  def sanitize_css(other) do
+    Logger.error("theme custom CSS sanitize_css received non-binary input",
+      type: inspect(other)
+    )
+
+    ""
+  end
 
   @doc """
   Validates file upload parameters.

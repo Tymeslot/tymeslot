@@ -280,7 +280,9 @@ defmodule Tymeslot.ThemeCustomizations do
   def generate_theme_css(theme_id, customization) do
     customization_map = to_map(customization)
 
-    Capability.generate_css(theme_id, customization_map)
+    theme_id
+    |> Capability.generate_css(customization_map)
+    |> Validation.sanitize_css()
   end
 
   # New orchestrator functions for component interface

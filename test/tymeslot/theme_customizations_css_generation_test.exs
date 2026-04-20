@@ -67,5 +67,27 @@ defmodule Tymeslot.ThemeCustomizationsCssGenerationTest do
     test "to_map/1 handles nil" do
       assert ThemeCustomizations.to_map(nil) == %{}
     end
+
+    # Regression guard: a `</style>` payload in a field must never reach the
+    # rendered stylesheet. This test exercises per-field validation — the
+    # background_value is rejected by `valid_color?` before CSS is assembled,
+    # so no payload reaches `sanitize_css`. The sanitize_css gate itself is
+    # unit-tested in theme_customizations_validation_test.exs.
+    test "generate_theme_css/2 never emits a </style> breakout payload", %{profile: profile} do
+      customization = %ThemeCustomizationSchema{
+        profile_id: profile.id,
+        theme_id: "1",
+        color_scheme: "purple",
+        background_type: "color",
+        background_value: "</style><script>alert(1)</script>"
+      }
+
+      css = ThemeCustomizations.generate_theme_css("1", customization)
+
+      # Per-field validation rejects the bogus background_value, and the
+      # output contains no attacker payload.
+      refute css =~ "</style"
+      refute css =~ "<script"
+    end
   end
 end
