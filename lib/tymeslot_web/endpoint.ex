@@ -96,7 +96,12 @@ defmodule TymeslotWeb.Endpoint do
 
   defp serve_robots(conn, _opts), do: conn
 
-  # Serve uploaded files from the data directory
+  # Serve uploaded files from the data directory.
+  # `UploadStaticSecurity` gates the mount to an extension allowlist and
+  # sets `X-Content-Type-Options: nosniff` so a stray `evil.html` written
+  # under the upload root can never be served as same-origin HTML.
+  plug TymeslotWeb.Plugs.UploadStaticSecurity
+
   plug Plug.Static,
     at: "/uploads",
     from: Application.compile_env(:tymeslot, :upload_directory, "uploads"),

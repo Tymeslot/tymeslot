@@ -240,6 +240,9 @@ defmodule TymeslotWeb.Helpers.FileOperations do
 
   defp validate_filename_security(filename) do
     cond do
+      String.contains?(filename, <<0>>) ->
+        {:error, :null_byte_in_filename}
+
       String.contains?(filename, ["../", "..\\", "~/"]) ->
         {:error, :path_traversal_in_filename}
 

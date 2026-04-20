@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Profiles.Avatars
   alias Tymeslot.Repo
 
   alias Ecto.Changeset
@@ -43,6 +44,40 @@ defmodule TymeslotWeb.Dashboard.ProfileSettingsTest do
       # Verify profile was updated in DB
       updated_profile = Repo.reload!(profile)
       assert updated_profile.avatar != nil
+    end
+
+    test "uploaded avatar is reachable via /uploads and has nosniff header", %{
+      conn: conn,
+      profile: profile
+    } do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/settings")
+
+      png_content =
+        <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, "IHDR", 0, 0, 0, 1, 0, 0,
+          0, 1, 8, 2, 0, 0, 0, 0x90, 0x77, 0x53, 0xDE>>
+
+      avatar = %{
+        last_modified: System.system_time(:millisecond),
+        name: "avatar.png",
+        content: png_content,
+        type: "image/png"
+      }
+
+      view
+      |> file_input("#avatar-upload-form", :avatar, [avatar])
+      |> render_upload("avatar.png")
+
+      render(view)
+
+      assert render(view) =~ "Avatar updated successfully"
+
+      updated_profile = Repo.reload!(profile)
+      avatar_url = Avatars.avatar_url(updated_profile)
+
+      response = get(build_conn(), avatar_url)
+
+      assert response.status == 200
+      assert get_resp_header(response, "x-content-type-options") == ["nosniff"]
     end
 
     test "does not show error when no files are provided on submit (auto-upload fallback)", %{

@@ -5,6 +5,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   """
 
   alias Tymeslot.ThemeCustomizations.Presets
+  alias TymeslotWeb.Helpers.UploadConstraints
 
   @valid_background_types ~w(gradient color image video)
   @valid_hex_color_regex ~r/^#[0-9A-Fa-f]{6}$/
@@ -229,7 +230,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   """
   @spec validate_file_extension(String.t(), file_kind() | atom()) :: validation_result()
   def validate_file_extension(filename, :image) do
-    allowed_extensions = ~w(.jpg .jpeg .png .gif .webp)
+    allowed_extensions = UploadConstraints.allowed_extensions(:image)
     extension = String.downcase(Path.extname(filename))
 
     if extension in allowed_extensions do
@@ -240,7 +241,7 @@ defmodule Tymeslot.ThemeCustomizations.Validation do
   end
 
   def validate_file_extension(filename, :video) do
-    allowed_extensions = ~w(.mp4 .webm .mov .avi)
+    allowed_extensions = UploadConstraints.allowed_extensions(:video)
     extension = String.downcase(Path.extname(filename))
 
     if extension in allowed_extensions do
