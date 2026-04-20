@@ -241,4 +241,144 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       assert config.half_open_requests == 3
     end
   end
+
+  describe "state persistence across GenServer restart" do
+    # The breaker GenServer crashing must not reset recovery progress: a
+    # recovering external service must still see `:open` / `:half_open`, not a
+    # fresh `:closed` budget that hammers it with retries.
+    @describetag :persistence
+
+    defp start_under_own_supervisor(breaker_name, config) do
+      child = {CircuitBreaker, name: breaker_name, config: config}
+      {:ok, sup} = Supervisor.start_link([child], strategy: :one_for_one)
+      on_exit(fn -> stop_supervisor(sup) end)
+      sup
+    end
+
+    defp stop_supervisor(sup) do
+      if Process.alive?(sup), do: Supervisor.stop(sup, :normal, 500)
+    rescue
+      _error -> :ok
+    catch
+      :exit, _reason -> :ok
+    end
+
+    defp kill_breaker_and_wait(breaker_name) do
+      pid = GenServer.whereis(breaker_name)
+      assert is_pid(pid)
+
+      ref = Process.monitor(pid)
+      Process.exit(pid, :kill)
+      assert_receive {:DOWN, ^ref, :process, ^pid, _}, 1_000
+
+      wait_for_new_pid(breaker_name, pid, 100)
+    end
+
+    defp wait_for_new_pid(_breaker_name, _old_pid, 0), do: nil
+
+    defp wait_for_new_pid(breaker_name, old_pid, retries) do
+      case GenServer.whereis(breaker_name) do
+        new_pid when is_pid(new_pid) and new_pid != old_pid ->
+          new_pid
+
+        _not_yet ->
+          tag = make_ref()
+          Process.send_after(self(), tag, 10)
+
+          receive do
+            ^tag -> wait_for_new_pid(breaker_name, old_pid, retries - 1)
+          end
+      end
+    end
+
+    defp clear_persisted(name) do
+      :ets.delete(:circuit_breaker_state_table, name)
+    end
+
+    defp backdate_past_recovery(breaker_name) do
+      :sys.replace_state(breaker_name, fn state ->
+        backdated = System.monotonic_time(:millisecond) - state.config.recovery_timeout - 10
+        %{state | last_failure_time: backdated}
+      end)
+    end
+
+    test "breaker tripped to :open stays :open after a crash and restart" do
+      breaker_name = via_name("cb_restart_open_#{System.unique_integer([:positive])}")
+      on_exit(fn -> clear_persisted(breaker_name) end)
+
+      start_under_own_supervisor(breaker_name, %{
+        failure_threshold: 1,
+        recovery_timeout: 60_000
+      })
+
+      assert {:error, :fail} = CircuitBreaker.call(breaker_name, fn -> {:error, :fail} end)
+      assert %{status: :open} = CircuitBreaker.status(breaker_name)
+
+      restarted_pid = kill_breaker_and_wait(breaker_name)
+      assert is_pid(restarted_pid)
+
+      # External service must not be hit on the very first call after restart.
+      assert %{status: :open} = CircuitBreaker.status(breaker_name)
+
+      assert {:error, :circuit_open} =
+               CircuitBreaker.call(breaker_name, fn -> {:ok, :touched} end)
+    end
+
+    test "half-open breaker comes back as :half_open after a crash" do
+      breaker_name = via_name("cb_restart_half_#{System.unique_integer([:positive])}")
+      on_exit(fn -> clear_persisted(breaker_name) end)
+
+      start_under_own_supervisor(breaker_name, %{
+        failure_threshold: 1,
+        recovery_timeout: @time_window_ms,
+        half_open_requests: 3
+      })
+
+      # Trip to open.
+      CircuitBreaker.call(breaker_name, fn -> {:error, :fail} end)
+      assert %{status: :open} = CircuitBreaker.status(breaker_name)
+
+      # Backdate last_failure_time past the recovery timeout so the next call
+      # transitions to :half_open without waiting real time.
+      backdate_past_recovery(breaker_name)
+      assert {:ok, :recovering} = CircuitBreaker.call(breaker_name, fn -> {:ok, :recovering} end)
+      assert %{status: :half_open} = CircuitBreaker.status(breaker_name)
+
+      restarted_pid = kill_breaker_and_wait(breaker_name)
+      assert is_pid(restarted_pid)
+
+      # Must remain :half_open — not snap back to :closed with a zero-failure budget.
+      assert %{status: :half_open, failure_count: failure_count} =
+               CircuitBreaker.status(breaker_name)
+
+      # Failure count from the previous run is preserved.
+      assert failure_count >= 1
+    end
+
+    test "reset/1 persists :closed so a crash-restart comes back :closed, not :open" do
+      breaker_name = via_name("cb_restart_reset_#{System.unique_integer([:positive])}")
+      on_exit(fn -> clear_persisted(breaker_name) end)
+
+      start_under_own_supervisor(breaker_name, %{
+        failure_threshold: 1,
+        recovery_timeout: 60_000
+      })
+
+      # Trip to :open.
+      CircuitBreaker.call(breaker_name, fn -> {:error, :fail} end)
+      assert %{status: :open} = CircuitBreaker.status(breaker_name)
+
+      # Reset to :closed — this must also update the ETS snapshot.
+      CircuitBreaker.reset(breaker_name)
+
+      # status/1 is a call, so it linearizes after the preceding cast; no sleep needed.
+      assert %{status: :closed} = CircuitBreaker.status(breaker_name)
+
+      restarted_pid = kill_breaker_and_wait(breaker_name)
+      assert is_pid(restarted_pid)
+
+      # The persisted snapshot must reflect the reset, not the earlier :open state.
+      assert %{status: :closed, failure_count: 0} = CircuitBreaker.status(breaker_name)
+    end
+  end
 end

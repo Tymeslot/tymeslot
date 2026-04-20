@@ -8,6 +8,11 @@ defmodule Tymeslot.Infrastructure.ResilientCallTest do
   setup do
     breaker_name = :resilient_call_test_breaker
 
+    # Breaker state now persists in ETS across the GenServer lifecycle, so a
+    # prior test that tripped the breaker would leak `:open` into this one.
+    # Wipe any prior snapshot before starting a fresh breaker.
+    :ets.delete(:circuit_breaker_state_table, breaker_name)
+
     {:ok, pid} =
       CircuitBreaker.start_link(
         name: breaker_name,
@@ -19,6 +24,7 @@ defmodule Tymeslot.Infrastructure.ResilientCallTest do
 
     on_exit(fn ->
       if Process.alive?(pid), do: GenServer.stop(pid)
+      :ets.delete(:circuit_breaker_state_table, breaker_name)
     end)
 
     {:ok, breaker: breaker_name}

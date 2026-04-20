@@ -21,6 +21,14 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   @idle_timeout :timer.hours(24)
 
+  # Shared ETS table — owned by `CircuitBreakerSupervisor` so entries survive
+  # this GenServer crashing and being restarted on the same BEAM. On init we
+  # restore any snapshot for our `name`, so a recovering external service still
+  # sees `:open` / `:half_open` rather than being hammered with a fresh
+  # `:closed` + zero-failure budget. Does NOT survive a BEAM restart, node
+  # shutdown, or deploy.
+  @state_table :circuit_breaker_state_table
+
   defmodule State do
     @moduledoc false
     defstruct [
@@ -84,7 +92,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   def init({name, user_config}) do
     config = Map.merge(@default_config, user_config)
 
-    state = %State{
+    base_state = %State{
       name: name,
       config: config,
       status: :closed,
@@ -95,6 +103,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       half_open_attempts: 0
     }
 
+    state = restore_state(name, base_state)
     {:ok, state, @idle_timeout}
   end
 
@@ -113,7 +122,9 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
       end
 
     case result do
-      {:reply, response, new_state} -> {:reply, response, new_state, @idle_timeout}
+      {:reply, response, new_state} ->
+        persist_state(new_state)
+        {:reply, response, new_state, @idle_timeout}
     end
   end
 
@@ -143,6 +154,7 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
         half_open_attempts: 0
     }
 
+    persist_state(new_state)
     {:noreply, new_state, @idle_timeout}
   end
 
@@ -278,6 +290,46 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
 
   defp record_failure(state, now) do
     %{state | failure_count: state.failure_count + 1, last_failure_time: now}
+  end
+
+  defp persist_state(%State{name: name} = state) do
+    snapshot = %{
+      status: state.status,
+      failure_count: state.failure_count,
+      success_count: state.success_count,
+      window_start: state.window_start,
+      last_failure_time: state.last_failure_time,
+      half_open_attempts: state.half_open_attempts
+    }
+
+    safe_ets_insert(@state_table, {name, snapshot})
+    state
+  end
+
+  defp restore_state(name, base_state) do
+    case safe_ets_lookup(@state_table, name) do
+      [{^name, snapshot}] -> Map.merge(base_state, snapshot)
+      _other -> base_state
+    end
+  end
+
+  # `:ets.whereis/1` guards against test environments that haven't started the
+  # application (and therefore haven't created the table). Without it the first
+  # test to touch a breaker crashes with `:badarg`.
+  defp safe_ets_insert(table, entry) do
+    if :ets.whereis(table) != :undefined do
+      :ets.insert(table, entry)
+    end
+
+    :ok
+  end
+
+  defp safe_ets_lookup(table, key) do
+    if :ets.whereis(table) != :undefined do
+      :ets.lookup(table, key)
+    else
+      []
+    end
   end
 
   @impl GenServer

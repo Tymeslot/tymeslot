@@ -17,6 +17,13 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerSupervisor do
 
   @impl Supervisor
   def init(_init_arg) do
+    # Own the shared state table so its entries survive individual breaker GenServers
+    # crashing and being restarted on the same BEAM. The table is lost only when this
+    # supervisor exits (BEAM shutdown / full application restart) — not across deploys.
+    if :ets.whereis(:circuit_breaker_state_table) == :undefined do
+      :ets.new(:circuit_breaker_state_table, [:named_table, :public, :set])
+    end
+
     # Build children for all calendar providers
     calendar_breakers = build_calendar_breakers()
 
