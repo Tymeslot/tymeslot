@@ -12,6 +12,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Utils.SanitizeMerge
 
   @type user_id :: pos_integer()
 
@@ -35,7 +36,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
 
     with {:ok, sanitized} <-
            CalendarInputValidation.validate_calendar_integration_form(params, metadata: metadata),
-         validated <- Map.merge(params, sanitized),
+         validated <- SanitizeMerge.merge(params, sanitized),
          :ok <- check_no_duplicate_calendar(user_id, validated),
          count_before <- length(CalendarManagement.list_calendar_integrations(user_id)),
          {:ok, integration} <- Calendar.create_integration(validated, user_id) do

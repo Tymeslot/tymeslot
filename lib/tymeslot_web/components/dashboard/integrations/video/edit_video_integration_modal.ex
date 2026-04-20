@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
 
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
+  alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplateAnalyzer
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig.TemplatePreviewBox
 
@@ -114,7 +115,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Video.EditVideoIntegrati
            metadata: DashboardHelpers.get_security_metadata(socket)
          ) do
       {:ok, sanitized} ->
-        attrs = map_keys_to_atoms(Map.merge(params, sanitized))
+        attrs = map_keys_to_atoms(SanitizeMerge.merge(params, sanitized))
 
         case Video.update_integration(user_id, integration.id, attrs) do
           {:ok, _updated} ->
