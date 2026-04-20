@@ -7,7 +7,6 @@ defmodule TymeslotWeb.VideoOAuthController do
   require Logger
 
   alias Tymeslot.Dashboard.DashboardContext
-  alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
@@ -15,6 +14,7 @@ defmodule TymeslotWeb.VideoOAuthController do
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Helpers.MicrosoftOAuth
+  alias TymeslotWeb.Helpers.OAuthStateGuard
 
   @doc """
   Handles Google Meet OAuth callback.
@@ -23,8 +23,8 @@ defmodule TymeslotWeb.VideoOAuthController do
   def google_callback(conn, %{"code" => code, "state" => state}) do
     redirect_uri = "#{Endpoint.url()}/auth/google/video/callback"
 
-    with :ok <- RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)),
-         :ok <- validate_state_parameter(state, google_state_secret()),
+    with :ok <- OAuthStateGuard.enforce_user_match(conn, state, :google),
+         :ok <- RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)),
          {:ok, tokens} <- GoogleOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
          {:ok, _integration} <-
            create_or_update_google_meet_integration(tokens, tokens[:integration_id]) do
@@ -34,26 +34,7 @@ defmodule TymeslotWeb.VideoOAuthController do
       |> put_flash(:info, "Google Meet connected successfully!")
       |> redirect(to: ~p"/dashboard/video-integration")
     else
-      {:error, :rate_limited, message} ->
-        Logger.warning("Rate limit exceeded for Google Meet OAuth callback")
-
-        conn
-        |> put_flash(:error, message)
-        |> redirect(to: ~p"/dashboard/video-integration")
-
-      {:error, :invalid_state, _reason} ->
-        Logger.warning("Invalid state parameter in Google Meet OAuth callback")
-
-        conn
-        |> put_flash(:error, "Invalid authentication state. Please try again.")
-        |> redirect(to: ~p"/dashboard/video-integration")
-
-      {:error, reason} ->
-        Logger.error("Google Meet OAuth flow failed", reason: inspect(reason))
-
-        conn
-        |> put_flash(:error, "Failed to connect Google Meet. Please try again.")
-        |> redirect(to: ~p"/dashboard/video-integration")
+      error -> handle_google_meet_error(conn, error)
     end
   end
 
@@ -72,7 +53,9 @@ defmodule TymeslotWeb.VideoOAuthController do
   end
 
   def google_callback(conn, params) do
-    Logger.warning("Invalid Google Meet OAuth callback params", params: inspect(params))
+    Logger.warning("Invalid Google Meet OAuth callback params",
+      params: inspect(OAuthStateGuard.redact_callback_params(params))
+    )
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
@@ -86,8 +69,8 @@ defmodule TymeslotWeb.VideoOAuthController do
   def teams_callback(conn, %{"code" => code, "state" => state}) do
     redirect_uri = "#{Endpoint.url()}/auth/teams/video/callback"
 
-    with :ok <- RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)),
-         :ok <- validate_state_parameter(state, teams_state_secret()),
+    with :ok <- OAuthStateGuard.enforce_user_match(conn, state, :outlook),
+         :ok <- RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)),
          {:ok, tokens} <- TeamsOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
          :ok <- validate_teams_tokens(tokens),
          {:ok, _integration} <-
@@ -124,12 +107,40 @@ defmodule TymeslotWeb.VideoOAuthController do
   end
 
   def teams_callback(conn, params) do
-    Logger.warning("Invalid Teams OAuth callback params", params: inspect(params))
+    Logger.warning("Invalid Teams OAuth callback params",
+      params: inspect(OAuthStateGuard.redact_callback_params(params))
+    )
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
     |> redirect(to: ~p"/dashboard/video-integration")
   end
+
+  defp handle_google_meet_error(conn, error) do
+    case error do
+      {:error, guard_reason}
+      when guard_reason in [:state_user_mismatch, :unauthenticated, :invalid_state] ->
+        reject_callback(conn)
+
+      {:error, :rate_limited, message} ->
+        Logger.warning("Rate limit exceeded for Google Meet OAuth callback")
+
+        conn
+        |> put_flash(:error, message)
+        |> redirect(to: ~p"/dashboard/video-integration")
+
+      {:error, reason} ->
+        Logger.error("Google Meet OAuth flow failed", reason: inspect(reason))
+
+        conn
+        |> put_flash(:error, "Failed to connect Google Meet. Please try again.")
+        |> redirect(to: ~p"/dashboard/video-integration")
+    end
+  end
+
+  defp handle_teams_oauth_error(conn, {:error, guard_reason})
+       when guard_reason in [:state_user_mismatch, :unauthenticated, :invalid_state],
+       do: reject_callback(conn)
 
   defp handle_teams_oauth_error(conn, error) do
     message =
@@ -137,10 +148,6 @@ defmodule TymeslotWeb.VideoOAuthController do
         {:error, :rate_limited, msg} ->
           Logger.warning("Rate limit exceeded for Teams OAuth callback")
           msg
-
-        {:error, :invalid_state, _reason} ->
-          Logger.warning("Invalid state parameter in Teams OAuth callback")
-          "Invalid authentication state. Please try again."
 
         {:error, :missing_teams_fields} ->
           Logger.warning(
@@ -159,6 +166,13 @@ defmodule TymeslotWeb.VideoOAuthController do
     |> redirect(to: ~p"/dashboard/video-integration")
   end
 
+  defp reject_callback(conn) do
+    conn
+    |> put_flash(:error, "Authentication session mismatch. Please sign in and try again.")
+    |> redirect(to: ~p"/dashboard/video-integration")
+    |> halt()
+  end
+
   # Private functions
 
   defp validate_teams_tokens(tokens) do
@@ -173,28 +187,6 @@ defmodule TymeslotWeb.VideoOAuthController do
 
       {:error, :missing_teams_fields}
     end
-  end
-
-  defp validate_state_parameter(state, secret) when is_binary(state) do
-    case State.validate(state, secret) do
-      {:ok, _result} -> :ok
-      {:error, reason} -> {:error, :invalid_state, reason}
-    end
-  end
-
-  defp validate_state_parameter(_arg, _secret),
-    do: {:error, :invalid_state, "Missing state parameter"}
-
-  defp google_state_secret do
-    Application.get_env(:tymeslot, :google_oauth)[:state_secret] ||
-      System.get_env("GOOGLE_STATE_SECRET") ||
-      raise "Google OAuth state secret not configured"
-  end
-
-  defp teams_state_secret do
-    Application.get_env(:tymeslot, :outlook_oauth)[:state_secret] ||
-      System.get_env("OUTLOOK_STATE_SECRET") ||
-      raise "Outlook OAuth state secret not configured"
   end
 
   defp create_or_update_google_meet_integration(tokens, integration_id) do

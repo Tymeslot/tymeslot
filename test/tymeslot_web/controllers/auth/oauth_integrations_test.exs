@@ -2,6 +2,8 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
   use TymeslotWeb.ConnCase, async: false
   @moduletag :utils
 
+  import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
+
   alias Phoenix.Flash
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.DashboardCache
@@ -93,7 +95,9 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
   describe "CalendarOAuthController" do
     test "google_callback handles success", %{conn: conn} do
-      :meck.expect(GoogleCalendarOAuthHelper, :handle_callback, fn "code", "state", _uri ->
+      conn = authenticate_state_user(conn, 123)
+
+      :meck.expect(GoogleCalendarOAuthHelper, :handle_callback, fn "code", _state, _uri ->
         {:ok, %{user_id: 123}}
       end)
 
@@ -105,7 +109,9 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     end
 
     test "outlook_callback handles success", %{conn: conn} do
-      :meck.expect(OutlookCalendarOAuthHelper, :handle_callback, fn "code", "state", _uri ->
+      conn = authenticate_state_user(conn, 123)
+
+      :meck.expect(OutlookCalendarOAuthHelper, :handle_callback, fn "code", _state, _uri ->
         {:ok, %{user_id: 123}}
       end)
 
@@ -156,6 +162,8 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     end
 
     test "outlook_callback handles exchange failure", %{conn: conn} do
+      conn = authenticate_state_user(conn, 123)
+
       :meck.expect(OutlookCalendarOAuthHelper, :handle_callback, fn _code, _state, _uri ->
         {:error, :invalid_code}
       end)
@@ -207,6 +215,8 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     test "google_callback accepts state signed with Google secret", %{conn: conn} do
       user_id = 1001
       state = State.generate(user_id, @google_secret)
+      user = Factory.insert(:user, id: user_id)
+      conn = log_in_user(conn, user)
 
       :meck.expect(GoogleOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, ^state ->
         {:ok,
@@ -229,8 +239,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
          }}
       end)
 
-      Factory.insert(:user, id: user_id)
-
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => state})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
@@ -239,17 +247,21 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
     test "google_callback rejects state signed with Outlook secret", %{conn: conn} do
       user_id = 1002
+      user = Factory.insert(:user, id: user_id)
+      conn = log_in_user(conn, user)
       state = State.generate(user_id, @outlook_secret)
 
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => state})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication state"
+      assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
     end
 
     test "teams_callback accepts state signed with Outlook secret", %{conn: conn} do
       user_id = 1003
       state = State.generate(user_id, @outlook_secret)
+      user = Factory.insert(:user, id: user_id)
+      conn = log_in_user(conn, user)
 
       :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, ^state ->
         {:ok,
@@ -274,8 +286,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
          }}
       end)
 
-      Factory.insert(:user, id: user_id)
-
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => state})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
@@ -284,23 +294,21 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
     test "teams_callback rejects state signed with Google secret", %{conn: conn} do
       user_id = 1004
+      user = Factory.insert(:user, id: user_id)
+      conn = log_in_user(conn, user)
       state = State.generate(user_id, @google_secret)
 
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => state})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication state"
+      assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
     end
   end
 
   describe "VideoOAuthController" do
-    setup do
-      :meck.expect(State, :validate, fn _state, _secret -> {:ok, %{user_id: 123}} end)
-      :ok
-    end
-
     test "google_callback (Meet) creates new integration when none exists", %{conn: conn} do
       user_id = 123
+      conn = authenticate_state_user(conn, user_id)
 
       :meck.expect(GoogleOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, "state" ->
         {:ok,
@@ -332,8 +340,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         {:ok, integration}
       end)
 
-      Factory.insert(:user, id: user_id)
-
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "state"})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
@@ -342,6 +348,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
     test "google_callback (Meet) updates existing integration on re-authorization", %{conn: conn} do
       user_id = 123
+      conn = authenticate_state_user(conn, user_id)
       new_expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       existing = %Tymeslot.Integrations.Video.VideoIntegrationSchema{
@@ -375,8 +382,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         {:ok, %{existing | access_token: attrs.access_token}}
       end)
 
-      Factory.insert(:user, id: user_id)
-
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "state"})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
@@ -385,6 +390,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
     test "teams_callback creates new integration when none exists", %{conn: conn} do
       user_id = 456
+      conn = authenticate_state_user(conn, user_id)
 
       :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn "code", _uri, "state" ->
         {:ok,
@@ -418,8 +424,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         {:ok, integration}
       end)
 
-      Factory.insert(:user, id: user_id)
-
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
@@ -428,6 +432,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
     test "teams_callback updates existing integration on re-authorization", %{conn: conn} do
       user_id = 456
+      conn = authenticate_state_user(conn, user_id)
 
       existing = %Tymeslot.Integrations.Video.VideoIntegrationSchema{
         id: 99,
@@ -464,8 +469,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
         {:ok, %{existing | access_token: attrs.access_token}}
       end)
 
-      Factory.insert(:user, id: user_id)
-
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
@@ -473,12 +476,14 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     end
 
     test "google_callback handles invalid state", %{conn: conn} do
+      user = Factory.insert(:user)
+      conn = log_in_user(conn, user)
       :meck.expect(State, :validate, fn _state, _secret -> {:error, :expired} end)
 
       conn = get(conn, ~p"/auth/google/video/callback", %{"code" => "code", "state" => "invalid"})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication state"
+      assert Flash.get(conn.assigns.flash, :error) =~ "session mismatch"
     end
 
     test "google_callback handles provider error", %{conn: conn} do
@@ -519,6 +524,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
     test "teams_callback handles creation failure", %{conn: conn} do
       user_id = 789
+      conn = authenticate_state_user(conn, user_id)
 
       :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, _state ->
         {:ok,
@@ -539,8 +545,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
       :meck.expect(VideoIntegrationQueries, :create, fn _client -> {:error, :db_error} end)
 
-      Factory.insert(:user, id: user_id)
-
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
@@ -549,6 +553,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
 
     test "teams_callback handles missing tenant_id or teams_user_id", %{conn: conn} do
       user_id = 999
+      conn = authenticate_state_user(conn, user_id)
 
       :meck.expect(TeamsOAuthHelper, :exchange_code_for_tokens, fn _code, _uri, _state ->
         {:ok,
@@ -562,8 +567,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
          }}
       end)
 
-      Factory.insert(:user, id: user_id)
-
       conn = get(conn, ~p"/auth/teams/video/callback", %{"code" => "code", "state" => "state"})
 
       assert redirected_to(conn) == "/dashboard/video-integration"
@@ -571,5 +574,14 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       assert Flash.get(conn.assigns.flash, :error) =~
                "Missing required Microsoft Teams information"
     end
+  end
+
+  # Logs a user in and redirects the mecked `State.validate/2` to return the
+  # same id so the new `OAuthStateGuard.enforce_user_match/3` passes.
+  defp authenticate_state_user(conn, user_id) do
+    user = Factory.insert(:user, id: user_id)
+    conn = log_in_user(conn, user)
+    :meck.expect(State, :validate, fn _state, _secret -> {:ok, %{user_id: user_id}} end)
+    conn
   end
 end
