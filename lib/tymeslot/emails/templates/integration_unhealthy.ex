@@ -2,12 +2,12 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
   @moduledoc """
   MJML email template notifying a user that one of their integrations has been
   continuously unhealthy for more than 48 hours.
+
+  This is an operational alert — always rendered in English.
   """
 
   alias Tymeslot.Emails.Shared.{Buttons, Callouts, Styles, TemplateHelper, Text}
   alias Tymeslot.Utils.UrlBuilder
-
-  use Gettext, backend: TymeslotWeb.Gettext
 
   @intent :alert
 
@@ -25,13 +25,10 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
 
     mjml_content = """
     #{Callouts.alert_box(:alert,
-    dgettext("emails",
-    "One of your %{type} integrations (%{provider}) has been reporting connection issues for over 48 hours. You may want to check your integration settings.",
-    type: type_label,
-    provider: provider_label),
-    title: dgettext("emails", "Integration Connection Issues"))}
+    "One of your #{type_label} integrations (#{provider_label}) has been reporting connection issues for over 48 hours. You may want to check your integration settings.",
+    title: "Integration Connection Issues")}
 
-    #{Text.title_section(dgettext("emails", "What's happening?"))}
+    #{Text.title_section("What's happening?")}
 
     <mj-text
       font-size="16px"
@@ -40,46 +37,38 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
       align="left"
       css-class="mobile-text"
     >
-      #{dgettext("emails", "Your <strong>%{provider}</strong> %{type} integration has been failing health checks consistently for the past 48+ hours. This may affect your ability to sync %{type}s or create new bookings.", provider: provider_label, type: type_label)}
+      Your <strong>#{provider_label}</strong> #{type_label} integration has been failing health checks consistently for the past 48+ hours. This may affect your ability to sync #{type_label}s or create new bookings.
     </mj-text>
 
     #{Text.divider()}
 
-    #{Text.title_section(dgettext("emails", "What should I do?"))}
+    #{Text.title_section("What should I do?")}
 
     <mj-text color="#{Styles.ink_soft()}" font-size="14px" line-height="1.6">
       <ul style="padding-left: 20px; margin: 0;">
-        <li style="margin-bottom: 8px;">#{dgettext("emails", "Visit your integration settings to test the connection")}</li>
-        <li style="margin-bottom: 8px;">#{dgettext("emails", "Check that your credentials or OAuth tokens are still valid")}</li>
-        <li style="margin-bottom: 8px;">#{dgettext("emails", "If you changed your password recently, you may need to reconnect the integration")}</li>
-        <li style="margin-bottom: 0;">#{dgettext("emails", "Contact your %{type} provider if the issue persists", type: type_label)}</li>
+        <li style="margin-bottom: 8px;">Visit your integration settings to test the connection</li>
+        <li style="margin-bottom: 8px;">Check that your credentials or OAuth tokens are still valid</li>
+        <li style="margin-bottom: 8px;">If you changed your password recently, you may need to reconnect the integration</li>
+        <li style="margin-bottom: 0;">Contact your #{type_label} provider if the issue persists</li>
       </ul>
     </mj-text>
 
-    #{Buttons.action_button(@intent, dgettext("emails", "Check Integration Settings"), settings_url)}
+    #{Buttons.action_button(@intent, "Check Integration Settings", settings_url)}
 
     #{Text.divider()}
 
-    #{Text.system_footer_note(dgettext("emails", "This notification is sent when an integration remains unhealthy for 48+ hours. It will not repeat for 30 days."))}
+    #{Text.system_footer_note("This notification is sent when an integration remains unhealthy for 48+ hours. It will not repeat for 30 days.")}
     """
 
     TemplateHelper.compile_system_template(
       mjml_content,
-      dgettext("emails", "Integration Connection Issues"),
-      dgettext("emails", "Your %{provider} %{type} integration needs attention",
-        provider: provider_label,
-        type: type_label
-      ),
+      "Integration Connection Issues",
+      "Your #{provider_label} #{type_label} integration needs attention",
       intent: @intent,
-      eyebrow: dgettext("emails", "Integration"),
-      stage_title: dgettext("emails", "Integration needs attention"),
+      eyebrow: "Integration",
+      stage_title: "Integration needs attention",
       stage_subtitle:
-        dgettext(
-          "emails",
-          "Your %{provider} %{type} integration has been unhealthy for 48+ hours.",
-          provider: provider_label,
-          type: type_label
-        )
+        "Your #{provider_label} #{type_label} integration has been unhealthy for 48+ hours."
     )
   end
 
@@ -96,23 +85,23 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
     {type_label, provider_label, settings_url} = labels(integration, type)
 
     """
-    #{dgettext("emails", "Integration Connection Issues")}
+    Integration Connection Issues
 
-    #{dgettext("emails", "One of your %{type} integrations (%{provider}) has been reporting connection issues for over 48 hours. You may want to check your integration settings.", type: type_label, provider: provider_label)}
+    One of your #{type_label} integrations (#{provider_label}) has been reporting connection issues for over 48 hours. You may want to check your integration settings.
 
-    #{dgettext("emails", "WHAT'S HAPPENING?")}
-    #{dgettext("emails", "Your %{provider} %{type} integration has been failing health checks consistently for the past 48+ hours. This may affect your ability to sync %{type}s or create new bookings.", provider: provider_label, type: type_label)}
+    WHAT'S HAPPENING?
+    Your #{provider_label} #{type_label} integration has been failing health checks consistently for the past 48+ hours. This may affect your ability to sync #{type_label}s or create new bookings.
 
-    #{dgettext("emails", "WHAT SHOULD I DO?")}
-    - #{dgettext("emails", "Visit your integration settings to test the connection")}
-    - #{dgettext("emails", "Check that your credentials or OAuth tokens are still valid")}
-    - #{dgettext("emails", "If you changed your password recently, you may need to reconnect the integration")}
-    - #{dgettext("emails", "Contact your %{type} provider if the issue persists", type: type_label)}
+    WHAT SHOULD I DO?
+    - Visit your integration settings to test the connection
+    - Check that your credentials or OAuth tokens are still valid
+    - If you changed your password recently, you may need to reconnect the integration
+    - Contact your #{type_label} provider if the issue persists
 
-    #{dgettext("emails", "Check Integration Settings:")}
+    Check Integration Settings:
     #{settings_url}
 
-    #{dgettext("emails", "This notification is sent when an integration remains unhealthy for 48+ hours. It will not repeat for 30 days.")}
+    This notification is sent when an integration remains unhealthy for 48+ hours. It will not repeat for 30 days.
     """
   end
 
@@ -125,8 +114,8 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
     {type_label, provider_label, settings_url_for_type(type)}
   end
 
-  defp humanize_type(:calendar), do: dgettext("emails", "calendar")
-  defp humanize_type(:video), do: dgettext("emails", "video")
+  defp humanize_type(:calendar), do: "calendar"
+  defp humanize_type(:video), do: "video"
   defp humanize_type(type), do: to_string(type)
 
   defp settings_url_for_type(:calendar),

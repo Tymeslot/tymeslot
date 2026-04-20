@@ -228,7 +228,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{dgettext("emails", "- Test video/audio setup if virtual")}
     #{organizer_reminder_line(appointment_details)}
 
-    Best,
+    #{dgettext("emails", "Best,")}
     #{appointment_details.organizer_name}
     """
   end

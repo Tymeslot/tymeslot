@@ -17,8 +17,8 @@ msgstr "Réservation"
 msgid "confirmation"
 msgstr "Confirmation"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:182
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:123
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:177
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:118
 #: lib/tymeslot_web/themes/rhythm/scheduling/components/schedule_component.ex:313
 #, elixir-autogen
 msgid "next"
@@ -276,7 +276,7 @@ msgstr "Adresse e-mail"
 msgid "Enter Your Details"
 msgstr "Saisissez vos coordonnées"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:121
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:116
 #, elixir-autogen, elixir-format
 msgid "Hi, I'm %{name}. Select how much time you need for our conversation."
 msgstr "Bonjour, je suis %{name}. Choisissez la durée de notre échange."
@@ -291,7 +291,7 @@ msgstr "Jean Dupont"
 msgid "Let me know what you'd like to discuss..."
 msgstr "Dites-moi de quoi vous souhaitez discuter..."
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:115
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:110
 #, elixir-autogen, elixir-format
 msgid "Let's Connect!"
 msgstr "Prenons rendez-vous !"
@@ -301,14 +301,14 @@ msgstr "Prenons rendez-vous !"
 msgid "Meeting Rescheduled!"
 msgstr "Réunion reportée !"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:131
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:79
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:126
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:74
 #, elixir-autogen, elixir-format
 msgid "No meeting types available"
 msgstr "Aucun type de réunion disponible"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:132
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:80
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:127
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:75
 #, elixir-autogen, elixir-format
 msgid "Please contact the organizer"
 msgstr "Veuillez contacter l'organisateur"
@@ -318,12 +318,12 @@ msgstr "Veuillez contacter l'organisateur"
 msgid "Please fill in all required fields"
 msgstr "Veuillez remplir tous les champs obligatoires"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:178
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:173
 #, elixir-autogen, elixir-format
 msgid "Please select a meeting duration first"
 msgstr "Veuillez d'abord choisir une durée"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:123
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:118
 #, elixir-autogen, elixir-format
 msgid "Select how much time you need for our conversation."
 msgstr "Choisissez la durée souhaitée pour notre échange."
@@ -359,12 +359,12 @@ msgstr "Votre nom"
 msgid "john@example.com"
 msgstr "jean.dupont@exemple.fr"
 
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:69
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:64
 #, elixir-autogen, elixir-format
 msgid "Hi! I'm %{name}."
 msgstr "Bonjour ! Je suis %{name}."
 
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:72
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:67
 #, elixir-autogen, elixir-format
 msgid "Pick a meeting duration below."
 msgstr "Choisissez une durée ci-dessous."
@@ -374,7 +374,7 @@ msgstr "Choisissez une durée ci-dessous."
 msgid "Schedule with"
 msgstr "Planifier avec"
 
-#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:55
+#: lib/tymeslot_web/themes/rhythm/scheduling/components/overview_component.ex:50
 #, elixir-autogen, elixir-format
 msgid "Schedule with %{name}"
 msgstr "Prendre rendez-vous avec %{name}"
@@ -1016,22 +1016,22 @@ msgstr "Heure"
 msgid "Timezone"
 msgstr "Fuseau horaire"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:150
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:145
 #, elixir-autogen, elixir-format
 msgid "15 Minutes"
 msgstr "15 minutes"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:160
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:155
 #, elixir-autogen, elixir-format
 msgid "30 Minutes"
 msgstr "30 minutes"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:162
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:157
 #, elixir-autogen, elixir-format
 msgid "In-depth discussion or detailed review"
 msgstr "Discussion approfondie ou examen détaillé"
 
-#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:152
+#: lib/tymeslot_web/themes/quill/scheduling/components/overview_component.ex:147
 #, elixir-autogen, elixir-format
 msgid "Quick chat or brief consultation"
 msgstr "Discussion rapide ou brève consultation"

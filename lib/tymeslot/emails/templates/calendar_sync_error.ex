@@ -1,6 +1,8 @@
 defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   @moduledoc """
   MJML template for calendar sync error notification sent to the calendar owner.
+
+  This is an operational alert — always rendered in English.
   """
 
   alias Tymeslot.Emails.Shared.{
@@ -13,8 +15,6 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   }
 
   alias Tymeslot.Profiles
-
-  use Gettext, backend: TymeslotWeb.Gettext
 
   # A sync failure the user needs to act on.
   @intent :alert
@@ -55,69 +55,66 @@ defmodule Tymeslot.Emails.Templates.CalendarSyncError do
   defp do_render_html(error_details, owner_start_time, meeting) do
     mjml_content = """
     #{Callouts.alert_box(:cancelled,
-    dgettext("emails",
-    "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar."),
-    title: dgettext("emails", "Calendar Sync Error"))}
+    "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar.",
+    title: "Calendar Sync Error")}
 
-    #{Text.title_section(dgettext("emails", "Meeting Details"))}
+    #{Text.title_section("Meeting Details")}
     #{MeetingComponents.meeting_details_table(%{date: owner_start_time, start_time: owner_start_time, duration: meeting.duration, location: meeting.location})}
 
     #{Text.divider()}
 
-    #{Text.title_section(dgettext("emails", "Error Details"))}
+    #{Text.title_section("Error Details")}
 
-    #{Callouts.alert_box(:cancelled, error_details, title: dgettext("emails", "Error"))}
+    #{Callouts.alert_box(:cancelled, error_details, title: "Error")}
 
-    #{Text.title_section(dgettext("emails", "Action Required"))}
+    #{Text.title_section("Action Required")}
 
     <mj-text color="#{Styles.ink_soft()}">
-      #{dgettext("emails", "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.")}
+      Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.
     </mj-text>
 
     #{Callouts.alert_box(:alert,
-    dgettext("emails",
-    "Common causes:<br/>• CalDAV server temporarily unavailable<br/>• Network connectivity issues<br/>• Calendar permissions or authentication problems<br/>• Maximum retries exceeded"))}
+    "Common causes:<br/>• CalDAV server temporarily unavailable<br/>• Network connectivity issues<br/>• Calendar permissions or authentication problems<br/>• Maximum retries exceeded")}
 
-    #{Text.system_footer_note(dgettext("emails", "This is an automated system notification. Please check your calendar sync settings if this issue persists."))}
+    #{Text.system_footer_note("This is an automated system notification. Please check your calendar sync settings if this issue persists.")}
     """
 
     TemplateHelper.compile_system_template(
       mjml_content,
-      dgettext("emails", "Calendar Sync Error"),
-      dgettext("emails", "A meeting could not be added to your calendar."),
+      "Calendar Sync Error",
+      "A meeting could not be added to your calendar.",
       intent: @intent,
-      eyebrow: dgettext("emails", "Action required"),
-      stage_title: dgettext("emails", "Calendar didn't sync"),
-      stage_subtitle:
-        dgettext("emails", "The booking is safe — but please add it to your calendar manually.")
+      eyebrow: "Action required",
+      stage_title: "Calendar didn't sync",
+      stage_subtitle: "The booking is safe — but please add it to your calendar manually."
     )
   end
 
   defp do_render_text(error_details, owner_start_time, meeting) do
     """
-    #{dgettext("emails", "Calendar Sync Error — Manual Action Required")}
+    Calendar Sync Error — Manual Action Required
 
-    #{dgettext("emails", "I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar.")}
+    I was unable to add this meeting to your calendar. The appointment has been successfully confirmed in Tymeslot and both you and the attendee have received confirmation emails. However, you'll need to manually add it to your calendar.
 
-    #{dgettext("emails", "MEETING DETAILS:")}
-    #{dgettext("emails", "Date:")} #{Calendar.strftime(owner_start_time, "%B %d, %Y")}
-    #{dgettext("emails", "Time:")} #{Calendar.strftime(owner_start_time, "%I:%M %p")}
-    #{dgettext("emails", "Duration:")} #{dgettext("emails", "%{count} minutes", count: meeting.duration)}
-    #{dgettext("emails", "Location:")} #{meeting.location || dgettext("emails", "Not specified")}
+    MEETING DETAILS:
+    Date: #{Calendar.strftime(owner_start_time, "%B %d, %Y")}
+    Time: #{Calendar.strftime(owner_start_time, "%I:%M %p")}
+    Duration: #{meeting.duration} minutes
+    Location: #{meeting.location || "Not specified"}
 
-    #{dgettext("emails", "ERROR DETAILS:")}
+    ERROR DETAILS:
     #{error_details}
 
-    #{dgettext("emails", "ACTION REQUIRED:")}
-    #{dgettext("emails", "Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.")}
+    ACTION REQUIRED:
+    Please manually add this meeting to your calendar to ensure you don't miss it. Both you and the attendee have already received your confirmation emails — this is purely a technical calendar sync issue that doesn't affect the booking itself.
 
-    #{dgettext("emails", "Common causes:")}
-    - #{dgettext("emails", "CalDAV server temporarily unavailable")}
-    - #{dgettext("emails", "Network connectivity issues")}
-    - #{dgettext("emails", "Calendar permissions or authentication problems")}
-    - #{dgettext("emails", "Maximum retries exceeded")}
+    Common causes:
+    - CalDAV server temporarily unavailable
+    - Network connectivity issues
+    - Calendar permissions or authentication problems
+    - Maximum retries exceeded
 
-    #{dgettext("emails", "This is an automated system notification. Please check your calendar sync settings if this issue persists.")}
+    This is an automated system notification. Please check your calendar sync settings if this issue persists.
     """
   end
 

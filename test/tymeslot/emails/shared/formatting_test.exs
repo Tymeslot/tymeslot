@@ -344,9 +344,8 @@ defmodule Tymeslot.Emails.Shared.FormattingTest do
       assert Formatting.format_weekday(~D[2025-01-11], "en") == "SATURDAY"
     end
 
-    test "returns uppercased weekday for non-English locale (falls back to English when untranslated)" do
-      # German translations are empty so the msgid (English) is returned uppercased
-      assert Formatting.format_weekday(~D[2025-01-06], "de") == "MONDAY"
+    test "returns uppercased weekday for non-English locale" do
+      assert Formatting.format_weekday(~D[2025-01-06], "de") == "MONTAG"
     end
 
     test "works with DateTime input" do
