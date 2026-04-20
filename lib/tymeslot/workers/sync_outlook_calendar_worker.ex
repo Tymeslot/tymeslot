@@ -27,6 +27,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Integrations.CalendarManagement
 
   @base_url "https://graph.microsoft.com/v1.0"
 
@@ -57,7 +58,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
       graph_resource_id: graph_resource_id
     )
 
-    case CalendarIntegrationQueries.get(integration_id) do
+    case CalendarIntegrationQueries.get_ready_for_sync(integration_id) do
       {:ok, integration} ->
         sync_event(integration, graph_resource_id)
 
@@ -67,6 +68,9 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         )
 
         {:discard, "Integration not found"}
+
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.flag_for_reauth(integration, "Outlook Calendar")
     end
   end
 

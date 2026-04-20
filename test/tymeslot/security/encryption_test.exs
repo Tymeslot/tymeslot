@@ -168,10 +168,14 @@ defmodule Tymeslot.Security.EncryptionTest do
       <<nonce::binary-12, _auth_tag::binary-16, ciphertext::binary>> = encrypted
       tampered = nonce <> :crypto.strong_rand_bytes(16) <> ciphertext
 
-      # Decryption should fail
+      # decrypt/1 raises on tampering so noisy failure modes stay loud.
       assert_raise RuntimeError, fn ->
         Encryption.decrypt(tampered)
       end
+
+      # decrypt_with_status/1 surfaces the same failure as a tagged tuple so
+      # calendar sync workers can flag the integration for reauth instead.
+      assert Encryption.decrypt_with_status(tampered) == {:error, :requires_reencryption}
     end
   end
 end

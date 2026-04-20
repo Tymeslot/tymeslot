@@ -59,6 +59,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Integrations.CalendarManagement
 
   # How far back and forward to fetch events on a full sync.
   # Centralised in ProviderConfig so all providers use the same window.
@@ -72,7 +73,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
     Logger.metadata(calendar_integration_id: integration_id)
 
-    case CalendarIntegrationQueries.get(integration_id) do
+    case CalendarIntegrationQueries.get_ready_for_sync(integration_id) do
       {:ok, integration} ->
         sync_integration(integration, force_full_fetch?)
 
@@ -82,6 +83,9 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         )
 
         {:discard, "Integration not found"}
+
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.flag_for_reauth(integration, "CalDAV")
     end
   end
 

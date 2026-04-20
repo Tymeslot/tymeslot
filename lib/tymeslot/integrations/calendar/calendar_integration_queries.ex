@@ -49,7 +49,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
       Repo.transaction(
         fn ->
           CalendarIntegrationSchema
-          |> where([c], c.is_active == true)
+          |> where([c], c.is_active == true and c.needs_reauth == false)
           |> order_by([c], asc: c.id)
           |> Repo.stream(max_rows: max_rows)
           |> Enum.reduce(initial_acc, fn row, acc ->
@@ -85,6 +85,34 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     case Repo.get(CalendarIntegrationSchema, id) do
       nil -> {:error, :not_found}
       integration -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
+    end
+  end
+
+  @doc """
+  Sync-worker variant of `get/1` that refuses to hand back an integration whose
+  encrypted credentials can't be decrypted with the current keyring.
+
+  Returns:
+
+    * `{:ok, integration}` — ready to sync
+    * `{:error, :not_found}` — no such integration
+    * `{:error, :requires_reencryption, integration}` — credentials unreadable;
+      worker should mark `needs_reauth` and discard without retrying
+  """
+  @spec get_ready_for_sync(integer()) ::
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, :not_found}
+          | {:error, :requires_reencryption, CalendarIntegrationSchema.t()}
+  def get_ready_for_sync(id) do
+    case Repo.get(CalendarIntegrationSchema, id) do
+      nil ->
+        {:error, :not_found}
+
+      integration ->
+        case CalendarIntegrationSchema.decryption_status(integration) do
+          :ok -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
+          :requires_reencryption -> {:error, :requires_reencryption, integration}
+        end
     end
   end
 
@@ -189,13 +217,34 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
 
   @doc """
   Updates a calendar integration.
+
+  When the update replaces any encrypted credential field, clears the
+  `needs_reauth` flag — the caller has supplied fresh credentials (via OAuth
+  reconnect or a CalDAV form), so the previous decryption-failure flag no
+  longer applies.
   """
   @spec update(CalendarIntegrationSchema.t(), map()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update(%CalendarIntegrationSchema{} = integration, attrs) do
     integration
     |> CalendarIntegrationSchema.changeset(attrs)
+    |> maybe_clear_needs_reauth()
     |> Repo.update()
+  end
+
+  @encrypted_credential_fields [
+    :username_encrypted,
+    :password_encrypted,
+    :access_token_encrypted,
+    :refresh_token_encrypted
+  ]
+
+  defp maybe_clear_needs_reauth(changeset) do
+    if Enum.any?(@encrypted_credential_fields, &Map.has_key?(changeset.changes, &1)) do
+      Changeset.put_change(changeset, :needs_reauth, false)
+    else
+      changeset
+    end
   end
 
   @doc """
@@ -208,7 +257,9 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   end
 
   @doc """
-  Updates the last sync timestamp and clears any error.
+  Updates the last sync timestamp and clears any error. Also clears the
+  `needs_reauth` flag — a successful sync proves the credentials are readable
+  and valid, so the flag would otherwise become stale.
   """
   @spec mark_sync_success(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
@@ -216,7 +267,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     integration
     |> Changeset.change(%{
       last_sync_at: DateTime.utc_now(:second),
-      sync_error: nil
+      sync_error: nil,
+      needs_reauth: false
     })
     |> Repo.update()
   end
@@ -229,6 +281,22 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   def mark_sync_error(%CalendarIntegrationSchema{} = integration, error_message) do
     integration
     |> Changeset.change(%{
+      sync_error: error_message
+    })
+    |> Repo.update()
+  end
+
+  @doc """
+  Flags an integration as needing reauthentication — used when the stored
+  credentials can no longer be decrypted. Also records a sync error so the
+  dashboard banner and the sync log stay consistent.
+  """
+  @spec mark_needs_reauth(CalendarIntegrationSchema.t(), String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def mark_needs_reauth(%CalendarIntegrationSchema{} = integration, error_message) do
+    integration
+    |> Changeset.change(%{
+      needs_reauth: true,
       sync_error: error_message
     })
     |> Repo.update()

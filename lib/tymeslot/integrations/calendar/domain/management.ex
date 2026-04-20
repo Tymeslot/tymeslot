@@ -132,6 +132,53 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     CalendarIntegrationQueries.mark_sync_error(integration, error_message)
   end
 
+  @doc """
+  Flags an integration as needing reauthentication when its stored credentials
+  can no longer be decrypted. Also records the sync error so the dashboard
+  shows the same message the worker logged.
+  """
+  @spec mark_needs_reauth(CalendarIntegrationSchema.t(), String.t()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def mark_needs_reauth(integration, error_message) do
+    CalendarIntegrationQueries.mark_needs_reauth(integration, error_message)
+  end
+
+  @reauth_error_message "Stored credentials could not be decrypted with the current encryption key. Please reconnect the integration."
+
+  @doc """
+  Sync-worker entry point for the "credentials no longer decrypt" path.
+
+  Logs a warning, flags the integration, and returns an Oban return value:
+  `{:discard, _}` on success (no point retrying — credentials won't recover
+  themselves) or `{:error, _}` if the flag couldn't be persisted, so Oban
+  retries the job and gets another shot at recording the flag.
+  """
+  @spec flag_for_reauth(CalendarIntegrationSchema.t(), String.t()) ::
+          {:discard, String.t()} | {:error, String.t()}
+  def flag_for_reauth(%CalendarIntegrationSchema{} = integration, provider_label) do
+    Logger.warning(
+      "Calendar integration credentials cannot be decrypted — flagging for reauth",
+      provider: provider_label,
+      calendar_integration_id: integration.id,
+      user_id: integration.user_id
+    )
+
+    case mark_needs_reauth(integration, @reauth_error_message) do
+      {:ok, _integration} ->
+        {:discard, "Credentials require reauthentication"}
+
+      {:error, changeset} ->
+        Logger.error(
+          "Failed to persist needs_reauth flag; Oban will retry the job",
+          provider: provider_label,
+          calendar_integration_id: integration.id,
+          errors: inspect(changeset.errors)
+        )
+
+        {:error, "Failed to flag integration for reauth"}
+    end
+  end
+
   # Private helpers
 
   defp ensure_default_booking_calendar(%{default_booking_calendar_id: nil} = integration) do

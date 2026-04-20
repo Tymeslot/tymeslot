@@ -30,6 +30,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
+  alias Tymeslot.Integrations.CalendarManagement
 
   @sync_window_past_days ProviderConfig.sync_window_past_days()
   @sync_window_future_days ProviderConfig.sync_window_future_days()
@@ -38,7 +39,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
     Logger.metadata(calendar_integration_id: integration_id)
 
-    case CalendarIntegrationQueries.get(integration_id) do
+    case CalendarIntegrationQueries.get_ready_for_sync(integration_id) do
       {:ok, integration} ->
         sync_integration(integration)
 
@@ -48,6 +49,9 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         )
 
         {:discard, "Integration not found"}
+
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.flag_for_reauth(integration, "Google Calendar")
     end
   end
 

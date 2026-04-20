@@ -33,6 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
           default_booking_calendar_id: String.t() | nil,
           verify_ssl: boolean(),
           is_active: boolean(),
+          needs_reauth: boolean(),
           last_sync_at: DateTime.t() | nil,
           provider_account_id: String.t() | nil,
           provider_account_email: String.t() | nil,
@@ -75,6 +76,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     field(:default_booking_calendar_id, :string)
     field(:verify_ssl, :boolean, default: true)
     field(:is_active, :boolean, default: true)
+    field(:needs_reauth, :boolean, default: false)
     field(:last_sync_at, :utc_datetime)
     field(:provider_account_id, :string)
     field(:provider_account_email, :string)
@@ -204,6 +206,34 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       | access_token: Encryption.decrypt(integration.access_token_encrypted),
         refresh_token: Encryption.decrypt(integration.refresh_token_encrypted)
     }
+  end
+
+  @doc """
+  Reports whether any encrypted credential on the integration fails to decrypt
+  under the current keyring. Returns `:ok` when every ciphertext is either
+  absent or decryptable, `:requires_reencryption` otherwise.
+
+  Used by sync workers to short-circuit jobs when SECRET_KEY_BASE has been
+  rotated without keeping the previous key on the keyring — the worker can
+  then flag `needs_reauth` so the user sees a reconnect prompt.
+  """
+  @spec decryption_status(t()) :: :ok | :requires_reencryption
+  def decryption_status(%__MODULE__{} = integration) do
+    encrypted_fields = [
+      integration.username_encrypted,
+      integration.password_encrypted,
+      integration.access_token_encrypted,
+      integration.refresh_token_encrypted
+    ]
+
+    if Enum.any?(
+         encrypted_fields,
+         &(Encryption.decrypt_with_status(&1) == {:error, :requires_reencryption})
+       ) do
+      :requires_reencryption
+    else
+      :ok
+    end
   end
 
   # Private functions
