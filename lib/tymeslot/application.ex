@@ -78,8 +78,8 @@ defmodule Tymeslot.Application do
           {Oban, oban_config()},
           # Start Hammer-backed rate limiter (ETS sliding window)
           {Tymeslot.Security.RateLimit, clean_period: :timer.minutes(5)},
-          # Start account lockout tracker
-          Tymeslot.Security.AccountLockout,
+          # Own the account lockout ETS table (AccountLockout is a plain module)
+          Tymeslot.Security.AccountLockout.TableOwner,
           # Start circuit breaker supervisor
           Tymeslot.Infrastructure.CircuitBreakerSupervisor
         ]
@@ -94,8 +94,8 @@ defmodule Tymeslot.Application do
           Tymeslot.Payments.Webhooks.IdempotencyCache,
           # Start Hammer-backed rate limiter (ETS sliding window)
           {Tymeslot.Security.RateLimit, clean_period: :timer.minutes(5)},
-          # Start account lockout tracker
-          Tymeslot.Security.AccountLockout,
+          # Own the account lockout ETS table (AccountLockout is a plain module)
+          Tymeslot.Security.AccountLockout.TableOwner,
           # Start Oban for background job processing (in manual mode for tests)
           {Oban, oban_config()},
           # Start circuit breaker supervisor (needed for some tests)

@@ -3,26 +3,14 @@ defmodule Tymeslot.Security.AccountLockout do
   Account lockout mechanism to prevent brute force attacks.
 
   Implements progressive lockout with increasing delays for repeated failed attempts.
-  Uses ETS for fast, in-memory tracking of failed attempts.
+  Uses ETS for fast, in-memory tracking of failed attempts. The ETS table is owned
+  by `Tymeslot.Security.AccountLockout.TableOwner` and survives this module's
+  caller crashing — but does NOT survive a BEAM restart, node shutdown, or deploy.
   """
 
-  use GenServer
   require Logger
 
   @lockout_table :account_lockout_table
-
-  @spec start_link(any()) :: GenServer.on_start()
-  def start_link(_opts \\ []) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
-  end
-
-  @impl GenServer
-  @spec init(any()) :: {:ok, %{}}
-  def init(_state) do
-    Logger.info("Starting AccountLockout with ETS table", table: @lockout_table)
-    :ets.new(@lockout_table, [:named_table, :public, :set])
-    {:ok, %{}}
-  end
 
   @doc """
   Checks and records authentication attempt.
@@ -36,7 +24,7 @@ defmodule Tymeslot.Security.AccountLockout do
 
   def check_and_record_attempt(identifier, false) do
     key = normalize(identifier)
-    GenServer.call(__MODULE__, {:record_failed_attempt, key})
+    do_record_failed_attempt(key)
     check_lockout_status(key)
   end
 
@@ -107,14 +95,6 @@ defmodule Tymeslot.Security.AccountLockout do
       [] ->
         0
     end
-  end
-
-  @impl GenServer
-  @spec handle_call({:record_failed_attempt, String.t()}, GenServer.from(), %{}) ::
-          {:reply, :ok, %{}}
-  def handle_call({:record_failed_attempt, identifier}, _from, state) do
-    do_record_failed_attempt(identifier)
-    {:reply, :ok, state}
   end
 
   # Private functions
