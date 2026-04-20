@@ -29,6 +29,14 @@ PORT=${PORT:-4000}
 DATABASE_HOST=${DATABASE_HOST:-localhost}
 DATABASE_PORT=${DATABASE_PORT:-5432}
 
+# The Postgres cluster lives in a subdirectory of the mounted volume.
+# initdb needs to own and chmod 700 its data dir; using a subdirectory means
+# the postgres user only touches a directory it creates itself, side-stepping
+# hostile mount-root ownership on Docker Desktop, rootless Docker,
+# userns-remap, and host bind-mounts.
+PG_MOUNT=/var/lib/postgresql/data
+PGDATA=$PG_MOUNT/pgdata
+
 # ==================== SECTION 2: Validate Critical Configuration ====================
 # Validate all required environment variables are set
 # Fail fast with clear error messages if any are missing
@@ -87,32 +95,55 @@ echo ""
 # Check if PostgreSQL has already been initialized
 # If not, perform first-time initialization and configuration
 # SKIP this section if using an external database
-if [ "$USING_EXTERNAL_DB" = false ] && [ ! -f /var/lib/postgresql/data/postgresql.conf ]; then
-    echo "PostgreSQL not initialized. Running first-time setup..."
-    # A freshly-mounted volume (named or bind) can land as root:root
-    # regardless of the image's build-time ownership — especially under
-    # userns-remap, rootless Docker, or host bind-mounts. Reclaim it for
-    # postgres before initdb tries to chmod 700 the directory.
-    chown -R postgres:postgres /var/lib/postgresql/data
-    chmod 700 /var/lib/postgresql/data
-    # Run initdb to create the initial database cluster
-    if su - postgres -c "/usr/lib/postgresql/*/bin/initdb -D /var/lib/postgresql/data"; then
-        echo "✓ PostgreSQL initialized successfully"
-    else
-        echo "✗ ERROR: PostgreSQL initialization failed!"
-        exit 1
+if [ "$USING_EXTERNAL_DB" = false ]; then
+    # Legacy layout migration: images prior to v0.100.9 stored the cluster
+    # directly in $PG_MOUNT. Move that content into the new $PGDATA
+    # subdirectory so existing self-hosters upgrade seamlessly.
+    if [ -f "$PG_MOUNT/postgresql.conf" ] && [ ! -f "$PGDATA/postgresql.conf" ]; then
+        echo "Migrating PostgreSQL data to subdirectory layout..."
+        # Clean any half-finished prior migration attempt.
+        rm -rf "$PG_MOUNT/.pgdata.migrating"
+        mkdir "$PG_MOUNT/.pgdata.migrating"
+        find "$PG_MOUNT" -mindepth 1 -maxdepth 1 \
+            ! -name pgdata ! -name .pgdata.migrating \
+            -exec mv {} "$PG_MOUNT/.pgdata.migrating/" \;
+        # An empty pgdata/ may exist from a previous interrupted attempt.
+        [ -d "$PGDATA" ] && rmdir "$PGDATA" 2>/dev/null || true
+        mv "$PG_MOUNT/.pgdata.migrating" "$PGDATA"
+        chown -R postgres:postgres "$PGDATA"
+        chmod 700 "$PGDATA"
+        echo "✓ Migration complete"
     fi
 
-    # Configure PostgreSQL for Docker environment
-    # Allow remote connections with MD5 password authentication
-    echo "host all all 0.0.0.0/0 md5" >> /var/lib/postgresql/data/pg_hba.conf
-    # Bind to localhost interface
-    echo "listen_addresses = 'localhost'" >> /var/lib/postgresql/data/postgresql.conf
-    # Use default PostgreSQL port
-    echo "port = 5432" >> /var/lib/postgresql/data/postgresql.conf
-    echo "✓ PostgreSQL configuration completed"
-else
-    echo "✓ PostgreSQL already initialized"
+    if [ ! -f "$PGDATA/postgresql.conf" ]; then
+        echo "PostgreSQL not initialized. Running first-time setup..."
+        # initdb will chmod 700 its own data directory, so the directory must
+        # be owned by postgres before it runs. We create the subdirectory as
+        # root (who owns the mount root in every scenario we've seen) and hand
+        # ownership to postgres — this works even when the mount root's
+        # attributes are not ours to change (Docker Desktop bind-mounts,
+        # rootless Docker, userns-remap, SELinux-labelled volumes).
+        mkdir -p "$PGDATA"
+        chown postgres:postgres "$PGDATA"
+        chmod 700 "$PGDATA"
+        if su - postgres -c "/usr/lib/postgresql/*/bin/initdb -D $PGDATA"; then
+            echo "✓ PostgreSQL initialized successfully"
+        else
+            echo "✗ ERROR: PostgreSQL initialization failed!"
+            exit 1
+        fi
+
+        # Configure PostgreSQL for Docker environment
+        # Allow remote connections with MD5 password authentication
+        echo "host all all 0.0.0.0/0 md5" >> "$PGDATA/pg_hba.conf"
+        # Bind to localhost interface
+        echo "listen_addresses = 'localhost'" >> "$PGDATA/postgresql.conf"
+        # Use default PostgreSQL port
+        echo "port = 5432" >> "$PGDATA/postgresql.conf"
+        echo "✓ PostgreSQL configuration completed"
+    else
+        echo "✓ PostgreSQL already initialized"
+    fi
 fi
 
 # ==================== SECTION 4: Start PostgreSQL Service ====================
@@ -120,7 +151,7 @@ fi
 if [ "$USING_EXTERNAL_DB" = false ]; then
     echo "Starting PostgreSQL service..."
     # Start PostgreSQL daemon and log output to a file
-    if su - postgres -c "/usr/lib/postgresql/*/bin/pg_ctl -D /var/lib/postgresql/data -l /var/lib/postgresql/data/logfile start"; then
+    if su - postgres -c "/usr/lib/postgresql/*/bin/pg_ctl -D $PGDATA -l $PGDATA/logfile start"; then
         echo "✓ PostgreSQL service started"
     else
         echo "✗ ERROR: Failed to start PostgreSQL service!"
@@ -136,7 +167,7 @@ if [ "$USING_EXTERNAL_DB" = false ]; then
         RETRY_COUNT=$((RETRY_COUNT + 1))
         if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
             echo "✗ ERROR: PostgreSQL failed to become ready after ${MAX_RETRIES} seconds!"
-            echo "Check /var/lib/postgresql/data/logfile for details"
+            echo "Check $PGDATA/logfile for details"
             exit 1
         fi
         echo "  Waiting... ($RETRY_COUNT/$MAX_RETRIES)"

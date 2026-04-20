@@ -43,6 +43,8 @@ docker run --name tymeslot \
 
 Open [http://localhost:4000](http://localhost:4000) — your scheduling platform is running. For SMTP, TLS, and reverse proxy setup, see the [Docker guide](README-Docker.md).
 
+> **Keep `tymeslot_pg` as a named volume.** Replacing it with a host path (e.g. `-v ./pgdata:/var/lib/postgresql/data`) can fail on Docker Desktop, rootless Docker, and SELinux-enforcing hosts because the mount arrives with ownership the container can't change. If you need the database on a specific host path, run an [external Postgres](README-Docker.md#using-an-external-database) instead.
+
 ---
 
 ## Features

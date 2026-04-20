@@ -48,6 +48,8 @@ docker run -d \
 
 This will pull the image automatically if it is not present locally. For a pinned version, use `luka1thb/tymeslot:<VERSION>` (e.g., `luka1thb/tymeslot:0.97`).
 
+> **Keep `tymeslot_pg:/var/lib/postgresql/data` as a named volume.** Swapping it for a host path (e.g. `./pgdata:/var/lib/postgresql/data`) can break first-run initialization on Docker Desktop, rootless Docker, userns-remap, or SELinux-enforcing hosts because the mount arrives with ownership the container can't change. If you need the database on a specific host path, use an [external PostgreSQL](#using-an-external-database) instead.
+
 **Note**: Email configuration is essential for production use (password resets, booking notifications, etc.). For development/testing only, you can omit email variables and the system will use a test adapter that logs emails to console instead of sending them.
 
 ### 1. Clone Repository
@@ -440,6 +442,16 @@ docker exec -it tymeslot su - postgres -c "psql -U $POSTGRES_USER -d $POSTGRES_D
 # Reset database (WARNING: Destroys all data)
 docker volume rm postgres_data
 ```
+
+### `initdb: could not change permissions of directory … Operation not permitted`
+
+This appears on first start when the PostgreSQL volume lands in the container with ownership we can't reassign — typically on Docker Desktop or rootless Docker when a host path is bind-mounted at `/var/lib/postgresql/data`, or on SELinux-enforcing hosts without a `:z`/`:Z` label.
+
+Fixes, in order of preference:
+
+1. **Use the named volume from the quick-start** (`-v tymeslot_pg:/var/lib/postgresql/data`). Named volumes live inside Docker's own storage and are immune to host filesystem quirks.
+2. **If you need the data on a specific host path**, run PostgreSQL in its own container (or managed externally) and point Tymeslot at it with `DATABASE_HOST` — see [Using an External Database](#using-an-external-database).
+3. **If you previously attempted a first run that crashed**, remove the partially-initialised volume before retrying: `docker volume rm tymeslot_pg`.
 
 ### Port Already in Use
 
