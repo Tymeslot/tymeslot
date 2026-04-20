@@ -131,10 +131,12 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
       # Verify language switcher is present
       assert html =~ "language-switcher"
 
-      # All three locales should be available in the dropdown
+      # All supported locales should be available in the dropdown
       assert html =~ "phx-value-locale=\"en\""
       assert html =~ "phx-value-locale=\"de\""
       assert html =~ "phx-value-locale=\"uk\""
+      assert html =~ "phx-value-locale=\"fr\""
+      assert html =~ "phx-value-locale=\"it\""
     end
   end
 
@@ -215,6 +217,16 @@ defmodule TymeslotWeb.Live.MultilingualBookingTest do
 
       # Verify we're in Ukrainian
       assert render(view) =~ "data-locale=\"uk\""
+
+      # Flow should work regardless of language
+      assert has_element?(view, "[data-testid='duration-option']")
+    end
+
+    test "completes full booking flow in Italian", %{conn: conn, username: username} do
+      view = start_view(conn, username, "it", "30min")
+
+      # Verify we're in Italian
+      assert render(view) =~ "data-locale=\"it\""
 
       # Flow should work regardless of language
       assert has_element?(view, "[data-testid='duration-option']")

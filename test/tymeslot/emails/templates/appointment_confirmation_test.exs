@@ -297,7 +297,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
 
   describe "attendee locale rendering" do
     test "renders without error for all supported locales" do
-      for locale <- ["en", "de", "uk", "fr"] do
+      for locale <- ["en", "de", "uk", "fr", "it"] do
         details = build_appointment_details(%{attendee_locale: locale})
         email = AppointmentConfirmation.render(:attendee, "a@b.com", details)
 
@@ -338,6 +338,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
       assert email.subject =~ "Зустріч підтверджено"
       refute email.subject =~ "Appointment Confirmed"
       assert email.text_body =~ "Зустріч підтверджено"
+    end
+
+    test "Italian email translates subject and key body labels" do
+      details = build_appointment_details(%{attendee_locale: "it"})
+      email = AppointmentConfirmation.render(:attendee, "a@b.com", details)
+
+      assert email.subject =~ "Appuntamento confermato"
+      refute email.subject =~ "Appointment Confirmed"
+      assert email.text_body =~ "Appuntamento confermato"
     end
 
     test "non-English subject uses numeric date format" do

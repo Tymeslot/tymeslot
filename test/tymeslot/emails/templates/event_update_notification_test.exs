@@ -94,7 +94,7 @@ defmodule Tymeslot.Emails.Templates.EventUpdateNotificationTest do
     end
 
     test "renders without error for all supported locales" do
-      for locale <- ["en", "de", "uk", "fr"] do
+      for locale <- ["en", "de", "uk", "fr", "it"] do
         details = build_event_update_details(%{attendee_locale: locale})
         email = EventUpdateNotification.render("a@example.com", details)
 

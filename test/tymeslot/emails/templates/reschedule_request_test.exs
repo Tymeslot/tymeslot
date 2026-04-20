@@ -131,7 +131,7 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
 
   describe "RescheduleRequest locale rendering" do
     test "renders without error for all supported locales" do
-      for locale <- ["en", "de", "uk", "fr"] do
+      for locale <- ["en", "de", "uk", "fr", "it"] do
         meeting = insert(:meeting, attendee_locale: locale)
         email = RescheduleRequest.render(meeting)
 
@@ -171,6 +171,15 @@ defmodule Tymeslot.Emails.Templates.RescheduleRequestTest do
       assert email.subject =~ "Запит на перенесення"
       refute email.subject =~ "Reschedule Request"
       assert email.text_body =~ "Запит на перенесення"
+    end
+
+    test "Italian reschedule request translates subject and body" do
+      meeting = insert(:meeting, attendee_locale: "it")
+      email = RescheduleRequest.render(meeting)
+
+      assert email.subject =~ "Richiesta di riprogrammazione"
+      refute email.subject =~ "Reschedule Request"
+      assert email.text_body =~ "Richiesta di riprogrammazione"
     end
   end
 

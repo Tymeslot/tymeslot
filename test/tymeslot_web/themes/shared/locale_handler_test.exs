@@ -118,7 +118,11 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
       socket = LocaleHandler.handle_locale_change(socket, "fr")
       assert socket.assigns.locale == "fr"
 
-      # fr -> en
+      # fr -> it
+      socket = LocaleHandler.handle_locale_change(socket, "it")
+      assert socket.assigns.locale == "it"
+
+      # it -> en
       socket = LocaleHandler.handle_locale_change(socket, "en")
       assert socket.assigns.locale == "en"
     end
@@ -143,6 +147,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
       assert "de" in locales
       assert "uk" in locales
       assert "fr" in locales
+      assert "it" in locales
     end
 
     test "supported locales are derived from metadata configuration" do
@@ -159,7 +164,7 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
       locales = LocaleHandler.get_locales_with_metadata()
 
       assert is_list(locales)
-      assert length(locales) == 4
+      assert length(locales) == 5
 
       Enum.each(locales, fn locale ->
         assert Map.has_key?(locale, :code)
@@ -198,6 +203,14 @@ defmodule TymeslotWeb.Themes.Shared.LocaleHandlerTest do
 
       assert french.name == "Français"
       assert french.country_code == :fra
+    end
+
+    test "includes Italian metadata" do
+      locales = LocaleHandler.get_locales_with_metadata()
+      italian = Enum.find(locales, &(&1.code == "it"))
+
+      assert italian.name == "Italiano"
+      assert italian.country_code == :ita
     end
   end
 

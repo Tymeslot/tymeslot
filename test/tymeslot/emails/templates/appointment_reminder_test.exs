@@ -241,7 +241,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
 
   describe "attendee locale rendering" do
     test "renders without error for all supported locales" do
-      for locale <- ["en", "de", "uk", "fr"] do
+      for locale <- ["en", "de", "uk", "fr", "it"] do
         details = build_appointment_details(%{attendee_locale: locale})
         email = AppointmentReminder.render(:attendee, "a@b.com", details)
 
@@ -281,6 +281,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminderTest do
       assert email.subject =~ "Нагадування"
       refute email.subject =~ "Reminder"
       assert email.text_body =~ "НАГАДУВАННЯ:"
+    end
+
+    test "Italian reminder uses translated subject" do
+      details = build_appointment_details(%{attendee_locale: "it"})
+      email = AppointmentReminder.render(:attendee, "a@b.com", details)
+
+      assert email.subject =~ "Promemoria"
+      refute email.subject =~ "Reminder"
+      assert email.text_body =~ "PROMEMORIA:"
     end
   end
 end

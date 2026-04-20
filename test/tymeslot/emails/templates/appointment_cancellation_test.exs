@@ -287,7 +287,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
 
   describe "locale rendering - attendee cancellation emails" do
     test "renders attendee cancellation without error for all supported locales" do
-      for locale <- ["en", "de", "uk", "fr"] do
+      for locale <- ["en", "de", "uk", "fr", "it"] do
         details = build_appointment_details(%{attendee_locale: locale})
 
         email =
@@ -329,6 +329,15 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       assert email.subject =~ "Зустріч скасовано"
       refute email.subject =~ "Meeting Cancelled"
       assert email.text_body =~ "Зустріч скасовано"
+    end
+
+    test "Italian cancellation translates subject and body" do
+      details = build_appointment_details(%{attendee_locale: "it"})
+      email = AppointmentCancellation.render(:attendee, "a@b.com", details)
+
+      assert email.subject =~ "Riunione annullata"
+      refute email.subject =~ "Meeting Cancelled"
+      assert email.text_body =~ "Riunione annullata"
     end
   end
 

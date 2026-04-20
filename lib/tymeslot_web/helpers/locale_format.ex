@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       "de" -> "#{date.day}. #{month_name} #{date.year}"
       "uk" -> "#{date.day} #{month_name} #{date.year}"
       "fr" -> "#{date.day} #{month_name} #{date.year}"
+      "it" -> "#{date.day} #{month_name} #{date.year}"
       _other_locale -> "#{month_name} #{day_padded}, #{date.year}"
     end
   end
@@ -37,6 +38,7 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
       "de" -> Calendar.strftime(time, "%H:%M")
       "uk" -> Calendar.strftime(time, "%H:%M")
       "fr" -> Calendar.strftime(time, "%H:%M")
+      "it" -> Calendar.strftime(time, "%H:%M")
       _other_locale -> Calendar.strftime(time, "%I:%M %p")
     end
   end
@@ -95,6 +97,22 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
           "décembre"
         ]
 
+      "it" ->
+        [
+          "gennaio",
+          "febbraio",
+          "marzo",
+          "aprile",
+          "maggio",
+          "giugno",
+          "luglio",
+          "agosto",
+          "settembre",
+          "ottobre",
+          "novembre",
+          "dicembre"
+        ]
+
       _other_locale ->
         [
           "January",
@@ -113,49 +131,44 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
     end
   end
 
+  @weekday_names %{
+    "de" => %{
+      full: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"],
+      short: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+      narrow: ["S", "M", "D", "M", "D", "F", "S"]
+    },
+    "uk" => %{
+      full: ["Неділя", "Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота"],
+      short: ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+      narrow: ["Н", "П", "В", "С", "Ч", "П", "С"]
+    },
+    "fr" => %{
+      full: ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"],
+      short: ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"],
+      narrow: ["D", "L", "M", "M", "J", "V", "S"]
+    },
+    "it" => %{
+      full: ["domenica", "lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato"],
+      short: ["dom", "lun", "mar", "mer", "gio", "ven", "sab"],
+      narrow: ["D", "L", "M", "M", "G", "V", "S"]
+    }
+  }
+
+  @default_weekday_names %{
+    full: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    short: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    narrow: ["S", "M", "T", "W", "T", "F", "S"]
+  }
+
   @doc """
   Returns localized weekday names.
   Format can be :full, :short, or :narrow.
   """
   @spec get_weekday_names(String.t(), :full | :short | :narrow) :: [String.t()]
   def get_weekday_names(locale, format \\ :short) do
-    case {locale, format} do
-      {"de", :full} ->
-        ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
-
-      {"de", :short} ->
-        ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
-
-      {"de", :narrow} ->
-        ["S", "M", "D", "M", "D", "F", "S"]
-
-      {"uk", :full} ->
-        ["Неділя", "Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота"]
-
-      {"uk", :short} ->
-        ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"]
-
-      {"uk", :narrow} ->
-        ["Н", "П", "В", "С", "Ч", "П", "С"]
-
-      {"fr", :full} ->
-        ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]
-
-      {"fr", :short} ->
-        ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"]
-
-      {"fr", :narrow} ->
-        ["D", "L", "M", "M", "J", "V", "S"]
-
-      {_other_locale, :full} ->
-        ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-
-      {_other_locale, :short} ->
-        ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-
-      {_other_locale, :narrow} ->
-        ["S", "M", "T", "W", "T", "F", "S"]
-    end
+    @weekday_names
+    |> Map.get(locale, @default_weekday_names)
+    |> Map.fetch!(format)
   end
 
   @doc """
@@ -212,11 +225,13 @@ defmodule TymeslotWeb.Helpers.LocaleFormat do
   end
 
   defp thousand_separator("de"), do: "."
+  defp thousand_separator("it"), do: "."
   defp thousand_separator("uk"), do: " "
   defp thousand_separator("fr"), do: " "
   defp thousand_separator(_other_locale), do: ","
 
   defp decimal_separator("de"), do: ","
+  defp decimal_separator("it"), do: ","
   defp decimal_separator("uk"), do: ","
   defp decimal_separator("fr"), do: ","
   defp decimal_separator(_other_locale), do: "."

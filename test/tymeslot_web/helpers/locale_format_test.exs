@@ -25,6 +25,11 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_date(date, "fr") == "15 mars 2026"
     end
 
+    test "formats date in Italian" do
+      date = ~D[2026-03-15]
+      assert LocaleFormat.format_date(date, "it") == "15 marzo 2026"
+    end
+
     test "falls back to English for unknown locale" do
       date = ~D[2026-03-15]
       assert LocaleFormat.format_date(date, "es") == "March 15, 2026"
@@ -67,6 +72,11 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert LocaleFormat.format_time(time, "fr") == "14:30"
     end
 
+    test "formats time in 24-hour format for Italian" do
+      time = ~T[14:30:00]
+      assert LocaleFormat.format_time(time, "it") == "14:30"
+    end
+
     test "falls back to English for unknown locale" do
       time = ~T[14:30:00]
       assert LocaleFormat.format_time(time, "es") == "02:30 PM"
@@ -103,6 +113,15 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
       assert Enum.at(months, 2) == "mars"
       assert Enum.at(months, 7) == "août"
       assert Enum.at(months, 11) == "décembre"
+    end
+
+    test "returns Italian month names" do
+      months = LocaleFormat.get_month_names("it")
+      assert length(months) == 12
+      assert Enum.at(months, 0) == "gennaio"
+      assert Enum.at(months, 2) == "marzo"
+      assert Enum.at(months, 7) == "agosto"
+      assert Enum.at(months, 11) == "dicembre"
     end
 
     test "falls back to English for unknown locale" do
@@ -309,6 +328,41 @@ defmodule TymeslotWeb.Helpers.LocaleFormatTest do
     test "formats weekday name in French" do
       assert LocaleFormat.format_weekday_name(1, "fr", :full) == "lundi"
       assert LocaleFormat.format_weekday_name(7, "fr", :full) == "dimanche"
+    end
+  end
+
+  describe "Italian locale" do
+    test "returns Italian full weekday names" do
+      weekdays = LocaleFormat.get_weekday_names("it", :full)
+      assert length(weekdays) == 7
+      assert Enum.at(weekdays, 0) == "domenica"
+      assert Enum.at(weekdays, 1) == "lunedì"
+      assert Enum.at(weekdays, 6) == "sabato"
+    end
+
+    test "returns Italian short weekday names" do
+      weekdays = LocaleFormat.get_weekday_names("it", :short)
+      assert Enum.at(weekdays, 0) == "dom"
+      assert Enum.at(weekdays, 1) == "lun"
+    end
+
+    test "returns Italian narrow weekday names" do
+      weekdays = LocaleFormat.get_weekday_names("it", :narrow)
+      assert weekdays == ["D", "L", "M", "M", "G", "V", "S"]
+    end
+
+    test "formats numbers with period thousand separator and comma decimal" do
+      assert LocaleFormat.format_number(1234.56, "it") == "1.234,56"
+    end
+
+    test "formats month name in Italian" do
+      assert LocaleFormat.format_month_name(1, "it") == "gennaio"
+      assert LocaleFormat.format_month_name(8, "it") == "agosto"
+    end
+
+    test "formats weekday name in Italian" do
+      assert LocaleFormat.format_weekday_name(1, "it", :full) == "lunedì"
+      assert LocaleFormat.format_weekday_name(7, "it", :full) == "domenica"
     end
   end
 

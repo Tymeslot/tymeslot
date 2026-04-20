@@ -130,7 +130,7 @@ defmodule Tymeslot.Emails.Templates.CalendarInvitationTest do
     end
 
     test "renders without error for all supported locales" do
-      for locale <- ["en", "de", "uk", "fr"] do
+      for locale <- ["en", "de", "uk", "fr", "it"] do
         details = build_invitation_details(%{attendee_locale: locale})
         email = CalendarInvitation.render("guest@example.com", details)
 

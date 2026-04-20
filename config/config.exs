@@ -144,7 +144,8 @@ config :tymeslot, :locales,
     %{code: "en", name: "English", country_code: :gbr},
     %{code: "de", name: "Deutsch", country_code: :deu},
     %{code: "uk", name: "Українська", country_code: :ukr},
-    %{code: "fr", name: "Français", country_code: :fra}
+    %{code: "fr", name: "Français", country_code: :fra},
+    %{code: "it", name: "Italiano", country_code: :ita}
   ],
   default: "en"
 

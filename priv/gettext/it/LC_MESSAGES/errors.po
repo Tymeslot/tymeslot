@@ -1,0 +1,45 @@
+msgid ""
+msgstr ""
+"Language: it\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: Error Messages
+msgid "something_went_wrong"
+msgstr "Qualcosa è andato storto"
+
+msgid "try_again_later"
+msgstr "Riprova più tardi"
+
+msgid "invalid_meeting_link"
+msgstr "Link della riunione non valido"
+
+msgid "slot_no_longer_available"
+msgstr "Questa fascia oraria non è più disponibile"
+
+msgid "name_required"
+msgstr "Il nome è obbligatorio"
+
+msgid "email_required"
+msgstr "L'indirizzo email è obbligatorio"
+
+msgid "email_invalid"
+msgstr "Inserisci un indirizzo email valido"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:31
+#, elixir-autogen
+msgid "calendar_setup_required"
+msgstr "Non è ancora possibile visualizzare questa pagina di prenotazione"
+
+#: lib/tymeslot_web/themes/shared/components/error_component.ex:44
+#, elixir-autogen
+msgid "connect_calendar_first"
+msgstr "Se sei l'organizzatore, collega un calendario dal tuo pannello di controllo."
+
+#: Status
+msgid "loading"
+msgstr "Caricamento..."
+
+msgid "submitting"
+msgstr "Invio in corso..."

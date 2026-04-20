@@ -147,7 +147,7 @@ Embeds are signed (6-hour token expiry) and domain-locked — your widget, only 
 - **Two themes** — Quill and Rhythm, both with dark mode
 - **Accent color** — override the brand color to match your identity
 - **Backgrounds** — solid, gradient, image, or video, with presets if you'd rather not choose
-- **Four languages** — English, German, Ukrainian, French, browser-detected with manual override
+- **Five languages** — English, German, Ukrainian, French, Italian, browser-detected with manual override
 - **White-label** — strip Tymeslot branding entirely (Pro, cloud only)
 
 ### Security

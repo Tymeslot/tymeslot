@@ -73,6 +73,7 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   @spec format_date_short(Date.t() | DateTime.t() | NaiveDateTime.t(), String.t()) :: String.t()
   def format_date_short(%Date{} = date, "en"), do: "#{Calendar.strftime(date, "%b")} #{date.day}"
   def format_date_short(%Date{} = date, "fr"), do: "#{date.day}/#{date.month}"
+  def format_date_short(%Date{} = date, "it"), do: "#{date.day}/#{date.month}"
   def format_date_short(%Date{} = date, _locale), do: "#{date.day}.#{date.month}."
 
   def format_date_short(%DateTime{} = datetime, locale) do
