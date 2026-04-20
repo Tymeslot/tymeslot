@@ -2,12 +2,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
   @moduledoc "Calendar visibility and refresh event handlers for CalendarGridComponent."
 
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [put_flash: 3, push_event: 3]
+  import Phoenix.LiveView, only: [push_event: 3]
 
   alias Tymeslot.CalendarGrid
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
+  alias TymeslotWeb.Live.Shared.Flash
 
   @spec handle_toggle_calendar_list(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
@@ -46,7 +47,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
         {:noreply, do_refresh(socket, user_id)}
 
       {:error, :rate_limited, _message} ->
-        {:noreply, put_flash(socket, :warning, "Too many refreshes. Please wait a moment.")}
+        {:noreply, Flash.put_flash(socket, :warning, "Too many refreshes. Please wait a moment.")}
     end
   end
 
@@ -69,8 +70,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
           |> Helpers.precompute_derived()
 
         {:error, _changeset} ->
-          send(self(), {:flash, {:error, "Failed to save preference"}})
-          socket
+          Flash.put_flash(socket, :error, "Failed to save preference")
       end
 
     {:noreply, socket}
@@ -86,17 +86,17 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Visibility do
 
         cond do
           result.errors != [] ->
-            put_flash(
+            Flash.put_flash(
               socket,
               :warning,
               "Refresh failed for #{length(result.errors)} integration(s)"
             )
 
           result.enqueued == 0 and result.skipped == 0 ->
-            put_flash(socket, :info, "No calendars to sync")
+            Flash.put_flash(socket, :info, "No calendars to sync")
 
           result.enqueued == 0 ->
-            put_flash(socket, :info, "Calendars refreshed")
+            Flash.put_flash(socket, :info, "Calendars refreshed")
 
           true ->
             # Schedule fallback reset in case workers complete without broadcasting
