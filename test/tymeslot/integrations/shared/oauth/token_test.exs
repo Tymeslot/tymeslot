@@ -163,6 +163,90 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
     end
   end
 
+  # Locks in the single-flight invariant: when two processes race to refresh
+  # the same integration's expired token, only one provider HTTP call must be
+  # made. Google's one-use-refresh-token policy would otherwise revoke the
+  # refresh token mid-race and brick the integration.
+  describe "ensure_valid_access_token/2 — concurrent refresh single-flight" do
+    test "two concurrent callers trigger exactly one refresh_fun invocation" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          token_expires_at: DateTime.add(DateTime.utc_now(), -100, :second),
+          access_token: "old"
+        )
+
+      new_expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+      call_count = :counters.new(1, [:atomics])
+      test_pid = self()
+
+      refresh_fun = fn _client ->
+        :counters.add(call_count, 1, 1)
+        # Signal the test that the lock has been acquired and we are inside
+        # the refresh body. Then wait for the test to release us, ensuring
+        # task_b is provably blocked on the lock before task_a completes.
+        send(test_pid, :refresh_started)
+
+        receive do
+          :proceed -> :ok
+        after
+          1_000 -> raise "timed out waiting for :proceed in refresh_fun"
+        end
+
+        {:ok, {"refreshed-access", "refreshed-refresh", new_expires_at}}
+      end
+
+      refetch_fun = fn id ->
+        case CalendarIntegrationQueries.get(id) do
+          {:ok, fresh} -> CalendarIntegrationSchema.decrypt_oauth_tokens(fresh)
+          {:error, _reason} = error -> error
+        end
+      end
+
+      # Start task_a first and wait until it has acquired the lock and entered
+      # refresh_fun — at that point the lock is held.
+      task_a =
+        Task.async(fn ->
+          Token.ensure_valid_access_token(integration,
+            refresh_fun: refresh_fun,
+            refetch_fun: refetch_fun
+          )
+        end)
+
+      assert_receive :refresh_started, 2_000
+
+      # The lock is now held by task_a. Spawn task_b; it will attempt to
+      # acquire the same lock and block.
+      task_b =
+        Task.async(fn ->
+          Token.ensure_valid_access_token(integration,
+            refresh_fun: refresh_fun,
+            refetch_fun: refetch_fun
+          )
+        end)
+
+      # Give task_b a moment to reach the lock and queue behind task_a.
+      Process.sleep(50)
+
+      # Release task_a's refresh_fun so it can write the new token and free
+      # the lock. task_b then wakes, re-fetches the DB row, and short-circuits.
+      send(task_a.pid, :proceed)
+
+      assert {:ok, token_a} = Task.await(task_a, 5_000)
+      assert {:ok, token_b} = Task.await(task_b, 5_000)
+
+      # Both callers see the refreshed token — the second one through the
+      # in-lock DB re-fetch rather than a duplicate refresh call.
+      assert token_a == "refreshed-access"
+      assert token_b == "refreshed-access"
+
+      # Exactly one provider HTTP call — the rest short-circuit on re-fetch.
+      assert :counters.get(call_count, 1) == 1
+    end
+  end
+
   # Polls until the Lock GenServer has been restarted by its supervisor, with a
   # short backoff so we don't busy-wait. Used after deliberately stopping Lock.
   defp wait_for_lock_restart(retries \\ 50) do

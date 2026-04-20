@@ -13,6 +13,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Helpers.MicrosoftOAuth
+  alias TymeslotWeb.Helpers.OAuthStateGuard
   alias TymeslotWeb.OAuthCallbackHandler
 
   @doc """
@@ -20,21 +21,26 @@ defmodule TymeslotWeb.CalendarOAuthController do
   """
   @spec google_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def google_callback(conn, %{"code" => code, "state" => state} = params) do
-    redirect_path = return_to_or_default(state)
-    redirect_uri = "#{Endpoint.url()}/auth/google/calendar/callback"
+    case OAuthStateGuard.enforce_user_match(conn, state, :google) do
+      :ok ->
+        redirect_path = return_to_or_default(state)
+        redirect_uri = "#{Endpoint.url()}/auth/google/calendar/callback"
 
-    OAuthCallbackHandler.handle_callback(conn, params,
-      service_name: "Google Calendar",
-      exchange_fun: fn _params ->
-        GoogleOAuthHelper.handle_callback(code, state, redirect_uri)
-      end,
-      create_fun: fn result -> {:ok, result} end,
-      redirect_path: redirect_path
-    )
+        OAuthCallbackHandler.handle_callback(conn, params,
+          service_name: "Google Calendar",
+          exchange_fun: fn _params ->
+            GoogleOAuthHelper.handle_callback(code, state, redirect_uri)
+          end,
+          create_fun: fn result -> {:ok, result} end,
+          redirect_path: redirect_path
+        )
+
+      {:error, reason} ->
+        reject_callback(conn, reason)
+    end
   end
 
-  def google_callback(conn, %{"error" => error, "state" => state}) do
-    redirect_path = return_to_or_default(state)
+  def google_callback(conn, %{"error" => error, "state" => _state}) do
     Logger.warning("Google Calendar OAuth error", error: error)
 
     error_message =
@@ -45,7 +51,7 @@ defmodule TymeslotWeb.CalendarOAuthController do
 
     conn
     |> put_flash(:error, error_message)
-    |> redirect(to: redirect_path)
+    |> redirect(to: ~p"/dashboard/calendar-integration")
   end
 
   def google_callback(conn, %{"error" => error}) do
@@ -63,7 +69,9 @@ defmodule TymeslotWeb.CalendarOAuthController do
   end
 
   def google_callback(conn, params) do
-    Logger.warning("Invalid Google Calendar OAuth callback params", params: inspect(params))
+    Logger.warning("Invalid Google Calendar OAuth callback params",
+      params: inspect(OAuthStateGuard.redact_callback_params(params))
+    )
 
     conn
     |> put_flash(:error, "Invalid authentication response. Please try again.")
@@ -77,6 +85,68 @@ defmodule TymeslotWeb.CalendarOAuthController do
   def outlook_callback(conn, %{"code" => code, "state" => state}) do
     redirect_path = return_to_or_default(state)
 
+    case OAuthStateGuard.enforce_user_match(conn, state, :outlook) do
+      :ok ->
+        handle_outlook_callback(conn, code, state, redirect_path)
+
+      {:error, reason} ->
+        reject_callback(conn, reason)
+    end
+  end
+
+  def outlook_callback(conn, %{"error" => error, "state" => _state} = params) do
+    error_description = Map.get(params, "error_description", "")
+    Logger.warning("Outlook Calendar OAuth error", error: error, description: error_description)
+
+    error_message =
+      cond do
+        MicrosoftOAuth.microsoft_admin_consent_error?(error_description) ->
+          "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
+
+        error == "access_denied" ->
+          "Authorization was denied. Please try again."
+
+        true ->
+          "Authentication failed. Please try again."
+      end
+
+    conn
+    |> put_flash(:error, error_message)
+    |> redirect(to: ~p"/dashboard/calendar-integration")
+  end
+
+  def outlook_callback(conn, %{"error" => error} = params) do
+    error_description = Map.get(params, "error_description", "")
+    Logger.warning("Outlook Calendar OAuth error", error: error, description: error_description)
+
+    error_message =
+      cond do
+        MicrosoftOAuth.microsoft_admin_consent_error?(error_description) ->
+          "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
+
+        error == "access_denied" ->
+          "Authorization was denied. Please try again."
+
+        true ->
+          "Authentication failed. Please try again."
+      end
+
+    conn
+    |> put_flash(:error, error_message)
+    |> redirect(to: ~p"/dashboard/calendar-integration")
+  end
+
+  def outlook_callback(conn, params) do
+    Logger.warning("Invalid Outlook Calendar OAuth callback params",
+      params: inspect(OAuthStateGuard.redact_callback_params(params))
+    )
+
+    conn
+    |> put_flash(:error, "Invalid authentication response. Please try again.")
+    |> redirect(to: ~p"/dashboard/calendar-integration")
+  end
+
+  defp handle_outlook_callback(conn, code, state, redirect_path) do
     case RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)) do
       :ok ->
         redirect_uri = "#{Endpoint.url()}/auth/outlook/calendar/callback"
@@ -104,55 +174,11 @@ defmodule TymeslotWeb.CalendarOAuthController do
     end
   end
 
-  def outlook_callback(conn, %{"error" => error, "state" => state} = params) do
-    redirect_path = return_to_or_default(state)
-    error_description = Map.get(params, "error_description", "")
-    Logger.warning("Outlook Calendar OAuth error", error: error, description: error_description)
-
-    error_message =
-      cond do
-        MicrosoftOAuth.microsoft_admin_consent_error?(error_description) ->
-          "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
-
-        error == "access_denied" ->
-          "Authorization was denied. Please try again."
-
-        true ->
-          "Authentication failed. Please try again."
-      end
-
+  defp reject_callback(conn, _reason) do
     conn
-    |> put_flash(:error, error_message)
-    |> redirect(to: redirect_path)
-  end
-
-  def outlook_callback(conn, %{"error" => error} = params) do
-    error_description = Map.get(params, "error_description", "")
-    Logger.warning("Outlook Calendar OAuth error", error: error, description: error_description)
-
-    error_message =
-      cond do
-        MicrosoftOAuth.microsoft_admin_consent_error?(error_description) ->
-          "Your Microsoft organisation requires admin approval before Tymeslot can be connected. Please ask your IT administrator to grant consent for the app."
-
-        error == "access_denied" ->
-          "Authorization was denied. Please try again."
-
-        true ->
-          "Authentication failed. Please try again."
-      end
-
-    conn
-    |> put_flash(:error, error_message)
+    |> put_flash(:error, "Authentication session mismatch. Please sign in and try again.")
     |> redirect(to: ~p"/dashboard/calendar-integration")
-  end
-
-  def outlook_callback(conn, params) do
-    Logger.warning("Invalid Outlook Calendar OAuth callback params", params: inspect(params))
-
-    conn
-    |> put_flash(:error, "Invalid authentication response. Please try again.")
-    |> redirect(to: ~p"/dashboard/calendar-integration")
+    |> halt()
   end
 
   defp return_to_or_default(state) do
