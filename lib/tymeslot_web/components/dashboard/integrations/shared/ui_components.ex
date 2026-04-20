@@ -151,4 +151,25 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Shared.UIComponents do
     </span>
     """
   end
+
+  @doc """
+  Renders a small amber warning badge indicating a calendar integration has no
+  calendars selected, so no events will be synced.
+
+  ## Examples
+
+      <.no_calendars_badge />
+  """
+  attr :class, :string,
+    default:
+      "flex items-center gap-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
+
+  @spec no_calendars_badge(map()) :: Phoenix.LiveView.Rendered.t()
+  def no_calendars_badge(assigns) do
+    ~H"""
+    <span class={@class} title="No calendars selected — nothing will sync until you pick at least one.">
+      <.icon name="hero-calendar-mini" class="w-3 h-3 flex-shrink-0" /> No calendars selected
+    </span>
+    """
+  end
 end

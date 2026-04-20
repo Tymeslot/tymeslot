@@ -244,6 +244,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   def calendar_item(assigns) do
     provider_name = Helpers.format_provider_name(assigns.integration.provider)
 
+    calendar_list = assigns.integration.calendar_list || []
+
+    no_calendars_selected? =
+      assigns.integration.is_active and calendar_list != [] and
+        not Enum.any?(calendar_list, &(&1["selected"] || &1[:selected]))
+
     assigns =
       assigns
       |> assign(:provider_name, provider_name)
@@ -254,6 +260,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
           else: assigns.integration.name
         )
       )
+      |> assign(:no_calendars_selected?, no_calendars_selected?)
 
     ~H"""
     <div class={[
@@ -279,6 +286,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               <UIComponents.health_warning_badge
                 :if={@health_state && @health_state.status == :unhealthy}
               />
+              <UIComponents.no_calendars_badge :if={@no_calendars_selected?} />
             </div>
             <p :if={@integration.provider_account_email} class="text-sm text-tymeslot-500 truncate -mt-1 mb-1">
               {@integration.provider_account_email}
