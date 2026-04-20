@@ -242,7 +242,12 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
       %{user: user}
     end
 
-    test "creates integration and sets as primary if first", %{user: user} do
+    test "preserves user-provided URL through the sanitise-merge step", %{user: user} do
+      # Regression for the sanitise-merge pattern: an optional-field sanitiser
+      # returning `nil`/`[]` must not clobber a populated params entry. The
+      # CalDAV path will still fail later (no live server), but the failure
+      # must not reference an empty/wiped URL — the error comes from the
+      # network attempt, not from the merge silently dropping the URL.
       params = %{
         "name" => "Test Calendar",
         "provider" => "caldav",
@@ -252,11 +257,7 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
         "calendar_paths" => ""
       }
 
-      # Will fail due to network validation
-      result = Creation.create_with_validation(user.id, params)
-
-      # Validation will fail because we can't connect
-      assert match?({:error, _reason}, result)
+      assert match?({:error, _reason}, Creation.create_with_validation(user.id, params))
     end
 
     test "returns changeset errors for invalid params", %{user: user} do
