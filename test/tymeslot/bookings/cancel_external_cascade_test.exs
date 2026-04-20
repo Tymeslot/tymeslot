@@ -103,7 +103,7 @@ defmodule Tymeslot.Bookings.CancelExternalCascadeTest do
       insert(:webhook, user: user, events: ["meeting.cancelled"])
       insert(:telegram_integration, user: user, events: ["meeting.cancelled"])
 
-      assert {:ok, _} = Cancel.execute_external(meeting)
+      assert {:ok, _result} = Cancel.execute_external(meeting)
 
       assert all_enqueued(worker: EmailWorker) == []
       assert all_enqueued(worker: WebhookWorker) == []

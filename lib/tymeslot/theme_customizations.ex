@@ -473,7 +473,7 @@ defmodule Tymeslot.ThemeCustomizations do
   # binaries — a raw changeset would crash the component.
   @spec format_persistence_error(persistence_result()) ::
           {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
-  defp format_persistence_error({:ok, _} = ok), do: ok
+  defp format_persistence_error({:ok, _result} = ok), do: ok
 
   defp format_persistence_error({:error, %Changeset{}}),
     do: {:error, "Could not save your theme customization. Please try again."}

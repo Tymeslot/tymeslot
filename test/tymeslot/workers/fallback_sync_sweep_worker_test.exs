@@ -13,6 +13,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
   alias Ecto.Query
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.SyncGating
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.FallbackSyncSweepWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
@@ -490,7 +491,7 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
       insert(:calendar_integration,
         provider: "outlook",
         is_active: true,
-        access_token_encrypted: Tymeslot.Security.Encryption.encrypt("valid-token"),
+        access_token_encrypted: Encryption.encrypt("valid-token"),
         token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
         graph_delta_link: stale_delta_link
       )
