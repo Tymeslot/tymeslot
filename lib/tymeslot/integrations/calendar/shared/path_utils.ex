@@ -71,6 +71,71 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
     end
   end
 
+  # CalDAV-family URLs users frequently paste from their browser: Nextcloud's
+  # DAV endpoints, its index.php front controller, and any app route. Match
+  # only on the URI path so hostnames like cloud.example.com are never touched.
+  @caldav_browser_path_suffix ~r{/(?:remote\.php/(?:dav|webdav)|index\.php|apps)(?:/.*)?$}
+
+  @doc """
+  Canonicalises a user-supplied CalDAV/Nextcloud server URL to its base form.
+
+  Ensures an http/https scheme, parses the URL structurally, strips known
+  browser/endpoint path suffixes (`/remote.php/dav…`, `/remote.php/webdav…`,
+  `/index.php…`, `/apps…`), and removes a trailing slash. Subpath installs
+  such as `https://example.com/nextcloud` are preserved.
+
+  If the input cannot be parsed into `scheme://host`, the scheme-normalised
+  string is returned unchanged so downstream validators can reject it with
+  a precise error.
+
+  ## Examples
+
+      iex> PathUtils.normalize_base_url("cloud.example.com")
+      "https://cloud.example.com"
+
+      iex> PathUtils.normalize_base_url("https://cloud.example.com/apps/calendar/dayGridMonth/2026-04-20")
+      "https://cloud.example.com"
+
+      iex> PathUtils.normalize_base_url("https://example.com/nextcloud/remote.php/dav/calendars/user/personal/")
+      "https://example.com/nextcloud"
+  """
+  @spec normalize_base_url(String.t()) :: String.t()
+  def normalize_base_url(url) when is_binary(url) do
+    trimmed = String.trim(url)
+
+    # Preserve disallowed-scheme inputs (javascript:, file:, data:, ftp:)
+    # verbatim so URLValidator can reject them with its precise error rather
+    # than being silently rewritten into a benign-looking https URL.
+    case URI.parse(trimmed) do
+      %URI{scheme: scheme} when scheme not in [nil, "http", "https"] ->
+        trimmed
+
+      _http_or_bare ->
+        normalize_http_base_url(trimmed)
+    end
+  end
+
+  defp normalize_http_base_url(trimmed) do
+    with_scheme = ensure_scheme(trimmed)
+
+    case URI.parse(with_scheme) do
+      %URI{scheme: scheme, host: host} = parsed
+      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
+        path =
+          (parsed.path || "")
+          |> String.replace(@caldav_browser_path_suffix, "")
+          |> String.trim_trailing("/")
+
+        port_suffix =
+          if parsed.port && parsed.port not in [80, 443], do: ":#{parsed.port}", else: ""
+
+        "#{scheme}://#{host}#{port_suffix}#{path}"
+
+      _unparseable ->
+        with_scheme
+    end
+  end
+
   @doc """
   Extracts the base URL from a full CalDAV URL.
 

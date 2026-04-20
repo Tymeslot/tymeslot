@@ -53,8 +53,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   @spec create_calendar_integration(integration_attrs()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_calendar_integration(attrs) do
-    with {:ok, discovered_attrs} <-
-           Discovery.maybe_discover_calendars(normalize_provider_attrs(attrs)),
+    with {:ok, discovered_attrs} <- Discovery.maybe_discover_calendars(attrs),
          {:ok, integration} <-
            PrimarySelection.create_with_auto_primary(discovered_attrs),
          {:ok, final_integration} <- ensure_default_booking_calendar(integration) do
@@ -131,21 +130,6 @@ defmodule Tymeslot.Integrations.CalendarManagement do
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def mark_sync_error(integration, error_message) do
     CalendarIntegrationQueries.mark_sync_error(integration, error_message)
-  end
-
-  @doc """
-  Normalizes provider-specific attributes before creation or update.
-  Public function that adds value by handling provider-specific quirks.
-  """
-  @spec normalize_provider_attrs(map()) :: map()
-  def normalize_provider_attrs(attrs) do
-    provider = attrs[:provider] || attrs["provider"]
-
-    case provider do
-      :nextcloud -> normalize_nextcloud_attrs(attrs)
-      "nextcloud" -> normalize_nextcloud_attrs(attrs)
-      _other -> attrs
-    end
   end
 
   # Private helpers
@@ -260,37 +244,5 @@ defmodule Tymeslot.Integrations.CalendarManagement do
       {:error, _reason} ->
         CalendarPrimary.set_primary_calendar_integration(user_id, updated_id)
     end
-  end
-
-  defp normalize_nextcloud_attrs(%{base_url: url} = attrs) when is_binary(url) do
-    # Remove any trailing slashes and paths from Nextcloud URL (atom keys)
-    normalized_url =
-      url
-      |> String.trim()
-      |> String.trim_trailing("/")
-      |> remove_nextcloud_paths()
-
-    Map.put(attrs, :base_url, normalized_url)
-  end
-
-  defp normalize_nextcloud_attrs(%{"base_url" => url} = attrs) when is_binary(url) do
-    # Remove any trailing slashes and paths from Nextcloud URL (string keys)
-    normalized_url =
-      url
-      |> String.trim()
-      |> String.trim_trailing("/")
-      |> remove_nextcloud_paths()
-
-    Map.put(attrs, "base_url", normalized_url)
-  end
-
-  defp remove_nextcloud_paths(url) do
-    # Remove common Nextcloud paths
-    url
-    |> String.replace(~r"/remote\.php/dav.*$", "")
-    |> String.replace(~r"/remote\.php/webdav.*$", "")
-    |> String.replace(~r"/nextcloud.*$", "")
-    |> String.replace(~r"/cloud.*$", "")
-    |> String.replace(~r"/owncloud.*$", "")
   end
 end

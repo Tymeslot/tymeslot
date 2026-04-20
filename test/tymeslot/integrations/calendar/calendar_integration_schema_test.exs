@@ -120,6 +120,47 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchemaTest do
       assert String.starts_with?(changeset.changes.base_url, "https://")
     end
 
+    # Regression for Tymeslot#45: a previous Nextcloud-specific regex clobbered
+    # hostnames containing "cloud", "nextcloud", or "owncloud", so integrations
+    # at https://cloud.example.com were stored as "https:/" and then rejected
+    # by the URL validator with a misleading "Must be a valid HTTP or HTTPS
+    # URL" message at submit time.
+    test "accepts Nextcloud-style subdomains as base_url" do
+      user = insert(:user)
+
+      for host <- ~w(cloud.example.com nextcloud.example.com owncloud.example.com) do
+        attrs = %{
+          name: "Test",
+          provider: "nextcloud",
+          base_url: "https://#{host}",
+          user_id: user.id
+        }
+
+        changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
+
+        assert changeset.valid?,
+               "expected valid changeset for #{host}, got: #{inspect(changeset.errors)}"
+
+        assert get_field(changeset, :base_url) == "https://#{host}"
+      end
+    end
+
+    test "strips browser-pasted path suffixes from base_url" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Test",
+        provider: "nextcloud",
+        base_url: "https://cloud.example.com/apps/calendar/dayGridMonth/2026-04-20",
+        user_id: user.id
+      }
+
+      changeset = CalendarIntegrationSchema.changeset(%CalendarIntegrationSchema{}, attrs)
+
+      assert changeset.valid?
+      assert get_field(changeset, :base_url) == "https://cloud.example.com"
+    end
+
     test "encrypts username when provided" do
       user = insert(:user)
 

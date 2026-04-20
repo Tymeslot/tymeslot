@@ -146,7 +146,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
       :user_id,
       :sync_error
     ])
-    |> update_change(:base_url, &PathUtils.ensure_scheme/1)
+    |> update_change(:base_url, &PathUtils.normalize_base_url/1)
     |> validate_required([:name, :provider, :user_id])
     |> validate_base_url_for_caldav()
     |> validate_inclusion(

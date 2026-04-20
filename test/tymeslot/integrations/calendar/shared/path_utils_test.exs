@@ -55,4 +55,100 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtilsTest do
                "https://cloud.example.com"
     end
   end
+
+  describe "normalize_base_url/1" do
+    # Regression for Tymeslot#45: the previous normaliser used a full-string
+    # regex `/cloud.*$` that matched the second slash of "https://cloud…",
+    # stripping the hostname entirely and producing "https:/", which then
+    # failed URL validation with a misleading "Must be a valid HTTP or HTTPS
+    # URL" error on submit. These three are the common Nextcloud subdomains
+    # and must survive normalisation untouched.
+    test "preserves Nextcloud-style subdomains" do
+      assert PathUtils.normalize_base_url("https://cloud.example.com") ==
+               "https://cloud.example.com"
+
+      assert PathUtils.normalize_base_url("https://nextcloud.example.com") ==
+               "https://nextcloud.example.com"
+
+      assert PathUtils.normalize_base_url("https://owncloud.example.com") ==
+               "https://owncloud.example.com"
+    end
+
+    test "adds https:// when the input has no scheme" do
+      assert PathUtils.normalize_base_url("cloud.example.com") ==
+               "https://cloud.example.com"
+    end
+
+    test "drops a lone trailing slash" do
+      assert PathUtils.normalize_base_url("https://cloud.example.com/") ==
+               "https://cloud.example.com"
+    end
+
+    test "strips a /remote.php/dav CalDAV endpoint suffix" do
+      assert PathUtils.normalize_base_url(
+               "https://cloud.example.com/remote.php/dav/calendars/user/personal/"
+             ) == "https://cloud.example.com"
+    end
+
+    test "strips a /remote.php/webdav suffix" do
+      assert PathUtils.normalize_base_url("https://cloud.example.com/remote.php/webdav/") ==
+               "https://cloud.example.com"
+    end
+
+    test "strips a browser-pasted /apps/* URL" do
+      assert PathUtils.normalize_base_url(
+               "https://cloud.example.com/apps/calendar/dayGridMonth/2026-04-20"
+             ) == "https://cloud.example.com"
+    end
+
+    test "strips an /index.php front-controller URL" do
+      assert PathUtils.normalize_base_url("https://cloud.example.com/index.php/settings/user") ==
+               "https://cloud.example.com"
+    end
+
+    test "preserves a subpath install" do
+      assert PathUtils.normalize_base_url("https://example.com/nextcloud") ==
+               "https://example.com/nextcloud"
+    end
+
+    test "strips CalDAV suffix but keeps the subpath install" do
+      assert PathUtils.normalize_base_url(
+               "https://example.com/nextcloud/remote.php/dav/calendars/user/"
+             ) == "https://example.com/nextcloud"
+    end
+
+    test "strips /apps suffix but keeps the subpath install" do
+      assert PathUtils.normalize_base_url("https://example.com/nextcloud/apps/calendar/") ==
+               "https://example.com/nextcloud"
+    end
+
+    test "preserves a non-standard port" do
+      assert PathUtils.normalize_base_url(
+               "https://example.com:8443/remote.php/dav/calendars/user/"
+             ) == "https://example.com:8443"
+    end
+
+    test "returns scheme-repaired input when no host can be parsed" do
+      # Downstream URLValidator rejects this; normalize_base_url stays out of
+      # the way rather than silently producing "https://".
+      assert PathUtils.normalize_base_url("not a url") == "https://not a url"
+    end
+
+    # Security regression: the pre-refactor ensure_scheme/URLValidator pair
+    # rejected javascript: URLs because the whole original string was kept
+    # and URLValidator scanned it for the "javascript:" substring. A naive
+    # refactor that parses-and-rebuilds the URL silently drops the payload
+    # (e.g. "https://javascript:alert(1)" → "https://javascript") and makes
+    # the URL pass validation. Disallowed schemes must round-trip intact.
+    test "does not rewrite javascript:, file:, data:, or ftp: URLs" do
+      for bad <- [
+            "javascript:alert(1)",
+            "file:///etc/passwd",
+            "data:text/html,<script>alert(1)</script>",
+            "ftp://example.com/file"
+          ] do
+        assert PathUtils.normalize_base_url(bad) == bad
+      end
+    end
+  end
 end
