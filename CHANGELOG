@@ -1,4 +1,13 @@
 
+[0.100.9]
+* core: Prevent uploaded non-media files from being served as HTML
+* core: Restore Outlook calendar sync broken by Graph delta query rejection
+* core: Prevent Nextcloud calendar setup failure on common hostnames
+* core: Make Docker QuickStart succeed on Docker Desktop and bind-mounts
+* core: Surface calendar refresh flashes that were silently dropped
+* core: Surface booking and theme error flashes that were silently dropped
+* core: Translate user-facing emails in French, German, and Ukrainian
+* core: Warn in dashboard when a calendar integration has no calendars selected
 [0.100.8]
 * core: Prevent Docker first-run failure when PostgreSQL volume is root-owned
 * core: Supervise fire-and-forget tasks in auth and webhook paths
