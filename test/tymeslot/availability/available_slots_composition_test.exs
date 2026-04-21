@@ -302,6 +302,32 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
       assert "4:30 PM" in slots
     end
 
+    test "fall-back transition window (America/New_York): repeated hour collapses to one label per wall-clock time" do
+      # Hours 00:30–02:30 local straddle the fall-back repeated hour
+      # (02:00 EDT → 01:00 EST). Six real 30-minute intervals elapse across the
+      # 180 UTC-minute window, but only four wall-clock labels exist
+      # (12:30 AM, 1:00 AM, 1:30 AM, 2:00 AM). Users can't disambiguate
+      # "1:00 AM EDT" from "1:00 AM EST" when booking, so the generator must
+      # collapse duplicates to one label each, keeping the earlier occurrence.
+      profile =
+        insert_profile_with_sunday_hours(~T[00:30:00], ~T[02:30:00], "America/New_York")
+
+      target = next_fall_back_sunday("America/New_York")
+
+      assert {:ok, slots} =
+               Calculate.available_slots(
+                 target,
+                 30,
+                 "America/New_York",
+                 "America/New_York",
+                 [],
+                 Map.put(@dst_config, :profile_id, profile.id)
+               )
+
+      assert slots == ["12:30 AM", "1:00 AM", "1:30 AM", "2:00 AM"]
+      assert Enum.uniq(slots) == slots
+    end
+
     test "cross-timezone DST: owner in Berlin on spring-forward day, viewer in New York" do
       profile = insert_always_on_profile("Europe/Berlin")
 

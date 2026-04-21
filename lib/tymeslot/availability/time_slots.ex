@@ -148,10 +148,17 @@ defmodule Tymeslot.Availability.TimeSlots do
     else
       slot_count = div(total_minutes, duration_minutes)
 
-      Enum.map(0..(slot_count - 1), fn i ->
+      # Iteration walks forward in UTC. On a DST fall-back day the wall-clock
+      # hour repeats, producing two DateTime structs with different offsets but
+      # the same formatted label. Users can't disambiguate "1:00 AM EDT" from
+      # "1:00 AM EST" when booking, so collapse duplicates to the earlier
+      # occurrence.
+      0..(slot_count - 1)
+      |> Enum.map(fn i ->
         slot_datetime = DateTime.add(start_dt, i * duration_minutes, :minute)
         format_datetime_slot(slot_datetime)
       end)
+      |> Enum.uniq()
     end
   end
 
