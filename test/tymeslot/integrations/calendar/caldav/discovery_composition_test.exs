@@ -85,15 +85,33 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryCompositionTest do
       refute Enum.any?(calendars, & &1.selected)
     end
 
-    test "a 401 at any step surfaces as {:error, :unauthorized}" do
-      # The plan calls for one test with a 401 rather than four — this
-      # one blanket-stubs 401 so every step of the RFC 4791 fallback
-      # chain sees it. The discovery function must still return the
-      # distinguishable `:unauthorized` atom so the caller can render
-      # "check your credentials" rather than a generic 500 error.
+    test "a 401 on the first PROPFIND surfaces as {:error, :unauthorized}" do
+      # `discover_calendars/2` short-circuits on the first PROPFIND when the
+      # server returns 401 — the RFC 4791 fallback chain only runs for
+      # :not_found / :server_error. The distinguishable `:unauthorized`
+      # atom is what lets the caller render "check your credentials"
+      # rather than a generic 500 error.
       ReqTest.stub(:tymeslot_http, fn conn ->
         Conn.send_resp(conn, 401, "")
       end)
+
+      assert {:error, :unauthorized} =
+               Discovery.discover_calendars(
+                 %{@caldav_client | password: "bad"},
+                 skip_breaker: true
+               )
+    end
+
+    test "a 401 mid-chain (after a 404 first PROPFIND) still surfaces as {:error, :unauthorized}" do
+      # Pins the RFC 4791 fallback path: first PROPFIND returns 404 so the
+      # discovery chain enters `discover_via_rfc4791/1`; each subsequent
+      # step returns 401. The caller must still see `:unauthorized`, not
+      # :not_found or a generic error — otherwise the UI would ask the
+      # user to check the server URL instead of their credentials.
+      stub_sequential(
+        fn conn -> Conn.send_resp(conn, 404, "") end,
+        fn conn -> Conn.send_resp(conn, 401, "") end
+      )
 
       assert {:error, :unauthorized} =
                Discovery.discover_calendars(

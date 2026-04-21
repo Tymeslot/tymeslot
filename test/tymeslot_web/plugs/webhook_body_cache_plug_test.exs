@@ -71,21 +71,21 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlugTest do
   end
 
   describe "read_body/2 — error propagation" do
-    test "propagates the underlying read_body error tuple unchanged" do
-      # A truncated body (or an IO error from the adapter) surfaces as
-      # `{:more, ...}` or `{:error, reason}` from Plug.Conn.read_body.
-      # The plug must not swallow either — Plug.Parsers relies on the
-      # exact shape to drive chunked reads and error pages.
+    test "propagates a {:more, _, _} read_body result unchanged and does not assign :raw_body" do
+      # A truncated body surfaces as `{:more, partial, conn}` from
+      # `Plug.Conn.read_body`. The plug must pass it straight through —
+      # Plug.Parsers relies on the exact shape to drive chunked reads.
+      # It must also NOT pre-assign `:raw_body` from a partial chunk, or
+      # Stripe signature verification would compare the signature against
+      # the wrong bytes.
       conn = build_conn_with_body("/webhooks/stripe", "abcdefgh")
 
       # Length 1 forces Plug.Test's in-memory adapter to return {:more, ...}.
-      result = WebhookBodyCachePlug.read_body(conn, length: 1)
+      assert {:more, partial, returned_conn} =
+               WebhookBodyCachePlug.read_body(conn, length: 1)
 
-      case result do
-        {:ok, _body, _conn} -> :ok
-        {:more, partial, _conn} when is_binary(partial) -> :ok
-        {:error, _reason} -> :ok
-      end
+      assert is_binary(partial)
+      refute Map.has_key?(returned_conn.assigns, :raw_body)
     end
   end
 end
