@@ -78,6 +78,30 @@ defmodule CredoChecks.NoUnsafeSanitizeMerge do
     end
   end
 
+  defp traverse(
+         {{:., _call_meta, [{:__aliases__, _alias_meta, [:Map]}, :merge]}, meta,
+          [_left, right, _resolver]} = ast,
+         issues,
+         issue_meta
+       ) do
+    case flagged_variable_name(right) do
+      nil ->
+        {ast, issues}
+
+      name ->
+        issue =
+          format_issue(issue_meta,
+            message:
+              "`Map.merge(params, #{name}, resolver)` is unsafe — use " <>
+                "`Tymeslot.Utils.SanitizeMerge.merge/2` instead.",
+            line_no: meta[:line],
+            trigger: "Map.merge"
+          )
+
+        {ast, [issue | issues]}
+    end
+  end
+
   defp traverse(ast, issues, _issue_meta), do: {ast, issues}
 
   defp flagged_variable_name({name, _meta, context}) when is_atom(name) and is_atom(context) do

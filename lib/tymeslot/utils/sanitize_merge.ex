@@ -45,8 +45,6 @@ defmodule Tymeslot.Utils.SanitizeMerge do
   defp drop?(_sanitized, _params_value), do: false
 
   defp blank?(nil), do: true
-  defp blank?(""), do: true
   defp blank?([]), do: true
-  defp blank?(value) when is_binary(value), do: String.trim(value) == ""
   defp blank?(_other), do: false
 end
