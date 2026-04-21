@@ -11,8 +11,9 @@ defmodule TymeslotWeb.OAuthIntegrationCase do
   alias Phoenix.ConnTest
   alias Plug.Conn
   alias Tymeslot.DataCase
-  alias Tymeslot.Security.AccountLockout
   alias Tymeslot.Security.RateLimiter
+
+  @account_lockout_table :account_lockout_table
 
   using do
     quote do
@@ -31,34 +32,13 @@ defmodule TymeslotWeb.OAuthIntegrationCase do
   setup tags do
     DataCase.setup_sandbox(tags)
 
-    # RateLimit (Hammer ETS) and AccountLockout are always started in the
-    # supervision tree. Clear their state for test isolation.
+    # RateLimit (Hammer ETS) and the account lockout ETS table are always
+    # started in the supervision tree. Clear their state for test isolation.
     RateLimiter.clear_all()
 
-    # Start AccountLockout if not already running (it is in the supervision tree,
-    # but guard defensively for isolated test runs)
-    lockout_result =
-      case Process.whereis(AccountLockout) do
-        nil ->
-          case AccountLockout.start_link([]) do
-            {:ok, pid} -> {:started, pid}
-            {:error, {:already_started, pid}} -> {:already_running, pid}
-          end
-
-        pid ->
-          {:already_running, pid}
-      end
-
-    # Only stop the AccountLockout process if we started it ourselves
-    on_exit(fn ->
-      case lockout_result do
-        {:started, pid} when is_pid(pid) ->
-          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5000)
-
-        _other ->
-          :ok
-      end
-    end)
+    if :ets.whereis(@account_lockout_table) != :undefined do
+      :ets.delete_all_objects(@account_lockout_table)
+    end
 
     {:ok, conn: setup_session(ConnTest.build_conn())}
   end
