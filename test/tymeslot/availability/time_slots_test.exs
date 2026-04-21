@@ -272,6 +272,54 @@ defmodule Tymeslot.Availability.TimeSlotsTest do
     end
   end
 
+  describe "generate_slots_for_range_with_breaks/5 across DST transitions" do
+    # Europe/London falls back at 02:00 BST on 2026-10-25, so wall-clock
+    # 01:00–01:59 happens twice. A break at 01:30 would crash DateTime.new!/3.
+    test "resolves ambiguous break times on fall-back day without raising" do
+      date = ~D[2026-10-25]
+      start_dt = DateTime.new!(date, ~T[09:00:00], "Europe/London")
+      end_dt = DateTime.new!(date, ~T[12:00:00], "Europe/London")
+      breaks = [{~T[01:30:00], ~T[01:45:00]}]
+
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
+
+      assert length(slots) == 6
+      assert "9:00 AM" in slots
+      assert "11:30 AM" in slots
+    end
+
+    # Europe/London springs forward at 01:00 GMT on 2026-03-29, so wall-clock
+    # 01:00–01:59 never happens. A break at 01:30 would crash DateTime.new!/3.
+    test "resolves break times in spring-forward gap without raising" do
+      date = ~D[2026-03-29]
+      start_dt = DateTime.new!(date, ~T[09:00:00], "Europe/London")
+      end_dt = DateTime.new!(date, ~T[12:00:00], "Europe/London")
+      breaks = [{~T[01:30:00], ~T[01:45:00]}]
+
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
+
+      assert length(slots) == 6
+      assert "9:00 AM" in slots
+      assert "11:30 AM" in slots
+    end
+
+    # Ambiguous breaks are still honoured at the first (earlier UTC) occurrence.
+    test "ambiguous break still filters an overlapping slot" do
+      date = ~D[2026-10-25]
+      start_dt = DateTime.new!(date, ~T[09:00:00], "Europe/London")
+      end_dt = DateTime.new!(date, ~T[12:00:00], "Europe/London")
+      # A break at wall-clock 10:30–11:00 is unambiguous and must still apply
+      # — proves resolve_wall_time doesn't silently drop usable breaks.
+      breaks = [{~T[10:30:00], ~T[11:00:00]}]
+
+      slots = TimeSlots.generate_slots_for_range_with_breaks(start_dt, end_dt, 30, date, breaks)
+
+      refute "10:30 AM" in slots
+      assert "10:00 AM" in slots
+      assert "11:00 AM" in slots
+    end
+  end
+
   describe "edge cases" do
     test "handles date mismatch - selected date before range" do
       start_dt = DateTime.new!(~D[2025-06-16], ~T[09:00:00], "Etc/UTC")

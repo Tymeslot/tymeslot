@@ -168,17 +168,30 @@ defmodule Tymeslot.Availability.TimeSlots do
     date = DateTime.to_date(start_dt)
     timezone = start_dt.time_zone
 
+    resolved_breaks =
+      Enum.map(breaks, fn {break_start_time, break_end_time} ->
+        {resolve_wall_time(date, break_start_time, timezone),
+         resolve_wall_time(date, break_end_time, timezone)}
+      end)
+
     Enum.filter(slots, fn slot ->
       slot_time = parse_time_slot(slot)
-      slot_start_dt = DateTime.new!(date, slot_time, timezone)
+      slot_start_dt = resolve_wall_time(date, slot_time, timezone)
       slot_end_dt = DateTime.add(slot_start_dt, duration_minutes, :minute)
 
-      not Enum.any?(breaks, fn {break_start_time, break_end_time} ->
-        break_start_dt = DateTime.new!(date, break_start_time, timezone)
-        break_end_dt = DateTime.new!(date, break_end_time, timezone)
-
+      not Enum.any?(resolved_breaks, fn {break_start_dt, break_end_dt} ->
         TimeRange.overlaps?(slot_start_dt, slot_end_dt, break_start_dt, break_end_dt)
       end)
     end)
+  end
+
+  # DST wall-clock resolution: fall-back anchors to the first occurrence;
+  # spring-forward snaps forward past the gap.
+  defp resolve_wall_time(date, time, timezone) do
+    case DateTime.new(date, time, timezone) do
+      {:ok, dt} -> dt
+      {:ambiguous, first, _second} -> first
+      {:gap, _before, just_after} -> just_after
+    end
   end
 end
