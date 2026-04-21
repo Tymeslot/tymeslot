@@ -141,7 +141,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmitCompositionTest do
     _drain = :sys.get_state(view.pid)
 
     rendered = render(view)
-    assert rendered =~ "no longer available"
+    assert rendered =~ "select a different time"
     refute rendered =~ "Meeting Confirmed"
   end
 
@@ -169,7 +169,7 @@ defmodule TymeslotWeb.Live.Scheduling.BookingSubmitCompositionTest do
     _drain = :sys.get_state(view.pid)
 
     rendered = render(view)
-    assert rendered =~ "no longer available"
+    assert rendered =~ "refresh the page"
     refute rendered =~ "Meeting Confirmed"
   end
 end
