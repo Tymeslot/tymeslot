@@ -111,6 +111,31 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiringTest do
 
       assert :ignored = QueueWiring.tag(meeting, :create, event_data())
     end
+
+    # Regression tests for the CalDAV nil-paths crash fixed by
+    # c9b8265af, e0f6b212d and ccdb25cf6. A CalDAV integration whose
+    # calendar_paths column is empty (new/unbootstrapped) or nil (old
+    # records before the non-null default) must fall through to
+    # `:ignored` rather than raising on a NOT NULL violation.
+    test "returns :ignored when a CalDAV integration has an empty calendar_paths" do
+      integration = insert(:calendar_integration, provider: "caldav", calendar_paths: [])
+      meeting = build_meeting(integration, "empty-paths")
+
+      assert :ignored = QueueWiring.tag(meeting, :create, event_data())
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "empty-paths")
+    end
+
+    test "returns :ignored when a CalDAV integration has nil calendar_paths" do
+      integration = insert(:calendar_integration, provider: "caldav", calendar_paths: nil)
+      meeting = build_meeting(integration, "nil-paths")
+
+      assert :ignored = QueueWiring.tag(meeting, :create, event_data())
+
+      assert {:error, :not_found} =
+               ProviderCalendarEventQueries.get_by_uid(integration.id, "nil-paths")
+    end
   end
 
   describe "clear/2" do
