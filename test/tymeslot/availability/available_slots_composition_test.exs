@@ -54,9 +54,13 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
                )
 
       refute slots == []
+      # buffer = 15 min → blocked window is [09:45, 11:15]
+      refute "9:30 AM" in slots
       refute "10:00 AM" in slots
       refute "10:30 AM" in slots
+      refute "11:00 AM" in slots
       assert "9:00 AM" in slots
+      assert "11:30 AM" in slots
       assert "2:00 PM" in slots
     end
 
@@ -129,11 +133,29 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     test "returns an empty list on a day the weekly schedule marks unavailable" do
       profile = setup_weekday_profile("Europe/Berlin")
       # 7 = Sunday, which is marked unavailable by the setup helper.
-      saturday_or_sunday = next_occurrence_of_weekday(7)
+      sunday = next_occurrence_of_weekday(7)
 
       assert {:ok, slots} =
                Calculate.available_slots(
-                 saturday_or_sunday,
+                 sunday,
+                 30,
+                 "Europe/Berlin",
+                 "Europe/Berlin",
+                 [],
+                 %{profile_id: profile.id}
+               )
+
+      assert slots == []
+    end
+
+    test "returns an empty list on Saturday (dow=6) which is also marked unavailable" do
+      profile = setup_weekday_profile("Europe/Berlin")
+      # 6 = Saturday, which is marked unavailable by the setup helper.
+      saturday = next_occurrence_of_weekday(6)
+
+      assert {:ok, slots} =
+               Calculate.available_slots(
+                 saturday,
                  30,
                  "Europe/Berlin",
                  "Europe/Berlin",
@@ -204,14 +226,15 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     # for the DST suite so we are asserting on the DST behaviour in isolation.
     @dst_config %{max_advance_booking_days: 2000, min_advance_hours: 0, buffer_minutes: 0}
 
-    test "spring-forward Sunday (Europe/Berlin) still emits the full business-hours window" do
+    test "spring-forward Sunday (Europe/Berlin) does not affect normal business hours" do
       profile = insert_always_on_profile("Europe/Berlin")
 
-      # Last Sunday of March 2027 is the spring-forward date for Europe/Berlin
-      # (CET → CEST). The clock jumps 02:00 → 03:00. Business hours start at
-      # 09:00 local, well clear of the gap, so the 8-hour window must still
-      # yield 16 half-hour slots and each slot must be a valid local wall time.
-      target = ~D[2027-03-28]
+      # The spring-forward date for Europe/Berlin (CET → CEST, clock jumps
+      # 02:00 → 03:00). Business hours start at 09:00 local — well clear of the
+      # gap — so the 8-hour window must still yield 16 half-hour slots and each
+      # slot must be a valid local wall time. This pins that normal hours are
+      # unaffected by the transition.
+      target = next_spring_forward_sunday("Europe/Berlin")
 
       assert {:ok, slots} =
                Calculate.available_slots(
@@ -229,15 +252,39 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
       assert "4:30 PM" in slots
     end
 
-    test "fall-back Sunday (America/New_York) does not duplicate slots in the repeated hour" do
+    test "spring-forward transition window (Europe/Berlin): only pre- and post-gap slots emitted" do
+      # Hours 01:00–04:00 local straddle the spring-forward gap (02:00 → 03:00).
+      # The gap hour is physically absent, so a correct 30-min slot generator
+      # must emit exactly 4 slots: 1:00 AM, 1:30 AM, 3:00 AM, 3:30 AM.
+      profile = insert_profile_with_sunday_hours(~T[01:00:00], ~T[04:00:00], "Europe/Berlin")
+      target = next_spring_forward_sunday("Europe/Berlin")
+
+      assert {:ok, slots} =
+               Calculate.available_slots(
+                 target,
+                 30,
+                 "Europe/Berlin",
+                 "Europe/Berlin",
+                 [],
+                 Map.put(@dst_config, :profile_id, profile.id)
+               )
+
+      assert length(slots) == 4
+      assert "1:00 AM" in slots
+      assert "1:30 AM" in slots
+      refute "2:00 AM" in slots
+      refute "2:30 AM" in slots
+      assert "3:00 AM" in slots
+      assert "3:30 AM" in slots
+    end
+
+    test "fall-back Sunday (America/New_York) does not duplicate slots when business hours clear the repeated window" do
       profile = insert_always_on_profile("America/New_York")
 
-      # First Sunday of November 2026 is the fall-back date for America/New_York
-      # (EDT → EST). The 01:00–02:00 hour occurs twice on the wall clock.
-      # Business hours run 09:00–17:00 — the repeated hour is outside the window,
-      # but we still assert no duplicate slot labels slip through when the window
-      # is rendered for the transition date.
-      target = ~D[2026-11-01]
+      # The fall-back date for America/New_York (EDT → EST, 01:00–02:00 repeats).
+      # Business hours run 09:00–17:00 — entirely outside the repeated window.
+      # This pins that normal hours are unaffected by the transition.
+      target = next_fall_back_sunday("America/New_York")
 
       assert {:ok, slots} =
                Calculate.available_slots(
@@ -258,13 +305,13 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     test "cross-timezone DST: owner in Berlin on spring-forward day, viewer in New York" do
       profile = insert_always_on_profile("Europe/Berlin")
 
-      # On 2027-03-28 Berlin has just switched to CEST (UTC+2) and New York is
-      # already on EDT (UTC-4) since 2027-03-14 — a six-hour gap between zones.
+      # On the Berlin spring-forward Sunday, Berlin has switched to CEST (UTC+2)
+      # and New York is already on EDT (UTC-4) — a six-hour gap between zones.
       # Owner hours 09:00–17:00 CEST therefore map to 03:00–11:00 in New York
       # on that date. The viewer should see those times in their own wall clock
       # with no duplicates, and the last 30-minute slot must start at 10:30 AM
       # (a slot starting at 11:00 AM would run past the owner's 17:00 close).
-      target = ~D[2027-03-28]
+      target = next_spring_forward_sunday("Europe/Berlin")
 
       assert {:ok, slots} =
                Calculate.available_slots(
@@ -352,5 +399,77 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
       end_at: end_at,
       synced_at: DateTime.utc_now()
     })
+  end
+
+  # Inserts a profile available only on Sunday (dow 7) with the given local
+  # start/end times. All other days are marked unavailable. Useful for
+  # targeting a specific DST transition Sunday without noise from other days.
+  defp insert_profile_with_sunday_hours(start_time, end_time, timezone) do
+    profile = insert(:profile, timezone: timezone, buffer_minutes: 0)
+
+    for dow <- 1..6 do
+      insert(:weekly_availability,
+        profile: profile,
+        day_of_week: dow,
+        is_available: false
+      )
+    end
+
+    insert(:weekly_availability,
+      profile: profile,
+      day_of_week: 7,
+      is_available: true,
+      start_time: start_time,
+      end_time: end_time
+    )
+
+    profile
+  end
+
+  # Returns the next Sunday on or after `from` in `timezone` where the clock
+  # jumps forward (DST "spring-forward"). Scans up to 53 Sundays ahead.
+  # Uses DateTime.new/3 which returns {:gap, _, _} for gap times; 02:30 local
+  # is chosen as the probe because it is within the standard transition hour.
+  defp next_spring_forward_sunday(timezone, from \\ Date.utc_today()) do
+    first_sunday = first_sunday_on_or_after(from)
+
+    result =
+      Enum.find(0..52, fn i ->
+        candidate = Date.add(first_sunday, i * 7)
+        match?({:gap, _, _}, DateTime.new(candidate, ~T[02:30:00], timezone))
+      end)
+
+    if is_nil(result) do
+      raise "No spring-forward Sunday found within 53 weeks of #{from} in #{timezone}"
+    end
+
+    Date.add(first_sunday, result * 7)
+  end
+
+  # Returns the next Sunday on or after `from` in `timezone` where the clock
+  # falls back (DST "fall-back"). Scans up to 53 Sundays ahead.
+  # Uses DateTime.new/3 which returns {:ambiguous, _, _} for repeated times;
+  # 01:30 local is chosen as the probe because it is within the standard
+  # repeated hour.
+  defp next_fall_back_sunday(timezone, from \\ Date.utc_today()) do
+    first_sunday = first_sunday_on_or_after(from)
+
+    result =
+      Enum.find(0..52, fn i ->
+        candidate = Date.add(first_sunday, i * 7)
+        match?({:ambiguous, _, _}, DateTime.new(candidate, ~T[01:30:00], timezone))
+      end)
+
+    if is_nil(result) do
+      raise "No fall-back Sunday found within 53 weeks of #{from} in #{timezone}"
+    end
+
+    Date.add(first_sunday, result * 7)
+  end
+
+  defp first_sunday_on_or_after(date) do
+    dow = Date.day_of_week(date)
+    days_ahead = rem(7 - dow, 7)
+    Date.add(date, days_ahead)
   end
 end
