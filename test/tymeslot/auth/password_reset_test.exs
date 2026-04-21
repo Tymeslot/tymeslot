@@ -146,4 +146,44 @@ defmodule Tymeslot.Auth.PasswordResetTest do
       assert length(rate_limited) >= 15
     end
   end
+
+  describe "token tamper + replay resistance" do
+    test "a single-bit-flipped token is rejected as :invalid_token, not matched to a neighbour" do
+      user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
+
+      # Flip the last character to produce a different-but-same-length token.
+      tampered = flip_last_char(token)
+      refute tampered == token
+
+      assert {:error, :invalid_token, _msg} =
+               PasswordReset.reset_password(tampered, "NewPass123!", "NewPass123!")
+
+      # And the real token still works — the tampered attempt must not have
+      # burned the legitimate reset token.
+      assert {:ok, _user_map, _msg} =
+               PasswordReset.reset_password(token, "NewPass123!", "NewPass123!")
+    end
+
+    # Concurrency note (discovered while writing this suite): calling
+    # reset_password/3 from two processes simultaneously with the same valid
+    # token causes both processes to observe the user before either has
+    # cleared the token — both then update the password (last write wins)
+    # and both return {:ok, _, _}. This is a latent race that should be
+    # closed with pessimistic locking on the token row or an atomic
+    # "consume token and read user" query. It is intentionally not asserted
+    # here: T4 is test-only, and the invariant the flow already guarantees
+    # (sequential single-use) is covered by the "reset tokens are single-use"
+    # test above. A separate fix should add the race-safe equivalent and
+    # its own regression test.
+  end
+
+  # --- Helpers for the tamper suite ---
+
+  defp flip_last_char(token) do
+    <<prefix::binary-size(byte_size(token) - 1), last::utf8>> = token
+    flipped = if last == ?A, do: ?B, else: ?A
+    <<prefix::binary, flipped::utf8>>
+  end
 end

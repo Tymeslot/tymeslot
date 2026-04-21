@@ -81,4 +81,31 @@ defmodule Tymeslot.Auth.VerificationTest do
       assert {:error, :user_not_found} = result
     end
   end
+
+  describe "token tamper resistance" do
+    test "a single-bit-flipped token is rejected as :invalid_token, not matched to a neighbour" do
+      user = insert(:unverified_user)
+      {token, _expiry, _purpose} = Token.generate_email_verification_token(user.id)
+      {:ok, _result} = UserTokenQueries.set_verification_token(user, token)
+
+      # Flip the last character of the base64url token.
+      tampered = flip_last_char(token)
+      refute tampered == token
+
+      assert {:error, :invalid_token} = Verification.verify_user(tampered)
+
+      # The real token still verifies the user — the tampered attempt must not
+      # have consumed the legitimate token.
+      assert {:ok, verified_user} = Verification.verify_user(token)
+      assert verified_user.verified_at
+    end
+  end
+
+  # --- Helpers for the tamper suite ---
+
+  defp flip_last_char(token) do
+    <<prefix::binary-size(byte_size(token) - 1), last::utf8>> = token
+    flipped = if last == ?A, do: ?B, else: ?A
+    <<prefix::binary, flipped::utf8>>
+  end
 end
