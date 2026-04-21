@@ -83,16 +83,25 @@ defmodule Tymeslot.Meetings.AttendeeNotifications.Worker do
   defp load_event(id, "meeting"), do: MeetingQueries.get_meeting(id)
 
   defp load_event(id, "provider_calendar_event") when is_integer(id),
-    do: ProviderCalendarEventQueries.fetch(id)
+    do: fetch_provider_event(id)
 
   defp load_event(id, "provider_calendar_event") when is_binary(id) do
     case Integer.parse(id) do
-      {int_id, ""} -> ProviderCalendarEventQueries.fetch(int_id)
+      {int_id, ""} -> fetch_provider_event(int_id)
       _other -> {:error, :not_found}
     end
   end
 
   defp load_event(_id, _kind), do: {:error, :not_found}
+
+  # Preload :calendar_integration so user_id_for/1 can resolve the owning
+  # user — the enqueued EmailWorker job needs a concrete user_id to look up
+  # the organiser's address in IntegrationEmails.
+  defp fetch_provider_event(id) do
+    with {:ok, event} <- ProviderCalendarEventQueries.fetch(id) do
+      {:ok, Repo.preload(event, :calendar_integration)}
+    end
+  end
 
   # Normalises both single-attendee meetings and multi-attendee provider events
   # into the shape ChangeDetector expects: `:title`, `:starts_at`, `:ends_at`,

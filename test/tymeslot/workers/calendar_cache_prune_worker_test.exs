@@ -1,5 +1,6 @@
 defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :calendar
 
@@ -71,6 +72,21 @@ defmodule Tymeslot.Workers.CalendarCachePruneWorkerTest do
 
     test "returns :ok when there is nothing to prune" do
       assert :ok = CalendarCachePruneWorker.perform(%Oban.Job{})
+    end
+  end
+
+  describe "uniqueness" do
+    test "a second enqueue inside the 24-hour window is coalesced, not duplicated" do
+      # The worker declares `unique: [period: 86_400, states: [...]]` so the
+      # daily cron can't double-fire. Regressing this would spawn redundant
+      # prune passes on every scheduler tick.
+      {:ok, first} = Oban.insert(CalendarCachePruneWorker.new(%{}))
+      {:ok, second} = Oban.insert(CalendarCachePruneWorker.new(%{}))
+
+      assert second.id == first.id
+
+      assert [_only] =
+               all_enqueued(worker: CalendarCachePruneWorker)
     end
   end
 end
