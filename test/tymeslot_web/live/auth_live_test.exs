@@ -365,6 +365,29 @@ defmodule TymeslotWeb.AuthLiveTest do
 
       assert render(view) =~ "Password Reset Successfully"
     end
+
+    test "submit_password_reset with nil reset_token surfaces 'Invalid reset token'", %{
+      conn: conn
+    } do
+      # The submit_password_reset handler has a two-step `with`: CSRF valid,
+      # then `true <- not is_nil(token)`. A stale reconnect or a direct
+      # invocation on the reset-request page hits the nil-guard — test that
+      # path by passing a real CSRF token from a page where reset_token was
+      # never assigned.
+      {:ok, view, _html} = live(conn, ~p"/auth/reset-password")
+
+      csrf_html = view |> element("input[name=_csrf_token]") |> render()
+      [_match, csrf_token] = Regex.run(~r/value="([^"]+)"/, csrf_html)
+
+      result =
+        render_hook(view, "submit_password_reset", %{
+          "password" => "NewSecurePass123!",
+          "password_confirmation" => "NewSecurePass123!",
+          "_csrf_token" => csrf_token
+        })
+
+      assert result =~ "Invalid reset token"
+    end
   end
 
   describe "CSRF validation failure" do
