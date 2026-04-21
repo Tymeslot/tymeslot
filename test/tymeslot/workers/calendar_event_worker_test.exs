@@ -464,6 +464,46 @@ defmodule Tymeslot.Workers.CalendarEventWorkerTest do
       assert cache_row.sync_state == "locally_deleted"
     end
 
+    test "provider-success + mapping-persistence failure surfaces as {:error, _}" do
+      # The provider has created the event on its side and returned a UID,
+      # but MeetingQueries.update_meeting then fails — a silent `:ok` here
+      # would leave the remote event dangling with no local reference, so
+      # the worker must surface {:error, _} to let Oban retry.
+      #
+      # We force the update failure by seeding a *second* meeting that
+      # already owns the UID the provider returns. The unique_constraint
+      # on meetings.uid makes the changeset invalid when we try to write
+      # the same UID onto the meeting under test.
+      %{integration: integration, meeting: meeting} = setup_calendar_scenario_with_paths()
+      external_uid = "collides-#{System.unique_integer([:positive])}"
+      original_uid = meeting.uid
+
+      # Offset start_time so we don't also trip the
+      # `unique_confirmed_meeting_per_organizer_at_time` constraint — we want
+      # the uid collision to be the failure, not a calendar-time clash.
+      colliding_start = DateTime.add(meeting.start_time, 1, :hour)
+
+      insert(:meeting,
+        uid: external_uid,
+        calendar_integration_id: integration.id,
+        organizer_user_id: meeting.organizer_user_id,
+        start_time: colliding_start,
+        end_time: DateTime.add(colliding_start, 60, :minute)
+      )
+
+      expect_calendar_create_success(integration.id, external_uid)
+
+      assert {:error, :calendar_mapping_persistence_failed} =
+               perform_job(CalendarEventWorker, %{
+                 "action" => "create",
+                 "meeting_id" => meeting.id
+               })
+
+      # UID on the meeting under test is untouched — no half-written mapping.
+      unchanged = Repo.get!(MeetingSchema, meeting.id)
+      assert unchanged.uid == original_uid
+    end
+
     test "successful create job clears a pre-existing offline queue row" do
       # The create mock returns this external uid, which persist_calendar_mapping
       # writes back to the meeting.  clear_offline_queue_tag then fetches the
