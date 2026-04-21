@@ -42,7 +42,9 @@ defmodule Tymeslot.Integrations.HealthCheck do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   alias Tymeslot.Integrations.HealthCheck.{
@@ -213,6 +215,14 @@ defmodule Tymeslot.Integrations.HealthCheck do
         end
 
       {:error, :not_found} ->
+        :ok
+
+      {:error, :requires_reencryption, integration} ->
+        case type do
+          :calendar -> CalendarManagement.handle_reauth_required(integration)
+          :video -> Video.handle_reauth_required(integration)
+        end
+
         :ok
     end
   end

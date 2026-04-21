@@ -73,7 +73,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
     Logger.metadata(calendar_integration_id: integration_id)
 
-    case CalendarIntegrationQueries.get_ready_for_sync(integration_id) do
+    case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
         sync_integration(integration, force_full_fetch?)
 
@@ -85,7 +85,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         {:discard, "Integration not found"}
 
       {:error, :requires_reencryption, integration} ->
-        CalendarManagement.flag_for_reauth(integration, "CalDAV")
+        CalendarManagement.handle_reauth_required(integration)
     end
   end
 

@@ -4,7 +4,7 @@ defmodule Tymeslot.Bookings.Policy do
   Pure functions that define what is allowed.
   """
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
@@ -395,7 +395,7 @@ defmodule Tymeslot.Bookings.Policy do
     if is_nil(video_integration_id) or is_nil(organizer_user_id) do
       nil
     else
-      case VideoIntegrationQueries.get_for_user(video_integration_id, organizer_user_id) do
+      case Video.fetch_integration_for_user(video_integration_id, organizer_user_id) do
         {:ok, %{is_active: true}} -> video_integration_id
         _other -> nil
       end

@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
@@ -379,8 +380,16 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
 
   defp lookup_integration_metadata(integration_id) do
     case CalendarIntegrationQueries.get(integration_id) do
-      {:ok, integration} -> {integration.provider, integration.default_booking_calendar_id}
-      {:error, _reason} -> {nil, nil}
+      {:ok, integration} ->
+        {integration.provider, integration.default_booking_calendar_id}
+
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.handle_reauth_required(integration)
+        send(self(), {:flash, {:error, "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."}})
+        {nil, nil}
+
+      {:error, _reason} ->
+        {nil, nil}
     end
   end
 

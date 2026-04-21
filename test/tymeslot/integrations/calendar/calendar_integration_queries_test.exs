@@ -1,10 +1,38 @@
 defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueriesTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
 
   @moduletag :database
   @moduletag :queries
+  @moduletag :security
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Security.Encryption
+
+  @endpoint TymeslotWeb.Endpoint
+  @key_a String.duplicate("a", 64)
+  @key_b String.duplicate("b", 64)
+
+  setup do
+    original = Application.get_env(:tymeslot, @endpoint)
+
+    on_exit(fn ->
+      if is_nil(original) do
+        Application.delete_env(:tymeslot, @endpoint)
+      else
+        Application.put_env(:tymeslot, @endpoint, original)
+      end
+    end)
+
+    :ok
+  end
+
+  defp put_secret_key(key) do
+    base = Application.get_env(:tymeslot, @endpoint) || []
+
+    base
+    |> Keyword.put(:secret_key_base, key)
+    |> then(&Application.put_env(:tymeslot, @endpoint, &1))
+  end
 
   describe "security isolation" do
     test "prevents access to other users' integrations" do
@@ -43,6 +71,29 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueriesTest do
       {:ok, retrieved} = CalendarIntegrationQueries.get(integration.id)
       assert retrieved.username == "secretuser"
       assert retrieved.password == "secretpass"
+    end
+  end
+
+  describe "get_for_user/2 with a stale encryption key" do
+    test "returns {:error, :requires_reencryption, integration} when credentials were encrypted under a different key" do
+      put_secret_key(@key_a)
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          username_encrypted: Encryption.encrypt("myuser"),
+          password_encrypted: Encryption.encrypt("mypassword")
+        )
+
+      # Simulate key rotation without re-encrypting existing rows.
+      put_secret_key(@key_b)
+
+      assert {:error, :requires_reencryption, stale} =
+               CalendarIntegrationQueries.get_for_user(integration.id, user.id)
+
+      assert stale.id == integration.id
     end
   end
 

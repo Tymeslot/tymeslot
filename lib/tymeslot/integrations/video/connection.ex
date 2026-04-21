@@ -8,35 +8,43 @@ defmodule Tymeslot.Integrations.Video.Connection do
   - Emits telemetry for connection tests
   """
 
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @spec test_connection(pos_integer(), pos_integer()) :: {:ok, String.t()} | {:error, any()}
   def test_connection(user_id, id) when is_integer(user_id) and is_integer(id) do
-    with {:ok, integration} <- VideoIntegrationQueries.get_for_user(id, user_id) do
-      start_time = System.monotonic_time(:millisecond)
+    case Video.fetch_integration_for_user(id, user_id) do
+      {:ok, integration} ->
+        run_connection_test(integration)
 
-      provider_atom = to_existing_atom_safe(integration.provider)
-      decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
-      config = build_config(provider_atom, integration, decrypted)
-
-      result =
-        case provider_atom do
-          :unknown -> {:error, :unsupported_provider}
-          _provider -> ProviderAdapter.test_connection(provider_atom, config)
-        end
-
-      duration = System.monotonic_time(:millisecond) - start_time
-
-      :telemetry.execute(
-        [:tymeslot, :integration, :test_connection],
-        %{duration: duration},
-        %{provider: integration.provider, type: "video", success: match?({:ok, _}, result)}
-      )
-
-      result
+      {:error, :not_found} = error ->
+        error
     end
+  end
+
+  defp run_connection_test(integration) do
+    start_time = System.monotonic_time(:millisecond)
+
+    provider_atom = to_existing_atom_safe(integration.provider)
+    decrypted = VideoIntegrationSchema.decrypt_credentials(integration)
+    config = build_config(provider_atom, integration, decrypted)
+
+    result =
+      case provider_atom do
+        :unknown -> {:error, :unsupported_provider}
+        _provider -> ProviderAdapter.test_connection(provider_atom, config)
+      end
+
+    duration = System.monotonic_time(:millisecond) - start_time
+
+    :telemetry.execute(
+      [:tymeslot, :integration, :test_connection],
+      %{duration: duration},
+      %{provider: integration.provider, type: "video", success: match?({:ok, _}, result)}
+    )
+
+    result
   end
 
   # Internal helpers

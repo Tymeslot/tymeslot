@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.PrimarySelection
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Common.OAuth.IdToken
@@ -179,7 +180,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
     cond do
       # Re-authorization of specific integration
       integration_id ->
-        case CalendarIntegrationQueries.get_for_user(integration_id, user_id) do
+        case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
           {:ok, existing} ->
             AccountMatch.verify_account_match(existing, provider_account_id, fn ->
               update_existing_integration(existing, token_attrs)

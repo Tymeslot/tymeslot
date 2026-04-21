@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Shared.MicrosoftConfig
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.Providers.ProviderBehaviour
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
@@ -221,7 +222,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
   end
 
   defp check_and_refresh_token(integration_id, user_id, config) do
-    case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
+    case Video.fetch_integration_for_user(integration_id, user_id) do
       {:ok, fresh_integration} ->
         decrypted = VideoIntegrationSchema.decrypt_credentials(fresh_integration)
 
@@ -231,7 +232,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
           perform_refresh(config)
         end
 
-      _other ->
+      {:error, :not_found} ->
         perform_refresh(config)
     end
   end
@@ -285,7 +286,7 @@ defmodule Tymeslot.Integrations.Video.Providers.TeamsProvider do
     # Only update scope if we got a new one from the refresh
     attrs = if scope && scope != "", do: Map.put(attrs, :oauth_scope, scope), else: attrs
 
-    case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
+    case Video.fetch_integration_for_user(integration_id, user_id) do
       {:error, :not_found} ->
         Logger.warning("Could not find integration to update tokens",
           integration_id: integration_id

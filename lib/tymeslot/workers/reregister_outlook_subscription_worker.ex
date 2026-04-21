@@ -23,6 +23,7 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
+  alias Tymeslot.Integrations.CalendarManagement
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
@@ -51,6 +52,9 @@ defmodule Tymeslot.Workers.ReregisterOutlookSubscriptionWorker do
         )
 
         {:discard, "Integration not found"}
+
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.handle_reauth_required(integration)
     end
   end
 end

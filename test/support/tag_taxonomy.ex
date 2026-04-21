@@ -50,6 +50,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :security,
       :themes,
       :utils,
+      :video,
       :workers,
       :seo,
       :telegram

@@ -78,32 +78,27 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   Gets a single calendar integration by ID.
   WARNING: This function does not check user authorization.
   Use get_for_user/2 instead for secure access.
-  Returns {:ok, integration} if found, {:error, :not_found} otherwise.
-  """
-  @spec get(integer()) :: {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
-  def get(id) do
-    case Repo.get(CalendarIntegrationSchema, id) do
-      nil -> {:error, :not_found}
-      integration -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
-    end
-  end
-
-  @doc """
-  Sync-worker variant of `get/1` that refuses to hand back an integration whose
-  encrypted credentials can't be decrypted with the current keyring.
 
   Returns:
 
-    * `{:ok, integration}` — ready to sync
-    * `{:error, :not_found}` — no such integration
-    * `{:error, :requires_reencryption, integration}` — credentials unreadable;
-      worker should mark `needs_reauth` and discard without retrying
+    * `{:ok, integration}` — found and credentials readable
+    * `{:error, :not_found}` — no row with that ID
+    * `{:error, :requires_reencryption, integration}` — found but one or more
+      encrypted credentials cannot be decrypted with the current keyring (e.g.
+      after SECRET_KEY_BASE rotation). The raw integration (without decrypted
+      virtual fields) is included so callers can flag `needs_reauth` without
+      needing to re-query.
+
+  Callers that previously only handled `{:ok, _}` and `{:error, :not_found}`
+  must add a `{:error, :requires_reencryption, integration}` clause and route
+  to `CalendarManagement.handle_reauth_required/1` (for background workers) or
+  surface a reconnect prompt (for the web layer).
   """
-  @spec get_ready_for_sync(integer()) ::
+  @spec get(integer()) ::
           {:ok, CalendarIntegrationSchema.t()}
           | {:error, :not_found}
           | {:error, :requires_reencryption, CalendarIntegrationSchema.t()}
-  def get_ready_for_sync(id) do
+  def get(id) do
     case Repo.get(CalendarIntegrationSchema, id) do
       nil ->
         {:error, :not_found}
@@ -119,10 +114,26 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
   @doc """
   Gets a calendar integration by ID for a specific user.
   This is the secure version that checks user authorization.
-  Returns {:ok, integration} if found, {:error, :not_found} otherwise.
+
+  Returns:
+
+    * `{:ok, integration}` — found and credentials readable
+    * `{:error, :not_found}` — no row with that ID for this user
+    * `{:error, :requires_reencryption, integration}` — found but one or more
+      encrypted credentials cannot be decrypted with the current keyring (e.g.
+      after SECRET_KEY_BASE rotation). The raw integration (without decrypted
+      virtual fields) is included so callers can flag `needs_reauth` without
+      needing to re-query.
+
+  Callers that only need a two-outcome shape should use
+  `CalendarManagement.fetch_integration_for_user/2`, which silently flags the
+  integration on `:requires_reencryption` and collapses it to
+  `{:error, :not_found}`.
   """
   @spec get_for_user(integer(), integer()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, :not_found}
+          | {:error, :requires_reencryption, CalendarIntegrationSchema.t()}
   def get_for_user(id, user_id) do
     result =
       CalendarIntegrationSchema
@@ -130,8 +141,14 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
       |> Repo.one()
 
     case result do
-      nil -> {:error, :not_found}
-      integration -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
+      nil ->
+        {:error, :not_found}
+
+      integration ->
+        case CalendarIntegrationSchema.decryption_status(integration) do
+          :ok -> {:ok, CalendarIntegrationSchema.decrypt_credentials(integration)}
+          :requires_reencryption -> {:error, :requires_reencryption, integration}
+        end
     end
   end
 
@@ -232,15 +249,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationQueries do
     |> Repo.update()
   end
 
-  @encrypted_credential_fields [
-    :username_encrypted,
-    :password_encrypted,
-    :access_token_encrypted,
-    :refresh_token_encrypted
-  ]
-
   defp maybe_clear_needs_reauth(changeset) do
-    if Enum.any?(@encrypted_credential_fields, &Map.has_key?(changeset.changes, &1)) do
+    if Enum.any?(
+         CalendarIntegrationSchema.encrypted_credential_fields(),
+         &Map.has_key?(changeset.changes, &1)
+       ) do
       Changeset.put_change(changeset, :needs_reauth, false)
     else
       changeset

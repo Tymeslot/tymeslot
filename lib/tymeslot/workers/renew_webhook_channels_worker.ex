@@ -21,6 +21,7 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
+  alias Tymeslot.Integrations.CalendarManagement
 
   # Batch entry point: enumerate expiring integrations and schedule one
   # per-integration renewal job with a staggered `scheduled_in` delay.
@@ -53,6 +54,9 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorker do
         )
 
         {:discard, "Integration not found"}
+
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.handle_reauth_required(integration)
     end
   end
 

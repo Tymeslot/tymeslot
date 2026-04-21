@@ -21,6 +21,7 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
   alias Tymeslot.Integrations.Calendar.Tokens
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Common.ErrorHandler
 
   @refresh_threshold_hours 2
@@ -63,6 +64,9 @@ defmodule Tymeslot.Integrations.Calendar.TokenRefreshJob do
     case CalendarIntegrationQueries.get(integration_id) do
       {:error, :not_found} ->
         {:discard, "Integration not found"}
+
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.handle_reauth_required(integration)
 
       {:ok, integration} ->
         refresh_integration_token(integration, job_id: job_id, attempt: attempt)

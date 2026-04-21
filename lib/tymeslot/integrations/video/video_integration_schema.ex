@@ -28,6 +28,8 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
           provider_account_id: String.t() | nil,
           provider_account_email: String.t() | nil,
           is_active: boolean(),
+          needs_reauth: boolean(),
+          sync_error: String.t() | nil,
           settings: map(),
           user: Tymeslot.Auth.UserSchema.t() | Ecto.Association.NotLoaded.t(),
           inserted_at: DateTime.t() | nil,
@@ -52,6 +54,8 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
     field(:provider_account_id, :string)
     field(:provider_account_email, :string)
     field(:is_active, :boolean, default: true)
+    field(:needs_reauth, :boolean, default: false)
+    field(:sync_error, :string)
     field(:settings, :map, default: %{})
 
     # Virtual fields for decrypted credentials
@@ -148,6 +152,48 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchema do
       )
 
       nil
+  end
+
+  @encrypted_credential_fields [
+    :api_key_encrypted,
+    :access_token_encrypted,
+    :refresh_token_encrypted,
+    :account_id_encrypted,
+    :client_id_encrypted,
+    :client_secret_encrypted,
+    :tenant_id_encrypted,
+    :teams_user_id_encrypted
+  ]
+
+  @doc """
+  Returns the list of encrypted credential field atoms on this schema. Used by
+  `decryption_status/1` and `VideoIntegrationQueries.maybe_clear_needs_reauth/1`
+  so the authoritative list lives in one place.
+  """
+  @spec encrypted_credential_fields() :: [atom()]
+  def encrypted_credential_fields, do: @encrypted_credential_fields
+
+  @doc """
+  Reports whether any encrypted credential on the integration fails to decrypt
+  under the current keyring. Returns `:ok` when every ciphertext is either
+  absent or decryptable, `:requires_reencryption` otherwise.
+
+  Used by workers to short-circuit jobs when SECRET_KEY_BASE has been
+  rotated without keeping the previous key on the keyring — the worker can
+  then flag `needs_reauth` so the user sees a reconnect prompt.
+  """
+  @spec decryption_status(t()) :: :ok | :requires_reencryption
+  def decryption_status(%__MODULE__{} = integration) do
+    encrypted_values = Enum.map(@encrypted_credential_fields, &Map.get(integration, &1))
+
+    if Enum.any?(
+         encrypted_values,
+         &(Encryption.decrypt_with_status(&1) == {:error, :requires_reencryption})
+       ) do
+      :requires_reencryption
+    else
+      :ok
+    end
   end
 
   # Private functions

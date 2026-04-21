@@ -26,7 +26,6 @@ defmodule Tymeslot.Meetings.VideoRooms do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Integrations.Calendar.CalendarEventScheduler
   alias Tymeslot.Integrations.Video
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Meetings.{MeetingQueries, MeetingSchema}
   alias Tymeslot.Repo
 
@@ -334,7 +333,7 @@ defmodule Tymeslot.Meetings.VideoRooms do
     integration_result =
       case meeting.video_integration_id do
         nil -> {:error, :not_found}
-        id -> VideoIntegrationQueries.get_for_user(id, user_id)
+        id -> Video.fetch_integration_for_user(id, user_id)
       end
 
     case integration_result do

@@ -9,8 +9,8 @@ defmodule Tymeslot.Integrations.Video.Rooms do
 
   require Logger
   alias Tymeslot.Infrastructure.Metrics
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
   @doc """
@@ -239,7 +239,7 @@ defmodule Tymeslot.Integrations.Video.Rooms do
             :not_found
 
           integration_id ->
-            case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
+            case Video.fetch_integration_for_user(integration_id, user_id) do
               {:ok, integration} -> {:ok, integration}
               {:error, :not_found} -> :not_found
             end

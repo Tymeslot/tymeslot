@@ -66,23 +66,60 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   Gets a single video integration by ID.
   WARNING: This function does not check user authorization.
   Use get_for_user/2 instead for secure access.
-  Returns {:ok, integration} if found, {:error, :not_found} otherwise.
+
+  Returns:
+
+    * `{:ok, integration}` — found and credentials readable
+    * `{:error, :not_found}` — no row with that ID
+    * `{:error, :requires_reencryption, integration}` — found but one or more
+      encrypted credentials cannot be decrypted with the current keyring (e.g.
+      after SECRET_KEY_BASE rotation). The raw integration (without decrypted
+      virtual fields) is included so callers can flag `needs_reauth` without
+      needing to re-query.
+
+  Callers must add a `{:error, :requires_reencryption, integration}` clause and
+  route to `Tymeslot.Integrations.Video.handle_reauth_required/1` (for background
+  workers) or surface a reconnect prompt (for the web layer).
   """
-  @spec get(integer()) :: {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+  @spec get(integer()) ::
+          {:ok, VideoIntegrationSchema.t()}
+          | {:error, :not_found}
+          | {:error, :requires_reencryption, VideoIntegrationSchema.t()}
   def get(id) do
     case Repo.get(VideoIntegrationSchema, id) do
-      nil -> {:error, :not_found}
-      integration -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
+      nil ->
+        {:error, :not_found}
+
+      integration ->
+        case VideoIntegrationSchema.decryption_status(integration) do
+          :ok -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
+          :requires_reencryption -> {:error, :requires_reencryption, integration}
+        end
     end
   end
 
   @doc """
   Gets a video integration by ID for a specific user.
   This is the secure version that checks user authorization.
-  Returns {:ok, integration} if found, {:error, :not_found} otherwise.
+
+  Returns:
+
+    * `{:ok, integration}` — found and credentials readable
+    * `{:error, :not_found}` — no row with that ID for this user
+    * `{:error, :requires_reencryption, integration}` — found but one or more
+      encrypted credentials cannot be decrypted with the current keyring (e.g.
+      after SECRET_KEY_BASE rotation). The raw integration (without decrypted
+      virtual fields) is included so callers can flag `needs_reauth` without
+      needing to re-query.
+
+  Callers must add a `{:error, :requires_reencryption, integration}` clause and
+  route to `Tymeslot.Integrations.Video.handle_reauth_required/1` (for background
+  workers) or surface a reconnect prompt (for the web layer).
   """
   @spec get_for_user(integer(), integer()) ::
-          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+          {:ok, VideoIntegrationSchema.t()}
+          | {:error, :not_found}
+          | {:error, :requires_reencryption, VideoIntegrationSchema.t()}
   def get_for_user(id, user_id) do
     result =
       VideoIntegrationSchema
@@ -90,8 +127,14 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
       |> Repo.one()
 
     case result do
-      nil -> {:error, :not_found}
-      integration -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
+      nil ->
+        {:error, :not_found}
+
+      integration ->
+        case VideoIntegrationSchema.decryption_status(integration) do
+          :ok -> {:ok, VideoIntegrationSchema.decrypt_credentials(integration)}
+          :requires_reencryption -> {:error, :requires_reencryption, integration}
+        end
     end
   end
 
@@ -177,12 +220,44 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
 
   @doc """
   Updates a video integration.
+
+  When the update replaces any encrypted credential field, clears the
+  `needs_reauth` flag — the caller has supplied fresh credentials (via OAuth
+  reconnect or a form), so the previous decryption-failure flag no longer applies.
   """
   @spec update(VideoIntegrationSchema.t(), map()) ::
           {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update(%VideoIntegrationSchema{} = integration, attrs) do
     integration
     |> VideoIntegrationSchema.changeset(attrs)
+    |> maybe_clear_needs_reauth()
+    |> Repo.update()
+  end
+
+  defp maybe_clear_needs_reauth(changeset) do
+    if Enum.any?(
+         VideoIntegrationSchema.encrypted_credential_fields(),
+         &Map.has_key?(changeset.changes, &1)
+       ) do
+      Changeset.put_change(changeset, :needs_reauth, false)
+    else
+      changeset
+    end
+  end
+
+  @doc """
+  Flags an integration as needing reauthentication — used when the stored
+  credentials can no longer be decrypted. Also records a sync error so the
+  dashboard banner stays consistent.
+  """
+  @spec mark_needs_reauth(VideoIntegrationSchema.t(), String.t()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def mark_needs_reauth(%VideoIntegrationSchema{} = integration, error_message) do
+    integration
+    |> Changeset.change(%{
+      needs_reauth: true,
+      sync_error: error_message
+    })
     |> Repo.update()
   end
 

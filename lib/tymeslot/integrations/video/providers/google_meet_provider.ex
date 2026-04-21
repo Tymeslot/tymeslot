@@ -15,6 +15,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Shared.Lock
   alias Tymeslot.Integrations.Shared.ProviderConfigHelper
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
 
@@ -250,7 +251,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
         {:google_meet, integration_id},
         fn ->
           # Re-fetch from DB to see if another process refreshed it while we waited
-          case VideoIntegrationQueries.get_for_user(integration_id, user_id) do
+          case Video.fetch_integration_for_user(integration_id, user_id) do
             {:ok, fresh_integration} ->
               decrypted = VideoIntegrationSchema.decrypt_credentials(fresh_integration)
 
@@ -267,7 +268,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
                 do_actual_refresh(config)
               end
 
-            _other ->
+            {:error, :not_found} ->
               do_actual_refresh(config)
           end
         end,
@@ -320,7 +321,7 @@ defmodule Tymeslot.Integrations.Video.Providers.GoogleMeetProvider do
 
     with id when is_integer(id) <- integration_id,
          uid when is_integer(uid) <- user_id,
-         {:ok, integration} <- VideoIntegrationQueries.get_for_user(id, uid),
+         {:ok, integration} <- Video.fetch_integration_for_user(id, uid),
          {:ok, _result} <- VideoIntegrationQueries.update(integration, attrs) do
       :ok
     else

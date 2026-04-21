@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
   alias Tymeslot.Integrations.Calendar.TokenUtils
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Shared.Lock
 
   require Logger
@@ -68,25 +69,31 @@ defmodule Tymeslot.Integrations.Calendar.Tokens do
         perform_refresh(integration)
       else
         Lock.with_lock(provider_atom, integration_id, fn ->
-          # Re-fetch from DB to ensure we have the most up-to-date tokens
-          # (in case another process just refreshed them while we were waiting for the lock)
-          integration =
-            case CalendarIntegrationQueries.get(integration_id) do
-              {:ok, fresh_integration} -> fresh_integration
-              _error -> integration
-            end
-
-          if TokenUtils.token_expired?(integration) do
-            perform_refresh(integration)
-          else
-            {:ok, integration}
-          end
+          refresh_under_lock(integration, integration_id)
         end)
       end
     end
   end
 
   def refresh_oauth_token(_integration), do: {:error, :unsupported_provider}
+
+  # Re-fetch from DB to ensure we have the most up-to-date tokens
+  # (in case another process just refreshed them while we were waiting for the lock)
+  defp refresh_under_lock(integration, integration_id) do
+    case CalendarIntegrationQueries.get(integration_id) do
+      {:ok, fresh_integration} -> refresh_if_expired(fresh_integration)
+      {:error, :requires_reencryption, stale} -> CalendarManagement.handle_reauth_required(stale)
+      _error -> refresh_if_expired(integration)
+    end
+  end
+
+  defp refresh_if_expired(integration) do
+    if TokenUtils.token_expired?(integration) do
+      perform_refresh(integration)
+    else
+      {:ok, integration}
+    end
+  end
 
   defp perform_refresh(%{provider: "google"} = integration) do
     case google_calendar_api().refresh_token(integration) do

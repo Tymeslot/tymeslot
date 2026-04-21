@@ -39,7 +39,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   def perform(%Oban.Job{args: %{"calendar_integration_id" => integration_id}}) do
     Logger.metadata(calendar_integration_id: integration_id)
 
-    case CalendarIntegrationQueries.get_ready_for_sync(integration_id) do
+    case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
         sync_integration(integration)
 
@@ -51,7 +51,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
         {:discard, "Integration not found"}
 
       {:error, :requires_reencryption, integration} ->
-        CalendarManagement.flag_for_reauth(integration, "Google Calendar")
+        CalendarManagement.handle_reauth_required(integration)
     end
   end
 

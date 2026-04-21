@@ -33,6 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
   alias Tymeslot.Integrations.Calendar.ProviderConfig
+  alias Tymeslot.Integrations.CalendarManagement
 
   @type action :: :create | :update | :delete
   @type meeting :: %{
@@ -103,6 +104,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.QueueWiring do
 
       {:error, :not_found} ->
         {:error, :not_found}
+
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.handle_reauth_required(integration)
+        {:error, :requires_reencryption}
     end
   end
 

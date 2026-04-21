@@ -5,24 +5,17 @@ defmodule Tymeslot.Integrations.Video do
   Exposes a cohesive API used by web components without any LiveView/socket coupling.
   """
 
-  # Database
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
-  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
-
-  # OAuth helpers
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
-  alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
-
-  # Internal video components
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Discovery
-  alias Tymeslot.Integrations.Video.Rooms
-  alias Tymeslot.Integrations.Video.Urls
-
-  # Provider modules
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
-
+  alias Tymeslot.Integrations.Video.Rooms
+  alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
+  alias Tymeslot.Integrations.Video.Urls
+  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias TymeslotWeb.Endpoint
 
   require Logger
@@ -44,6 +37,72 @@ defmodule Tymeslot.Integrations.Video do
           {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
   def get_integration(user_id, id) when is_integer(user_id) and is_integer(id) do
     VideoIntegrationQueries.get_for_user(id, user_id)
+  end
+
+  @doc """
+  Entry point for the "credentials no longer decrypt" path, used by any
+  worker or caller that receives `{:error, :requires_reencryption, integration}`
+  from `VideoIntegrationQueries.get/1` or `VideoIntegrationQueries.get_for_user/2`.
+
+  Returns an Oban return value: `{:discard, _}` on success (retrying won't
+  recover the credentials), or `{:error, _}` if the flag couldn't be persisted —
+  which causes Oban to retry the job and take another shot at recording the flag.
+  """
+  @spec handle_reauth_required(VideoIntegrationSchema.t()) ::
+          {:discard, String.t()} | {:error, String.t()}
+  def handle_reauth_required(%VideoIntegrationSchema{} = integration) do
+    case flag_for_reauth(integration) do
+      :ok -> {:discard, "Credentials require reauthentication"}
+      {:error, _changeset} -> {:error, "Failed to flag integration for reauth"}
+    end
+  end
+
+  @doc """
+  Fetches a video integration by ID, collapsing the
+  `{:error, :requires_reencryption, integration}` arm into `{:error, :not_found}`
+  after silently flagging the integration for reauthentication.
+
+  Use this in non-Oban callers that only care about the two-outcome
+  `{:ok, _} | {:error, :not_found}` shape.
+  """
+  @spec fetch_integration(integer()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+  def fetch_integration(id) do
+    case VideoIntegrationQueries.get(id) do
+      {:ok, integration} -> {:ok, integration}
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, :requires_reencryption, stale} ->
+        flag_for_reauth(stale)
+        {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Fetches a video integration by ID for a specific user, collapsing the
+  `{:error, :requires_reencryption, integration}` arm into `{:error, :not_found}`
+  after silently flagging the integration for reauthentication.
+
+  Use this in non-Oban callers that only care about the two-outcome
+  `{:ok, _} | {:error, :not_found}` shape.
+  """
+  @spec fetch_integration_for_user(integer(), integer()) ::
+          {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
+  def fetch_integration_for_user(id, user_id) do
+    case VideoIntegrationQueries.get_for_user(id, user_id) do
+      {:ok, integration} -> {:ok, integration}
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, :requires_reencryption, stale} ->
+        flag_for_reauth(stale)
+        {:error, :not_found}
+    end
+  end
+
+  # Shared helper: delegates to ReauthHandling.flag/2 with video-specific opts.
+  defp flag_for_reauth(integration) do
+    ReauthHandling.flag(integration,
+      mark_needs_reauth: &VideoIntegrationQueries.mark_needs_reauth/2,
+      log_prefix: "Video"
+    )
   end
 
   # ---------------
@@ -139,8 +198,10 @@ defmodule Tymeslot.Integrations.Video do
   @spec update_integration(pos_integer(), pos_integer(), %{atom() => term()}) ::
           {:ok, any()} | {:error, any()}
   def update_integration(user_id, id, attrs) when is_integer(user_id) and is_integer(id) do
-    with {:ok, integration} <- VideoIntegrationQueries.get_for_user(id, user_id) do
-      VideoIntegrationQueries.update(integration, attrs)
+    case VideoIntegrationQueries.get_for_user(id, user_id) do
+      {:ok, integration} -> VideoIntegrationQueries.update(integration, attrs)
+      {:error, :not_found} = err -> err
+      {:error, :requires_reencryption, _integration} -> {:error, :requires_reencryption}
     end
   end
 
@@ -149,11 +210,21 @@ defmodule Tymeslot.Integrations.Video do
   # ---------------
   @spec delete_integration(pos_integer(), pos_integer()) :: {:ok, :deleted} | {:error, any()}
   def delete_integration(user_id, id) when is_integer(user_id) do
-    with {:ok, integration} <- VideoIntegrationQueries.get_for_user(id, user_id),
-         {:ok, _result} <- VideoIntegrationQueries.delete(integration) do
-      {:ok, :deleted}
-    else
-      {:error, _reason} = err -> err
+    case VideoIntegrationQueries.get_for_user(id, user_id) do
+      {:ok, integration} ->
+        case VideoIntegrationQueries.delete(integration) do
+          {:ok, _result} -> {:ok, :deleted}
+          {:error, _reason} = err -> err
+        end
+
+      {:error, :not_found} = err ->
+        err
+
+      {:error, :requires_reencryption, integration} ->
+        case VideoIntegrationQueries.delete(integration) do
+          {:ok, _result} -> {:ok, :deleted}
+          {:error, _reason} = err -> err
+        end
     end
   end
 
@@ -164,7 +235,8 @@ defmodule Tymeslot.Integrations.Video do
   def toggle_integration(user_id, id) when is_integer(user_id) do
     case VideoIntegrationQueries.get_for_user(id, user_id) do
       {:ok, integration} -> VideoIntegrationQueries.toggle_active(integration)
-      {:error, _reason} = err -> err
+      {:error, :not_found} = err -> err
+      {:error, :requires_reencryption, _integration} -> {:error, :requires_reencryption}
     end
   end
 
@@ -264,6 +336,13 @@ defmodule Tymeslot.Integrations.Video do
 
       {:error, :not_found} ->
         {:error, "Integration not found"}
+
+      {:error, :requires_reencryption, existing} ->
+        # Credentials are stale but the user is reconnecting — allow the update
+        # so fresh credentials replace the undecryptable ones.
+        AccountMatch.verify_account_match(existing, provider_account_id, fn ->
+          VideoIntegrationQueries.update(existing, token_attrs)
+        end)
     end
   end
 

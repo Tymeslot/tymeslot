@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.AccessToken do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Common.OAuth.Token, as: OAuthToken
 
   @default_buffer 300
@@ -22,8 +23,15 @@ defmodule Tymeslot.Integrations.Calendar.Shared.AccessToken do
 
     refetch_fun = fn id ->
       case CalendarIntegrationQueries.get(id) do
-        {:ok, fresh} -> fresh
-        _error -> nil
+        {:ok, fresh} ->
+          fresh
+
+        {:error, :requires_reencryption, stale} ->
+          CalendarManagement.handle_reauth_required(stale)
+          nil
+
+        {:error, :not_found} ->
+          nil
       end
     end
 

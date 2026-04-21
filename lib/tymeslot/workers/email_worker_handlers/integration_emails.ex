@@ -10,7 +10,9 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
   alias Tymeslot.CalendarGrid
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
 
   @spec handle_integration_unhealthy_notification(%{String.t() => term()}) ::
@@ -176,11 +178,33 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
     end
   end
 
-  defp fetch_integration("calendar", integration_id),
-    do: CalendarIntegrationQueries.get(integration_id)
+  defp fetch_integration("calendar", integration_id) do
+    case CalendarIntegrationQueries.get(integration_id) do
+      {:ok, _integration} = ok ->
+        ok
 
-  defp fetch_integration("video", integration_id),
-    do: VideoIntegrationQueries.get(integration_id)
+      {:error, :not_found} = not_found ->
+        not_found
+
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.handle_reauth_required(integration)
+        {:error, :not_found}
+    end
+  end
+
+  defp fetch_integration("video", integration_id) do
+    case VideoIntegrationQueries.get(integration_id) do
+      {:ok, _integration} = ok ->
+        ok
+
+      {:error, :not_found} = not_found ->
+        not_found
+
+      {:error, :requires_reencryption, integration} ->
+        Video.handle_reauth_required(integration)
+        {:error, :not_found}
+    end
+  end
 
   defp fetch_integration(_type, _id), do: {:error, :not_found}
 

@@ -9,7 +9,6 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   """
 
   require Logger
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
@@ -86,7 +85,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
           | {:error, atom()}
   def get_booking_integration_info(%MeetingSchema{} = meeting) do
     if is_integer(meeting.calendar_integration_id) and is_binary(meeting.calendar_path) do
-      case CalendarIntegrationQueries.get_for_user(
+      case CalendarManagement.fetch_integration_for_user(
              meeting.calendar_integration_id,
              meeting.organizer_user_id
            ) do
@@ -107,7 +106,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
 
   def get_booking_integration_info(%MeetingTypeSchema{} = mt) do
     if is_integer(mt.calendar_integration_id) and is_binary(mt.target_calendar_id) do
-      case CalendarIntegrationQueries.get_for_user(mt.calendar_integration_id, mt.user_id) do
+      case CalendarManagement.fetch_integration_for_user(mt.calendar_integration_id, mt.user_id) do
         {:ok, integration} when integration.is_active ->
           {:ok,
            %{
@@ -142,7 +141,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   """
   @spec get_client_by_integration_id(integration_id(), user_id()) :: client() | nil
   def get_client_by_integration_id(integration_id, user_id) do
-    case CalendarIntegrationQueries.get_for_user(integration_id, user_id) do
+    case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
       {:error, :not_found} ->
         nil
 
@@ -314,7 +313,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
 
   defp resolve_booking_integration({integration_id, user_id})
        when is_integer(integration_id) and is_integer(user_id) do
-    case CalendarIntegrationQueries.get_for_user(integration_id, user_id) do
+    case CalendarManagement.fetch_integration_for_user(integration_id, user_id) do
       {:ok, integration} when integration.is_active -> integration
       _not_found_or_inactive -> resolve_booking_integration(user_id)
     end
@@ -323,7 +322,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   defp resolve_booking_integration(%MeetingSchema{} = meeting) do
     cond do
       is_integer(meeting.calendar_integration_id) ->
-        case CalendarIntegrationQueries.get_for_user(
+        case CalendarManagement.fetch_integration_for_user(
                meeting.calendar_integration_id,
                meeting.organizer_user_id
              ) do
@@ -346,7 +345,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   defp resolve_booking_integration(%MeetingTypeSchema{} = meeting_type) do
     cond do
       is_integer(meeting_type.calendar_integration_id) ->
-        case CalendarIntegrationQueries.get_for_user(
+        case CalendarManagement.fetch_integration_for_user(
                meeting_type.calendar_integration_id,
                meeting_type.user_id
              ) do

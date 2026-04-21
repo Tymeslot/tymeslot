@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
   require Logger
@@ -38,12 +39,36 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   end
 
   @doc """
-  Gets a single calendar integration.
+  Gets a single calendar integration, returning a two-outcome tuple.
+
+  Delegates to `fetch_integration_for_user/2` so that a
+  `{:error, :requires_reencryption, _}` result is silently flagged and
+  collapsed to `{:error, :not_found}` before it reaches callers.
   """
   @spec get_calendar_integration(integration_id(), user_id()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
   def get_calendar_integration(integration_id, user_id) do
-    CalendarIntegrationQueries.get_for_user(integration_id, user_id)
+    fetch_integration_for_user(integration_id, user_id)
+  end
+
+  @doc """
+  Fetches a calendar integration by ID for a user, collapsing the
+  `{:error, :requires_reencryption, integration}` arm into `{:error, :not_found}`
+  after silently flagging the integration for reauthentication.
+
+  Use this in non-Oban callers that only care about the two-outcome
+  `{:ok, _} | {:error, :not_found}` shape.
+  """
+  @spec fetch_integration_for_user(integration_id(), user_id()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def fetch_integration_for_user(integration_id, user_id) do
+    case CalendarIntegrationQueries.get_for_user(integration_id, user_id) do
+      {:ok, integration} -> {:ok, integration}
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, :requires_reencryption, stale} ->
+        flag_for_reauth(stale)
+        {:error, :not_found}
+    end
   end
 
   @doc """
@@ -143,40 +168,50 @@ defmodule Tymeslot.Integrations.CalendarManagement do
     CalendarIntegrationQueries.mark_needs_reauth(integration, error_message)
   end
 
-  @reauth_error_message "Stored credentials could not be decrypted with the current encryption key. Please reconnect the integration."
+  @doc """
+  Entry point for the "credentials no longer decrypt" path, used by any
+  worker or caller that receives `{:error, :requires_reencryption, integration}`
+  from `CalendarIntegrationQueries.get/1`.
+
+  Returns an Oban return value: `{:discard, _}` on success (retrying won't
+  recover the credentials), or `{:error, _}` if the flag couldn't be persisted —
+  which causes Oban to retry the job and take another shot at recording the flag.
+  """
+  @spec handle_reauth_required(CalendarIntegrationSchema.t()) ::
+          {:discard, String.t()} | {:error, String.t()}
+  def handle_reauth_required(%CalendarIntegrationSchema{} = integration) do
+    case flag_for_reauth(integration) do
+      :ok -> {:discard, "Credentials require reauthentication"}
+      {:error, _changeset} -> {:error, "Failed to flag integration for reauth"}
+    end
+  end
 
   @doc """
-  Sync-worker entry point for the "credentials no longer decrypt" path.
+  Fetches a calendar integration by ID, collapsing the
+  `{:error, :requires_reencryption, integration}` arm into `{:error, :not_found}`
+  after silently flagging the integration for reauthentication.
 
-  Logs a warning, flags the integration, and returns an Oban return value:
-  `{:discard, _}` on success (no point retrying — credentials won't recover
-  themselves) or `{:error, _}` if the flag couldn't be persisted, so Oban
-  retries the job and gets another shot at recording the flag.
+  Use this in non-Oban callers that only care about the two-outcome
+  `{:ok, _} | {:error, :not_found}` shape.
   """
-  @spec flag_for_reauth(CalendarIntegrationSchema.t(), String.t()) ::
-          {:discard, String.t()} | {:error, String.t()}
-  def flag_for_reauth(%CalendarIntegrationSchema{} = integration, provider_label) do
-    Logger.warning(
-      "Calendar integration credentials cannot be decrypted — flagging for reauth",
-      provider: provider_label,
-      calendar_integration_id: integration.id,
-      user_id: integration.user_id
-    )
-
-    case mark_needs_reauth(integration, @reauth_error_message) do
-      {:ok, _integration} ->
-        {:discard, "Credentials require reauthentication"}
-
-      {:error, changeset} ->
-        Logger.error(
-          "Failed to persist needs_reauth flag; Oban will retry the job",
-          provider: provider_label,
-          calendar_integration_id: integration.id,
-          errors: inspect(changeset.errors)
-        )
-
-        {:error, "Failed to flag integration for reauth"}
+  @spec fetch_integration(integer()) ::
+          {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
+  def fetch_integration(id) do
+    case CalendarIntegrationQueries.get(id) do
+      {:ok, integration} -> {:ok, integration}
+      {:error, :not_found} -> {:error, :not_found}
+      {:error, :requires_reencryption, stale} ->
+        flag_for_reauth(stale)
+        {:error, :not_found}
     end
+  end
+
+  # Shared helper: delegates to ReauthHandling.flag/2 with calendar-specific opts.
+  defp flag_for_reauth(integration) do
+    ReauthHandling.flag(integration,
+      mark_needs_reauth: &mark_needs_reauth/2,
+      log_prefix: "Calendar"
+    )
   end
 
   # Private helpers

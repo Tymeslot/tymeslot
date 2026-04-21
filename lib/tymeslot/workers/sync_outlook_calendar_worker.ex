@@ -58,7 +58,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
       graph_resource_id: graph_resource_id
     )
 
-    case CalendarIntegrationQueries.get_ready_for_sync(integration_id) do
+    case CalendarIntegrationQueries.get(integration_id) do
       {:ok, integration} ->
         sync_event(integration, graph_resource_id)
 
@@ -70,7 +70,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
         {:discard, "Integration not found"}
 
       {:error, :requires_reencryption, integration} ->
-        CalendarManagement.flag_for_reauth(integration, "Outlook Calendar")
+        CalendarManagement.handle_reauth_required(integration)
     end
   end
 

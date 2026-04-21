@@ -21,7 +21,11 @@ case CalendarIntegrationQueries.get(integration_id) do
   {:error, :not_found} ->
     Logger.error("Integration not found with ID: #{integration_id}")
     exit(:integration_not_found)
-    
+
+  {:error, :requires_reencryption, _integration} ->
+    Logger.error("Integration #{integration_id} credentials cannot be decrypted — SECRET_KEY_BASE may have changed. Reconnect the integration.")
+    exit(:requires_reencryption)
+
   {:ok, integration} ->
     if integration.provider != "outlook" do
       Logger.error("Integration #{integration_id} is not an Outlook integration (provider: #{integration.provider})")
@@ -63,6 +67,10 @@ case CalendarIntegrationQueries.get(integration_id) do
             Logger.info("  - Token expires at: #{updated_integration.token_expires_at}")
             Logger.info("  - Integration is active: #{updated_integration.is_active}")
             Logger.info("  - Sync error: #{updated_integration.sync_error || "none"}")
+
+          {:error, :requires_reencryption, _integration} ->
+            Logger.warning("Could not verify database update — credentials require reencryption")
+
           _ ->
             Logger.warning("Could not verify database update")
         end

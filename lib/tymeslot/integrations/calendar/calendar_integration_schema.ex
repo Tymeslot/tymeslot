@@ -208,6 +208,21 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     }
   end
 
+  @encrypted_credential_fields [
+    :username_encrypted,
+    :password_encrypted,
+    :access_token_encrypted,
+    :refresh_token_encrypted
+  ]
+
+  @doc """
+  Returns the list of encrypted credential field atoms on this schema. Used by
+  `decryption_status/1` and `CalendarIntegrationQueries.maybe_clear_needs_reauth/1`
+  so the authoritative list lives in one place.
+  """
+  @spec encrypted_credential_fields() :: [atom()]
+  def encrypted_credential_fields, do: @encrypted_credential_fields
+
   @doc """
   Reports whether any encrypted credential on the integration fails to decrypt
   under the current keyring. Returns `:ok` when every ciphertext is either
@@ -219,15 +234,10 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
   """
   @spec decryption_status(t()) :: :ok | :requires_reencryption
   def decryption_status(%__MODULE__{} = integration) do
-    encrypted_fields = [
-      integration.username_encrypted,
-      integration.password_encrypted,
-      integration.access_token_encrypted,
-      integration.refresh_token_encrypted
-    ]
+    encrypted_values = Enum.map(@encrypted_credential_fields, &Map.get(integration, &1))
 
     if Enum.any?(
-         encrypted_fields,
+         encrypted_values,
          &(Encryption.decrypt_with_status(&1) == {:error, :requires_reencryption})
        ) do
       :requires_reencryption

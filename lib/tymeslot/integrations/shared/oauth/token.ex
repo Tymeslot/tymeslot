@@ -8,6 +8,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.Shared.Lock
 
   @type integration :: map()
@@ -171,6 +172,10 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
     case CalendarIntegrationQueries.get(id) do
       {:ok, %CalendarIntegrationSchema{} = integ} ->
         persist_tokens(integ, access, refresh, expires_at)
+
+      {:error, :requires_reencryption, integration} ->
+        CalendarManagement.handle_reauth_required(integration)
+        :ok
 
       {:error, _fetch_error} ->
         :ok

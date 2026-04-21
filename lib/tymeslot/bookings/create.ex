@@ -9,7 +9,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Repo
@@ -368,7 +368,7 @@ defmodule Tymeslot.Bookings.Create do
     integration_result =
       case meeting.video_integration_id do
         nil -> {:error, :not_found}
-        id -> VideoIntegrationQueries.get_for_user(id, meeting.organizer_user_id)
+        id -> Video.fetch_integration_for_user(id, meeting.organizer_user_id)
       end
 
     case integration_result do

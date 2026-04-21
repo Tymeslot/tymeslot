@@ -2,9 +2,9 @@ defmodule Tymeslot.MeetingTypes do
   @moduledoc """
   Context for managing meeting types.
   """
-  alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
-  alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Utils.ReminderUtils
@@ -349,7 +349,7 @@ defmodule Tymeslot.MeetingTypes do
 
   defp validate_video_integration(%{allow_video: true, video_integration_id: id}, user_id)
        when is_integer(id) do
-    case VideoIntegrationQueries.get_for_user(id, user_id) do
+    case Video.fetch_integration_for_user(id, user_id) do
       {:ok, %{is_active: true}} -> :ok
       {:ok, _integration} -> {:error, :invalid_video_integration}
       {:error, :not_found} -> {:error, :invalid_video_integration}
@@ -384,7 +384,7 @@ defmodule Tymeslot.MeetingTypes do
          user_id
        )
        when is_integer(id) do
-    with {:ok, integration} <- CalendarIntegrationQueries.get_for_user(id, user_id),
+    with {:ok, integration} <- CalendarManagement.fetch_integration_for_user(id, user_id),
          :ok <- validate_target_calendar(target_calendar_id, integration) do
       :ok
     else
