@@ -220,6 +220,36 @@ defmodule TymeslotWeb.OnboardingLiveTest do
       # The form should have the user's name pre-filled
       assert html =~ "Pre Filled Name"
     end
+
+    test "profile step blocks advancing when username is empty", %{conn: conn} do
+      # Front-line defence: NavigationHandlers.handle_username_validation
+      # rejects an empty username at the profile step with "Username is
+      # required", so the user can't reach the calendar step (let alone
+      # complete onboarding) without choosing a handle. Regression pins
+      # the UX gate — the completion-time ensure_username/2 backfill is
+      # a secondary safety net, not the primary guard.
+      {:ok, view, _html, _user} = setup_onboarding(conn, %{name: "No Username User"})
+
+      # Step 1: Welcome -> Profile
+      view |> element("button[phx-click='next_step']") |> render_click()
+
+      # Profile step with blank username.
+      view
+      |> form("form#profile-form", %{
+        "full_name" => "No Username User",
+        "username" => ""
+      })
+      |> render_change()
+
+      result =
+        view
+        |> element("button[phx-click='next_step']")
+        |> render_click()
+
+      assert result =~ "Username is required"
+      # The profile form is still visible — the step did not advance.
+      assert has_element?(view, "#profile-form")
+    end
   end
 
   describe "already completed onboarding" do
