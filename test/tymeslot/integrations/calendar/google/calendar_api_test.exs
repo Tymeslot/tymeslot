@@ -338,7 +338,14 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
           refresh_token_encrypted: Encryption.encrypt("old_refresh_token")
         )
 
+      prior = Application.get_env(:tymeslot, :google_oauth)
       Application.put_env(:tymeslot, :google_oauth, client_id: "client", client_secret: "secret")
+
+      on_exit(fn ->
+        if prior,
+          do: Application.put_env(:tymeslot, :google_oauth, prior),
+          else: Application.delete_env(:tymeslot, :google_oauth)
+      end)
 
       expect(Tymeslot.HTTPClientMock, :request, fn :post, url, body, _headers, _opts ->
         assert url == "https://oauth2.googleapis.com/token"
@@ -359,6 +366,74 @@ defmodule Tymeslot.Integrations.Calendar.Google.CalendarAPITest do
 
       assert {:ok, {"new_access_token", "new_refresh_token", %DateTime{}}} =
                CalendarAPI.refresh_token(integration)
+    end
+  end
+
+  describe "error taxonomy" do
+    # Callers downstream of CalendarAPI (CalendarEventWorker, CircuitBreaker,
+    # retry policies) route on the second element of the error tuple. These
+    # tests lock in the contract that each HTTP status maps to a
+    # distinguishable atom so those call sites keep working.
+
+    setup do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      %{integration: integration}
+    end
+
+    test "404 from the Google API surfaces as :not_found", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      assert {:error, :not_found, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "500 from the Google API surfaces as :network_error", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 500, body: ""}}
+      end)
+
+      assert {:error, :network_error, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "403 with rateLimitExceeded reason surfaces as :rate_limited", %{
+      integration: integration
+    } do
+      body =
+        Jason.encode!(%{
+          "error" => %{
+            "message" => "Rate Limit Exceeded",
+            "errors" => [%{"reason" => "rateLimitExceeded"}]
+          }
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: body}}
+      end)
+
+      assert {:error, :rate_limited, _msg} =
+               CalendarAPI.create_event(integration, "primary", %{
+                 summary: "Team sync",
+                 start_time: ~U[2026-05-01 10:00:00Z],
+                 end_time: ~U[2026-05-01 11:00:00Z]
+               })
+    end
+
+    test "a transport timeout surfaces as :network_error", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:error, %Mint.TransportError{reason: :timeout}}
+      end)
+
+      assert {:error, :network_error, _msg} = CalendarAPI.list_calendars(integration)
     end
   end
 end

@@ -253,7 +253,14 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
           refresh_token_encrypted: Encryption.encrypt("old_refresh_token")
         )
 
+      prior = Application.get_env(:tymeslot, :outlook_oauth)
       Application.put_env(:tymeslot, :outlook_oauth, client_id: "client", client_secret: "secret")
+
+      on_exit(fn ->
+        if prior,
+          do: Application.put_env(:tymeslot, :outlook_oauth, prior),
+          else: Application.delete_env(:tymeslot, :outlook_oauth)
+      end)
 
       expect(Tymeslot.HTTPClientMock, :request, fn :post, url, body, _headers, _opts ->
         assert url == "https://login.microsoftonline.com/common/oauth2/v2.0/token"
@@ -411,6 +418,117 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.CalendarAPITest do
       end)
 
       assert {:error, :network_error, _msg} = CalendarAPI.list_calendars(integration)
+    end
+  end
+
+  describe "error taxonomy" do
+    # Outlook maps HTTP statuses to the same atoms as Google, except that
+    # 429 has an explicit handler (Google routes its rate-limited signal
+    # via 403 + a Graph-free "rateLimitExceeded" reason). Downstream
+    # callers branch on the atom, so each code-to-atom edge needs a
+    # regression.
+
+    setup do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "outlook",
+          access_token_encrypted: Encryption.encrypt("valid_token"),
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600)
+        )
+
+      %{integration: integration}
+    end
+
+    test "404 from Graph API surfaces as :not_found", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      assert {:error, :not_found, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "429 from Graph API surfaces as :rate_limited", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 429, body: ""}}
+      end)
+
+      assert {:error, :rate_limited, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "500 from Graph API surfaces as :network_error", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 500, body: ""}}
+      end)
+
+      assert {:error, :network_error, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "403 with a throttled Graph code surfaces as :rate_limited", %{
+      integration: integration
+    } do
+      body =
+        Jason.encode!(%{
+          "error" => %{
+            "code" => "ApplicationThrottled",
+            "message" => "Application has been throttled"
+          }
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: body, headers: %{}}}
+      end)
+
+      assert {:error, :rate_limited, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "403 with empty body surfaces as :network_error", %{integration: integration} do
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: "", headers: %{}}}
+      end)
+
+      assert {:error, :network_error, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "403 with AccessDenied code surfaces as :unauthorized", %{integration: integration} do
+      body =
+        Jason.encode!(%{
+          "error" => %{
+            "code" => "AccessDenied",
+            "message" => "Insufficient privileges to complete the operation."
+          }
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 403, body: body, headers: %{}}}
+      end)
+
+      assert {:error, :unauthorized, _msg} = CalendarAPI.list_calendars(integration)
+    end
+
+    test "403 with Retry-After header includes retry_after seconds in message", %{
+      integration: integration
+    } do
+      body =
+        Jason.encode!(%{
+          "error" => %{
+            "code" => "ApplicationThrottled",
+            "message" => "Application has been throttled"
+          }
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :get, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 403,
+           body: body,
+           headers: %{"retry-after" => ["120"]}
+         }}
+      end)
+
+      assert {:error, :rate_limited, "retry_after:120"} = CalendarAPI.list_calendars(integration)
     end
   end
 end
