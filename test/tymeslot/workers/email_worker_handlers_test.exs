@@ -131,6 +131,46 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
       assert updated.organizer_email_sent == true
       assert updated.attendee_email_sent == false
     end
+
+    test "retry after a partial send does not re-send the organiser" do
+      # First attempt: organiser send succeeds, attendee send fails.
+      # The handler returns {:error, _} and Oban would re-enqueue, with
+      # the DB remembering which side already went out.
+      meeting = insert(:meeting, organizer_email_sent: false, attendee_email_sent: false)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_organizer, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _email, _details ->
+        {:error, "transient"}
+      end)
+
+      assert {:error, "Failed to send all emails"} =
+               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+                 "meeting_id" => meeting.id
+               })
+
+      {:ok, after_first} = MeetingQueries.get_meeting(meeting.id)
+      assert after_first.organizer_email_sent == true
+      assert after_first.attendee_email_sent == false
+
+      # Retry: only the attendee callback is expected. `verify_on_exit!`
+      # enforces that :send_appointment_confirmation_to_organizer is NOT
+      # called a second time — that is the retry-safety invariant.
+      expect(EmailServiceMock, :send_appointment_confirmation_to_attendee, fn _email, _details ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action("send_confirmation_emails", %{
+                 "meeting_id" => meeting.id
+               })
+
+      {:ok, after_retry} = MeetingQueries.get_meeting(meeting.id)
+      assert after_retry.organizer_email_sent == true
+      assert after_retry.attendee_email_sent == true
+    end
   end
 
   describe "handle_reminder_emails/1" do
