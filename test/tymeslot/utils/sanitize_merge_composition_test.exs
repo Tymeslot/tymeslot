@@ -62,7 +62,11 @@ defmodule Tymeslot.Utils.SanitizeMergeCompositionTest do
   end
 
   describe "ServiceSettingsComponent meeting type form" do
-    test "empty calendar_integration_id stays nil after merge" do
+    test "empty string calendar_integration_id is preserved against a nil sanitiser" do
+      # When the user submits "" for an optional id field, the validator
+      # normalises it to nil. SanitizeMerge must not let that nil silently
+      # overwrite the user's submitted value — "" is user-provided content,
+      # not a drop signal.
       params = %{
         "name" => "Consultation",
         "duration" => "30",
@@ -81,7 +85,7 @@ defmodule Tymeslot.Utils.SanitizeMergeCompositionTest do
 
       assert merged["name"] == "Consultation"
       assert merged["duration"] == "30"
-      assert merged["calendar_integration_id"] == nil
+      assert merged["calendar_integration_id"] == ""
     end
 
     test "preserves user-selected calendar_integration_id against a nil drop-signal" do

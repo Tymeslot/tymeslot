@@ -67,6 +67,15 @@ defmodule Tymeslot.Utils.SanitizeMergeTest do
       assert SanitizeMerge.merge(params, sanitized) == %{"calendar_integration_id" => 5}
     end
 
+    test "nil sanitised value does not overwrite whitespace-only params value" do
+      # Whitespace is user-provided content — it must not be treated as a
+      # drop signal. Only `nil` and `[]` are drop signals per the moduledoc.
+      params = %{"notes" => "   "}
+      sanitized = %{"notes" => nil}
+
+      assert SanitizeMerge.merge(params, sanitized) == %{"notes" => "   "}
+    end
+
     test "nil sanitised value falls through when params was also nil" do
       params = %{"calendar_integration_id" => nil}
       sanitized = %{"calendar_integration_id" => nil}
