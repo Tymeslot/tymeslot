@@ -38,10 +38,9 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
 
   import Mox
   import Phoenix.LiveViewTest
-  import Tymeslot.AuthTestHelpers
+  import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
-  alias Plug.Test
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
@@ -49,16 +48,12 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
 
   setup :verify_on_exit!
 
-  setup %{conn: conn} do
+  setup do
     RateLimiter.clear_all()
-
-    user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    _profile = insert(:profile, user: user)
-    conn = conn |> Test.init_test_session(%{}) |> fetch_session()
-    conn = log_in_user(conn, user)
-
-    %{conn: conn, user: user}
+    :ok
   end
+
+  setup :setup_dashboard_user
 
   describe "add_integration — sanitise-merge regression" do
     @tag :capture_log
@@ -140,8 +135,11 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsCompositionTest do
       })
       |> render_submit()
 
-      # The modal should reject the empty API key rather than persist
-      # it; the stored ciphertext must be untouched so the integration
+      # The modal must surface a validation error so the user knows
+      # why the save was rejected.
+      assert render(view) =~ "API key is required"
+
+      # The stored ciphertext must be untouched so the integration
       # keeps working on subsequent calls.
       fresh = Repo.get!(VideoIntegrationSchema, integration.id)
       assert fresh.api_key_encrypted == original_api_key_ciphertext

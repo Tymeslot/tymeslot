@@ -47,14 +47,17 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       would only exercise the handler directly, which is a unit test.
     * `toggle_calendar_selection` for an integration deleted mid-session
       — uncovered a separate bug: the handler passes the stale struct
-      from socket assigns into `Calendar.toggle_calendar_selection/2`,
-      which raises `Ecto.StaleEntryError` instead of returning an error
-      tuple. The component never sees `{:error, _}`, so the user gets
-      a LiveView crash rather than the "Failed to update selection"
-      flash the component's `else` branch promises. Landing the
-      regression test here would require the production fix; per the
-      plan's test-only worktree policy, this goes as a follow-up in a
-      dedicated fix worktree.
+      from socket assigns into `Calendar.toggle_calendar_selection/2`.
+      Because `CalendarIntegrationSchema` has no `optimistic_lock` field,
+      `Repo.update/1` on the deleted row silently returns `{:ok, stale_struct}`
+      (0 rows affected, no exception). The `with` pipeline takes the success
+      branch, calls `load_integrations/1`, and never reaches the `else`
+      clause — so the user sees a silent no-op instead of the "Failed to
+      update selection" flash. The fix is a pre-update existence check in
+      the queries module (e.g. `Repo.get` before updating), not rescuing
+      `Ecto.StaleEntryError`. Landing the regression test here would require
+      the production fix; per the plan's test-only worktree policy, this
+      goes as a follow-up in a dedicated fix worktree.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -66,11 +69,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
   import Mox
   import Phoenix.LiveViewTest
-  import Tymeslot.AuthTestHelpers
+  import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
   import Tymeslot.TestHelpers.Eventually
 
-  alias Plug.Test
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Profiles.ProfileQueries
@@ -79,16 +81,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
   setup :verify_on_exit!
 
-  setup %{conn: conn} do
+  setup do
     RateLimiter.clear_all()
-
-    user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    profile = insert(:profile, user: user)
-    conn = conn |> Test.init_test_session(%{}) |> fetch_session()
-    conn = log_in_user(conn, user)
-
-    %{conn: conn, user: user, profile: profile}
+    :ok
   end
+
+  setup :setup_dashboard_user
 
   describe "refresh_all_calendars" do
     @tag :capture_log

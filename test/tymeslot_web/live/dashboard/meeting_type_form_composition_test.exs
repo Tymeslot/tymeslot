@@ -120,6 +120,12 @@ defmodule TymeslotWeb.Dashboard.MeetingTypeFormCompositionTest do
       # happy-path confirmation must NOT show, and no row may land.
       refute html =~ "Meeting type created"
 
+      # The catch-all error handler in MeetingSettings.Helpers fires
+      # Flash.error/1, which forwards the message to the parent LiveView
+      # via send(self(), {:flash, ...}). The parent's handle_info/2 puts
+      # it on the LiveView socket, so it appears in the rendered HTML.
+      assert html =~ "Failed to save meeting type"
+
       # Default meeting types are auto-provisioned on first visit, so
       # the list is never empty; instead assert the specific name we
       # tried to save never landed.
