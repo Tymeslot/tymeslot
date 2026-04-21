@@ -328,8 +328,8 @@ defmodule Tymeslot.MeetingTypes do
         is_active: params["is_active"] == "true",
         allow_video: ui_state.meeting_mode == "video",
         video_integration_id: video_integration_id,
-        calendar_integration_id: params["calendar_integration_id"],
-        target_calendar_id: params["target_calendar_id"],
+        calendar_integration_id: blank_to_nil(params["calendar_integration_id"]),
+        target_calendar_id: blank_to_nil(params["target_calendar_id"]),
         reminder_config: reminder_config
       }
 
@@ -339,6 +339,9 @@ defmodule Tymeslot.MeetingTypes do
     ArgumentError ->
       {:error, :invalid_duration}
   end
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(value), do: value
 
   defp validate_video_integration(%{allow_video: true, video_integration_id: nil}, _user_id) do
     {:error, :video_integration_required}
