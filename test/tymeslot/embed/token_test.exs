@@ -58,4 +58,56 @@ defmodule Tymeslot.Embed.TokenTest do
       assert {:error, :invalid} = Token.verify(token)
     end
   end
+
+  describe "Task 116: forge/expiry/cross-user boundary coverage" do
+    # Rotated or foreign secret_key_base is simulated by signing with a
+    # different salt — Phoenix.Token derives the verifier secret from
+    # secret_key_base <> salt, so a mismatch here is equivalent to a
+    # mismatch in secret_key_base from the verifier's perspective.
+    test "token signed with a foreign salt (rotated key) is rejected as :invalid" do
+      foreign = Phoenix.Token.sign(TymeslotWeb.Endpoint, "different-salt", {"sarah", nil})
+      assert {:error, :invalid} = Token.verify(foreign)
+    end
+
+    test "token with signed_at older than max_age is rejected as :expired" do
+      past_seconds = System.system_time(:second) - 21_700
+
+      stale =
+        Phoenix.Token.sign(
+          TymeslotWeb.Endpoint,
+          "embed_session",
+          {"sarah", nil},
+          signed_at: past_seconds
+        )
+
+      assert {:error, :expired} = Token.verify(stale)
+    end
+
+    test "token signed just within max_age still verifies" do
+      past_seconds = System.system_time(:second) - 30
+
+      fresh =
+        Phoenix.Token.sign(
+          TymeslotWeb.Endpoint,
+          "embed_session",
+          {"sarah", nil},
+          signed_at: past_seconds
+        )
+
+      assert {:ok, {"sarah", nil}} = Token.verify(fresh, max_age: 60)
+    end
+
+    test "user A's token decodes to user A's username only — never user B's" do
+      # The embed controller uses the decoded username to look up the profile.
+      # If verify/1 ever returned the wrong username for a valid token, a
+      # viewer could see another profile's availability. Pin the identity
+      # guarantee explicitly.
+      token_a = Token.sign("user-a")
+      token_b = Token.sign("user-b")
+
+      assert {:ok, {"user-a", nil}} = Token.verify(token_a)
+      assert {:ok, {"user-b", nil}} = Token.verify(token_b)
+      refute match?({:ok, {"user-b", _}}, Token.verify(token_a))
+    end
+  end
 end
