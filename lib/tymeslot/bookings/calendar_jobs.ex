@@ -45,9 +45,9 @@ defmodule Tymeslot.Bookings.CalendarJobs do
       )
 
     case Oban.insert(job_changeset) do
+      {:ok, %{conflict?: true}} -> {:ok, :already_scheduled}
       {:ok, _job} -> {:ok, :scheduled}
-      {:error, %Ecto.Changeset{errors: [unique: _error]}} -> {:ok, :already_scheduled}
-      {:error, changeset} -> {:error, changeset}
+      {:error, reason} -> {:error, reason}
     end
   end
 
