@@ -138,6 +138,26 @@ defmodule Tymeslot.Emails.Templates.AppointmentCancellationTest do
       assert email.text_body =~ "Meeting Cancelled"
       assert email.text_body =~ details.attendee_name
     end
+
+    test "does not claim the organiser's calendar was updated (regression for d56cf8677)" do
+      # d56cf8677 removed the stale "Your calendar has been updated to
+      # reflect this cancellation." line from the organiser cancellation
+      # email — no ICS cancel attachment is sent, so the claim would
+      # have misled the organiser into thinking their calendar software
+      # had processed the cancellation. Both bodies must stay clear of
+      # that phrase.
+      details = build_appointment_details()
+
+      email =
+        AppointmentCancellation.render(
+          :organizer,
+          "organizer@example.com",
+          details
+        )
+
+      refute email.html_body =~ "calendar has been updated"
+      refute email.text_body =~ "calendar has been updated"
+    end
   end
 
   describe "render/3 with :attendee" do
