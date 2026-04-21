@@ -74,10 +74,10 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.DiscoveryCompositionTest do
                Discovery.discover_calendars(@caldav_client, skip_breaker: true)
 
       assert length(calendars) == 2
-      names = Enum.map(calendars, & &1.name) |> Enum.sort()
+      names = calendars |> Enum.map(& &1.name) |> Enum.sort()
       assert names == ["Personal", "Work"]
 
-      hrefs = Enum.map(calendars, & &1.href) |> Enum.sort()
+      hrefs = calendars |> Enum.map(& &1.href) |> Enum.sort()
       assert hrefs == ["/calendars/user/personal/", "/calendars/user/work/"]
 
       # The controller renders the picker unsaved — none of the returned

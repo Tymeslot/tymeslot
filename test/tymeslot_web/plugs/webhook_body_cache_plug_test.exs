@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlugTest do
 
   @moduletag :plugs
 
-  alias Plug.Conn
+  alias Plug.Test, as: PlugTest
   alias TymeslotWeb.Plugs.WebhookBodyCachePlug
 
   defp build_conn_with_body(path, body) do
@@ -23,7 +23,7 @@ defmodule TymeslotWeb.Plugs.WebhookBodyCachePlugTest do
     # hands the body over via Conn.read_body/2. We build it manually
     # here because we don't need the whole TymeslotWeb router — just
     # the plug.
-    Plug.Test.conn(:post, path, body)
+    PlugTest.conn(:post, path, body)
   end
 
   describe "read_body/2 — webhook paths" do
