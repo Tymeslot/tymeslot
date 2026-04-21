@@ -79,7 +79,7 @@ defmodule Tymeslot.Pagination.CursorPagePropertyTest do
 
       # Forward direction: production encode -> production decode always works.
       encoded = CursorPage.encode_cursor(cursor)
-      assert {:ok, _} = CursorPage.decode_cursor(encoded)
+      assert {:ok, _decoded} = CursorPage.decode_cursor(encoded)
 
       # Reverse guard: a token signed without explicit max_age (library default
       # 86400s) should NOT be considered equivalent to one signed with :infinity.
@@ -94,7 +94,7 @@ defmodule Tymeslot.Pagination.CursorPagePropertyTest do
       # This token has 86400 embedded but decode_cursor uses max_age: :infinity,
       # so it currently succeeds — confirming infinity wins. The test documents
       # this and will catch any future tightening of the verify side.
-      assert {:ok, _} = CursorPage.decode_cursor(finite_token)
+      assert {:ok, _decoded} = CursorPage.decode_cursor(finite_token)
 
       # Guard the sign side: verify a token produced by encode_cursor is
       # accepted with max_age: 0 → it must be rejected (proving the embedded

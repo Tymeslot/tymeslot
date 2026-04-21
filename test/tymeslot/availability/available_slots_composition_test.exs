@@ -462,7 +462,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     result =
       Enum.find(0..52, fn i ->
         candidate = Date.add(first_sunday, i * 7)
-        match?({:gap, _, _}, DateTime.new(candidate, ~T[02:30:00], timezone))
+        match?({:gap, _dt1, _dt2}, DateTime.new(candidate, ~T[02:30:00], timezone))
       end)
 
     if is_nil(result) do
@@ -483,7 +483,7 @@ defmodule Tymeslot.Availability.AvailableSlotsCompositionTest do
     result =
       Enum.find(0..52, fn i ->
         candidate = Date.add(first_sunday, i * 7)
-        match?({:ambiguous, _, _}, DateTime.new(candidate, ~T[01:30:00], timezone))
+        match?({:ambiguous, _dt1, _dt2}, DateTime.new(candidate, ~T[01:30:00], timezone))
       end)
 
     if is_nil(result) do
