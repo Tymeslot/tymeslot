@@ -8,6 +8,8 @@ defmodule Tymeslot.Security.AccountLockout do
   caller crashing — but does NOT survive a BEAM restart, node shutdown, or deploy.
   """
 
+  alias Tymeslot.Security.AccountLockout.TableOwner
+
   require Logger
 
   @lockout_table :account_lockout_table
@@ -104,27 +106,18 @@ defmodule Tymeslot.Security.AccountLockout do
   defp normalize(identifier) when is_binary(identifier),
     do: identifier |> String.trim() |> String.downcase()
 
+  # Writes go through the TableOwner GenServer to serialise the read-modify-write
+  # cycle — a `:public` ETS table alone cannot prevent two concurrent callers
+  # from both reading the same attempt list and clobbering each other's insert.
   defp do_record_failed_attempt(identifier) do
-    now = System.system_time(:second)
-
-    case :ets.lookup(@lockout_table, identifier) do
-      [] ->
-        :ets.insert(@lockout_table, {identifier, [now]})
+    case TableOwner.record_attempt(identifier) do
+      1 ->
         Logger.info("First failed attempt recorded", identifier: identifier)
 
-      [{^identifier, attempts}] ->
-        # Keep only attempts from last 24 hours
-        recent_attempts =
-          Enum.filter(attempts, fn timestamp ->
-            now - timestamp < 86_400
-          end)
-
-        updated_attempts = [now | recent_attempts]
-        :ets.insert(@lockout_table, {identifier, updated_attempts})
-
+      total ->
         Logger.info("Failed attempt recorded",
           identifier: identifier,
-          total_attempts: length(updated_attempts)
+          total_attempts: total
         )
     end
   end
