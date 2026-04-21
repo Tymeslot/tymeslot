@@ -15,6 +15,7 @@ defmodule Tymeslot.Auth.PasswordReset do
 
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Repo
   alias Tymeslot.Security.{InputProcessor, RateLimiter, Token}
   alias Tymeslot.Utils.UrlBuilder
   alias TymeslotWeb.Helpers.ClientIP
@@ -215,15 +216,68 @@ defmodule Tymeslot.Auth.PasswordReset do
   @spec reset_password(String.t(), String.t(), String.t(), keyword()) ::
           {:ok, map(), String.t()}
           | {:error, atom(), String.t()}
-  def reset_password(token, new_password, password_confirmation, opts \\ []) do
-    with {:ok, user, _token} <- verify_token(token, opts),
-         {:ok, _result} <- validate_password_input(new_password, password_confirmation, user),
-         {:ok, updated_user} <- perform_password_update(user, new_password),
-         {:ok, final_user} <- perform_token_clear(updated_user),
-         :ok <- invalidate_all_sessions(final_user) do
-      {:ok, Map.from_struct(final_user), "Your password has been reset successfully"}
-    else
-      {:error, reason, message} -> {:error, reason, message}
+  def reset_password(token, new_password, password_confirmation, _opts \\ []) do
+    case consume_and_update(token, new_password, password_confirmation) do
+      {:ok, updated_user} ->
+        AccountLogging.log_password_reset(updated_user, "completed")
+        :ok = invalidate_all_sessions(updated_user)
+        {:ok, Map.from_struct(updated_user), "Your password has been reset successfully"}
+
+      {:error, reason, message} ->
+        {:error, reason, message}
+    end
+  end
+
+  # The lookup + update run inside a single transaction with `FOR UPDATE` on
+  # the token row so two concurrent requests can't both pass the
+  # `used_at IS NULL` check and each apply a password update — without the
+  # lock, the later update silently overwrites the earlier one.
+  defp consume_and_update(token, new_password, password_confirmation) do
+    txn =
+      Repo.transaction(fn ->
+        with {:ok, user} <- consume_reset_token(token),
+             {:ok, _validated} <-
+               validate_password_input(new_password, password_confirmation, user),
+             {:ok, updated_user} <- perform_password_update(user, new_password) do
+          updated_user
+        else
+          {:error, reason, message} -> Repo.rollback({reason, message})
+        end
+      end)
+
+    case txn do
+      {:ok, user} -> {:ok, user}
+      {:error, {reason, message}} -> {:error, reason, message}
+    end
+  end
+
+  defp consume_reset_token(token) do
+    case Config.user_token_queries_module().get_user_by_reset_token_for_update(token) do
+      {:error, :not_found} ->
+        Logger.warning("Invalid password reset token",
+          token: String.slice(token, 0, 8) <> "...",
+          event: :password_reset_invalid_token
+        )
+
+        {:error, :invalid_token, "Invalid or expired password reset token."}
+
+      {:ok, user} ->
+        expiry = DateTime.add(user.reset_sent_at, 2 * 3600, :second)
+
+        case Token.verify_token(token, expiry) do
+          {:ok, _verified} ->
+            {:ok, user}
+
+          {:error, :token_expired} ->
+            Logger.warning("Password reset token expired",
+              user_id: user.id,
+              email: user.email,
+              event: :password_reset_token_expired
+            )
+
+            {:error, :token_expired,
+             "Your reset token has expired. Please request a new password reset."}
+        end
     end
   end
 
@@ -259,23 +313,6 @@ defmodule Tymeslot.Auth.PasswordReset do
 
         {:error, :invalid_password,
          "The password couldn't be updated. Please try again with a different password."}
-    end
-  end
-
-  defp perform_token_clear(user) do
-    case Config.user_token_queries_module().set_reset_token(user, nil) do
-      {:ok, final_user} ->
-        AccountLogging.log_password_reset(final_user, "completed")
-        {:ok, final_user}
-
-      {:error, reason} ->
-        AccountLogging.log_operation_failure("password_reset", user.email, :clear_token_failed, %{
-          user_id: user.id,
-          reason: inspect(reason)
-        })
-
-        {:error, :server_error,
-         "An error occurred while resetting your password. Please try again."}
     end
   end
 

@@ -166,17 +166,34 @@ defmodule Tymeslot.Auth.PasswordResetTest do
                PasswordReset.reset_password(token, "NewPass123!", "NewPass123!")
     end
 
-    # Concurrency note (discovered while writing this suite): calling
-    # reset_password/3 from two processes simultaneously with the same valid
-    # token causes both processes to observe the user before either has
-    # cleared the token — both then update the password (last write wins)
-    # and both return {:ok, _, _}. This is a latent race that should be
-    # closed with pessimistic locking on the token row or an atomic
-    # "consume token and read user" query. It is intentionally not asserted
-    # here: T4 is test-only, and the invariant the flow already guarantees
-    # (sequential single-use) is covered by the "reset tokens are single-use"
-    # test above. A separate fix should add the race-safe equivalent and
-    # its own regression test.
+    test "concurrent resets with the same valid token: only one succeeds" do
+      # Note: `async: false` puts DataCase into sandbox `shared: true` mode, which
+      # means all processes share a single DB connection. The two Task.async calls
+      # below therefore serialise at the connection pool rather than at Postgres, so
+      # this test cannot exercise the `FOR UPDATE` row-level lock directly. What it
+      # *does* verify is the end-state invariant: regardless of interleaving, exactly
+      # one caller succeeds and the other receives `:invalid_token`. The `FOR UPDATE`
+      # lock itself is verified at the query level in
+      # `Tymeslot.Auth.UserTokenQueriesTest`.
+      user = insert(:user, password_hash: Password.hash_password("OldPass123!"))
+      {token, _value} = Token.generate_password_reset_token()
+      {:ok, _result} = UserTokenQueries.set_reset_token(user, token)
+
+      tasks =
+        for pw <- ["FirstNewPass1!", "SecondNewPass2!"] do
+          Task.async(fn -> PasswordReset.reset_password(token, pw, pw) end)
+        end
+
+      results = Task.await_many(tasks, 10_000)
+      successes = Enum.count(results, &match?({:ok, _user, _msg}, &1))
+      invalid = Enum.count(results, &match?({:error, :invalid_token, _msg}, &1))
+
+      assert successes == 1,
+             "expected exactly one {:ok, _, _} result, got: #{inspect(results)}"
+
+      assert invalid == 1,
+             "expected exactly one {:error, :invalid_token, _} result, got: #{inspect(results)}"
+    end
   end
 
   # --- Helpers for the tamper suite ---

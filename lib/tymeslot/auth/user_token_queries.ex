@@ -130,6 +130,25 @@ defmodule Tymeslot.Auth.UserTokenQueries do
   end
 
   @doc """
+  Same as `get_user_by_reset_token/1` but takes a row-level lock (`FOR UPDATE`)
+  so concurrent consumers serialise on the token row. Must be called inside
+  a `Repo.transaction/1`.
+  """
+  @spec get_user_by_reset_token_for_update(String.t()) ::
+          {:ok, UserSchema.t()} | {:error, :not_found}
+  def get_user_by_reset_token_for_update(token) when is_binary(token) do
+    token_hash = Base.encode16(:crypto.hash(:sha256, token), case: :lower)
+
+    case UserSchema
+         |> where([u], u.reset_token_hash == ^token_hash and is_nil(u.reset_token_used_at))
+         |> lock("FOR UPDATE")
+         |> Repo.one() do
+      nil -> {:error, :not_found}
+      user -> {:ok, user}
+    end
+  end
+
+  @doc """
   Initiates an email change request for a user.
   Returns {:ok, user} on success, {:error, changeset} on failure.
   """
