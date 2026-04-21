@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
   alias Tymeslot.MeetingTypes
   alias Tymeslot.MeetingTypes.InputValidation, as: MeetingSettingsInputValidation
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Components.Dashboard.MeetingTypes.DeleteMeetingTypeModal
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
@@ -274,8 +275,10 @@ defmodule TymeslotWeb.Dashboard.ServiceSettingsComponent do
             end
         }
 
-        # Merge sanitized params with original params (keeping other fields)
-        validated_params = Map.merge(params, sanitized_params)
+        # Merge sanitized params with original params (keeping other fields).
+        # SanitizeMerge preserves user-provided values when the sanitiser
+        # returns a blank for an optional field.
+        validated_params = SanitizeMerge.merge(params, sanitized_params)
 
         result =
           if socket.assigns.editing_type do

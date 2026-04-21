@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
+  alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
@@ -155,7 +156,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
               selection =
                 Calendar.prepare_selection_params(calendars, socket.assigns.discovered_calendars)
 
-              Map.merge(params, selection)
+              SanitizeMerge.merge(params, selection)
 
             _other ->
               params

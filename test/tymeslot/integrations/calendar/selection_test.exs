@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
   @moduletag :calendar
 
   alias Tymeslot.Integrations.Calendar.Selection
+  alias Tymeslot.Utils.SanitizeMerge
 
   # =====================================
   # unify_discovered_with_existing/2
@@ -176,6 +177,60 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       [cal] = result["calendar_list"]
       assert cal["id"] == encoded_path
       assert cal["path"] == encoded_path
+    end
+
+    test "zero-selection merge does not silently erase typed calendar_paths" do
+      # Regression for the selection-merge clobber: when the user submits
+      # `selected_calendars: []` (zero checkboxes ticked), the component used
+      # to `Map.merge(params, selection)` — which wrote `calendar_paths: []`
+      # and `calendar_list: []` over whatever the user had typed. The refactor
+      # to `SanitizeMerge.merge/2` drops the empty-list drop-signals so the
+      # user's original calendar_paths survive through to the validator, which
+      # can then surface a real form error instead of silently persisting an
+      # empty selection.
+      discovered = [
+        %{"id" => "/cal1", "path" => "/cal1", "name" => "Cal1", "type" => "calendar"},
+        %{"id" => "/cal2", "path" => "/cal2", "name" => "Cal2", "type" => "calendar"}
+      ]
+
+      params = %{
+        "name" => "My Calendar",
+        "provider" => "caldav",
+        "url" => "https://cal.example.com",
+        "username" => "u",
+        "password" => "p",
+        "calendar_paths" => "/user-typed-path",
+        "calendar_list" => [%{"path" => "/existing", "selected" => true}]
+      }
+
+      selection = Selection.prepare_selected_params([], discovered)
+      assert selection["calendar_paths"] == []
+      assert selection["calendar_list"] == []
+
+      merged = SanitizeMerge.merge(params, selection)
+
+      assert merged["calendar_paths"] == "/user-typed-path"
+      assert merged["calendar_list"] == [%{"path" => "/existing", "selected" => true}]
+    end
+
+    test "non-empty selection still wins over user-typed calendar_paths" do
+      # Complement of the regression above: when the user DOES select
+      # calendars, the selection's `calendar_paths`/`calendar_list` must
+      # overwrite the raw form input — that's the intended happy path.
+      discovered = [
+        %{"id" => "/cal1", "path" => "/cal1", "name" => "Cal1", "type" => "calendar"}
+      ]
+
+      params = %{
+        "calendar_paths" => "/ignored-raw-input",
+        "calendar_list" => [%{"path" => "/stale", "selected" => true}]
+      }
+
+      selection = Selection.prepare_selected_params(["/cal1"], discovered)
+      merged = SanitizeMerge.merge(params, selection)
+
+      assert merged["calendar_paths"] == ["/cal1"]
+      assert [%{"path" => "/cal1"}] = merged["calendar_list"]
     end
   end
 

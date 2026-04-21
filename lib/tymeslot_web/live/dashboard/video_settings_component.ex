@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
   alias Tymeslot.Integrations.Video.InputValidation, as: VideoInputValidation
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
+  alias Tymeslot.Utils.SanitizeMerge
   alias TymeslotWeb.Components.Dashboard.Integrations.ProviderCard
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
@@ -144,7 +145,7 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponent do
 
       case VideoInputValidation.validate_video_integration_form(params, metadata: metadata) do
         {:ok, sanitized_params} ->
-          validated_params = Map.merge(params, sanitized_params)
+          validated_params = SanitizeMerge.merge(params, sanitized_params)
           provider = validated_params["provider"] || socket.assigns.config_provider
 
           if is_nil(provider) do

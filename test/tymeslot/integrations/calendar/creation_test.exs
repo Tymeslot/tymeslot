@@ -252,11 +252,8 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
         "calendar_paths" => ""
       }
 
-      # Will fail due to network validation
-      result = Creation.create_with_validation(user.id, params)
-
-      # Validation will fail because we can't connect
-      assert match?({:error, _reason}, result)
+      # Will fail due to network validation — no live CalDAV server in tests.
+      assert match?({:error, _reason}, Creation.create_with_validation(user.id, params))
     end
 
     test "returns changeset errors for invalid params", %{user: user} do
