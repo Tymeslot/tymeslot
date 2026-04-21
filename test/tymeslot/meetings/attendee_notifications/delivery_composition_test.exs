@@ -1,4 +1,4 @@
-defmodule Tymeslot.Notifications.DeliveryCompositionTest do
+defmodule Tymeslot.Meetings.AttendeeNotifications.DeliveryCompositionTest do
   @moduledoc """
   End-to-end composition coverage for the attendee-notification pipeline:
 
@@ -6,16 +6,16 @@ defmodule Tymeslot.Notifications.DeliveryCompositionTest do
 
   Two hot paths are pinned here:
 
-    * the **outer** `Tymeslot.Meetings.AttendeeNotifications.Worker` walks the
-      diff of a calendar event against its `last_notified_state`, resolves
-      the per-recipient args, and enqueues an `EmailWorker` job inside the
-      same transaction that bumps `ical_sequence` — asserted together so a
-      regression in either half surfaces here.
-    * the **inner** `EmailWorker` handler
-      (`EmailWorkerHandlers.IntegrationEmails.handle_event_update_notification/1`)
-      loops over `attendee_emails` and, when any recipient's send fails,
-      returns `{:discard, "Partial delivery failure: N of M failed"}` —
-      a shape nothing else in the suite locks in today.
+    * the **end-to-end chain**: `Tymeslot.Meetings.AttendeeNotifications.Worker`
+      diffs a calendar event against its `last_notified_state`, bumps
+      `ical_sequence`, and enqueues an `EmailWorker` job — the test then feeds
+      that job's own args into `perform_job(EmailWorker, …)`, so a rename or
+      reshape between producer (`CalendarScheduler.schedule_event_update_notification/1`)
+      and consumer (`EmailWorkerHandlers.IntegrationEmails.handle_event_update_notification/1`)
+      surfaces here.
+    * the **inner** handler's partial-delivery branch, which returns
+      `{:discard, "Partial delivery failure: N of M failed"}` when any
+      recipient's send fails — a shape nothing else in the suite locks in.
   """
 
   use Tymeslot.DataCase, async: false
@@ -34,27 +34,45 @@ defmodule Tymeslot.Notifications.DeliveryCompositionTest do
 
   setup :verify_on_exit!
 
-  describe "outer Worker — trigger → recipient resolution → job dispatch" do
-    test "diffs the event, bumps ical_sequence, and enqueues the notification job" do
+  describe "outer Worker → inner EmailWorker end-to-end chain" do
+    test "diffs, bumps ical_sequence, enqueues the job, and the job renders + delivers" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user)
 
-      # The event's current state diverges from `last_notified_state` on the
-      # title — that's the change the detector picks up. `attendees` stays
-      # identical, so the attendee survives as a retained recipient and the
-      # `:update` dispatch fans out to them.
+      # Title diff drives recipient resolution — the retained attendee is the
+      # one recipient fanned out to in the :update dispatch.
       event =
         insert(:provider_calendar_event,
           calendar_integration: integration,
           summary: "New Title",
           attendees: [%{"email" => "retained@example.com"}],
           ical_sequence: 4,
-          # LastNotifiedState.to_event/1 reads attendees as a list of strings.
           last_notified_state: %{
             "title" => "Old Title",
             "attendees" => ["retained@example.com"]
           }
         )
+
+      expected_uid = event.uid
+      organizer_email = user.email
+
+      # The mock pattern-matches the shape of `details` — a field rename in
+      # `build_update_details/4` or a key rename in the scheduler's args
+      # surfaces here before reaching production.
+      expect(EmailServiceMock, :send_event_update_notification, fn email, details ->
+        assert email == "retained@example.com"
+
+        assert %{
+                 event_title: "New Title",
+                 event_uid: ^expected_uid,
+                 organizer_email: ^organizer_email,
+                 changes: [_change | _rest],
+                 method: :request,
+                 sequence: 5
+               } = details
+
+        {:ok, "sent"}
+      end)
 
       assert :ok =
                perform_job(AttendeeWorker, %{
@@ -63,7 +81,6 @@ defmodule Tymeslot.Notifications.DeliveryCompositionTest do
                  "action" => "update"
                })
 
-      # Recipient resolution landed on the retained attendee.
       assert [job] =
                all_enqueued(
                  worker: EmailWorker,
@@ -78,10 +95,14 @@ defmodule Tymeslot.Notifications.DeliveryCompositionTest do
       assert job.args["before_title"] == "Old Title"
 
       # ical_sequence and last_notified_state are persisted atomically with
-      # the dispatch — so a retry after a crash doesn't re-notify.
+      # the dispatch — a retry after a crash doesn't re-notify.
       {:ok, reloaded} = ProviderCalendarEventQueries.fetch(event.id)
       assert reloaded.ical_sequence == 5
       assert reloaded.last_notified_state["title"] == "New Title"
+
+      # Feed the producer's own args into the consumer — if the two halves
+      # disagree on arg shape, this is where it surfaces.
+      assert :ok = perform_job(EmailWorker, job.args)
     end
   end
 
@@ -139,7 +160,22 @@ defmodule Tymeslot.Notifications.DeliveryCompositionTest do
           summary: "New Title"
         )
 
-      expect(EmailServiceMock, :send_event_update_notification, 2, fn _email, _details ->
+      expected_uid = event.uid
+
+      # Pattern-matching in the mock ensures a regression in
+      # `build_update_details/4` (e.g. missing `changes` or wrong `method`)
+      # fails the test rather than silently passing.
+      expect(EmailServiceMock, :send_event_update_notification, 2, fn email, details ->
+        assert email in ["a@example.com", "b@example.com"]
+
+        assert %{
+                 event_title: "New Title",
+                 event_uid: ^expected_uid,
+                 changes: [_change | _rest],
+                 method: :request,
+                 sequence: 2
+               } = details
+
         {:ok, "sent"}
       end)
 
