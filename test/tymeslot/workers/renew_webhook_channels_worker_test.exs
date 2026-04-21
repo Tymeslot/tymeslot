@@ -132,5 +132,47 @@ defmodule Tymeslot.Workers.RenewWebhookChannelsWorkerTest do
                  "provider" => "outlook"
                })
     end
+
+    test "surfaces Google provider HTTP errors as {:error, _} so Oban retries" do
+      # The provider API has four documented non-retryable responses — 401
+      # (token revoked), 403 (forbidden), 500 (server blew up), and any
+      # transport failure. The worker collapses them all to `{:error, reason}`
+      # so Oban's retry machinery (max_attempts: 3) gets a chance to recover.
+      integration =
+        insert(:calendar_integration,
+          provider: "google",
+          google_channel_id: "failing-channel",
+          google_channel_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
+
+      expect(GoogleCalendarAPIMock, :register_push_channel, fn _integration ->
+        {:error, {:http_error, 500}}
+      end)
+
+      assert {:error, {:http_error, 500}} =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "google"
+               })
+    end
+
+    test "surfaces Outlook provider HTTP errors as {:error, _} so Oban retries" do
+      integration =
+        insert(:calendar_integration,
+          provider: "outlook",
+          graph_subscription_id: "failing-sub",
+          graph_subscription_expires_at: DateTime.add(DateTime.utc_now(), 12, :hour)
+        )
+
+      expect(OutlookCalendarAPIMock, :register_graph_subscription, fn _integration ->
+        {:error, {:http_error, 401}}
+      end)
+
+      assert {:error, {:http_error, 401}} =
+               perform_job(RenewWebhookChannelsWorker, %{
+                 "calendar_integration_id" => integration.id,
+                 "provider" => "outlook"
+               })
+    end
   end
 end
