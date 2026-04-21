@@ -1,4 +1,24 @@
 
+[0.100.10]
+* core: Count all concurrent failed login attempts toward account lockout
+* core: Restore meeting-type creation when no calendar is selected
+* core: Deliver attendee notifications on calendar event updates
+* core: Prevent password-reset race that could overwrite a user's new password
+* core: Prevent availability crash on DST-transition break times
+* core: Collapse duplicate time slot labels on daylight-saving fall-back days
+* core: Prevent CalDAV sync crash on malformed server responses
+* core: Honour :already_scheduled dedup contract in CalendarJobs
+* core: Reject double-encoded open-redirect payloads
+* core: Sign pagination cursors to prevent forged keyset offsets
+* core: Block webhook delivery redirects to private networks
+* core: Flag calendar integrations for reauth on decryption failure
+* core: Preserve circuit-breaker state across worker restarts
+* core: Keep account lockout counter in effect across restarts
+* saas: Restrict billing portal to subscription owner
+* core: Block XSS via custom theme CSS breakout
+* core: Require OAuth callback state to match session user
+* saas: Advertise 5 supported languages on marketing site
+* core: Add Italian to supported booking and email languages
 [0.100.9]
 * core: Prevent uploaded non-media files from being served as HTML
 * core: Restore Outlook calendar sync broken by Graph delta query rejection
