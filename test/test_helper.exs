@@ -44,6 +44,7 @@ Mox.defmock(Tymeslot.RadicaleClientMock,
 
 Mox.defmock(Tymeslot.EmailServiceMock, for: Tymeslot.Emails.EmailServiceBehaviour)
 Mox.defmock(Tymeslot.HTTPClientMock, for: Tymeslot.Infrastructure.HTTPClientBehaviour)
+Mox.defmock(Tymeslot.DnsResolverMock, for: Tymeslot.Security.DnsResolutionBehaviour)
 
 Mox.defmock(Tymeslot.GoogleOAuthHelperMock,
   for: Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour

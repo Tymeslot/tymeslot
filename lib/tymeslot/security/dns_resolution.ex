@@ -1,3 +1,12 @@
+defmodule Tymeslot.Security.DnsResolutionBehaviour do
+  @moduledoc """
+  Behaviour for DNS-based SSRF protection, allowing the resolver to be
+  substituted in tests.
+  """
+
+  @callback check_private_ip(String.t(), keyword()) :: :ok | {:error, String.t()}
+end
+
 defmodule Tymeslot.Security.DnsResolution do
   @moduledoc """
   DNS-resolving SSRF protection for server-side HTTP requests.
@@ -10,10 +19,13 @@ defmodule Tymeslot.Security.DnsResolution do
   use `Tymeslot.Security.UrlValidation` with `block_private_ips: true`.
   """
 
+  @behaviour Tymeslot.Security.DnsResolutionBehaviour
+
   alias Tymeslot.Security.PrivateIPv4
 
   @default_error "URL resolves to a private or local network address"
 
+  @impl Tymeslot.Security.DnsResolutionBehaviour
   @spec check_private_ip(String.t(), keyword()) :: :ok | {:error, String.t()}
   def check_private_ip(url, opts \\ []) do
     error_message = Keyword.get(opts, :error_message, @default_error)
