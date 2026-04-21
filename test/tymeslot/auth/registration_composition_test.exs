@@ -21,6 +21,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
   """
 
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :auth
   @moduletag :integration
@@ -31,6 +32,7 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Workers.EmailWorker
 
   setup do
     Phoenix.PubSub.subscribe(Tymeslot.PubSub, "auth:user_registered")
@@ -84,6 +86,12 @@ defmodule Tymeslot.Auth.RegistrationCompositionTest do
       weekend_rows = Enum.filter(weekly_rows, &(&1.day_of_week in 6..7))
       assert Enum.all?(weekday_rows, & &1.is_available)
       refute Enum.any?(weekend_rows, & &1.is_available)
+
+      # Verification email job is enqueued — users must verify before accessing the app.
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{"action" => "send_email_verification", "user_id" => user.id}
+      )
 
       # PubSub event for cross-app listeners (SaaS, etc.).
       assert_received {:user_registered, %{user: broadcast_user, metadata: metadata}}

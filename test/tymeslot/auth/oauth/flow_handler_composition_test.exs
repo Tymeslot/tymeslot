@@ -65,12 +65,18 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerCompositionTest do
 
   describe "existing-user login" do
     test "returns {:ok, conn, :github} and creates a real session row for a known GitHub user" do
-      github_id = "gh-#{System.unique_integer([:positive])}"
+      # Use a plain integer string so normalize_github_id/1 succeeds and the
+      # get_user_by_github_id branch is exercised — not the email-fallback path.
+      github_id = "#{System.unique_integer([:positive])}"
       user = insert(:user, provider: "github", github_user_id: github_id)
+
+      # Deliberately use a different email in the OAuth stub so the test cannot
+      # pass via the email-fallback branch; only the GitHub-ID lookup can match.
+      stub_email = "oauth-stub-#{System.unique_integer([:positive])}@example.com"
 
       stub_client_success(:github, %{
         "id" => github_id,
-        "email" => user.email,
+        "email" => stub_email,
         "name" => user.name
       })
 
@@ -91,8 +97,10 @@ defmodule Tymeslot.Auth.OAuth.FlowHandlerCompositionTest do
         )
 
       assert [session_row] = sessions
-      # And the conn carries the token in the session bag.
+      # The conn carries the token in the session bag.
       assert Conn.get_session(result_conn, :user_token) == session_row.token
+      # The session row is for the correct user — matched via GitHub ID, not email.
+      assert session_row.user_id == user.id
     end
 
     test "returns {:ok, conn, :google} for a known Google user" do

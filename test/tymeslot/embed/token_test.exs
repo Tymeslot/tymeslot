@@ -60,11 +60,9 @@ defmodule Tymeslot.Embed.TokenTest do
   end
 
   describe "Task 116: forge/expiry/cross-user boundary coverage" do
-    # Rotated or foreign secret_key_base is simulated by signing with a
-    # different salt — Phoenix.Token derives the verifier secret from
-    # secret_key_base <> salt, so a mismatch here is equivalent to a
-    # mismatch in secret_key_base from the verifier's perspective.
-    test "token signed with a foreign salt (rotated key) is rejected as :invalid" do
+    # A token signed under a different salt is rejected — salts are isolated
+    # even when secret_key_base is the same.
+    test "token signed with a foreign salt is rejected as :invalid" do
       foreign = Phoenix.Token.sign(TymeslotWeb.Endpoint, "different-salt", {"sarah", nil})
       assert {:error, :invalid} = Token.verify(foreign)
     end
@@ -94,7 +92,7 @@ defmodule Tymeslot.Embed.TokenTest do
           signed_at: past_seconds
         )
 
-      assert {:ok, {"sarah", nil}} = Token.verify(fresh, max_age: 60)
+      assert {:ok, {"sarah", nil}} = Token.verify(fresh)
     end
 
     test "user A's token decodes to user A's username only — never user B's" do
