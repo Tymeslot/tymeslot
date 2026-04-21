@@ -2,9 +2,20 @@ defmodule Tymeslot.Pagination.CursorPage do
   @moduledoc """
   Generic cursor page response for keyset pagination.
 
-  Cursors are encoded as a URL-safe base64 JSON string. Helpers are provided to
-  encode/decode a map containing :after_start and :after_id for meeting pagination.
+  Cursors are signed with `Phoenix.Token` using the endpoint's
+  `secret_key_base`. An unsigned or tampered cursor fails verification and
+  decodes to `{:error, :invalid_cursor}`, preventing attackers from forging
+  an `after_id` to probe another user's row ordering.
+
+  Cursors are intentionally permanent (`max_age: :infinity`): they represent
+  bookmarkable pagination state and must remain valid across server restarts
+  and indefinitely long-lived browser sessions. Both `encode_cursor/1` and
+  `decode_cursor/1` pass `max_age: :infinity` explicitly so the intent is
+  auditable at both call sites.
   """
+
+  alias Phoenix.Token
+  alias TymeslotWeb.Endpoint
 
   @enforce_keys [:items]
   defstruct items: [], next_cursor: nil, prev_cursor: nil, page_size: nil, has_more: false
@@ -18,29 +29,36 @@ defmodule Tymeslot.Pagination.CursorPage do
         }
   @type t :: t(map())
 
+  # Bump the salt when the cursor payload shape changes; it also invalidates
+  # every cursor currently in the wild.
+  @salt "cursor-page:v1"
+
   @doc """
-  Encodes a cursor map like %{after_start: DateTime.t(), after_id: binary()} to a URL-safe string.
+  Encodes a cursor map like %{after_start: DateTime.t(), after_id: binary()} to a signed URL-safe string.
   """
   @spec encode_cursor(%{after_start: DateTime.t(), after_id: binary()}) :: String.t()
   def encode_cursor(%{after_start: %DateTime{} = after_start, after_id: after_id})
       when is_binary(after_id) do
-    payload = %{after_start: DateTime.to_iso8601(after_start), after_id: after_id}
-    Base.url_encode64(Jason.encode!(payload), padding: false)
+    Token.sign(Endpoint, @salt, %{after_start: after_start, after_id: after_id},
+      max_age: :infinity
+    )
   end
 
   @doc """
-  Decodes a cursor string back into a map %{after_start: DateTime.t(), after_id: binary()}.
-  Returns {:ok, map} | {:error, reason}.
+  Decodes a signed cursor string back into a map.
+  Returns `{:ok, map}` only if the signature verifies against the endpoint's
+  `secret_key_base`; otherwise `{:error, :invalid_cursor}`.
   """
   @spec decode_cursor(String.t()) ::
-          {:ok, %{after_start: DateTime.t(), after_id: binary()}} | {:error, term()}
+          {:ok, %{after_start: DateTime.t(), after_id: binary()}} | {:error, :invalid_cursor}
   def decode_cursor(cursor) when is_binary(cursor) do
-    with {:ok, json} <- Base.url_decode64(cursor, padding: false),
-         {:ok, %{"after_start" => after_start_str, "after_id" => after_id}} <- Jason.decode(json),
-         {:ok, after_start, _offset} <- DateTime.from_iso8601(after_start_str) do
-      {:ok, %{after_start: after_start, after_id: after_id}}
-    else
-      _other -> {:error, :invalid_cursor}
+    case Token.verify(Endpoint, @salt, cursor, max_age: :infinity) do
+      {:ok, %{after_start: %DateTime{} = after_start, after_id: after_id}}
+      when is_binary(after_id) ->
+        {:ok, %{after_start: after_start, after_id: after_id}}
+
+      _invalid ->
+        {:error, :invalid_cursor}
     end
   end
 end
