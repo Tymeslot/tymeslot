@@ -434,6 +434,46 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderTest do
     end
   end
 
+  describe "expand/4 boundary edges" do
+    # These cases pin behaviour at the awkward corners of RRULE expansion
+    # where a naive loop could either produce phantom occurrences or
+    # silently skip the master event. `COUNT=0` is legal per RFC 5545
+    # (though rarely seen in the wild) and must collapse to the empty
+    # list; `UNTIL < DTSTART` is a nonsense rule that some CalDAV clients
+    # still emit during bulk-edit flows and must likewise collapse
+    # without falling through to the fail-open "return master" arm.
+
+    test "COUNT=0 produces an empty expansion, not a single fail-open occurrence" do
+      event = %{
+        uid: "count-zero",
+        summary: "Nothing",
+        start_time: ~U[2026-04-03 09:00:00Z],
+        end_time: ~U[2026-04-03 10:00:00Z],
+        recurrence_rule: "FREQ=WEEKLY;COUNT=0"
+      }
+
+      occurrences =
+        RecurrenceExpander.expand(event, ~U[2026-04-01 00:00:00Z], ~U[2026-05-31 23:59:59Z])
+
+      assert occurrences == []
+    end
+
+    test "UNTIL strictly before DTSTART produces an empty expansion" do
+      event = %{
+        uid: "until-before-start",
+        summary: "Already expired",
+        start_time: ~U[2026-04-03 09:00:00Z],
+        end_time: ~U[2026-04-03 10:00:00Z],
+        recurrence_rule: "FREQ=WEEKLY;UNTIL=20260101T000000Z"
+      }
+
+      occurrences =
+        RecurrenceExpander.expand(event, ~U[2026-04-01 00:00:00Z], ~U[2026-05-31 23:59:59Z])
+
+      assert occurrences == []
+    end
+  end
+
   describe "expand/4 preserves event fields" do
     test "copies all original fields to each occurrence" do
       event = %{
