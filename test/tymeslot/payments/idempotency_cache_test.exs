@@ -104,6 +104,56 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
     end
   end
 
+  describe "reserve/1 expiry-recovery" do
+    test "replaces an expired-but-unclean entry and returns :reserved" do
+      event_id = generate_event_id()
+      # Insert a stale entry: expiry is 1 ms in the past so lookup_entry/1 returns :miss
+      past_expiry = System.monotonic_time(:millisecond) - 1
+      :ets.insert(:webhook_idempotency_cache, {event_id, :processing, past_expiry})
+
+      # reserve/1 hits the :miss branch: deletes the stale row and re-inserts
+      assert {:ok, :reserved} = IdempotencyCache.reserve(event_id)
+
+      # The new entry is live — a second caller sees :in_progress
+      assert {:ok, :in_progress} = IdempotencyCache.reserve(event_id)
+    end
+  end
+
+  describe "reserve/1 concurrency" do
+    # Stripe routinely retries webhooks; two parallel workers can land on
+    # `reserve/1` for the same event_id before either has called
+    # `mark_processed/3`. The ETS-backed `insert_new/2` must atomically
+    # pick exactly one winner — otherwise the DB writes downstream would
+    # double-apply the same event (duplicate subscription insert,
+    # double-refund credit, etc.). Pin the contract directly.
+    test "exactly one caller gets :reserved across concurrent callers" do
+      event_id = generate_event_id()
+
+      results =
+        Tymeslot.TaskSupervisor
+        |> Task.Supervisor.async_stream_nolink(
+          1..25,
+          fn _n -> IdempotencyCache.reserve(event_id) end,
+          max_concurrency: 25,
+          timeout: 5_000
+        )
+        |> Enum.map(fn {:ok, result} -> result end)
+
+      # Only one :reserved is possible because processing_ttl (10 min) >> test window;
+      # the expired-entry recovery branch in reserve/1 cannot fire here.
+      assert Enum.count(results, &match?({:ok, :reserved}, &1)) == 1,
+             "expected exactly one :reserved across concurrent callers, got: #{inspect(results)}"
+
+      losers = Enum.reject(results, &match?({:ok, :reserved}, &1))
+
+      assert Enum.all?(losers, fn result ->
+               match?({:ok, :in_progress}, result) or
+                 match?({:ok, :already_processed}, result)
+             end),
+             "non-winners must resolve to :in_progress or :already_processed, got: #{inspect(losers)}"
+    end
+  end
+
   describe "clear_all/0" do
     test "clears all cached events" do
       {event_id1, event_id2} = generate_two_event_ids()
