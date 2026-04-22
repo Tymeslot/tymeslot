@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
-  use Tymeslot.DataCase, async: true
+  use ExUnit.Case, async: true
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.IcsGenerator

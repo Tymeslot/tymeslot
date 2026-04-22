@@ -269,16 +269,35 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button[phx-value-theme='1']", "Customize Style")
       |> render_click()
 
-      # Each valid tab click should render without error
-      for label <- ["Solid Color", "Gradient", "Image", "Video"] do
-        html =
-          view
-          |> element("button", label)
-          |> render_click()
+      html_solid =
+        view
+        |> element("button", "Solid Color")
+        |> render_click()
 
-        # Page remains functional after each tab switch
-        assert is_binary(html)
-      end
+      assert html_solid =~ "Select a solid color"
+
+      html_gradient =
+        view
+        |> element("button", "Gradient")
+        |> render_click()
+
+      refute html_gradient =~ "Select a solid color"
+      refute html_gradient =~ "JPG, PNG or WebP. Max 5MB."
+      refute html_gradient =~ "MP4 or WebM. Max 20MB."
+
+      html_image =
+        view
+        |> element("button", "Image")
+        |> render_click()
+
+      assert html_image =~ "JPG, PNG or WebP. Max 5MB."
+
+      html_video =
+        view
+        |> element("button", "Video")
+        |> render_click()
+
+      assert html_video =~ "MP4 or WebM. Max 20MB."
     end
   end
 end

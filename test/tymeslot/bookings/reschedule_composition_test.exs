@@ -12,6 +12,8 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
   use Tymeslot.DataCase, async: false
   use Oban.Testing, repo: Tymeslot.Repo
 
+  setup :verify_on_exit!
+
   @moduletag :bookings
   @moduletag :integration
 
@@ -102,7 +104,9 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
       # Over-ride the default stub with a strict expectation so the
       # email channel counts as "observed" alongside the three Oban
       # queues.
-      expect(EmailServiceMock, :send_appointment_confirmations, 1, fn _details -> {:ok, :ok} end)
+      expect(EmailServiceMock, :send_appointment_confirmations, 1, fn _details ->
+        {{:ok, :ok}, {:ok, :ok}}
+      end)
 
       new_params = reschedule_params_for(future_datetime(7, :day))
 
@@ -113,10 +117,10 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
 
       assert mid == meeting.id
 
-      assert [%{args: %{"event_type" => "meeting.rescheduled"}}] =
+      assert [%{args: %{"event_type" => "meeting.rescheduled", "meeting_id" => ^mid}}] =
                all_enqueued(worker: WebhookWorker)
 
-      assert [%{args: %{"event_type" => "meeting.rescheduled"}}] =
+      assert [%{args: %{"event_type" => "meeting.rescheduled", "meeting_id" => ^mid}}] =
                all_enqueued(worker: TelegramWorker)
     end
 
@@ -132,7 +136,9 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
       Repo.delete_all(WebhookSchema)
       Repo.delete_all(TelegramIntegrationSchema)
 
-      expect(EmailServiceMock, :send_appointment_confirmations, 1, fn _details -> {:ok, :ok} end)
+      expect(EmailServiceMock, :send_appointment_confirmations, 1, fn _details ->
+        {{:ok, :ok}, {:ok, :ok}}
+      end)
 
       new_params = reschedule_params_for(future_datetime(8, :day))
 

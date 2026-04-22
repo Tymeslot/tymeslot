@@ -29,9 +29,12 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Auth.UserSessionSchema
+  alias Tymeslot.Availability.AvailabilityBreakSchema
   alias Tymeslot.Availability.AvailabilityOverrideSchema
   alias Tymeslot.Availability.WeeklyAvailabilitySchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.CalendarPreferencesSchema
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
@@ -39,6 +42,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
   alias Tymeslot.Payments.PaymentTransactionSchema
   alias Tymeslot.Profiles.ProfileSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
   alias Tymeslot.Webhooks.WebhookDeliverySchema
@@ -64,9 +68,25 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       # Transitive cascade via webhook_id -> delete_all
       webhook_delivery = insert(:webhook_delivery, webhook: webhook)
 
+      # Transitive cascade via calendar_integration_id -> delete_all
+      provider_event =
+        insert(:provider_calendar_event, calendar_integration: calendar_integration)
+
+      # Transitive cascade via integration_id -> delete_all
+      telegram_delivery = insert(:telegram_delivery, integration: telegram_integration)
+
+      # Direct user_id FK with on_delete: :delete_all (no factory — seed directly)
+      {:ok, calendar_prefs} =
+        %CalendarPreferencesSchema{}
+        |> CalendarPreferencesSchema.changeset(%{user_id: user.id})
+        |> Repo.insert()
+
       # Profile-chained :delete_all
       weekly = insert(:weekly_availability, profile: profile)
       override = insert(:availability_override, profile: profile)
+
+      # Transitive cascade via weekly_availability_id -> delete_all
+      availability_break = insert(:availability_break, weekly_availability: weekly)
 
       theme =
         insert(:theme_customization,
@@ -106,6 +126,10 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       assert Repo.get(AvailabilityOverrideSchema, override.id)
       assert Repo.get(ThemeCustomizationSchema, theme.id)
       assert Repo.get(IntegrationHealthStateSchema, health_state.id)
+      assert Repo.get(CalendarPreferencesSchema, calendar_prefs.id)
+      assert Repo.get(ProviderCalendarEventSchema, provider_event.id)
+      assert Repo.get(TelegramDeliverySchema, telegram_delivery.id)
+      assert Repo.get(AvailabilityBreakSchema, availability_break.id)
 
       assert {:ok, _deleted} = UserQueries.delete_user(user)
 
@@ -149,6 +173,10 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       refute Repo.get(WebhookDeliverySchema, webhook_delivery.id),
              "webhook_delivery: expected transitive delete-cascade through its webhook"
 
+      # Direct :delete_all via user_id.
+      refute Repo.get(CalendarPreferencesSchema, calendar_prefs.id),
+             "calendar_preferences: expected delete-cascade via user_id FK (`on_delete: :delete_all`)"
+
       # Profile-chained :delete_all.
       refute Repo.get(WeeklyAvailabilitySchema, weekly.id),
              "weekly_availability: expected transitive delete-cascade through its profile"
@@ -158,6 +186,18 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
 
       refute Repo.get(ThemeCustomizationSchema, theme.id),
              "theme_customization: expected transitive delete-cascade through its profile"
+
+      # Transitive :delete_all: provider_event -> calendar_integration -> user.
+      refute Repo.get(ProviderCalendarEventSchema, provider_event.id),
+             "provider_calendar_event: expected transitive delete-cascade through its calendar_integration"
+
+      # Transitive :delete_all: telegram_delivery -> telegram_integration -> user.
+      refute Repo.get(TelegramDeliverySchema, telegram_delivery.id),
+             "telegram_delivery: expected transitive delete-cascade through its telegram_integration"
+
+      # Transitive :delete_all: availability_break -> weekly_availability -> profile -> user.
+      refute Repo.get(AvailabilityBreakSchema, availability_break.id),
+             "availability_break: expected transitive delete-cascade through its weekly_availability"
     end
 
     test "does not touch rows belonging to another user" do
