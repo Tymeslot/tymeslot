@@ -104,6 +104,37 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
     end
   end
 
+  describe "reserve/1 concurrency" do
+    # Stripe routinely retries webhooks; two parallel workers can land on
+    # `reserve/1` for the same event_id before either has called
+    # `mark_processed/3`. The ETS-backed `insert_new/2` must atomically
+    # pick exactly one winner — otherwise the DB writes downstream would
+    # double-apply the same event (duplicate subscription insert,
+    # double-refund credit, etc.). Pin the contract directly.
+    test "exactly one caller gets :reserved across concurrent callers" do
+      event_id = generate_event_id()
+
+      results =
+        Task.await_many(
+          for _ <- 1..25 do
+            Task.async(fn -> IdempotencyCache.reserve(event_id) end)
+          end,
+          5_000
+        )
+
+      assert Enum.count(results, &match?({:ok, :reserved}, &1)) == 1,
+             "expected exactly one :reserved across concurrent callers, got: #{inspect(results)}"
+
+      losers = Enum.reject(results, &match?({:ok, :reserved}, &1))
+
+      assert Enum.all?(losers, fn result ->
+               match?({:ok, :in_progress}, result) or
+                 match?({:ok, :already_processed}, result)
+             end),
+             "non-winners must resolve to :in_progress or :already_processed, got: #{inspect(losers)}"
+    end
+  end
+
   describe "clear_all/0" do
     test "clears all cached events" do
       {event_id1, event_id2} = generate_two_event_ids()
