@@ -29,7 +29,8 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
           base_delay_ms: non_neg_integer(),
           max_delay_ms: non_neg_integer(),
           jitter_factor: float(),
-          retryable_errors: list(atom())
+          retryable_errors: list(atom()),
+          await_timeout: timeout()
         ]
 
   @doc """
@@ -66,14 +67,30 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
 
   Similar to `with_retry/2` but designed for async operations that
   return Task references.
+
+  ## Additional option
+  - `:await_timeout` — maximum time, in milliseconds (or `:infinity`), to wait
+    for each inner `Task` to complete. Defaults to `:infinity`, matching the
+    caller's retry budget rather than `Task.await/1`'s 5 s fallback. A timeout
+    is converted to `{:error, :timeout}`, which is retryable by default, so
+    slow individual attempts are retried rather than crashing the outer task.
   """
   @spec with_retry_async((-> Task.t()), retry_opts()) :: Task.t()
   def with_retry_async(fun, opts \\ []) when is_function(fun, 0) do
+    await_timeout = Keyword.get(opts, :await_timeout, :infinity)
+
     Task.async(fn ->
       with_retry(
         fn ->
           task = fun.()
-          Task.await(task)
+
+          try do
+            Task.await(task, await_timeout)
+          catch
+            :exit, {:timeout, _details} ->
+              Task.shutdown(task, :brutal_kill)
+              {:error, :timeout}
+          end
         end,
         opts
       )
