@@ -12,7 +12,19 @@ defmodule Tymeslot.PaymentsTest do
   setup :verify_on_exit!
 
   setup do
+    # Snapshot the pre-test value so the put_env below is scoped to this
+    # suite and doesn't leak into other test files that share the VM.
+    original_provider = Application.get_env(:tymeslot, :stripe_provider)
     Application.put_env(:tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock)
+
+    on_exit(fn ->
+      if is_nil(original_provider) do
+        Application.delete_env(:tymeslot, :stripe_provider)
+      else
+        Application.put_env(:tymeslot, :stripe_provider, original_provider)
+      end
+    end)
+
     :ok
   end
 
