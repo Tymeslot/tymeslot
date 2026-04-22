@@ -1,5 +1,5 @@
 defmodule Tymeslot.PaymentsTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :utils
 
   alias Tymeslot.Factory
@@ -302,8 +302,17 @@ defmodule Tymeslot.PaymentsTest do
   end
 
   defp set_subscription_manager(manager) do
+    original = Application.get_env(:tymeslot, :subscription_manager)
     Application.put_env(:tymeslot, :subscription_manager, manager)
-    on_exit(fn -> Application.delete_env(:tymeslot, :subscription_manager) end)
+
+    on_exit(fn ->
+      if is_nil(original) do
+        Application.delete_env(:tymeslot, :subscription_manager)
+      else
+        Application.put_env(:tymeslot, :subscription_manager, original)
+      end
+    end)
+
     :ok
   end
 end
