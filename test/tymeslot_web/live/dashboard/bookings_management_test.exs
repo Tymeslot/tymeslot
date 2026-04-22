@@ -320,5 +320,57 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
       assert render(view) =~ "Meeting 25"
       refute has_element?(view, "button", "Load more meetings")
     end
+
+    test "load more appends rows without removing previously visible ones",
+         %{conn: conn, user: user} do
+      # Seed 25 meetings and capture the names of the first-page
+      # rows. "Load more" must not replace them; the user-observable
+      # invariant is that the list only grows.
+      now = DateTime.utc_now()
+
+      for i <- 1..25 do
+        insert(:meeting,
+          organizer_user_id: user.id,
+          organizer_email: user.email,
+          attendee_name: "Attendee #{String.pad_leading(Integer.to_string(i), 2, "0")}",
+          start_time: DateTime.add(now, i, :hour)
+        )
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      # Snapshot the first-page names that are visible before the
+      # "Load more" click. These must all remain after the click.
+      first_page_html = render(view)
+
+      first_page_names =
+        for i <- 1..25,
+            name = "Attendee #{String.pad_leading(Integer.to_string(i), 2, "0")}",
+            first_page_html =~ name do
+          name
+        end
+
+      # Sanity: the first-page sample must be a real, non-empty
+      # window so the post-click assertion is meaningful. If pagination
+      # ever renders zero rows on page one, the supposed regression
+      # we're pinning would never surface here — fail loudly in that
+      # case.
+      assert length(first_page_names) >= 15
+
+      view |> element("button", "Load more meetings") |> render_click()
+
+      rendered_after = render(view)
+
+      for name <- first_page_names do
+        assert rendered_after =~ name,
+               "Expected #{name} to still be rendered after 'Load more' click, " <>
+                 "but it was removed — rows must append, not replace."
+      end
+
+      # And the new rows are present — `reset: false` semantics mean
+      # the final rendered list contains both the pre-click sample
+      # and the tail that was just fetched.
+      assert rendered_after =~ "Attendee 25"
+    end
   end
 end
