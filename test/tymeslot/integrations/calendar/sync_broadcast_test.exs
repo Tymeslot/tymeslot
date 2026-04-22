@@ -64,10 +64,16 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
           end
         end)
 
-      # Short-lived subscriber — subscribes, then exits. pg's cleanup
-      # callback removes the dead pid from the group asynchronously; we
-      # monitor it so we can wait for it to fully leave before firing
-      # the broadcast.
+      on_exit(fn -> if Process.alive?(alive_pid), do: Process.exit(alive_pid, :kill) end)
+
+      # Short-lived subscriber — subscribes then exits immediately.
+      # Phoenix.PubSub's Registry monitors subscribers and removes dead
+      # pids asynchronously on DOWN. We fire the broadcast as soon as
+      # both subscribers have confirmed subscription, creating a narrow
+      # window where the short-lived pid may or may not have been cleaned
+      # up yet. Either way, BEAM's `send/2` to a dead PID is a silent
+      # no-op, so the broadcaster must return :ok and deliver to the
+      # alive subscriber unaffected.
       {short_pid, short_ref} =
         spawn_monitor(fn ->
           Phoenix.PubSub.subscribe(Tymeslot.PubSub, topic)
@@ -75,13 +81,14 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
           :ok
         end)
 
+      on_exit(fn -> if Process.alive?(short_pid), do: Process.exit(short_pid, :kill) end)
+
       assert_receive {^ref, :alive_subscribed}, 1_000
       assert_receive {^ref, :short_subscribed}, 1_000
-      assert_receive {:DOWN, ^short_ref, :process, ^short_pid, _}, 1_000
 
-      # The broadcaster's public contract is `:ok` regardless of
-      # subscriber health — verifies it never bubbles a subscriber
-      # failure up to the caller.
+      # Fire immediately — the short-lived subscriber has exited and may
+      # or may not still be in the Registry. The broadcaster must be
+      # unaffected either way.
       assert :ok = SyncBroadcast.broadcast_cache_update(user.id, ["uid-x"])
 
       assert_receive {^ref, :alive_received,
@@ -89,11 +96,10 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
                      1_000
 
       assert received_user_id == user.id
-
-      # Tidy up the surviving process.
-      Process.exit(alive_pid, :kill)
+      assert_receive {:DOWN, ^short_ref, :process, ^short_pid, _}, 1_000
     end
 
+    @tag capture_log: true
     test "a subscriber that raises on receive does not disrupt other subscribers" do
       user = insert(:user)
       topic = "calendar_events:#{user.id}"
@@ -115,6 +121,8 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
           end
         end)
 
+      on_exit(fn -> if Process.alive?(crash_pid), do: Process.exit(crash_pid, :kill) end)
+
       # Surviving subscriber — this one must still receive the message
       # regardless of the other subscriber's fate.
       alive_pid =
@@ -129,25 +137,25 @@ defmodule Tymeslot.Integrations.Calendar.SyncBroadcastTest do
           end
         end)
 
+      on_exit(fn -> if Process.alive?(alive_pid), do: Process.exit(alive_pid, :kill) end)
+
       assert_receive {^ref, :crash_subscribed}, 1_000
       assert_receive {^ref, :alive_subscribed}, 1_000
 
       assert :ok = SyncBroadcast.broadcast_sync_complete(user.id, 42)
 
-      # The crashing subscriber does its thing (caught by the
-      # `:capture_log` tag on the test or just the default logger).
+      # The crashing subscriber does its thing — the crash log is
+      # captured by the :capture_log tag on this test.
       assert_receive {:DOWN, ^crash_ref, :process, ^crash_pid, {%RuntimeError{}, _stack}},
                      1_000
 
       # The surviving subscriber receives its copy of the broadcast —
       # proof that one subscriber's crash does not block delivery to
-      # the rest of the pg group.
+      # the rest of the group.
       assert_receive {^ref, :alive_received, {:calendar_sync_complete, received_user_id, 42}},
                      1_000
 
       assert received_user_id == user.id
-
-      Process.exit(alive_pid, :kill)
     end
   end
 end

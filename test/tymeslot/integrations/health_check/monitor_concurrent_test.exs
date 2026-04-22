@@ -5,15 +5,17 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorConcurrentTest do
 
   Two invariants are covered:
 
-    * **Concurrent-race exactly-one notification.** Two workers
-      simultaneously running the full health-check lifecycle
+    * **Uniqueness-configuration pin.** Two sequential callers inside
+      the shared Ecto sandbox running the full health-check lifecycle
       (get_state → update_health → put_state → detect_transition →
       handle_transition) on an integration that has already been
       unhealthy for >48h must enqueue exactly one user notification
       email — not zero (both suppressed), not two (silent duplicate).
-      The guarantee rests on Oban's `unique:` job constraint; this
-      test pins that contract under real concurrent load so a future
-      change to the constraint or the lifecycle would surface here.
+      The guarantee rests on Oban's `unique:` job constraint. Note:
+      the Ecto sandbox serialises Task DB access, so this test pins
+      the uniqueness *configuration* under the same execution order,
+      not true DB-level concurrency. A future change to the constraint
+      or the lifecycle would still surface here.
 
     * **Transient-failure grace period.** A healthy integration that
       sees a burst of transient errors during (for example) a deploy
@@ -28,7 +30,6 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorConcurrentTest do
   use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :integrations
-  @moduletag :health_check
 
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
@@ -36,7 +37,7 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorConcurrentTest do
   alias Tymeslot.Workers.EmailWorker
 
   describe "concurrent update_health on a sustained-unhealthy integration" do
-    test "two workers race the 48h notification — exactly one email job is enqueued" do
+    test "two sequential callers inside shared-sandbox: Oban's `unique:` dedupes to one job" do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true)
 
@@ -63,18 +64,15 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorConcurrentTest do
           notification_sent_at: nil
         )
 
-      parent = self()
-
       worker = fn ->
-        # Each worker runs the full health-check orchestration loop
-        # concurrently with the other. `handle_transition` is what
-        # ultimately enqueues the email via Oban.
+        # Each worker runs the full health-check orchestration loop.
+        # `handle_transition` is what ultimately enqueues the email
+        # via Oban.
         old = Monitor.get_state(:calendar, integration.id, user.id)
         new = Monitor.update_health(old, {:error, :unauthorized, :hard})
         {_count, _nil} = Monitor.put_state(:calendar, integration.id, new)
         transition = Monitor.detect_transition(old, new)
         :ok = ResponseHandler.handle_transition(:calendar, integration, transition, new)
-        send(parent, :done)
       end
 
       [t1, t2] = [Task.async(worker), Task.async(worker)]

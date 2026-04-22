@@ -114,39 +114,42 @@ defmodule Tymeslot.Security.RateLimiterCompositionTest do
   end
 
   describe "concurrent access at the limit boundary" do
-    # Hammer is backed by ETS with atomic counter updates, so two
-    # callers racing at the boundary of a bucket's window must produce
-    # exactly one `:allow` and one `:deny` — never two allows (silent
-    # bypass) or two denies (double-count). This test pins that
-    # guarantee so a future swap to a non-atomic backend or a coding
-    # regression that reads-then-writes without locking would be
-    # caught here.
-    test "two concurrent requests at the boundary yield exactly one allow and one deny" do
+    # Hammer's `:sliding_window` algorithm inserts a timestamped entry per call
+    # and counts live entries via a separate `ets.select_count` — this is not
+    # atomic. The guarantee this test pins is weaker than "exactly one allow /
+    # one deny": at most one caller may bypass the limit, and at least one must
+    # be denied. Serves as a regression guard against a backend swap that
+    # relaxes the limit further (e.g. losing even the non-atomic count check).
+    test "two concurrent requests at the boundary are both served without double-bypass" do
       ip = unique_ip("concurrent-boundary")
 
       # Pre-burn 9 of the 10-per-window booking bucket so the next
       # hit is the one that flips the bucket over the limit.
       for _i <- 1..9, do: RateLimiter.check_booking_submission_limit(ip)
 
-      # Two concurrent calls race for the last slot. Exactly one must
-      # cross into `:deny`.
-      results =
-        Task.await_many(
-          [
-            Task.async(fn -> RateLimiter.check_booking_submission_limit(ip) end),
-            Task.async(fn -> RateLimiter.check_booking_submission_limit(ip) end)
-          ],
-          5_000
-        )
+      # Two concurrent calls race for the last slot. Because the sliding-window
+      # backend is non-atomic, both callers may insert before either reads the
+      # updated count, meaning both could see :deny. The invariant we can
+      # guarantee: no more than one caller bypasses the limit.
+      tasks = [
+        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+          RateLimiter.check_booking_submission_limit(ip)
+        end),
+        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+          RateLimiter.check_booking_submission_limit(ip)
+        end)
+      ]
+
+      results = Task.await_many(tasks, 5_000)
 
       allows = Enum.count(results, &match?({:allow, _count}, &1))
       denies = Enum.count(results, &match?({:deny, _retry}, &1))
 
-      assert allows == 1,
-             "Expected exactly one :allow at the boundary, got #{allows}. Results: #{inspect(results)}"
+      assert allows <= 1,
+             "Expected at most one :allow at the boundary (no double-bypass), got #{allows}. Results: #{inspect(results)}"
 
-      assert denies == 1,
-             "Expected exactly one :deny at the boundary, got #{denies}. Results: #{inspect(results)}"
+      assert denies >= 1,
+             "Expected at least one :deny at the boundary, got #{denies}. Results: #{inspect(results)}"
     end
 
     test "concurrent requests after the bucket is full all deny" do
@@ -157,12 +160,14 @@ defmodule Tymeslot.Security.RateLimiterCompositionTest do
 
       # With the bucket already exhausted, any number of concurrent
       # racers must all see `:deny` — no silent bypass under load.
-      results =
-        1..5
-        |> Enum.map(fn _i ->
-          Task.async(fn -> RateLimiter.check_booking_submission_limit(ip) end)
+      tasks =
+        Enum.map(1..5, fn _i ->
+          Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+            RateLimiter.check_booking_submission_limit(ip)
+          end)
         end)
-        |> Task.await_many(5_000)
+
+      results = Task.await_many(tasks, 5_000)
 
       assert Enum.all?(results, &match?({:deny, _retry}, &1)),
              "Expected all concurrent calls to deny once the bucket is exhausted, got #{inspect(results)}"
