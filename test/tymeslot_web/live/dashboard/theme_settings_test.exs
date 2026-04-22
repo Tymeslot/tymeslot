@@ -206,6 +206,62 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       end)
     end
 
+    test "background image upload is idempotent — re-submitting does not duplicate the row", %{
+      conn: conn,
+      profile: profile
+    } do
+      # Pins the user-observable guarantee that a second "save" tap after
+      # auto-upload already consumed the entry (or after a sticky frontend
+      # submit) does not double-write a ThemeCustomization row. The guard
+      # is `upload_ready?/2` returning false once entries are drained plus
+      # `upsert_theme_customization/3` keying on (profile_id, theme_id).
+      # If either is removed a duplicate row would surface here.
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
+
+      view
+      |> element("button[phx-value-theme='1']", "Customize Style")
+      |> render_click()
+
+      view
+      |> element("button", "Image")
+      |> render_click()
+
+      image = %{
+        last_modified: System.system_time(:millisecond),
+        name: "bg.png",
+        content:
+          <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, "IHDR", 0x00,
+            0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77,
+            0x53, 0xDE>>,
+        type: "image/png"
+      }
+
+      view
+      |> file_input("#theme-background-image-form", :background_image, [image])
+      |> render_upload("bg.png")
+
+      eventually(fn ->
+        assert render(view) =~ "Background image uploaded successfully"
+      end)
+
+      first_row = Repo.get_by!(ThemeCustomizationSchema, profile_id: profile.id, theme_id: "1")
+
+      # User submits the save form again after consumption drained the
+      # upload entries. No new row, same stored path.
+      view
+      |> element("#theme-background-image-form")
+      |> render_submit()
+
+      matching_rows =
+        ThemeCustomizationSchema
+        |> Repo.all()
+        |> Enum.filter(&(&1.profile_id == profile.id and &1.theme_id == "1"))
+
+      assert [only_row] = matching_rows
+      assert only_row.id == first_row.id
+      assert only_row.background_image_path == first_row.background_image_path
+    end
+
     test "switching browsing type tabs renders each valid category", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard/theme")
 
@@ -213,16 +269,35 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       |> element("button[phx-value-theme='1']", "Customize Style")
       |> render_click()
 
-      # Each valid tab click should render without error
-      for label <- ["Solid Color", "Gradient", "Image", "Video"] do
-        html =
-          view
-          |> element("button", label)
-          |> render_click()
+      html_solid =
+        view
+        |> element("button", "Solid Color")
+        |> render_click()
 
-        # Page remains functional after each tab switch
-        assert is_binary(html)
-      end
+      assert html_solid =~ "Select a solid color"
+
+      html_gradient =
+        view
+        |> element("button", "Gradient")
+        |> render_click()
+
+      refute html_gradient =~ "Select a solid color"
+      refute html_gradient =~ "JPG, PNG or WebP. Max 5MB."
+      refute html_gradient =~ "MP4 or WebM. Max 20MB."
+
+      html_image =
+        view
+        |> element("button", "Image")
+        |> render_click()
+
+      assert html_image =~ "JPG, PNG or WebP. Max 5MB."
+
+      html_video =
+        view
+        |> element("button", "Video")
+        |> render_click()
+
+      assert html_video =~ "MP4 or WebM. Max 20MB."
     end
   end
 end

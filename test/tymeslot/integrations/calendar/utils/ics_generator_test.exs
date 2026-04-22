@@ -1,5 +1,5 @@
 defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
-  use Tymeslot.DataCase, async: true
+  use ExUnit.Case, async: true
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.IcsGenerator
@@ -505,6 +505,69 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       ics = IcsGenerator.generate_ics(meeting_details)
 
       assert ics =~ "ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:john@example.com"
+    end
+  end
+
+  describe "DST and timezone serialisation" do
+    # `format_datetime_utc/1` in the generator always shifts to UTC and
+    # appends the `Z` suffix. These tests pin that invariant on DST
+    # boundary days where a buggy renderer that stripped the offset
+    # without shifting would silently leak local time.
+    #
+    # Tymeslot never emits TZID-bound VTIMEZONE blocks; the wire format
+    # is always Z-suffixed UTC, so any regression that dropped the
+    # `shift_zone!("Etc/UTC")` step would surface as a mismatch between
+    # the DateTime's UTC instant and the rendered string.
+
+    test "spring-forward: Europe/London DateTime renders as its UTC instant" do
+      # Last Sunday of March 2026, UK springs forward at 01:00 UTC.
+      # 10:30 Europe/London on that day is BST (+01:00) — 09:30 UTC.
+      # A buggy renderer that stripped the offset without shifting would
+      # emit T103000Z here.
+      {:ok, bst_dt} = DateTime.from_naive(~N[2026-03-29 10:30:00], "Europe/London")
+      {:ok, bst_end} = DateTime.from_naive(~N[2026-03-29 11:30:00], "Europe/London")
+
+      meeting_details = %{
+        title: "DST spring forward",
+        start_time: bst_dt,
+        end_time: bst_end,
+        uid: "dst-spring",
+        organizer_email: "x@example.com"
+      }
+
+      ics = IcsGenerator.generate_ics(meeting_details)
+
+      assert ics =~ "DTSTART:20260329T093000Z"
+      assert ics =~ "DTEND:20260329T103000Z"
+    end
+
+    test "fall-back: Europe/Berlin DateTime after the boundary renders as its UTC instant" do
+      # Last Sunday of October 2026, Europe/Berlin falls back at 01:00 UTC
+      # (03:00 local → 02:00 local). 02:30 local is *ambiguous* — both
+      # the CEST (+02:00) and CET (+01:00) arms of that wall clock are
+      # valid. `DateTime.from_naive/2` returns both arms as
+      # `{:ambiguous, cest_dt, cet_dt}`; callers must resolve. We pick
+      # the post-boundary CET arm (01:30 UTC) — what a calendar client
+      # sends after the user re-ticks their clock — and verify the
+      # renderer honours that choice rather than silently picking the
+      # other arm.
+      {:ambiguous, _cest_dt, cet_dt} =
+        DateTime.from_naive(~N[2026-10-25 02:30:00], "Europe/Berlin")
+
+      {:ok, cet_end} = DateTime.from_naive(~N[2026-10-25 03:30:00], "Europe/Berlin")
+
+      meeting_details = %{
+        title: "DST fall back",
+        start_time: cet_dt,
+        end_time: cet_end,
+        uid: "dst-fall",
+        organizer_email: "x@example.com"
+      }
+
+      ics = IcsGenerator.generate_ics(meeting_details)
+
+      assert ics =~ "DTSTART:20261025T013000Z"
+      assert ics =~ "DTEND:20261025T023000Z"
     end
   end
 end
