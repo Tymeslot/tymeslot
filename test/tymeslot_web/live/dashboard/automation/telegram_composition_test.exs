@@ -136,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.Automation.TelegramCompositionTest do
       open_telegram_tab(view)
 
       view |> element("button", "Add Telegram Account") |> render_click()
-      [stub] = Telegram.list_integrations(user.id)
+      assert [stub] = Telegram.list_integrations(user.id)
       initial_token = stub.link_token
       assert is_binary(initial_token)
 
