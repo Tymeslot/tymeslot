@@ -247,6 +247,56 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenTest do
     end
   end
 
+  # Pins the error-propagation contract introduced to stop persist_tokens/4
+  # from silently swallowing DB-update failures. Prior to this change, a
+  # failed write left the DB holding stale tokens while the caller received
+  # `{:ok, fresh_token}` — next read re-refreshed, triggering IdP rate limits
+  # or refresh-token revocation (Google's one-use policy). The fix surfaces
+  # `{:error, :token_persist_failed}` so callers fail loudly instead.
+  describe "ensure_valid_access_token/2 — persistence failure surfaces as :token_persist_failed" do
+    test "bare-map integration whose id has no DB row" do
+      # Hits the `persist_tokens(%{id: id}, ...)` fallback clause. After the
+      # refresh succeeds, CalendarIntegrationQueries.get/1 returns
+      # {:error, :not_found}; persist_tokens propagates it and
+      # handle_refresh_result converts to the stable caller-facing error.
+      integration = %{
+        token_expires_at: DateTime.add(DateTime.utc_now(), -100, :second),
+        access_token: "old",
+        id: 999_999_999
+      }
+
+      new_expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+      refresh_fun = fn _client -> {:ok, {"fresh-access", "fresh-refresh", new_expires_at}} end
+
+      assert {:error, :token_persist_failed} =
+               Token.ensure_valid_access_token(integration, refresh_fun: refresh_fun)
+    end
+
+    test "schema struct whose changeset validation fails at Repo.update" do
+      # Hits the `persist_tokens(%CalendarIntegrationSchema{}, ...)` primary
+      # clause. The struct's :name is forced to nil so that the changeset's
+      # validate_required([:name, :provider, :user_id]) fires at update time
+      # — Repo.update returns {:error, changeset}, which persist_tokens now
+      # propagates instead of masking.
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          token_expires_at: DateTime.add(DateTime.utc_now(), -100, :second),
+          access_token: "old"
+        )
+
+      tainted = %{integration | name: nil}
+
+      new_expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+      refresh_fun = fn _client -> {:ok, {"fresh-access", "fresh-refresh", new_expires_at}} end
+
+      assert {:error, :token_persist_failed} =
+               Token.ensure_valid_access_token(tainted, refresh_fun: refresh_fun)
+    end
+  end
+
   # Polls until the Lock GenServer has been restarted by its supervisor, with a
   # short backoff so we don't busy-wait. Used after deliberately stopping Lock.
   defp wait_for_lock_restart(retries \\ 50) do

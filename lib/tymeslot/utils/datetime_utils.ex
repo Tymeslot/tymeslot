@@ -245,7 +245,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   """
   @spec format_ical_datetime(DateTime.t()) :: String.t()
   def format_ical_datetime(%DateTime{} = dt) do
-    utc_dt = ensure_utc(dt)
+    utc_dt = ensure_utc!(dt)
 
     # Format without microseconds for iCalendar compatibility
     utc_dt
@@ -261,7 +261,7 @@ defmodule Tymeslot.Utils.DateTimeUtils do
   """
   @spec format_caldav_datetime(DateTime.t()) :: String.t()
   def format_caldav_datetime(%DateTime{} = dt) do
-    utc_dt = ensure_utc(dt)
+    utc_dt = ensure_utc!(dt)
 
     utc_dt
     |> DateTime.to_iso8601(:basic)
@@ -405,14 +405,21 @@ defmodule Tymeslot.Utils.DateTimeUtils do
 
   @doc """
   Ensures a DateTime is in UTC timezone.
+
+  Returns `{:ok, utc_dt}` on success and `{:error, reason}` when
+  `DateTime.shift_zone/2` fails — typically because the source DateTime's
+  time zone is unknown to the loaded tzdata. Prior versions silently
+  returned the original (non-UTC) DateTime on failure, which produced
+  downstream iCal/CalDAV strings in the wrong zone. Callers that must
+  have a UTC DateTime should use `ensure_utc!/1`.
   """
-  @spec ensure_utc(DateTime.t()) :: DateTime.t()
-  def ensure_utc(%DateTime{time_zone: "Etc/UTC"} = dt), do: dt
+  @spec ensure_utc(DateTime.t()) :: {:ok, DateTime.t()} | {:error, term()}
+  def ensure_utc(%DateTime{time_zone: "Etc/UTC"} = dt), do: {:ok, dt}
 
   def ensure_utc(%DateTime{} = dt) do
     case DateTime.shift_zone(dt, "Etc/UTC") do
       {:ok, utc_dt} ->
-        utc_dt
+        {:ok, utc_dt}
 
       {:error, reason} ->
         Logger.error("Failed to shift timezone to UTC",
@@ -420,7 +427,26 @@ defmodule Tymeslot.Utils.DateTimeUtils do
           datetime: inspect(dt)
         )
 
-        dt
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Same as `ensure_utc/1` but unwraps `{:ok, utc_dt}` and raises on error.
+
+  Use this in internal callers whose contract is `DateTime.t() -> String.t()`
+  (iCal/CalDAV formatters) where falling back to the original non-UTC
+  DateTime would silently produce a wrong-zone output string.
+  """
+  @spec ensure_utc!(DateTime.t()) :: DateTime.t()
+  def ensure_utc!(%DateTime{} = dt) do
+    case ensure_utc(dt) do
+      {:ok, utc_dt} ->
+        utc_dt
+
+      {:error, reason} ->
+        raise ArgumentError,
+              "DateTimeUtils.ensure_utc!/1 failed to shift #{inspect(dt)} to UTC: #{inspect(reason)}"
     end
   end
 
