@@ -161,16 +161,23 @@ defmodule TymeslotWeb.Live.AsyncHandlersTest do
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/video-integration")
 
-      view
-      |> element("div.hidden button[phx-click='test_connection']")
-      |> render_click()
+      # Capture the HTML returned by render_click directly — this is the
+      # state right after the click handler assigns :testing_connection
+      # and before the LiveView can process the async callback message.
+      # Calling render(view) separately would be racy: the stub returns
+      # instantly, so the async may complete and reset :testing_connection
+      # before the separate render/1 call is dispatched.
+      html =
+        view
+        |> element("div.hidden button[phx-click='test_connection']")
+        |> render_click()
 
       # The spinner label appears synchronously as soon as the click is
       # handled, before the async task completes. Asserting this here
       # pins the "shown" half of the lifecycle so that the negative
       # `eventually` below cannot pass vacuously (i.e. if a regression
       # broke the assign such that the spinner never showed at all).
-      assert render(view) =~ "Testing..."
+      assert html =~ "Testing..."
 
       # The error surfaces as a flash with the provider-specific message.
       # "MiroTalk server error" is the stable prefix shared by all 5xx
