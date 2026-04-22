@@ -20,8 +20,19 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
   (the async task sends an empty-list `:calendar_list_refreshed`
   message when `CalendarManagement.get_calendar_integration/2` returns
   `{:error, :not_found}`). This test pins the LiveView side of that
-  seam: the dashboard must survive receiving both messages and keep
-  rendering.
+  seam:
+
+    1. The user mounts the dashboard with a live calendar integration.
+    2. The user opens the Add Meeting Type form and clicks the
+       integration button — this sets `refreshing_calendars: true` in
+       the form component and sends `{:refresh_calendar_list, ...}` to
+       the parent LiveView, which spawns the async task.
+    3. Before the async task completes, the integration is deleted
+       (another tab, admin revocation).
+    4. The async task finds `{:error, :not_found}` and sends back
+       `{:calendar_list_refreshed, form_id, integration_id, []}`.
+    5. The parent's `handle_info` must forward the update to the form
+       component, clearing the spinner — not crash or leave it stuck.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -31,10 +42,9 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
   @moduletag :live
 
   import Phoenix.LiveViewTest
-  import Tymeslot.AuthTestHelpers
+  import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
-  alias Plug.Test, as: PlugTest
   alias Tymeslot.Infrastructure.DashboardCache
   alias Tymeslot.Integrations.Calendar
 
@@ -47,49 +57,59 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
     :ok
   end
 
-  setup %{conn: conn} do
+  setup :setup_dashboard_user
+
+  setup do
     DashboardCache.clear_all()
-
-    user = insert(:user, onboarding_completed_at: DateTime.utc_now())
-    insert(:profile, user: user, username: "pubsubuser", full_name: "PubSub User")
-
-    conn =
-      conn
-      |> PlugTest.init_test_session(%{})
-      |> log_in_user(user)
-
-    {:ok, conn: conn, user: user}
+    :ok
   end
 
   describe "refresh_calendar_list — integration deleted mid-flight" do
     @tag :capture_log
-    test "handles a refresh request for an already-deleted integration without crashing the LiveView",
+    test "spinner clears after the async task returns not-found for a deleted integration",
          %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, provider: "google")
 
-      # Simulate the race: the user clicked "select calendar" and the
-      # refresh message is in flight, but the integration has been
-      # deleted in another tab (or by an admin revocation) before the
-      # async task fires.
-      {:ok, _deleted} = Calendar.delete_integration(integration.id, user.id)
-
+      # Mount with the integration present so the calendar picker renders.
       {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
 
-      # Feed the handler directly — the real UI path is
-      # `select_calendar_integration` inside the meeting-type form, but
-      # the handler under test is on the parent DashboardLive and does
-      # not care which form emitted the message. The form id below is
-      # intentionally fictitious to mimic a component that has since
-      # unmounted.
-      send(view.pid, {:refresh_calendar_list, "ghost-form", integration.id})
+      # Open the Add Meeting Type form so MeetingTypeForm mounts with
+      # id "meeting-type-form-new".
+      view |> element("button", "Add Meeting Type") |> render_click()
 
-      # The async task sends :calendar_list_refreshed back to the
-      # LiveView. Wait for both hops to settle.
+      # Simulate the race: delete the integration before the user's
+      # click is processed. The component's assigns are not reloaded by
+      # the deletion (no PubSub broadcast), so the integration button
+      # remains in the rendered HTML. When the click fires the async
+      # task, `CalendarManagement.get_calendar_integration/2` will
+      # return `{:error, :not_found}`.
+      {:ok, _deleted} = Calendar.delete_integration(integration.id, user.id)
+
+      # Click the calendar integration button — the real UI path for
+      # `select_calendar_integration`. This sets
+      # `refreshing_calendars: true` and `selected_calendar_integration_id`
+      # in the form component, then queues
+      # `{:refresh_calendar_list, form_id, integration.id}` to the parent
+      # LiveView which spawns the async task. The task finds
+      # `{:error, :not_found}` (integration deleted above) and sends back
+      # `{:calendar_list_refreshed, form_id, integration.id, []}`.
+      view
+      |> element(
+        "button[phx-click*='select_calendar_integration'][phx-click*='#{integration.id}']"
+      )
+      |> render_click()
+
+      # Sharp seam assertion: the empty-calendar-list branch only renders
+      # after `handle_info({:calendar_list_refreshed, ...})` runs
+      # `send_update(MeetingTypeForm, refreshing_calendars: false,
+      # calendars: [])`. If either `handle_info` clause raised, LiveView
+      # would rescue but `send_update` would never fire — the component
+      # would stay on `refreshing_calendars: true` and this text would
+      # never render. (The outer `:if @selected_calendar_integration_id`
+      # gate is satisfied by the click setting that assign alongside the
+      # spinner.)
       wait_until(fn ->
-        assert Process.alive?(view.pid)
-        # A subsequent render must succeed — if either handle_info
-        # raised, the LiveView would be down and this would error.
-        assert render(view) =~ "Meeting Settings"
+        assert render(view) =~ "No calendars found for this account."
       end)
     end
   end
