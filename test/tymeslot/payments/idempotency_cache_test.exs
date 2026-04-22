@@ -116,7 +116,7 @@ defmodule Tymeslot.Payments.Webhooks.IdempotencyCacheTest do
 
       results =
         Task.await_many(
-          for _ <- 1..25 do
+          for _n <- 1..25 do
             Task.async(fn -> IdempotencyCache.reserve(event_id) end)
           end,
           5_000
