@@ -1,5 +1,5 @@
 defmodule Tymeslot.PaymentsTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :utils
 
   alias Tymeslot.Factory
@@ -12,7 +12,19 @@ defmodule Tymeslot.PaymentsTest do
   setup :verify_on_exit!
 
   setup do
+    # Snapshot the pre-test value so the put_env below is scoped to this
+    # suite and doesn't leak into other test files that share the VM.
+    original_provider = Application.get_env(:tymeslot, :stripe_provider)
     Application.put_env(:tymeslot, :stripe_provider, Tymeslot.Payments.StripeMock)
+
+    on_exit(fn ->
+      if is_nil(original_provider) do
+        Application.delete_env(:tymeslot, :stripe_provider)
+      else
+        Application.put_env(:tymeslot, :stripe_provider, original_provider)
+      end
+    end)
+
     :ok
   end
 
@@ -290,8 +302,17 @@ defmodule Tymeslot.PaymentsTest do
   end
 
   defp set_subscription_manager(manager) do
+    original = Application.get_env(:tymeslot, :subscription_manager)
     Application.put_env(:tymeslot, :subscription_manager, manager)
-    on_exit(fn -> Application.delete_env(:tymeslot, :subscription_manager) end)
+
+    on_exit(fn ->
+      if is_nil(original) do
+        Application.delete_env(:tymeslot, :subscription_manager)
+      else
+        Application.put_env(:tymeslot, :subscription_manager, original)
+      end
+    end)
+
     :ok
   end
 end
