@@ -295,16 +295,25 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       ) do
     user_id = socket.assigns.current_user.id
 
+    # Re-fetch the integration by id before updating: the struct in
+    # socket assigns can be stale if the row was deleted between mount
+    # and this click, and CalendarIntegrationSchema has no
+    # optimistic_lock — Repo.update on a stale struct returns
+    # {:ok, stale_struct} (0 rows affected, no exception) and the user
+    # would see a silent no-op.
     with :ok <- RateLimiter.check_integration_write_rate_limit(user_id),
          {:ok, int_id} <- parse_int(id),
-         %{} = integration <-
-           Enum.find(socket.assigns.integrations, &(&1.id == int_id)),
+         {:ok, integration} <- Calendar.get_integration(int_id, user_id),
          {:ok, _result} <- Calendar.toggle_calendar_selection(integration, cal_id) do
       {:noreply, load_integrations(socket)}
     else
       {:error, :rate_limited, message} ->
         Flash.error(message)
         {:noreply, socket}
+
+      {:error, :not_found} ->
+        Flash.error("This calendar integration is no longer available.")
+        {:noreply, load_integrations(socket)}
 
       _other ->
         Flash.error("Failed to update selection")

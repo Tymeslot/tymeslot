@@ -14,6 +14,18 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
     * `toggle_integration` full round-trip — the DB `is_active` flag
       flips and the view refreshes; pins the LiveComponent → Calendar
       context → Ecto-update seam that has no composition coverage today.
+    * `toggle_calendar_selection` happy path — clicking a calendar pill
+      flips its `selected` flag in the persisted `calendar_list`. Pins
+      the LiveComponent → `Calendar.toggle_calendar_selection/2` →
+      Ecto-update seam that `dashboard_integrations_test.exs` used to
+      cover with handle_event-only stubs.
+    * `toggle_calendar_selection` race with deletion — if the underlying
+      integration row is removed between mount and the click, the handler
+      re-fetches by id, surfaces the not-found arm as a user-visible
+      flash, and reloads the list so the stale entry disappears. Without
+      the fresh fetch, `Repo.update` on the stale struct returns
+      `{:ok, stale_struct}` (0 rows affected, no optimistic lock) and the
+      user sees a silent no-op.
     * Delete modal → confirm on the **primary** integration with another
       active one present — the secondary is promoted to primary on the
       profile. Pins the LiveComponent → Deletion → ProfileQueries chain.
@@ -45,19 +57,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       event today. The handler at `calendar_settings_component.ex:315`
       is currently unreachable through the UI, so a composition test
       would only exercise the handler directly, which is a unit test.
-    * `toggle_calendar_selection` for an integration deleted mid-session
-      — uncovered a separate bug: the handler passes the stale struct
-      from socket assigns into `Calendar.toggle_calendar_selection/2`.
-      Because `CalendarIntegrationSchema` has no `optimistic_lock` field,
-      `Repo.update/1` on the deleted row silently returns `{:ok, stale_struct}`
-      (0 rows affected, no exception). The `with` pipeline takes the success
-      branch, calls `load_integrations/1`, and never reaches the `else`
-      clause — so the user sees a silent no-op instead of the "Failed to
-      update selection" flash. The fix is a pre-update existence check in
-      the queries module (e.g. `Repo.get` before updating), not rescuing
-      `Ecto.StaleEntryError`. Landing the regression test here would require
-      the production fix; per the plan's test-only worktree policy, this
-      goes as a follow-up in a dedicated fix worktree.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -159,6 +158,85 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       rendered = render(view)
       assert rendered =~ "Calendar status updated"
       refute Repo.get!(CalendarIntegrationSchema, integration.id).is_active
+    end
+  end
+
+  describe "toggle_calendar_selection" do
+    @tag :capture_log
+    test "flipping a calendar pill persists the new selected flag", %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          is_active: true,
+          calendar_list: [
+            %{
+              "id" => "cal-primary",
+              "path" => "cal-primary",
+              "name" => "Primary",
+              "type" => "calendar",
+              "selected" => true
+            }
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      view
+      |> element(
+        "button[phx-click='toggle_calendar_selection']" <>
+          "[phx-value-integration_id='#{integration.id}']" <>
+          "[phx-value-calendar_id='cal-primary']"
+      )
+      |> render_click()
+
+      [%{"id" => "cal-primary", "selected" => selected}] =
+        Repo.get!(CalendarIntegrationSchema, integration.id).calendar_list
+
+      refute selected
+    end
+
+    @tag :capture_log
+    test "toggling a calendar after the integration was deleted flashes and refreshes the list",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          name: "Soon-to-be-deleted",
+          is_active: true,
+          calendar_list: [
+            %{
+              "id" => "cal-primary",
+              "path" => "cal-primary",
+              "name" => "Primary",
+              "type" => "calendar",
+              "selected" => true
+            }
+          ]
+        )
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/calendar-integration")
+      assert html =~ "Soon-to-be-deleted"
+
+      # Simulate the user deleting the integration from another tab
+      # between page load and click. Without the pre-update existence
+      # check, `Repo.update` on the stale struct would succeed silently
+      # (0 rows affected, no optimistic lock) and the user would see
+      # no feedback at all.
+      Repo.delete!(integration)
+
+      view
+      |> element(
+        "button[phx-click='toggle_calendar_selection']" <>
+          "[phx-value-integration_id='#{integration.id}']" <>
+          "[phx-value-calendar_id='cal-primary']"
+      )
+      |> render_click()
+
+      rendered = render(view)
+      assert rendered =~ "This calendar integration is no longer available."
+      refute rendered =~ "Soon-to-be-deleted"
     end
   end
 
