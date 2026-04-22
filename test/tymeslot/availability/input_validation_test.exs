@@ -33,13 +33,15 @@ defmodule Tymeslot.Availability.InputValidationTest do
     test "rejects end time equal to start time" do
       params = %{"start" => "09:00", "end" => "09:00"}
       assert {:error, errors} = InputValidation.validate_day_hours(params)
-      assert Map.has_key?(errors, :time_range)
+      assert errors[:start_time] == "End time must be after start time"
+      assert errors[:end_time] == "End time must be after start time"
     end
 
     test "rejects end time before start time" do
       params = %{"start" => "17:00", "end" => "09:00"}
       assert {:error, errors} = InputValidation.validate_day_hours(params)
-      assert Map.has_key?(errors, :time_range)
+      assert errors[:start_time] == "End time must be after start time"
+      assert errors[:end_time] == "End time must be after start time"
     end
 
     test "rejects non-string time values" do
@@ -85,7 +87,8 @@ defmodule Tymeslot.Availability.InputValidationTest do
     test "rejects invalid time range in break" do
       params = %{"start" => "13:00", "end" => "12:00", "label" => "Lunch"}
       assert {:error, errors} = InputValidation.validate_break_input(params)
-      assert Map.has_key?(errors, :time_range)
+      assert errors[:start_time] == "End time must be after start time"
+      assert errors[:end_time] == "End time must be after start time"
     end
   end
 

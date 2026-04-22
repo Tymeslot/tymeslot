@@ -49,20 +49,6 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
   submits `add_break` with start ≥ end must surface a form error and
   not persist a nonsensical break window — the UI uses dropdowns, but
   nothing enforces start < end client-side.
-
-  Known bug — end-before-start error never renders (follow-up worktree):
-
-    `validate_time_window/5` in `input_validation.ex` wraps time-range
-    errors as `%{time_range: "End time must be after start time"}`.
-    The template (`day_card_component.ex`) calls
-    `FormValidationHelpers.field_errors(@form_errors, :start_time)` and
-    `:end_time` — neither key matches `:time_range`, so both return `nil`.
-    The user-visible effect: a start ≥ end submission is rejected
-    server-side (no DB write, no success flash) but the form re-renders
-    with no error message whatsoever — silent rejection. The fix is either
-    to rename the validation key to `:start_time` (or `:end_time`), or to
-    add a `:time_range` lookup in the template; to be resolved in a
-    separate worktree.
   """
 
   use TymeslotWeb.LiveCase, async: false
@@ -120,11 +106,7 @@ defmodule TymeslotWeb.Live.Dashboard.Availability.ListComponentCompositionTest d
       html = render(view)
       refute html =~ "Break added"
       refute html =~ "Impossible Break"
-      # Bug: error is keyed as :time_range in validation but the template
-      # looks up :start_time / :end_time — the message never reaches the UI.
-      # This refute pins the current broken behaviour; it must be flipped to
-      # an assert once the key mismatch is fixed.
-      refute html =~ "End time must be after start time"
+      assert html =~ "End time must be after start time"
 
       day = WeeklySchedule.get_day_availability(profile.id, 1)
       assert Breaks.get_breaks_for_day(day.id) == []

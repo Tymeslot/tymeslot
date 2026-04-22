@@ -176,7 +176,7 @@ defmodule Tymeslot.Availability.InputValidation do
         {:error, errors}
 
       {:error, error_msg} ->
-        errors = %{time_range: error_msg}
+        errors = %{start_time: error_msg, end_time: error_msg}
         log_validation_failure(failure_event, metadata, errors)
         {:error, errors}
     end
