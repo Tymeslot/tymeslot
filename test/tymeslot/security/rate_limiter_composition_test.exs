@@ -113,6 +113,67 @@ defmodule Tymeslot.Security.RateLimiterCompositionTest do
     end
   end
 
+  describe "concurrent access at the limit boundary" do
+    # Hammer's `:sliding_window` algorithm inserts a timestamped entry per call
+    # and counts live entries via a separate `ets.select_count` — this is not
+    # atomic. The guarantee this test pins is weaker than "exactly one allow /
+    # one deny": at most one caller may bypass the limit, and at least one must
+    # be denied. Serves as a regression guard against a backend swap that
+    # relaxes the limit further (e.g. losing even the non-atomic count check).
+    test "two concurrent requests at the boundary are both served without double-bypass" do
+      ip = unique_ip("concurrent-boundary")
+
+      # Pre-burn 9 of the 10-per-window booking bucket so the next
+      # hit is the one that flips the bucket over the limit.
+      for _i <- 1..9, do: RateLimiter.check_booking_submission_limit(ip)
+
+      # Two concurrent calls race for the last slot. Because the sliding-window
+      # backend is non-atomic, both callers may insert before either reads the
+      # updated count, meaning both could see :deny. The invariant we can
+      # guarantee: no more than one caller bypasses the limit.
+      tasks = [
+        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+          RateLimiter.check_booking_submission_limit(ip)
+        end),
+        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+          RateLimiter.check_booking_submission_limit(ip)
+        end)
+      ]
+
+      results = Task.await_many(tasks, 5_000)
+
+      allows = Enum.count(results, &match?({:allow, _count}, &1))
+      denies = Enum.count(results, &match?({:deny, _retry}, &1))
+
+      assert allows <= 1,
+             "Expected at most one :allow at the boundary (no double-bypass), got #{allows}. Results: #{inspect(results)}"
+
+      assert denies >= 1,
+             "Expected at least one :deny at the boundary, got #{denies}. Results: #{inspect(results)}"
+    end
+
+    test "concurrent requests after the bucket is full all deny" do
+      ip = unique_ip("concurrent-full")
+
+      # Fill the bucket completely first.
+      for _i <- 1..10, do: RateLimiter.check_booking_submission_limit(ip)
+
+      # With the bucket already exhausted, any number of concurrent
+      # racers must all see `:deny` — no silent bypass under load.
+      tasks =
+        Enum.map(1..5, fn _i ->
+          Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+            RateLimiter.check_booking_submission_limit(ip)
+          end)
+        end)
+
+      results = Task.await_many(tasks, 5_000)
+
+      assert Enum.all?(results, &match?({:deny, _retry}, &1)),
+             "Expected all concurrent calls to deny once the bucket is exhausted, got #{inspect(results)}"
+    end
+  end
+
   describe "bucket lifecycle via clear_bucket/1" do
     test "clearing the underlying bucket key re-allows requests" do
       ip = unique_ip("clear-cancel")
