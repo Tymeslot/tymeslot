@@ -165,11 +165,18 @@ defmodule TymeslotWeb.Live.AsyncHandlersTest do
       |> element("div.hidden button[phx-click='test_connection']")
       |> render_click()
 
-      # The error surfaces as a flash — the exact message is provider-
-      # specific, but it must be visibly present (not swallowed).
+      # The spinner label appears synchronously as soon as the click is
+      # handled, before the async task completes. Asserting this here
+      # pins the "shown" half of the lifecycle so that the negative
+      # `eventually` below cannot pass vacuously (i.e. if a regression
+      # broke the assign such that the spinner never showed at all).
+      assert render(view) =~ "Testing..."
+
+      # The error surfaces as a flash with the provider-specific message.
+      # "MiroTalk server error" is the stable prefix shared by all 5xx
+      # responses from `mirotalk_provider.ex`.
       eventually(fn ->
-        rendered = render(view)
-        assert rendered =~ "Connection test failed" or rendered =~ "MiroTalk"
+        assert render(view) =~ "MiroTalk server error"
       end)
 
       # `testing_connection` must clear so the user can click the
