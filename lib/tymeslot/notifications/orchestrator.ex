@@ -293,7 +293,18 @@ defmodule Tymeslot.Notifications.Orchestrator do
 
     case notification_type do
       :reschedule ->
-        email_service.send_appointment_confirmations(content)
+        case email_service.send_appointment_confirmations(content) do
+          {{:ok, _organizer}, {:ok, _attendee}} ->
+            {:ok, :confirmations_sent}
+
+          {organizer_result, attendee_result} ->
+            Logger.warning("Some confirmation emails may have failed",
+              organizer_result: inspect(organizer_result),
+              attendee_result: inspect(attendee_result)
+            )
+
+            {:ok, :confirmations_partially_sent}
+        end
 
       :video_room_failed ->
         # For now, just log this as we don't have this specific method yet
