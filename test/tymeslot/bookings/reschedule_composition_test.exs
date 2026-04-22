@@ -15,13 +15,18 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
   @moduletag :bookings
   @moduletag :integration
 
+  import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Reschedule
+  alias Tymeslot.EmailServiceMock
   alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Repo
+  alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.TestMocks
+  alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.CalendarEventWorker
   alias Tymeslot.Workers.TelegramWorker
   alias Tymeslot.Workers.WebhookWorker
@@ -77,6 +82,65 @@ defmodule Tymeslot.Bookings.RescheduleCompositionTest do
       assert [telegram_job] = all_enqueued(worker: TelegramWorker)
       assert telegram_job.args["event_type"] == "meeting.rescheduled"
       assert telegram_job.args["meeting_id"] == meeting.id
+    end
+  end
+
+  describe "execute/4 full cascade parity" do
+    # Reschedule's public guarantee is that every channel the user has
+    # configured for meeting changes fires exactly once: calendar
+    # provider, email recipients, webhook subscribers, Telegram chat.
+    # Dropping any one of those channels silently (e.g. a refactor that
+    # moves Dispatcher.dispatch outside of Events.meeting_rescheduled/2)
+    # would be invisible via unit tests but user-breaking. This test
+    # pins the union — all four channels surface a reschedule event
+    # when the user has opted into each.
+
+    test "fires calendar job + email send + webhook + Telegram in a single execute/4", %{
+      user: user,
+      meeting: meeting
+    } do
+      # Over-ride the default stub with a strict expectation so the
+      # email channel counts as "observed" alongside the three Oban
+      # queues.
+      expect(EmailServiceMock, :send_appointment_confirmations, 1, fn _details -> {:ok, :ok} end)
+
+      new_params = reschedule_params_for(future_datetime(7, :day))
+
+      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+
+      assert [%{args: %{"action" => "update", "meeting_id" => mid}}] =
+               all_enqueued(worker: CalendarEventWorker)
+
+      assert mid == meeting.id
+
+      assert [%{args: %{"event_type" => "meeting.rescheduled"}}] =
+               all_enqueued(worker: WebhookWorker)
+
+      assert [%{args: %{"event_type" => "meeting.rescheduled"}}] =
+               all_enqueued(worker: TelegramWorker)
+    end
+
+    test "with no webhook or Telegram integration the email + calendar channels still fire", %{
+      user: user,
+      meeting: meeting
+    } do
+      # Drops the opt-in rows seeded in the top-level setup so the user
+      # has only the core email + calendar channels wired. The reschedule
+      # must still fire both of those, and must not enqueue phantom
+      # webhook/Telegram jobs for channels the user never configured.
+      # Sandbox isolation keeps the delete_all scoped to this test.
+      Repo.delete_all(WebhookSchema)
+      Repo.delete_all(TelegramIntegrationSchema)
+
+      expect(EmailServiceMock, :send_appointment_confirmations, 1, fn _details -> {:ok, :ok} end)
+
+      new_params = reschedule_params_for(future_datetime(8, :day))
+
+      assert {:ok, _updated} = Reschedule.execute(meeting.uid, new_params, %{}, user.id)
+
+      assert [_calendar_job] = all_enqueued(worker: CalendarEventWorker)
+      assert all_enqueued(worker: WebhookWorker) == []
+      assert all_enqueued(worker: TelegramWorker) == []
     end
   end
 
