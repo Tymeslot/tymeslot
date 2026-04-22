@@ -37,6 +37,12 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
       impossible via Ecto. The `%{booking_theme: theme} when
       is_binary(theme)` guard in the hook is a defensive belt-and-
       braces against a state Ecto cannot emit.
+
+    * `socket.private[:theme_id] branch` — no production caller writes
+      `theme_id` into `socket.private`. The branch in `extract_theme_id/2`
+      (`theme_hook.ex:36–37`) reads `socket.private[:theme_id]` but
+      no plug, router, or hook in Core or SaaS ever sets it. The path
+      is unreachable and therefore has no test.
   """
 
   use TymeslotWeb.ConnCase, async: true
@@ -99,11 +105,11 @@ defmodule TymeslotWeb.Hooks.ThemeHookTest do
       assert updated_socket.assigns.theme_id == "3"
     end
 
-    test "socket.private theme_id is used when no params are provided" do
+    test "theme_id query param is used when no theme param is present" do
       assert {:cont, updated_socket} =
-               ThemeHook.on_mount(:default, %{}, %{}, build_socket(%{theme_id: "4"}))
+               ThemeHook.on_mount(:default, %{"theme_id" => "2"}, %{}, build_socket())
 
-      assert updated_socket.assigns.theme_id == "4"
+      assert updated_socket.assigns.theme_id == "2"
     end
 
     test "defaults to theme 1 when neither params nor socket.private carry a theme" do
