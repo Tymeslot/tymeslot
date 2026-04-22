@@ -6,6 +6,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
   a usable access token, reducing duplication across provider clients.
   """
 
+  require Logger
+
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.CalendarManagement
@@ -121,10 +123,27 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
         {:ok, access_token}
 
       {:ok, {access_token, refresh_token, expires_at}} ->
-        _persist_result =
-          if persist?, do: persist_tokens(integration, access_token, refresh_token, expires_at)
+        if persist? do
+          case persist_tokens(integration, access_token, refresh_token, expires_at) do
+            :ok ->
+              {:ok, access_token}
 
-        {:ok, access_token}
+            {:error, reason} ->
+              # Returning the fresh access_token here would mask the fact that
+              # the DB still holds the old one — subsequent callers would read
+              # stale tokens, re-refresh each time, and risk IdP rate-limits or
+              # refresh-token revocation (Google's one-use policy). Surface the
+              # failure so callers can fail loudly instead.
+              Logger.warning("OAuth token persistence failed",
+                integration_id: Map.get(integration, :id),
+                reason: inspect(reason)
+              )
+
+              {:error, :token_persist_failed}
+          end
+        else
+          {:ok, access_token}
+        end
 
       {:ok, _non_binary_token} ->
         {:error, :token_not_available}
@@ -154,7 +173,10 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
     end
   end
 
-  # Best-effort persistence of refreshed tokens; no-ops on failure
+  # Persists refreshed tokens to the integration row. Returns `:ok` on success
+  # and `{:error, reason}` on failure so the caller can surface the error
+  # rather than silently serving stale DB state on the next call.
+  @spec persist_tokens(map(), String.t(), String.t(), DateTime.t()) :: :ok | {:error, term()}
   defp persist_tokens(%CalendarIntegrationSchema{} = integration, access, refresh, expires_at) do
     attrs = %{
       access_token: access,
@@ -164,7 +186,7 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
 
     case CalendarIntegrationQueries.update_integration(integration, attrs) do
       {:ok, _updated_integration} -> :ok
-      {:error, _update_error} -> :ok
+      {:error, update_error} -> {:error, update_error}
     end
   end
 
@@ -175,10 +197,10 @@ defmodule Tymeslot.Integrations.Common.OAuth.Token do
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
-        :ok
+        {:error, :requires_reencryption}
 
-      {:error, _fetch_error} ->
-        :ok
+      {:error, fetch_error} ->
+        {:error, fetch_error}
     end
   end
 
