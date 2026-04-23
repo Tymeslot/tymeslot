@@ -114,4 +114,60 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       assert html =~ "Configuration form not available"
     end
   end
+
+  describe "calendar_item reconnect button" do
+    test "renders a Reconnect button for Google integrations" do
+      integration = %{
+        id: 42,
+        name: "Work Google",
+        provider: "google",
+        is_active: true,
+        needs_reauth: false,
+        calendar_list: [],
+        calendar_paths: [],
+        base_url: nil,
+        is_primary: false,
+        default_booking_calendar_id: nil,
+        provider_account_email: "user@example.com"
+      }
+
+      html =
+        render_component(&Components.calendar_item/1,
+          integration: integration,
+          validating_integration_id: nil,
+          myself: "target"
+        )
+
+      assert html =~ ~s(phx-click="reconnect_integration")
+      assert html =~ ~s(phx-value-id="42")
+      assert html =~ "Reconnect"
+    end
+
+    test "renders a Reconnect button for CalDAV integrations" do
+      integration = %{
+        id: 7,
+        name: "My CalDAV",
+        provider: "caldav",
+        is_active: true,
+        needs_reauth: false,
+        calendar_list: [],
+        calendar_paths: ["/calendars/user/default/"],
+        base_url: "https://caldav.example.com",
+        is_primary: false,
+        default_booking_calendar_id: nil,
+        provider_account_email: nil
+      }
+
+      html =
+        render_component(&Components.calendar_item/1,
+          integration: integration,
+          validating_integration_id: nil,
+          myself: "target"
+        )
+
+      assert html =~ ~s(phx-click="reconnect_integration")
+      assert html =~ ~s(phx-value-id="7")
+      assert html =~ "Reconnect"
+    end
+  end
 end

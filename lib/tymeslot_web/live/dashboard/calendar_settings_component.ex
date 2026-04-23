@@ -378,6 +378,21 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     end
   end
 
+  def handle_event("reconnect_integration", %{"id" => id}, socket) do
+    with {:ok, int_id} <- parse_int(id),
+         {:ok, integration} <- Calendar.get_integration(int_id, socket.assigns.current_user.id) do
+      handle_reconnect_by_provider(integration, socket)
+    else
+      :error ->
+        Flash.error("Invalid calendar ID")
+        {:noreply, socket}
+
+      {:error, :not_found} ->
+        Flash.error("Integration not found")
+        {:noreply, socket}
+    end
+  end
+
   # --- Async Handlers ---
 
   @impl Phoenix.LiveComponent
@@ -488,6 +503,46 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   defp format_refresh_failures(names) do
     shown = names |> Enum.take(3) |> Enum.join(", ")
     "#{shown} and #{length(names) - 3} more"
+  end
+
+  defp handle_reconnect_by_provider(%{provider: "google"}, socket) do
+    case Calendar.initiate_google_oauth(socket.assigns.current_user.id) do
+      {:ok, url} ->
+        send(self(), {:external_redirect, url})
+        {:noreply, socket}
+
+      {:error, msg} when is_binary(msg) ->
+        Flash.error(msg)
+        {:noreply, socket}
+
+      {:error, _other} ->
+        Flash.error("Failed to start reconnect")
+        {:noreply, socket}
+    end
+  end
+
+  defp handle_reconnect_by_provider(%{provider: "outlook"}, socket) do
+    case Calendar.initiate_outlook_oauth(socket.assigns.current_user.id) do
+      {:ok, url} ->
+        send(self(), {:external_redirect, url})
+        {:noreply, socket}
+
+      {:error, msg} when is_binary(msg) ->
+        Flash.error(msg)
+        {:noreply, socket}
+
+      {:error, _other} ->
+        Flash.error("Failed to start reconnect")
+        {:noreply, socket}
+    end
+  end
+
+  defp handle_reconnect_by_provider(%{provider: provider}, socket)
+       when provider in ~w(caldav nextcloud radicale zimbra) do
+    # CalDAV-family modal is wired up in the next plan task. For now, signal
+    # "not yet available" so nothing silently fails.
+    Flash.error("CalDAV reconnect is coming in the next commit")
+    {:noreply, socket}
   end
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}
