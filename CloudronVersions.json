@@ -140,6 +140,53 @@
       "publishState": "published",
       "ts": "Tue, 21 Apr 2026 14:51:19 GMT"
     },
+    "0.100.11": {
+      "creationDate": "Thu, 23 Apr 2026 11:21:47 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* core: Prevent reCAPTCHA tokens being corrupted during form validation\n* saas: Keep dashboard mounted when the subscription service exits\n* core: Derive with_retry_async's Task.await timeout from the retry budget\n* core: Prevent search engines from indexing booking pages\n* core: Surface timezone conversion failures from ensure_utc/1\n* core: Surface OAuth token persistence failures loudly\n* saas: Persist renewed billing period and dedupe duplicate dispute webhooks\n* core: Deliver reschedule confirmation emails without pattern mismatch\n* core: Warn when toggling a deleted calendar integration\n* core: Show validation error when break end time precedes start time",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:0.100.11",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "0.100.11",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Thu, 23 Apr 2026 11:21:47 GMT"
+    },
     "0.100.2": {
       "creationDate": "Thu, 16 Apr 2026 09:35:32 GMT",
       "manifest": {

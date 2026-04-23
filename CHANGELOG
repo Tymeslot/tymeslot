@@ -1,4 +1,15 @@
 
+[0.100.11]
+* core: Prevent reCAPTCHA tokens being corrupted during form validation
+* saas: Keep dashboard mounted when the subscription service exits
+* core: Derive with_retry_async's Task.await timeout from the retry budget
+* core: Prevent search engines from indexing booking pages
+* core: Surface timezone conversion failures from ensure_utc/1
+* core: Surface OAuth token persistence failures loudly
+* saas: Persist renewed billing period and dedupe duplicate dispute webhooks
+* core: Deliver reschedule confirmation emails without pattern mismatch
+* core: Warn when toggling a deleted calendar integration
+* core: Show validation error when break end time precedes start time
 [0.100.10]
 * core: Count all concurrent failed login attempts toward account lockout
 * core: Restore meeting-type creation when no calendar is selected
