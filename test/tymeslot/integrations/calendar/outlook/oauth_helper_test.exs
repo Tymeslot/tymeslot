@@ -75,28 +75,39 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelperTest do
     end
   end
 
+  # Dispatches on the HTTP verb in a single multi-clause stub:
+  #
+  #   * `:post` → succeeds with a token payload (the token exchange)
+  #   * anything else → `Mint.TransportError{reason: :timeout}` (the
+  #     supervised seed_delta_async task's `:get` against Graph)
+  #
+  # Using `stub/3` rather than `expect/4` is deliberate. In `async: false`
+  # Mox shared mode, a supervised task from a *previous* test can still be
+  # running when this test's setup installs its mocks. That stray task
+  # makes the next HTTPClient.request call the test sees. If we used an
+  # `expect`, the stray task would consume it — with the wrong HTTP verb
+  # — so when the real token exchange fires, its call would fall through
+  # to the fallback stub and return `:timeout`, manifesting as
+  # `{:error, "Network error during token exchange: ..."}` from the
+  # `handle_callback/3` flow. A single multi-clause stub matches on verb,
+  # is not consumed, and is therefore immune to the cross-test race.
   defp expect_token_response(access_token, refresh_token) do
-    expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
-      {:ok,
-       %{
-         status: 200,
-         body:
-           Jason.encode!(%{
-             "access_token" => access_token,
-             "refresh_token" => refresh_token,
-             "expires_in" => 3600,
-             "scope" => "Calendars.ReadWrite"
-           })
-       }}
-    end)
+    stub(Tymeslot.HTTPClientMock, :request, fn
+      :post, _url, _body, _headers, _opts ->
+        {:ok,
+         %{
+           status: 200,
+           body:
+             Jason.encode!(%{
+               "access_token" => access_token,
+               "refresh_token" => refresh_token,
+               "expires_in" => 3600,
+               "scope" => "Calendars.ReadWrite"
+             })
+         }}
 
-    # handle_callback/3 spawns a supervised task (seed_delta_async) that inherits
-    # the test process's Mox context via $callers and calls HTTPClient.request/5
-    # with :get against the Graph delta endpoint. Mox's expect/4 wipes any prior
-    # stub on the same MFA, so we re-establish a fallback stub here to keep that
-    # background call from overflowing the expect counter.
-    stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
-      {:error, %Mint.TransportError{reason: :timeout}}
+      _other_method, _url, _body, _headers, _opts ->
+        {:error, %Mint.TransportError{reason: :timeout}}
     end)
   end
 
