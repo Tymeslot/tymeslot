@@ -6,10 +6,19 @@ defmodule Tymeslot.Security.InputProcessor do
   followed by field-specific validation with error aggregation.
   """
 
-  alias Tymeslot.Security.{FieldValidators, SecurityLogger, UniversalSanitizer}
+  alias Tymeslot.Security.{FieldValidators, UniversalSanitizer}
 
   @type form_params :: %{String.t() => term()}
   @type form_errors :: %{atom() => [String.t()]}
+
+  # Keys whose values must never be passed through the universal sanitiser.
+  # These are opaque third-party tokens whose high-entropy byte sequences can
+  # incidentally match SQL-injection or path-traversal heuristics, producing
+  # false-positive rejections that would corrupt the token before it reaches
+  # the external verification API (e.g. Google reCAPTCHA siteverify).
+  # The values are preserved in the returned params map unchanged so that
+  # downstream callers (reCAPTCHA verification, etc.) still receive them.
+  @skip_sanitisation_keys ["g-recaptcha-response"]
 
   @doc """
   Validates a form with universal sanitization and field-specific validation.
@@ -48,10 +57,14 @@ defmodule Tymeslot.Security.InputProcessor do
     metadata = Keyword.get(opts, :metadata, %{})
     universal_opts = Keyword.get(opts, :universal_opts, [])
 
-    # Step 1: Universal sanitization for all fields
-    with {:ok, sanitized_params} <- sanitize_all_fields(params, universal_opts, metadata) do
-      # Step 2: Field-specific validation with error aggregation
-      validate_fields_with_aggregation(sanitized_params, field_specs, metadata)
+    # Step 1: Universal sanitization for all fields, skipping opaque tokens
+    {skipped, sanitisable} = Map.split(params, @skip_sanitisation_keys)
+
+    with {:ok, sanitized_params} <- sanitize_all_fields(sanitisable, universal_opts, metadata) do
+      # Step 2: Field-specific validation with error aggregation.
+      # Re-merge skipped keys so callers still receive them unchanged.
+      all_params = Map.merge(sanitized_params, skipped)
+      validate_fields_with_aggregation(all_params, field_specs, metadata)
     end
   end
 
@@ -71,7 +84,6 @@ defmodule Tymeslot.Security.InputProcessor do
   """
   @spec validate_field(any(), atom(), keyword()) :: {:ok, any()} | {:error, String.t()}
   def validate_field(value, type_or_module, opts \\ []) do
-    metadata = Keyword.get(opts, :metadata, %{})
     universal_opts = Keyword.get(opts, :universal_opts, [])
     field = Keyword.get(opts, :field, type_or_module)
     validator_module = resolve_validator(type_or_module)
@@ -81,12 +93,7 @@ defmodule Tymeslot.Security.InputProcessor do
     with {:ok, sanitized} <-
            UniversalSanitizer.sanitize_and_validate(value, universal_opts_with_field),
          :ok <- validator_module.validate(sanitized, opts) do
-      SecurityLogger.log_successful_validation(field, metadata)
       {:ok, sanitized}
-    else
-      {:error, reason} ->
-        SecurityLogger.log_validation_failure(field, reason, metadata)
-        {:error, reason}
     end
   end
 
@@ -104,7 +111,6 @@ defmodule Tymeslot.Security.InputProcessor do
           {:cont, {:ok, Map.put(acc, key, sanitized_value)}}
 
         {:error, reason} ->
-          SecurityLogger.log_validation_failure(field_key, reason, metadata)
           {:halt, {:error, %{field_key => reason}}}
       end
     end)
@@ -120,7 +126,7 @@ defmodule Tymeslot.Security.InputProcessor do
 
   defp safe_field_key(key), do: key
 
-  defp validate_fields_with_aggregation(sanitized_params, field_specs, metadata) do
+  defp validate_fields_with_aggregation(sanitized_params, field_specs, _metadata) do
     errors =
       Enum.reduce(field_specs, %{}, fn spec, acc ->
         {field_name, type_or_module, field_opts} =
@@ -143,11 +149,9 @@ defmodule Tymeslot.Security.InputProcessor do
 
         case validator_module.validate(field_value, field_opts) do
           :ok ->
-            SecurityLogger.log_successful_validation(field_key, metadata)
             acc
 
           {:error, reason} ->
-            SecurityLogger.log_validation_failure(field_key, reason, metadata)
             Map.put(acc, field_key, reason)
         end
       end)

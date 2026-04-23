@@ -210,7 +210,7 @@ defmodule Tymeslot.Security.SecurityLoggerTest do
 
       Logger.configure(level: original_level)
 
-      assert log =~ "Malicious input blocked"
+      assert log =~ "Suspicious input sanitised"
     end
 
     test "returns :ok" do

@@ -1,9 +1,6 @@
 defmodule Tymeslot.Security.SecurityLogger do
   @moduledoc """
-  Security event logging for monitoring malicious input attempts.
-
-  Logs security events without exposing sensitive data, providing
-  visibility into attack patterns for monitoring and response.
+  Security event logging for suspicious input patterns that were sanitised in place.
   """
 
   require Logger
@@ -25,7 +22,13 @@ defmodule Tymeslot.Security.SecurityLogger do
         }
 
   @doc """
-  Logs blocked malicious input attempts.
+  Logs that suspicious input was sanitised in place.
+
+  This function is purely informational. The caller (universal sanitiser) has
+  already stripped the matching pattern from the value via `String.replace`
+  and continues with the scrubbed string — nothing is rejected or aborted.
+  The log line records that a heuristic fired so attack patterns can be
+  monitored, not that a request was blocked.
 
   ## Parameters
   - `field` - The form/input field that matched (atom or string — e.g. `:name`, `:email`, `:message`)
@@ -47,41 +50,12 @@ defmodule Tymeslot.Security.SecurityLogger do
   def log_blocked_input(field, check, metadata \\ %{}) do
     sanitized_metadata = sanitize_metadata(metadata)
 
-    Logger.warning("Malicious input blocked",
+    Logger.warning("Suspicious input sanitised",
       field: field,
       check: check,
       ip_address: sanitized_metadata[:ip],
       user_id: sanitized_metadata[:user_id],
       user_agent: sanitized_metadata[:user_agent]
-    )
-  end
-
-  @doc """
-  Logs validation failures that may indicate attack attempts.
-  """
-  @spec log_validation_failure(atom() | String.t(), String.t(), security_metadata()) :: :ok
-  def log_validation_failure(field, error_type, metadata \\ %{}) do
-    sanitized_metadata = sanitize_metadata(metadata)
-
-    Logger.info("Validation failure",
-      field: field,
-      error_type: error_type,
-      ip_address: sanitized_metadata[:ip],
-      user_id: sanitized_metadata[:user_id]
-    )
-  end
-
-  @doc """
-  Logs successful validation for security monitoring.
-  """
-  @spec log_successful_validation(atom() | String.t(), security_metadata()) :: :ok
-  def log_successful_validation(field, metadata \\ %{}) do
-    sanitized_metadata = sanitize_metadata(metadata)
-
-    Logger.debug("Validation successful",
-      field: field,
-      ip_address: sanitized_metadata[:ip],
-      user_id: sanitized_metadata[:user_id]
     )
   end
 

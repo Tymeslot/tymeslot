@@ -45,7 +45,7 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
                    )
         end)
 
-      assert log =~ "Malicious input blocked"
+      assert log =~ "Suspicious input sanitised"
     end
 
     test "invalid UTF-8 log carries the caller-supplied field name" do
@@ -61,7 +61,7 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
         end)
 
       assert Enum.any?(events, fn event ->
-               event.message == "Malicious input blocked" and
+               event.message == "Suspicious input sanitised" and
                  event.metadata[:field] == :name and
                  event.metadata[:check] == "invalid_encoding"
              end),
@@ -227,7 +227,7 @@ defmodule Tymeslot.Security.UniversalSanitizerTest do
         end)
 
       assert Enum.any?(events, fn event ->
-               event.message == "Malicious input blocked" and
+               event.message == "Suspicious input sanitised" and
                  event.metadata[:field] == :email and
                  event.metadata[:check] == "sql_injection"
              end),
