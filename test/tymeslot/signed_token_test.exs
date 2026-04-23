@@ -35,7 +35,7 @@ defmodule Tymeslot.SignedTokenTest do
       end
 
       token = Token.sign(Endpoint, @salt, {"payload", 42})
-      tampered = flip_last_char(token)
+      tampered = flip_first_char(token)
       refute tampered == token
 
       assert {:error, :invalid} = SignedToken.verify(tampered, @salt, 60, validator)
@@ -93,9 +93,18 @@ defmodule Tymeslot.SignedTokenTest do
     end
   end
 
-  defp flip_last_char(token) do
-    <<prefix::binary-size(byte_size(token) - 1), last::utf8>> = token
-    flipped = if last == ?A, do: ?B, else: ?A
-    <<prefix::binary, flipped::utf8>>
+  # Flips the first character of the token. We don't flip the *last*
+  # character because Phoenix.Token encodes as URL-safe base64 without
+  # padding, and the final character of an HMAC-SHA256 segment only
+  # carries 4 significant bits — the remaining 2 are slack and decode
+  # to the same byte regardless, so some flips (e.g. ?A <-> ?B) leave
+  # the decoded signature unchanged and the tampered token still
+  # verifies. Flipping a character at the start of the signed payload
+  # always changes a significant bit, so the HMAC check is guaranteed
+  # to fail.
+  defp flip_first_char(token) do
+    <<first::utf8, rest::binary>> = token
+    flipped = if first == ?A, do: ?B, else: ?A
+    <<flipped::utf8, rest::binary>>
   end
 end
