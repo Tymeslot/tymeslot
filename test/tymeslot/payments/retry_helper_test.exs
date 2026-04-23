@@ -142,14 +142,19 @@ defmodule Tymeslot.Payments.RetryHelperTest do
 
       timestamps = Enum.reverse(Agent.get(agent_pid, & &1))
 
-      # Check delays between attempts (should be ~50ms and ~100ms for linear backoff)
+      # Linear backoff: attempt-1 delay is `base_delay_ms * 1 = 50ms`.
+      # Process.sleep guarantees >= 50ms, so we allow a small measurement
+      # slack below (system monotonic clock granularity) and a generous
+      # upper bound so the assertion doesn't flake under scheduler
+      # contention or GC pauses. The upper bound only needs to sit well
+      # below the default `base_delay_ms` (1000ms) to prove the option
+      # was honoured — we're not trying to pin the exact latency.
       if length(timestamps) >= 2 do
         delay1 =
           Enum.at(timestamps, 1) -
             Enum.at(timestamps, 0)
 
-        # Allow some margin for test execution time
-        assert delay1 >= 45 and delay1 <= 100
+        assert delay1 >= 45 and delay1 < 500
       end
 
       Agent.stop(agent_pid)
