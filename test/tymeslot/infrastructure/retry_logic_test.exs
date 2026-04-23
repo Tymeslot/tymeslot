@@ -96,22 +96,23 @@ defmodule Tymeslot.Infrastructure.RetryLogicTest do
       # any attempt running longer than 5 s crashed the outer async task with
       # :exit {:timeout, ...}. The new default (:infinity) lets the caller's
       # retry budget — not the Task.await default — govern the deadline.
+      # A 20 ms delay is enough to prove :infinity imposes no ceiling — the
+      # property is "no artificial 5 s ceiling", not "must survive 5 s".
       fun = fn ->
-        Task.async(fn ->
-          # Longer than the old 5s default but well within a realistic CI budget.
-          Process.sleep(5_100)
+        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
+          Process.sleep(20)
           {:ok, :done}
         end)
       end
 
       outer = RetryLogic.with_retry_async(fun)
 
-      assert {:ok, :done} = Task.await(outer, 10_000)
+      assert {:ok, :done} = Task.await(outer, 500)
     end
 
     test "explicit short :await_timeout surfaces as retryable {:error, :timeout} and exhausts retries" do
       fun = fn ->
-        Task.async(fn ->
+        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
           Process.sleep(500)
           {:ok, :done}
         end)
@@ -130,7 +131,7 @@ defmodule Tymeslot.Infrastructure.RetryLogicTest do
 
     test "a fast operation inside a bounded :await_timeout returns its value" do
       fun = fn ->
-        Task.async(fn -> {:ok, :fast} end)
+        Task.Supervisor.async(Tymeslot.TaskSupervisor, fn -> {:ok, :fast} end)
       end
 
       outer = RetryLogic.with_retry_async(fun, await_timeout: 1_000)

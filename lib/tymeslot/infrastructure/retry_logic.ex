@@ -79,17 +79,15 @@ defmodule Tymeslot.Infrastructure.RetryLogic do
   def with_retry_async(fun, opts \\ []) when is_function(fun, 0) do
     await_timeout = Keyword.get(opts, :await_timeout, :infinity)
 
-    Task.async(fn ->
+    Task.Supervisor.async(Tymeslot.TaskSupervisor, fn ->
       with_retry(
         fn ->
           task = fun.()
 
-          try do
-            Task.await(task, await_timeout)
-          catch
-            :exit, {:timeout, _details} ->
-              Task.shutdown(task, :brutal_kill)
-              {:error, :timeout}
+          case Task.yield(task, await_timeout) || Task.shutdown(task, :brutal_kill) do
+            {:ok, result} -> result
+            {:exit, reason} -> {:error, {:task_exit, reason}}
+            nil -> {:error, :timeout}
           end
         end,
         opts
