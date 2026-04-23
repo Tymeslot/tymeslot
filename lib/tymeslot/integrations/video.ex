@@ -69,8 +69,12 @@ defmodule Tymeslot.Integrations.Video do
           {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
   def fetch_integration(id) do
     case VideoIntegrationQueries.get(id) do
-      {:ok, integration} -> {:ok, integration}
-      {:error, :not_found} -> {:error, :not_found}
+      {:ok, integration} ->
+        {:ok, integration}
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+
       {:error, :requires_reencryption, stale} ->
         flag_for_reauth(stale)
         {:error, :not_found}
@@ -89,8 +93,12 @@ defmodule Tymeslot.Integrations.Video do
           {:ok, VideoIntegrationSchema.t()} | {:error, :not_found}
   def fetch_integration_for_user(id, user_id) do
     case VideoIntegrationQueries.get_for_user(id, user_id) do
-      {:ok, integration} -> {:ok, integration}
-      {:error, :not_found} -> {:error, :not_found}
+      {:ok, integration} ->
+        {:ok, integration}
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+
       {:error, :requires_reencryption, stale} ->
         flag_for_reauth(stale)
         {:error, :not_found}

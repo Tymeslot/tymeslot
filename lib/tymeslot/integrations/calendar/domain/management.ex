@@ -63,8 +63,12 @@ defmodule Tymeslot.Integrations.CalendarManagement do
           {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
   def fetch_integration_for_user(integration_id, user_id) do
     case CalendarIntegrationQueries.get_for_user(integration_id, user_id) do
-      {:ok, integration} -> {:ok, integration}
-      {:error, :not_found} -> {:error, :not_found}
+      {:ok, integration} ->
+        {:ok, integration}
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+
       {:error, :requires_reencryption, stale} ->
         flag_for_reauth(stale)
         {:error, :not_found}
@@ -198,8 +202,12 @@ defmodule Tymeslot.Integrations.CalendarManagement do
           {:ok, CalendarIntegrationSchema.t()} | {:error, :not_found}
   def fetch_integration(id) do
     case CalendarIntegrationQueries.get(id) do
-      {:ok, integration} -> {:ok, integration}
-      {:error, :not_found} -> {:error, :not_found}
+      {:ok, integration} ->
+        {:ok, integration}
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+
       {:error, :requires_reencryption, stale} ->
         flag_for_reauth(stale)
         {:error, :not_found}

@@ -385,7 +385,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventCreate do
 
       {:error, :requires_reencryption, integration} ->
         CalendarManagement.handle_reauth_required(integration)
-        send(self(), {:flash, {:error, "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."}})
+
+        send(
+          self(),
+          {:flash,
+           {:error,
+            "Your calendar needs to be reconnected. Please reconnect it from the Integrations page."}}
+        )
+
         {nil, nil}
 
       {:error, _reason} ->
