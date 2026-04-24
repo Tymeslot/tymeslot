@@ -396,13 +396,13 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
            {:ok, ^accept_basic} <- Base.decode64(encoded) do
         respond_caldav(http_conn, calendar_href, calendar_name)
       else
-        _ -> Conn.resp(http_conn, 401, "")
+        _no_match -> Conn.resp(http_conn, 401, "")
       end
     end)
   end
 
   defp respond_caldav(conn, calendar_href, calendar_name) do
-    {:ok, body, conn} = Plug.Conn.read_body(conn)
+    {:ok, body, conn} = Conn.read_body(conn)
 
     cond do
       String.contains?(body, "current-user-principal") ->

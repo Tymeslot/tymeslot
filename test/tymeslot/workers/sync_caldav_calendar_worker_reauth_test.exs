@@ -51,6 +51,19 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
     |> then(&Application.put_env(:tymeslot, @endpoint, &1))
   end
 
+  defp assert_flags_reauth_on_401(integration) do
+    ReqTest.stub(:tymeslot_http, fn conn -> Conn.send_resp(conn, 401, "Unauthorized") end)
+
+    assert {:discard, _reason} =
+             perform_job(SyncCalDavCalendarWorker, %{
+               "calendar_integration_id" => integration.id
+             })
+
+    reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+    assert reloaded.needs_reauth == true
+    assert reloaded.sync_error != nil
+  end
+
   describe "perform/1 when the CalDAV server returns 401" do
     # Route CalDAV HTTP through the real HTTPClient so `Req.Test` can intercept
     # the PROPFIND the worker sends on the tier-detection probe.
@@ -81,16 +94,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
     test "flips needs_reauth and records a sync error", %{integration: integration} do
       # Every request the worker makes to the CalDAV server comes back 401,
       # mirroring a server-side credential rejection.
-      ReqTest.stub(:tymeslot_http, fn conn -> Conn.send_resp(conn, 401, "Unauthorized") end)
-
-      assert {:discard, _reason} =
-               perform_job(SyncCalDavCalendarWorker, %{
-                 "calendar_integration_id" => integration.id
-               })
-
-      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
-      assert reloaded.needs_reauth == true
-      assert reloaded.sync_error != nil
+      assert_flags_reauth_on_401(integration)
     end
   end
 
@@ -131,16 +135,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
       # Every request the worker makes returns 401 — the sync REPORT that fires
       # after tier detection was skipped hits the :unauthorized branch inside
       # do_sync_tier1/3, which calls flag_reauth_required/1.
-      ReqTest.stub(:tymeslot_http, fn conn -> Conn.send_resp(conn, 401, "Unauthorized") end)
-
-      assert {:discard, _reason} =
-               perform_job(SyncCalDavCalendarWorker, %{
-                 "calendar_integration_id" => integration.id
-               })
-
-      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
-      assert reloaded.needs_reauth == true
-      assert reloaded.sync_error != nil
+      assert_flags_reauth_on_401(integration)
     end
   end
 
