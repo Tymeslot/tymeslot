@@ -202,12 +202,20 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
 
   @doc """
   Deletes an event from the calendar. Idempotent — succeeds if already gone.
+
+  When `opts[:provider_event_id]` is set (the event's href on the server),
+  the DELETE is routed to that exact URL. This is required when the event
+  lives on a calendar other than `calendar_path` — a multi-calendar CalDAV
+  integration stores events under different paths, and building the URL from
+  `calendar_path` + `uid` would hit the wrong calendar. The server would then
+  return 404, which our HTTP layer treats as idempotent success, silently
+  leaving the event intact on its real calendar.
   """
   @spec delete_calendar_event(Base.client(), String.t(), String.t(), keyword()) ::
           :ok | {:error, Base.error_reason()}
   def delete_calendar_event(client, calendar_path, uid, opts \\ []) do
     with_events_breaker(client, opts, fn ->
-      url = UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
+      url = delete_url_from_opts(client, calendar_path, uid, opts)
       delete_opts = Keyword.take(opts, [:timeout])
 
       case Http.delete_event(url, client.username, client.password, delete_opts) do
@@ -217,18 +225,24 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Events do
     end)
   end
 
-  # Use the event's href (provider_event_id) when available — it's the actual
-  # server path. Fall back to UID-based URL construction for Tymeslot-created events.
-  defp event_url_from_data(client, calendar_path, uid, event_data) do
-    case Map.get(event_data, :provider_event_id) do
-      href when is_binary(href) and href != "" ->
-        base = String.trim_trailing(client.base_url, "/")
-        if String.starts_with?(href, "http"), do: href, else: "#{base}#{href}"
+  defp delete_url_from_opts(client, calendar_path, uid, opts),
+    do: resolve_event_url(client, calendar_path, uid, Keyword.get(opts, :provider_event_id))
 
-      _missing ->
-        UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
-    end
+  defp event_url_from_data(client, calendar_path, uid, event_data),
+    do: resolve_event_url(client, calendar_path, uid, Map.get(event_data, :provider_event_id))
+
+  # Use the event's href (provider_event_id) when available — it's the actual
+  # server path and is required when the event lives on a calendar other than
+  # the one supplied in `calendar_path`. Fall back to UID-based URL
+  # construction for Tymeslot-created events that have not yet been synced.
+  defp resolve_event_url(client, _calendar_path, _uid, href)
+       when is_binary(href) and href != "" do
+    base = String.trim_trailing(client.base_url, "/")
+    if String.starts_with?(href, "http"), do: href, else: "#{base}#{href}"
   end
+
+  defp resolve_event_url(client, calendar_path, uid, _missing),
+    do: UrlBuilder.build_event_url(client.base_url, calendar_path, uid)
 
   # Prefer the caller-supplied ETag (cached on provider_calendar_events.etag).
   # Fall back to a HEAD probe only when the caller does not know the current

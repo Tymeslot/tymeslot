@@ -27,7 +27,7 @@ defmodule Tymeslot.Integrations.Calendar.DebugCalendarProvider do
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
-  def delete_event(_client, _uid) do
+  def delete_event(_client, _uid, _opts \\ []) do
     {:error, "Debug calendar provider does not support event deletion"}
   end
 

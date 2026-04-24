@@ -15,15 +15,15 @@ defmodule Tymeslot.Integrations.Calendar.ProviderAdapterTest do
     @spec update_event(any(), String.t(), map()) :: {:error, :boom}
     def update_event(_client, _uid, _event), do: {:error, :boom}
 
-    @spec delete_event(any(), String.t()) :: {:error, :boom}
-    def delete_event(_client, _uid), do: {:error, :boom}
+    @spec delete_event(any(), String.t(), keyword()) :: {:error, :boom}
+    def delete_event(_client, _uid, _opts), do: {:error, :boom}
   end
 
   defmodule ThreeTupleErrorProvider do
     def list_events(_client, _opts), do: {:error, :rate_limited, "Too many requests"}
     def create_event(_client, _event), do: {:error, :unauthorized, "Insufficient permissions"}
     def update_event(_client, _uid, _event), do: {:error, :not_found, "Event not found"}
-    def delete_event(_client, _uid), do: {:error, :network_error, "Connection refused"}
+    def delete_event(_client, _uid, _opts), do: {:error, :network_error, "Connection refused"}
   end
 
   setup do

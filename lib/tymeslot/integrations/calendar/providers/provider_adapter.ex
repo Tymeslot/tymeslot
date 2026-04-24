@@ -268,7 +268,11 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderAdapter do
             uid
           end
 
-        case adapter_client.provider_module.delete_event(adapter_client.client, effective_id) do
+        case adapter_client.provider_module.delete_event(
+               adapter_client.client,
+               effective_id,
+               opts
+             ) do
           :ok ->
             Logger.info("Successfully deleted event", uid: uid)
             :ok

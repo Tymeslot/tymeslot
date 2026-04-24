@@ -194,7 +194,7 @@ defmodule Tymeslot.Integrations.Common.OAuthBase do
       end
 
       @impl Tymeslot.Integrations.Calendar.Provider
-      def delete_event(integration, event_id) do
+      def delete_event(integration, event_id, _opts) do
         OAuthBase.handle_api_call(fn -> call_delete_event(integration, event_id) end)
       end
 

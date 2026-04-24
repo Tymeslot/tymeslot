@@ -524,5 +524,58 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.EventsTest do
                  skip_breaker: true
                )
     end
+
+    test "routes DELETE via opts[:provider_event_id] when the event lives on a non-primary calendar" do
+      # Regression: a multi-calendar CalDAV integration would previously send
+      # DELETE to the FIRST calendar path with the event's UID appended,
+      # regardless of which calendar the event actually lives on. The server
+      # would return 404 for the (non-existent) URL, which Http.delete_event
+      # treats as idempotent success — silently leaving the event intact on
+      # its real calendar. Passing the event's real href via opts routes the
+      # DELETE to the correct URL.
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test_pid, {:delete_path, conn.request_path})
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      client_with_two_calendars = %{
+        @caldav_client
+        | calendar_paths: ["/calendars/user/personal/", "/calendars/user/work/"]
+      }
+
+      provider_event_id = "/calendars/user/work/event-on-second-calendar.ics"
+
+      assert :ok =
+               Events.delete_calendar_event(
+                 client_with_two_calendars,
+                 "/calendars/user/personal/",
+                 "event-on-second-calendar",
+                 skip_breaker: true,
+                 provider_event_id: provider_event_id
+               )
+
+      assert_receive {:delete_path, ^provider_event_id}
+    end
+
+    test "falls back to calendar_path + uid when provider_event_id is missing" do
+      test_pid = self()
+
+      ReqTest.stub(:tymeslot_http, fn conn ->
+        send(test_pid, {:delete_path, conn.request_path})
+        Conn.send_resp(conn, 204, "")
+      end)
+
+      assert :ok =
+               Events.delete_calendar_event(
+                 @caldav_client,
+                 "/calendars/user/personal/",
+                 "legacy-uid",
+                 skip_breaker: true
+               )
+
+      assert_receive {:delete_path, "/calendars/user/personal/legacy-uid.ics"}
+    end
   end
 end

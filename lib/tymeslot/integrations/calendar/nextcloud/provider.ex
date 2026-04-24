@@ -206,7 +206,7 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
   defdelegate update_event(client, uid, event_data), to: CalDAVProvider
 
   @impl Tymeslot.Integrations.Calendar.Provider
-  defdelegate delete_event(client, uid), to: CalDAVProvider
+  def delete_event(client, uid, opts \\ []), do: CalDAVProvider.delete_event(client, uid, opts)
 
   # Private helper functions
 

@@ -248,13 +248,18 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
   end
 
   @doc """
-  Delete an event by UID in the primary configured calendar.
+  Delete an event by UID.
+
+  When `opts[:provider_event_id]` is set, the event's server-side href is used
+  directly — required when the event lives on a calendar other than the first
+  configured path. Otherwise falls back to the primary calendar path and
+  constructs the URL from the UID.
   """
-  @spec delete_event(caldav_client(), String.t()) :: :ok | {:error, term()}
-  def delete_event(client, uid) do
+  @spec delete_event(caldav_client(), String.t(), keyword()) :: :ok | {:error, term()}
+  def delete_event(client, uid, opts \\ []) do
     case primary_calendar_path(client) do
       nil -> :ok
-      path -> Events.delete_calendar_event(client, path, uid)
+      path -> Events.delete_calendar_event(client, path, uid, opts)
     end
   end
 

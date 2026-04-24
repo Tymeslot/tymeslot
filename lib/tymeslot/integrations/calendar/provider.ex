@@ -33,8 +33,13 @@ defmodule Tymeslot.Integrations.Calendar.Provider do
 
   @doc """
   Deletes an event from the calendar.
+
+  `opts` may carry a `:provider_event_id` (the event's canonical server-side
+  identifier). CalDAV providers use it to route the DELETE to the calendar
+  that actually holds the event, rather than defaulting to the first
+  configured calendar path.
   """
-  @callback delete_event(client :: any(), uid :: String.t()) ::
+  @callback delete_event(client :: any(), uid :: String.t(), opts :: keyword()) ::
               :ok | {:ok, any()} | {:error, any()}
 
   @doc """

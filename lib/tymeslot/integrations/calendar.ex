@@ -328,7 +328,7 @@ defmodule Tymeslot.Integrations.Calendar do
           :ok | {:ok, any()} | {:error, any()}
   def delete_provider_event(%CalendarIntegrationSchema{} = integration, event_id) do
     with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
-      adapter_client.provider_module.delete_event(adapter_client.client, event_id)
+      adapter_client.provider_module.delete_event(adapter_client.client, event_id, [])
     end
   end
 

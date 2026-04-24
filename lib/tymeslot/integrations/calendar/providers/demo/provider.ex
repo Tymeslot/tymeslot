@@ -29,7 +29,7 @@ defmodule Tymeslot.Integrations.Calendar.DemoCalendarProvider do
   end
 
   @impl Tymeslot.Integrations.Calendar.Provider
-  def delete_event(_client, _uid) do
+  def delete_event(_client, _uid, _opts \\ []) do
     # Demo mode: pretend to delete successfully
     :ok
   end
