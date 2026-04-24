@@ -157,8 +157,10 @@ defmodule Tymeslot.CalendarGrid do
 
   # The cached events schema stores start/end/synced_at as :utc_datetime_usec
   # and requires synced_at NOT NULL. Dashboard-originated create/update flows
-  # build datetimes at second precision and don't supply synced_at — they're
-  # writing what they just committed, so "now" is the correct sync timestamp.
+  # build datetimes at second precision and don't always supply synced_at —
+  # they're writing what they just committed, so "now" is the correct sync
+  # timestamp. synced_at is upcast unconditionally so a caller-supplied
+  # second-precision value does not fail Ecto's :utc_datetime_usec check.
   defp normalise_cache_attrs(attrs) do
     now = DateTime.utc_now(:microsecond)
 
@@ -166,6 +168,7 @@ defmodule Tymeslot.CalendarGrid do
     |> Map.update(:start_at, nil, &to_usec/1)
     |> Map.update(:end_at, nil, &to_usec/1)
     |> Map.put_new(:synced_at, now)
+    |> Map.update!(:synced_at, &to_usec/1)
   end
 
   defp to_usec(%DateTime{microsecond: {_value, 6}} = dt), do: dt

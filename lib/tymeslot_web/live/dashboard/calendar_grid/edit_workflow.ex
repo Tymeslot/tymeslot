@@ -181,7 +181,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
               attendees: original_event.attendees || [],
               status: original_event.status,
               provider_metadata: original_event.provider_metadata,
-              synced_at: DateTime.utc_now(:second)
+              synced_at: DateTime.utc_now(:microsecond)
             })
           )
 
@@ -416,7 +416,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
         attendees: attendees,
         status: event.status,
         provider_metadata: event.provider_metadata,
-        synced_at: DateTime.utc_now(:second)
+        synced_at: DateTime.utc_now(:microsecond)
       })
 
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
@@ -497,7 +497,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
         attendees: event.attendees || [],
         status: event.status,
         provider_metadata: event.provider_metadata,
-        synced_at: DateTime.utc_now(:second)
+        synced_at: DateTime.utc_now(:microsecond)
       })
 
     Map.put(base, field, new_value)
