@@ -109,11 +109,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
       |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
       |> render_click(%{"id" => "abc"})
 
-      # Flash is forwarded via `send(self(), {:flash, _})` from the component,
-      # handled in a separate cycle. Drain the mailbox so the next `render/1`
-      # sees the flash.
-      _drain = :sys.get_state(view.pid)
-
       assert render(view) =~ "Invalid calendar ID"
     end
 
@@ -155,8 +150,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
         "button[phx-click='reconnect_integration'][phx-value-id='#{own_integration.id}']"
       )
       |> render_click(%{"id" => to_string(other_integration.id)})
-
-      _drain = :sys.get_state(view.pid)
 
       assert render(view) =~ "Integration not found"
     end

@@ -83,7 +83,57 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
       # mirroring a server-side credential rejection.
       ReqTest.stub(:tymeslot_http, fn conn -> Conn.send_resp(conn, 401, "Unauthorized") end)
 
-      assert :ok =
+      assert {:discard, _reason} =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth == true
+      assert reloaded.sync_error != nil
+    end
+  end
+
+  describe "perform/1 when the CalDAV server returns 401 mid-sync (after tier detection)" do
+    # Route CalDAV HTTP through the real HTTPClient so `Req.Test` can intercept
+    # the sync request the worker sends after tier detection is skipped.
+    setup :set_req_test_to_shared
+
+    setup do
+      with_config(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
+      with_config(:tymeslot, :req_test_plug, {Req.Test, :tymeslot_http})
+      :ok
+    end
+
+    setup do
+      # Pre-set caldav_sync_tier to 1 so maybe_detect_tier/2 bypasses the
+      # tier-detection PROPFIND entirely and jumps straight into sync_tier1/2.
+      # The first request the worker makes is the sync-collection REPORT, which
+      # returns 401 — exercising the mid-sync flag_reauth_required/1 branch in
+      # do_sync_tier1/3 rather than the tier-detection branch.
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          base_url: "http://localhost:65432",
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("expired"),
+          calendar_paths: ["/calendars/alice/default/"],
+          provider_account_id: "http://localhost:65432||alice",
+          is_active: true,
+          needs_reauth: false,
+          caldav_sync_tier: 1
+        )
+
+      %{integration: integration}
+    end
+
+    test "flags needs_reauth and discards the job", %{integration: integration} do
+      # Every request the worker makes returns 401 — the sync REPORT that fires
+      # after tier detection was skipped hits the :unauthorized branch inside
+      # do_sync_tier1/3, which calls flag_reauth_required/1.
+      ReqTest.stub(:tymeslot_http, fn conn -> Conn.send_resp(conn, 401, "Unauthorized") end)
+
+      assert {:discard, _reason} =
                perform_job(SyncCalDavCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })
