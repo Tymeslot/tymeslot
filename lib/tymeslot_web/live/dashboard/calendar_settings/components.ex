@@ -283,6 +283,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               <span :if={!@integration.is_active} class="px-2 py-0.5 rounded-full bg-tymeslot-100 text-tymeslot-500 text-token-2xs font-black uppercase tracking-widest">
                 Paused
               </span>
+              <span
+                :if={@integration.needs_reauth}
+                class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-token-2xs font-black uppercase tracking-widest"
+              >
+                Reconnect required
+              </span>
               <UIComponents.health_warning_badge
                 :if={@health_state && @health_state.status == :unhealthy}
               />

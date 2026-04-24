@@ -4,8 +4,10 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
   @moduletag :integrations
   @moduletag :calendar
 
+  alias Tymeslot.Factory
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Reconnection
+  alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
 
   describe "credentials_change_kind/2" do
@@ -20,8 +22,8 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
           provider_account_id: "https://caldav.example.com||alice",
           calendar_paths: ["/calendars/alice/default/"],
           is_active: true,
-          username_encrypted: Tymeslot.Security.Encryption.encrypt("alice"),
-          password_encrypted: Tymeslot.Security.Encryption.encrypt("oldpass")
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("oldpass")
         )
 
       decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
@@ -97,7 +99,7 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
       assert {:ok, :updated, updated} =
                Reconnection.reconnect(integration, params, test_connection: ok_connection)
 
-      reloaded = Tymeslot.Repo.get!(CalendarIntegrationSchema, updated.id)
+      reloaded = Repo.get!(CalendarIntegrationSchema, updated.id)
       assert reloaded.needs_reauth == false
       assert length(reloaded.calendar_list) == length(integration.calendar_list)
     end
@@ -116,7 +118,7 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
       assert {:error, :invalid_credentials} =
                Reconnection.reconnect(integration, params, test_connection: failing_connection)
 
-      reloaded = Tymeslot.Repo.get!(CalendarIntegrationSchema, integration.id)
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == true
     end
   end
@@ -142,7 +144,12 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
         {:ok,
          %{
            calendars: [
-             %{"id" => "/new-path/", "path" => "/new-path/", "name" => "Home", "type" => "calendar"}
+             %{
+               "id" => "/new-path/",
+               "path" => "/new-path/",
+               "name" => "Home",
+               "type" => "calendar"
+             }
            ],
            discovery_credentials: %{
              url: "https://caldav.new.example.com",
@@ -214,7 +221,7 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
 
       assert {:ok, :needs_calendar_selection, _payload} =
                Reconnection.reconnect(integration, params,
-                 test_connection: fn _ -> :ok end,
+                 test_connection: fn _params -> :ok end,
                  discover: discover
                )
 
@@ -247,7 +254,7 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
 
       reloaded =
         CalendarIntegrationSchema
-        |> Tymeslot.Repo.get!(updated.id)
+        |> Repo.get!(updated.id)
         |> CalendarIntegrationSchema.decrypt_credentials()
 
       assert reloaded.base_url == "https://caldav.new.example.com"
@@ -284,7 +291,7 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
     attrs = Map.merge(base_attrs, overrides)
 
     :calendar_integration
-    |> Tymeslot.Factory.insert(attrs)
+    |> Factory.insert(attrs)
     |> CalendarIntegrationSchema.decrypt_credentials()
   end
 end

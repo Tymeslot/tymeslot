@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
         name: "My Calendar",
         provider: "google",
         is_active: true,
+        needs_reauth: false,
         calendar_list: [],
         calendar_paths: [],
         base_url: nil,
@@ -168,6 +169,62 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       assert html =~ ~s(phx-click="reconnect_integration")
       assert html =~ ~s(phx-value-id="7")
       assert html =~ "Reconnect"
+    end
+  end
+
+  describe "calendar_item reauth badge" do
+    test "renders a reauth warning badge when needs_reauth is true" do
+      integration = %{
+        id: 99,
+        name: "Stale CalDAV",
+        provider: "caldav",
+        is_active: true,
+        needs_reauth: true,
+        calendar_list: [
+          %{"id" => "/a/", "path" => "/a/", "name" => "A", "selected" => true}
+        ],
+        calendar_paths: ["/a/"],
+        base_url: "https://caldav.example.com",
+        is_primary: false,
+        default_booking_calendar_id: nil,
+        provider_account_email: nil
+      }
+
+      html =
+        render_component(&Components.calendar_item/1,
+          integration: integration,
+          validating_integration_id: nil,
+          myself: "target"
+        )
+
+      assert html =~ "Reconnect required"
+    end
+
+    test "does not render the reauth badge when needs_reauth is false" do
+      integration = %{
+        id: 100,
+        name: "Healthy CalDAV",
+        provider: "caldav",
+        is_active: true,
+        needs_reauth: false,
+        calendar_list: [
+          %{"id" => "/a/", "path" => "/a/", "name" => "A", "selected" => true}
+        ],
+        calendar_paths: ["/a/"],
+        base_url: "https://caldav.example.com",
+        is_primary: false,
+        default_booking_calendar_id: nil,
+        provider_account_email: nil
+      }
+
+      html =
+        render_component(&Components.calendar_item/1,
+          integration: integration,
+          validating_integration_id: nil,
+          myself: "target"
+        )
+
+      refute html =~ "Reconnect required"
     end
   end
 end

@@ -514,9 +514,17 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # ---------------------------------------------------------------------------
 
   defp log_auth_error(integration) do
-    Logger.warning("CalDAV sync unauthorised; discarding job",
+    Logger.warning("CalDAV sync unauthorised; flagging for reauth",
       calendar_integration_id: integration.id
     )
+
+    _result =
+      CalendarManagement.mark_needs_reauth(
+        integration,
+        "CalDAV server rejected the stored credentials. Please reconnect the integration."
+      )
+
+    :ok
   end
 
   defp log_sync_error(integration, phase, reason) do

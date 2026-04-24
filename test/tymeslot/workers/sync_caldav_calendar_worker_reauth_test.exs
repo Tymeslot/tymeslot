@@ -10,12 +10,19 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
   @moduletag :workers
   @moduletag :calendar
   @moduletag :security
+  @moduletag :integrations
 
   use Oban.Testing, repo: Tymeslot.Repo
 
+  import Req.Test, only: [set_req_test_to_shared: 1]
+  import Tymeslot.ConfigTestHelpers
+
+  alias Plug.Conn
+  alias Req.Test, as: ReqTest
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Repo
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
   @endpoint TymeslotWeb.Endpoint
@@ -42,6 +49,49 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerReauthTest do
     base
     |> Keyword.put(:secret_key_base, key)
     |> then(&Application.put_env(:tymeslot, @endpoint, &1))
+  end
+
+  describe "perform/1 when the CalDAV server returns 401" do
+    # Route CalDAV HTTP through the real HTTPClient so `Req.Test` can intercept
+    # the PROPFIND the worker sends on the tier-detection probe.
+    setup :set_req_test_to_shared
+
+    setup do
+      with_config(:tymeslot, :http_client_module, Tymeslot.Infrastructure.HTTPClient)
+      with_config(:tymeslot, :req_test_plug, {Req.Test, :tymeslot_http})
+      :ok
+    end
+
+    setup do
+      integration =
+        insert(:calendar_integration,
+          provider: "caldav",
+          base_url: "http://localhost:65432",
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("expired"),
+          calendar_paths: ["/calendars/alice/default/"],
+          provider_account_id: "http://localhost:65432||alice",
+          is_active: true,
+          needs_reauth: false
+        )
+
+      %{integration: integration}
+    end
+
+    test "flips needs_reauth and records a sync error", %{integration: integration} do
+      # Every request the worker makes to the CalDAV server comes back 401,
+      # mirroring a server-side credential rejection.
+      ReqTest.stub(:tymeslot_http, fn conn -> Conn.send_resp(conn, 401, "Unauthorized") end)
+
+      assert :ok =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth == true
+      assert reloaded.sync_error != nil
+    end
   end
 
   describe "perform/1 when stored credentials cannot be decrypted" do

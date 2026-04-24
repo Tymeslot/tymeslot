@@ -17,6 +17,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Security.Encryption
+
   setup :verify_on_exit!
 
   setup :setup_dashboard_user
@@ -44,9 +46,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element(
-        "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
-      )
+      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       assert_redirect(view, expected_url)
@@ -77,9 +77,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element(
-        "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
-      )
+      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       assert_redirect(view, expected_url)
@@ -108,9 +106,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element(
-        "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
-      )
+      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
       |> render_click(%{"id" => "abc"})
 
       # Flash is forwarded via `send(self(), {:flash, _})` from the component,
@@ -175,8 +171,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
           name: "My CalDAV",
           provider: "caldav",
           base_url: "https://caldav.example.com",
-          username_encrypted: Tymeslot.Security.Encryption.encrypt("alice"),
-          password_encrypted: Tymeslot.Security.Encryption.encrypt("oldpass"),
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("oldpass"),
           calendar_paths: ["/calendars/alice/default/"],
           provider_account_id: "https://caldav.example.com||alice",
           is_active: true,
@@ -187,9 +183,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
 
       html =
         view
-        |> element(
-          "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
-        )
+        |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
         |> render_click()
 
       assert html =~ "Reconnect My CalDAV"

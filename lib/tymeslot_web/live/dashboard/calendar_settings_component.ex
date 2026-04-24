@@ -435,7 +435,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
       {:error, :invalid_credentials} ->
         {:noreply,
          socket
-         |> assign(:reconnect_form_errors, %{generic: ["Could not sign in with those credentials"]})
+         |> assign(:reconnect_form_errors, %{
+           generic: ["Could not sign in with those credentials"]
+         })
          |> assign(:reconnect_form_values, params)
          |> assign(:reconnect_submitting, false)}
 
@@ -604,12 +606,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         send(self(), {:external_redirect, url})
         {:noreply, socket}
 
-      {:error, msg} when is_binary(msg) ->
+      {:error, msg} ->
         Flash.error(msg)
-        {:noreply, socket}
-
-      {:error, _other} ->
-        Flash.error("Failed to start reconnect")
         {:noreply, socket}
     end
   end
@@ -620,12 +618,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         send(self(), {:external_redirect, url})
         {:noreply, socket}
 
-      {:error, msg} when is_binary(msg) ->
+      {:error, msg} ->
         Flash.error(msg)
-        {:noreply, socket}
-
-      {:error, _other} ->
-        Flash.error("Failed to start reconnect")
         {:noreply, socket}
     end
   end

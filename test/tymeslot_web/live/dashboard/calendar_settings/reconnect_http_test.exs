@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
   """
 
   use TymeslotWeb.LiveCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :live
   @moduletag :integrations
@@ -27,8 +28,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
   alias Req.Test, as: ReqTest
   alias Tymeslot.Infrastructure.CalendarCircuitBreaker
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Repo
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Workers.SyncCalDavCalendarWorker
 
   # Route CalDAV HTTP through the real HTTPClient so `Req.Test` can intercept
   # and assert on each request/response. The global test config wires
@@ -93,7 +96,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       )
       |> render_submit()
 
-      reloaded = Tymeslot.Repo.get!(CalendarIntegrationSchema, integration.id)
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == false
       assert Encryption.decrypt(reloaded.password_encrypted) == "newpass"
     end
@@ -126,9 +129,74 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
 
       assert html =~ "Could not sign in with those credentials"
 
-      reloaded = Tymeslot.Repo.get!(CalendarIntegrationSchema, integration.id)
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == true
       assert Encryption.decrypt(reloaded.password_encrypted) == "oldpass"
+    end
+  end
+
+  describe "CalDAV badge lifecycle" do
+    setup %{user: user} do
+      base_url = "http://localhost:65432"
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          name: "Lifecycle CalDAV",
+          provider: "caldav",
+          base_url: base_url,
+          username_encrypted: Encryption.encrypt("alice"),
+          password_encrypted: Encryption.encrypt("oldpass"),
+          calendar_paths: ["/calendars/alice/default/"],
+          provider_account_id: "#{base_url}||alice",
+          is_active: true,
+          needs_reauth: false
+        )
+
+      %{integration: integration, base_url: base_url}
+    end
+
+    test "sync 401 flips needs_reauth; reconnect clears it", %{
+      conn: conn,
+      integration: integration
+    } do
+      # Phase 1: every CalDAV request returns 401 — the worker's tier-detection
+      # probe fails and `log_auth_error/1` flips `needs_reauth` to true.
+      ReqTest.stub(:tymeslot_http, fn http_conn -> Conn.send_resp(http_conn, 401, "") end)
+
+      assert :ok =
+               perform_job(SyncCalDavCalendarWorker, %{
+                 "calendar_integration_id" => integration.id
+               })
+
+      flagged = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert flagged.needs_reauth == true
+
+      {:ok, view, html} = live(conn, ~p"/dashboard/calendar-integration")
+      assert html =~ "Reconnect required"
+
+      # Phase 2: the server now accepts the rotated password and the user
+      # reconnects through the modal. The badge must disappear.
+      stub_caldav_server(accept: "alice:newpass")
+
+      view
+      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      view
+      |> form("form[phx-submit='reconnect_caldav_discover']",
+        reconnect: %{
+          url: integration.base_url,
+          username: "alice",
+          password: "newpass"
+        }
+      )
+      |> render_submit()
+
+      refute render(view) =~ "Reconnect required"
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth == false
     end
   end
 
