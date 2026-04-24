@@ -27,9 +27,12 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   ## Auth errors (REQ-012)
 
-  A 401/403 response is treated as a permanent discard: the job returns `:ok`
-  without retrying. The integration's `is_active` flag is left unchanged so the
-  user can correct credentials through the dashboard.
+  A 401/403 response flags the integration's `needs_reauth` field and returns
+  `{:discard, …}` (no retry — the failure is permanent until the user
+  reconnects). If the DB write itself fails, the worker returns `{:error, …}`
+  so Oban retries and takes another shot at recording the flag. The
+  `is_active` flag is left unchanged so the integration remains visible in the
+  dashboard.
 
   ## Jitter (first run)
 
@@ -128,8 +131,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           end
 
         {:error, :unauthorized} ->
-          log_auth_error(integration)
-          :ok
+          flag_reauth_required(integration)
       end
     end
   end
@@ -183,9 +185,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
           :ok
 
+        {:discard, _reason} = discard ->
+          discard
+
         {:error, reason} ->
-          # do_full_fetch handles :unauthorized internally (logs and returns :ok),
-          # so we only see real errors here.
           log_sync_error(integration, "forced full fetch", reason)
           {:error, reason}
       end
@@ -287,8 +290,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         sync_tier3(integration, client)
 
       {:error, :unauthorized} ->
-        log_auth_error(integration)
-        :ok
+        flag_reauth_required(integration)
 
       {:error, reason} ->
         log_sync_error(integration, "Tier 1 sync", reason)
@@ -346,8 +348,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         end
 
       {:error, :unauthorized} ->
-        log_auth_error(integration)
-        :ok
+        flag_reauth_required(integration)
 
       {:error, reason} ->
         log_sync_error(integration, "Tier 2 CTag check", reason)
@@ -425,8 +426,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         end
 
       {:error, :unauthorized} ->
-        log_auth_error(integration)
-        :ok
+        flag_reauth_required(integration)
 
       {:error, reason} ->
         log_sync_error(integration, "full fetch", reason)
@@ -513,18 +513,21 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   # Helpers
   # ---------------------------------------------------------------------------
 
-  defp log_auth_error(integration) do
+  defp flag_reauth_required(integration) do
     Logger.warning("CalDAV sync unauthorised; flagging for reauth",
       calendar_integration_id: integration.id
     )
 
-    _result =
-      CalendarManagement.mark_needs_reauth(
-        integration,
-        "CalDAV server rejected the stored credentials. Please reconnect the integration."
-      )
+    case CalendarManagement.mark_needs_reauth(
+           integration,
+           "CalDAV server rejected the stored credentials. Please reconnect the integration."
+         ) do
+      {:ok, _updated} ->
+        {:discard, "CalDAV server rejected credentials — reauthentication required"}
 
-    :ok
+      {:error, _changeset} ->
+        {:error, "Failed to flag integration for reauth"}
+    end
   end
 
   defp log_sync_error(integration, phase, reason) do
