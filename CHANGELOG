@@ -1,4 +1,13 @@
 
+[0.100.12]
+* core: Stop deleted CalDAV events from reappearing on refresh
+* core: Keep the dashboard in sync after editing a calendar event
+* core: Preserve CalDAV reauth flag when worker DB write fails
+* core: Harden CalDAV reconnect flow
+* core: Add 3-day view, swipe navigation, and responsive view demotion
+* core: Flag CalDAV integrations needing reauth when sync hits 401
+* core: Allow CalDAV credential rotation without recreating the integration
+* core: Add OAuth reconnect button to calendar integration cards
 [0.100.11]
 * core: Prevent reCAPTCHA tokens being corrupted during form validation
 * saas: Keep dashboard mounted when the subscription service exits
