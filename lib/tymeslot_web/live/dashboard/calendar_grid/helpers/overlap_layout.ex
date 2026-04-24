@@ -1,8 +1,24 @@
 defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayout do
   @moduledoc "Overlap-aware column layout algorithm for positioning simultaneous timed events within a day column."
 
+  # Cap visible overlap columns — anything beyond this becomes unreadable (< 33% width).
+  # Events that would land in column 4+ are returned as overflow and rendered as a "+N" chip.
+  @max_visible_cols 3
+
   @spec positioned_events_for_day(map(), Date.t()) :: list()
   def positioned_events_for_day(assigns, date) do
+    {visible, _overflow} = layout_for_day(assigns, date)
+    visible
+  end
+
+  @spec overflow_events_for_day(map(), Date.t()) :: list()
+  def overflow_events_for_day(assigns, date) do
+    {_visible, overflow} = layout_for_day(assigns, date)
+    overflow
+  end
+
+  @spec layout_for_day(map(), Date.t()) :: {list(), list()}
+  def layout_for_day(assigns, date) do
     tz = assigns.user_timezone
 
     events =
@@ -19,11 +35,12 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayout do
   @doc """
   Assigns each event a column index and total column count for side-by-side rendering.
 
-  Returns a list of `{event, col_idx, total_cols}` tuples. Events are sorted by
-  start time before layout is computed.
+  Returns `{visible_tuples, overflow_events}` where `visible_tuples` is a list of
+  `{event, col_idx, total_cols}` for events fitting within the max visible columns,
+  and `overflow_events` are those that would have landed beyond the cap.
   """
-  @spec overlap_layout(list()) :: list()
-  def overlap_layout([]), do: []
+  @spec overlap_layout(list()) :: {list(), list()}
+  def overlap_layout([]), do: {[], []}
 
   def overlap_layout(events) do
     # Greedy slot assignment: assign each event to the first available column slot
@@ -43,12 +60,18 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.OverlapLayout do
         end
       end)
 
-    total_cols = length(slots)
+    actual_cols = length(slots)
+    total_cols = min(actual_cols, @max_visible_cols)
+    visible_slots = Enum.take(slots, @max_visible_cols)
+    overflow_events = slots |> Enum.drop(@max_visible_cols) |> List.flatten()
 
-    for {col_events, col_idx} <- Enum.with_index(slots),
-        event <- col_events do
-      {event, col_idx, total_cols}
-    end
+    visible_tuples =
+      for {col_events, col_idx} <- Enum.with_index(visible_slots),
+          event <- col_events do
+        {event, col_idx, total_cols}
+      end
+
+    {visible_tuples, overflow_events}
   end
 
   @doc """

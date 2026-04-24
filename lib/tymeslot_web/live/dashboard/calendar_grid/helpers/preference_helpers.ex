@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
 
   @spec col_count(map()) :: integer()
   def col_count(%{view: :week} = assigns), do: if(show_weekends?(assigns), do: 7, else: 5)
+  def col_count(%{view: :three_day}), do: 3
   def col_count(%{view: :day}), do: 1
   def col_count(%{view: :month}), do: 7
 
@@ -24,16 +25,11 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def period_label(%{view: :week, date: date} = assigns) do
     ws = week_start(date, assigns)
     we = Date.add(ws, 6)
-    start_str = Calendar.strftime(ws, "%B %-d")
+    range_label(ws, we)
+  end
 
-    end_str =
-      if ws.month == we.month do
-        Calendar.strftime(we, "%-d, %Y")
-      else
-        Calendar.strftime(we, "%B %-d, %Y")
-      end
-
-    "#{start_str} \u2013 #{end_str}"
+  def period_label(%{view: :three_day, date: date}) do
+    range_label(date, Date.add(date, 2))
   end
 
   def period_label(%{view: :day, date: date}) do
@@ -44,8 +40,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
     Calendar.strftime(date, "%B %Y")
   end
 
+  defp range_label(start_date, end_date) do
+    start_str = Calendar.strftime(start_date, "%B %-d")
+
+    end_str =
+      if start_date.month == end_date.month do
+        Calendar.strftime(end_date, "%-d, %Y")
+      else
+        Calendar.strftime(end_date, "%B %-d, %Y")
+      end
+
+    "#{start_str} \u2013 #{end_str}"
+  end
+
   @spec view_label(atom()) :: String.t()
   def view_label(:day), do: "Day"
+  def view_label(:three_day), do: "3 Days"
   def view_label(:week), do: "Week"
   def view_label(:month), do: "Month"
 
@@ -75,9 +85,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers do
   def time_format(%{preferences: %{time_format: fmt}}), do: fmt
   def time_format(_assigns), do: "12h"
 
-  @valid_views %{"week" => :week, "day" => :day, "month" => :month}
+  @valid_views %{
+    "week" => :week,
+    "three_day" => :three_day,
+    "day" => :day,
+    "month" => :month
+  }
 
-  @spec safe_view_atom(String.t()) :: :week | :day | :month
+  @spec safe_view_atom(String.t()) :: :week | :three_day | :day | :month
   def safe_view_atom(view) when is_binary(view), do: Map.get(@valid_views, view, :week)
   def safe_view_atom(_view), do: :week
 

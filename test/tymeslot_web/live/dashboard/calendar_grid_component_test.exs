@@ -33,16 +33,71 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
   describe "view switching" do
     test "switches to day view", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("button", "Day") |> render_click()
+      html = lv |> element("button[phx-value-view='day']", "Day") |> render_click()
       assert html =~ Calendar.strftime(Date.utc_today(), "%A")
     end
 
     test "switches back to week view after day view", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("button", "Day") |> render_click()
-      html = lv |> element("button", "Week") |> render_click()
+      lv |> element("button[phx-value-view='day']", "Day") |> render_click()
+      html = lv |> element("button[phx-value-view='week']", "Week") |> render_click()
       # Week view shows short day names, not the full "DayName, Month Day, Year" format
       refute html =~ Calendar.strftime(Date.utc_today(), "%A, %B %-d, %Y")
+    end
+
+    test "switches to 3-day view", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      html = lv |> element("button[phx-value-view='three_day']", "3 Days") |> render_click()
+      # 3-day view renders exactly 3 day columns (each with data-day-col attr)
+      assert length(Regex.scan(~r/data-day-col=/, html)) == 3
+    end
+  end
+
+  describe "responsive view" do
+    test "tablet viewport demotes week to 3-day without persisting", %{conn: conn, user: user} do
+      alias Tymeslot.CalendarGrid
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("set_responsive_view", %{"viewport" => "tablet"})
+
+      html = render(lv)
+      # The 3-day view renders three day columns
+      assert length(Regex.scan(~r/data-day-col=/, html)) == 3
+
+      # But the user's stored preference remains :week
+      prefs = CalendarGrid.get_or_create_preferences(user.id)
+      assert prefs.default_view == "week"
+    end
+
+    test "mobile viewport demotes week to day", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("set_responsive_view", %{"viewport" => "mobile"})
+
+      html = render(lv)
+      # Day view's full date format appears
+      assert html =~ Calendar.strftime(Date.utc_today(), "%A, %B %-d, %Y")
+    end
+
+    test "mobile viewport demotes three_day to day", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      # First switch to three_day
+      lv |> element("button[phx-value-view='three_day']", "3 Days") |> render_click()
+      assert length(Regex.scan(~r/data-day-col=/, render(lv))) == 3
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("set_responsive_view", %{"viewport" => "mobile"})
+
+      html = render(lv)
+      # Day view renders exactly 1 day column
+      assert length(Regex.scan(~r/data-day-col=/, html)) == 1
     end
   end
 
@@ -80,14 +135,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
   describe "month view" do
     test "renders month grid", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      html = lv |> element("button", "Month") |> render_click()
+      html = lv |> element("button[phx-value-view='month']", "Month") |> render_click()
       assert html =~ "calendar-month-grid"
       assert html =~ to_string(Date.utc_today().year)
     end
 
     test "clicking a day cell navigates to day view", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("button", "Month") |> render_click()
+      lv |> element("button[phx-value-view='month']", "Month") |> render_click()
       today_iso = Date.to_iso8601(Date.utc_today())
 
       html =
@@ -99,10 +154,28 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
     end
   end
 
+  describe "handle_set_view three_day does not persist preference" do
+    test "switching to three_day leaves stored default_view unchanged", %{conn: conn, user: user} do
+      alias Tymeslot.CalendarGrid
+
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+
+      lv |> element("button[phx-value-view='three_day']", "3 Days") |> render_click()
+
+      # Three-day view must be reflected in the DOM
+      html = render(lv)
+      assert length(Regex.scan(~r/data-day-col=/, html)) == 3
+
+      # But the stored preference must still be week (the factory default)
+      prefs = CalendarGrid.get_or_create_preferences(user.id)
+      assert prefs.default_view == "week"
+    end
+  end
+
   describe "swipe navigation" do
     test "navigate_swipe 'next' advances to next day", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("button", "Day") |> render_click()
+      lv |> element("button[phx-value-view='day']", "Day") |> render_click()
       html = render(lv)
       original_label = extract_period_label(html)
 
@@ -116,13 +189,26 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponentTest do
 
     test "navigate_swipe 'prev' goes back one day", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
-      lv |> element("button", "Day") |> render_click()
+      lv |> element("button[phx-value-view='day']", "Day") |> render_click()
       html = render(lv)
       original_label = extract_period_label(html)
 
       lv
       |> element("#calendar-grid")
       |> render_hook("navigate_swipe", %{"direction" => "prev"})
+
+      new_label = extract_period_label(render(lv))
+      refute new_label == original_label
+    end
+
+    test "navigate_swipe 'next' in three_day view advances by 3 days", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
+      lv |> element("button[phx-value-view='three_day']", "3 Days") |> render_click()
+      original_label = extract_period_label(render(lv))
+
+      lv
+      |> element("#calendar-grid")
+      |> render_hook("navigate_swipe", %{"direction" => "next"})
 
       new_label = extract_period_label(render(lv))
       refute new_label == original_label

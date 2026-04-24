@@ -90,6 +90,14 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
      DateTime.new!(range_end, ~T[00:00:00], "Etc/UTC")}
   end
 
+  def range_for_view(%{view: :three_day, date: date}) do
+    range_start = Date.add(date, -1)
+    range_end = Date.add(date, 3)
+
+    {DateTime.new!(range_start, ~T[00:00:00], "Etc/UTC"),
+     DateTime.new!(range_end, ~T[00:00:00], "Etc/UTC")}
+  end
+
   def range_for_view(%{view: :month, date: date}) do
     first_of_month = Date.new!(date.year, date.month, 1)
     range_start = DateTime.new!(Date.add(first_of_month, -7), ~T[00:00:00], "Etc/UTC")
@@ -117,6 +125,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   end
 
   defp visible_days(%{view: :day, date: date}), do: [date]
+
+  defp visible_days(%{view: :three_day, date: date}),
+    do: Enum.map(0..2, &Date.add(date, &1))
 
   defp visible_days(%{view: :month, date: date} = assigns) do
     first_of_month = Date.new!(date.year, date.month, 1)

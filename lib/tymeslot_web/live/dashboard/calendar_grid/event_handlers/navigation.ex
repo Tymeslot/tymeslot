@@ -34,13 +34,22 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
 
   @spec handle_set_view(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_set_view(%{"view" => view}, socket) when view in ~w(day week month) do
+  def handle_set_view(%{"view" => view}, socket) when view in ~w(day three_day week month) do
     view_atom = String.to_existing_atom(view)
-    user_id = socket.assigns.current_user.id
 
-    case CalendarGrid.save_preferences(user_id, %{default_view: view}) do
-      {:ok, _preferences} -> :ok
-      {:error, reason} -> Logger.warning("Failed to save view preference", error: inspect(reason))
+    # Only persist "real" view choices. `:three_day` is a responsive view that
+    # should not override the user's stored preference — otherwise a narrow
+    # viewport would permanently demote their week/month choice.
+    if view in ~w(day week month) do
+      user_id = socket.assigns.current_user.id
+
+      case CalendarGrid.save_preferences(user_id, %{default_view: view}) do
+        {:ok, _preferences} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Failed to save view preference", error: inspect(reason))
+      end
     end
 
     socket =
@@ -69,27 +78,51 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
 
   @spec handle_set_mobile_view(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
-  def handle_set_mobile_view(_params, socket) do
-    if socket.assigns.view == :week do
-      socket = socket |> assign(:view, :day) |> Helpers.load_events()
+  def handle_set_mobile_view(_params, socket),
+    do: handle_set_responsive_view(%{"viewport" => "mobile"}, socket)
+
+  @spec handle_set_responsive_view(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_set_responsive_view(%{"viewport" => viewport}, socket) do
+    # Responsive demotion: a week-view on a narrow screen is illegible.
+    # Mobile (<640px) → day view; tablet (<1024px) → 3-day view.
+    # We only demote; we never upgrade the user's view choice.
+    # We also do not persist the demoted view — `handle_set_view/2` gates
+    # persistence to genuine user selections.
+    target =
+      case {viewport, socket.assigns.view} do
+        {"mobile", :week} -> :day
+        {"mobile", :three_day} -> :day
+        {"mobile", :month} -> :month
+        {"tablet", :week} -> :three_day
+        _other -> socket.assigns.view
+      end
+
+    if target == socket.assigns.view do
       {:noreply, socket}
     else
+      socket = socket |> assign(:view, target) |> Helpers.load_events()
       {:noreply, socket}
     end
   end
 
+  def handle_set_responsive_view(_params, socket), do: {:noreply, socket}
+
   @spec handle_navigate_swipe(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_navigate_swipe(%{"direction" => direction}, socket) do
-    new_date =
+    delta =
       case direction do
-        "next" -> Date.add(socket.assigns.date, 1)
-        "prev" -> Date.add(socket.assigns.date, -1)
-        _other -> socket.assigns.date
+        "next" -> 1
+        "prev" -> -1
+        _other -> 0
       end
 
-    socket = socket |> assign(:date, new_date) |> Helpers.load_events()
-    {:noreply, socket}
+    if delta == 0 do
+      {:noreply, socket}
+    else
+      navigate_period(socket, delta)
+    end
   end
 
   defp navigate_period(socket, direction) do
@@ -97,6 +130,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Navigation do
       case socket.assigns.view do
         :month -> Helpers.navigate_month(socket.assigns.date, direction)
         :week -> Date.add(socket.assigns.date, 7 * direction)
+        :three_day -> Date.add(socket.assigns.date, 3 * direction)
         :day -> Date.add(socket.assigns.date, direction)
       end
 

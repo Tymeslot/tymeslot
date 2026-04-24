@@ -68,6 +68,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers do
   # Overlap layout
 
   defdelegate positioned_events_for_day(assigns, date), to: OverlapLayout
+  defdelegate overflow_events_for_day(assigns, date), to: OverlapLayout
+  defdelegate layout_for_day(assigns, date), to: OverlapLayout
   defdelegate overlap_layout(events), to: OverlapLayout
 
   # General-purpose event filtering (remains in facade)

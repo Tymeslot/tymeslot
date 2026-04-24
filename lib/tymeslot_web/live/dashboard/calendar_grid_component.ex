@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   LiveComponent rendering a week/day/month calendar grid backed by cached calendar events.
 
   State assigns:
-  - `:view`               — `:week` | `:day` | `:month` (default `:week`)
+  - `:view`               — `:week` | `:three_day` | `:day` | `:month` (default `:week`)
   - `:date`               — `Date.t()` anchor date (default `Date.utc_today()`)
   - `:events`             — list of cached events (default `[]`)
   - `:integrations`       — list of active integrations (default `[]`)
@@ -341,6 +341,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGridComponent do
   @impl Phoenix.LiveComponent
   def handle_event("set_mobile_view", params, socket),
     do: Navigation.handle_set_mobile_view(params, socket)
+
+  @impl Phoenix.LiveComponent
+  def handle_event("set_responsive_view", params, socket),
+    do: Navigation.handle_set_responsive_view(params, socket)
 
   @impl Phoenix.LiveComponent
   def handle_event("navigate_swipe", params, socket),
