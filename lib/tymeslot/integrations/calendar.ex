@@ -23,6 +23,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.{CaldavCommon, ProviderAdapter}
+  alias Tymeslot.Integrations.Calendar.Reconnection
   alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.TokenUtils
@@ -656,6 +657,48 @@ defmodule Tymeslot.Integrations.Calendar do
     case errors do
       [] -> "Calendar discovery failed. Please check your credentials and try again."
       errors -> Enum.map_join(errors, ", ", &to_string/1)
+    end
+  end
+
+  @doc """
+  Reconnect an existing CalDAV-family integration. Returns either
+  `{:ok, :updated, integration}` (password-only path, done) or
+  `{:ok, :needs_calendar_selection, payload}` (account change; caller must
+  prompt for calendar selection and then call
+  `Calendar.finalise_caldav_reconnect/3`).
+
+  Arguments:
+    * `user_id` — owning user id, used to scope the fetch.
+    * `integration_id` — the integration to reconnect.
+    * `params` — map with `"url"`, `"username"`, `"password"`.
+  """
+  @spec reconnect_caldav_integration(user_id(), integration_id(), map()) ::
+          {:ok, :updated, integration()}
+          | {:ok, :needs_calendar_selection, %{calendars: [map()], credentials: map()}}
+          | {:error, :not_found}
+          | {:error, :invalid_credentials}
+          | {:error, {:changeset, Ecto.Changeset.t()}}
+          | {:error, term()}
+  def reconnect_caldav_integration(user_id, integration_id, params)
+      when is_integer(user_id) and is_integer(integration_id) and is_map(params) do
+    with {:ok, integration} <- CalendarManagement.get_calendar_integration(integration_id, user_id) do
+      Reconnection.reconnect(integration, params)
+    end
+  end
+
+  @doc """
+  Finalise the `:account_change` branch by persisting the user's selected
+  calendars alongside the new credentials. See `reconnect_caldav_integration/3`.
+  """
+  @spec finalise_caldav_reconnect(user_id(), integration_id(), %{
+          required(:payload) => map(),
+          required(:selected_paths) => [String.t()]
+        }) ::
+          {:ok, integration()} | {:error, :not_found} | {:error, {:changeset, Ecto.Changeset.t()}}
+  def finalise_caldav_reconnect(user_id, integration_id, %{payload: payload, selected_paths: paths})
+      when is_integer(user_id) and is_integer(integration_id) do
+    with {:ok, integration} <- CalendarManagement.get_calendar_integration(integration_id, user_id) do
+      Reconnection.finalise_account_change(integration, payload, paths)
     end
   end
 end

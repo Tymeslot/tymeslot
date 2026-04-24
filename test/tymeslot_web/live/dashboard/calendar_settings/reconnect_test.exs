@@ -165,4 +165,37 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
       assert render(view) =~ "Integration not found"
     end
   end
+
+  describe "CalDAV reconnect modal (password-only path)" do
+    test "clicking Reconnect on a CalDAV integration opens the modal with prefilled url + username",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          name: "My CalDAV",
+          provider: "caldav",
+          base_url: "https://caldav.example.com",
+          username_encrypted: Tymeslot.Security.Encryption.encrypt("alice"),
+          password_encrypted: Tymeslot.Security.Encryption.encrypt("oldpass"),
+          calendar_paths: ["/calendars/alice/default/"],
+          provider_account_id: "https://caldav.example.com||alice",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      html =
+        view
+        |> element(
+          "button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']"
+        )
+        |> render_click()
+
+      assert html =~ "Reconnect My CalDAV"
+      assert html =~ "https://caldav.example.com"
+      assert html =~ "alice"
+      refute html =~ ~s(name="reconnect[password]" value="oldpass")
+    end
+  end
 end

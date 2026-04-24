@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Utils.ChangesetUtils
   alias Tymeslot.Utils.SanitizeMerge
+  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal
   alias TymeslotWeb.Components.Dashboard.Integrations.Shared.DeleteIntegrationModal
   alias TymeslotWeb.Dashboard.CalendarSettings.Components
   alias TymeslotWeb.Live.Dashboard.Shared.DashboardHelpers
@@ -36,7 +37,13 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
      |> assign(:is_refreshing, false)
      |> assign(:validating_integration_id, nil)
      |> assign(:health_states, %{})
-     |> assign(:available_calendar_providers, Calendar.list_available_providers(:calendar))}
+     |> assign(:available_calendar_providers, Calendar.list_available_providers(:calendar))
+     |> assign(:reconnect_integration, nil)
+     |> assign(:reconnect_phase, :credentials)
+     |> assign(:reconnect_form_values, %{})
+     |> assign(:reconnect_form_errors, %{})
+     |> assign(:reconnect_discovery_payload, nil)
+     |> assign(:reconnect_submitting, false)}
   end
 
   @impl Phoenix.LiveComponent
@@ -393,6 +400,92 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     end
   end
 
+  def handle_event("close_reconnect_modal", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:reconnect_integration, nil)
+     |> assign(:reconnect_phase, :credentials)
+     |> assign(:reconnect_discovery_payload, nil)
+     |> assign(:reconnect_submitting, false)}
+  end
+
+  def handle_event("reconnect_caldav_discover", %{"reconnect" => params}, socket) do
+    integration = socket.assigns.reconnect_integration
+    user_id = socket.assigns.current_user.id
+    socket = assign(socket, :reconnect_submitting, true)
+
+    case Calendar.reconnect_caldav_integration(user_id, integration.id, params) do
+      {:ok, :updated, _updated} ->
+        send(self(), {:integration_updated, :calendar})
+        Flash.info("Calendar reconnected")
+
+        {:noreply,
+         socket
+         |> assign(:reconnect_integration, nil)
+         |> assign(:reconnect_submitting, false)
+         |> load_integrations()}
+
+      {:ok, :needs_calendar_selection, payload} ->
+        {:noreply,
+         socket
+         |> assign(:reconnect_phase, :calendar_selection)
+         |> assign(:reconnect_discovery_payload, payload)
+         |> assign(:reconnect_submitting, false)}
+
+      {:error, :invalid_credentials} ->
+        {:noreply,
+         socket
+         |> assign(:reconnect_form_errors, %{generic: ["Could not sign in with those credentials"]})
+         |> assign(:reconnect_form_values, params)
+         |> assign(:reconnect_submitting, false)}
+
+      {:error, :not_found} ->
+        Flash.error("Integration not found")
+        {:noreply, assign(socket, :reconnect_submitting, false)}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> assign(:reconnect_form_errors, %{
+           generic: [Calendar.connection_error_message(reason)]
+         })
+         |> assign(:reconnect_form_values, params)
+         |> assign(:reconnect_submitting, false)}
+    end
+  end
+
+  def handle_event("reconnect_caldav_submit", params, socket) do
+    integration = socket.assigns.reconnect_integration
+    user_id = socket.assigns.current_user.id
+    payload = socket.assigns.reconnect_discovery_payload
+    selected_paths = params |> Map.get("selected_paths", []) |> List.wrap()
+
+    case Calendar.finalise_caldav_reconnect(user_id, integration.id, %{
+           payload: payload,
+           selected_paths: selected_paths
+         }) do
+      {:ok, _updated} ->
+        send(self(), {:integration_updated, :calendar})
+        Flash.info("Calendar reconnected")
+
+        {:noreply,
+         socket
+         |> assign(:reconnect_integration, nil)
+         |> assign(:reconnect_phase, :credentials)
+         |> assign(:reconnect_discovery_payload, nil)
+         |> assign(:reconnect_submitting, false)
+         |> load_integrations()}
+
+      {:error, :not_found} ->
+        Flash.error("Integration not found")
+        {:noreply, assign(socket, :reconnect_submitting, false)}
+
+      {:error, {:changeset, cs}} ->
+        Flash.error("Could not save: #{ChangesetUtils.get_first_error(cs)}")
+        {:noreply, assign(socket, :reconnect_submitting, false)}
+    end
+  end
+
   # --- Async Handlers ---
 
   @impl Phoenix.LiveComponent
@@ -537,12 +630,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     end
   end
 
-  defp handle_reconnect_by_provider(%{provider: provider}, socket)
+  defp handle_reconnect_by_provider(%{provider: provider} = integration, socket)
        when provider in ~w(caldav nextcloud radicale zimbra) do
-    # CalDAV-family modal is wired up in the next plan task. For now, signal
-    # "not yet available" so nothing silently fails.
-    Flash.error("CalDAV reconnect is coming in the next commit")
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> assign(:reconnect_integration, integration)
+     |> assign(:reconnect_phase, :credentials)
+     |> assign(:reconnect_form_errors, %{})
+     |> assign(:reconnect_form_values, %{
+       "url" => integration.base_url || "",
+       "username" => integration.username || "",
+       "password" => ""
+     })
+     |> assign(:reconnect_discovery_payload, nil)
+     |> assign(:reconnect_submitting, false)}
   end
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}
@@ -596,6 +697,20 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         id="delete-calendar-modal"
         integration_type={:calendar}
         current_user={@current_user}
+      />
+
+      <.live_component
+        :if={@reconnect_integration}
+        module={CaldavReconnectModal}
+        id="caldav-reconnect-modal"
+        integration={@reconnect_integration}
+        phase={@reconnect_phase}
+        form_values={@reconnect_form_values}
+        form_errors={@reconnect_form_errors}
+        discovery_payload={@reconnect_discovery_payload}
+        selected_paths={[]}
+        is_submitting={@reconnect_submitting}
+        parent_target={@myself}
       />
     </div>
     """
