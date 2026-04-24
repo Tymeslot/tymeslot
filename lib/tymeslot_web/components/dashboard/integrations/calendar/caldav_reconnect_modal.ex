@@ -65,6 +65,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
             <.calendar_selection
               payload={@discovery_payload}
               selected_paths={@selected_paths}
+              form_errors={@form_errors}
               is_submitting={@is_submitting}
               parent_target={@parent_target}
             />
@@ -123,13 +124,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       <%= if error = form_level_error(@form_errors) do %>
         <div class="brand-card p-3 bg-red-50/50 border border-red-200/50">
           <p class="text-sm text-red-600 flex items-center">
-            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
+            <.icon name="hero-exclamation-circle-solid" class="w-4 h-4 mr-2 flex-shrink-0" />
             {error}
           </p>
         </div>
@@ -157,6 +152,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
 
   attr :payload, :map, required: true
   attr :selected_paths, :list, required: true
+  attr :form_errors, :map, required: true
   attr :is_submitting, :boolean, required: true
   attr :parent_target, :any, required: true
 
@@ -167,6 +163,15 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
         The new credentials belong to a different account. Select the calendars
         you want to sync for availability checks.
       </p>
+
+      <%= if error = form_level_error(@form_errors) do %>
+        <div class="brand-card p-3 bg-red-50/50 border border-red-200/50">
+          <p class="text-sm text-red-600 flex items-center">
+            <.icon name="hero-exclamation-circle-solid" class="w-4 h-4 mr-2 flex-shrink-0" />
+            {error}
+          </p>
+        </div>
+      <% end %>
 
       <div class="space-y-3">
         <h4 class="label">Select calendars to sync:</h4>

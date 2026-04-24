@@ -695,7 +695,10 @@ defmodule Tymeslot.Integrations.Calendar do
           required(:payload) => map(),
           required(:selected_paths) => [String.t()]
         }) ::
-          {:ok, integration()} | {:error, :not_found} | {:error, {:changeset, Ecto.Changeset.t()}}
+          {:ok, integration()}
+          | {:error, :not_found}
+          | {:error, :no_calendars_selected}
+          | {:error, {:changeset, Ecto.Changeset.t()}}
   def finalise_caldav_reconnect(user_id, integration_id, %{
         payload: payload,
         selected_paths: paths

@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
+  alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Integrations.CalendarManagement
 
@@ -90,8 +91,24 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   credentials, and calendar selection after the user has picked calendars.
   """
   @spec finalise_account_change(integration(), map(), [String.t()]) ::
-          {:ok, integration()} | {:error, {:changeset, Ecto.Changeset.t()}}
+          {:ok, integration()}
+          | {:error, :no_calendars_selected}
+          | {:error, {:changeset, Ecto.Changeset.t()}}
   def finalise_account_change(%CalendarIntegrationSchema{} = integration, payload, selected_paths) do
+    valid_paths = Enum.filter(selected_paths, fn p -> is_binary(p) and p != "" end)
+
+    if valid_paths == [] do
+      {:error, :no_calendars_selected}
+    else
+      do_finalise_account_change(integration, payload, valid_paths)
+    end
+  end
+
+  defp do_finalise_account_change(
+         %CalendarIntegrationSchema{} = integration,
+         payload,
+         selected_paths
+       ) do
     %{credentials: creds, calendars: calendars} = payload
 
     calendar_list =
@@ -161,8 +178,12 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
       {:ok, %{calendars: calendars, discovery_credentials: credentials}} ->
         {:ok, :needs_calendar_selection, %{calendars: calendars, credentials: credentials}}
 
-      {:error, :unauthorized} ->
-        {:error, :invalid_credentials}
+      {:error, reason} when is_binary(reason) ->
+        if ErrorHandler.categorize_error(reason) == :auth do
+          {:error, :invalid_credentials}
+        else
+          {:error, reason}
+        end
 
       {:error, reason} ->
         {:error, reason}

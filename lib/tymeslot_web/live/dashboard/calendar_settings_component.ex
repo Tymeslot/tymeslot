@@ -445,6 +445,13 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         Flash.error("Integration not found")
         {:noreply, assign(socket, :reconnect_submitting, false)}
 
+      {:error, reason} when is_binary(reason) ->
+        {:noreply,
+         socket
+         |> assign(:reconnect_form_errors, %{generic: [reason]})
+         |> assign(:reconnect_form_values, params)
+         |> assign(:reconnect_submitting, false)}
+
       {:error, reason} ->
         {:noreply,
          socket
@@ -461,6 +468,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     user_id = socket.assigns.current_user.id
     payload = socket.assigns.reconnect_discovery_payload
     selected_paths = params |> Map.get("selected_paths", []) |> List.wrap()
+    socket = assign(socket, :reconnect_submitting, true)
 
     case Calendar.finalise_caldav_reconnect(user_id, integration.id, %{
            payload: payload,
@@ -477,6 +485,14 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
          |> assign(:reconnect_discovery_payload, nil)
          |> assign(:reconnect_submitting, false)
          |> load_integrations()}
+
+      {:error, :no_calendars_selected} ->
+        {:noreply,
+         socket
+         |> assign(:reconnect_form_errors, %{
+           generic: ["Please select at least one calendar to sync."]
+         })
+         |> assign(:reconnect_submitting, false)}
 
       {:error, :not_found} ->
         Flash.error("Integration not found")
@@ -638,6 +654,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
      })
      |> assign(:reconnect_discovery_payload, nil)
      |> assign(:reconnect_submitting, false)}
+  end
+
+  defp handle_reconnect_by_provider(%{provider: provider}, socket) do
+    Logger.warning("Reconnect requested for unsupported provider", provider: provider)
+    Flash.error("Reconnect is not supported for this provider yet.")
+    {:noreply, socket}
   end
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}
