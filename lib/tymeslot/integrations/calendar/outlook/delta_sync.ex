@@ -1,0 +1,283 @@
+defmodule Tymeslot.Integrations.Calendar.Outlook.DeltaSync do
+  @moduledoc """
+  Outlook (Microsoft Graph) delta-link change tracking.
+
+  Given an integration that already has a stored `graph_delta_link`, fetches
+  the changes the Graph API has accumulated since that link was issued,
+  applies the changes to the local cache (upserts changed events, deletes
+  removed ones, reconciles bookings), persists the new delta link returned
+  by the API, and broadcasts the cache update so connected dashboards
+  refresh.
+
+  The bootstrap path (no delta link present yet) is handled by the worker
+  via `OutlookCalendarAPI.bootstrap_sync/1` — this module is the steady-state
+  optimisation that lets us catch up between webhook deliveries without a
+  full re-sync.
+  """
+
+  require Logger
+
+  alias Tymeslot.Infrastructure.CalendarCircuitBreaker
+  alias Tymeslot.Infrastructure.HTTPClient
+  alias Tymeslot.Integrations.Calendar.CalendarIntegrationWebhookQueries
+  alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
+  alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries
+  alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
+  alias Tymeslot.Integrations.Calendar.Shared.AccessToken
+  alias Tymeslot.Integrations.Calendar.Sync
+  alias Tymeslot.Integrations.Calendar.SyncBroadcast
+
+  # Microsoft Graph rejects these query parameters on the `events/delta`
+  # change-tracking resource. Stored `graph_delta_link` URLs written before
+  # this was known may still carry them — strip before reuse.
+  @unsupported_delta_params ~w($orderby $filter $select $expand $search)
+
+  @max_delta_pages 100
+
+  @doc """
+  Fetches and applies Outlook delta changes for an integration that has a
+  stored `graph_delta_link`. Returns `:ok` on success, `:error` on any
+  failure (already logged with context).
+  """
+  @spec fetch_and_apply(map()) :: :ok | :error
+  def fetch_and_apply(integration) do
+    delta_link = integration.graph_delta_link
+    api_module = outlook_calendar_api()
+
+    result =
+      AccessToken.with_access_token(integration, &api_module.refresh_token/1, fn token ->
+        CalendarCircuitBreaker.call(:outlook, fn ->
+          fetch_delta_page(token, delta_link, [])
+        end)
+      end)
+
+    handle_fetch_result(result, integration)
+  end
+
+  defp handle_fetch_result({:ok, {:ok, events, new_delta_link}}, integration) do
+    apply_delta(integration, events, new_delta_link)
+  end
+
+  # CalendarCircuitBreaker.call returns {:error, :circuit_open} when the breaker
+  # is open, and {:error, reason} for errors returned by the function it wraps.
+  # The {:ok, {:error, ...}} shape never occurs — errors are not wrapped in {:ok}.
+  defp handle_fetch_result({:error, :circuit_open}, integration) do
+    Logger.warning("Outlook circuit breaker open during fallback sweep",
+      calendar_integration_id: integration.id
+    )
+
+    :error
+  end
+
+  defp handle_fetch_result({:error, :delta_link_expired}, integration) do
+    Logger.warning("Outlook delta link expired (410); clearing stored link for re-bootstrap",
+      calendar_integration_id: integration.id
+    )
+
+    CalendarIntegrationWebhookQueries.update_delta_link(integration, nil)
+    :error
+  end
+
+  defp handle_fetch_result({:error, _reason} = fetch_error, integration) do
+    Logger.warning("Outlook delta fetch failed during fallback sweep",
+      calendar_integration_id: integration.id,
+      error: format_error(fetch_error)
+    )
+
+    :error
+  end
+
+  defp handle_fetch_result(refresh_error, integration) do
+    Logger.warning("Outlook token refresh failed during fallback sweep",
+      calendar_integration_id: integration.id,
+      error: format_error(refresh_error)
+    )
+
+    :error
+  end
+
+  defp apply_delta(integration, events, new_delta_link) do
+    {removed, changed} = Enum.split_with(events, &Map.has_key?(&1, "@removed"))
+    cache_attrs = build_cache_attrs_batch(changed, integration.id)
+    removed_uids = process_removed(removed, integration)
+
+    with {:ok, _count} <- ProviderCalendarEventQueries.upsert_batch(cache_attrs),
+         :ok <- persist_delta_link(integration, new_delta_link) do
+      uids = Enum.map(cache_attrs, & &1.uid) ++ removed_uids
+      SyncBroadcast.broadcast_cache_update(integration.user_id, uids)
+      :ok
+    else
+      {:error, reason} ->
+        Logger.warning("Outlook delta upsert/persist failed during fallback sweep",
+          calendar_integration_id: integration.id,
+          error: reason
+        )
+
+        :error
+    end
+  end
+
+  defp process_removed(removed, integration) do
+    Enum.flat_map(removed, fn event ->
+      graph_id = event["id"]
+      ical_uid = event["iCalUId"]
+      uid_for_cache = ical_uid || graph_id
+
+      if uid_for_cache do
+        ProviderCalendarEventQueries.delete_by_uid(integration.id, uid_for_cache)
+        log_reconcile_failures(integration, graph_id, ical_uid, uid_for_cache)
+        [uid_for_cache]
+      else
+        []
+      end
+    end)
+  end
+
+  defp log_reconcile_failures(integration, graph_id, ical_uid, uid_for_cache) do
+    case Sync.reconcile(integration.id, graph_id, ical_uid, :deleted) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Reconcile failed for deleted event",
+          uid: uid_for_cache,
+          integration_id: integration.id,
+          reason: inspect(reason)
+        )
+    end
+  end
+
+  defp fetch_delta_page(token, url, accumulated, page \\ 0)
+
+  defp fetch_delta_page(_token, _url, _accumulated, page) when page >= @max_delta_pages do
+    {:error, :too_many_pages}
+  end
+
+  defp fetch_delta_page(token, url, accumulated, page) do
+    uri = url |> strip_unsupported_delta_params() |> URI.parse()
+    path = uri.path <> if(uri.query, do: "?#{uri.query}", else: "")
+
+    headers = [
+      {"Authorization", "Bearer #{token}"},
+      {"Content-Type", "application/json"},
+      {"Prefer", "outlook.timezone=\"UTC\""}
+    ]
+
+    case http_client().request(:get, "https://graph.microsoft.com" <> path, "", headers, []) do
+      {:ok, %{status: status, body: body}} when status in [200, 201] ->
+        decode_delta_page(body, token, accumulated, page)
+
+      {:ok, %{status: 401}} ->
+        {:error, :unauthorized}
+
+      {:ok, %{status: 410}} ->
+        {:error, :delta_link_expired}
+
+      {:ok, %{status: status}} ->
+        {:error, {:http_error, status}}
+
+      {:error, reason} ->
+        {:error, {:network_error, reason}}
+    end
+  end
+
+  defp decode_delta_page(body, token, accumulated, page) do
+    case Jason.decode(body) do
+      {:error, _reason} ->
+        Logger.warning("Invalid JSON in Outlook delta response")
+        {:error, :invalid_json}
+
+      {:ok, response} ->
+        events = [response["value"] || [] | accumulated]
+
+        cond do
+          new_delta_link = response["@odata.deltaLink"] ->
+            {:ok, List.flatten(events), new_delta_link}
+
+          next_link = response["@odata.nextLink"] ->
+            fetch_delta_page(token, next_link, events, page + 1)
+
+          true ->
+            {:ok, List.flatten(events), nil}
+        end
+    end
+  end
+
+  defp build_cache_attrs_batch(events, calendar_integration_id) do
+    context = %{
+      calendar_integration_id: calendar_integration_id,
+      # Microsoft Graph /me/events/delta returns events from the user's primary
+      # calendar. The provider_calendar_events.provider_calendar_id column is NOT
+      # NULL with 'primary' as the documented default; passing nil causes a
+      # Postgres constraint violation.
+      provider_calendar_id: "primary",
+      synced_at: DateTime.utc_now(:microsecond)
+    }
+
+    {:ok, calendar_events} = OutlookProvider.normalise_events(events, context)
+    Enum.map(calendar_events, &ProviderCalendarEventSchema.from_calendar_event/1)
+  end
+
+  defp persist_delta_link(_integration, nil), do: :ok
+
+  defp persist_delta_link(integration, new_delta_link) do
+    case CalendarIntegrationWebhookQueries.update_delta_link(integration, new_delta_link) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.warning("Failed to persist Outlook delta link in fallback sweep",
+          calendar_integration_id: integration.id,
+          error: inspect(changeset)
+        )
+
+        {:error, :delta_link_persistence_failed}
+    end
+  end
+
+  defp strip_unsupported_delta_params(url) do
+    uri = URI.parse(url)
+
+    case uri.query do
+      query when query in [nil, ""] ->
+        url
+
+      query ->
+        # Split and filter on the raw query string rather than decode-then-encode,
+        # because URI.encode_query/1 percent-encodes '$' as '%24', which turns
+        # '$deltatoken' into '%24deltatoken' and breaks Microsoft Graph requests.
+        cleaned_parts =
+          query
+          |> String.split("&")
+          |> Enum.reject(fn part ->
+            key = part |> String.split("=", parts: 2) |> hd() |> String.downcase()
+            key in @unsupported_delta_params
+          end)
+
+        new_query = if cleaned_parts == [], do: nil, else: Enum.join(cleaned_parts, "&")
+
+        uri
+        |> Map.put(:query, new_query)
+        |> URI.to_string()
+    end
+  end
+
+  # Normalises both 2-tuple (`{:error, reason}`) and 3-tuple
+  # (`{:error, type, reason}` — the `api_error()` shape returned by the
+  # Outlook/Graph client) error shapes into a single printable string.
+  defp format_error({:error, type, reason}) when is_atom(type),
+    do: "#{type}: #{inspect(reason)}"
+
+  defp format_error({:error, reason}), do: inspect(reason)
+
+  defp format_error(other), do: inspect(other)
+
+  defp outlook_calendar_api do
+    Application.get_env(:tymeslot, :outlook_calendar_api_module, OutlookCalendarAPI)
+  end
+
+  defp http_client do
+    Application.get_env(:tymeslot, :http_client_module, HTTPClient)
+  end
+end
