@@ -31,7 +31,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         is_active: true,
         calendar_list: [%{"id" => "cal1", "name" => "Work", "selected" => true}],
         default_booking_calendar_id: "cal1",
-        provider_account_email: nil
+        provider_account_email: nil,
+        needs_reauth: false
       },
       validating_integration_id: 0,
       myself: "some-target"
@@ -51,7 +52,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         provider: "google",
         is_active: false,
         calendar_list: [],
-        provider_account_email: nil
+        provider_account_email: nil,
+        needs_reauth: false
       },
       validating_integration_id: 0,
       myself: "some-target"
@@ -70,7 +72,8 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
         provider: "google",
         is_active: true,
         calendar_list: nil,
-        provider_account_email: nil
+        provider_account_email: nil,
+        needs_reauth: false
       },
       validating_integration_id: 0,
       myself: "some-target"

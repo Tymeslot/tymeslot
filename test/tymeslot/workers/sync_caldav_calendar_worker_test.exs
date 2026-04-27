@@ -450,10 +450,12 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorkerTest do
         Conn.send_resp(conn, 401, "Unauthorized")
       end)
 
-      assert :ok =
+      assert {:discard, reason} =
                perform_job(SyncCalDavCalendarWorker, %{
                  "calendar_integration_id" => integration.id
                })
+
+      assert reason =~ "reauthentication"
     end
   end
 
