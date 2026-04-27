@@ -41,12 +41,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
                )
     end
 
-    test "maps 403 to :unauthorized (Radicale auth failure)" do
+    test "maps 403 to :forbidden (resource access denied, distinct from auth failure)" do
       ReqTest.stub(:tymeslot_http, fn conn ->
         Conn.send_resp(conn, 403, "")
       end)
 
-      assert {:error, :unauthorized} =
+      assert {:error, :forbidden} =
                Http.propfind(
                  "https://caldav.example.com/calendars/user/",
                  "user",
@@ -118,12 +118,12 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.HttpTest do
                )
     end
 
-    test "maps 403 to :unauthorized (Radicale auth failure)" do
+    test "maps 403 to :forbidden (resource access denied, distinct from auth failure)" do
       ReqTest.stub(:tymeslot_http, fn conn ->
         Conn.send_resp(conn, 403, "")
       end)
 
-      assert {:error, :unauthorized} =
+      assert {:error, :forbidden} =
                Http.report(
                  "https://caldav.example.com/calendars/user/personal/",
                  "user",

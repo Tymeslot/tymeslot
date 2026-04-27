@@ -75,7 +75,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
        do: {:ok, response}
 
   defp handle_propfind_response(%Req.Response{status: 401}), do: {:error, :unauthorized}
-  defp handle_propfind_response(%Req.Response{status: 403}), do: {:error, :unauthorized}
+  defp handle_propfind_response(%Req.Response{status: 403}), do: {:error, :forbidden}
   defp handle_propfind_response(%Req.Response{status: 404}), do: {:error, :not_found}
 
   defp handle_propfind_response(%Req.Response{status: status}) when status >= 500,
@@ -121,8 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
         {:error, :unauthorized}
 
       {:ok, %Req.Response{status: 403}} ->
-        # Radicale returns 403 for auth failures
-        {:error, :unauthorized}
+        {:error, :forbidden}
 
       {:ok, %Req.Response{status: 404}} ->
         {:error, :not_found}
@@ -199,8 +198,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
         {:error, :unauthorized}
 
       {:ok, %Req.Response{status: 403}} ->
-        # Radicale returns 403 for auth failures
-        {:error, :unauthorized}
+        {:error, :forbidden}
 
       {:ok, %Req.Response{status: status}} when status >= 500 ->
         {:error, :server_error}
@@ -282,7 +280,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Http do
        do: {:ok, response}
 
   defp handle_put_event_response(%Req.Response{status: 401}), do: {:error, :unauthorized}
-  defp handle_put_event_response(%Req.Response{status: 403}), do: {:error, :unauthorized}
+  defp handle_put_event_response(%Req.Response{status: 403}), do: {:error, :forbidden}
   defp handle_put_event_response(%Req.Response{status: 404}), do: {:error, :not_found}
 
   defp handle_put_event_response(%Req.Response{status: 412}),

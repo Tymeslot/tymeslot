@@ -132,6 +132,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
         {:error, :unauthorized} ->
           flag_reauth_required(integration)
+
+        {:error, :forbidden} ->
+          log_sync_error(integration, "tier detection", :forbidden)
+          {:error, :forbidden}
       end
     end
   end
@@ -292,6 +296,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       {:error, :unauthorized} ->
         flag_reauth_required(integration)
 
+      {:error, :forbidden} ->
+        log_sync_error(integration, "Tier 1 sync", :forbidden)
+        {:error, :forbidden}
+
       {:error, reason} ->
         log_sync_error(integration, "Tier 1 sync", reason)
         {:error, reason}
@@ -349,6 +357,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
       {:error, :unauthorized} ->
         flag_reauth_required(integration)
+
+      {:error, :forbidden} ->
+        log_sync_error(integration, "Tier 2 CTag check", :forbidden)
+        {:error, :forbidden}
 
       {:error, reason} ->
         log_sync_error(integration, "Tier 2 CTag check", reason)
@@ -427,6 +439,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
       {:error, :unauthorized} ->
         flag_reauth_required(integration)
+
+      {:error, :forbidden} ->
+        log_sync_error(integration, "full fetch", :forbidden)
+        {:error, :forbidden}
 
       {:error, reason} ->
         log_sync_error(integration, "full fetch", reason)

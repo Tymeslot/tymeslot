@@ -51,7 +51,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
         {:error, :unauthorized}
 
       {:ok, %Req.Response{status: 403}} ->
-        {:error, :unauthorized}
+        {:error, :forbidden}
 
       {:error, :unauthorized} ->
         {:error, :unauthorized}
@@ -169,8 +169,11 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.SyncCollectionReport do
       {:ok, %Req.Response{status: status, body: body}} when status in [200, 207] ->
         parse_ctag_response(body)
 
-      {:ok, %Req.Response{status: status}} when status in [401, 403] ->
+      {:ok, %Req.Response{status: 401}} ->
         {:error, :unauthorized}
+
+      {:ok, %Req.Response{status: 403}} ->
+        {:error, :forbidden}
 
       {:ok, %Req.Response{status: status}} ->
         {:error, {:http_error, status}}

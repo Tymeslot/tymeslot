@@ -79,6 +79,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Base do
 
   @type error_reason ::
           :unauthorized
+          | :forbidden
           | :not_found
           | :precondition_failed
           | :rate_limited

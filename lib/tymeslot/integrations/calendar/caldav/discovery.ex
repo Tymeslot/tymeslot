@@ -50,7 +50,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
           {:ok, _response} = success ->
             success
 
-          {:error, reason} when reason in [:not_found, :server_error] ->
+          {:error, reason} when reason in [:not_found, :forbidden, :server_error] ->
             Logger.debug("CalDAV discovery path not found; falling back to RFC 4791 probe",
               reason: reason,
               base_url: client.base_url
@@ -92,7 +92,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
           {:ok, %Req.Response{body: body}} ->
             parse_calendar_discovery(body, client)
 
-          {:error, reason} when reason in [:not_found, :server_error] ->
+          {:error, reason} when reason in [:not_found, :forbidden, :server_error] ->
             Logger.debug(
               "CalDAV discovery path not found; falling back to RFC 4791 principal discovery",
               reason: reason,

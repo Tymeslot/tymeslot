@@ -22,7 +22,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDetector do
   HTTP requests.
   """
   @spec detect(integration :: map(), client :: map()) ::
-          {:ok, 1 | 2 | 3} | {:error, :unauthorized} | {:error, term()}
+          {:ok, 1 | 2 | 3} | {:error, :unauthorized | :forbidden | term()}
   def detect(integration, client) do
     primary_path =
       client
@@ -70,6 +70,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.TierDetector do
 
       {:error, :unauthorized} ->
         {:error, :unauthorized}
+
+      {:error, :forbidden} ->
+        {:error, :forbidden}
 
       {:error, reason} ->
         Logger.debug("CalDAV tier detection PROPFIND failed, defaulting to Tier 3",
