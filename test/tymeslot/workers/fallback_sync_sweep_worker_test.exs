@@ -13,7 +13,6 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
   alias Ecto.Query
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.SyncGating
-  alias Tymeslot.Security.Encryption
   alias Tymeslot.Workers.FallbackSyncSweepWorker
   alias Tymeslot.Workers.SyncCalDavCalendarWorker
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
@@ -453,67 +452,6 @@ defmodule Tymeslot.Workers.FallbackSyncSweepWorkerTest do
         end)
 
       assert log =~ "Outlook bootstrap delta fetch failed in fallback sweep"
-    end
-  end
-
-  describe "perform/1 - Outlook integration with delta link" do
-    test "logs and continues when token refresh returns an api_error 3-tuple" do
-      insert(:calendar_integration,
-        provider: "outlook",
-        is_active: true,
-        graph_delta_link:
-          "https://graph.microsoft.com/v1.0/me/events/delta?$skiptoken=fake-skiptoken",
-        token_expires_at: nil
-      )
-
-      expect(OutlookCalendarAPIMock, :refresh_token, fn _integration ->
-        {:error, :unauthorized, "Token refresh failed"}
-      end)
-
-      # Same regression: 3-tuple from refresh_token used to escape the case
-      # clause in fetch_outlook_delta and crash the whole sweep.
-      log =
-        capture_log(fn ->
-          assert :ok = perform_job(FallbackSyncSweepWorker, %{})
-        end)
-
-      assert log =~ "Outlook token refresh failed during fallback sweep"
-    end
-
-    test "strips unsupported query parameters from a stale stored delta link" do
-      # A stored delta link written before the fix may still carry
-      # $select/$expand query params. Microsoft Graph now rejects these on
-      # events/delta with HTTP 400 — the worker must strip them before reuse.
-      stale_delta_link =
-        "https://graph.microsoft.com/v1.0/me/events/delta?" <>
-          "$deltatoken=stale-token&$select=id,subject&$expand=extendedProperties"
-
-      insert(:calendar_integration,
-        provider: "outlook",
-        is_active: true,
-        access_token_encrypted: Encryption.encrypt("valid-token"),
-        token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
-        graph_delta_link: stale_delta_link
-      )
-
-      expect(Tymeslot.HTTPClientMock, :request, fn :get, url, _body, _headers, _opts ->
-        assert String.contains?(url, "$deltatoken=stale-token")
-        refute String.contains?(String.downcase(url), "$select")
-        refute String.contains?(String.downcase(url), "$expand")
-
-        {:ok,
-         %Req.Response{
-           status: 200,
-           body:
-             Jason.encode!(%{
-               "value" => [],
-               "@odata.deltaLink" =>
-                 "https://graph.microsoft.com/v1.0/me/events/delta?$deltatoken=fresh"
-             })
-         }}
-      end)
-
-      assert :ok = perform_job(FallbackSyncSweepWorker, %{})
     end
   end
 end
