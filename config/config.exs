@@ -272,6 +272,7 @@ config :tymeslot, :calendar_providers, %{
   radicale: [enabled: true],
   nextcloud: [enabled: true],
   zimbra: [enabled: true],
+  mailbox_org: [enabled: true],
   google: [enabled: true],
   outlook: [enabled: true]
 }
