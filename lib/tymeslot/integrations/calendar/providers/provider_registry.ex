@@ -68,12 +68,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
 
   @doc """
   Returns a list of all valid provider types.
-  Delegates to ProviderConfig for consistency.
-
-  ## Examples
-
-      iex> ProviderRegistry.valid_providers()
-      [:caldav, :radicale, :nextcloud, :google, :outlook]
+  Delegates to `ProviderConfig.all_providers_with_dev/0`, so the result reflects
+  whichever providers are enabled at runtime.
   """
   @spec valid_providers() :: list(atom())
   defdelegate valid_providers(), to: ProviderConfig, as: :all_providers_with_dev
@@ -88,12 +84,12 @@ defmodule Tymeslot.Integrations.Calendar.Providers.ProviderRegistry do
 
       iex> ProviderRegistry.validate_provider(:google)
       {:ok, :google}
-      
+
       iex> ProviderRegistry.validate_provider("google")
       {:ok, :google}
-      
-      iex> ProviderRegistry.validate_provider(:invalid)
-      {:error, "Invalid provider: invalid. Valid providers are: caldav, radicale, nextcloud, google, outlook"}
+
+      iex> match?({:error, _}, ProviderRegistry.validate_provider(:invalid))
+      true
   """
   @spec validate_provider(atom() | String.t()) :: {:ok, atom()} | {:error, String.t()}
   defdelegate validate_provider(provider), to: ProviderConfig

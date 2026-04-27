@@ -14,6 +14,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
 
   require Logger
 
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Calendar.Runtime.BookingIntegrationResolver
   alias Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolver
@@ -24,6 +25,8 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
   @type client :: map()
+
+  @caldav_providers ProviderConfig.caldav_based_providers()
 
   @doc """
   Gets configured calendar clients for all calendars belonging to a user.
@@ -144,7 +147,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
           provider when provider in [:google, :outlook] ->
             create_adapter_client(provider_type, integration)
 
-          provider when provider in [:caldav, :nextcloud, :radicale, :zimbra] ->
+          provider when provider in @caldav_providers ->
             create_caldav_client(provider_type, integration)
 
           _unknown ->
@@ -186,7 +189,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
       provider when provider in [:google, :outlook] ->
         create_oauth_client(provider, integration)
 
-      provider when provider in [:caldav, :radicale, :nextcloud, :zimbra] ->
+      provider when provider in @caldav_providers ->
         create_caldav_clients(provider, integration)
 
       :debug ->
@@ -281,7 +284,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
       provider when provider in [:google, :outlook] ->
         create_adapter_client(provider, integration)
 
-      provider when provider in [:caldav, :nextcloud, :radicale, :zimbra] ->
+      provider when provider in @caldav_providers ->
         create_caldav_client(provider, integration)
 
       _unknown ->

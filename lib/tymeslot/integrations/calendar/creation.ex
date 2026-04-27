@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
@@ -15,6 +16,8 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
   alias Tymeslot.Utils.SanitizeMerge
 
   @type user_id :: pos_integer()
+
+  @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
 
   @doc """
   Validates incoming params (security-aware), creates the integration via Calendar,
@@ -267,7 +270,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
           {:ok, %{required(:provider) => String.t(), optional(atom()) => term()}}
           | {:error, Ecto.Changeset.t()}
   def prevalidate_config(%{provider: provider} = attrs)
-      when provider in ["caldav", "nextcloud", "radicale", "zimbra"] do
+      when provider in @caldav_provider_strings do
     config = %{
       base_url: attrs[:base_url],
       username: attrs[:username],
