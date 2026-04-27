@@ -352,7 +352,7 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
       {:ok, lv, _html} = live(conn, ~p"/dashboard/calendar")
 
       # Switch to day view so `set_mobile_view`'s guard is false.
-      lv |> element("button", "Day") |> render_click()
+      lv |> element(~s|button[phx-value-view="day"]|) |> render_click()
       html_before = render(lv)
 
       # `handle_set_mobile_view/2` discards its params; the only thing
@@ -387,7 +387,7 @@ defmodule TymeslotWeb.Live.JsHookEventTest do
       # Day view gives a unique, date-bearing header. The swipe
       # handler's `_other -> socket.assigns.date` arm must leave it
       # exactly as-is.
-      lv |> element("button", "Day") |> render_click()
+      lv |> element(~s|button[phx-value-view="day"]|) |> render_click()
       label_before = extract_period_label(render(lv))
 
       lv
