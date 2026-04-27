@@ -89,7 +89,8 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
              required(:name) => String.t(),
              required(:href) => String.t(),
              required(:color) => String.t(),
-             required(:selected) => boolean()
+             required(:selected) => boolean(),
+             required(:read_only) => boolean()
            })}
           | {:error, String.t()}
   def parse_calendar_discovery(xml_body, opts \\ []) do
@@ -109,16 +110,29 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
           transform_by(
             ~x".//*[local-name()='resourcetype']/*[local-name()='calendar']",
             &(&1 != nil)
+          ),
+        component_names:
+          ~x".//*[local-name()='supported-calendar-component-set']/*[local-name()='comp']/@name"sl,
+        has_privilege_set:
+          transform_by(
+            ~x".//*[local-name()='current-user-privilege-set']",
+            &(&1 != nil)
+          ),
+        has_write_privilege:
+          transform_by(
+            ~x".//*[local-name()='current-user-privilege-set']/*[local-name()='privilege']/*[local-name()='write']",
+            &(&1 != nil)
           )
       )
-      |> Enum.filter(fn cal -> cal.is_calendar end)
+      |> Enum.filter(&include_calendar?/1)
       |> Enum.map(fn cal ->
         %{
           id: cal.href,
           name: determine_calendar_name(cal),
           href: cal.href,
           color: cal.calendar_color,
-          selected: Keyword.get(opts, :selected_default, false)
+          selected: Keyword.get(opts, :selected_default, false),
+          read_only: read_only?(cal)
         }
       end)
 
@@ -297,6 +311,21 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandler do
     do: "<c:calendar-home-set xmlns:c=\"urn:ietf:params:xml:ns:caldav\"/>"
 
   defp build_prop_element(other), do: "<d:#{other}/>"
+
+  # Keep only calendar collections that support VEVENT. When the server omits
+  # supported-calendar-component-set, accept the calendar by default — RFC 4791
+  # treats VEVENT support as implied. Collections that explicitly declare
+  # components without VEVENT are filtered out (e.g. mailbox.org's task-only
+  # "Aufgaben" collection).
+  defp include_calendar?(%{is_calendar: true, component_names: []}), do: true
+  defp include_calendar?(%{is_calendar: true, component_names: names}), do: "VEVENT" in names
+  defp include_calendar?(_other), do: false
+
+  # Only mark a calendar read-only when the server explicitly returned a
+  # privilege set that omitted write access. Servers that don't advertise
+  # privileges at all (most do not) are treated as writable.
+  defp read_only?(%{has_privilege_set: true, has_write_privilege: false}), do: true
+  defp read_only?(_other), do: false
 
   defp determine_calendar_name(%{displayname: displayname, href: _calendar_href})
        when displayname != "" do

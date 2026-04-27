@@ -281,6 +281,68 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.XmlHandlerTest do
     test "returns error on malformed XML" do
       assert {:error, _reason} = XmlHandler.parse_calendar_discovery("<not xml at all <<<")
     end
+
+    test "accepts calendar that omits supported-calendar-component-set (RFC 4791 implies VEVENT)" do
+      # Legacy / minimalist servers (some Radicale and Baikal versions) don't
+      # advertise components. The shared filter must default-accept them, not
+      # silently drop the only calendar.
+      xml = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+        <D:response>
+          <D:href>/calendars/user/personal/</D:href>
+          <D:propstat>
+            <D:prop>
+              <D:displayname>Personal</D:displayname>
+              <D:resourcetype><D:collection/><C:calendar/></D:resourcetype>
+            </D:prop>
+            <D:status>HTTP/1.1 200 OK</D:status>
+          </D:propstat>
+        </D:response>
+      </D:multistatus>
+      """
+
+      assert {:ok, [cal]} = XmlHandler.parse_calendar_discovery(xml)
+      assert cal.name == "Personal"
+      assert cal.read_only == false
+    end
+
+    test "filters out a VTODO-only collection while keeping VEVENT siblings" do
+      xml = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+        <D:response>
+          <D:href>/calendars/user/events/</D:href>
+          <D:propstat>
+            <D:prop>
+              <D:displayname>Events</D:displayname>
+              <D:resourcetype><D:collection/><C:calendar/></D:resourcetype>
+              <C:supported-calendar-component-set>
+                <C:comp name="VEVENT"/>
+              </C:supported-calendar-component-set>
+            </D:prop>
+            <D:status>HTTP/1.1 200 OK</D:status>
+          </D:propstat>
+        </D:response>
+        <D:response>
+          <D:href>/calendars/user/tasks/</D:href>
+          <D:propstat>
+            <D:prop>
+              <D:displayname>Tasks</D:displayname>
+              <D:resourcetype><D:collection/><C:calendar/></D:resourcetype>
+              <C:supported-calendar-component-set>
+                <C:comp name="VTODO"/>
+              </C:supported-calendar-component-set>
+            </D:prop>
+            <D:status>HTTP/1.1 200 OK</D:status>
+          </D:propstat>
+        </D:response>
+      </D:multistatus>
+      """
+
+      assert {:ok, [cal]} = XmlHandler.parse_calendar_discovery(xml)
+      assert cal.name == "Events"
+    end
   end
 
   # ---------------------------------------------------------------------------
