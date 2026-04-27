@@ -147,7 +147,7 @@ defmodule Tymeslot.Bookings.Policy do
         uid: meeting_uid,
         title: "#{meeting_type_name} with #{form_data["name"]}",
         summary: "#{meeting_type_name} with #{form_data["name"]}",
-        description: form_data["message"] || "",
+        description: (meeting_type_record && meeting_type_record.description) || "",
         start_time: params.start_datetime,
         end_time: params.end_datetime,
         duration: params.duration_minutes,
