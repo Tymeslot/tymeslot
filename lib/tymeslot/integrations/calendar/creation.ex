@@ -267,7 +267,7 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
           {:ok, %{required(:provider) => String.t(), optional(atom()) => term()}}
           | {:error, Ecto.Changeset.t()}
   def prevalidate_config(%{provider: provider} = attrs)
-      when provider in ["caldav", "nextcloud", "radicale", "zimbra"] do
+      when provider in ["caldav", "nextcloud", "radicale", "zimbra", "mailbox_org"] do
     config = %{
       base_url: attrs[:base_url],
       username: attrs[:username],

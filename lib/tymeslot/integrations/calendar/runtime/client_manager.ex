@@ -157,7 +157,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
           provider when provider in [:google, :outlook] ->
             create_adapter_client(provider_type, integration)
 
-          provider when provider in [:caldav, :nextcloud, :radicale, :zimbra] ->
+          provider when provider in [:caldav, :nextcloud, :radicale, :zimbra, :mailbox_org] ->
             create_caldav_client(provider_type, integration)
 
           _not_found_or_inactive ->
@@ -419,7 +419,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
       provider when provider in [:google, :outlook] ->
         create_adapter_client(provider_type, integration)
 
-      provider when provider in [:caldav, :nextcloud, :radicale, :zimbra] ->
+      provider when provider in [:caldav, :nextcloud, :radicale, :zimbra, :mailbox_org] ->
         create_caldav_client(provider_type, integration)
 
       _not_found_or_inactive ->
