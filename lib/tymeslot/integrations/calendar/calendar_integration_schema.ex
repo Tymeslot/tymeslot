@@ -169,7 +169,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarIntegrationSchema do
     )
   end
 
-  @caldav_based_providers ~w(caldav radicale nextcloud zimbra)
+  @caldav_based_providers ~w(caldav radicale nextcloud zimbra mailbox_org)
 
   defp validate_base_url_for_caldav(changeset) do
     provider = get_field(changeset, :provider)

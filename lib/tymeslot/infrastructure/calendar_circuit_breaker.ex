@@ -15,7 +15,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   alias Tymeslot.Infrastructure.{CircuitBreaker, CircuitBreakerHelpers}
   require Logger
 
-  @calendar_providers [:caldav, :radicale, :nextcloud, :zimbra, :google, :outlook]
+  @calendar_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :google, :outlook]
   @calendar_breaker_names Enum.into(@calendar_providers, %{}, fn p ->
                             {p, :"calendar_breaker_#{p}"}
                           end)

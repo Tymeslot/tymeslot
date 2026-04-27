@@ -213,7 +213,7 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
         create_oauth_client(provider_type, integration)
 
       # CalDAV providers use config map with calendar paths
-      provider when provider in [:caldav, :radicale, :nextcloud, :zimbra] ->
+      provider when provider in [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org] ->
         create_caldav_clients(provider_type, integration)
 
       # Debug provider for development testing
