@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase
+  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.NextcloudConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.RadicaleConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents
@@ -370,6 +371,12 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
     assert html =~ "Radicale"
     assert html =~ "Lightweight CalDAV server integration"
     assert html =~ ~s(name="integration[provider]" value="radicale")
+
+    html = render_component(&MailboxOrgConfig.render/1, base_assigns)
+    assert html =~ "mailbox.org"
+    assert html =~ "Sync calendars from your mailbox.org account"
+    assert html =~ "application-specific password"
+    assert html =~ ~s(name="integration[provider]" value="mailbox_org")
   end
 
   test "renders video provider configs" do
