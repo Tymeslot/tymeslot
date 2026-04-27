@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.{
     CaldavConfig,
+    MailboxOrgConfig,
     NextcloudConfig,
     RadicaleConfig,
     ZimbraConfig
@@ -112,6 +113,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             <.live_component
               module={ZimbraConfig}
               id="zimbra-config"
+              target={@myself}
+              metadata={@security_metadata}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              discovered_calendars={@discovered_calendars}
+              show_calendar_selection={@show_calendar_selection}
+              discovery_credentials={@discovery_credentials}
+              saving={@is_saving}
+            />
+          <% :mailbox_org -> %>
+            <.live_component
+              module={MailboxOrgConfig}
+              id="mailbox-org-config"
               target={@myself}
               metadata={@security_metadata}
               form_errors={@form_errors}
@@ -450,5 +464,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp format_provider_title(:radicale), do: "Radicale"
   defp format_provider_title(:caldav), do: "CalDAV"
   defp format_provider_title(:zimbra), do: "Zimbra"
+  defp format_provider_title(:mailbox_org), do: "mailbox.org"
   defp format_provider_title(_provider), do: "Calendar"
 end

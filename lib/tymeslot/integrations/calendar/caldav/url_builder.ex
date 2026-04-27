@@ -33,6 +33,9 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.UrlBuilder do
         :zimbra ->
           "#{base_url}/dav/#{client.username}/"
 
+        :mailbox_org ->
+          "#{base_url}/caldav/"
+
         _other ->
           "#{base_url}/calendars/#{client.username}/"
       end

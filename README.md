@@ -68,6 +68,7 @@ Open [http://localhost:4000](http://localhost:4000) — your scheduling platform
   <img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="48" title="Nextcloud Calendar" />
   <img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="48" title="Radicale" />
   <img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="48" title="Zimbra" />
+  <img src="./priv/static/icons/providers/calendar/medium/mailbox_org.png" alt="mailbox.org" height="48" title="mailbox.org" />
 </div>
 
 | Provider | Auth |
@@ -78,6 +79,7 @@ Open [http://localhost:4000](http://localhost:4000) — your scheduling platform
 | Nextcloud Calendar | CalDAV |
 | Zimbra | CalDAV |
 | Radicale | CalDAV |
+| mailbox.org | CalDAV (app-specific password if 2FA enabled) |
 
 Connect as many calendars as you have. Assign each meeting type to whichever calendar it belongs in. If an integration goes down, you get an email — you won't find out from a missed meeting.
 

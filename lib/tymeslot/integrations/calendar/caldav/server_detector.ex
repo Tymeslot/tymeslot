@@ -26,6 +26,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
           | :baikal_legacy
           | :sabredav
           | :zimbra
+          | :mailbox_org
           | :generic
 
   @type server_profile :: %{
@@ -92,6 +93,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
       String.contains?(url_lower, "baikal") -> :baikal
       String.contains?(url_lower, "sabre") -> :sabredav
       String.contains?(url_lower, "zimbra") -> :zimbra
+      String.contains?(url_lower, "mailbox.org") -> :mailbox_org
       true -> nil
     end
   end
@@ -228,6 +230,7 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
     cond do
       String.contains?(powered_by, "nextcloud") -> :nextcloud
       String.contains?(powered_by, "owncloud") -> :owncloud
+      String.contains?(powered_by, "open-xchange") -> :mailbox_org
       true -> nil
     end
   end
@@ -329,6 +332,19 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.ServerDetector do
       discovery_path: "/dav/{username}/",
       calendar_path_pattern: "/dav/{username}/{calendar}/",
       event_path_pattern: "/dav/{username}/{calendar}/{uid}.ics",
+      supports_oauth: false,
+      supports_calendar_color: true,
+      supports_calendar_order: false,
+      requires_calendar_suffix: false
+    }
+  end
+
+  def get_server_profile(:mailbox_org) do
+    %{
+      type: :mailbox_org,
+      discovery_path: "/caldav/",
+      calendar_path_pattern: "/caldav/{calendar}/",
+      event_path_pattern: "/caldav/{calendar}/{uid}.ics",
       supports_oauth: false,
       supports_calendar_color: true,
       supports_calendar_order: false,

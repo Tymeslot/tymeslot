@@ -15,9 +15,9 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @sync_window_past_days 365
   @sync_window_future_days 365
 
-  @providers [:caldav, :radicale, :nextcloud, :zimbra, :google, :outlook, :demo]
+  @providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :google, :outlook, :demo]
   @oauth_providers [:google, :outlook]
-  @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra]
+  @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org]
   @dev_only_providers [:debug]
 
   # Provider metadata - single source of truth for all provider information
@@ -48,6 +48,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       description: "Enterprise Zimbra calendar integration",
       button_text: "Connect Zimbra",
       click_event: "connect_zimbra_calendar",
+      circuit_breaker_enabled: true
+    },
+    mailbox_org: %{
+      icon: "mailbox_org",
+      description: "Sync calendars from your mailbox.org account",
+      button_text: "Connect mailbox.org",
+      click_event: "connect_mailbox_org_calendar",
       circuit_breaker_enabled: true
     },
     google: %{
@@ -244,6 +251,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def display_name(:radicale), do: "Radicale"
   def display_name(:nextcloud), do: "Nextcloud"
   def display_name(:zimbra), do: "Zimbra"
+  def display_name(:mailbox_org), do: "mailbox.org"
   def display_name(:google), do: "Google Calendar"
   def display_name(:outlook), do: "Outlook Calendar"
   def display_name(:debug), do: "Debug Provider"
@@ -258,6 +266,10 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def get_provider_module(:radicale), do: Tymeslot.Integrations.Calendar.Radicale.Provider
   def get_provider_module(:nextcloud), do: Tymeslot.Integrations.Calendar.Nextcloud.Provider
   def get_provider_module(:zimbra), do: Tymeslot.Integrations.Calendar.Zimbra.Provider
+
+  def get_provider_module(:mailbox_org),
+    do: Tymeslot.Integrations.Calendar.MailboxOrg.Provider
+
   def get_provider_module(:google), do: Tymeslot.Integrations.Calendar.Google.Provider
   def get_provider_module(:outlook), do: Tymeslot.Integrations.Calendar.Outlook.Provider
   def get_provider_module(:debug), do: Tymeslot.Integrations.Calendar.DebugCalendarProvider

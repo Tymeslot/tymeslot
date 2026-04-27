@@ -12,7 +12,7 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
 
   Supports different sizes (compact, medium, large) and all providers:
   - Video: mirotalk, google_meet, teams, custom, in_person, local, none
-  - Calendar: google, google_calendar, outlook, outlook_calendar, nextcloud, nextcloud_calendar, caldav, radicale, zimbra
+  - Calendar: google, google_calendar, outlook, outlook_calendar, nextcloud, nextcloud_calendar, caldav, radicale, zimbra, mailbox_org
   - OAuth: google, github
 
   ## Examples
@@ -86,7 +86,8 @@ defmodule TymeslotWeb.Components.Icons.ProviderIcon do
              "nextcloud_calendar",
              "caldav",
              "radicale",
-             "zimbra"
+             "zimbra",
+             "mailbox_org"
            ] ->
         "calendar"
 

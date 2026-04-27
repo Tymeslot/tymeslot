@@ -10,7 +10,15 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
 
   @type error_category ::
           :auth | :network | :config | :permission | :timeout | :rate_limit | :unknown
-  @type provider :: :caldav | :nextcloud | :google | :outlook | :radicale | :zimbra | :generic
+  @type provider ::
+          :caldav
+          | :nextcloud
+          | :google
+          | :outlook
+          | :radicale
+          | :zimbra
+          | :mailbox_org
+          | :generic
 
   @doc """
   Sanitizes error messages to remove sensitive server information.
@@ -230,6 +238,10 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     "Check your Radicale credentials. If using htpasswd authentication, ensure the password is correct"
   end
 
+  defp get_auth_suggestion(:auth, :mailbox_org) do
+    "If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead"
+  end
+
   defp get_auth_suggestion(:auth, _provider) do
     "Double-check your credentials and ensure they haven't expired"
   end
@@ -379,6 +391,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
       :nextcloud -> "Nextcloud"
       :radicale -> "Radicale"
       :zimbra -> "Zimbra"
+      :mailbox_org -> "mailbox.org"
       :google -> "Google Calendar"
       :outlook -> "Outlook Calendar"
       _other_provider -> "calendar provider"
