@@ -1,6 +1,20 @@
 import Config
 require Logger
 
+# Load `.env` before any `System.get_env/1` so it populates unset vars. Shell
+# vars always win. On Cloudron `/app` is read-only and reset on every upgrade,
+# so `.env` lives on the persistent `/app/data` volume.
+if config_env() != :test do
+  dotenv_path =
+    if System.get_env("DEPLOYMENT_TYPE") == "cloudron" do
+      "/app/data/.env"
+    else
+      Path.join(System.get_env("RELEASE_ROOT") || Path.expand("..", __DIR__), ".env")
+    end
+
+  Tymeslot.Infrastructure.DotenvLoader.load([dotenv_path])
+end
+
 # Helper to safely parse integers from environment variables with validation
 parse_int = fn var, default ->
   case System.get_env(var) do

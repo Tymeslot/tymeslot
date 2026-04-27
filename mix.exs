@@ -101,6 +101,7 @@ defmodule Tymeslot.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2"},
+      {:dotenvy, "~> 1.1"},
       {:bandit, "~> 1.8"},
       {:caldav_client, "~> 2.0"},
       {:webdavex, "~> 0.3.3"},

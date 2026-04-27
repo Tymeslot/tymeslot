@@ -74,6 +74,31 @@ cloudron env set --app tymeslot.yourdomain.com \
 
 > **Note:** `PHX_HOST` must match your Cloudron domain exactly. If unset, Tymeslot falls back to `CLOUDRON_APP_DOMAIN` (provided automatically by Cloudron), but setting it explicitly is recommended.
 
+### Two Ways to Set Variables
+
+You can configure environment variables in either of two ways. They can be mixed freely — values set via the Cloudron CLI take precedence over values from the `.env` file, so the file is best treated as a default that the CLI can override per-key.
+
+**Option 1: Cloudron CLI / Dashboard (recommended for most operators)**
+
+Use `cloudron env set` or the dashboard's **Environment** tab as shown above. Cloudron persists the values, restarts the app automatically, and surfaces them under `cloudron env list`. This is the simplest workflow and the only one that also exposes the values in the dashboard UI.
+
+**Option 2: `.env` file in the data directory**
+
+Tymeslot reads `/app/data/.env` at boot and loads any keys that are not already set in the environment. This is convenient when you have many variables to manage, want to keep them under version control on your own host, or are scripting the deployment.
+
+```bash
+# Edit the .env file directly inside the running container
+cloudron exec --app tymeslot.yourdomain.com -- vi /app/data/.env
+
+# Or copy a prepared file in from your workstation
+cloudron push --app tymeslot.yourdomain.com ./my-env /app/data/.env
+
+# Restart so the new values take effect
+cloudron restart --app tymeslot.yourdomain.com
+```
+
+The file uses standard dotenv syntax (`KEY=value`, one per line, `#` for comments). It must live in `/app/data` — `/app` itself is read-only on Cloudron and is wiped on every app upgrade. Variables set via `cloudron env set` always win over `.env` entries, so use the CLI for one-off overrides.
+
 ### Accessing Your Installation
 
 Once deployed, Tymeslot will be available at:
