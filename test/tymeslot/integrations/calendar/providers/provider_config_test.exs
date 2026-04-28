@@ -6,20 +6,21 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
 
   describe "caldav_based_provider_strings/0" do
     test "returns the caldav-based provider list as strings" do
-      atoms = ProviderConfig.caldav_based_providers()
-      strings = ProviderConfig.caldav_based_provider_strings()
-
-      assert strings == Enum.map(atoms, &Atom.to_string/1)
+      assert ProviderConfig.caldav_based_provider_strings() == [
+               "caldav",
+               "radicale",
+               "nextcloud",
+               "zimbra"
+             ]
     end
 
-    test "matches the database string shape used by integration.provider" do
+    test "produces no duplicate strings" do
       strings = ProviderConfig.caldav_based_provider_strings()
+      assert length(strings) == length(Enum.uniq(strings))
+    end
 
-      assert Enum.all?(strings, &is_binary/1)
-      assert "caldav" in strings
-      assert "radicale" in strings
-      assert "nextcloud" in strings
-      assert "zimbra" in strings
+    test "all elements are binaries (database string shape)" do
+      assert Enum.all?(ProviderConfig.caldav_based_provider_strings(), &is_binary/1)
     end
   end
 
