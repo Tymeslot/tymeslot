@@ -9,6 +9,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
   require Logger
 
   alias Tymeslot.Integrations.Calendar.CalDAV
+  alias Tymeslot.Integrations.Calendar.MailboxOrg
   alias Tymeslot.Integrations.Calendar.Nextcloud
   alias Tymeslot.Integrations.Calendar.Radicale
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
@@ -184,6 +185,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
           :radicale ->
             perform_radicale_discovery(config)
 
+          :mailbox_org ->
+            perform_mailbox_org_discovery(config)
+
           :zimbra ->
             perform_zimbra_discovery(config)
 
@@ -213,8 +217,12 @@ defmodule Tymeslot.Integrations.Calendar.Shared.DiscoveryService do
     Radicale.Provider.discover_calendars(client)
   end
 
+  defp perform_mailbox_org_discovery(config) do
+    client = MailboxOrg.Provider.new(config)
+    MailboxOrg.Provider.discover_calendars(client)
+  end
+
   defp perform_zimbra_discovery(config) do
-    # Create Zimbra client and discover calendars
     client = Zimbra.Provider.new(config)
     Zimbra.Provider.discover_calendars(client)
   end
