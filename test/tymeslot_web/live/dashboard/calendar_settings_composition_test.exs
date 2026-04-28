@@ -87,6 +87,57 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
   setup :setup_dashboard_user
 
+  describe "connect_provider_calendar navigation" do
+    for {event, label} <- [
+          {"connect_caldav_calendar", "CalDAV"},
+          {"connect_radicale_calendar", "Radicale"},
+          {"connect_nextcloud_calendar", "Nextcloud"},
+          {"connect_zimbra_calendar", "Zimbra"},
+          {"connect_mailbox_org_calendar", "mailbox.org"}
+        ] do
+      @event event
+      @label label
+
+      test "clicking #{label} provider card navigates to its config form", %{conn: conn} do
+        {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+        view
+        |> element("button[phx-click='#{@event}']")
+        |> render_click()
+
+        assert render(view) =~ @label
+      end
+    end
+
+    test "clicking Google Calendar initiates OAuth and redirects", %{conn: conn} do
+      stub(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id, _redirect_uri, _opts ->
+        "https://accounts.google.com/o/oauth2/auth?fake=1"
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      view
+      |> element("button[phx-click='connect_google_calendar']")
+      |> render_click()
+
+      assert_redirect(view, "https://accounts.google.com/o/oauth2/auth?fake=1")
+    end
+
+    test "clicking Outlook Calendar initiates OAuth and redirects", %{conn: conn} do
+      stub(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _user_id, _redirect_uri, _opts ->
+        "https://login.microsoftonline.com/oauth?fake=1"
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      view
+      |> element("button[phx-click='connect_outlook_calendar']")
+      |> render_click()
+
+      assert_redirect(view, "https://login.microsoftonline.com/oauth?fake=1")
+    end
+  end
+
   describe "refresh_all_calendars" do
     @tag :capture_log
     test "partial failure across integrations surfaces accurate counts and clears is_refreshing",
