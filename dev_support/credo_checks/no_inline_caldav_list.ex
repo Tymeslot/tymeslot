@@ -50,7 +50,11 @@ defmodule CredoChecks.NoInlineCaldavList do
   alias Credo.IssueMeta
   alias Credo.SourceFile
 
-  @whitelisted_basenames ~w(provider_config.ex provider_registry.ex articles.ex)
+  @whitelisted_paths [
+    "integrations/calendar/providers/provider_config.ex",
+    "integrations/calendar/providers/provider_registry.ex",
+    "docs_live/articles.ex"
+  ]
 
   # Match `caldav` followed (anywhere on the line) by `radicale`, or vice
   # versa, in either atom or string form. The `(?:^|[^a-zA-Z0-9_])` and
@@ -59,7 +63,8 @@ defmodule CredoChecks.NoInlineCaldavList do
   @inline_list_pattern ~r/(?:^|[^a-zA-Z0-9_])(?::caldav|"caldav")(?![a-zA-Z0-9_]).*(?:^|[^a-zA-Z0-9_])(?::radicale|"radicale")(?![a-zA-Z0-9_])|(?:^|[^a-zA-Z0-9_])(?::radicale|"radicale")(?![a-zA-Z0-9_]).*(?:^|[^a-zA-Z0-9_])(?::caldav|"caldav")(?![a-zA-Z0-9_])/
 
   # Sigil form: `~w(caldav radicale ...)` or `~w(radicale caldav ...)` etc.
-  @sigil_pattern ~r/~w[a-zA-Z]*[\(\[]([^)\]]*)[\)\]]/
+  # Supports all standard paired delimiters: ( [ { < / |
+  @sigil_pattern ~r/~w[a-zA-Z]*[\(\[\{\<\/\|]([^\)\]\}\>\/\|]*)[\)\]\}\>\/\|]/
 
   @doc false
   @impl Credo.Check
@@ -77,13 +82,15 @@ defmodule CredoChecks.NoInlineCaldavList do
   end
 
   defp excluded?(filename) do
-    basename = Path.basename(filename)
-
     not lib_file?(filename) or
-      basename in @whitelisted_basenames or
+      whitelisted?(filename) or
       String.contains?(filename, "/test/") or
       String.contains?(filename, "/migrations/") or
       String.contains?(filename, "/deps/")
+  end
+
+  defp whitelisted?(filename) do
+    Enum.any?(@whitelisted_paths, &String.ends_with?(filename, &1))
   end
 
   defp lib_file?(filename) do
@@ -92,11 +99,16 @@ defmodule CredoChecks.NoInlineCaldavList do
 
   defp issues_for_line({line_no, line}, issue_meta) do
     cond do
+      comment_line?(line) -> []
       typespec_line?(line) -> []
       Regex.match?(@inline_list_pattern, line) -> [build_issue(issue_meta, line_no)]
       sigil_caldav_radicale?(line) -> [build_issue(issue_meta, line_no)]
       true -> []
     end
+  end
+
+  defp comment_line?(line) do
+    String.starts_with?(String.trim_leading(line), "#")
   end
 
   defp typespec_line?(line) do
