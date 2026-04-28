@@ -554,7 +554,7 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandlerTest do
       integration = insert(:video_integration, user: user, is_active: true, needs_reauth: false)
       reason = {:error, "Token refresh failed: invalid_grant"}
 
-      for _ <- 1..5 do
+      for _i <- 1..5 do
         assert ResponseHandler.handle_permanent_auth_failure(:video, integration, reason) == :ok
       end
 
