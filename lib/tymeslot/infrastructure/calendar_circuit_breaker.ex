@@ -31,6 +31,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   # - OAuth providers (Google, Outlook): More lenient due to rate limiting and API quotas
   # - Self-hosted CalDAV (CalDAV, Radicale, Zimbra): Standard settings for typical self-hosted servers
   # - Nextcloud: Slightly more lenient than basic CalDAV due to heavier server operations
+  # - mailbox.org (Open-Xchange): Same conservative defaults as other CalDAV providers
   @provider_configs %{
     google: %{
       failure_threshold: 5,
@@ -53,6 +54,10 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
       recovery_timeout: :timer.minutes(3)
     },
     zimbra: %{
+      failure_threshold: 3,
+      recovery_timeout: :timer.minutes(2)
+    },
+    mailbox_org: %{
       failure_threshold: 3,
       recovery_timeout: :timer.minutes(2)
     }

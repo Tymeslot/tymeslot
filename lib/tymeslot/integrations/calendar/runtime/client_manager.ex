@@ -243,12 +243,14 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.ClientManager do
   end
 
   defp create_caldav_clients(provider_type, integration) do
-    # If calendar_list is populated, use it to filter selected calendars
+    # If calendar_list is populated, use it to filter selected calendars.
+    # Skip read-only calendars — writing to them returns 403 from the server.
     paths =
       if integration.calendar_list && integration.calendar_list != [] do
         integration.calendar_list
         |> Enum.filter(fn cal ->
-          cal["selected"] == true || cal[:selected] == true
+          (cal["selected"] == true || cal[:selected] == true) &&
+            not (Map.get(cal, "read_only", false) || Map.get(cal, :read_only, false))
         end)
         |> Enum.map(fn cal ->
           cal["path"] || cal[:path] || cal["id"] || cal[:id]

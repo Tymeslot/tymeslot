@@ -98,7 +98,10 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
   end
 
   defp selected_calendars(integration) do
-    Enum.filter(integration.calendar_list || [], &(&1["selected"] || &1[:selected]))
+    Enum.filter(integration.calendar_list || [], fn cal ->
+      (cal["selected"] || cal[:selected]) &&
+        not (Map.get(cal, "read_only", false) || Map.get(cal, :read_only, false))
+    end)
   end
 
   defp calendar_selected?(cal_id, selected_id, default_id) do

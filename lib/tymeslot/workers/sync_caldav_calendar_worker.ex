@@ -27,8 +27,8 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
 
   ## Auth errors (REQ-012)
 
-  A 401/403 response flags the integration's `needs_reauth` field and returns
-  `{:discard, …}` (no retry — the failure is permanent until the user
+  A 401 or 403 response flags the integration's `needs_reauth` field and
+  returns `{:discard, …}` (no retry — the failure is permanent until the user
   reconnects). If the DB write itself fails, the worker returns `{:error, …}`
   so Oban retries and takes another shot at recording the flag. The
   `is_active` flag is left unchanged so the integration remains visible in the
@@ -134,8 +134,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
           flag_reauth_required(integration)
 
         {:error, :forbidden} ->
-          log_sync_error(integration, "tier detection", :forbidden)
-          {:error, :forbidden}
+          flag_reauth_required(integration)
       end
     end
   end
@@ -297,8 +296,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         flag_reauth_required(integration)
 
       {:error, :forbidden} ->
-        log_sync_error(integration, "Tier 1 sync", :forbidden)
-        {:error, :forbidden}
+        flag_reauth_required(integration)
 
       {:error, reason} ->
         log_sync_error(integration, "Tier 1 sync", reason)
@@ -359,8 +357,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         flag_reauth_required(integration)
 
       {:error, :forbidden} ->
-        log_sync_error(integration, "Tier 2 CTag check", :forbidden)
-        {:error, :forbidden}
+        flag_reauth_required(integration)
 
       {:error, reason} ->
         log_sync_error(integration, "Tier 2 CTag check", reason)
@@ -441,8 +438,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
         flag_reauth_required(integration)
 
       {:error, :forbidden} ->
-        log_sync_error(integration, "full fetch", :forbidden)
-        {:error, :forbidden}
+        flag_reauth_required(integration)
 
       {:error, reason} ->
         log_sync_error(integration, "full fetch", reason)
@@ -521,6 +517,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       "radicale" -> :radicale
       "nextcloud" -> :nextcloud
       "zimbra" -> :zimbra
+      "mailbox_org" -> :mailbox_org
       _other -> :caldav
     end
   end

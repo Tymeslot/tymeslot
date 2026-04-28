@@ -31,7 +31,8 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
           "path" => fetch(cal, "path"),
           "name" => fetch(cal, "name") || "Calendar",
           "type" => fetch(cal, "type") || "calendar",
-          "selected" => true
+          "selected" => true,
+          "read_only" => fetch(cal, "read_only") || Map.get(cal, :read_only, false)
         }
       end)
 
@@ -66,13 +67,15 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
       path = fetch(cal, "path")
       id = fetch(cal, "id") || path
       selected = lookup_selection(existing_map, [path, id])
+      read_only = fetch(cal, "read_only") || Map.get(cal, :read_only, false)
 
       %{
         "id" => id,
         "path" => path,
         "name" => fetch(cal, "name") || "Calendar",
         "type" => fetch(cal, "type") || "calendar",
-        "selected" => selected
+        "selected" => selected,
+        "read_only" => read_only
       }
     end)
   end
@@ -162,7 +165,8 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
             "selected" => is_selected,
             "name" => base_map["name"] || base_map[:name],
             "type" => base_map["type"] || base_map[:type] || "calendar",
-            "path" => base_map["path"] || base_map[:path] || cal_id
+            "path" => base_map["path"] || base_map[:path] || cal_id,
+            "read_only" => base_map["read_only"] || base_map[:read_only] || false
           },
           Map.drop(base_map, ["selected", :selected])
         )

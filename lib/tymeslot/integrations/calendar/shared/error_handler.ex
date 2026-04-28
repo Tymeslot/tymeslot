@@ -61,6 +61,14 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
     "Authentication failed. Please check your credentials."
   end
 
+  def sanitize_error_message(:forbidden, :mailbox_org) do
+    "Access denied. If two-factor authentication is enabled on your mailbox.org account, generate an application-specific password under Settings → Security and use that instead."
+  end
+
+  def sanitize_error_message(:forbidden, _provider) do
+    "Access denied. You do not have permission to access this calendar resource."
+  end
+
   def sanitize_error_message(:not_found, _provider) do
     "Resource not found. Please verify your configuration."
   end

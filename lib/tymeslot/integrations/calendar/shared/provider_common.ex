@@ -109,6 +109,9 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ProviderCommon do
       {:error, :unauthorized} ->
         {:error, unauthorized_msg}
 
+      {:error, :forbidden} ->
+        {:error, error_formatter.(:forbidden)}
+
       {:error, :not_found} ->
         {:error, not_found_msg}
 

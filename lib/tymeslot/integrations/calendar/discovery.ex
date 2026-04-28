@@ -30,63 +30,68 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
         OutlookProvider.discover_calendars(integration)
 
       "caldav" ->
-        config = %{
-          base_url: integration.base_url,
-          username: integration.username,
-          password: integration.password,
-          calendar_paths: calendar_paths_or_empty(integration)
-        }
-
-        client = Tymeslot.Integrations.Calendar.CalDAV.Provider.new(config)
-        Tymeslot.Integrations.Calendar.CalDAV.Provider.discover_calendars(client)
+        discover_caldav_without_decrypt(
+          integration,
+          Tymeslot.Integrations.Calendar.CalDAV.Provider
+        )
 
       "nextcloud" ->
-        decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
+        discover_nextcloud_calendars(integration)
 
-        config = %{
-          base_url: integration.base_url,
-          username: decrypted.username,
-          password: decrypted.password,
-          calendar_paths: calendar_paths_or_empty(integration)
-        }
-
-        case DiscoveryService.discover_calendars(:nextcloud, config, force_refresh: true) do
-          {:ok, calendars} ->
-            standardized = DiscoveryService.standardize_calendar_data(calendars, :nextcloud)
-            {:ok, standardized}
-
-          error ->
-            error
-        end
-
-      "radicale" ->
-        decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
-
-        config = %{
-          base_url: integration.base_url,
-          username: decrypted.username,
-          password: decrypted.password,
-          calendar_paths: calendar_paths_or_empty(integration)
-        }
-
-        client = Tymeslot.Integrations.Calendar.Radicale.Provider.new(config)
-        Tymeslot.Integrations.Calendar.Radicale.Provider.discover_calendars(client)
-
-      "zimbra" ->
-        decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
-
-        config = %{
-          base_url: integration.base_url,
-          username: decrypted.username,
-          password: decrypted.password,
-          calendar_paths: calendar_paths_or_empty(integration)
-        }
-
-        client = Tymeslot.Integrations.Calendar.Zimbra.Provider.new(config)
-        Tymeslot.Integrations.Calendar.Zimbra.Provider.discover_calendars(client)
+      caldav when caldav in ["radicale", "zimbra", "mailbox_org"] ->
+        discover_caldav_with_decrypt(integration, caldav)
 
       _unknown ->
         {:error, "Unknown provider: #{provider}"}
+    end
+  end
+
+  defp discover_caldav_without_decrypt(integration, provider_module) do
+    config = %{
+      base_url: integration.base_url,
+      username: integration.username,
+      password: integration.password,
+      calendar_paths: calendar_paths_or_empty(integration)
+    }
+
+    client = provider_module.new(config)
+    provider_module.discover_calendars(client)
+  end
+
+  defp discover_caldav_with_decrypt(integration, provider) do
+    decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
+
+    config = %{
+      base_url: integration.base_url,
+      username: decrypted.username,
+      password: decrypted.password,
+      calendar_paths: calendar_paths_or_empty(integration)
+    }
+
+    with {:ok, provider_atom} <- resolve_provider_atom(provider),
+         {:ok, provider_module} <- provider_module_for(provider_atom) do
+      client = provider_module.new(config)
+      provider_module.discover_calendars(client)
+    end
+  end
+
+  defp discover_nextcloud_calendars(integration) do
+    decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
+
+    config = %{
+      base_url: integration.base_url,
+      username: decrypted.username,
+      password: decrypted.password,
+      calendar_paths: calendar_paths_or_empty(integration)
+    }
+
+    case DiscoveryService.discover_calendars(:nextcloud, config, force_refresh: true) do
+      {:ok, calendars} ->
+        standardized = DiscoveryService.standardize_calendar_data(calendars, :nextcloud)
+        {:ok, standardized}
+
+      error ->
+        error
     end
   end
 

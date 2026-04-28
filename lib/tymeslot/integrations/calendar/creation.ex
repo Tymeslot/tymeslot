@@ -157,13 +157,15 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
     path = derive_path(calendar, id)
     name = derive_name(calendar, path)
     type = derive_type(calendar)
+    read_only = Map.get(calendar, :read_only, Map.get(calendar, "read_only", false))
 
     %{
       "id" => id || path,
       "path" => path,
       "name" => name,
       "type" => type,
-      "selected" => true
+      "selected" => true,
+      "read_only" => read_only
     }
   end
 
@@ -206,7 +208,8 @@ defmodule Tymeslot.Integrations.Calendar.Creation do
         "path" => path,
         "name" => name,
         "type" => "calendar",
-        "selected" => true
+        "selected" => true,
+        "read_only" => false
       }
     end)
   end
