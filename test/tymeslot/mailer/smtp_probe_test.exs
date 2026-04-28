@@ -201,7 +201,7 @@ defmodule Tymeslot.Mailer.SmtpProbeTest do
   describe "error message formatting" do
     test "connection refused on port 587 includes STARTTLS suggestion" do
       {:ok, tmp} = :gen_tcp.listen(0, [:binary, reuseaddr: true, ip: {127, 0, 0, 1}])
-      {:ok, {_addr, unused_port}} = :inet.sockname(tmp)
+      {:ok, {_addr, _port}} = :inet.sockname(tmp)
       :gen_tcp.close(tmp)
 
       config = [relay: "127.0.0.1", port: 587, username: "user", password: "pass"]
