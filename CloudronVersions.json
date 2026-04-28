@@ -234,6 +234,53 @@
       "publishState": "published",
       "ts": "Fri, 24 Apr 2026 14:10:20 GMT"
     },
+    "0.100.13": {
+      "creationDate": "Tue, 28 Apr 2026 14:00:59 GMT",
+      "manifest": {
+        "addons": {
+          "localstorage": {},
+          "oidc": {
+            "loginRedirectUri": "/auth/oauth/callback"
+          },
+          "postgresql": {},
+          "sendmail": {}
+        },
+        "author": "Luka Karsten Breitig",
+        "changelog": "* core: Fix mailbox.org calendar discovery failing with unsupported provider error\n* core: Prevent crash when clicking mailbox.org calendar provider\n* core: Auto-discover calendars during CalDAV onboarding\n* core: Keep signup form responsive when the email field is missing\n* core: Downgrade webhook redirects from POST to GET on 301/302/303\n* core: Make Outlook delta sync resilient to expired and partial responses\n* core: Align booking integration selection across meeting schemas\n* core: Stop duplicating attendee message in calendar events\n* core: Correct mailbox.org provider integration after pre-merge review\n* core: Reject blank CalDAV credentials before connecting\n* core: Keep Radicale auth failures flagged for reauth after 403 mapping change\n* core: Finish wiring mailbox.org through onboarding and runtime client paths\n* core: Enable mailbox.org in the runtime calendar-provider toggle list\n* core: Include mailbox.org in remaining CalDAV provider lists\n* core: Hide task-only CalDAV calendars from event calendar pickers\n* core: Prevent CalDAV permission errors from disconnecting calendars\n* core: Pre-fill and lock server URL in mailbox.org calendar setup\n* saas: Add per-provider CalDAV setup articles and update general guide\n* core: Add setup guide links to CalDAV provider configuration forms\n* core: Notify users immediately when integration credentials become invalid\n* saas: List mailbox.org as a supported CalDAV provider\n* core: Add mailbox.org as a CalDAV calendar provider\n* core: Load environment variables from a .env file at boot",
+        "contactEmail": "hello@tymeslot.app",
+        "description": "A meeting scheduler application with CalDAV integration",
+        "dockerImage": "luka1thb/tymeslot-cloudron:0.100.13",
+        "documentationUrl": "https://tymeslot.app/docs",
+        "healthCheckPath": "/healthcheck",
+        "httpPort": 4000,
+        "icon": "priv/static/images/brand/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Tymeslot/tymeslot/main/priv/static/images/brand/icon.png",
+        "id": "app.tymeslot",
+        "manifestVersion": 2,
+        "mediaLinks": [
+          "https://tymeslot.app/images/cloudron-screenshots/dashboard.png",
+          "https://tymeslot.app/images/cloudron-screenshots/availability.png",
+          "https://tymeslot.app/images/cloudron-screenshots/embedding.png"
+        ],
+        "memoryLimit": 1073741824,
+        "minBoxVersion": "9.1.0",
+        "packagerName": "Luka Karsten Breitig",
+        "packagerUrl": "https://lukabreitig.com",
+        "postInstallMessage": "Thank you for installing Tymeslot!",
+        "tagline": "Smart meeting scheduling with CalDAV",
+        "tags": [
+          "calendar",
+          "scheduling",
+          "meetings",
+          "caldav"
+        ],
+        "title": "Tymeslot",
+        "version": "0.100.13",
+        "website": "https://tymeslot.app"
+      },
+      "publishState": "published",
+      "ts": "Tue, 28 Apr 2026 14:00:59 GMT"
+    },
     "0.100.2": {
       "creationDate": "Thu, 16 Apr 2026 09:35:32 GMT",
       "manifest": {

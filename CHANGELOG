@@ -1,4 +1,28 @@
 
+[0.100.13]
+* core: Fix mailbox.org calendar discovery failing with unsupported provider error
+* core: Prevent crash when clicking mailbox.org calendar provider
+* core: Auto-discover calendars during CalDAV onboarding
+* core: Keep signup form responsive when the email field is missing
+* core: Downgrade webhook redirects from POST to GET on 301/302/303
+* core: Make Outlook delta sync resilient to expired and partial responses
+* core: Align booking integration selection across meeting schemas
+* core: Stop duplicating attendee message in calendar events
+* core: Correct mailbox.org provider integration after pre-merge review
+* core: Reject blank CalDAV credentials before connecting
+* core: Keep Radicale auth failures flagged for reauth after 403 mapping change
+* core: Finish wiring mailbox.org through onboarding and runtime client paths
+* core: Enable mailbox.org in the runtime calendar-provider toggle list
+* core: Include mailbox.org in remaining CalDAV provider lists
+* core: Hide task-only CalDAV calendars from event calendar pickers
+* core: Prevent CalDAV permission errors from disconnecting calendars
+* core: Pre-fill and lock server URL in mailbox.org calendar setup
+* saas: Add per-provider CalDAV setup articles and update general guide
+* core: Add setup guide links to CalDAV provider configuration forms
+* core: Notify users immediately when integration credentials become invalid
+* saas: List mailbox.org as a supported CalDAV provider
+* core: Add mailbox.org as a CalDAV calendar provider
+* core: Load environment variables from a .env file at boot
 [0.100.12]
 * core: Stop deleted CalDAV events from reappearing on refresh
 * core: Keep the dashboard in sync after editing a calendar event
