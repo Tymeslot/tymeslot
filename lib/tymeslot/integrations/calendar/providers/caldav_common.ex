@@ -296,7 +296,8 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     username = client[:username] || Map.get(client, :username)
     password = client[:password] || Map.get(client, :password)
 
-    if is_binary(username) and username != "" and is_binary(password) and password != "" do
+    if is_binary(username) and String.trim(username) != "" and
+         is_binary(password) and String.trim(password) != "" do
       :ok
     else
       {:error, :invalid_credentials}
