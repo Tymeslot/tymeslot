@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
 
   require Logger
 
+  alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Outlook.CalendarAPI, as: OutlookCalendarAPI
@@ -17,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
+  alias Tymeslot.Integrations.Common.OAuth.ErrorParser
   alias Tymeslot.Integrations.Common.OAuth.IdToken
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
@@ -127,18 +129,33 @@ defmodule Tymeslot.Integrations.Calendar.Outlook.OAuthHelper do
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec refresh_access_token(String.t(), String.t() | nil) :: {:ok, map()} | {:error, String.t()}
   def refresh_access_token(refresh_token, current_scope \\ nil) do
-    TokenExchange.refresh_access_token(
-      @token_url,
-      %{
-        refresh_token: refresh_token,
-        client_id: outlook_client_id(),
-        client_secret: outlook_client_secret(),
-        grant_type: "refresh_token",
-        scope: current_scope || @calendar_scope
-      },
-      fallback_refresh_token: refresh_token,
-      fallback_scope: current_scope || @calendar_scope
-    )
+    body = %{
+      refresh_token: refresh_token,
+      client_id: outlook_client_id(),
+      client_secret: outlook_client_secret(),
+      grant_type: "refresh_token",
+      scope: current_scope || @calendar_scope
+    }
+
+    case TokenExchange.refresh_access_token(@token_url, body,
+           fallback_refresh_token: refresh_token,
+           fallback_scope: current_scope || @calendar_scope
+         ) do
+      {:ok, tokens} ->
+        {:ok, tokens}
+
+      {:error, {:http_error, status, resp_body}} ->
+        Logger.error("Outlook OAuth token refresh failed",
+          status: status,
+          response_body: Redactor.redact_and_truncate(resp_body)
+        )
+
+        {:error, ErrorParser.build_message("Token refresh failed", status, resp_body)}
+
+      {:error, {:network_error, reason}} ->
+        Logger.error("Network error during Outlook token refresh", reason: inspect(reason))
+        {:error, "Network error during token refresh: #{inspect(reason)}"}
+    end
   end
 
   # Private functions

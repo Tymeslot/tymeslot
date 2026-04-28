@@ -11,8 +11,11 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
   alias Ecto.Changeset
   alias Oban.Job
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
+  alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.HealthCheck
+  alias Tymeslot.Integrations.HealthCheck.ResponseHandler
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.EmailWorker
 
   setup :verify_on_exit!
 
@@ -255,6 +258,107 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       assert Enum.any?(report.video_integrations, &(&1.id == v1.id))
 
       assert is_map(report.summary)
+    end
+  end
+
+  describe "permanent auth failure fast path" do
+    @moduletag :integration
+
+    test "calendar invalid_grant flags needs_reauth and enqueues email immediately" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
+
+      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
+        {:error, :unauthorized, "Token has been expired or revoked"}
+      end)
+
+      run_health_checks()
+      sync_with_server()
+
+      {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
+      assert updated.needs_reauth == true
+      assert updated.is_active == true
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_unhealthy_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
+    end
+
+    test "transient errors do not trigger fast path" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
+
+      expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _int, _start, _end ->
+        {:error, :timeout}
+      end)
+
+      run_health_checks()
+      sync_with_server()
+
+      {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
+      assert updated.needs_reauth == false
+      refute_enqueued(worker: EmailWorker)
+    end
+
+    # The health-check pipeline calls the calendar API mock directly, bypassing
+    # the token-refresh HTTP path. We exercise the full wiring from raw HTTP body
+    # → GoogleOAuthHelper → ResponseHandler in two explicit steps rather than
+    # routing through run_health_checks/0, which cannot reach TokenExchange.
+    test "invalid_grant HTTP 400 body wires through refresh helper to needs_reauth flag and email" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          is_active: true,
+          needs_reauth: false
+        )
+
+      Application.put_env(:tymeslot, :google_oauth,
+        client_id: "test-client-id",
+        client_secret: "test-client-secret",
+        state_secret: "test-state-secret"
+      )
+
+      on_exit(fn -> Application.delete_env(:tymeslot, :google_oauth) end)
+
+      # Step 1: HTTP layer returns 400 + invalid_grant body.
+      # Verify GoogleOAuthHelper surfaces this as a string reason that carries
+      # the OAuth error code — which is what ResponseHandler pattern-matches on.
+      expect(Tymeslot.HTTPClientMock, :request, 1, fn :post,
+                                                      "https://oauth2.googleapis.com/token",
+                                                      _body,
+                                                      _headers,
+                                                      _opts ->
+        {:ok, %{status: 400, body: ~s({"error":"invalid_grant"})}}
+      end)
+
+      assert {:error, reason} = GoogleOAuthHelper.refresh_access_token("stale-refresh-token")
+      assert reason == "Token refresh failed: invalid_grant"
+
+      # Step 2: Feed the propagated reason into the response handler and confirm
+      # the integration is flagged for reauth and the notification is enqueued.
+      ResponseHandler.handle_permanent_auth_failure(:calendar, integration, {:error, reason})
+
+      {:ok, updated} = CalendarIntegrationQueries.get(integration.id)
+      assert updated.needs_reauth == true
+
+      assert_enqueued(
+        worker: EmailWorker,
+        args: %{
+          "action" => "send_integration_unhealthy_notification",
+          "user_id" => user.id,
+          "integration_id" => integration.id,
+          "integration_type" => "calendar"
+        }
+      )
     end
   end
 

@@ -11,6 +11,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
 
   alias Tymeslot.Infrastructure.Logging.Redactor
   alias Tymeslot.Infrastructure.Retry
+  alias Tymeslot.Integrations.Common.OAuth.ErrorParser
   alias Tymeslot.Integrations.Common.OAuth.IdToken
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Common.OAuth.TokenExchange
@@ -172,7 +173,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
           response_body: Redactor.redact_and_truncate(body)
         )
 
-        {:error, "Token refresh failed: HTTP #{status} (see logs for details)"}
+        {:error, ErrorParser.build_message("Token refresh failed", status, body)}
 
       {:error, {:network_error, reason}} ->
         Logger.error("Network error during Teams token refresh", reason: inspect(reason))
