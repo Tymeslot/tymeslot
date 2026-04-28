@@ -251,6 +251,13 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ConfigBase do
         |> assign_new(:saving, fn -> false end)
         |> assign_new(:metadata, fn -> %{} end)
       end
+
+      defp docs_guide_url(slug) do
+        base =
+          Application.get_env(:tymeslot, :docs_article_base_url, "https://tymeslot.app/docs")
+
+        "#{base}/#{slug}"
+      end
     end
   end
 end

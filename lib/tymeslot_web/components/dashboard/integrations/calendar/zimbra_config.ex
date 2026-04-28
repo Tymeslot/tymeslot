@@ -28,12 +28,30 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.ZimbraConfig do
   def render(assigns) do
     ~H"""
     <div id={"zimbra-config-#{@id}"} class="space-y-6">
-      <div class="flex items-center gap-4 mb-2">
-        <ProviderIcon.provider_icon provider="zimbra" type="calendar" size="large" />
-        <div>
-          <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">Zimbra</h3>
-          <p class="text-sm text-tymeslot-500 font-medium">Sync calendars from your Zimbra server</p>
+      <div class="flex items-start justify-between gap-4 mb-2">
+        <div class="flex items-center gap-4">
+          <ProviderIcon.provider_icon provider="zimbra" type="calendar" size="large" />
+          <div>
+            <h3 class="text-xl font-black text-tymeslot-900 tracking-tight">Zimbra</h3>
+            <p class="text-sm text-tymeslot-500 font-medium">Sync calendars from your Zimbra server</p>
+          </div>
         </div>
+        <a
+          href={docs_guide_url("caldav-zimbra")}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold text-tymeslot-500 hover:text-tymeslot-700 transition-colors mt-1"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          Setup guide
+        </a>
       </div>
 
       <SharedForm.config_form
