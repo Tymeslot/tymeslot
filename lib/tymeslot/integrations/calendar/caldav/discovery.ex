@@ -63,10 +63,22 @@ defmodule Tymeslot.Integrations.Calendar.CalDAV.Discovery do
         end
 
       case result do
-        {:ok, %Req.Response{}} -> {:ok, "CalDAV connection successful"}
-        {:error, :unauthorized} -> {:error, :unauthorized}
-        {:error, :not_found} -> {:error, :not_found}
-        {:error, reason} -> {:error, reason}
+        {:ok, %Req.Response{}} ->
+          {:ok, "CalDAV connection successful"}
+
+        {:error, :unauthorized} ->
+          {:error, :unauthorized}
+
+        {:error, :not_found} ->
+          {:error, :not_found}
+
+        # Radicale returns 403 for auth failures; re-tag so callers treat it as
+        # a credential error rather than a permissions error.
+        {:error, :forbidden} when client.provider == :radicale ->
+          {:error, :unauthorized}
+
+        {:error, reason} ->
+          {:error, reason}
       end
     end
   end
