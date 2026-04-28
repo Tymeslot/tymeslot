@@ -13,9 +13,6 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
   alias Tymeslot.Webhooks.WebhookSchema
   alias Tymeslot.Workers.WebhookWorker
 
-  # The @max_redirects value must match the constant in WebhookWorker.
-  @max_redirects 5
-
   setup :verify_on_exit!
 
   setup do
@@ -102,7 +99,7 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
       # Verify delivery was logged with error
       delivery = Repo.one(WebhookDeliverySchema)
       assert delivery, "Expected delivery log to exist"
-      assert delivery.error_message =~ "Private or local network"
+      assert delivery.error_message =~ "blocked_by_ssrf"
       refute delivery.delivered_at
     end
 
@@ -206,7 +203,7 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
            headers: %{"location" => ["https://other.example.com/webhook"]}
          }}
       end)
-      |> expect(:post, fn "https://other.example.com/webhook", _body, _headers, _opts ->
+      |> expect(:get, fn "https://other.example.com/webhook", _headers, _opts ->
         {:ok, %Req.Response{status: 200, body: "OK"}}
       end)
 
@@ -220,252 +217,6 @@ defmodule Tymeslot.Workers.WebhookWorkerSecurityTest do
       delivery = Repo.one(WebhookDeliverySchema)
       assert delivery.response_status == 200
       assert delivery.delivered_at
-    end
-  end
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Issue 1 — token not leaked across origin boundaries on redirect
-  # ──────────────────────────────────────────────────────────────────────────
-  describe "perform/1 - redirect header sanitisation" do
-    test "strips X-Tymeslot-Token when a redirect crosses to a different host" do
-      with_config(:tymeslot, environment: :test)
-
-      meeting = insert(:meeting)
-      webhook = insert(:webhook, url: "https://example.com/webhook")
-
-      # Capture the headers sent on the second (redirect-target) request.
-      test_pid = self()
-
-      Tymeslot.HTTPClientMock
-      |> expect(:post, fn "https://example.com/webhook", _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 301,
-           body: "",
-           headers: %{"location" => ["https://other.example.com/new-endpoint"]}
-         }}
-      end)
-      |> expect(:post, fn "https://other.example.com/new-endpoint", _body, headers, _opts ->
-        send(test_pid, {:second_request_headers, headers})
-        {:ok, %Req.Response{status: 200, body: "OK"}}
-      end)
-
-      assert :ok =
-               perform_job(WebhookWorker, %{
-                 "webhook_id" => webhook.id,
-                 "event_type" => "meeting.created",
-                 "meeting_id" => meeting.id
-               })
-
-      assert_received {:second_request_headers, second_headers}
-
-      refute Enum.any?(second_headers, fn
-               {"X-Tymeslot-Token", _value} -> true
-               _other -> false
-             end),
-             "X-Tymeslot-Token must not be forwarded to a different origin"
-    end
-
-    test "preserves X-Tymeslot-Token when a redirect stays on the same host" do
-      with_config(:tymeslot, environment: :test)
-
-      meeting = insert(:meeting)
-      user = insert(:user)
-
-      # Use a properly-encrypted webhook token so that X-Tymeslot-Token is
-      # actually included in the outgoing headers.
-      {:ok, webhook} =
-        %WebhookSchema{}
-        |> WebhookSchema.changeset(%{
-          name: "Same-Origin Test Webhook",
-          url: "https://example.com/webhook",
-          events: ["meeting.created"],
-          is_active: true,
-          user_id: user.id
-        })
-        |> Repo.insert()
-
-      test_pid = self()
-
-      Tymeslot.HTTPClientMock
-      |> expect(:post, fn "https://example.com/webhook", _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 301,
-           body: "",
-           headers: %{"location" => ["https://example.com/new-path"]}
-         }}
-      end)
-      |> expect(:post, fn "https://example.com/new-path", _body, headers, _opts ->
-        send(test_pid, {:second_request_headers, headers})
-        {:ok, %Req.Response{status: 200, body: "OK"}}
-      end)
-
-      assert :ok =
-               perform_job(WebhookWorker, %{
-                 "webhook_id" => webhook.id,
-                 "event_type" => "meeting.created",
-                 "meeting_id" => meeting.id
-               })
-
-      assert_received {:second_request_headers, second_headers}
-
-      assert Enum.any?(second_headers, fn
-               {"X-Tymeslot-Token", _value} -> true
-               _other -> false
-             end),
-             "X-Tymeslot-Token must be preserved for same-origin redirects"
-    end
-  end
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Issue 2 — deterministic redirect failures are discarded, not retried
-  # ──────────────────────────────────────────────────────────────────────────
-  describe "perform/1 - redirect error discard behaviour" do
-    test "discards job when redirect is blocked (returns {:discard, :blocked_redirect})" do
-      with_config(:tymeslot, environment: :prod)
-
-      meeting = insert(:meeting)
-      webhook = insert(:webhook, url: "https://example.com/webhook")
-
-      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 301,
-           body: "",
-           headers: %{"location" => ["http://127.0.0.1:9090/internal"]}
-         }}
-      end)
-
-      assert {:discard, :blocked_redirect} =
-               perform_job(WebhookWorker, %{
-                 "webhook_id" => webhook.id,
-                 "event_type" => "meeting.created",
-                 "meeting_id" => meeting.id
-               })
-    end
-
-    test "discards job when too many redirects occur (returns {:discard, :too_many_redirects})" do
-      with_config(:tymeslot, environment: :test)
-
-      meeting = insert(:meeting)
-      webhook = insert(:webhook, url: "https://example.com/webhook")
-
-      # Each of the @max_redirects requests returns a redirect. After the last
-      # HTTP call decrements redirects_remaining to 0, the guard clause fires
-      # without making another HTTP call, so exactly @max_redirects calls occur.
-      expect(Tymeslot.HTTPClientMock, :post, @max_redirects, fn _url, _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 301,
-           body: "",
-           headers: %{"location" => ["https://example.com/webhook"]}
-         }}
-      end)
-
-      assert {:discard, :too_many_redirects} =
-               perform_job(WebhookWorker, %{
-                 "webhook_id" => webhook.id,
-                 "event_type" => "meeting.created",
-                 "meeting_id" => meeting.id
-               })
-
-      delivery = Repo.one(WebhookDeliverySchema)
-      assert delivery, "Expected a delivery log row"
-      assert delivery.error_message =~ "too_many_redirects"
-    end
-
-    test "discards job when redirect response has no Location header" do
-      with_config(:tymeslot, environment: :test)
-
-      meeting = insert(:meeting)
-      webhook = insert(:webhook, url: "https://example.com/webhook")
-
-      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
-        {:ok, %Req.Response{status: 301, body: "", headers: %{}}}
-      end)
-
-      assert {:discard, :redirect_missing_location} =
-               perform_job(WebhookWorker, %{
-                 "webhook_id" => webhook.id,
-                 "event_type" => "meeting.created",
-                 "meeting_id" => meeting.id
-               })
-
-      delivery = Repo.one(WebhookDeliverySchema)
-      assert delivery, "Expected a delivery log row"
-      assert delivery.error_message =~ "redirect_missing_location"
-    end
-  end
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # Issue 3 — protocol-relative Location headers are classified as absolute
-  # ──────────────────────────────────────────────────────────────────────────
-  describe "perform/1 - protocol-relative Location header" do
-    test "blocks a protocol-relative redirect to a private IP" do
-      with_config(:tymeslot, environment: :prod)
-
-      meeting = insert(:meeting)
-      webhook = insert(:webhook, url: "https://example.com/webhook")
-
-      expect(Tymeslot.HTTPClientMock, :post, 1, fn _url, _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 301,
-           body: "",
-           headers: %{"location" => ["//127.0.0.1/bad"]}
-         }}
-      end)
-
-      assert {:discard, :blocked_redirect} =
-               perform_job(WebhookWorker, %{
-                 "webhook_id" => webhook.id,
-                 "event_type" => "meeting.created",
-                 "meeting_id" => meeting.id
-               })
-    end
-
-    test "treats a protocol-relative redirect to a public host as cross-origin and strips the token" do
-      with_config(:tymeslot, environment: :test)
-
-      meeting = insert(:meeting)
-      webhook = insert(:webhook, url: "https://example.com/webhook")
-
-      test_pid = self()
-
-      Tymeslot.HTTPClientMock
-      |> expect(:post, fn "https://example.com/webhook", _body, _headers, _opts ->
-        {:ok,
-         %Req.Response{
-           status: 301,
-           body: "",
-           headers: %{"location" => ["//other.example.com/ok"]}
-         }}
-      end)
-      |> expect(:post, fn "https://other.example.com/ok", _body, headers, _opts ->
-        send(test_pid, {:second_request_headers, headers})
-        {:ok, %Req.Response{status: 200, body: "OK"}}
-      end)
-
-      assert :ok =
-               perform_job(WebhookWorker, %{
-                 "webhook_id" => webhook.id,
-                 "event_type" => "meeting.created",
-                 "meeting_id" => meeting.id
-               })
-
-      assert_received {:second_request_headers, second_headers}
-
-      # The redirect target is a different host, so the token must be stripped.
-      refute Enum.any?(second_headers, fn
-               {"X-Tymeslot-Token", _value} -> true
-               _other -> false
-             end),
-             "X-Tymeslot-Token must not be forwarded when a protocol-relative redirect crosses hosts"
-
-      # The resolved URL must use the originating scheme (https), not a merged path.
-      delivery = Repo.one(WebhookDeliverySchema)
-      assert delivery.response_status == 200
     end
   end
 

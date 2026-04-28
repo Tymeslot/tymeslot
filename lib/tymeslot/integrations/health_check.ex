@@ -206,8 +206,13 @@ defmodule Tymeslot.Integrations.HealthCheck do
         # Step 6: Persist new health state to DB
         Monitor.put_state(type, id, new_health_state)
 
-        # Step 7: Handle transition (logging, user notification)
+        # Step 7: Handle transition (logging, user notification after 48h)
         ResponseHandler.handle_transition(type, integration, transition, new_health_state)
+
+        # Step 8: Fast-path immediate reauth + notification on permanent auth failures
+        # (e.g. Google `invalid_grant`). Bypasses the 48-hour notification threshold
+        # because the integration cannot recover without user action.
+        ResponseHandler.handle_permanent_auth_failure(type, integration, check_result)
 
         case check_result do
           {:error, _reason} = error -> error

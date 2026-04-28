@@ -13,7 +13,8 @@ defmodule Tymeslot.Integrations.Calendar.Shared.PathUtils do
   - `url` - The URL to normalize
   - `opts` - Options for normalization
     - `:ensure_trailing_slash` - Ensures the path ends with `/` (default: true)
-    - `:provider` - Provider type for specific normalization (:caldav, :radicale, :nextcloud, :zimbra)
+    - `:provider` - Provider type for specific normalization (any atom returned by
+      `Tymeslot.Integrations.Calendar.ProviderConfig.caldav_based_providers/0`)
 
   ## Returns
   - Normalized URL string

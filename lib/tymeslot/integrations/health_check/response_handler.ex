@@ -15,6 +15,11 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
   - Recovery is silent — no email is sent.
   - The in-app badge shows immediately on `:unhealthy` status, regardless
     of the 48-hour email threshold.
+  - Permanent auth failures (e.g. Google `invalid_grant`) bypass the 48-hour
+    threshold via `handle_permanent_auth_failure/4`: the integration is flagged
+    `needs_reauth: true` and the notification is enqueued on the same check.
+    Oban's 30-day uniqueness window prevents duplicates while the user
+    has not reconnected.
 
   ## Atomicity Notes
 
@@ -29,13 +34,32 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Emails.EmailScheduler
+  alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
+  alias Tymeslot.Integrations.Video
 
   @type integration_type :: :calendar | :video
 
   @notification_threshold_hours 48
   @notification_cooldown_days 30
+
+  # OAuth error markers that mean the user must reconnect — retrying the call
+  # will never recover.
+  #
+  # String markers are matched against whole word tokens extracted from the
+  # lowercased error reason (split on non-alphanumeric/underscore boundaries).
+  # This prevents `"invalid_grant"` from matching extended forms such as
+  # `"invalid_grant_period_started"`, and prevents `"unauthorized"` false
+  # positives from strings like `"unauthorized origin"` or `"unauthorized
+  # network host"` produced by CalDAV servers and Google JS-API errors.
+  #
+  # Note: `:unauthorized` atoms are already covered by
+  # `@permanent_auth_error_atoms`; the string list intentionally omits the
+  # `"unauthorized"` word to avoid the false-positive substring matches
+  # described above.
+  @permanent_auth_error_strings ~w(invalid_grant invalid_client access_denied)
+  @permanent_auth_error_atoms [:unauthorized, :invalid_credentials, :token_expired]
 
   @doc """
   Handles a health status transition by taking appropriate action.
@@ -122,7 +146,110 @@ defmodule Tymeslot.Integrations.HealthCheck.ResponseHandler do
     :ok
   end
 
+  @doc """
+  Fast-path handler for permanent OAuth auth failures (e.g. Google
+  `invalid_grant`, Outlook `invalid_client`, atomic `:unauthorized`).
+
+  When the assessor's `check_result` carries a permanent auth marker, the
+  integration is flagged `needs_reauth: true` so the dashboard reconnect
+  banner shows immediately, and the unhealthy-notification email is enqueued
+  on the same health check rather than waiting 48 hours.
+
+  Non-auth failures and successes are passed through untouched. Safe to call
+  on every check — Oban's 30-day uniqueness window on the email job prevents
+  duplicate sends until the user reconnects.
+  """
+  @spec handle_permanent_auth_failure(
+          integration_type(),
+          map(),
+          {:ok, any()} | {:error, any()}
+        ) :: :ok
+  def handle_permanent_auth_failure(type, integration, check_result)
+
+  def handle_permanent_auth_failure(type, integration, {:error, reason}) do
+    if permanent_auth_error?(reason) do
+      Logger.warning("Permanent auth failure detected — flagging for reauth",
+        type: type,
+        integration_id: integration.id,
+        provider: integration.provider,
+        reason: inspect(reason)
+      )
+
+      case flag_for_reauth(type, integration) do
+        :ok ->
+          maybe_notify_on_reauth(type, integration)
+
+        {:error, _reason} ->
+          Logger.error(
+            "Failed to set needs_reauth flag — skipping notification until next successful flag write",
+            type: type,
+            integration_id: integration.id,
+            provider: integration.provider
+          )
+      end
+    end
+
+    :ok
+  end
+
+  def handle_permanent_auth_failure(_type, _integration, _check_result), do: :ok
+
   # Private Functions
+
+  defp permanent_auth_error?(reason) when is_atom(reason),
+    do: reason in @permanent_auth_error_atoms
+
+  defp permanent_auth_error?(reason) when is_binary(reason) do
+    if String.valid?(reason) do
+      tokens = reason |> String.downcase() |> String.split(~r/[^a-z0-9_]+/, trim: true)
+      Enum.any?(@permanent_auth_error_strings, &(&1 in tokens))
+    else
+      false
+    end
+  end
+
+  defp permanent_auth_error?({:exception, message}) when is_binary(message),
+    do: permanent_auth_error?(message)
+
+  defp permanent_auth_error?(_other), do: false
+
+  # Re-uses the worker entry points on each domain. Their return values are
+  # Oban-shaped (`{:discard, _} | {:error, _}`). We normalise to `:ok | {:error, _}`
+  # so callers can gate subsequent actions on a successful DB write:
+  # `{:discard, _}` means the flag was written (the integration is irrecoverably
+  # broken and no retry is needed), which is a success from this module's perspective.
+  defp flag_for_reauth(:video, integration) do
+    case Video.handle_reauth_required(integration) do
+      {:discard, _msg} -> :ok
+      {:error, _reason} = err -> err
+    end
+  end
+
+  defp flag_for_reauth(:calendar, integration) do
+    case CalendarManagement.handle_reauth_required(integration) do
+      {:discard, _msg} -> :ok
+      {:error, _reason} = err -> err
+    end
+  end
+
+  # Sends a notification for a permanent auth failure if the cooldown window
+  # allows it. Fetches the current health state row for `notification_sent_at`
+  # so we don't duplicate an email that `maybe_notify_user` already enqueued
+  # for the same 30-day window (e.g. the 48-hour threshold fired on the same
+  # check before this fast-path ran).
+  defp maybe_notify_on_reauth(type, integration) do
+    now = DateTime.utc_now()
+
+    notification_sent_at =
+      case IntegrationHealthStateQueries.get(type, integration.id) do
+        {:ok, record} -> record.notification_sent_at
+        {:error, :not_found} -> nil
+      end
+
+    if outside_cooldown?(notification_sent_at, now) do
+      send_user_notification(type, integration)
+    end
+  end
 
   defp clear_notification_state(type, integration_id) do
     IntegrationHealthStateQueries.update_fields(type, integration_id,

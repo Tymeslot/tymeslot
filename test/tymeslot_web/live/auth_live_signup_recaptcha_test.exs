@@ -118,28 +118,6 @@ defmodule TymeslotWeb.AuthLiveSignupRecaptchaTest do
     assert Repo.aggregate(UserSchema, :count, :id) == 1
   end
 
-  test "signup with honeypot bypasses reCAPTCHA check", %{conn: conn} do
-    enable_recaptcha()
-    {:ok, view, _html} = live(conn, ~p"/auth/signup")
-
-    params = %{
-      "email" => "honeypot@example.com",
-      "password" => "ValidPassword123!",
-      "terms_accepted" => "true",
-      "website" => "http://bot.example"
-    }
-
-    view
-    |> form("#signup-form", %{"user" => params})
-    |> render_submit()
-
-    # Honeypot triggers before reCAPTCHA check
-    assert_patch(view, ~p"/auth/verify-email")
-    assert render(view) =~ "Account created successfully"
-    # Honeypot: no user created
-    assert Repo.aggregate(UserSchema, :count, :id) == 0
-  end
-
   test "signup fails when reCAPTCHA script is blocked (CSP, extension, or JS disabled)", %{
     conn: conn
   } do

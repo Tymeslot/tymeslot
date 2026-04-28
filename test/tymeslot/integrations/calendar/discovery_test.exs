@@ -63,13 +63,19 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
 
   describe "maybe_discover_calendars/1" do
     test "passes through non-caldav providers" do
-      attrs = %{"provider" => "google"}
+      attrs = %{provider: "google"}
       assert {:ok, ^attrs} = Discovery.maybe_discover_calendars(attrs)
     end
 
     test "handles caldav provider with no paths found" do
-      # This will likely return {:ok, attrs} because it fails silently in discovery
-      attrs = %{"provider" => "caldav", "base_url" => "http://invalid"}
+      # Invalid URL causes discovery to fail silently — returns attrs unchanged.
+      attrs = %{provider: "caldav", base_url: "http://invalid"}
+      assert {:ok, ^attrs} = Discovery.maybe_discover_calendars(attrs)
+    end
+
+    test "dispatches nextcloud through CalDAV discovery" do
+      # Invalid URL causes discovery to fail silently — returns attrs unchanged.
+      attrs = %{provider: "nextcloud", base_url: "http://invalid"}
       assert {:ok, ^attrs} = Discovery.maybe_discover_calendars(attrs)
     end
   end

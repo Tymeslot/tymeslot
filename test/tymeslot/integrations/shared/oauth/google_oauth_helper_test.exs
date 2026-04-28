@@ -117,6 +117,55 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelperTest do
       assert {:ok, tokens} = GoogleOAuthHelper.refresh_access_token("old-rt")
       assert tokens.access_token == "new-at"
     end
+
+    test "surfaces invalid_grant when Google returns 400 with that error" do
+      resp_body =
+        Jason.encode!(%{
+          "error" => "invalid_grant",
+          "error_description" => "Token has been expired or revoked."
+        })
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %{status: 400, body: resp_body}}
+      end)
+
+      assert {:error, msg} = GoogleOAuthHelper.refresh_access_token("revoked-rt")
+      assert msg == "Token refresh failed: invalid_grant"
+    end
+
+    test "falls back to generic message when 400 body has no error field" do
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %{status: 400, body: "Bad Request"}}
+      end)
+
+      assert {:error, msg} = GoogleOAuthHelper.refresh_access_token("rt")
+      assert msg == "Token refresh failed: HTTP 400 (see logs for details)"
+    end
+
+    test "does not surface OAuth error field for 5xx responses" do
+      resp_body = Jason.encode!(%{"error" => "access_denied"})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %{status: 503, body: resp_body}}
+      end)
+
+      assert {:error, msg} = GoogleOAuthHelper.refresh_access_token("rt")
+      assert msg == "Token refresh failed: HTTP 503 (see logs for details)"
+      refute msg =~ "access_denied"
+    end
+  end
+
+  describe "exchange_code_for_tokens/3 OAuth error propagation" do
+    test "surfaces invalid_grant from authorization code exchange" do
+      resp_body = Jason.encode!(%{"error" => "invalid_grant"})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %{status: 400, body: resp_body}}
+      end)
+
+      assert {:error, msg} = GoogleOAuthHelper.exchange_code_for_tokens("code", "uri")
+      assert msg == "OAuth token exchange failed: invalid_grant"
+    end
   end
 
   describe "validate_token_scope/2" do

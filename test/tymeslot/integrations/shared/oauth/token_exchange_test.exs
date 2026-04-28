@@ -117,5 +117,21 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchangeTest do
       assert {:error, {:http_error, 401, _error_body}} =
                TokenExchange.refresh_access_token(@token_url, %{})
     end
+
+    test "preserves raw response body on 400 so callers can extract the OAuth error code" do
+      # Regression guard: a previous implementation returned a redacted placeholder
+      # string instead of the raw body, which broke ErrorParser.build_message/3 and
+      # prevented `invalid_grant` from being detected as a permanent auth failure.
+      raw_body = Jason.encode!(%{"error" => "invalid_grant"})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
+        {:ok, %{status: 400, body: raw_body}}
+      end)
+
+      assert {:error, {:http_error, 400, error_body}} =
+               TokenExchange.refresh_access_token(@token_url, %{})
+
+      assert error_body =~ "invalid_grant"
+    end
   end
 end

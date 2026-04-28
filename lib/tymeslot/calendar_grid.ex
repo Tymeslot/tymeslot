@@ -48,7 +48,8 @@ defmodule Tymeslot.CalendarGrid do
   Each integration is dispatched to the appropriate worker based on its provider:
   - `"google"` → `SyncGoogleCalendarWorker`
   - `"outlook"` → skipped (event-driven via Microsoft Graph webhooks)
-  - `"caldav"` / `"radicale"` / `"nextcloud"` / `"zimbra"` → `SyncCalDavCalendarWorker`
+  - any provider returned by `ProviderConfig.caldav_based_providers/0` →
+    `SyncCalDavCalendarWorker`
 
   Returns `{:ok, %{enqueued: count, errors: [{integration_id, reason}]}}`.
   """

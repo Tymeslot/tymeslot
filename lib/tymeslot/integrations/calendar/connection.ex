@@ -4,11 +4,14 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   """
 
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.DiscoveryService
   alias Tymeslot.Integrations.Calendar.Tokens
 
   @type user_id :: pos_integer()
+
+  @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
 
   @doc """
   Validate an integration's connection with a timeout.
@@ -46,7 +49,7 @@ defmodule Tymeslot.Integrations.Calendar.Connection do
   end
 
   def validate_connection(%{provider: provider} = integration, _user_id)
-      when provider in ["caldav", "nextcloud", "radicale", "zimbra", "mailbox_org"] do
+      when provider in @caldav_provider_strings do
     client_config = %{
       base_url: integration.base_url,
       username: integration.username,

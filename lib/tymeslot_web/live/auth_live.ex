@@ -10,12 +10,10 @@ defmodule TymeslotWeb.AuthLive do
   import Phoenix.LiveView, only: [push_patch: 2, put_flash: 3]
 
   alias Phoenix.Controller
-  alias Tymeslot.Auth.{AuthActions, Session, Verification}
+  alias Tymeslot.Auth.{AuthActions, Session, SignupSecurity, Verification}
   alias Tymeslot.Infrastructure.Config
-  alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
   alias Tymeslot.Security.FieldValidators.PasswordValidator
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
-  alias Tymeslot.Security.SecurityLogger
   alias TymeslotWeb.AuthLive.{PageMetaHelper, SecurityHelper, StateHelper}
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Registration.CompleteRegistrationComponent
@@ -150,10 +148,17 @@ defmodule TymeslotWeb.AuthLive do
   def handle_event("submit_signup", %{"user" => user_params} = params, socket) do
     case SecurityHelper.validate_csrf_token(socket, params) do
       :ok ->
-        if honeypot_tripped?(user_params) do
-          handle_honeypot_signup(socket, user_params)
-        else
-          handle_legitimate_signup(socket, user_params)
+        metadata = SecurityHelper.extract_client_metadata(socket)
+
+        case SignupSecurity.gate(user_params, metadata) do
+          :ok ->
+            handle_recaptcha_verified_signup(socket, user_params)
+
+          :honeypot ->
+            handle_honeypot_signup(socket, user_params)
+
+          {:error, _kind, message} ->
+            {:noreply, SecurityHelper.set_errors(socket, %{general: message})}
         end
 
       {:error, :invalid_csrf} ->
@@ -307,7 +312,7 @@ defmodule TymeslotWeb.AuthLive do
 
       case RateLimiter.check_verification_rate_limit("honeypot", ip) do
         :ok ->
-          log_honeypot_resend(metadata)
+          SignupSecurity.log_honeypot_resend(metadata)
 
           socket =
             socket
@@ -373,8 +378,6 @@ defmodule TymeslotWeb.AuthLive do
   end
 
   defp handle_honeypot_signup(socket, user_params) do
-    log_honeypot(socket)
-
     message =
       "Account created successfully. Please check your email for verification instructions."
 
@@ -386,46 +389,6 @@ defmodule TymeslotWeb.AuthLive do
       |> assign(:honeypot_signup, true)
 
     {:noreply, push_patch(socket, to: ~p"/auth/verify-email")}
-  end
-
-  defp handle_legitimate_signup(socket, user_params) do
-    email = user_params["email"]
-    metadata = SecurityHelper.extract_client_metadata(socket)
-
-    # HYBRID APPROACH: Check rate limiting first (fast gate) before reCAPTCHA verification (slow gate)
-    # This prevents attackers from hammering Google API with invalid tokens from distributed IPs
-    case RateLimiter.check_signup_rate_limit(email, metadata[:ip]) do
-      {:error, :rate_limited, reason} ->
-        {:noreply,
-         SecurityHelper.set_errors(socket, %{
-           general: reason
-         })}
-
-      :ok ->
-        handle_rate_limited_signup(socket, user_params, metadata)
-    end
-  end
-
-  defp handle_rate_limited_signup(socket, user_params, metadata) do
-    recaptcha_token = Map.get(user_params, "g-recaptcha-response", "")
-
-    case RecaptchaHelpers.maybe_verify_signup_token(recaptcha_token, metadata) do
-      :ok ->
-        handle_recaptcha_verified_signup(socket, user_params)
-
-      {:error, :recaptcha_failed} ->
-        {:noreply,
-         SecurityHelper.set_errors(socket, %{
-           general: "Security verification failed. Please try again."
-         })}
-
-      {:error, :recaptcha_script_blocked} ->
-        {:noreply,
-         SecurityHelper.set_errors(socket, %{
-           general:
-             "Security verification unavailable. Please enable JavaScript and refresh the page, or contact support if the problem persists."
-         })}
-    end
   end
 
   defp handle_recaptcha_verified_signup(socket, user_params) do
@@ -445,27 +408,6 @@ defmodule TymeslotWeb.AuthLive do
       {:error, error_message} ->
         {:noreply, SecurityHelper.set_errors(socket, %{general: error_message})}
     end
-  end
-
-  defp honeypot_tripped?(params) do
-    case Map.get(params, "website") do
-      value when is_binary(value) -> value != ""
-      _other -> false
-    end
-  end
-
-  defp log_honeypot(socket) do
-    SecurityLogger.log_security_event("signup_honeypot_triggered", %{
-      ip_address: ClientIP.get(socket),
-      user_agent: ClientIP.get_user_agent(socket)
-    })
-  end
-
-  defp log_honeypot_resend(metadata) do
-    SecurityLogger.log_security_event("signup_honeypot_resend", %{
-      ip_address: metadata.ip,
-      user_agent: metadata.user_agent
-    })
   end
 
   defp validate_login_params(params) do

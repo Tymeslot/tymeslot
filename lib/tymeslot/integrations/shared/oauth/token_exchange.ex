@@ -93,14 +93,15 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
             parse_token_response(resp_body, fallback_refresh_token, fallback_scope)
 
           _other ->
-            redacted_body = Redactor.redact_and_truncate(resp_body)
-
             Logger.error("OAuth token refresh failed",
               status: status,
-              body: redacted_body
+              body: Redactor.redact_and_truncate(resp_body)
             )
 
-            {:error, {:http_error, status, "OAuth token refresh failed (see logs for details)"}}
+            # Preserve the raw response body so callers can extract the OAuth
+            # error type (e.g. `invalid_grant`) and route revoked-token failures
+            # straight to the reauth flow instead of waiting on retry backoff.
+            {:error, {:http_error, status, resp_body}}
         end
 
       {:error, reason} ->

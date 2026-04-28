@@ -7,8 +7,11 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
   alias Tymeslot.Integrations.Calendar.Outlook.Provider, as: OutlookProvider
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.Calendar.Providers.ProviderRegistry
   alias Tymeslot.Integrations.Calendar.Shared.{DiscoveryService, ErrorHandler}
+
+  @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
 
   @type discovery_credentials :: %{
           required(:url) => String.t(),
@@ -161,11 +164,11 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   discovery logic to providers and Shared.DiscoveryService.
   """
   @spec maybe_discover_calendars(map()) :: {:ok, map()}
-  def maybe_discover_calendars(%{"provider" => provider} = attrs)
-      when provider in ["caldav", "radicale", "zimbra", "mailbox_org"] do
+  def maybe_discover_calendars(%{provider: provider} = attrs)
+      when provider in @caldav_provider_strings do
     case discover_caldav_calendar_paths(attrs) do
       {:ok, paths} when is_list(paths) and paths != [] ->
-        {:ok, Map.put(attrs, "calendar_paths", paths)}
+        {:ok, Map.put(attrs, :calendar_paths, paths)}
 
       _other ->
         {:ok, attrs}
@@ -177,9 +180,10 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
   defp calendar_paths_or_empty(%{calendar_paths: paths}) when is_list(paths), do: paths
   defp calendar_paths_or_empty(_arg), do: []
 
-  # Internal helper that returns just the list of paths for CalDAV/Radicale
+  # Internal helper that returns just the list of paths for CalDAV/Radicale.
+  # Production callers pass atom-keyed attrs from Creation.prepare_attrs/2.
   @spec discover_caldav_calendar_paths(map()) :: {:ok, list(String.t())} | {:error, String.t()}
-  defp discover_caldav_calendar_paths(%{"provider" => provider} = config) do
+  defp discover_caldav_calendar_paths(%{provider: provider} = config) do
     provider_atom =
       case ProviderRegistry.validate_provider(provider) do
         {:ok, atom} -> atom
@@ -196,8 +200,6 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       _other -> {:ok, []}
     end
   end
-
-  defp discover_caldav_calendar_paths(_arg), do: {:ok, []}
 
   defp resolve_provider_atom(p) do
     case ProviderRegistry.validate_provider(p) do

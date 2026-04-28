@@ -158,6 +158,29 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperTest do
       assert {:ok, tokens} = TeamsOAuthHelper.refresh_access_token("old-rt")
       assert tokens.access_token == "new-at"
     end
+
+    test "surfaces OAuth error type on 400 with invalid_client body" do
+      resp_body = Jason.encode!(%{"error" => "invalid_client"})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+        {:ok, %{status: 400, body: resp_body}}
+      end)
+
+      assert {:error, msg} = TeamsOAuthHelper.refresh_access_token("bad-rt")
+      assert msg == "Token refresh failed: invalid_client"
+    end
+
+    test "returns generic message for 5xx responses even with OAuth-shaped body" do
+      resp_body = Jason.encode!(%{"error" => "access_denied"})
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _headers, _body, _opts ->
+        {:ok, %{status: 503, body: resp_body}}
+      end)
+
+      assert {:error, msg} = TeamsOAuthHelper.refresh_access_token("rt")
+      assert msg == "Token refresh failed: HTTP 503 (see logs for details)"
+      refute msg =~ "access_denied"
+    end
   end
 
   describe "validate_token/1" do

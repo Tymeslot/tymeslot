@@ -371,6 +371,18 @@ defmodule Tymeslot.Integrations.Calendar do
     result
   end
 
+  @doc """
+  Returns the list of CalDAV-based provider atoms.
+  See `Tymeslot.Integrations.Calendar.ProviderConfig.caldav_based_providers/0`.
+  """
+  defdelegate caldav_based_providers(), to: ProviderConfig
+
+  @doc """
+  Returns the list of CalDAV-based provider strings, matching the `provider`
+  column shape stored in the database.
+  """
+  defdelegate caldav_based_provider_strings(), to: ProviderConfig
+
   # ---------------------------
   # Public API: Higher-level wrappers (submodules)
   # ---------------------------

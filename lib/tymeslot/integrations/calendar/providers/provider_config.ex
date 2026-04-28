@@ -128,6 +128,29 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @spec caldav_based_providers() :: list(atom())
   def caldav_based_providers, do: @caldav_based_providers
 
+  @caldav_based_provider_strings Enum.map(@caldav_based_providers, &Atom.to_string/1)
+
+  @doc """
+  Returns CalDAV-based providers as strings, for matching against database
+  string values such as `integration.provider`.
+  """
+  @spec caldav_based_provider_strings() :: list(String.t())
+  def caldav_based_provider_strings, do: @caldav_based_provider_strings
+
+  # Order follows @providers — the canonical provider list — for deterministic results.
+  @providers_with_circuit_breakers for p <- @providers,
+                                       get_in(@provider_metadata, [p, :circuit_breaker_enabled]),
+                                       do: p
+
+  @doc """
+  Returns providers that have circuit-breaker monitoring enabled.
+
+  Ordered to match `@providers`. Includes both CalDAV-based and OAuth providers;
+  excludes providers whose metadata sets `circuit_breaker_enabled: false`.
+  """
+  @spec providers_with_circuit_breakers() :: list(atom())
+  def providers_with_circuit_breakers, do: @providers_with_circuit_breakers
+
   @doc "Number of days in the past to fetch events during sync."
   @spec sync_window_past_days() :: pos_integer()
   def sync_window_past_days, do: @sync_window_past_days

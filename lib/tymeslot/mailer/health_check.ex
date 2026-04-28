@@ -1,6 +1,4 @@
 defmodule Tymeslot.Mailer.HealthCheck do
-  @compile {:no_warn_undefined, CAStore}
-
   @moduledoc """
   Health checks for mailer configuration at application startup.
 
@@ -15,7 +13,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
      - Valid types and ranges
      - Non-empty values
 
-  2. **Connection Test** (1-5 seconds, always runs):
+  2. **Connection Test** (1-5 seconds, always runs) — see `Tymeslot.Mailer.SmtpProbe`:
      - Server is reachable on specified port
      - SMTP service responds with valid greeting (220)
      - SSL/TLS handshake succeeds (for port 465)
@@ -29,7 +27,7 @@ defmodule Tymeslot.Mailer.HealthCheck do
      - API key is present and non-empty
      - API key is a string
 
-  2. **API Key Test** (1-5 seconds, always runs):
+  2. **API Key Test** (1-5 seconds, always runs) — see `Tymeslot.Mailer.PostmarkProbe`:
      - Makes request to Postmark `/server` endpoint
      - Validates API key is active and valid
      - Checks network connectivity to Postmark API
@@ -42,10 +40,12 @@ defmodule Tymeslot.Mailer.HealthCheck do
   ## Example
 
       config = Application.get_env(:tymeslot, Tymeslot.Mailer)
-      Tymeslot.Mailer.HealthCheck.validate_startup_config!(config)
+      Tymeslot.Mailer.HealthCheck.validate_startup_config(config)
   """
 
   require Logger
+
+  alias Tymeslot.Mailer.{PostmarkProbe, SmtpProbe}
 
   @type mailer_config :: keyword()
 
@@ -53,7 +53,8 @@ defmodule Tymeslot.Mailer.HealthCheck do
   Validates mailer configuration at startup.
 
   For SMTP adapter, performs both structure validation and connection test.
-  For other adapters (Test, Local, Postmark), only validates they are configured.
+  For Postmark adapter, performs structure validation and API key test.
+  For Test/Local adapters, no validation is performed.
 
   Logs errors prominently but always returns :ok to prevent blocking app startup.
   This allows the application to start even with email misconfiguration, but
@@ -66,163 +67,75 @@ defmodule Tymeslot.Mailer.HealthCheck do
   def validate_startup_config(config) do
     case config[:adapter] do
       Swoosh.Adapters.SMTP ->
-        with :ok <- validate_smtp_structure(config),
-             :ok <- test_smtp_connection(config) do
-          Logger.info("✓ SMTP mailer configuration validated successfully")
-          :ok
-        else
-          {:error, reason} ->
-            Logger.error(
-              "SMTP configuration validation failed; emails will not be sent until configuration is fixed",
-              reason: reason
-            )
-
-            # Return :ok to allow app to start despite validation failure
-            :ok
-        end
-
-      adapter when adapter in [Swoosh.Adapters.Test, Swoosh.Adapters.Local] ->
-        Logger.info("Mailer configured with dev/test adapter; no validation needed",
-          adapter: inspect(adapter)
-        )
-
-        :ok
+        validate_smtp(config)
 
       Swoosh.Adapters.Postmark ->
-        case validate_postmark_config(config) do
-          :ok ->
-            Logger.info("✓ Postmark mailer configuration validated successfully")
-            :ok
+        validate_postmark(config)
 
-          {:error, reason} ->
-            Logger.error(
-              "Postmark configuration validation failed; emails will not be sent until configuration is fixed",
-              reason: reason
-            )
-
-            # Return :ok to allow app to start
-            :ok
-        end
+      adapter when adapter in [Swoosh.Adapters.Test, Swoosh.Adapters.Local] ->
+        log_dev_adapter(adapter)
 
       nil ->
-        Logger.error(
-          "Mailer adapter not configured; no emails will be sent. Set the EMAIL_ADAPTER environment variable."
-        )
-
-        :ok
+        log_missing_adapter()
 
       adapter ->
-        Logger.warning("Unknown mailer adapter; skipping validation", adapter: inspect(adapter))
-        :ok
+        log_unknown_adapter(adapter)
     end
   end
 
-  # Validates Postmark configuration and tests API key
-  defp validate_postmark_config(config) do
-    with :ok <- validate_postmark_structure(config),
-         :ok <- test_postmark_api_key(config) do
+  defp validate_smtp(config) do
+    with :ok <- validate_smtp_structure(config),
+         :ok <- SmtpProbe.test_connection(config) do
+      Logger.info("✓ SMTP mailer configuration validated successfully")
       :ok
     else
       {:error, reason} ->
-        error_message = """
-        Postmark configuration validation failed: #{reason}
-
-        Please verify your Postmark configuration:
-        - POSTMARK_API_KEY: Your Postmark server API token
-
-        Get your API key from: https://account.postmarkapp.com/servers
-        """
-
-        {:error, error_message}
-    end
-  end
-
-  # Validates Postmark configuration structure
-  defp validate_postmark_structure(config) do
-    api_key = config[:api_key]
-
-    cond do
-      is_nil(api_key) ->
-        {:error, "Postmark API key is required (set POSTMARK_API_KEY environment variable)"}
-
-      not is_binary(api_key) ->
-        {:error, "Postmark API key must be a string"}
-
-      String.trim(api_key) == "" ->
-        {:error, "Postmark API key cannot be empty"}
-
-      true ->
-        :ok
-    end
-  end
-
-  # Tests Postmark API key by fetching server details
-  defp test_postmark_api_key(config) do
-    # Check if Finch is available (it might not be started during early boot)
-    case Process.whereis(Tymeslot.Finch) do
-      nil ->
-        Logger.warning(
-          "Postmark API key validation skipped (Finch not started). " <>
-            "Structure validated but cannot test API connectivity. " <>
-            "API key will be validated on first email send."
+        Logger.error(
+          "SMTP configuration validation failed; emails will not be sent until configuration is fixed",
+          reason: reason
         )
 
         :ok
-
-      _pid ->
-        do_test_postmark_api_key(config)
     end
   end
 
-  defp do_test_postmark_api_key(config) do
-    api_key = config[:api_key]
-    Logger.info("Testing Postmark API key...")
-
-    # Use Postmark's /server endpoint to validate API key
-    # This doesn't send any emails, just checks if the key is valid
-    url = "https://api.postmarkapp.com/server"
-
-    headers = [
-      {"Accept", "application/json"},
-      {"X-Postmark-Server-Token", api_key}
-    ]
-
-    case Finch.request(Finch.build(:get, url, headers), Tymeslot.Finch, receive_timeout: 5_000) do
-      {:ok, %{status: 200}} ->
-        Logger.info("✓ Postmark API key validation passed")
-        :ok
-
-      {:ok, %{status: 401}} ->
-        Logger.error("✗ Postmark API key validation failed: Invalid API key")
-        {:error, "Invalid Postmark API key (401 Unauthorized)"}
-
-      {:ok, %{status: 422, body: body}} ->
-        Logger.error("✗ Postmark API key validation failed",
-          status: 422,
-          body: String.slice(body, 0, 200)
-        )
-
-        {:error, "Invalid Postmark API key format (422 Unprocessable Entity)"}
-
-      {:ok, %{status: status}} ->
-        Logger.error("✗ Postmark API validation failed", status: status)
-        {:error, "Postmark API returned unexpected status: #{status}"}
-
-      {:error, %{reason: :timeout}} ->
-        Logger.error("✗ Postmark API validation timed out")
-        {:error, "Timeout connecting to Postmark API (check network connectivity)"}
-
+  defp validate_postmark(config) do
+    with :ok <- validate_postmark_structure(config),
+         :ok <- PostmarkProbe.test_api_key(config) do
+      Logger.info("✓ Postmark mailer configuration validated successfully")
+      :ok
+    else
       {:error, reason} ->
-        Logger.error("✗ Postmark API validation failed", reason: inspect(reason))
-        {:error, "Cannot connect to Postmark API: #{inspect(reason)}"}
+        Logger.error(
+          "Postmark configuration validation failed; verify POSTMARK_API_KEY at https://account.postmarkapp.com/servers",
+          reason: reason
+        )
+
+        :ok
     end
-  rescue
-    e ->
-      Logger.error("✗ Postmark API validation exception", error: Exception.message(e))
-      {:error, "Postmark API validation error: #{Exception.message(e)}"}
   end
 
-  # Validates SMTP configuration structure
+  defp log_dev_adapter(adapter) do
+    Logger.info("Mailer configured with dev/test adapter; no validation needed",
+      adapter: inspect(adapter)
+    )
+
+    :ok
+  end
+
+  defp log_missing_adapter do
+    Logger.error(
+      "Mailer adapter not configured; no emails will be sent. Set the EMAIL_ADAPTER environment variable."
+    )
+
+    :ok
+  end
+
+  defp log_unknown_adapter(adapter) do
+    Logger.warning("Unknown mailer adapter; skipping validation", adapter: inspect(adapter))
+    :ok
+  end
+
   defp validate_smtp_structure(config) do
     cond do
       is_nil(config[:relay]) or config[:relay] == "" ->
@@ -245,261 +158,21 @@ defmodule Tymeslot.Mailer.HealthCheck do
     end
   end
 
-  # Tests SMTP server connection without sending email
-  defp test_smtp_connection(config) do
-    host_string = config[:relay]
-    host = String.to_charlist(host_string)
-    port = config[:port]
-    dns_timeout = 3_000
-    connection_timeout = 5_000
+  defp validate_postmark_structure(config) do
+    api_key = config[:api_key]
 
-    Logger.info("Testing SMTP connection", host: host_string, port: port)
-
-    # First, resolve DNS separately to provide better error messages
-    with :ok <- test_dns_resolution(host, host_string, dns_timeout),
-         :ok <- test_smtp_connectivity(host, port, connection_timeout, config) do
-      Logger.info("✓ SMTP connection test passed")
-      :ok
-    else
-      {:error, reason} ->
-        Logger.error("✗ SMTP connection test failed",
-          host: host_string,
-          port: port,
-          reason: inspect(reason)
-        )
-
-        {:error, format_connection_error(reason, host_string, port)}
-    end
-  end
-
-  # Test DNS resolution separately
-  defp test_dns_resolution(host, _original_host_string, timeout) do
-    case :inet.getaddr(host, :inet, timeout) do
-      {:ok, _ip} ->
-        :ok
-
-      {:error, :nxdomain} ->
-        {:error, {:dns_failed, :nxdomain}}
-
-      {:error, reason} ->
-        {:error, {:dns_failed, reason}}
-    end
-  rescue
-    e ->
-      {:error, {:dns_failed, Exception.message(e)}}
-  end
-
-  # Test actual SMTP connectivity
-  defp test_smtp_connectivity(host, port, timeout, config) do
-    case port do
-      465 -> test_ssl_connection(host, port, timeout, config)
-      587 -> test_starttls_connection(host, port, timeout)
-      _other -> test_plain_connection(host, port, timeout)
-    end
-  end
-
-  # Port 587: Plain connection with STARTTLS
-  defp test_starttls_connection(host, port, timeout) do
-    case :gen_tcp.connect(host, port, [:binary, active: false], timeout) do
-      {:ok, socket} ->
-        result =
-          with {:ok, greeting} <- :gen_tcp.recv(socket, 0, timeout),
-               :ok <- validate_smtp_greeting(greeting) do
-            # Send QUIT to close cleanly
-            :gen_tcp.send(socket, "QUIT\r\n")
-
-            # Wait for 221 response (server closing connection)
-            case :gen_tcp.recv(socket, 0, 1000) do
-              {:ok, response} ->
-                if String.starts_with?(response, "221") do
-                  :ok
-                else
-                  # Server responded but not with expected close message
-                  Logger.debug("Unexpected QUIT response from SMTP server",
-                    response: String.slice(response, 0, 50)
-                  )
-
-                  :ok
-                end
-
-              {:error, _error_reason} ->
-                # Timeout or connection closed - acceptable, server might close immediately
-                :ok
-            end
-          end
-
-        :gen_tcp.close(socket)
-        result
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  rescue
-    e -> {:error, Exception.message(e)}
-  end
-
-  # Port 465: Direct SSL connection
-  defp test_ssl_connection(host, port, timeout, config) do
-    # Use cacerts if provided, otherwise use cacertfile from CAStore
-    ssl_opts =
-      if config[:tls_options][:cacerts] do
-        [
-          :binary,
-          active: false,
-          verify: :verify_peer,
-          cacerts: config[:tls_options][:cacerts],
-          server_name_indication: host,
-          versions: config[:tls_options][:versions] || [:"tlsv1.2", :"tlsv1.3"],
-          depth: config[:tls_options][:depth] || 5
-        ]
-      else
-        [
-          :binary,
-          active: false,
-          verify: :verify_peer,
-          cacertfile: load_fallback_cacertfile(),
-          server_name_indication: host,
-          versions: config[:tls_options][:versions] || [:"tlsv1.2", :"tlsv1.3"],
-          depth: config[:tls_options][:depth] || 5
-        ]
-      end
-
-    case :ssl.connect(host, port, ssl_opts, timeout) do
-      {:ok, socket} ->
-        result =
-          with {:ok, greeting} <- :ssl.recv(socket, 0, timeout),
-               :ok <- validate_smtp_greeting(greeting) do
-            :ssl.send(socket, "QUIT\r\n")
-
-            # Wait for 221 response (server closing connection)
-            case :ssl.recv(socket, 0, 1000) do
-              {:ok, response} ->
-                if String.starts_with?(response, "221") do
-                  :ok
-                else
-                  Logger.debug("Unexpected QUIT response from SMTP server",
-                    response: String.slice(response, 0, 50)
-                  )
-
-                  :ok
-                end
-
-              {:error, _error_reason} ->
-                # Timeout or connection closed - acceptable
-                :ok
-            end
-          end
-
-        :ssl.close(socket)
-        result
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  rescue
-    e -> {:error, Exception.message(e)}
-  end
-
-  # Load fallback cacertfile path if not provided in config
-  defp load_fallback_cacertfile do
-    if Code.ensure_loaded?(CAStore) do
-      CAStore.file_path()
-    else
-      # This should not happen if dependencies are correct, but provide clear error
-      raise "Cannot load CA certificates: CAStore module not available"
-    end
-  end
-
-  # Other ports: Try plain connection
-  defp test_plain_connection(host, port, timeout) do
-    test_starttls_connection(host, port, timeout)
-  end
-
-  # Validates SMTP greeting message (should start with "220" and contain SMTP/ESMTP)
-  defp validate_smtp_greeting(greeting) when is_binary(greeting) do
     cond do
-      not String.starts_with?(greeting, "220") ->
-        {:error, "Invalid SMTP greeting (expected 220 code): #{String.slice(greeting, 0, 100)}"}
+      is_nil(api_key) ->
+        {:error, "Postmark API key is required (set POSTMARK_API_KEY environment variable)"}
 
-      String.contains?(greeting, ["SMTP", "ESMTP", "smtp", "esmtp"]) ->
-        :ok
+      not is_binary(api_key) ->
+        {:error, "Postmark API key must be a string"}
+
+      String.trim(api_key) == "" ->
+        {:error, "Postmark API key cannot be empty"}
 
       true ->
-        # Greeting starts with 220 but doesn't mention SMTP
-        # Log warning but accept (some servers have non-standard greetings)
-        Logger.debug(
-          "SMTP greeting starts with 220 but doesn't mention SMTP/ESMTP: " <>
-            String.slice(greeting, 0, 100)
-        )
-
         :ok
     end
   end
-
-  # Formats connection error with helpful context and human-readable messages
-  defp format_connection_error(reason, host, port) do
-    readable_reason = format_readable_reason(reason)
-    base_error = "Cannot connect to #{host}:#{port}: #{readable_reason}"
-    suggestion = get_error_suggestion(reason, port)
-    "#{base_error}#{suggestion}"
-  end
-
-  # Translates Erlang error atoms to human-readable messages
-  defp format_readable_reason(:econnrefused), do: "Connection refused"
-
-  defp format_readable_reason({:dns_failed, :nxdomain}),
-    do: "Hostname not found (DNS resolution failed)"
-
-  defp format_readable_reason({:dns_failed, reason}),
-    do: "DNS resolution failed: #{inspect(reason)}"
-
-  defp format_readable_reason(:timeout), do: "Connection timed out"
-  defp format_readable_reason(:etimedout), do: "Connection timed out"
-
-  defp format_readable_reason({:tls_alert, {:handshake_failure, _details}}),
-    do: "SSL/TLS handshake failed"
-
-  defp format_readable_reason({:tls_alert, alert}), do: "SSL/TLS alert: #{inspect(alert)}"
-  defp format_readable_reason(:closed), do: "Connection closed by server"
-  defp format_readable_reason(reason), do: inspect(reason)
-
-  # Provides helpful suggestions based on error type and port
-  defp get_error_suggestion(:econnrefused, 587) do
-    "\n\nPort 587 (STARTTLS) connection refused. Common causes:\n" <>
-      "  - SMTP server is not running\n" <>
-      "  - Firewall blocking port 587\n" <>
-      "  - Wrong SMTP_HOST value\n" <>
-      "  - Try port 465 (SSL) instead: SMTP_PORT=465"
-  end
-
-  defp get_error_suggestion(:econnrefused, 465) do
-    "\n\nPort 465 (SSL) connection refused. Common causes:\n" <>
-      "  - SMTP server is not running\n" <>
-      "  - Firewall blocking port 465\n" <>
-      "  - Wrong SMTP_HOST value\n" <>
-      "  - Try port 587 (STARTTLS) instead: SMTP_PORT=587"
-  end
-
-  defp get_error_suggestion(reason, _port) when reason in [:timeout, :etimedout] do
-    "\n\nConnection timed out. Common causes:\n" <>
-      "  - Firewall blocking outbound SMTP\n" <>
-      "  - Network connectivity issues\n" <>
-      "  - SMTP server is slow to respond"
-  end
-
-  defp get_error_suggestion({:dns_failed, :nxdomain}, _port) do
-    "\n\nHostname not found (DNS resolution failed).\n" <>
-      "  - Verify SMTP_HOST is correct (no spaces, correct domain)\n" <>
-      "  - Check DNS configuration"
-  end
-
-  defp get_error_suggestion({:tls_alert, {:handshake_failure, _details}}, 465) do
-    "\n\nSSL/TLS handshake failed. Common causes:\n" <>
-      "  - Certificate verification failed\n" <>
-      "  - Server requires different TLS version\n" <>
-      "  - Server doesn't support port 465 SSL\n" <>
-      "  - Try port 587 (STARTTLS) instead: SMTP_PORT=587"
-  end
-
-  defp get_error_suggestion(_other_reason, _port), do: ""
 end

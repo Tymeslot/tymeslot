@@ -7,6 +7,31 @@ defmodule Tymeslot.Integrations.Calendar.CreationTest do
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Profiles.ProfileQueries
 
+  describe "prepare_attrs/2 — nextcloud" do
+    test "returns atom-keyed attrs that satisfy the maybe_discover_calendars/1 guard" do
+      # Verifies that the atom-keyed map produced here will match the %{provider: provider}
+      # pattern in Discovery.maybe_discover_calendars/1, ensuring the Nextcloud discovery
+      # branch is reachable (not dead code).
+      params = %{
+        "name" => "Test Nextcloud",
+        "provider" => "nextcloud",
+        "url" => "https://nextcloud.example.com",
+        "username" => "alice",
+        "password" => "secret",
+        "calendar_paths" => ""
+      }
+
+      assert {:ok, attrs} = Creation.prepare_attrs(params, 1)
+
+      assert attrs.provider == "nextcloud"
+      assert is_atom(:provider)
+      assert Map.has_key?(attrs, :provider)
+      refute Map.has_key?(attrs, "provider")
+      assert attrs.base_url == "https://nextcloud.example.com"
+      assert attrs.is_active == true
+    end
+  end
+
   describe "prepare_attrs/2" do
     test "prepares attributes for CalDAV integration" do
       params = %{

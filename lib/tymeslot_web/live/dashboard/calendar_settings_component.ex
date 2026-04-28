@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
   alias Tymeslot.Security.RateLimiter
@@ -19,6 +20,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   require Logger
+
+  @caldav_providers ProviderConfig.caldav_based_providers()
+  @caldav_provider_strings ProviderConfig.caldav_based_provider_strings()
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -258,9 +262,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
   def handle_event("connect_zimbra_calendar", _params, socket),
     do: {:noreply, setup_config_view(socket, :zimbra)}
-
-  def handle_event("connect_mailbox_org_calendar", _params, socket),
-    do: {:noreply, setup_config_view(socket, :mailbox_org)}
 
   def handle_event("refresh_all_calendars", _params, socket) do
     if socket.assigns.is_refreshing do
@@ -603,14 +604,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     )
   end
 
-  defp normalize_provider(p) when p in [:nextcloud, :radicale, :caldav, :zimbra, :mailbox_org],
-    do: p
+  defp normalize_provider(p) when p in @caldav_providers, do: p
 
-  defp normalize_provider("nextcloud"), do: :nextcloud
-  defp normalize_provider("radicale"), do: :radicale
-  defp normalize_provider("caldav"), do: :caldav
-  defp normalize_provider("zimbra"), do: :zimbra
-  defp normalize_provider("mailbox_org"), do: :mailbox_org
+  defp normalize_provider(p) when is_binary(p) do
+    atom = String.to_existing_atom(p)
+    if atom in @caldav_providers, do: atom, else: :caldav
+  rescue
+    ArgumentError -> :caldav
+  end
+
   defp normalize_provider(_other_provider), do: :caldav
 
   defp format_refresh_failures(names) when length(names) <= 3 do
@@ -647,7 +649,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   defp handle_reconnect_by_provider(%{provider: provider} = integration, socket)
-       when provider in ~w(caldav nextcloud radicale zimbra mailbox_org) do
+       when provider in @caldav_provider_strings do
     {:noreply,
      socket
      |> assign(:reconnect_integration, integration)

@@ -9,7 +9,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
 
   alias Tymeslot.Infrastructure.HTTPClient
   alias Tymeslot.Infrastructure.Logging.Redactor
-  alias Tymeslot.Integrations.Common.OAuth.{IdToken, State, TokenExchange}
+  alias Tymeslot.Integrations.Common.OAuth.{ErrorParser, IdToken, State, TokenExchange}
   alias Tymeslot.Integrations.Shared.OAuth.TokenFlow
 
   require Logger
@@ -121,7 +121,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
           response_body: Redactor.redact_and_truncate(body)
         )
 
-        {:error, "OAuth token exchange failed: HTTP #{status} (see logs for details)"}
+        {:error, ErrorParser.build_message("OAuth token exchange failed", status, body)}
 
       {:error, {:network_error, reason}} ->
         Logger.error("Network error during token exchange", reason: inspect(reason))
@@ -163,7 +163,7 @@ defmodule Tymeslot.Integrations.Google.GoogleOAuthHelper do
           response_body: Redactor.redact_and_truncate(body)
         )
 
-        {:error, "Token refresh failed: HTTP #{status} (see logs for details)"}
+        {:error, ErrorParser.build_message("Token refresh failed", status, body)}
 
       {:error, {:network_error, reason}} ->
         Logger.error("Network error during token refresh", reason: inspect(reason))
