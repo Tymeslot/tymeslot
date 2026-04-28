@@ -22,6 +22,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
   attr :suggested_name, :string, required: true
   attr :name_placeholder, :string, default: "My Calendar"
   attr :url_placeholder, :string, default: "https://example.com/remote.php/dav"
+  attr :url_locked, :boolean, default: false
+  attr :url_value, :string, default: ""
+  attr :url_locked_tooltip, :string, default: "This server address is fixed for this provider"
   attr :username_placeholder, :string, default: "Username"
   attr :password_placeholder, :string, default: "Password"
 
@@ -86,17 +89,24 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
               target={@target}
             />
 
-            <.text_field
-              id="discovery_url"
-              name="integration[url]"
-              label="Server URL"
-              value={Map.get(@form_values, "url", "")}
-              placeholder={@url_placeholder}
-              errors={FormValidationHelpers.field_errors(@form_errors, :url)}
-              target={@target}
-              field="url"
-              icon="hero-globe-alt"
-            />
+            <%= if @url_locked do %>
+              <.locked_url_field
+                value={@url_value}
+                tooltip={@url_locked_tooltip}
+              />
+            <% else %>
+              <.text_field
+                id="discovery_url"
+                name="integration[url]"
+                label="Server URL"
+                value={Map.get(@form_values, "url", "")}
+                placeholder={@url_placeholder}
+                errors={FormValidationHelpers.field_errors(@form_errors, :url)}
+                target={@target}
+                field="url"
+                icon="hero-globe-alt"
+              />
+            <% end %>
 
             <.text_field
               id="discovery_username"
@@ -198,6 +208,40 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
             </div>
           <% end %>
         <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  attr :value, :string, required: true
+  attr :tooltip, :string, required: true
+
+  defp locked_url_field(assigns) do
+    ~H"""
+    <div class="form-field-wrapper">
+      <div class="flex items-center gap-1.5 mb-2">
+        <span class="label !mb-0">Server URL</span>
+        <span class="text-tymeslot-400 flex-shrink-0">
+          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </span>
+      </div>
+      <input type="hidden" name="integration[url]" value={@value} />
+      <div class="relative" title={@tooltip}>
+        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-tymeslot-300 pointer-events-none">
+          <TymeslotWeb.Components.CoreComponents.Icons.icon name="hero-lock-closed" class="w-5 h-5" />
+        </div>
+        <input
+          type="text"
+          value={@value}
+          disabled
+          class="input input-with-icon opacity-60 cursor-not-allowed bg-tymeslot-100 text-tymeslot-500"
+        />
       </div>
     </div>
     """

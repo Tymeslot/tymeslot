@@ -74,7 +74,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfi
         myself={@myself}
         suggested_name="My mailbox.org"
         name_placeholder="My mailbox.org Calendar"
-        url_placeholder="https://dav.mailbox.org"
+        url_locked={true}
+        url_value="https://dav.mailbox.org"
+        url_locked_tooltip="mailbox.org always uses this CalDAV server — the address cannot be changed"
       />
     </div>
     """
