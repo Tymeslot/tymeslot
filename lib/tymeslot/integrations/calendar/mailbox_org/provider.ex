@@ -158,29 +158,16 @@ defmodule Tymeslot.Integrations.Calendar.MailboxOrg.Provider do
   # Private helpers
 
   defp validate_mailbox_url(url) do
-    case UrlValidation.validate_http_url(url,
-           enforce_https_for_public: true,
-           https_error_message: "mailbox.org requires HTTPS",
-           invalid_message:
-             "Invalid mailbox.org URL. Use https://dav.mailbox.org (or your custom mailbox.org-compatible CalDAV endpoint)."
-         ) do
-      :ok -> :ok
-      {:error, message} -> {:error, message}
-    end
+    UrlValidation.validate_http_url(url,
+      enforce_https_for_public: true,
+      https_error_message: "mailbox.org requires HTTPS",
+      invalid_message:
+        "Invalid mailbox.org URL. Use https://dav.mailbox.org (or your custom mailbox.org-compatible CalDAV endpoint)."
+    )
   end
 
   defp build_test_client(config) do
-    full_client = new(config)
-
-    {:ok,
-     %{
-       base_url: full_client.base_url,
-       username: full_client.username,
-       password: full_client.password,
-       calendar_paths: full_client.calendar_paths,
-       verify_ssl: true,
-       provider: full_client.provider
-     }}
+    {:ok, new(config)}
   end
 
   defp normalize_base_url(url) do
