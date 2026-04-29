@@ -110,7 +110,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
     end
 
     test "clicking Google Calendar initiates OAuth and redirects", %{conn: conn} do
-      stub(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id, _redirect_uri, _opts ->
+      stub(Tymeslot.GoogleOAuthHelperMock, :authorization_url, fn _user_id,
+                                                                  _redirect_uri,
+                                                                  _opts ->
         "https://accounts.google.com/o/oauth2/auth?fake=1"
       end)
 
@@ -124,7 +126,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
     end
 
     test "clicking Outlook Calendar initiates OAuth and redirects", %{conn: conn} do
-      stub(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _user_id, _redirect_uri, _opts ->
+      stub(Tymeslot.OutlookOAuthHelperMock, :authorization_url, fn _user_id,
+                                                                   _redirect_uri,
+                                                                   _opts ->
         "https://login.microsoftonline.com/oauth?fake=1"
       end)
 
