@@ -57,21 +57,23 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def validate_config(config) do
-    # Extract username from URL if it's a calendar URL
-    config = maybe_extract_username_from_url(config)
+    # Trim credentials so whitespace-only values count as missing rather than
+    # leaking into CaldavCommon.validate_credentials/1 as {:error, :invalid_credentials}.
+    config =
+      config
+      |> maybe_extract_username_from_url()
+      |> trim_credentials()
 
-    # For calendar URLs, we need to handle them differently
     is_calendar_url = PathUtils.nextcloud_calendar_url?(config[:base_url] || "")
 
     required_fields =
       if is_calendar_url do
-        # Username can be extracted from URL, so it's optional
         [:base_url, :password]
       else
         [:base_url, :username, :password]
       end
 
-    missing_fields = required_fields -- Map.keys(config)
+    missing_fields = Enum.filter(required_fields, &blank?(config[&1]))
 
     cond do
       !Enum.empty?(missing_fields) ->
@@ -82,8 +84,6 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
          "Invalid Nextcloud URL. Should be your Nextcloud server URL (e.g., https://cloud.example.com) or calendar URL"}
 
       true ->
-        # All required fields present and URL is valid, now test the actual connection
-        # Create a temporary integration-like map for test_connection
         test_config = %{
           base_url: normalize_base_url(config[:base_url]),
           username: config[:username],
@@ -92,15 +92,28 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
         }
 
         case test_connection(test_config) do
-          {:ok, _message} ->
-            :ok
-
-          {:error, reason} ->
-            # All errors from test_connection should already be strings
-            {:error, reason}
+          {:ok, _message} -> :ok
+          {:error, reason} -> {:error, reason}
         end
     end
   end
+
+  defp trim_credentials(config) do
+    config
+    |> maybe_trim(:username)
+    |> maybe_trim(:password)
+  end
+
+  defp maybe_trim(config, key) do
+    case Map.get(config, key) do
+      value when is_binary(value) -> Map.put(config, key, String.trim(value))
+      _other -> config
+    end
+  end
+
+  defp blank?(nil), do: true
+  defp blank?(""), do: true
+  defp blank?(_value), do: false
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def new(config) do
@@ -122,15 +135,33 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
 
   @doc """
   Tests connection to Nextcloud server using CalDAV discovery.
+
+  Builds the CalDAV client with the same URL normalisation used at setup time
+  (`PathUtils.normalize_url/2` with `provider: :nextcloud`), so a `base_url`
+  stored without `/remote.php/dav` — the format produced by `Creation.prepare_attrs`
+  — still resolves to a valid CalDAV principal URL. Without this the discovery
+  probe targets `\#{base_url}/calendars/\#{username}/`, which Nextcloud answers
+  with HTTP 405 because that path is not WebDAV-mounted.
   """
   @spec test_connection(map(), Keyword.t()) :: {:ok, String.t()} | {:error, term()}
   def test_connection(integration, opts \\ []) do
-    # Extract IP address for rate limiting
     ip_address = get_in(opts, [:metadata, :ip]) || "127.0.0.1"
 
     with :ok <- check_rate_limit(ip_address) do
-      # Use CalDAV provider but with Nextcloud-specific error messages
-      case CalDAVProvider.test_connection(integration, opts) do
+      client = %{
+        base_url:
+          PathUtils.normalize_url(integration.base_url || "",
+            provider: :nextcloud,
+            ensure_trailing_slash: false
+          ),
+        username: integration.username,
+        password: integration.password,
+        calendar_paths: integration.calendar_paths || [],
+        verify_ssl: true,
+        provider: :nextcloud
+      }
+
+      case CaldavCommon.test_connection(client) do
         {:ok, _message} ->
           {:ok, "Nextcloud connection successful"}
 
@@ -143,7 +174,6 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.Provider do
            "Nextcloud server not found or CalDAV endpoint not accessible. Check your server URL."}
 
         {:error, reason} ->
-          # All other errors from CalDAVProvider.test_connection should be strings
           {:error, reason}
       end
     end

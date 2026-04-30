@@ -289,6 +289,7 @@ defmodule Tymeslot.Integrations.Calendar.Providers.CaldavCommon do
     |> List.first()
   end
 
+  defp success_message(:nextcloud), do: "Nextcloud connection successful"
   defp success_message(:radicale), do: "Radicale connection successful"
   defp success_message(_arg), do: "CalDAV connection successful"
 

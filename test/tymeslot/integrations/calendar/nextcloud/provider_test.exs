@@ -186,53 +186,112 @@ defmodule Tymeslot.Integrations.Calendar.Nextcloud.ProviderTest do
   end
 
   describe "test_connection/2" do
+    test "probes the CalDAV principal URL even when base_url omits /remote.php/dav" do
+      # Regression: `Creation.prepare_attrs` persists the user-entered URL verbatim
+      # (e.g. "https://cloud.example.com"), while `validate_config` normalises before
+      # probing. Without normalisation here the discovery URL becomes
+      # `<base_url>/calendars/<user>/`, which Nextcloud answers with HTTP 405 because
+      # CalDAV is mounted at `/remote.php/dav/`.
+      integration = %{
+        base_url: "https://cloud.example.com",
+        username: "alice",
+        password: "secret",
+        calendar_paths: ["/remote.php/dav/calendars/alice/personal/"]
+      }
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, url, _body, _headers, _opts ->
+        assert url =~ "/remote.php/dav/", "probed wrong URL: #{url}"
+        {:ok, %Req.Response{status: 207, body: ""}}
+      end)
+
+      assert {:ok, "Nextcloud connection successful"} = Provider.test_connection(integration)
+    end
+
     test "returns Nextcloud-specific success message" do
       integration = %{
-        base_url: "http://localhost:1",
-        username: "user",
-        password: "pass",
+        base_url: "https://cloud.example.com",
+        username: "alice",
+        password: "secret",
         calendar_paths: []
       }
 
-      # Will fail but tests interface
-      case Provider.test_connection(integration) do
-        {:ok, message} -> assert String.contains?(message, "Nextcloud")
-        {:error, _reason} -> :ok
-      end
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 207, body: ""}}
+      end)
+
+      assert {:ok, message} = Provider.test_connection(integration)
+      assert String.contains?(message, "Nextcloud")
     end
 
-    test "returns helpful error message for authentication failure" do
+    test "translates 401 to a Nextcloud-flavoured authentication failure message" do
       integration = %{
-        base_url: "http://localhost:1",
-        username: "invalid",
+        base_url: "https://cloud.example.com",
+        username: "alice",
         password: "wrong",
         calendar_paths: []
       }
 
-      result = Provider.test_connection(integration)
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 401, body: ""}}
+      end)
 
-      case result do
-        {:error, message} ->
-          # Check for helpful message or network error
-          assert is_atom(message) or is_binary(message) or is_tuple(message)
-
-        {:ok, _result} ->
-          :ok
-      end
+      assert {:error, message} = Provider.test_connection(integration)
+      assert message =~ "Authentication failed"
+      assert message =~ "app password"
     end
 
     test "accepts options with IP metadata" do
       integration = %{
-        base_url: "http://localhost:1",
-        username: "user",
-        password: "pass",
+        base_url: "https://cloud.example.com",
+        username: "alice",
+        password: "secret",
         calendar_paths: []
       }
 
-      opts = [metadata: %{ip: "192.168.1.1"}]
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 207, body: ""}}
+      end)
 
-      result = Provider.test_connection(integration, opts)
-      assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
+      assert {:ok, _message} =
+               Provider.test_connection(integration, metadata: %{ip: "192.168.1.1"})
+    end
+
+    test "returns Nextcloud-specific :not_found message when server returns 404" do
+      # Discovery.test_connection performs an RFC 4791 fallback probe when the
+      # primary PROPFIND returns 404, so two requests are issued before
+      # {:error, :not_found} propagates back to the provider.
+      integration = %{
+        base_url: "https://cloud.example.com",
+        username: "alice",
+        password: "secret",
+        calendar_paths: []
+      }
+
+      # Primary PROPFIND on the guessed discovery path → 404
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      # RFC 4791 fallback probe on "/" → also 404
+      expect(Tymeslot.HTTPClientMock, :request, fn :propfind, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 404, body: ""}}
+      end)
+
+      assert {:error, message} = Provider.test_connection(integration)
+      assert message =~ "server not found" or message =~ "CalDAV endpoint not accessible"
+    end
+
+    test "passes transport errors through unchanged via catch-all clause" do
+      # The default MockCase stub returns {:error, %Mint.TransportError{reason: :timeout}}.
+      # The provider catch-all at line 163 forwards unknown error reasons as-is.
+      integration = %{
+        base_url: "https://cloud.example.com",
+        username: "alice",
+        password: "secret",
+        calendar_paths: []
+      }
+
+      assert {:error, _reason} = Provider.test_connection(integration)
     end
   end
 
