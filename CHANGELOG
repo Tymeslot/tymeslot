@@ -1,4 +1,11 @@
 
+[0.100.14]
+* core: Prevent CalDAV sync crash on all-day recurring events with EXDATEs
+* core: Fix Nextcloud connection test failing for bare server URLs
+* saas: Correct privacy claims to accurately reflect tracking scope
+* core: Auto-pause integrations stuck unhealthy past the configured cutoff
+* saas: Split docs filters into topic, provider, and self-hosting toggle
+* saas: Publish v1.1 of Terms and Privacy Policy
 [0.100.13]
 * core: Fix mailbox.org calendar discovery failing with unsupported provider error
 * core: Prevent crash when clicking mailbox.org calendar provider
