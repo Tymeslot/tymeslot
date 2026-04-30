@@ -350,6 +350,28 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpanderTest do
       refute ~U[2026-04-10 09:00:00Z] in starts
       refute ~U[2026-04-24 09:00:00Z] in starts
     end
+
+    test "excludes Date-valued EXDATEs from all-day recurring events" do
+      event = %{
+        uid: "exdate-allday-1",
+        summary: "All-day weekly",
+        start_time: ~D[2026-04-03],
+        end_time: ~D[2026-04-04],
+        recurrence_rule: "FREQ=WEEKLY;INTERVAL=1"
+      }
+
+      range_start = ~U[2026-04-01 00:00:00Z]
+      range_end = ~U[2026-04-30 23:59:59Z]
+
+      exdates = [~D[2026-04-10], ~D[2026-04-24]]
+      occurrences = RecurrenceExpander.expand(event, range_start, range_end, exdates: exdates)
+      starts = Enum.map(occurrences, & &1.start_time)
+
+      assert ~D[2026-04-03] in starts
+      assert ~D[2026-04-17] in starts
+      refute ~D[2026-04-10] in starts
+      refute ~D[2026-04-24] in starts
+    end
   end
 
   describe "expand/4 with all-day events (Date structs)" do

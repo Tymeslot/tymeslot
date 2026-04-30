@@ -176,6 +176,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
     safety_cap = min(@max_occurrences, rule.count || @max_occurrences)
     range_start_dt = DateTimeUtils.to_datetime(range_start)
     range_end_dt = DateTimeUtils.to_datetime(range_end)
+    exdates_dt = exdates |> Enum.map(&DateTimeUtils.to_datetime/1) |> Enum.reject(&is_nil/1)
 
     start_dt
     |> Stream.iterate(&advance(&1, rule))
@@ -183,7 +184,7 @@ defmodule Tymeslot.Integrations.Calendar.RecurrenceExpander do
     |> Stream.take_while(&before_end?(&1, rule, range_end_dt))
     |> Stream.filter(&in_range?(&1, range_start_dt, range_end_dt))
     |> Stream.filter(&matches_byday?(&1, rule))
-    |> Stream.reject(&excluded?(&1, exdates))
+    |> Stream.reject(&excluded?(&1, exdates_dt))
     |> Enum.map(&build_occurrence(event, &1, duration, all_day?))
   end
 
