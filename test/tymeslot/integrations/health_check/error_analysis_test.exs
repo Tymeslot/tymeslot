@@ -94,33 +94,46 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysisTest do
       assert ErrorAnalysis.classify_error(:token_expired) == :hard
     end
 
-    test "classifies HTTP 4xx (except 408, 425, 429) as hard" do
-      assert ErrorAnalysis.classify_error({:http_error, 400, "Bad Request"}) == :hard
+    test "classifies the canonical auth HTTP statuses (401, 403, 404) as hard" do
       assert ErrorAnalysis.classify_error({:http_error, 401, "Unauthorized"}) == :hard
       assert ErrorAnalysis.classify_error({:http_error, 403, "Forbidden"}) == :hard
       assert ErrorAnalysis.classify_error({:http_error, 404, "Not Found"}) == :hard
     end
 
-    test "classifies generic string errors as hard" do
-      assert ErrorAnalysis.classify_error("Invalid token") == :hard
-      assert ErrorAnalysis.classify_error("Permission denied") == :hard
-      assert ErrorAnalysis.classify_error("Resource not found") == :hard
+    test "classifies known permanent OAuth markers in strings as hard" do
+      assert ErrorAnalysis.classify_error("invalid_grant") == :hard
+      assert ErrorAnalysis.classify_error("OAuth: invalid_client") == :hard
+      assert ErrorAnalysis.classify_error("access_denied") == :hard
     end
 
-    test "classifies exception wrappers with hard error messages as hard" do
-      assert ErrorAnalysis.classify_error({:exception, "Invalid credentials"}) == :hard
-      assert ErrorAnalysis.classify_error({:exception, "Permission denied"}) == :hard
+    test "classifies exception wrappers with hard auth markers as hard" do
+      assert ErrorAnalysis.classify_error({:exception, "invalid_grant"}) == :hard
+      assert ErrorAnalysis.classify_error({:exception, "access_denied: user revoked"}) == :hard
+    end
+  end
+
+  describe "classify_error/1 - conservative default" do
+    test "classifies unknown 4xx as transient (not 401/403/404)" do
+      assert ErrorAnalysis.classify_error({:http_error, 400, "Bad Request"}) == :transient
+      assert ErrorAnalysis.classify_error({:http_error, 422, "Unprocessable"}) == :transient
+      assert ErrorAnalysis.classify_error({:http_error, 423, "Locked"}) == :transient
     end
 
-    test "classifies unknown errors as hard" do
-      assert ErrorAnalysis.classify_error(:unknown_error) == :hard
-      assert ErrorAnalysis.classify_error({:weird, :error}) == :hard
-      assert ErrorAnalysis.classify_error(123) == :hard
+    test "classifies opaque server-returned strings as transient" do
+      assert ErrorAnalysis.classify_error("Server is busy, try again") == :transient
+      assert ErrorAnalysis.classify_error("Unexpected response") == :transient
+      assert ErrorAnalysis.classify_error("Resource not found") == :transient
     end
 
-    test "classifies invalid UTF-8 strings as hard" do
+    test "classifies unknown atoms as transient" do
+      assert ErrorAnalysis.classify_error(:unknown_error) == :transient
+      assert ErrorAnalysis.classify_error({:weird, :error}) == :transient
+      assert ErrorAnalysis.classify_error(123) == :transient
+    end
+
+    test "classifies invalid UTF-8 strings as transient" do
       invalid_string = <<255>>
-      assert ErrorAnalysis.classify_error(invalid_string) == :hard
+      assert ErrorAnalysis.classify_error(invalid_string) == :transient
     end
   end
 

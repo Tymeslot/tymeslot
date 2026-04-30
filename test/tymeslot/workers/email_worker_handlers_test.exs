@@ -357,6 +357,107 @@ defmodule Tymeslot.Workers.EmailWorkerHandlersTest do
     end
   end
 
+  describe "handle_integration_paused_notification/1" do
+    test "happy path: returns :ok when user and calendar integration exist and email sends" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      expect(EmailServiceMock, :send_integration_paused_notification, fn _user,
+                                                                         _integration,
+                                                                         :calendar,
+                                                                         14 ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action(
+                 "send_integration_paused_notification",
+                 %{
+                   "user_id" => user.id,
+                   "integration_id" => integration.id,
+                   "integration_type" => "calendar",
+                   "cutoff_days" => 14
+                 }
+               )
+    end
+
+    test "happy path: returns :ok when user and video integration exist and email sends" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user)
+
+      expect(EmailServiceMock, :send_integration_paused_notification, fn _user,
+                                                                         _integration,
+                                                                         :video,
+                                                                         14 ->
+        {:ok, "sent"}
+      end)
+
+      assert :ok =
+               EmailWorkerHandlers.execute_email_action(
+                 "send_integration_paused_notification",
+                 %{
+                   "user_id" => user.id,
+                   "integration_id" => integration.id,
+                   "integration_type" => "video",
+                   "cutoff_days" => 14
+                 }
+               )
+    end
+
+    test "discards when user is not found" do
+      integration = insert(:calendar_integration)
+
+      assert {:discard, "User or integration not found"} =
+               EmailWorkerHandlers.execute_email_action(
+                 "send_integration_paused_notification",
+                 %{
+                   "user_id" => 999_999,
+                   "integration_id" => integration.id,
+                   "integration_type" => "calendar",
+                   "cutoff_days" => 14
+                 }
+               )
+    end
+
+    test "discards when integration is not found" do
+      user = insert(:user)
+
+      assert {:discard, "User or integration not found"} =
+               EmailWorkerHandlers.execute_email_action(
+                 "send_integration_paused_notification",
+                 %{
+                   "user_id" => user.id,
+                   "integration_id" => 999_999,
+                   "integration_type" => "calendar",
+                   "cutoff_days" => 14
+                 }
+               )
+    end
+
+    test "returns error when email service fails" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      expect(EmailServiceMock, :send_integration_paused_notification, fn _user,
+                                                                         _integration,
+                                                                         _type,
+                                                                         _cutoff_days ->
+        {:error, "SMTP timeout"}
+      end)
+
+      assert {:error, "Failed to send notification"} =
+               EmailWorkerHandlers.execute_email_action(
+                 "send_integration_paused_notification",
+                 %{
+                   "user_id" => user.id,
+                   "integration_id" => integration.id,
+                   "integration_type" => "calendar",
+                   "cutoff_days" => 14
+                 }
+               )
+    end
+  end
+
   describe "handle_admin_alert/1" do
     test "happy path: returns :ok and calls email service with correctly mapped args" do
       expect(EmailServiceMock, :send_admin_alert, fn recipient,

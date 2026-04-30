@@ -28,6 +28,7 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Shared.AccessToken
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.HealthCheck
 
   @base_url "https://graph.microsoft.com/v1.0"
 
@@ -206,9 +207,14 @@ defmodule Tymeslot.Workers.SyncOutlookCalendarWorker do
   end
 
   defp update_last_sync_at(integration) do
-    case CalendarIntegrationQueries.update_sync_state(integration, %{
-           last_external_sync_at: DateTime.utc_now(:second)
-         }) do
+    result =
+      CalendarIntegrationQueries.update_sync_state(integration, %{
+        last_external_sync_at: DateTime.utc_now(:second)
+      })
+
+    HealthCheck.mark_synced_successfully(:calendar, integration.id)
+
+    case result do
       {:ok, _updated} ->
         :ok
 

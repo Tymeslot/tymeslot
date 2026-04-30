@@ -31,6 +31,7 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Sync
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.HealthCheck
 
   @sync_window_past_days ProviderConfig.sync_window_past_days()
   @sync_window_future_days ProviderConfig.sync_window_future_days()
@@ -267,7 +268,10 @@ defmodule Tymeslot.Workers.SyncGoogleCalendarWorker do
     attrs =
       maybe_put_sync_token(%{last_external_sync_at: DateTime.utc_now(:second)}, next_sync_token)
 
-    case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
+    result = CalendarIntegrationQueries.update_sync_state(integration, attrs)
+    HealthCheck.mark_synced_successfully(:calendar, integration.id)
+
+    case result do
       {:ok, _updated} ->
         :ok
 

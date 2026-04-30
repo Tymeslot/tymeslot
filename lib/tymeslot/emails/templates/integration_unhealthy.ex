@@ -25,8 +25,8 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
 
     mjml_content = """
     #{Callouts.alert_box(:alert,
-    "One of your #{type_label} integrations (#{provider_label}) has been reporting connection issues for over 48 hours. You may want to check your integration settings.",
-    title: "Integration Connection Issues")}
+    "Our health checks for your #{type_label} integration (#{provider_label}) have been returning errors on and off for at least 48 hours. It's worth taking a look in case something needs your attention.",
+    title: "Integration may need attention")}
 
     #{Text.title_section("What's happening?")}
 
@@ -37,7 +37,7 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
       align="left"
       css-class="mobile-text"
     >
-      Your <strong>#{provider_label}</strong> #{type_label} integration has been failing health checks consistently for the past 48+ hours. This may affect your ability to sync #{type_label}s or create new bookings.
+      Our connection probes to your <strong>#{provider_label}</strong> #{type_label} integration have been failing intermittently for 48+ hours. The integration may already be working again — but if it isn't, syncing and new bookings could be affected, so it's worth a quick check.
     </mj-text>
 
     #{Text.divider()}
@@ -62,13 +62,13 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
 
     TemplateHelper.compile_system_template(
       mjml_content,
-      "Integration Connection Issues",
-      "Your #{provider_label} #{type_label} integration needs attention",
+      "Integration may need attention",
+      "Your #{provider_label} #{type_label} integration may need attention",
       intent: @intent,
       eyebrow: "Integration",
-      stage_title: "Integration needs attention",
+      stage_title: "Integration may need attention",
       stage_subtitle:
-        "Your #{provider_label} #{type_label} integration has been unhealthy for 48+ hours."
+        "Health probes for your #{provider_label} #{type_label} integration have been failing intermittently for 48+ hours."
     )
   end
 
@@ -85,12 +85,12 @@ defmodule Tymeslot.Emails.Templates.IntegrationUnhealthy do
     {type_label, provider_label, settings_url} = labels(integration, type)
 
     """
-    Integration Connection Issues
+    Integration may need attention
 
-    One of your #{type_label} integrations (#{provider_label}) has been reporting connection issues for over 48 hours. You may want to check your integration settings.
+    Our health checks for your #{type_label} integration (#{provider_label}) have been returning errors on and off for at least 48 hours. It's worth taking a look in case something needs your attention.
 
     WHAT'S HAPPENING?
-    Your #{provider_label} #{type_label} integration has been failing health checks consistently for the past 48+ hours. This may affect your ability to sync #{type_label}s or create new bookings.
+    Our connection probes to your #{provider_label} #{type_label} integration have been failing intermittently for 48+ hours. The integration may already be working again — but if it isn't, syncing and new bookings could be affected, so it's worth a quick check.
 
     WHAT SHOULD I DO?
     - Visit your integration settings to test the connection

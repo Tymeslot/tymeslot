@@ -350,7 +350,9 @@ if config_env() == :prod do
          # Run every 6 hours to detect silent/dead webhook channels
          {"0 */6 * * *", Tymeslot.Workers.DeadChannelAlertWorker},
          # Run daily at 03:30 UTC to prune old/inactive calendar event cache
-         {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker}
+         {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
+         # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
+         {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker}
        ]}
     ]
 

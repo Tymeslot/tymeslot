@@ -112,6 +112,32 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   end
 
   @doc """
+  Resets the health state row to a known-healthy baseline.
+
+  Used when the user has produced an unambiguous success signal — a successful
+  sync, a credentials update, or a reactivation — that proves the integration
+  works regardless of what the last scheduled probe said. Without this, the
+  in-app badge can lag the truth by up to an hour while waiting for the next
+  scheduled probe.
+
+  Safe to call when no row exists (no-op).
+  """
+  @spec reset(String.t() | atom(), integer()) :: {non_neg_integer(), nil}
+  def reset(type, integration_id) do
+    update_fields(type, integration_id,
+      status: "healthy",
+      failures: 0,
+      consecutive_hard_failures: 0,
+      successes: 2,
+      backoff_ms: 1_800_000,
+      last_check_at: DateTime.utc_now(),
+      last_error_class: nil,
+      became_unhealthy_at: nil,
+      notification_sent_at: nil
+    )
+  end
+
+  @doc """
   Deletes health state records whose integration no longer exists.
   Runs a NOT IN subquery per integration type.
   """
@@ -124,13 +150,71 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
   end
 
   @doc """
-  Returns all unhealthy integration health state records for a user.
-  Used to populate in-app health badges on integration cards.
+  Returns all unhealthy integration health state records for a user that
+  belong to a still-active integration.
+
+  Rows are filtered against the underlying integration tables so that a stale
+  `:unhealthy` row left behind on an integration the user has deactivated does
+  not produce a phantom badge. Once the user reactivates, the calling layer is
+  expected to call `reset/2` (via `HealthCheck.mark_user_recovered/2`) so the
+  next probe reconciles state with reality.
   """
   @spec list_unhealthy_for_user(integer()) :: [IntegrationHealthStateSchema.t()]
   def list_unhealthy_for_user(user_id) do
+    calendar_ids =
+      from(c in CalendarIntegrationSchema,
+        where: c.user_id == ^user_id and c.is_active == true,
+        select: c.id
+      )
+
+    video_ids =
+      from(v in VideoIntegrationSchema,
+        where: v.user_id == ^user_id and v.is_active == true,
+        select: v.id
+      )
+
+    Repo.all(
+      from(s in IntegrationHealthStateSchema,
+        where: s.user_id == ^user_id and s.status == "unhealthy",
+        where:
+          (s.integration_type == "calendar" and s.integration_id in subquery(calendar_ids)) or
+            (s.integration_type == "video" and s.integration_id in subquery(video_ids))
+      )
+    )
+  end
+
+  @doc """
+  Returns currently-unhealthy health-state rows of the given type that match
+  *either* of the auto-pause triggers:
+
+    * `became_unhealthy_at < calendar_cutoff` — the current unhealthy streak
+      has been going for at least the calendar cutoff (default 14 days).
+      Catches flappy / intermittently broken integrations.
+
+    * `consecutive_hard_failures >= hard_failure_count` — the integration
+      has hit at least this many back-to-back hard failures with no successes
+      mixed in. Catches "token revoked, server is gone, nothing transient is
+      happening" cases much earlier than the calendar trigger.
+
+  Used by `Tymeslot.Workers.IntegrationAutoPauseWorker`. Both triggers carry
+  the same outcome (pause + notify) but the worker logs which one fired.
+  """
+  @spec list_pausable(String.t() | atom(), DateTime.t(), non_neg_integer()) ::
+          [IntegrationHealthStateSchema.t()]
+  def list_pausable(type, %DateTime{} = calendar_cutoff, hard_failure_count)
+      when is_integer(hard_failure_count) and hard_failure_count >= 0 do
+    type_str = to_string(type)
+    active_ids = active_integration_ids_subquery(type, type_str)
+
     IntegrationHealthStateSchema
-    |> where([s], s.user_id == ^user_id and s.status == "unhealthy")
+    |> where(
+      [s],
+      s.integration_type == ^type_str and
+        s.status == "unhealthy" and
+        s.integration_id in subquery(active_ids) and
+        ((not is_nil(s.became_unhealthy_at) and s.became_unhealthy_at < ^calendar_cutoff) or
+           s.consecutive_hard_failures >= ^hard_failure_count)
+    )
     |> Repo.all()
   end
 
@@ -158,6 +242,16 @@ defmodule Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries do
     )
     |> select([s], s.integration_id)
     |> Repo.all()
+  end
+
+  defp active_integration_ids_subquery(:calendar, _type_str),
+    do: from(c in CalendarIntegrationSchema, where: c.is_active == true, select: c.id)
+
+  defp active_integration_ids_subquery(:video, _type_str),
+    do: from(v in VideoIntegrationSchema, where: v.is_active == true, select: v.id)
+
+  defp active_integration_ids_subquery(type, type_str) when is_binary(type) do
+    active_integration_ids_subquery(String.to_existing_atom(type), type_str)
   end
 
   defp delete_orphaned_by_type(type_str, integration_schema) do

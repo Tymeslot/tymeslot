@@ -1,11 +1,17 @@
 defmodule Tymeslot.Integrations.VideoTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
+
+  use Oban.Testing, repo: Tymeslot.Repo
 
   import Mox
   import Tymeslot.Factory
 
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video
+  alias Tymeslot.Repo
+  alias Tymeslot.Workers.IntegrationHealthWorker
 
   setup :verify_on_exit!
 
@@ -93,6 +99,101 @@ defmodule Tymeslot.Integrations.VideoTest do
 
       {:ok, updated2} = Video.toggle_integration(user.id, integration.id)
       assert updated2.is_active
+    end
+
+    test "enqueues an IntegrationHealthWorker probe when reactivating (inactive → active)" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, is_active: false)
+
+      assert {:ok, updated} = Video.toggle_integration(user.id, integration.id)
+      assert updated.is_active
+
+      assert_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "video", "integration_id" => integration.id}
+      )
+    end
+
+    test "does NOT enqueue a probe when deactivating (active → inactive)" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, is_active: true)
+
+      assert {:ok, updated} = Video.toggle_integration(user.id, integration.id)
+      refute updated.is_active
+
+      refute_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "video", "integration_id" => integration.id}
+      )
+    end
+  end
+
+  describe "update_integration/3" do
+    test "returns the updated integration on success" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, name: "Old Name")
+
+      assert {:ok, updated} =
+               Video.update_integration(user.id, integration.id, %{name: "New Name"})
+
+      assert updated.name == "New Name"
+    end
+
+    test "enqueues an IntegrationHealthWorker probe and resets the health row when credential fields are present" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user)
+
+      # Seed an unhealthy row so we can verify the reset fires.
+      %IntegrationHealthStateSchema{}
+      |> IntegrationHealthStateSchema.changeset(%{
+        integration_type: "video",
+        integration_id: integration.id,
+        user_id: user.id,
+        status: "unhealthy",
+        failures: 5,
+        consecutive_hard_failures: 5,
+        successes: 0,
+        backoff_ms: :timer.hours(1)
+      })
+      |> Repo.insert!()
+
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, %{
+                 api_key_encrypted: "new-encrypted-key"
+               })
+
+      # Health row is reset to a healthy baseline.
+      {:ok, row} = IntegrationHealthStateQueries.get(:video, integration.id)
+      assert row.status == "healthy"
+      assert row.failures == 0
+
+      # Immediate verification probe is enqueued.
+      assert_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "video", "integration_id" => integration.id}
+      )
+    end
+
+    test "does NOT enqueue a probe when no credential fields are present" do
+      user = insert(:user)
+      integration = insert(:video_integration, user: user, name: "Before")
+
+      assert {:ok, _updated} =
+               Video.update_integration(user.id, integration.id, %{name: "After"})
+
+      refute_enqueued(
+        worker: IntegrationHealthWorker,
+        args: %{"type" => "video", "integration_id" => integration.id}
+      )
+    end
+
+    test "returns {:error, :not_found} for an integration belonging to another user" do
+      user = insert(:user)
+      other = insert(:user)
+      integration = insert(:video_integration, user: other)
+
+      assert {:error, :not_found} =
+               Video.update_integration(user.id, integration.id, %{name: "Stolen"})
     end
   end
 

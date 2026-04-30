@@ -9,8 +9,43 @@ defmodule Tymeslot.WorkerTestHelpers do
   alias Ecto.UUID
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.Repo
+
+  @doc """
+  Inserts an `unhealthy` integration health state row for the given user and
+  integration. Used by tests for `IntegrationAutoPauseWorker` and the recovery
+  flow to seed deterministic unhealthy state.
+
+  ## Options
+    * `:became_unhealthy_at` (default: `DateTime.utc_now/0`)
+    * `:consecutive_hard_failures` (default: `5`)
+  """
+  @spec insert_unhealthy_health_row(UserSchema.t(), :calendar | :video, term(), keyword()) ::
+          IntegrationHealthStateSchema.t()
+  def insert_unhealthy_health_row(user, type, integration_id, opts \\ []) do
+    became_unhealthy_at = Keyword.get(opts, :became_unhealthy_at, DateTime.utc_now())
+    consecutive_hard_failures = Keyword.get(opts, :consecutive_hard_failures, 5)
+
+    %IntegrationHealthStateSchema{}
+    |> IntegrationHealthStateSchema.changeset(%{
+      integration_type: Atom.to_string(type),
+      integration_id: integration_id,
+      user_id: user.id,
+      status: "unhealthy",
+      failures: max(consecutive_hard_failures, 5),
+      consecutive_hard_failures: consecutive_hard_failures,
+      successes: 0,
+      backoff_ms: :timer.hours(1),
+      last_check_at: DateTime.utc_now(),
+      last_error_class: "hard",
+      became_unhealthy_at: became_unhealthy_at,
+      notification_sent_at: DateTime.add(became_unhealthy_at, 2 * 24 * 3600, :second)
+    })
+    |> Repo.insert!()
+  end
 
   @doc """
   Sets up a complete calendar scenario with user, integration, and meeting.

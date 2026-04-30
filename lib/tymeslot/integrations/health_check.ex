@@ -46,6 +46,7 @@ defmodule Tymeslot.Integrations.HealthCheck do
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
+  alias Tymeslot.Workers.IntegrationHealthWorker
 
   alias Tymeslot.Integrations.HealthCheck.{
     Assessor,
@@ -131,6 +132,61 @@ defmodule Tymeslot.Integrations.HealthCheck do
   @spec get_user_health_report(integer()) :: map()
   def get_user_health_report(user_id) do
     Monitor.build_user_report(user_id)
+  end
+
+  @doc """
+  Records that the user has produced an unambiguous success signal — fresh
+  credentials or a reactivation — and we should treat the integration as
+  healthy without waiting for the next scheduled probe.
+
+  Resets the health row to a healthy baseline and enqueues an immediate
+  verification probe with no jitter so the state is reconciled with reality
+  within seconds. Use `mark_synced_successfully/2` instead when the signal is
+  a successful sync — that already proves health, so the extra probe is
+  wasted work.
+
+  Idempotent and safe to call when no row exists.
+  """
+  @spec mark_user_recovered(integration_type(), integer()) :: :ok
+  def mark_user_recovered(type, integration_id) do
+    IntegrationHealthStateQueries.reset(type, integration_id)
+
+    result =
+      %{"type" => Atom.to_string(type), "integration_id" => integration_id}
+      |> IntegrationHealthWorker.new()
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue immediate verification probe after user recovery",
+          integration_type: type,
+          integration_id: integration_id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
+  end
+
+  @doc """
+  Resets the health state row after a successful sync.
+
+  A real sync is the strongest possible health signal — it actually exercised
+  the credentials end-to-end. Without this, the badge can stay stuck on
+  `:unhealthy` for up to an hour while syncs are happily working in parallel.
+
+  Unlike `mark_user_recovered/2`, this does not enqueue a probe — sync just
+  proved everything works, so re-probing is wasted work.
+
+  Idempotent and safe to call when no row exists.
+  """
+  @spec mark_synced_successfully(integration_type(), integer()) :: :ok
+  def mark_synced_successfully(type, integration_id) do
+    IntegrationHealthStateQueries.reset(type, integration_id)
+    :ok
   end
 
   # Server Callbacks

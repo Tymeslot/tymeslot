@@ -180,6 +180,47 @@ defmodule Tymeslot.Integrations.HealthCheck.MonitorTest do
       assert new_state.failures == 4
       assert new_state.became_unhealthy_at == unhealthy_since
     end
+
+    test "schedules a 15-minute recovery probe on the first transition to unhealthy" do
+      # Two prior hard failures, status still :degraded — the third hard failure
+      # is the one that flips the status. The override should kick in here.
+      old_state = %{
+        failures: 2,
+        consecutive_hard_failures: 2,
+        successes: 0,
+        last_check_at: DateTime.utc_now(),
+        status: :degraded,
+        backoff_ms: :timer.hours(1),
+        last_error_class: :hard,
+        became_unhealthy_at: nil,
+        notification_sent_at: nil
+      }
+
+      new_state = Monitor.update_health(old_state, {:error, :unauthorized, :hard})
+
+      assert new_state.status == :unhealthy
+      assert new_state.backoff_ms == :timer.minutes(15)
+    end
+
+    test "reverts to the standard 1-hour cadence on subsequent unhealthy probes" do
+      # Already unhealthy — the override only fires on the *transition*.
+      old_state = %{
+        failures: 3,
+        consecutive_hard_failures: 3,
+        successes: 0,
+        last_check_at: DateTime.utc_now(),
+        status: :unhealthy,
+        backoff_ms: :timer.minutes(15),
+        last_error_class: :hard,
+        became_unhealthy_at: DateTime.utc_now(),
+        notification_sent_at: nil
+      }
+
+      new_state = Monitor.update_health(old_state, {:error, :unauthorized, :hard})
+
+      assert new_state.status == :unhealthy
+      assert new_state.backoff_ms == :timer.hours(1)
+    end
   end
 
   describe "update_health/2 with persistent transient errors (escalation)" do

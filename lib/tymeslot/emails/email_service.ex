@@ -136,6 +136,10 @@ defmodule Tymeslot.Emails.EmailService do
     to: IntegrationEmails
 
   @impl Tymeslot.Emails.EmailServiceBehaviour
+  defdelegate send_integration_paused_notification(user, integration, type, cutoff_days),
+    to: IntegrationEmails
+
+  @impl Tymeslot.Emails.EmailServiceBehaviour
   defdelegate send_admin_alert(recipient, category, severity, message, metadata),
     to: IntegrationEmails
 end

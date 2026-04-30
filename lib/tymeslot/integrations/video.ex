@@ -7,6 +7,7 @@ defmodule Tymeslot.Integrations.Video do
 
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Integrations.Video.Connection
   alias Tymeslot.Integrations.Video.Discovery
@@ -207,10 +208,31 @@ defmodule Tymeslot.Integrations.Video do
           {:ok, any()} | {:error, any()}
   def update_integration(user_id, id, attrs) when is_integer(user_id) and is_integer(id) do
     case VideoIntegrationQueries.get_for_user(id, user_id) do
-      {:ok, integration} -> VideoIntegrationQueries.update(integration, attrs)
-      {:error, :not_found} = err -> err
-      {:error, :requires_reencryption, _integration} -> {:error, :requires_reencryption}
+      {:ok, integration} ->
+        case VideoIntegrationQueries.update(integration, attrs) do
+          {:ok, updated} = ok ->
+            if credentials_in_attrs?(attrs) do
+              HealthCheck.mark_user_recovered(:video, updated.id)
+            end
+
+            ok
+
+          err ->
+            err
+        end
+
+      {:error, :not_found} = err ->
+        err
+
+      {:error, :requires_reencryption, _integration} ->
+        {:error, :requires_reencryption}
     end
+  end
+
+  defp credentials_in_attrs?(attrs) when is_map(attrs) do
+    fields = VideoIntegrationSchema.encrypted_credential_fields()
+
+    Enum.any?(fields, fn f -> Map.has_key?(attrs, f) or Map.has_key?(attrs, Atom.to_string(f)) end)
   end
 
   # ---------------
@@ -242,9 +264,21 @@ defmodule Tymeslot.Integrations.Video do
   @spec toggle_integration(pos_integer(), pos_integer()) :: {:ok, any()} | {:error, any()}
   def toggle_integration(user_id, id) when is_integer(user_id) do
     case VideoIntegrationQueries.get_for_user(id, user_id) do
-      {:ok, integration} -> VideoIntegrationQueries.toggle_active(integration)
-      {:error, :not_found} = err -> err
-      {:error, :requires_reencryption, _integration} -> {:error, :requires_reencryption}
+      {:ok, integration} ->
+        case VideoIntegrationQueries.toggle_active(integration) do
+          {:ok, %{is_active: true} = updated} = ok ->
+            HealthCheck.mark_user_recovered(:video, updated.id)
+            ok
+
+          result ->
+            result
+        end
+
+      {:error, :not_found} = err ->
+        err
+
+      {:error, :requires_reencryption, _integration} ->
+        {:error, :requires_reencryption}
     end
   end
 

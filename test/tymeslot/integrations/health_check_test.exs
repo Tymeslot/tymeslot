@@ -92,11 +92,13 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       user = insert(:user)
       integration = insert(:calendar_integration, user: user, is_active: true, provider: "google")
 
-      # Initial failure to make it degraded
+      # Initial failure to make it degraded — return the 3-tuple shape that
+      # `Google.Provider.test_connection/1` translates into `{:error, :unauthorized}`,
+      # which is unambiguously a :hard failure.
       expect(GoogleCalendarAPIMock, :list_primary_events, 1, fn _integration,
                                                                 _start_date,
                                                                 _end_date ->
-        {:error, :unauthorized}
+        {:error, :unauthorized, "Token revoked"}
       end)
 
       run_health_checks()
@@ -174,9 +176,14 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       run_health_checks()
       sync_with_server()
 
+      # Crashes are wrapped as `{:error, {:exception, message}}` and treated
+      # as `:transient` under the conservative classification policy. The
+      # important property is that a single crash does not immediately push
+      # the integration toward `:unhealthy`.
       status = HealthCheck.get_health_status(:calendar, integration.id)
-      assert status.status == :degraded
-      assert status.failures == 1
+      assert status.status == :healthy
+      assert status.failures == 0
+      assert status.last_error_class == :transient
     end
 
     test "treats http 429 as transient" do
@@ -224,10 +231,14 @@ defmodule Tymeslot.Integrations.HealthCheckTest do
       run_health_checks()
       sync_with_server()
 
+      # Non-UTF-8 garbage from a provider is opaque — under the conservative
+      # classification policy we default unknown errors to `:transient` rather
+      # than `:hard`. The system must remain stable and not increment failure
+      # counters on input it cannot meaningfully classify.
       status = HealthCheck.get_health_status(:calendar, integration.id)
-      assert status.status == :degraded
-      assert status.failures == 1
-      assert status.last_error_class == :hard
+      assert status.status == :healthy
+      assert status.failures == 0
+      assert status.last_error_class == :transient
     end
   end
 

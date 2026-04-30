@@ -37,9 +37,23 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
     {:error, reason, error_class}
   end
 
+  # Markers in lowercased error strings that indicate a permanent OAuth/auth
+  # failure. Mirrors `ResponseHandler.@permanent_auth_error_strings` so the
+  # classifier and the fast-path reauth handler agree on which strings are
+  # genuinely hard.
+  @hard_auth_string_markers ~w(invalid_grant invalid_client access_denied)
+
   @doc """
   Classifies an error as either transient (temporary, will retry) or
   hard (permanent, requires intervention).
+
+  The classifier is intentionally conservative: only errors with a strong,
+  recognised "permanent failure" signal are classified as `:hard`. Everything
+  else — unknown atoms, opaque server-returned strings, bare integers — is
+  classified as `:transient`. This avoids the historical footgun where a
+  single weird response page from a CalDAV server (or an unfamiliar localised
+  error message) would push an integration to `:unhealthy` after only three
+  occurrences when the underlying connection was actually fine.
   """
   @spec classify_error(any()) :: error_class()
   def classify_error({:error, :rate_limited}), do: :transient
@@ -49,6 +63,14 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
     do: :transient
 
   def classify_error({:http_error, status, _message}) when status >= 500, do: :transient
+
+  # 401/403/404 are the canonical "credentials are wrong / your account no longer
+  # has access" statuses. The other 4xx codes (400, 405, 410, 422, 423…) are
+  # frequently produced by transient server-side states or malformed client
+  # requests that recover on retry, so they default to :transient.
+  def classify_error({:http_error, status, _message}) when status in [401, 403, 404], do: :hard
+
+  def classify_error({:http_error, _status, _message}), do: :transient
 
   def classify_error(reason) when reason in [:timeout, :nxdomain, :econnrefused, :network_error],
     do: :transient
@@ -69,14 +91,19 @@ defmodule Tymeslot.Integrations.HealthCheck.ErrorAnalysis do
         String.contains?(reason_downcased, "rate limited") -> :transient
         String.contains?(reason_downcased, "too many") -> :transient
         String.contains?(reason_downcased, "timeout") -> :transient
-        true -> :hard
+        contains_hard_auth_marker?(reason_downcased) -> :hard
+        true -> :transient
       end
     else
-      :hard
+      :transient
     end
   end
 
-  def classify_error(_reason), do: :hard
+  def classify_error(_reason), do: :transient
+
+  defp contains_hard_auth_marker?(reason_downcased) do
+    Enum.any?(@hard_auth_string_markers, &String.contains?(reason_downcased, &1))
+  end
 
   @doc """
   Calculates the next backoff duration based on error class and current health state.

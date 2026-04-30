@@ -66,6 +66,53 @@ defmodule Tymeslot.Workers.EmailWorkerHandlers.IntegrationEmails do
     end
   end
 
+  @spec handle_integration_paused_notification(%{String.t() => term()}) ::
+          :ok | {:error, term()} | {:discard, String.t()}
+  def handle_integration_paused_notification(%{
+        "user_id" => user_id,
+        "integration_id" => integration_id,
+        "integration_type" => integration_type,
+        "cutoff_days" => cutoff_days
+      }) do
+    with {:ok, user} <- UserQueries.get_user(user_id),
+         {:ok, integration} <- fetch_integration(integration_type, integration_id) do
+      type_atom = safe_integration_type_atom(integration_type)
+
+      case email_service_module().send_integration_paused_notification(
+             user,
+             integration,
+             type_atom,
+             cutoff_days
+           ) do
+        {:ok, _result} ->
+          Logger.info("Integration paused notification sent",
+            user_id: user_id,
+            integration_id: integration_id,
+            type: integration_type
+          )
+
+          :ok
+
+        {:error, reason} ->
+          Logger.error("Failed to send integration paused notification",
+            user_id: user_id,
+            integration_id: integration_id,
+            error: inspect(reason)
+          )
+
+          {:error, "Failed to send notification"}
+      end
+    else
+      {:error, :not_found} ->
+        Logger.warning("User or integration not found for paused notification",
+          user_id: user_id,
+          integration_id: integration_id
+        )
+
+        {:discard, "User or integration not found"}
+    end
+  end
+
   @spec handle_calendar_invitation(%{String.t() => term()}) ::
           :ok | {:error, term()} | {:discard, String.t()}
   def handle_calendar_invitation(%{"user_id" => user_id} = args) do

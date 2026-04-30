@@ -63,6 +63,7 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.SyncBroadcast
   alias Tymeslot.Integrations.CalendarManagement
+  alias Tymeslot.Integrations.HealthCheck
 
   # How far back and forward to fetch events on a full sync.
   # Centralised in ProviderConfig so all providers use the same window.
@@ -474,7 +475,10 @@ defmodule Tymeslot.Workers.SyncCalDavCalendarWorker do
       |> maybe_put(opts, :last_full_sync_at, :last_full_sync_at)
       |> maybe_put(opts, :sync_tier, :caldav_sync_tier)
 
-    case CalendarIntegrationQueries.update_sync_state(integration, attrs) do
+    result = CalendarIntegrationQueries.update_sync_state(integration, attrs)
+    HealthCheck.mark_synced_successfully(:calendar, integration.id)
+
+    case result do
       {:ok, _updated} ->
         :ok
 

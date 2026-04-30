@@ -6,7 +6,7 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
   alias Swoosh.Email
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Shared.MjmlEmail
-  alias Tymeslot.Emails.Templates.{AdminAlert, IntegrationUnhealthy}
+  alias Tymeslot.Emails.Templates.{AdminAlert, IntegrationPaused, IntegrationUnhealthy}
 
   @doc """
   Sends an integration unhealthy notification to the integration owner.
@@ -35,6 +35,42 @@ defmodule Tymeslot.Emails.EmailService.IntegrationEmails do
       MjmlEmail.base_email()
       |> Email.to({display_name, user.email})
       |> Email.subject("Your #{type_label} integration may need attention")
+      |> Email.html_body(html_body)
+      |> Email.text_body(text_body)
+
+    Delivery.deliver(email)
+  end
+
+  @doc """
+  Sends an integration paused notification to the integration owner.
+  Called by the auto-pause worker after the configured cutoff period of sustained
+  unhealthy status. `cutoff_days` is passed through to the template so it can
+  render the actual configured threshold rather than a hard-coded number.
+  """
+  @spec send_integration_paused_notification(
+          Tymeslot.Emails.EmailService.user_map(),
+          %{required(:provider) => atom(), optional(atom()) => term()},
+          atom() | String.t(),
+          pos_integer()
+        ) ::
+          {:ok, any()} | {:error, any()}
+  def send_integration_paused_notification(user, integration, type, cutoff_days) do
+    Logger.info("Sending integration paused notification",
+      user_id: user.id,
+      integration_id: integration.id,
+      type: type
+    )
+
+    html_body = IntegrationPaused.render(user, integration, type, cutoff_days)
+    text_body = IntegrationPaused.render_text(user, integration, type, cutoff_days)
+    type_label = if type == :video, do: "video", else: "calendar"
+
+    display_name = Map.get(user, :name) || user.email
+
+    email =
+      MjmlEmail.base_email()
+      |> Email.to({display_name, user.email})
+      |> Email.subject("Your #{type_label} integration has been paused")
       |> Email.html_body(html_body)
       |> Email.text_body(text_body)
 

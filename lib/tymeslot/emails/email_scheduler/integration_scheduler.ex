@@ -72,6 +72,74 @@ defmodule Tymeslot.Emails.EmailScheduler.IntegrationScheduler do
   end
 
   @doc """
+  Schedules an integration paused notification email.
+
+  Sent once when the auto-pause worker deactivates an integration after the
+  configured unhealthy cutoff period. The 90-day uniqueness window is
+  belt-and-suspenders against an integration that the user reactivates and
+  re-pauses within the same window — that's an extreme edge and one extra
+  notification is preferable to silence.
+
+  `cutoff_days` is the actual configured value (`:auto_pause_cutoff_days`)
+  and is stored in the job args so the email template can render the correct
+  threshold rather than a hard-coded number.
+  """
+  @spec schedule_integration_paused_notification(
+          entity_with_id(),
+          entity_with_id(),
+          atom() | String.t(),
+          pos_integer()
+        ) :: :ok | {:error, String.t()}
+  def schedule_integration_paused_notification(user, integration, type, cutoff_days) do
+    result =
+      %{
+        "action" => "send_integration_paused_notification",
+        "user_id" => user.id,
+        "integration_id" => integration.id,
+        "integration_type" => to_string(type),
+        "cutoff_days" => cutoff_days
+      }
+      |> EmailWorker.new(
+        queue: :emails,
+        priority: 2,
+        unique: [
+          period: 90 * 24 * 60 * 60,
+          fields: [:args, :queue],
+          keys: [:action, :user_id, :integration_id, :integration_type]
+        ]
+      )
+      |> Oban.insert()
+
+    case result do
+      {:ok, _job} ->
+        Logger.info("Integration paused notification job scheduled",
+          user_id: user.id,
+          integration_id: integration.id,
+          type: type
+        )
+
+        :ok
+
+      {:error, %Changeset{errors: [unique: _details]}} ->
+        Logger.info("Integration paused notification job already exists, skipping duplicate",
+          user_id: user.id,
+          integration_id: integration.id
+        )
+
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Failed to schedule integration paused notification",
+          user_id: user.id,
+          integration_id: integration.id,
+          error: Helpers.format_insert_error(reason)
+        )
+
+        {:error, "Failed to schedule job"}
+    end
+  end
+
+  @doc """
   Schedules an administrative alert email.
 
   Delegates to `Tymeslot.Workers.EmailWorker.AdminAlertScheduler.schedule/5`,

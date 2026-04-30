@@ -41,6 +41,13 @@ defmodule Tymeslot.Emails.EmailServiceBehaviour do
               atom() | String.t()
             ) ::
               {:ok, any()} | {:error, any()}
+  @callback send_integration_paused_notification(
+              user_map(),
+              %{required(:provider) => atom(), optional(atom()) => term()},
+              atom() | String.t(),
+              pos_integer()
+            ) ::
+              {:ok, any()} | {:error, any()}
   @callback send_external_booking_change(map(), String.t(), :deleted | :modified) ::
               {:ok, any()} | {:error, any()}
   @callback send_calendar_invitation(String.t(), map()) :: {:ok, any()} | {:error, any()}

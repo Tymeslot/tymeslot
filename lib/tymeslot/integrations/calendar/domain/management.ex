@@ -13,6 +13,7 @@ defmodule Tymeslot.Integrations.CalendarManagement do
   alias Tymeslot.Integrations.Calendar.Discovery
   alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.CalendarPrimary
+  alias Tymeslot.Integrations.HealthCheck
   alias Tymeslot.Integrations.Shared.ReauthHandling
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
@@ -117,11 +118,26 @@ defmodule Tymeslot.Integrations.CalendarManagement do
 
   @doc """
   Updates a calendar integration.
+
+  When the update touches an encrypted credential field — i.e. the user has
+  supplied fresh credentials — the integration's health state row is reset and
+  an immediate verification probe is enqueued so the in-app badge clears
+  without waiting up to an hour for the next scheduled probe.
   """
   @spec update_calendar_integration(CalendarIntegrationSchema.t(), integration_attrs()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def update_calendar_integration(integration, attrs) do
-    CalendarIntegrationQueries.update(integration, attrs)
+    case CalendarIntegrationQueries.update(integration, attrs) do
+      {:ok, updated} = ok ->
+        if credentials_in_attrs?(attrs) do
+          HealthCheck.mark_user_recovered(:calendar, updated.id)
+        end
+
+        ok
+
+      error ->
+        error
+    end
   end
 
   @doc """
@@ -136,20 +152,42 @@ defmodule Tymeslot.Integrations.CalendarManagement do
 
   @doc """
   Toggles the active status of an integration.
+
+  Reactivating clears the health state row and enqueues an immediate probe so
+  the badge can't lie about an integration the user has just turned back on.
   """
   @spec toggle_calendar_integration(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def toggle_calendar_integration(integration) do
-    CalendarIntegrationQueries.toggle_active(integration)
+    case CalendarIntegrationQueries.toggle_active(integration) do
+      {:ok, %{is_active: true} = updated} = ok ->
+        HealthCheck.mark_user_recovered(:calendar, updated.id)
+        ok
+
+      result ->
+        result
+    end
   end
 
   @doc """
   Updates the last sync timestamp for an integration.
+
+  A successful sync is the strongest possible signal that the integration
+  works, so the health state row is reset on every success. Without this, a
+  flaky probe can leave the badge stuck on `:unhealthy` even while real syncs
+  succeed every few minutes.
   """
   @spec mark_sync_success(CalendarIntegrationSchema.t()) ::
           {:ok, CalendarIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def mark_sync_success(integration) do
-    CalendarIntegrationQueries.mark_sync_success(integration)
+    case CalendarIntegrationQueries.mark_sync_success(integration) do
+      {:ok, updated} = ok ->
+        HealthCheck.mark_synced_successfully(:calendar, updated.id)
+        ok
+
+      error ->
+        error
+    end
   end
 
   @doc """
@@ -220,6 +258,12 @@ defmodule Tymeslot.Integrations.CalendarManagement do
       mark_needs_reauth: &mark_needs_reauth/2,
       log_prefix: "Calendar"
     )
+  end
+
+  defp credentials_in_attrs?(attrs) when is_map(attrs) do
+    fields = CalendarIntegrationSchema.encrypted_credential_fields()
+
+    Enum.any?(fields, fn f -> Map.has_key?(attrs, f) or Map.has_key?(attrs, Atom.to_string(f)) end)
   end
 
   # Private helpers

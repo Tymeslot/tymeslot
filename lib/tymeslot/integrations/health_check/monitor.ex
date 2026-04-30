@@ -21,6 +21,14 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   @recovery_threshold 2
   @check_interval :timer.minutes(30)
   @max_backoff_ms :timer.hours(1)
+  # On the very first transition into :unhealthy, override the standard 1 h
+  # hard backoff with a quick 15-minute re-probe. This catches the common case
+  # where the user fixes their integration server-side immediately after the
+  # third probe fails — without the override, the badge would persist for up
+  # to an hour even though the integration is already working again.
+  # Subsequent failed probes while still :unhealthy revert to the 1 h cadence
+  # so we don't hammer a genuinely broken server.
+  @first_unhealthy_recovery_probe_ms :timer.minutes(15)
 
   @type health_status :: :healthy | :degraded | :unhealthy
   @type integration_type :: :calendar | :video
@@ -142,8 +150,15 @@ defmodule Tymeslot.Integrations.HealthCheck.Monitor do
   def update_health(health_state, {:error, _error_reason, :hard}) do
     failures = health_state.failures + 1
     consecutive_hard_failures = health_state.consecutive_hard_failures + 1
-    new_backoff = ErrorAnalysis.calculate_next_backoff(health_state, :hard)
     new_status = determine_status(failures, 0)
+    just_became_unhealthy? = new_status == :unhealthy and health_state.status != :unhealthy
+
+    new_backoff =
+      if just_became_unhealthy? do
+        @first_unhealthy_recovery_probe_ms
+      else
+        ErrorAnalysis.calculate_next_backoff(health_state, :hard)
+      end
 
     became_unhealthy_at =
       if new_status == :unhealthy and is_nil(health_state.became_unhealthy_at),

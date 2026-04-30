@@ -58,6 +58,9 @@ defmodule Tymeslot.Emails.EmailScheduler do
   defdelegate schedule_integration_unhealthy_notification(user, integration, type),
     to: IntegrationScheduler
 
+  defdelegate schedule_integration_paused_notification(user, integration, type, cutoff_days),
+    to: IntegrationScheduler
+
   defdelegate schedule_admin_alert(recipient, category, severity, message, metadata),
     to: IntegrationScheduler
 
@@ -74,6 +77,11 @@ defmodule Tymeslot.Emails.EmailScheduler do
     "send_email_change_notification" => ["user_id", "new_email"],
     "send_email_change_confirmations" => ["user_id", "old_email", "new_email"],
     "send_integration_unhealthy_notification" => [
+      "user_id",
+      "integration_id",
+      "integration_type"
+    ],
+    "send_integration_paused_notification" => [
       "user_id",
       "integration_id",
       "integration_type"
