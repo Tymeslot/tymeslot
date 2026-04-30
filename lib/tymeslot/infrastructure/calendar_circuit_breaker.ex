@@ -199,6 +199,35 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   end
 
   @doc """
+  Resets the host-specific circuit breaker for a provider and URL.
+
+  A successful reconnect to a host that was previously failing should clear the
+  breaker so the next operation isn't rejected immediately with `:circuit_open`.
+  Returns `:ok` even if no host breaker exists yet (idempotent).
+  """
+  @spec reset_for_url(atom(), String.t()) :: :ok
+  def reset_for_url(provider, url) when provider in @calendar_providers and is_binary(url) do
+    case URI.parse(url) do
+      %URI{host: host} when is_binary(host) ->
+        safe_host = String.replace(host, ~r/[^a-zA-Z0-9]/, "_")
+        breaker_id = "calendar_breaker_#{provider}_#{safe_host}"
+        breaker_name = {:via, Registry, {Tymeslot.Infrastructure.CircuitBreakerRegistry, breaker_id}}
+
+        if breaker_exists?(breaker_name) do
+          CircuitBreaker.reset(breaker_name)
+          Logger.info("Calendar host circuit breaker reset", provider: provider, host: host)
+        end
+
+        :ok
+
+      _other ->
+        :ok
+    end
+  end
+
+  def reset_for_url(_provider, _url), do: :ok
+
+  @doc """
   Gets the configuration for a specific provider.
   """
   @spec get_config(atom()) :: map()
