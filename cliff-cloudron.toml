@@ -5,7 +5,7 @@ body = """
 [{{ version | trim_start_matches(pat="v") }}]
 {% for group, commits in commits | group_by(attribute="group") %}\
 {% for commit in commits %}\
-* {% if commit.scope %}{{ commit.scope }}: {% endif %}{{ commit.message | upper_first }}
+* {% if commit.breaking %}[BREAKING] {% endif %}{% if commit.scope %}{{ commit.scope }}: {% endif %}{{ commit.message | upper_first }}
 {% endfor %}\
 {% endfor %}\
 {% endif %}\
@@ -23,6 +23,7 @@ sort_commits = "newest"
 
 commit_parsers = [
   { footer = "^Changelog: skip", skip = true },
+  { breaking = true, group = "Breaking Changes" },
   { message = "^test", skip = true },
   { message = "^refactor", skip = true },
   { message = "^style", skip = true },

@@ -27,6 +27,8 @@ sort_commits = "newest"
 commit_parsers = [
   # Skip commits explicitly marked as changelog-internal
   { footer = "^Changelog: skip", skip = true },
+  # Breaking changes — must come before feat/fix to avoid duplication
+  { breaking = true, group = "Breaking Changes" },
   # Skip test, refactor, style, chore, docs commits
   { message = "^test", skip = true },
   { message = "^refactor", skip = true },
