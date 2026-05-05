@@ -246,7 +246,7 @@ defmodule TymeslotWeb.Components.SiteComponents do
         <div class="flex flex-col lg:flex-row gap-12 mb-12">
           <%!-- Brand column --%>
           <div class="lg:w-72 flex-shrink-0">
-            <.link navigate={~p"/"} class="inline-block mb-5">
+            <.link href={~p"/"} class="inline-block mb-5">
               <.logo mode={:full} img_class="h-10" />
             </.link>
             <p class="text-tymeslot-400 text-token-sm leading-relaxed mb-6 max-w-xs">
