@@ -87,12 +87,6 @@ defmodule TymeslotWeb.Plugs.SecurityHeadersPlug do
             {frame_ancestors, x_frame_options}
 
           nil ->
-            # Profile not found; default to blocking embedding.
-            Logger.warning("Profile not found for username, blocking embedding",
-              username: username,
-              path: conn.request_path
-            )
-
             {"'none'", "DENY"}
         end
     end
