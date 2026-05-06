@@ -75,7 +75,7 @@ defmodule Tymeslot.Bookings.Policy do
           required(:start_time) => DateTime.t(),
           required(:end_time) => DateTime.t(),
           required(:duration) => integer(),
-          required(:location) => String.t(),
+          required(:location) => String.t() | nil,
           required(:meeting_type) => String.t(),
           required(:meeting_type_id) => integer() | nil,
           required(:organizer_name) => String.t(),
