@@ -1,4 +1,11 @@
 
+[0.100.15]
+* core: Translate reCAPTCHA notice text so it localises with the booking form
+* core: Translate location placeholder in booking confirmation emails
+* core: Translate location placeholder in booking confirmation emails
+* core: Fix invisible reply text in Thunderbird dark mode
+* core: Restore CalDAV booking creation when discovery omits path
+* saas: Add breaking changes callout to changelog
 [0.100.14]
 * core: Prevent CalDAV sync crash on all-day recurring events with EXDATEs
 * core: Fix Nextcloud connection test failing for bare server URLs
