@@ -1,4 +1,10 @@
 
+[0.100.16]
+* core: Apply calendar deselection to CalDAV sync immediately
+* core: Prevent calendar dashboard crash on 3+ overlapping all-day events
+* core: Reject Google Calendar connections without write access
+* core: Add custom colour picker for booking page palettes and backgrounds
+* core: Add rotating file logs with sensitive-data redaction
 [0.100.15]
 * core: Translate reCAPTCHA notice text so it localises with the booking form
 * core: Translate location placeholder in booking confirmation emails
