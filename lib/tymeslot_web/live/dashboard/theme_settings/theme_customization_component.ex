@@ -119,7 +119,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
      |> assign(:customization, customization)
      |> assign(:presets, presets)
      |> assign(:defaults, defaults)
-     |> assign_new(:browsing_type, fn -> customization.background_type end)}
+     |> assign_new(:browsing_type, fn -> customization.background_type end)
+     |> assign_new(:custom_picker_open, fn -> false end)
+     |> assign_new(:palette_picker_open, fn ->
+       not is_nil(customization.custom_palette_seed)
+     end)}
   end
 
   @impl Phoenix.LiveComponent
@@ -137,6 +141,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
         customization={@customization}
         presets={@presets}
         myself={@myself}
+        palette_picker_open={@palette_picker_open}
       />
 
       <Components.background_section
@@ -145,6 +150,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
         presets={@presets}
         uploads={@uploads}
         myself={@myself}
+        custom_picker_open={@custom_picker_open}
       />
     </div>
     """
@@ -162,13 +168,46 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
            ) do
         {:ok, updated_customization} ->
           emit_telemetry(:color_scheme_changed, socket, %{scheme_id: scheme_id})
-          {:noreply, assign(socket, :customization, updated_customization)}
+
+          {:noreply,
+           socket
+           |> assign(:customization, updated_customization)
+           |> assign(:palette_picker_open, not is_nil(updated_customization.custom_palette_seed))}
 
         {:error, reason} ->
           Flash.error(reason)
           {:noreply, socket}
       end
     end)
+  end
+
+  def handle_event("theme:toggle_palette_picker", _params, socket) do
+    if is_nil(socket.assigns.customization.custom_palette_seed) do
+      with_rate_limit(socket, "color_scheme", fn ->
+        case ThemeCustomizations.apply_color_scheme_change(
+               socket.assigns.profile.id,
+               socket.assigns.theme_id,
+               socket.assigns.customization,
+               "custom"
+             ) do
+          {:ok, updated} ->
+            emit_telemetry(:palette_seed_set, socket, %{
+              seed: updated.custom_palette_seed
+            })
+
+            {:noreply,
+             socket
+             |> assign(:customization, updated)
+             |> assign(:palette_picker_open, true)}
+
+          {:error, reason} ->
+            Flash.error(reason)
+            {:noreply, socket}
+        end
+      end)
+    else
+      {:noreply, update(socket, :palette_picker_open, &(!&1))}
+    end
   end
 
   @valid_browsing_types ~w[gradient color image video]
@@ -181,6 +220,53 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomizationComponent do
 
   def handle_event("theme:set_browsing_type", _params, socket) do
     {:noreply, socket}
+  end
+
+  def handle_event("theme:toggle_custom_picker", _params, socket) do
+    {:noreply, update(socket, :custom_picker_open, &(!&1))}
+  end
+
+  def handle_event("theme:set_palette_seed", %{"value" => hex}, socket) do
+    with_rate_limit(socket, "palette_seed", fn ->
+      case ThemeCustomizations.apply_custom_palette_change(
+             socket.assigns.profile.id,
+             socket.assigns.theme_id,
+             socket.assigns.customization,
+             hex
+           ) do
+        {:ok, updated} ->
+          emit_telemetry(:palette_seed_changed, socket, %{seed: hex})
+          {:noreply, assign(socket, :customization, updated)}
+
+        {:error, reason} ->
+          Flash.error(reason)
+          {:noreply, socket}
+      end
+    end)
+  end
+
+  def handle_event("theme:set_custom_background", %{"value" => hex}, socket) do
+    with_rate_limit(socket, "background", fn ->
+      case ThemeCustomizations.apply_background_change(
+             socket.assigns.profile.id,
+             socket.assigns.theme_id,
+             socket.assigns.customization,
+             "color",
+             hex
+           ) do
+        {:ok, updated} ->
+          emit_telemetry(:background_changed, socket, %{type: "color", value: hex})
+
+          {:noreply,
+           socket
+           |> assign(:customization, updated)
+           |> assign(:browsing_type, "color")}
+
+        {:error, reason} ->
+          Flash.error(reason)
+          {:noreply, socket}
+      end
+    end)
   end
 
   def handle_event("theme:select_background", params, socket) do

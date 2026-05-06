@@ -274,7 +274,7 @@ defmodule Tymeslot.ThemeCustomizations.Capability do
       if features[:supports_custom_colors] do
         color_css =
           if customizations["color_scheme"] do
-            ThemeCustomizations.get_color_scheme_css(customizations["color_scheme"])
+            ThemeCustomizations.get_color_scheme_css(customizations)
           else
             nil
           end

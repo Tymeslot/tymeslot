@@ -90,5 +90,31 @@ defmodule TymeslotWeb.Live.Themes.ThemeCustomizationIntegrationTest do
       # Poster should use the preset poster image
       assert html =~ ~s(poster="/images/ui/posters/rhythm-background-poster.jpg")
     end
+
+    test "custom palette seed flows through to booking page CSS variables",
+         %{conn: conn, profile: profile} do
+      # Set Quill theme (theme 1 supports custom colours)
+      profile = Repo.update!(Changeset.change(profile, %{booking_theme: "1"}))
+
+      seed = "#ff6b35"
+
+      # Store a custom seed via the public API (apply_custom_palette_change)
+      current = %ThemeCustomizationSchema{
+        profile_id: profile.id,
+        theme_id: "1",
+        color_scheme: "default",
+        background_type: "gradient",
+        background_value: "gradient_1"
+      }
+
+      {:ok, _customization} =
+        ThemeCustomizations.apply_custom_palette_change(profile.id, "1", current, seed)
+
+      # Load the public booking page
+      {:ok, _view, html} = live(conn, ~p"/#{profile.username}")
+
+      # The derived primary colour equals the seed — verify the CSS variable is present
+      assert html =~ "--theme-primary: #{seed}"
+    end
   end
 end

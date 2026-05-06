@@ -10,6 +10,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
   @type customization_struct :: ThemeCustomizationSchema.t()
   @type customization_map :: %{
           optional(:color_scheme) => String.t() | nil,
+          optional(:custom_palette_seed) => String.t() | nil,
           optional(:background_type) => String.t() | nil,
           optional(:background_value) => String.t() | nil,
           optional(:background_image_path) => String.t() | nil,
@@ -28,6 +29,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
   def extract_save_attributes(%ThemeCustomizationSchema{} = customization) do
     %{
       "color_scheme" => customization.color_scheme,
+      "custom_palette_seed" => customization.custom_palette_seed,
       "background_type" => customization.background_type,
       "background_value" => customization.background_value,
       "background_image_path" => customization.background_image_path,
@@ -39,6 +41,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
   def extract_save_attributes(customization) when is_map(customization) do
     %{
       "color_scheme" => Map.get(customization, :color_scheme),
+      "custom_palette_seed" => Map.get(customization, :custom_palette_seed),
       "background_type" => Map.get(customization, :background_type),
       "background_value" => Map.get(customization, :background_value),
       "background_image_path" => Map.get(customization, :background_image_path),
@@ -64,6 +67,9 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
 
   defp apply_customization_change(acc, :color_scheme, value), do: %{acc | color_scheme: value}
 
+  defp apply_customization_change(acc, :custom_palette_seed, value),
+    do: %{acc | custom_palette_seed: value}
+
   defp apply_customization_change(acc, :background_type, value),
     do: %{acc | background_type: value}
 
@@ -77,6 +83,9 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
     do: %{acc | background_video_path: value}
 
   defp apply_customization_change(acc, "color_scheme", value), do: %{acc | color_scheme: value}
+
+  defp apply_customization_change(acc, "custom_palette_seed", value),
+    do: %{acc | custom_palette_seed: value}
 
   defp apply_customization_change(acc, "background_type", value),
     do: %{acc | background_type: value}
@@ -125,6 +134,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
       profile_id: assigns.profile.id,
       theme_id: theme_id,
       color_scheme: assigns[:color_scheme] || "default",
+      custom_palette_seed: assigns[:custom_palette_seed],
       background_type: assigns[:background_type] || "gradient",
       background_value: assigns[:background_value] || "gradient_1",
       background_image_path: assigns[:background_image_path],
@@ -141,6 +151,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
   def convert_to_map(%ThemeCustomizationSchema{} = customization) do
     %{
       "color_scheme" => customization.color_scheme,
+      "custom_palette_seed" => customization.custom_palette_seed,
       "background_type" => customization.background_type,
       "background_value" => customization.background_value,
       "background_image_path" => customization.background_image_path,
@@ -164,6 +175,7 @@ defmodule Tymeslot.ThemeCustomizations.DataTransform do
       atom_key =
         case key do
           "color_scheme" -> :color_scheme
+          "custom_palette_seed" -> :custom_palette_seed
           "background_type" -> :background_type
           "background_value" -> :background_value
           "background_image_path" -> :background_image_path

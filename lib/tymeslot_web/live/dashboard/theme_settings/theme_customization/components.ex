@@ -5,9 +5,16 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
   use TymeslotWeb, :html
 
   alias Tymeslot.Scheduling.LinkAccessPolicy
+  alias Tymeslot.ThemeCustomizations
+
+  import TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.CurrentIndicator,
+    only: [current_indicator: 1]
 
   import TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColorPicker,
     only: [color_picker: 1]
+
+  import TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.ColourPickerWidget,
+    only: [colour_picker_widget: 1]
 
   import TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Pickers.GradientPicker,
     only: [gradient_picker: 1]
@@ -74,33 +81,59 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
             Select the primary colors for your booking page interface.
           </p>
         </div>
-        <% current_scheme = @presets.color_schemes[@customization.color_scheme] %>
-        <%= if current_scheme do %>
-          <div class="flex items-center gap-3 bg-tymeslot-50 px-4 py-2 rounded-token-2xl border border-tymeslot-100 shadow-inner">
-            <span class="text-token-2xs font-black uppercase tracking-widest text-tymeslot-400">Current</span>
-            <div class="flex items-center gap-1.5 bg-white p-1 rounded-token-lg border border-tymeslot-100">
-              <div class="w-3 h-3 rounded-full" style={"background-color: #{current_scheme.colors.primary}"}>
-              </div>
-              <div
-                class="w-3 h-3 rounded-full"
-                style={"background-color: #{current_scheme.colors.secondary}"}
-              >
-              </div>
-              <div class="w-3 h-3 rounded-full" style={"background-color: #{current_scheme.colors.accent}"}>
-              </div>
-            </div>
-            <span class="text-token-sm font-black text-tymeslot-700">{current_scheme.name}</span>
-          </div>
-        <% end %>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <% current_scheme = ThemeCustomizations.resolve_active_scheme(@customization, @presets) %>
+          <% custom_selected = not is_nil(@customization.custom_palette_seed) %>
+          <%= if current_scheme do %>
+            <.current_indicator
+              swatches={[
+                current_scheme.colors.primary,
+                current_scheme.colors.secondary,
+                current_scheme.colors.accent
+              ]}
+              label={current_scheme.name}
+              code={
+                if custom_selected,
+                  do: String.upcase(@customization.custom_palette_seed)
+              }
+              highlighted={custom_selected}
+            />
+          <% end %>
+          <button
+            type="button"
+            phx-click="theme:toggle_palette_picker"
+            phx-target={@myself}
+            aria-expanded={to_string(@palette_picker_open)}
+            aria-controls="custom-palette-picker"
+            class={[
+              "flex items-center gap-2 px-3.5 py-2 rounded-token-xl border-2 text-token-2xs font-black uppercase tracking-widest transition-all duration-300",
+              if(@palette_picker_open,
+                do:
+                  "bg-turquoise-50 border-turquoise-300 text-turquoise-700 shadow-sm shadow-turquoise-500/10",
+                else:
+                  "bg-tymeslot-50 border-transparent text-tymeslot-600 hover:bg-tymeslot-100 hover:border-tymeslot-200"
+              )
+            ]}
+          >
+            <.icon name="hero-swatch-mini" class="w-4 h-4" />
+            <span>Custom</span>
+            <.icon
+              name="hero-chevron-down-mini"
+              class={"w-4 h-4 transition-transform duration-300 #{if @palette_picker_open, do: "rotate-180"}"}
+            />
+          </button>
+        </div>
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <% active_scheme_id = if is_nil(@customization.custom_palette_seed), do: @customization.color_scheme %>
         <%= for {scheme_id, scheme} <- @presets.color_schemes do %>
           <button
             type="button"
             class={[
               "group/scheme relative flex flex-col items-center p-4 rounded-token-2xl border-2 transition-all duration-300",
-              if(@customization.color_scheme == scheme_id,
+              if(active_scheme_id == scheme_id,
                 do: "bg-turquoise-50 border-turquoise-400 shadow-xl shadow-turquoise-500/10",
                 else: "bg-white border-tymeslot-50 hover:border-turquoise-200 hover:shadow-lg"
               )
@@ -128,7 +161,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
             </div>
             <p class={[
               "text-token-sm font-black uppercase tracking-widest transition-colors",
-              if(@customization.color_scheme == scheme_id,
+              if(active_scheme_id == scheme_id,
                 do: "text-turquoise-700",
                 else: "text-tymeslot-400 group-hover/scheme:text-tymeslot-600"
               )
@@ -136,16 +169,25 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
               {scheme.name}
             </p>
 
-            <%= if @customization.color_scheme == scheme_id do %>
+            <%= if active_scheme_id == scheme_id do %>
               <div class="absolute top-2 right-2 w-6 h-6 bg-turquoise-500 text-white rounded-full flex items-center justify-center shadow-lg">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
+                <.icon name="hero-check-mini" class="w-4 h-4" />
               </div>
             <% end %>
           </button>
         <% end %>
       </div>
+
+      <%= if not is_nil(@customization.custom_palette_seed) and @palette_picker_open do %>
+        <div class="mt-6 animate-fade-in-up rounded-token-2xl border-2 border-tymeslot-50 bg-tymeslot-50/50 p-4">
+          <.colour_picker_widget
+            id="custom-palette-picker"
+            target={@myself}
+            initial_hex={@customization.custom_palette_seed}
+            commit_event="theme:set_palette_seed"
+          />
+        </div>
+      <% end %>
     </div>
     """
   end
@@ -190,7 +232,11 @@ defmodule TymeslotWeb.Dashboard.ThemeSettings.ThemeCustomization.Components do
             <% "gradient" -> %>
               <.gradient_picker customization={@customization} presets={@presets} myself={@myself} />
             <% "color" -> %>
-              <.color_picker customization={@customization} myself={@myself} />
+              <.color_picker
+                customization={@customization}
+                myself={@myself}
+                custom_picker_open={@custom_picker_open}
+              />
             <% "image" -> %>
               <.image_picker
                 customization={@customization}

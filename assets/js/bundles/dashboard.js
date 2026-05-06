@@ -17,6 +17,7 @@ const DashboardHooks = {
   CalendarResize: lazyHook("CalendarResize", () => import("../hooks/calendar_drag").then(m => m.CalendarResize)),
   CalendarCreate: lazyHook("CalendarCreate", () => import("../hooks/calendar_drag").then(m => m.CalendarCreate)),
   CalendarMobile: lazyHook("CalendarMobile", () => import("../hooks/calendar_drag").then(m => m.CalendarMobile)),
+  CustomColourPicker: lazyHook("CustomColourPicker", () => import("../hooks/custom_colour_picker").then(m => m.CustomColourPicker)),
 };
 
 // Initialize bundle with shared utility (handles retry logic, errors, telemetry)

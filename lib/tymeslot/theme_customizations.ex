@@ -17,6 +17,7 @@ defmodule Tymeslot.ThemeCustomizations do
     Capability,
     DataTransform,
     Defaults,
+    PaletteDerivation,
     Presets,
     Storage,
     Validation
@@ -231,18 +232,42 @@ defmodule Tymeslot.ThemeCustomizations do
 
   @doc """
   Gets the CSS variables for a color scheme.
-  """
-  @spec get_color_scheme_css(String.t() | atom()) :: String.t() | nil
-  def get_color_scheme_css(color_scheme) do
-    case Presets.find_preset_by_id(:color_scheme, color_scheme) do
-      nil ->
-        nil
 
-      %{colors: colors} ->
-        Enum.map_join(colors, "\n", fn {key, value} ->
-          "--theme-#{String.replace(to_string(key), "_", "-")}: #{value};"
-        end)
+  Accepts either a scheme ID (string/atom — looked up in the static preset map)
+  or a customisation map. The map form supports the "custom" scheme: when
+  `color_scheme == "custom"`, the palette is derived from `custom_palette_seed`
+  via `PaletteDerivation.derive_palette/1` instead of preset lookup.
+  """
+  @spec get_color_scheme_css(String.t() | atom() | map()) :: String.t() | nil
+  def get_color_scheme_css(customization) when is_map(customization) do
+    case resolve_palette(customization) do
+      nil -> nil
+      %{colors: colors} -> format_palette_css(colors)
     end
+  end
+
+  def get_color_scheme_css(scheme_id) when is_binary(scheme_id) or is_atom(scheme_id) do
+    case Presets.find_preset_by_id(:color_scheme, scheme_id) do
+      nil -> nil
+      %{colors: colors} -> format_palette_css(colors)
+    end
+  end
+
+  defp resolve_palette(customization) do
+    seed = get_seed(customization)
+    scheme_id = get_scheme_id(customization)
+
+    cond do
+      is_binary(seed) and seed != "" -> PaletteDerivation.derive_palette(seed)
+      is_binary(scheme_id) -> Presets.find_preset_by_id(:color_scheme, scheme_id)
+      true -> nil
+    end
+  end
+
+  defp format_palette_css(colors) do
+    Enum.map_join(colors, "\n", fn {key, value} ->
+      "--theme-#{String.replace(to_string(key), "_", "-")}: #{value};"
+    end)
   end
 
   @doc """
@@ -309,8 +334,55 @@ defmodule Tymeslot.ThemeCustomizations do
     }
   end
 
+  @default_custom_palette_seed "#06b6d4"
+
+  @doc """
+  Returns the brand default seed hex used when a user first activates the
+  custom-palette mode and has no previously stored seed.
+  """
+  @spec default_custom_palette_seed() :: String.t()
+  def default_custom_palette_seed, do: @default_custom_palette_seed
+
+  @doc """
+  Resolves the active colour scheme for a customization, returning the same
+  `%{name, colors}` shape used by both presets and palette derivation.
+
+  When `custom_palette_seed` is present on the customization, the palette is
+  derived from that seed; otherwise the `color_scheme` field is looked up in
+  the provided `presets.color_schemes` map.  Returns `nil` if neither resolves
+  to a known scheme.
+  """
+  @spec resolve_active_scheme(ThemeCustomizationSchema.t() | map(), map()) :: map() | nil
+  def resolve_active_scheme(customization, presets) do
+    seed = get_seed(customization)
+
+    if is_binary(seed) and seed != "" do
+      PaletteDerivation.derive_palette(seed)
+    else
+      scheme_id = get_scheme_id(customization)
+      Map.get(presets.color_schemes, scheme_id)
+    end
+  end
+
+  defp get_seed(%ThemeCustomizationSchema{custom_palette_seed: seed}), do: seed
+
+  defp get_seed(map) when is_map(map) do
+    Map.get(map, :custom_palette_seed) || Map.get(map, "custom_palette_seed")
+  end
+
+  defp get_scheme_id(%ThemeCustomizationSchema{color_scheme: s}), do: s
+
+  defp get_scheme_id(map) when is_map(map) do
+    Map.get(map, :color_scheme) || Map.get(map, "color_scheme")
+  end
+
   @doc """
   Applies a color scheme change through the component interface.
+
+  Switching to the "custom" scheme reuses the existing seed if one is already
+  stored; otherwise it seeds with the brand turquoise default. Use
+  `apply_custom_palette_change/4` directly when the user picks a specific
+  custom seed.
   """
   @spec apply_color_scheme_change(
           profile_id(),
@@ -318,12 +390,18 @@ defmodule Tymeslot.ThemeCustomizations do
           ThemeCustomizationSchema.t() | map(),
           String.t() | atom()
         ) :: {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
+  def apply_color_scheme_change(profile_id, theme_id, current_customization, "custom") do
+    seed = get_seed(current_customization) || @default_custom_palette_seed
+    apply_custom_palette_change(profile_id, theme_id, current_customization, seed)
+  end
+
   def apply_color_scheme_change(profile_id, theme_id, current_customization, scheme_id) do
     with :ok <- Validation.validate_color_scheme(scheme_id),
          :ok <- validate_theme_capability(theme_id, %{"color_scheme" => scheme_id}),
          new_customization <-
            DataTransform.merge_customization_changes(current_customization, %{
-             color_scheme: scheme_id
+             color_scheme: scheme_id,
+             custom_palette_seed: nil
            }),
          save_attrs <- DataTransform.extract_save_attributes(new_customization) do
       profile_id
@@ -342,6 +420,45 @@ defmodule Tymeslot.ThemeCustomizations do
 
     apply_color_scheme_change(profile_id, theme_id, current_customization, scheme_id)
   end
+
+  @doc """
+  Switches the customisation to the "custom" colour scheme and persists the seed
+  hex used to derive the palette.
+
+  The seed must be a 6-character hex string (with leading `#`); otherwise an
+  error is returned without touching the database.
+  """
+  @spec apply_custom_palette_change(
+          profile_id(),
+          theme_id(),
+          ThemeCustomizationSchema.t() | map(),
+          String.t()
+        ) :: {:ok, ThemeCustomizationSchema.t()} | {:error, String.t()}
+  def apply_custom_palette_change(profile_id, theme_id, current_customization, seed_hex) do
+    with :ok <- validate_seed_hex(seed_hex),
+         new_customization <-
+           DataTransform.merge_customization_changes(current_customization, %{
+             custom_palette_seed: String.downcase(seed_hex)
+           }),
+         save_attrs <- DataTransform.extract_save_attributes(new_customization) do
+      profile_id
+      |> upsert_theme_customization(theme_id, save_attrs)
+      |> format_persistence_error()
+    end
+  end
+
+  @hex_color_regex ~r/^#[0-9A-Fa-f]{6}$/
+
+  defp validate_seed_hex(seed) when is_binary(seed) do
+    if String.match?(seed, @hex_color_regex) do
+      :ok
+    else
+      {:error, "Custom palette seed must be a 6-character hex colour"}
+    end
+  end
+
+  defp validate_seed_hex(_other),
+    do: {:error, "Custom palette seed must be a 6-character hex colour"}
 
   @doc """
   Applies a background change through the component interface.

@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
   import Tymeslot.DashboardTestHelpers
 
   alias Tymeslot.Repo
+  alias Tymeslot.ThemeCustomizations
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
 
   setup :setup_dashboard_user_with_theme
@@ -82,7 +83,7 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
       # The Current badge (span.text-tymeslot-700) shows the loaded scheme's display name.
       # Scoping to that element rules out "Arctic Blue" appearing only in the scheme card list,
       # which is always rendered regardless of any saved customization.
-      assert render(view) =~ ~r/text-tymeslot-700">Arctic Blue/
+      assert render(view) =~ ~r/text-tymeslot-700"[^>]*>\s*Arctic Blue/
     end
 
     test "changes color scheme and persists it", %{conn: conn, profile: profile} do
@@ -298,6 +299,112 @@ defmodule TymeslotWeb.Dashboard.ThemeSettingsTest do
         |> render_click()
 
       assert html_video =~ "MP4 or WebM. Max 20MB."
+    end
+
+    test "theme:toggle_palette_picker with no seed persists default seed and opens picker",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+
+      # No seed stored yet — clicking "Custom" should write the default seed to the DB
+      view
+      |> element("button[phx-click='theme:toggle_palette_picker']")
+      |> render_click()
+
+      saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
+      assert saved != nil
+      assert saved.custom_palette_seed == ThemeCustomizations.default_custom_palette_seed()
+
+      # Picker button should now be expanded (seed was written so toggle_open = true)
+      assert render(view) =~ ~s(aria-expanded="true")
+    end
+
+    test "theme:toggle_palette_picker with existing seed toggles picker without a DB write",
+         %{conn: conn, profile: profile} do
+      # Store a custom seed first so the component loads with it
+      {:ok, _seeded} =
+        ThemeCustomizations.upsert_theme_customization(profile.id, "1", %{
+          "color_scheme" => "default",
+          "custom_palette_seed" => "#ff6b35",
+          "background_type" => "gradient",
+          "background_value" => "gradient_1"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+
+      # The picker button should initially be open because a seed exists
+      html_before = render(view)
+      assert html_before =~ ~s(aria-expanded="true")
+
+      # Clicking again toggles it closed — no DB write, seed unchanged
+      view
+      |> element("button[phx-click='theme:toggle_palette_picker']")
+      |> render_click()
+
+      assert render(view) =~ ~s(aria-expanded="false")
+
+      # DB value is unchanged
+      saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
+      assert saved.custom_palette_seed == "#ff6b35"
+    end
+
+    test "theme:set_palette_seed with valid hex persists lowercased seed",
+         %{conn: conn, profile: profile} do
+      # First open the picker by toggling (no seed stored)
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+
+      view
+      |> element("button[phx-click='theme:toggle_palette_picker']")
+      |> render_click()
+
+      # Now the palette picker widget is rendered — push the set_palette_seed event
+      view
+      |> element("#custom-palette-picker")
+      |> render_hook("theme:set_palette_seed", %{"value" => "#AABBCC"})
+
+      saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
+      assert saved.custom_palette_seed == "#aabbcc"
+    end
+
+    test "theme:toggle_custom_picker toggles the custom background picker",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+
+      # Switch to Solid Color tab first so the picker button is visible
+      view
+      |> element("button", "Solid Color")
+      |> render_click()
+
+      html_before = render(view)
+      assert html_before =~ ~s(aria-expanded="false")
+
+      view
+      |> element("button[phx-click='theme:toggle_custom_picker']")
+      |> render_click()
+
+      assert render(view) =~ ~s(aria-expanded="true")
+    end
+
+    test "theme:set_custom_background persists hex color",
+         %{conn: conn, profile: profile} do
+      {:ok, view, _html} = live(conn, ~p"/dashboard/theme/customize/1")
+
+      # Switch to Solid Color tab and open the custom picker
+      view
+      |> element("button", "Solid Color")
+      |> render_click()
+
+      view
+      |> element("button[phx-click='theme:toggle_custom_picker']")
+      |> render_click()
+
+      # Push the set_custom_background event from the hook element
+      view
+      |> element("#custom-background-picker")
+      |> render_hook("theme:set_custom_background", %{"value" => "#123456"})
+
+      saved = ThemeCustomizations.get_by_profile_and_theme(profile.id, "1")
+      assert saved.background_type == "color"
+      assert saved.background_value == "#123456"
     end
   end
 end
