@@ -151,6 +151,18 @@ defmodule TymeslotWeb.OAuthCallbackHandler do
         )
         |> Controller.redirect(to: redirect_path)
 
+      {:error, :calendar_scope_missing} ->
+        Logger.info("OAuth callback rejected: calendar write scope not granted",
+          service: service_name
+        )
+
+        conn
+        |> Controller.put_flash(
+          :error,
+          "#{service_name} wasn't connected because Calendar permission was not granted. Please try again and tick the box for \"See, edit, share, and permanently delete all the calendars you can access using Google Calendar\" — Tymeslot needs this to create meetings and Google Meet links."
+        )
+        |> Controller.redirect(to: redirect_path)
+
       {:error, reason} ->
         Logger.error("OAuth callback failed", service: service_name, reason: inspect(reason))
 

@@ -24,7 +24,33 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
       assert Provider.needs_scope_upgrade?(integration)
     end
 
-    test "returns false when integration has calendar scope" do
+    test "returns true when integration has only calendar.readonly scope" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          oauth_scope: "openid email https://www.googleapis.com/auth/calendar.readonly"
+        )
+
+      assert Provider.needs_scope_upgrade?(integration)
+    end
+
+    test "returns true when integration has only calendar.events.readonly scope" do
+      user = insert(:user)
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          oauth_scope: "https://www.googleapis.com/auth/calendar.events.readonly"
+        )
+
+      assert Provider.needs_scope_upgrade?(integration)
+    end
+
+    test "returns false when integration has full calendar scope" do
       user = insert(:user)
 
       integration =
@@ -70,23 +96,23 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
       # Function only checks structs, returns false for plain maps
       refute Provider.needs_scope_upgrade?(integration)
     end
+  end
 
-    test "returns false for schema struct with calendar scope" do
-      user = insert(:user)
+  describe "has_calendar_write_scope?/1" do
+    # Substantive scope cases (calendar / calendar.events / readonly variants /
+    # missing) are exercised transitively via the needs_scope_upgrade?/1 and
+    # validate_oauth_scope/1 blocks. These cases cover the input-shape edges.
+    test "returns false for nil" do
+      refute Provider.has_calendar_write_scope?(nil)
+    end
 
-      integration =
-        insert(:calendar_integration,
-          user: user,
-          provider: "google",
-          oauth_scope: "https://www.googleapis.com/auth/calendar"
-        )
-
-      refute Provider.needs_scope_upgrade?(integration)
+    test "returns false for empty string" do
+      refute Provider.has_calendar_write_scope?("")
     end
   end
 
   describe "validate_oauth_scope/1" do
-    test "accepts valid calendar scope" do
+    test "accepts full calendar scope" do
       config = %{oauth_scope: "https://www.googleapis.com/auth/calendar"}
 
       assert :ok = Provider.validate_oauth_scope(config)
@@ -94,12 +120,6 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
 
     test "accepts calendar.events scope" do
       config = %{oauth_scope: "https://www.googleapis.com/auth/calendar.events"}
-
-      assert :ok = Provider.validate_oauth_scope(config)
-    end
-
-    test "accepts scope containing 'calendar' keyword" do
-      config = %{oauth_scope: "openid profile email calendar"}
 
       assert :ok = Provider.validate_oauth_scope(config)
     end
@@ -113,11 +133,20 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
       assert :ok = Provider.validate_oauth_scope(config)
     end
 
-    test "rejects scope without calendar permission" do
+    test "rejects calendar.readonly only" do
+      config = %{
+        oauth_scope: "openid email https://www.googleapis.com/auth/calendar.readonly"
+      }
+
+      assert {:error, message} = Provider.validate_oauth_scope(config)
+      assert String.contains?(message, "calendar.readonly is not sufficient")
+    end
+
+    test "rejects scope without any calendar permission" do
       config = %{oauth_scope: "https://www.googleapis.com/auth/userinfo.email"}
 
       assert {:error, message} = Provider.validate_oauth_scope(config)
-      assert String.contains?(message, "calendar permission")
+      assert String.contains?(message, "calendar write access")
     end
 
     test "rejects nil oauth_scope" do

@@ -43,34 +43,50 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
            required(:color) => String.t() | nil
          }
 
+  # Scopes that grant write access to calendar events. Required for Google Meet
+  # creation via calendar.v3.Events.Insert. `calendar.readonly` and
+  # `calendar.events.readonly` are intentionally excluded.
+  @calendar_write_scopes MapSet.new([
+                           "https://www.googleapis.com/auth/calendar",
+                           "https://www.googleapis.com/auth/calendar.events"
+                         ])
+
   @doc """
-  Checks if a Google Calendar integration needs a scope upgrade.
-  Returns true if the integration only has basic auth scope without calendar permissions.
+  Returns true when the integration's stored scope lacks any write-capable
+  calendar scope. Read-only and absent scopes both qualify.
   """
   @spec needs_scope_upgrade?(term()) :: boolean()
   def needs_scope_upgrade?(%CalendarIntegrationSchema{oauth_scope: scope})
       when is_binary(scope) do
-    !String.contains?(scope, "calendar")
+    not has_calendar_write_scope?(scope)
   end
 
-  def needs_scope_upgrade?(_scope), do: false
+  def needs_scope_upgrade?(_integration), do: false
+
+  @doc """
+  Returns true when the given OAuth scope string grants calendar event write
+  access. Exposed for the OAuth callback to validate freshly returned tokens
+  before persisting an integration.
+  """
+  @spec has_calendar_write_scope?(String.t() | nil) :: boolean()
+  def has_calendar_write_scope?(scope) when is_binary(scope) do
+    granted = scope |> String.split(" ", trim: true) |> MapSet.new()
+    not MapSet.disjoint?(@calendar_write_scopes, granted)
+  end
+
+  def has_calendar_write_scope?(_scope), do: false
 
   # Required callbacks for OAuth base
 
   @spec validate_oauth_scope(map()) :: :ok | {:error, String.t()}
   def validate_oauth_scope(config) do
-    required_scopes = [
-      "https://www.googleapis.com/auth/calendar",
-      "https://www.googleapis.com/auth/calendar.events"
-    ]
-
     case Map.get(config, :oauth_scope) do
       scope when is_binary(scope) ->
-        if Enum.any?(required_scopes, &String.contains?(scope, &1)) or
-             String.contains?(scope, "calendar") do
+        if has_calendar_write_scope?(scope) do
           :ok
         else
-          {:error, "OAuth scope must include calendar permission for read/write access"}
+          {:error,
+           "OAuth scope must grant calendar write access (calendar.readonly is not sufficient)"}
         end
 
       _other ->

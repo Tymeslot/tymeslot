@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.OAuthHelper
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
+  alias Tymeslot.Repo
   import Tymeslot.Factory
   import Mox
 
@@ -37,12 +38,19 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
   defp expect_token_response(access_token, refresh_token, opts \\ []) do
     id_token = Keyword.get(opts, :id_token)
 
+    scope =
+      Keyword.get(
+        opts,
+        :scope,
+        "openid email https://www.googleapis.com/auth/calendar"
+      )
+
     expect(Tymeslot.HTTPClientMock, :request, fn :post, _url, _body, _headers, _opts ->
       base = %{
         "access_token" => access_token,
         "refresh_token" => refresh_token,
         "expires_in" => 3600,
-        "scope" => "calendar"
+        "scope" => scope
       }
 
       body = if id_token, do: Map.put(base, "id_token", id_token), else: base
@@ -131,6 +139,99 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelperTest do
       # Should still succeed — discovery failure is non-fatal
       assert {:ok, integration} = OAuthHelper.handle_callback("code", state, "http://uri")
       assert integration.provider == "google"
+    end
+
+    test "rejects callback when calendar write scope was not granted" do
+      user = insert(:user)
+      insert(:profile, user: user)
+      state = GoogleOAuthHelper.generate_state(user.id)
+
+      # User clicked "Continue" without ticking the Calendar checkbox —
+      # Google still returns a 200 with the partial scope.
+      expect_token_response("at-readonly", "rt-readonly", scope: "openid email")
+
+      assert {:error, :calendar_scope_missing} =
+               OAuthHelper.handle_callback("code", state, "http://uri")
+
+      # No integration row should be created.
+      refute Repo.exists?(
+               from(i in CalendarIntegrationSchema,
+                 where: i.user_id == ^user.id and i.provider == "google"
+               )
+             )
+
+      # No sync job should be enqueued.
+      refute_enqueued(worker: Tymeslot.Workers.SyncGoogleCalendarWorker)
+    end
+
+    test "rejects callback when only calendar.readonly was granted" do
+      user = insert(:user)
+      insert(:profile, user: user)
+      state = GoogleOAuthHelper.generate_state(user.id)
+
+      expect_token_response(
+        "at-ro",
+        "rt-ro",
+        scope: "openid email https://www.googleapis.com/auth/calendar.readonly"
+      )
+
+      assert {:error, :calendar_scope_missing} =
+               OAuthHelper.handle_callback("code", state, "http://uri")
+    end
+
+    test "enqueues video room retries for user's pending meetings on success" do
+      user = insert(:user)
+      insert(:profile, user: user)
+
+      video_integration = insert(:video_integration, user: user)
+
+      pending_start = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+      pending_end = DateTime.add(pending_start, 60, :minute)
+
+      pending =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_user_id: user.id,
+          status: "confirmed",
+          video_integration_id: video_integration.id,
+          video_room_id: nil,
+          start_time: pending_start,
+          end_time: pending_end
+        )
+
+      already_start = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+      already_end = DateTime.add(already_start, 60, :minute)
+
+      # A meeting that already has a video room — should NOT be re-enqueued.
+      already_has_room =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_user_id: user.id,
+          status: "confirmed",
+          video_integration_id: video_integration.id,
+          video_room_id: "room-existing",
+          start_time: already_start,
+          end_time: already_end
+        )
+
+      state = GoogleOAuthHelper.generate_state(user.id)
+      expect_token_response("at-success", "rt-success")
+
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
+        {:ok, [%{id: "cal1", summary: "Primary", primary: true}]}
+      end)
+
+      assert {:ok, _integration} = OAuthHelper.handle_callback("code", state, "http://uri")
+
+      assert_enqueued(
+        worker: Tymeslot.Workers.VideoRoomWorker,
+        args: %{"meeting_id" => pending.id, "send_emails" => false}
+      )
+
+      refute_enqueued(
+        worker: Tymeslot.Workers.VideoRoomWorker,
+        args: %{"meeting_id" => already_has_room.id}
+      )
     end
   end
 

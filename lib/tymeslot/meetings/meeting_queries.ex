@@ -396,6 +396,25 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   end
 
   @doc """
+  Returns the given user's upcoming meetings that should have a video room link
+  but do not. Used to retry video room creation immediately after the user
+  re-authorises their video provider integration with the right scope.
+  """
+  @spec list_user_meetings_missing_video_rooms(pos_integer(), DateTime.t(), pos_integer()) ::
+          [Meeting.t()]
+  def list_user_meetings_missing_video_rooms(user_id, now, limit \\ 500) do
+    Meeting
+    |> with_status("confirmed")
+    |> upcoming(now)
+    |> where([m], m.organizer_user_id == ^user_id)
+    |> where([m], not is_nil(m.video_integration_id))
+    |> where([m], is_nil(m.video_room_id))
+    |> order_by([m], asc: m.start_time)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
   Get upcoming meetings with preloaded associations.
   Limits results and orders by start time.
   """

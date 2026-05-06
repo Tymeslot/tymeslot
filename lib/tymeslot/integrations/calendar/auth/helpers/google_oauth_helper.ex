@@ -13,12 +13,15 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Google.CalendarAPI, as: GoogleCalendarAPI
+  alias Tymeslot.Integrations.Calendar.Google.Provider, as: GoogleProvider
   alias Tymeslot.Integrations.Calendar.PrimarySelection
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Common.OAuth.AccountMatch
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Workers.SyncGoogleCalendarWorker
+  alias Tymeslot.Workers.VideoRoomWorker
 
   @doc """
   Generates the OAuth authorization URL for Google Calendar.
@@ -56,16 +59,46 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   """
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec handle_callback(String.t(), String.t(), String.t()) ::
-          {:ok, CalendarIntegrationSchema.t()} | {:error, String.t()}
+          {:ok, CalendarIntegrationSchema.t()}
+          | {:error, :calendar_scope_missing}
+          | {:error, String.t()}
   def handle_callback(code, state, redirect_uri) do
     with {:ok, tokens} <- GoogleOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
+         :ok <- ensure_calendar_write_scope(tokens),
          {:ok, integration} <-
            create_or_update_calendar_integration(tokens.user_id, tokens, tokens[:integration_id]) do
       register_push_channel_async(integration)
+      enqueue_pending_video_room_retries(integration.user_id)
       {:ok, integration}
     else
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  # Validates that Google returned a token whose granted scope grants calendar
+  # event write access. Without it, downstream Google Meet creation will fail
+  # with HTTP 403 (ACCESS_TOKEN_SCOPE_INSUFFICIENT) — so we reject the callback
+  # before any database write happens.
+  defp ensure_calendar_write_scope(%{scope: scope, user_id: user_id}) do
+    if GoogleProvider.has_calendar_write_scope?(scope) do
+      :ok
+    else
+      Logger.info("Google Calendar OAuth callback rejected: calendar write scope not granted",
+        user_id: user_id,
+        granted_scope: scope
+      )
+
+      {:error, :calendar_scope_missing}
+    end
+  end
+
+  # After a successful (re-)connection, kick the user's confirmed upcoming
+  # meetings whose video room creation was previously blocked. The Oban job's
+  # 5-minute uniqueness window prevents duplicates with any in-flight retries.
+  defp enqueue_pending_video_room_retries(user_id) do
+    user_id
+    |> MeetingQueries.list_user_meetings_missing_video_rooms(DateTime.utc_now())
+    |> Enum.each(&VideoRoomWorker.schedule_video_room_creation(&1.id))
   end
 
   @doc """
