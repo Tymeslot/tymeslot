@@ -58,6 +58,36 @@ defmodule Tymeslot.Integrations.Calendar.OperationsBookingTest do
       assert id == integration.id
     end
 
+    test "resolves CalDAV booking when calendar_list entry has nil path" do
+      # Production data shape from `XmlHandler.parse_calendar_discovery/2`:
+      # entries are stored with `\"path\": null` and only `id` carries the
+      # CalDAV href. Resolution must succeed off the id.
+      user = insert(:user)
+      href = "/calendars/MK43327/8538e694/"
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          default_booking_calendar_id: href,
+          calendar_paths: [],
+          calendar_list: [
+            %{
+              "id" => href,
+              "path" => nil,
+              "name" => "Mark AhaSend",
+              "type" => "calendar",
+              "selected" => true
+            }
+          ]
+        )
+
+      assert {:ok, %{integration_id: id, calendar_path: ^href}} =
+               Operations.get_booking_integration_info(user.id)
+
+      assert id == integration.id
+    end
+
     test "returns error when no integrations exist for user" do
       user = insert(:user)
       assert {:error, :no_integration} = Operations.get_booking_integration_info(user.id)

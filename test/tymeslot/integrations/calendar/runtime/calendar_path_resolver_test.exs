@@ -75,5 +75,26 @@ defmodule Tymeslot.Integrations.Calendar.Runtime.CalendarPathResolverTest do
 
       assert nil == CalendarPathResolver.resolve(integration)
     end
+
+    test "falls back to id when calendar_list entry has nil path" do
+      # CalDAV's XML discovery emits maps with `id` set to the href but no
+      # `path` field, so existing rows in the database have `\"path\": null`.
+      # The resolver must still produce a usable booking target.
+      integration = %{
+        default_booking_calendar_id: "/calendars/MK43327/8538e694/",
+        calendar_list: [
+          %{
+            "id" => "/calendars/MK43327/8538e694/",
+            "path" => nil,
+            "name" => "Mark AhaSend",
+            "selected" => true
+          }
+        ],
+        calendar_paths: []
+      }
+
+      assert "/calendars/MK43327/8538e694/" =
+               CalendarPathResolver.resolve(integration)
+    end
   end
 end

@@ -132,6 +132,30 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       assert unified["selected"] == false
     end
+
+    test "populates path from id when discovered map omits path (CalDAV shape)" do
+      # `XmlHandler.parse_calendar_discovery/2` returns atom-keyed maps with
+      # `:id` (the href) and no `:path` key. Persisting `\"path\" => nil`
+      # broke booking via `CalendarPathResolver`. The unifier must derive a
+      # usable path from the available identifiers.
+      href = "/calendars/MK43327/8538e694/"
+
+      discovered = [
+        %{
+          id: href,
+          href: href,
+          name: "Mark AhaSend",
+          color: nil,
+          selected: false,
+          read_only: false
+        }
+      ]
+
+      [unified] = Selection.unify_discovered_with_existing(discovered, [])
+
+      assert unified["id"] == href
+      assert unified["path"] == href
+    end
   end
 
   # =====================================
@@ -211,6 +235,31 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
 
       assert merged["calendar_paths"] == "/user-typed-path"
       assert merged["calendar_list"] == [%{"path" => "/existing", "selected" => true}]
+    end
+
+    test "selects and persists path for CalDAV-shaped discovered entries (no :path key)" do
+      # Real CalDAV discovery output omits `:path`. Selecting via the href
+      # must still yield a calendar_list entry with a non-nil `path` so that
+      # downstream booking via `CalendarPathResolver` succeeds.
+      href = "/calendars/MK43327/8538e694/"
+
+      discovered = [
+        %{
+          id: href,
+          href: href,
+          name: "Mark AhaSend",
+          color: nil,
+          selected: false,
+          read_only: false
+        }
+      ]
+
+      result = Selection.prepare_selected_params([href], discovered)
+
+      assert result["calendar_paths"] == [href]
+      assert [cal] = result["calendar_list"]
+      assert cal["id"] == href
+      assert cal["path"] == href
     end
 
     test "non-empty selection still wins over user-typed calendar_paths" do

@@ -24,11 +24,17 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
 
     selected_calendar_info =
       discovered
-      |> Enum.filter(fn cal -> path_in_selected?(fetch(cal, "path"), selected_paths) end)
+      |> Enum.filter(fn cal ->
+        # Match against either path or id — CalDAV discovery emits only `id`
+        # (the href), so a path-only filter would silently drop those entries.
+        path_in_selected?(fetch(cal, "path") || fetch(cal, "id"), selected_paths)
+      end)
       |> Enum.map(fn cal ->
+        path = fetch(cal, "path") || fetch(cal, "href") || fetch(cal, "id")
+
         %{
-          "id" => fetch(cal, "id") || fetch(cal, :id) || fetch(cal, "path"),
-          "path" => fetch(cal, "path"),
+          "id" => fetch(cal, "id") || fetch(cal, :id) || path,
+          "path" => path,
           "name" => fetch(cal, "name") || "Calendar",
           "type" => fetch(cal, "type") || "calendar",
           "selected" => true,
@@ -64,7 +70,9 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
     existing_map = build_existing_selection_map(existing_list)
 
     Enum.map(discovered, fn cal ->
-      path = fetch(cal, "path")
+      # CalDAV's XML discovery only emits `id` (the href). Fall back so we
+      # always persist a usable path rather than `null`.
+      path = fetch(cal, "path") || fetch(cal, "href") || fetch(cal, "id")
       id = fetch(cal, "id") || path
       selected = lookup_selection(existing_map, [path, id])
       read_only = fetch(cal, "read_only") || Map.get(cal, :read_only, false)
