@@ -211,7 +211,9 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
       %URI{host: host} when is_binary(host) ->
         safe_host = String.replace(host, ~r/[^a-zA-Z0-9]/, "_")
         breaker_id = "calendar_breaker_#{provider}_#{safe_host}"
-        breaker_name = {:via, Registry, {Tymeslot.Infrastructure.CircuitBreakerRegistry, breaker_id}}
+
+        breaker_name =
+          {:via, Registry, {Tymeslot.Infrastructure.CircuitBreakerRegistry, breaker_id}}
 
         if breaker_exists?(breaker_name) do
           CircuitBreaker.reset(breaker_name)
