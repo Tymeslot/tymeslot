@@ -20,6 +20,7 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
   alias Tymeslot.Integrations.CalendarManagement
@@ -117,17 +118,17 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
         Map.put(cal, "selected", path in selected_paths)
       end)
 
-    attrs = %{
+    credential_attrs = %{
       base_url:
         creds
         |> Map.get(:url)
         |> to_string()
         |> PathUtils.normalize_base_url(),
       username: Map.get(creds, :username),
-      password: Map.get(creds, :password),
-      calendar_paths: Enum.filter(selected_paths, &is_binary/1),
-      calendar_list: calendar_list
+      password: Map.get(creds, :password)
     }
+
+    attrs = Map.merge(credential_attrs, Selection.calendar_list_attrs(calendar_list))
 
     case CalendarManagement.update_calendar_integration(integration, attrs) do
       {:ok, updated} -> {:ok, updated}

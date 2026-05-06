@@ -180,6 +180,63 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
         )
       end)
 
-    CalendarManagement.update_calendar_integration(integration, %{calendar_list: calendar_list})
+    persist_calendar_list(integration, calendar_list)
+  end
+
+  @doc """
+  Persists `calendar_list` together with the `calendar_paths` derived from
+  its `selected: true` entries.
+
+  `calendar_paths` is what the CalDAV sync worker iterates over to decide
+  which collections to fetch; `calendar_list` carries per-calendar metadata
+  (name, type, selected). The two MUST move together — writing one
+  without the other is the bug behind issue #50, where toggling a
+  calendar off in the dashboard left it being synced because the worker
+  never saw the change.
+
+  Always use this rather than passing a bare `%{calendar_list: ...}` to
+  `update_calendar_integration/2`.
+  """
+  @spec persist_calendar_list(
+          Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t(),
+          [map()]
+        ) ::
+          {:ok, Tymeslot.Integrations.Calendar.CalendarIntegrationSchema.t()} | {:error, any()}
+  def persist_calendar_list(integration, calendar_list) when is_list(calendar_list) do
+    CalendarManagement.update_calendar_integration(
+      integration,
+      calendar_list_attrs(calendar_list)
+    )
+  end
+
+  @doc """
+  Builds the `%{calendar_list: ..., calendar_paths: ...}` attribute pair
+  to merge into a multi-field update (e.g. reconnection, which also
+  rewrites credentials). For updates that only touch the selection, prefer
+  `persist_calendar_list/2`.
+  """
+  @spec calendar_list_attrs([map()]) :: %{
+          calendar_list: [map()],
+          calendar_paths: [String.t()]
+        }
+  def calendar_list_attrs(calendar_list) when is_list(calendar_list) do
+    %{calendar_list: calendar_list, calendar_paths: derive_selected_paths(calendar_list)}
+  end
+
+  @doc """
+  Returns the paths of the calendars marked `selected: true`.
+
+  Tolerates both string and atom keys; falls back to `id` when `path` is
+  absent (CalDAV discovery emits only `id`).
+  """
+  @spec derive_selected_paths([map()]) :: [String.t()]
+  def derive_selected_paths(calendar_list) when is_list(calendar_list) do
+    for cal <- calendar_list,
+        Map.get(cal, "selected") || Map.get(cal, :selected),
+        path =
+          Map.get(cal, "path") || Map.get(cal, :path) || Map.get(cal, "id") || Map.get(cal, :id),
+        is_binary(path),
+        path != "",
+        do: path
   end
 end

@@ -122,4 +122,51 @@ defmodule Tymeslot.Integrations.Calendar.PrimaryTest do
     {:ok, profile} = ProfileQueries.get_by_user_id(user.id)
     assert profile.primary_calendar_integration_id == nil
   end
+
+  describe "auto_select_primary_calendar/2" do
+    test "CalDAV provider: writes calendar_paths from selected calendars alongside calendar_list",
+         %{user: user} do
+      path = "/dav/user@example.org/Calendar/"
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          calendar_paths: [],
+          calendar_list: []
+        )
+
+      calendars = [
+        %{"id" => path, "path" => path, "name" => "Personal", "selected" => true}
+      ]
+
+      assert {:ok, updated} = CalendarPrimary.auto_select_primary_calendar(integration, calendars)
+
+      assert updated.calendar_paths == [path]
+      assert length(updated.calendar_list) == 1
+    end
+
+    test "OAuth (Google) provider: does NOT write calendar IDs into calendar_paths", %{
+      user: user
+    } do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_paths: [],
+          calendar_list: []
+        )
+
+      # Atom-keyed maps as returned by GoogleProvider.format_calendar/1 —
+      # they have no :path key, only :id.
+      calendars = [
+        %{id: "primary", name: "Primary", selected: true, primary: true}
+      ]
+
+      assert {:ok, updated} = CalendarPrimary.auto_select_primary_calendar(integration, calendars)
+
+      assert updated.calendar_paths == []
+      assert length(updated.calendar_list) == 1
+    end
+  end
 end

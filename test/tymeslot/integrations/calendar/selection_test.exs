@@ -311,5 +311,131 @@ defmodule Tymeslot.Integrations.Calendar.SelectionTest do
       [cal] = updated.calendar_list
       assert cal["selected"] == true
     end
+
+    test "rebuilds calendar_paths from the new selection so the sync worker stops touching un-toggled calendars" do
+      user = insert(:user)
+      kept_path = "/dav/user@example.org/Calendar/"
+      removed_path = "/dav/user@example.org/General/"
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_paths: [kept_path, removed_path],
+          calendar_list: [
+            %{
+              "id" => kept_path,
+              "path" => kept_path,
+              "name" => "Calendar",
+              "selected" => true
+            },
+            %{
+              "id" => removed_path,
+              "path" => removed_path,
+              "name" => "General",
+              "selected" => true
+            }
+          ]
+        )
+
+      {:ok, updated} =
+        Selection.update_calendar_selection(integration, %{
+          "selected_calendars" => [kept_path]
+        })
+
+      assert updated.calendar_paths == [kept_path]
+
+      assert Enum.find(updated.calendar_list, &(&1["id"] == kept_path))["selected"] == true
+      assert Enum.find(updated.calendar_list, &(&1["id"] == removed_path))["selected"] == false
+    end
+
+    test "empties calendar_paths when every calendar is un-toggled" do
+      user = insert(:user)
+      path = "/dav/user@example.org/Calendar/"
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          is_active: true,
+          calendar_paths: [path],
+          calendar_list: [
+            %{"id" => path, "path" => path, "name" => "Calendar", "selected" => true}
+          ]
+        )
+
+      {:ok, updated} =
+        Selection.update_calendar_selection(integration, %{"selected_calendars" => []})
+
+      assert updated.calendar_paths == []
+      assert [%{"selected" => false}] = updated.calendar_list
+    end
+  end
+
+  # =====================================
+  # derive_selected_paths/1
+  # =====================================
+
+  describe "derive_selected_paths/1" do
+    test "returns paths of selected entries, preserving order" do
+      list = [
+        %{"path" => "/a", "selected" => true},
+        %{"path" => "/b", "selected" => false},
+        %{"path" => "/c", "selected" => true}
+      ]
+
+      assert Selection.derive_selected_paths(list) == ["/a", "/c"]
+    end
+
+    test "tolerates atom keys and falls back to id when path is absent" do
+      list = [
+        %{path: "/a", selected: true},
+        %{"id" => "/b", "selected" => true},
+        %{"id" => "/c", "selected" => false}
+      ]
+
+      assert Selection.derive_selected_paths(list) == ["/a", "/b"]
+    end
+
+    test "skips entries with non-binary or empty paths" do
+      list = [
+        %{"path" => nil, "selected" => true},
+        %{"path" => "", "selected" => true},
+        %{"path" => "/ok", "selected" => true}
+      ]
+
+      assert Selection.derive_selected_paths(list) == ["/ok"]
+    end
+  end
+
+  # =====================================
+  # persist_calendar_list/2
+  # =====================================
+
+  describe "persist_calendar_list/2" do
+    test "writes calendar_list and the derived calendar_paths atomically" do
+      user = insert(:user)
+      a = "/dav/user@example.org/Calendar/"
+      b = "/dav/user@example.org/General/"
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "caldav",
+          calendar_paths: [],
+          calendar_list: []
+        )
+
+      new_list = [
+        %{"id" => a, "path" => a, "name" => "Calendar", "selected" => true},
+        %{"id" => b, "path" => b, "name" => "General", "selected" => false}
+      ]
+
+      {:ok, updated} = Selection.persist_calendar_list(integration, new_list)
+
+      assert updated.calendar_paths == [a]
+      assert length(updated.calendar_list) == 2
+    end
   end
 end

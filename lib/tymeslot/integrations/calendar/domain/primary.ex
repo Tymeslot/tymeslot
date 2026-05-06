@@ -10,6 +10,7 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationQueries
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.Defaults
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Profiles.ProfileQueries
 
@@ -96,15 +97,18 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
   def auto_select_primary_calendar(integration, calendars) do
     alias Tymeslot.Integrations.Calendar.ProviderConfig
 
+    provider_atom =
+      try do
+        String.to_existing_atom(integration.provider)
+      rescue
+        ArgumentError -> :unknown
+      end
+
+    oauth? = ProviderConfig.oauth_provider?(provider_atom)
+
     # Find the default booking calendar
     default_calendar_id =
-      if ProviderConfig.oauth_provider?(
-           try do
-             String.to_existing_atom(integration.provider)
-           rescue
-             ArgumentError -> :unknown
-           end
-         ) do
+      if oauth? do
         # For OAuth, prefer provider primary, then selected, then first
         Defaults.primary_id(calendars) || Defaults.selected_id(calendars) ||
           Defaults.first_id_from_list(calendars)
@@ -113,8 +117,21 @@ defmodule Tymeslot.Integrations.CalendarPrimary do
         Defaults.selected_id(calendars) || Defaults.first_id_from_list(calendars)
       end
 
-    # Update with calendar list and default booking calendar if found
-    attrs = %{calendar_list: calendars}
+    # Update with calendar list and default booking calendar if found.
+    # For CalDAV-family providers, `calendar_list_attrs/1` keeps `calendar_paths`
+    # in sync with the selection — required so the CalDAV worker only fetches
+    # calendars the user has activated.
+    # For OAuth providers (Google, Outlook), the discovery maps are atom-keyed
+    # and carry no `:path` key, so passing them through `calendar_list_attrs/1`
+    # would write provider IDs (e.g. "primary") into `calendar_paths` — a field
+    # that must stay empty for OAuth integrations. Only write `calendar_list`
+    # for those providers.
+    attrs =
+      if oauth? do
+        %{calendar_list: calendars}
+      else
+        Selection.calendar_list_attrs(calendars)
+      end
 
     attrs =
       if default_calendar_id do

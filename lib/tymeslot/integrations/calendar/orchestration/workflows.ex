@@ -40,14 +40,16 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
                 count: length(calendars)
               )
 
-              # Update the integration's calendar_list in the database so it's persisted
-              case CalendarManagement.update_calendar_integration(integration, %{
-                     calendar_list: calendars
-                   }) do
+              # Merge with existing selection so refreshing the list doesn't
+              # silently un-select calendars the user previously enabled.
+              merged =
+                Selection.unify_discovered_with_existing(calendars, integration.calendar_list)
+
+              case Selection.persist_calendar_list(integration, merged) do
                 {:ok, _integration} ->
                   send(
                     parent,
-                    {:calendar_list_refreshed, component_id, integration_id, calendars}
+                    {:calendar_list_refreshed, component_id, integration_id, merged}
                   )
 
                 {:error, reason} ->
@@ -111,9 +113,7 @@ defmodule Tymeslot.Integrations.Calendar.Orchestration.Workflows do
           merged
         end
 
-      case CalendarManagement.update_calendar_integration(refreshed_integration, %{
-             calendar_list: final_calendar_list
-           }) do
+      case Selection.persist_calendar_list(refreshed_integration, final_calendar_list) do
         {:ok, updated} -> {:ok, updated}
         error -> error
       end
