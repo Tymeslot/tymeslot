@@ -55,8 +55,6 @@ defmodule Tymeslot.Emails.Shared.Styles.CSS do
 
   defp base_rules do
     """
-    body { background: #{Tokens.canvas()}; }
-
     a {
       color: #{Tokens.intent_accent_deep(:confirmed)};
       text-decoration: none;
