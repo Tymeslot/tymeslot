@@ -7,6 +7,7 @@ defmodule Tymeslot.Application do
   require Logger
 
   alias Phoenix.PubSub
+  alias Tymeslot.Infrastructure.Logging.{FileSink, MetadataRedactor}
   alias Tymeslot.Infrastructure.{Metrics, ObanLogger}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
   alias Tymeslot.Integrations.{HealthCheck, Telemetry}
@@ -17,6 +18,16 @@ defmodule Tymeslot.Application do
   @impl Application
   def start(_type, _args) do
     validate_config!()
+
+    # Install the global Logger metadata redactor before the first log line
+    # so any sensitive keys (api_key, token, secret, ...) passed inline are
+    # scrubbed at every handler.
+    MetadataRedactor.attach()
+
+    # Attach the rotating-file sink (no-op when LOG_FILE_PATH is unset on
+    # non-cloudron deployments). Stdout output is unaffected.
+    FileSink.attach()
+
     Logger.info("Starting Tymeslot application")
 
     # Attach Oban's structured telemetry logger — emits job start/stop/exception

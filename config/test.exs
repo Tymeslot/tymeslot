@@ -75,8 +75,13 @@ config :tymeslot, Tymeslot.Mailer, adapter: Swoosh.Adapters.Test
 # Disable swoosh api client
 config :swoosh, :api_client, false
 
-# Print only warnings and errors during test
+# Print only warnings and errors during test, but show structured metadata
+# so test failures and capture_log/1 output retain correlation_id / user_id.
 config :logger, level: :warning
+
+config :logger, :default_formatter,
+  format: "[$level] $message $metadata\n",
+  metadata: [:request_id, :user_id, :correlation_id, :event, :domain, :reason]
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime

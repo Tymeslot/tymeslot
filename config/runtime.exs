@@ -169,12 +169,15 @@ if config_env() == :prod do
   # seeds this directory with the bundled release_ets data on first boot.
   config :tzdata, :data_dir, "/app/data/tzdata"
 
-  # Structured JSON logging for production containers
+  # Structured JSON logging for production containers.
+  #
+  # `:all_except` captures every keyword metadata field passed inline or set on
+  # the process, minus the noisy OTP internals listed below. `:domain` is kept
+  # because StructuredLogger tags log lines with `domain: :authentication`,
+  # `:database`, etc. — that key is what enables domain-faceted log queries.
   config :logger, :default_handler,
     formatter:
-      LoggerJSON.Formatters.Basic.new(
-        metadata: {:all_except, [:conn, :socket, :mfa, :pid, :gl, :domain]}
-      )
+      LoggerJSON.Formatters.Basic.new(metadata: {:all_except, [:conn, :socket, :mfa, :pid, :gl]})
 
   # Database configuration based on deployment type (define early as it's used for URL scheme)
   # Defaults to "docker" if DEPLOYMENT_TYPE is not set or unknown

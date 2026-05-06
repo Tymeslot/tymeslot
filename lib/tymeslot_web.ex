@@ -67,11 +67,13 @@ defmodule TymeslotWeb do
       pipeline :api do
         plug :accepts, ["json"]
         plug TymeslotWeb.Plugs.SecurityHeadersPlug
+        plug TymeslotWeb.Plugs.SetLoggerMetadata
       end
 
       pipeline :webhook do
         plug TymeslotWeb.Plugs.StripeWebhookPlug
         plug :accepts, ["json"]
+        plug TymeslotWeb.Plugs.SetLoggerMetadata
       end
 
       pipeline :require_authenticated_user do
