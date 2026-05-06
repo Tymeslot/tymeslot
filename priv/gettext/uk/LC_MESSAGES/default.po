@@ -1068,3 +1068,18 @@ msgid_plural "%{count} attendees haven't been invited yet. Discard?"
 msgstr[0] "1 учасника ще не запрошено. Скасувати?"
 msgstr[1] "%{count} учасника ще не запрошено. Скасувати?"
 msgstr[2] "%{count} учасників ще не запрошено. Скасувати?"
+
+#: lib/tymeslot_web/themes/shared/security_fields.ex:87
+#, elixir-autogen, elixir-format
+msgid "Privacy Policy"
+msgstr "Політика конфіденційності"
+
+#: lib/tymeslot_web/themes/shared/security_fields.ex:91
+#, elixir-autogen, elixir-format
+msgid "Terms of Service"
+msgstr "Умови використання"
+
+#: lib/tymeslot_web/themes/shared/security_fields.ex:93
+#, elixir-autogen, elixir-format
+msgid "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply."
+msgstr "Цей сайт захищено reCAPTCHA, і застосовуються %{privacy_link} та %{terms_link} Google."

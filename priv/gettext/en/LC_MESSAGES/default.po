@@ -1067,3 +1067,18 @@ msgid "1 attendee hasn't been invited yet. Discard?"
 msgid_plural "%{count} attendees haven't been invited yet. Discard?"
 msgstr[0] "1 attendee hasn't been invited yet. Discard?"
 msgstr[1] "%{count} attendees haven't been invited yet. Discard?"
+
+#: lib/tymeslot_web/themes/shared/security_fields.ex:87
+#, elixir-autogen, elixir-format
+msgid "Privacy Policy"
+msgstr "Privacy Policy"
+
+#: lib/tymeslot_web/themes/shared/security_fields.ex:91
+#, elixir-autogen, elixir-format
+msgid "Terms of Service"
+msgstr "Terms of Service"
+
+#: lib/tymeslot_web/themes/shared/security_fields.ex:93
+#, elixir-autogen, elixir-format
+msgid "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply."
+msgstr "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply."

@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
   Provides honeypot and reCAPTCHA fields to prevent spam and bot submissions.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
 
@@ -72,28 +73,28 @@ defmodule TymeslotWeb.Themes.Shared.SecurityFields do
         value=""
       />
       <div class="recaptcha-notice text-xs text-tymeslot-500 text-center">
-        This site is protected by reCAPTCHA and the Google
-        <a
-          href="https://policies.google.com/privacy"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-turquoise-600 underline hover:text-turquoise-700"
-        >
-          Privacy Policy
-        </a>
-        and
-        <a
-          href="https://policies.google.com/terms"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-turquoise-600 underline hover:text-turquoise-700"
-        >
-          Terms of Service
-        </a>
-        apply.
+        {Phoenix.HTML.raw(recaptcha_notice())}
       </div>
     <% end %>
     """
+  end
+
+  defp recaptcha_notice do
+    link_class = "text-turquoise-600 underline hover:text-turquoise-700"
+
+    privacy_link =
+      ~s(<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" class="#{link_class}">) <>
+        gettext("Privacy Policy") <> "</a>"
+
+    terms_link =
+      ~s(<a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" class="#{link_class}">) <>
+        gettext("Terms of Service") <> "</a>"
+
+    gettext(
+      "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply.",
+      privacy_link: privacy_link,
+      terms_link: terms_link
+    )
   end
 
   @doc """
