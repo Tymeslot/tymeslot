@@ -52,6 +52,38 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       assert html =~ "calendar-allday-row"
     end
 
+    test "renders 3+ overlapping all-day events without crashing (issue #50)",
+         %{conn: conn, user: user} do
+      # Regression: grid_views.ex's all-day disclosure branch referenced
+      # @allday_visible_limit inside HEEx, which resolves to assigns rather
+      # than the module attribute, raising KeyError whenever a day held more
+      # all-day events than the cap. Triggered by Zimbra returning 3+
+      # overlapping all-day events for a single day.
+      integration = insert(:calendar_integration, user: user, is_active: true)
+      today = Date.utc_today()
+      tomorrow = Date.add(today, 1)
+      midnight_today = DateTime.new!(today, ~T[00:00:00], "Etc/UTC")
+      midnight_tomorrow = DateTime.new!(tomorrow, ~T[00:00:00], "Etc/UTC")
+
+      for summary <- ["All Day One", "All Day Two", "All Day Three"] do
+        insert_event(integration, %{
+          summary: summary,
+          start_date: today,
+          end_date: tomorrow,
+          start_at: midnight_today,
+          end_at: midnight_tomorrow,
+          all_day: true
+        })
+      end
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
+
+      assert html =~ "All Day One"
+      assert html =~ "All Day Two"
+      assert html =~ "All Day Three"
+      assert html =~ "+1 more"
+    end
+
     test "opens event detail modal on click", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 

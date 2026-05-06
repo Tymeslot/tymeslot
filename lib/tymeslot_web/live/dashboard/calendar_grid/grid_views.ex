@@ -200,14 +200,13 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
 
   defp allday_cell(assigns) do
     all_day_events = Helpers.all_day_events_for_day(assigns.assigns_ref, assigns.day)
-    shown = Enum.take(all_day_events, @allday_visible_limit)
-    hidden_count = max(0, length(all_day_events) - @allday_visible_limit)
+    {shown, hidden} = Enum.split(all_day_events, @allday_visible_limit)
 
     assigns =
       assigns
       |> assign(:shown, shown)
-      |> assign(:hidden_count, hidden_count)
-      |> assign(:all_day_events, all_day_events)
+      |> assign(:hidden, hidden)
+      |> assign(:hidden_count, length(hidden))
 
     ~H"""
     <details class="group border-l border-tymeslot-100 p-0.5 min-h-[1.5rem] [&>summary::-webkit-details-marker]:hidden">
@@ -237,7 +236,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.GridViews do
       </summary>
       <div :if={@hidden_count > 0} class="flex flex-col gap-0.5 mt-0.5">
         <div
-          :for={event <- Enum.drop(@all_day_events, @allday_visible_limit)}
+          :for={event <- @hidden}
           class={"rounded px-1 text-token-xs font-medium text-white truncate cursor-pointer #{Helpers.color_for_event(@assigns_ref, event)}"}
           phx-click="show_event"
           phx-value-event-id={event.id}
