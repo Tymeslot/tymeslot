@@ -63,7 +63,7 @@ defmodule Tymeslot.Infrastructure.Logging.MetadataRedactor do
   def sensitive_substrings, do: @sensitive_substrings
 
   defp redact_meta(meta) do
-    if Enum.any?(meta, fn {k, _} -> sensitive_key?(k) end) do
+    if Enum.any?(meta, fn {k, _v} -> sensitive_key?(k) end) do
       Map.new(meta, fn {key, value} ->
         if sensitive_key?(key) do
           {key, @redacted}
