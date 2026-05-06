@@ -34,7 +34,7 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
     end
   end
 
-  describe "base_email/0" do
+  describe "base_email/1" do
     test "creates email with correct from address" do
       email = MjmlEmail.base_email()
 
@@ -45,11 +45,36 @@ defmodule Tymeslot.Emails.Shared.MjmlEmailTest do
       assert is_binary(address)
     end
 
-    test "sets provider options for tracking" do
+    test "defaults to :transactional — no tracking, outbound stream" do
       email = MjmlEmail.base_email()
+
+      assert email.provider_options[:track_opens] == false
+      assert email.provider_options[:track_links] == "None"
+      assert email.provider_options[:message_stream] == "outbound"
+    end
+
+    test ":transactional explicitly disables tracking" do
+      email = MjmlEmail.base_email(tracking: :transactional)
+
+      assert email.provider_options[:track_opens] == false
+      assert email.provider_options[:track_links] == "None"
+      assert email.provider_options[:message_stream] == "outbound"
+    end
+
+    test ":lifecycle enables open tracking only, stays on outbound stream" do
+      email = MjmlEmail.base_email(tracking: :lifecycle)
+
+      assert email.provider_options[:track_opens] == true
+      assert email.provider_options[:track_links] == "None"
+      assert email.provider_options[:message_stream] == "outbound"
+    end
+
+    test ":marketing enables full tracking on the broadcast stream" do
+      email = MjmlEmail.base_email(tracking: :marketing)
 
       assert email.provider_options[:track_opens] == true
       assert email.provider_options[:track_links] == "HtmlAndText"
+      assert email.provider_options[:message_stream] == "broadcast"
     end
   end
 

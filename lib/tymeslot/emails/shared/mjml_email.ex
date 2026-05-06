@@ -47,18 +47,63 @@ defmodule Tymeslot.Emails.Shared.MjmlEmail do
     end
   end
 
-  @doc """
-  Creates a base Swoosh email with tracking enabled and the Tymeslot logo
-  attached inline (CID `tymeslot-logo`) so the system layout's logo header
-  renders identically in every email client without needing an external URL.
+  @typedoc """
+  Postmark tracking category. Controls open-tracking, link-rewriting and the
+  message stream the email is routed through.
+
+    * `:transactional` — confirmations, security alerts, receipts. No opens,
+      no link rewriting, sent on the default `outbound` (transactional) stream.
+      Safer for spam filters and respects user privacy.
+    * `:lifecycle` — onboarding / billing nudges where engagement metrics are
+      genuinely useful (welcome, trial ending, dunning). Opens on, links left
+      untouched, still on `outbound`.
+    * `:marketing` — bulk newsletters and announcements. Opens on, links
+      rewritten in HTML and text, sent on the `broadcast` stream so reputation
+      is isolated from transactional mail.
   """
-  @spec base_email() :: Swoosh.Email.t()
-  def base_email do
+  @type tracking :: :transactional | :lifecycle | :marketing
+
+  @doc """
+  Creates a base Swoosh email pre-configured for the given tracking category
+  and with the Tymeslot logo attached inline (CID `tymeslot-logo`) so the
+  system layout's logo header renders identically in every email client
+  without needing an external URL.
+
+  Defaults to `:transactional` — the safe choice for any email tied to a
+  specific user action (booking confirmation, password reset, receipt).
+  Override with `tracking: :lifecycle` or `tracking: :marketing` at the call
+  site for templates that genuinely benefit from engagement metrics.
+  """
+  @spec base_email(keyword()) :: Swoosh.Email.t()
+  def base_email(opts \\ []) do
+    tracking = Keyword.get(opts, :tracking, :transactional)
+
     new()
     |> from({fetch_from_name(), fetch_from_email()})
+    |> apply_tracking(tracking)
+    |> attach_logo()
+  end
+
+  @spec apply_tracking(Swoosh.Email.t(), tracking()) :: Swoosh.Email.t()
+  defp apply_tracking(email, :transactional) do
+    email
+    |> put_provider_option(:track_opens, false)
+    |> put_provider_option(:track_links, "None")
+    |> put_provider_option(:message_stream, "outbound")
+  end
+
+  defp apply_tracking(email, :lifecycle) do
+    email
+    |> put_provider_option(:track_opens, true)
+    |> put_provider_option(:track_links, "None")
+    |> put_provider_option(:message_stream, "outbound")
+  end
+
+  defp apply_tracking(email, :marketing) do
+    email
     |> put_provider_option(:track_opens, true)
     |> put_provider_option(:track_links, "HtmlAndText")
-    |> attach_logo()
+    |> put_provider_option(:message_stream, "broadcast")
   end
 
   @logo_cid "tymeslot-logo"
