@@ -99,9 +99,27 @@ defmodule Tymeslot.Integrations.Calendar.Google.ProviderTest do
   end
 
   describe "has_calendar_write_scope?/1" do
-    # Substantive scope cases (calendar / calendar.events / readonly variants /
-    # missing) are exercised transitively via the needs_scope_upgrade?/1 and
-    # validate_oauth_scope/1 blocks. These cases cover the input-shape edges.
+    test "returns true for full calendar scope" do
+      assert Provider.has_calendar_write_scope?("https://www.googleapis.com/auth/calendar")
+    end
+
+    test "returns true for calendar.events scope" do
+      assert Provider.has_calendar_write_scope?("https://www.googleapis.com/auth/calendar.events")
+    end
+
+    test "returns true when write scope appears alongside other scopes" do
+      scope =
+        "openid email https://www.googleapis.com/auth/calendar profile"
+
+      assert Provider.has_calendar_write_scope?(scope)
+    end
+
+    test "returns false for readonly scope" do
+      refute Provider.has_calendar_write_scope?(
+               "https://www.googleapis.com/auth/calendar.readonly"
+             )
+    end
+
     test "returns false for nil" do
       refute Provider.has_calendar_write_scope?(nil)
     end

@@ -217,4 +217,160 @@ defmodule Tymeslot.Meetings.MeetingQueriesExpandedTest do
       assert hd(meetings).id == meeting1.id
     end
   end
+
+  describe "list_user_meetings_missing_video_rooms/3" do
+    defp future_times(offset_days) do
+      start_time =
+        DateTime.utc_now()
+        |> DateTime.add(offset_days, :day)
+        |> DateTime.truncate(:second)
+
+      {start_time, DateTime.add(start_time, 60, :minute)}
+    end
+
+    defp missing_video_room_meeting(user, video_integration, offset_days) do
+      {start_time, end_time} = future_times(offset_days)
+
+      insert(:meeting,
+        organizer_user: user,
+        organizer_user_id: user.id,
+        status: "confirmed",
+        video_integration_id: video_integration.id,
+        video_room_id: nil,
+        start_time: start_time,
+        end_time: end_time
+      )
+    end
+
+    test "returns confirmed upcoming meetings missing a video room for the user" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user)
+      meeting = missing_video_room_meeting(user, video_integration, 2)
+
+      results = MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+
+      assert length(results) == 1
+      assert hd(results).id == meeting.id
+    end
+
+    test "excludes meetings that already have a video_room_id" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user)
+      {start_time, end_time} = future_times(2)
+
+      _has_room =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_user_id: user.id,
+          status: "confirmed",
+          video_integration_id: video_integration.id,
+          video_room_id: "room-already-created",
+          start_time: start_time,
+          end_time: end_time
+        )
+
+      assert [] =
+               MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+    end
+
+    test "excludes non-confirmed meetings" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user)
+      {start_time, end_time} = future_times(2)
+
+      _cancelled =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_user_id: user.id,
+          status: "cancelled",
+          video_integration_id: video_integration.id,
+          video_room_id: nil,
+          start_time: start_time,
+          end_time: end_time
+        )
+
+      assert [] =
+               MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+    end
+
+    test "excludes past meetings" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user)
+
+      past_start =
+        DateTime.utc_now() |> DateTime.add(-1, :day) |> DateTime.truncate(:second)
+
+      past_end = DateTime.add(past_start, 60, :minute)
+
+      _past =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_user_id: user.id,
+          status: "confirmed",
+          video_integration_id: video_integration.id,
+          video_room_id: nil,
+          start_time: past_start,
+          end_time: past_end
+        )
+
+      assert [] =
+               MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+    end
+
+    test "excludes meetings with a null video_integration_id" do
+      user = insert(:user)
+      {start_time, end_time} = future_times(2)
+
+      _no_integration =
+        insert(:meeting,
+          organizer_user: user,
+          organizer_user_id: user.id,
+          status: "confirmed",
+          video_integration_id: nil,
+          video_room_id: nil,
+          start_time: start_time,
+          end_time: end_time
+        )
+
+      assert [] =
+               MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+    end
+
+    test "excludes meetings belonging to a different user" do
+      user = insert(:user)
+      other_user = insert(:user)
+      video_integration = insert(:video_integration, user: other_user)
+
+      _other_meeting = missing_video_room_meeting(other_user, video_integration, 2)
+
+      assert [] =
+               MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+    end
+
+    test "honours the limit parameter" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user)
+
+      for offset <- [2, 3, 4] do
+        missing_video_room_meeting(user, video_integration, offset)
+      end
+
+      results =
+        MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now(), 2)
+
+      assert length(results) == 2
+    end
+
+    test "returns results ordered by start_time ascending" do
+      user = insert(:user)
+      video_integration = insert(:video_integration, user: user)
+
+      later = missing_video_room_meeting(user, video_integration, 5)
+      sooner = missing_video_room_meeting(user, video_integration, 2)
+
+      results = MeetingQueries.list_user_meetings_missing_video_rooms(user.id, DateTime.utc_now())
+
+      assert Enum.map(results, & &1.id) == [sooner.id, later.id]
+    end
+  end
 end

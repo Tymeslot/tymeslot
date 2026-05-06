@@ -174,6 +174,23 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       assert redirected_to(conn) == "/dashboard/calendar-integration"
       assert Flash.get(conn.assigns.flash, :error) =~ "Failed to connect Outlook Calendar"
     end
+
+    test "google_callback handles :calendar_scope_missing — redirects with instructional flash",
+         %{conn: conn} do
+      conn = authenticate_state_user(conn, 123)
+
+      :meck.expect(GoogleCalendarOAuthHelper, :handle_callback, fn _code, _state, _uri ->
+        {:error, :calendar_scope_missing}
+      end)
+
+      conn =
+        get(conn, ~p"/auth/google/calendar/callback", %{"code" => "code", "state" => "state"})
+
+      assert redirected_to(conn) == "/dashboard/calendar-integration"
+
+      assert Flash.get(conn.assigns.flash, :error) =~
+               "Calendar permission was not granted"
+    end
   end
 
   # These tests run State.validate for real (no mock) to verify that each callback

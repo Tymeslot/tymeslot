@@ -63,6 +63,22 @@ defmodule TymeslotWeb.OAuthCallbackHandlerTest do
       assert Flash.get(conn.assigns.flash, :error) =~ "Failed to connect TestService"
     end
 
+    test "handles :calendar_scope_missing from create_fun", %{conn: conn} do
+      opts = [
+        service_name: "Google Calendar",
+        exchange_fun: fn _params -> {:ok, %{access_token: "abc", user_id: 123}} end,
+        create_fun: fn _tokens -> {:error, :calendar_scope_missing} end,
+        redirect_path: "/dashboard/calendar-integration"
+      ]
+
+      conn = OAuthCallbackHandler.handle_callback(conn, %{"code" => "123"}, opts)
+
+      assert redirected_to(conn) == "/dashboard/calendar-integration"
+
+      assert Flash.get(conn.assigns.flash, :error) =~
+               "Calendar permission was not granted"
+    end
+
     test "handles rate limiting", %{conn: conn} do
       :meck.expect(RateLimiter, :check_oauth_callback_rate_limit, fn _ip ->
         {:error, :rate_limited, "Too many requests"}
