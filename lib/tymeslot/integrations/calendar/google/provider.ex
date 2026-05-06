@@ -11,15 +11,10 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
     display_name: "Google Calendar",
     base_url: "https://www.googleapis.com/calendar/v3"
 
-  require Logger
-
-  alias Tymeslot.Infrastructure.AdminAlerts
-  alias Tymeslot.Integrations.Calendar.CalendarEvent
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.Google.CalendarAPI
+  alias Tymeslot.Integrations.Calendar.Google.{CalendarAPI, EventNormaliser}
   alias Tymeslot.Integrations.Calendar.Shared.{ErrorHandler, ProviderCommon}
   alias Tymeslot.Integrations.Calendar.Shared.MultiCalendarFetch
-  alias Tymeslot.Timezones
 
   @typep converted_event :: %{
            required(:uid) => String.t() | nil,
@@ -98,156 +93,8 @@ defmodule Tymeslot.Integrations.Calendar.Google.Provider do
 
   @impl Tymeslot.Integrations.Calendar.Provider
   def normalise_events(raw_events, context) do
-    events =
-      raw_events
-      |> Enum.reduce([], fn raw, acc ->
-        case build_calendar_event(raw, context) do
-          {:ok, event} ->
-            [event | acc]
-
-          {:error, reason} ->
-            Logger.warning("Skipping invalid Google calendar event",
-              reason: reason,
-              event_id: raw["id"],
-              calendar_integration_id: context.calendar_integration_id
-            )
-
-            AdminAlerts.send_alert(:invalid_calendar_event, %{
-              provider: :google,
-              event_id: raw["id"],
-              reason: reason,
-              calendar_integration_id: context.calendar_integration_id
-            })
-
-            acc
-        end
-      end)
-      |> Enum.reverse()
-
-    {:ok, events}
+    EventNormaliser.normalise_events(raw_events, context)
   end
-
-  defp build_calendar_event(raw, context) do
-    attrs =
-      %{
-        uid: raw["iCalUID"] || raw["id"],
-        provider: :google,
-        calendar_integration_id: context.calendar_integration_id,
-        provider_calendar_id: context.provider_calendar_id,
-        provider_event_id: raw["id"],
-        recurring_event_id: raw["recurringEventId"],
-        synced_at: context.synced_at,
-        summary: raw["summary"],
-        description: raw["description"],
-        location: raw["location"],
-        visibility: map_visibility(raw["visibility"]),
-        transparency: map_transparency(raw["transparency"]),
-        status: map_status(raw["status"]),
-        organiser: map_organiser(raw["organizer"]),
-        attendees: map_attendees(raw["attendees"]),
-        reminders: map_reminders(raw["reminders"]),
-        colour: raw["colorId"],
-        etag: raw["etag"],
-        recurrence_rule: map_recurrence_rule(raw["recurrence"]),
-        provider_metadata: Map.put(raw, "recurringEventId", raw["recurringEventId"]),
-        created_by_tymeslot:
-          get_in(raw, ["extendedProperties", "private", "createdBy"]) == "tymeslot"
-      }
-      |> Map.merge(parse_timing(raw))
-      |> maybe_put_timezone(raw)
-
-    CalendarEvent.new(attrs)
-  end
-
-  defp map_visibility("public"), do: :public
-  defp map_visibility("private"), do: :private
-  defp map_visibility("confidential"), do: :confidential
-  defp map_visibility(_other), do: nil
-
-  defp map_transparency("transparent"), do: :transparent
-  defp map_transparency(_other), do: :opaque
-
-  defp map_status("confirmed"), do: :confirmed
-  defp map_status("tentative"), do: :tentative
-  defp map_status("cancelled"), do: :cancelled
-  defp map_status(_other), do: :confirmed
-
-  defp map_organiser(nil), do: nil
-
-  defp map_organiser(organiser) do
-    %{email: organiser["email"], display_name: organiser["displayName"]}
-  end
-
-  defp map_attendees(nil), do: []
-
-  defp map_attendees(attendees) when is_list(attendees) do
-    Enum.map(attendees, fn a ->
-      %{
-        email: a["email"],
-        display_name: a["displayName"],
-        response_status: map_response_status(a["responseStatus"]),
-        optional: a["optional"] || false
-      }
-    end)
-  end
-
-  defp map_response_status("accepted"), do: :accepted
-  defp map_response_status("declined"), do: :declined
-  defp map_response_status("tentative"), do: :tentative
-  defp map_response_status("needsAction"), do: :needs_action
-  defp map_response_status(_other), do: :needs_action
-
-  defp map_reminders(%{"overrides" => overrides}) when is_list(overrides) do
-    Enum.map(overrides, fn r ->
-      %{method: map_reminder_method(r["method"]), minutes_before: r["minutes"]}
-    end)
-  end
-
-  defp map_reminders(_other), do: []
-
-  defp map_reminder_method("email"), do: :email
-  defp map_reminder_method("popup"), do: :popup
-  defp map_reminder_method("sms"), do: :sms
-  defp map_reminder_method(_other), do: :popup
-
-  defp map_recurrence_rule([first | _rest]), do: first
-  defp map_recurrence_rule(_other), do: nil
-
-  defp parse_timing(%{"start" => %{"date" => start_date}, "end" => %{"date" => end_date}}) do
-    with {:ok, sd} <- Date.from_iso8601(start_date),
-         {:ok, ed} <- Date.from_iso8601(end_date) do
-      %{all_day: true, start_date: sd, end_date: ed}
-    else
-      _error -> %{all_day: true, start_date: nil, end_date: nil}
-    end
-  end
-
-  defp parse_timing(%{
-         "start" => %{"dateTime" => start_dt},
-         "end" => %{"dateTime" => end_dt}
-       }) do
-    with {:ok, s, _offset} <- DateTime.from_iso8601(start_dt),
-         {:ok, e, _offset} <- DateTime.from_iso8601(end_dt) do
-      %{
-        all_day: false,
-        start_at: DateTime.shift_zone!(s, "Etc/UTC"),
-        end_at: DateTime.shift_zone!(e, "Etc/UTC")
-      }
-    else
-      _error -> %{all_day: false, start_at: nil, end_at: nil}
-    end
-  end
-
-  defp parse_timing(_other), do: %{all_day: false, start_at: nil, end_at: nil}
-
-  defp maybe_put_timezone(attrs, %{"start" => %{"timeZone" => tz}}) do
-    case Timezones.sanitize(tz) do
-      nil -> attrs
-      clean -> Map.put(attrs, :timezone, clean)
-    end
-  end
-
-  defp maybe_put_timezone(attrs, _raw), do: attrs
 
   # --- Legacy conversion (used by OAuthBase get_events / create_event / update_event) ---
 
