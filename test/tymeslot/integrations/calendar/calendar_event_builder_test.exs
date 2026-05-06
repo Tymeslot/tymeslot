@@ -58,12 +58,12 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
       assert result.location == "Conference Room B"
     end
 
-    test "uses \"To be determined\" when both meeting_url and location are nil" do
+    test "leaves location nil when both meeting_url and location are nil" do
       meeting = %{@base_meeting | meeting_url: nil, location: nil}
 
       result = CalendarEventBuilder.build_event_data(meeting)
 
-      assert result.location == "To be determined"
+      assert result.location == nil
     end
 
     test "description is assembled from build_event_description" do

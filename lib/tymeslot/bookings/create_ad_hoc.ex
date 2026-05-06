@@ -79,7 +79,7 @@ defmodule Tymeslot.Bookings.CreateAdHoc do
       start_time: params.start_time,
       end_time: params.end_time,
       duration: duration,
-      location: "To be determined",
+      location: nil,
       meeting_type: params.title,
       meeting_type_id: nil,
       organizer_name: org_name,

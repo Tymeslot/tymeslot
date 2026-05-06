@@ -99,7 +99,7 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
       assert result.meeting_url == nil
     end
 
-    test "uses 'To be determined' when both meeting_url and location are nil" do
+    test "leaves location nil so the renderer substitutes the localised TBD label" do
       %{user: user} = create_user_with_profile()
 
       meeting =
@@ -112,8 +112,25 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
 
       result = AppointmentBuilder.from_meeting(meeting)
 
-      assert result.location == "To be determined"
-      assert result.location_details == "Location to be determined"
+      assert result.location == nil
+      assert result.location_details == nil
+    end
+
+    test "treats the legacy 'To be determined' placeholder as an unset location" do
+      %{user: user} = create_user_with_profile()
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 3600,
+          duration: 3600,
+          meeting_url: nil,
+          location: "To be determined"
+        })
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.location == nil
+      assert result.location_details == nil
     end
 
     test "includes video URLs for organizer and attendee when present" do

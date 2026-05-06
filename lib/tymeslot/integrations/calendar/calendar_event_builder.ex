@@ -29,7 +29,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
       start_time: meeting.start_time,
       end_time: meeting.end_time,
       timezone: meeting.attendee_timezone,
-      location: meeting.meeting_url || meeting.location || "To be determined",
+      location: meeting.meeting_url || meeting.location,
       organizer_name: meeting.organizer_name,
       organizer_email: meeting.organizer_email,
       attendee_name: meeting.attendee_name,

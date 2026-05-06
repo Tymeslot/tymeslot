@@ -151,7 +151,7 @@ defmodule Tymeslot.Bookings.Policy do
         start_time: params.start_datetime,
         end_time: params.end_datetime,
         duration: params.duration_minutes,
-        location: "To be determined",
+        location: nil,
         meeting_type: meeting_type_name,
         meeting_type_id: resolved_meeting_type_id,
         organizer_name: org_name,

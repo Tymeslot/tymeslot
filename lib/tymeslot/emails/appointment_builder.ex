@@ -235,25 +235,21 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
     }
   end
 
-  # Derive a display location from the meeting's fields.  When a video URL is
+  # Derive a display location from the meeting's fields. When a video URL is
   # present the location is "Video Call" regardless of any physical location
-  # stored on the record; when nothing is set at all a placeholder is returned.
-  # Translation of these labels happens at render time in the shared components.
+  # stored on the record. When nothing is set, return nil so the rendering
+  # layer (`Formatting.format_location/1`) substitutes the localised "TBD".
+  # Legacy meetings persisted the English placeholder before that change —
+  # treat it as nil here so they also render translated.
   defp format_location(meeting) do
     cond do
       meeting.meeting_url -> "Video Call"
-      meeting.location -> meeting.location
-      true -> "To be determined"
+      meeting.location in [nil, "", "To be determined"] -> nil
+      true -> meeting.location
     end
   end
 
-  defp format_location_details(meeting) do
-    cond do
-      meeting.meeting_url -> "Video Call"
-      meeting.location -> meeting.location
-      true -> "Location to be determined"
-    end
-  end
+  defp format_location_details(meeting), do: format_location(meeting)
 
   defp convert_to_timezone(datetime, timezone) do
     DateTimeUtils.convert_to_timezone(datetime, timezone)
