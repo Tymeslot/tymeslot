@@ -385,12 +385,8 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   """
   @spec list_meetings_missing_video_rooms(DateTime.t(), pos_integer()) :: [Meeting.t()]
   def list_meetings_missing_video_rooms(now, limit \\ 500) do
-    Meeting
-    |> with_status("confirmed")
-    |> upcoming(now)
-    |> where([m], not is_nil(m.video_integration_id))
-    |> where([m], is_nil(m.video_room_id))
-    |> order_by([m], asc: m.start_time)
+    now
+    |> meetings_missing_video_rooms_base()
     |> limit(^limit)
     |> Repo.all()
   end
@@ -403,15 +399,20 @@ defmodule Tymeslot.Meetings.MeetingQueries do
   @spec list_user_meetings_missing_video_rooms(pos_integer(), DateTime.t(), pos_integer()) ::
           [Meeting.t()]
   def list_user_meetings_missing_video_rooms(user_id, now, limit \\ 500) do
+    now
+    |> meetings_missing_video_rooms_base()
+    |> where([m], m.organizer_user_id == ^user_id)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  defp meetings_missing_video_rooms_base(now) do
     Meeting
     |> with_status("confirmed")
     |> upcoming(now)
-    |> where([m], m.organizer_user_id == ^user_id)
     |> where([m], not is_nil(m.video_integration_id))
     |> where([m], is_nil(m.video_room_id))
     |> order_by([m], asc: m.start_time)
-    |> limit(^limit)
-    |> Repo.all()
   end
 
   @doc """

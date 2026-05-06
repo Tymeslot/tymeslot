@@ -60,8 +60,7 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   @impl Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour
   @spec handle_callback(String.t(), String.t(), String.t()) ::
           {:ok, CalendarIntegrationSchema.t()}
-          | {:error, :calendar_scope_missing}
-          | {:error, String.t()}
+          | {:error, Tymeslot.Integrations.Calendar.Auth.OAuthHelperBehaviour.callback_error()}
   def handle_callback(code, state, redirect_uri) do
     with {:ok, tokens} <- GoogleOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
          :ok <- ensure_calendar_write_scope(tokens),
@@ -95,10 +94,22 @@ defmodule Tymeslot.Integrations.Calendar.Google.OAuthHelper do
   # After a successful (re-)connection, kick the user's confirmed upcoming
   # meetings whose video room creation was previously blocked. The Oban job's
   # 5-minute uniqueness window prevents duplicates with any in-flight retries.
+  # Best-effort: failures are logged but must not fail the OAuth response.
   defp enqueue_pending_video_room_retries(user_id) do
     user_id
     |> MeetingQueries.list_user_meetings_missing_video_rooms(DateTime.utc_now())
     |> Enum.each(&VideoRoomWorker.schedule_video_room_creation(&1.id))
+
+    :ok
+  rescue
+    error ->
+      Logger.warning(
+        "Failed to enqueue pending video room retries after calendar reconnect",
+        user_id: user_id,
+        error: inspect(error)
+      )
+
+      :ok
   end
 
   @doc """
