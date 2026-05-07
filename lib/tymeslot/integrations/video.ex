@@ -21,7 +21,7 @@ defmodule Tymeslot.Integrations.Video do
 
   require Logger
 
-  @type provider :: :google_meet | :teams | :mirotalk | :custom | :none | String.t()
+  @type provider :: :google_meet | :teams | :zoom | :mirotalk | :custom | :none | String.t()
 
   # ---------------
   # Read
@@ -176,7 +176,7 @@ defmodule Tymeslot.Integrations.Video do
 
   # OAuth providers are created after OAuth callback normally; allow manual create only for none
   defp do_create_integration(provider, attrs)
-       when provider in [:google_meet, :teams, :none] do
+       when provider in [:google_meet, :teams, :zoom, :none] do
     VideoIntegrationQueries.create(attrs)
   end
 
@@ -521,6 +521,7 @@ defmodule Tymeslot.Integrations.Video do
       "mirotalk" -> :mirotalk
       "custom" -> :custom
       "none" -> :none
+      "zoom" -> :zoom
       _other -> :unknown
     end
   end

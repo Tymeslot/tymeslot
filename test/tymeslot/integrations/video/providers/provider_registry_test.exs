@@ -3,6 +3,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
   @moduletag :integrations
 
   import Mox
+  alias Tymeslot.Integrations.Video.ProviderConfig
   alias Tymeslot.Integrations.Video.Providers.ProviderRegistry
 
   setup :verify_on_exit!
@@ -235,6 +236,25 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       provider = ProviderRegistry.recommend_provider()
 
       assert provider == :mirotalk
+    end
+  end
+
+  describe "ProviderConfig integration with Zoom" do
+    test "providers_map/0 includes Zoom when enabled" do
+      map = ProviderConfig.providers_map()
+      assert map[:zoom] == Tymeslot.Integrations.Video.Providers.ZoomProvider
+    end
+
+    test "all_providers_with_dev/0 lists Zoom among providers" do
+      assert :zoom in ProviderConfig.all_providers_with_dev()
+    end
+
+    test "oauth_providers/0 lists Zoom" do
+      assert :zoom in ProviderConfig.oauth_providers()
+    end
+
+    test "display_name/1 returns Zoom for :zoom" do
+      assert ProviderConfig.display_name(:zoom) == "Zoom"
     end
   end
 end
