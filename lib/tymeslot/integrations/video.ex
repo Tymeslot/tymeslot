@@ -501,9 +501,7 @@ defmodule Tymeslot.Integrations.Video do
         {:ok, url}
 
       :zoom ->
-        redirect_uri = "#{Endpoint.url()}/auth/zoom/video/callback"
-        url = zoom_oauth_helper().authorization_url(user_id, redirect_uri, opts)
-        {:ok, url}
+        zoom_oauth_reconnect_url(user_id, opts)
 
       _other ->
         {:error, "Provider does not support OAuth reconnection"}
@@ -585,6 +583,14 @@ defmodule Tymeslot.Integrations.Video do
   defp zoom_oauth_authorization_url(user_id) do
     redirect_uri = "#{Endpoint.url()}/auth/zoom/video/callback"
     url = zoom_oauth_helper().authorization_url(user_id, redirect_uri)
+    {:ok, url}
+  rescue
+    error -> {:error, format_zoom_oauth_error(error)}
+  end
+
+  defp zoom_oauth_reconnect_url(user_id, opts) do
+    redirect_uri = "#{Endpoint.url()}/auth/zoom/video/callback"
+    url = zoom_oauth_helper().authorization_url(user_id, redirect_uri, opts)
     {:ok, url}
   rescue
     error -> {:error, format_zoom_oauth_error(error)}

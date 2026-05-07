@@ -212,6 +212,16 @@ defmodule Tymeslot.Integrations.Video.Rooms do
                 user_id: integration.user_id
               }
 
+            :zoom ->
+              %{
+                access_token: decrypted.access_token,
+                refresh_token: decrypted.refresh_token,
+                token_expires_at: integration.token_expires_at,
+                oauth_scope: integration.oauth_scope,
+                integration_id: integration.id,
+                user_id: integration.user_id
+              }
+
             :custom ->
               %{
                 custom_meeting_url: integration.custom_meeting_url,

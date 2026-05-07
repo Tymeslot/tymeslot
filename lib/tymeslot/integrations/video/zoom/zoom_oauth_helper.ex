@@ -71,9 +71,11 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
   @impl Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperBehaviour
   @spec exchange_code_for_tokens(String.t(), String.t(), String.t()) ::
           {:ok, map()} | {:error, String.t()}
+  # credo:disable-for-next-line Credo.Check.Design.DuplicatedCode
   def exchange_code_for_tokens(code, redirect_uri, state) do
     with {:ok, %{user_id: user_id, integration_id: integration_id}} <- verify_state(state),
          {:ok, tokens} <- fetch_tokens(code, redirect_uri),
+         :ok <- verify_required_scopes(tokens),
          {:ok, profile} <- fetch_user_profile(tokens.access_token) do
       {:ok, build_result_tokens(tokens, user_id, integration_id, profile)}
     else
@@ -95,25 +97,27 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
       refresh_token: refresh_token
     }
 
-    case TokenExchange.refresh_access_token(@token_url, body,
-           fallback_refresh_token: refresh_token,
-           fallback_scope: scope,
-           headers: basic_auth_headers()
-         ) do
-      {:ok, tokens} ->
-        {:ok, tokens}
+    with {:ok, headers} <- basic_auth_headers() do
+      case TokenExchange.refresh_access_token(@token_url, body,
+             fallback_refresh_token: refresh_token,
+             fallback_scope: scope,
+             headers: headers
+           ) do
+        {:ok, tokens} ->
+          {:ok, tokens}
 
-      {:error, {:http_error, status, resp_body}} ->
-        Logger.error("Zoom OAuth token refresh failed",
-          status: status,
-          response_body: Redactor.redact_and_truncate(resp_body)
-        )
+        {:error, {:http_error, status, resp_body}} ->
+          Logger.error("Zoom OAuth token refresh failed",
+            status: status,
+            response_body: Redactor.redact_and_truncate(resp_body)
+          )
 
-        {:error, ErrorParser.build_message("Token refresh failed", status, resp_body)}
+          {:error, ErrorParser.build_message("Token refresh failed", status, resp_body)}
 
-      {:error, {:network_error, reason}} ->
-        Logger.error("Network error during Zoom token refresh", reason: inspect(reason))
-        {:error, "Network error during token refresh: #{inspect(reason)}"}
+        {:error, {:network_error, reason}} ->
+          Logger.error("Network error during Zoom token refresh", reason: inspect(reason))
+          {:error, "Network error during token refresh: #{inspect(reason)}"}
+      end
     end
   end
 
@@ -153,15 +157,20 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
   end
 
   defp fetch_tokens(code, redirect_uri) do
-    TokenExchange.exchange_code_for_tokens(
-      code,
-      redirect_uri,
-      @token_url,
-      ZoomConfig.client_id(),
-      ZoomConfig.client_secret(),
-      @zoom_scope,
-      headers: basic_auth_headers()
-    )
+    with {:ok, client_id} <- ZoomConfig.fetch_client_id(),
+         {:ok, client_secret} <- ZoomConfig.fetch_client_secret(),
+         {:ok, headers} <- basic_auth_headers() do
+      TokenExchange.exchange_code_for_tokens(
+        code,
+        redirect_uri,
+        @token_url,
+        client_id,
+        client_secret,
+        @zoom_scope,
+        headers: headers,
+        omit_body_credentials: true
+      )
+    end
   end
 
   defp fetch_user_profile(token) do
@@ -176,7 +185,11 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
           parse_profile_body(body)
 
         {:ok, %Req.Response{status: status, body: body}} ->
-          Logger.error("Failed to fetch Zoom user profile", status: status, body: body)
+          Logger.error("Failed to fetch Zoom user profile",
+            status: status,
+            body: Redactor.redact_and_truncate(body)
+          )
+
           {:error, "Failed to fetch user profile: HTTP #{status}"}
 
         {:error, exception} when is_exception(exception) ->
@@ -202,12 +215,31 @@ defmodule Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper do
   end
 
   defp basic_auth_headers do
-    credentials = Base.encode64("#{ZoomConfig.client_id()}:#{ZoomConfig.client_secret()}")
+    with {:ok, client_id} <- ZoomConfig.fetch_client_id(),
+         {:ok, client_secret} <- ZoomConfig.fetch_client_secret() do
+      credentials = Base.encode64("#{client_id}:#{client_secret}")
 
-    [
-      {"Authorization", "Basic #{credentials}"},
-      {"Content-Type", "application/x-www-form-urlencoded"}
-    ]
+      {:ok,
+       [
+         {"Authorization", "Basic #{credentials}"},
+         {"Content-Type", "application/x-www-form-urlencoded"}
+       ]}
+    end
+  end
+
+  defp verify_required_scopes(tokens) do
+    returned_scope = tokens[:scope] || ""
+
+    if String.contains?(returned_scope, "meeting:write:meeting") do
+      :ok
+    else
+      Logger.error("Zoom OAuth response missing required scope",
+        required_scope: "meeting:write:meeting",
+        returned_scope: returned_scope
+      )
+
+      {:error, :missing_required_scope}
+    end
   end
 
   defp http_client do

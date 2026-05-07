@@ -56,6 +56,13 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
       scope: scope
     }
 
+    body =
+      if Keyword.get(opts, :omit_body_credentials, false) do
+        Map.drop(body, [:client_id, :client_secret])
+      else
+        body
+      end
+
     headers = Keyword.get(opts, :headers, @default_headers)
 
     case http_client().request(:post, token_url, URI.encode_query(body), headers, []) do
@@ -130,7 +137,8 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
   defp parse_token_response(response_body, fallback_refresh_token, fallback_scope) do
     case Jason.decode(response_body) do
       {:ok, response} ->
-        expires_at = DateTime.add(DateTime.utc_now(), response["expires_in"], :second)
+        expires_in = if is_integer(response["expires_in"]), do: response["expires_in"], else: 3600
+        expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
         {:ok,
          %{

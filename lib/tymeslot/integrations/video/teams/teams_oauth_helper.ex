@@ -57,6 +57,7 @@ defmodule Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper do
   """
   @spec exchange_code_for_tokens(String.t(), String.t(), String.t()) ::
           {:ok, map()} | {:error, String.t()}
+  # credo:disable-for-next-line Credo.Check.Design.DuplicatedCode
   def exchange_code_for_tokens(code, redirect_uri, state) do
     with {:ok, %{user_id: user_id, integration_id: integration_id}} <- verify_state(state),
          {:ok, tokens} <- fetch_tokens(code, redirect_uri),
