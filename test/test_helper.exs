@@ -58,6 +58,10 @@ Mox.defmock(Tymeslot.TeamsOAuthHelperMock,
   for: Tymeslot.Integrations.Video.Teams.TeamsOAuthHelperBehaviour
 )
 
+Mox.defmock(Tymeslot.ZoomOAuthHelperMock,
+  for: Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelperBehaviour
+)
+
 Mox.defmock(GoogleCalendarAPIMock,
   for: Tymeslot.Integrations.Calendar.Google.CalendarAPIBehaviour
 )

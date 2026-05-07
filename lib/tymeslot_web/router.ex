@@ -110,6 +110,7 @@ defmodule TymeslotWeb.Router do
     # Video OAuth routes
     get "/auth/google/video/callback", VideoOAuthController, :google_callback
     get "/auth/teams/video/callback", VideoOAuthController, :teams_callback
+    get "/auth/zoom/video/callback", VideoOAuthController, :zoom_callback
 
     # Session management routes
     post "/auth/session", SessionController, :create

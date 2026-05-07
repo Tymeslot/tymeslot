@@ -17,6 +17,7 @@ defmodule Tymeslot.Integrations.Video do
   alias Tymeslot.Integrations.Video.Urls
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
   alias TymeslotWeb.Endpoint
 
   require Logger
@@ -463,6 +464,9 @@ defmodule Tymeslot.Integrations.Video do
       :teams ->
         teams_oauth_authorization_url(user_id)
 
+      :zoom ->
+        zoom_oauth_authorization_url(user_id)
+
       _other ->
         {:error, "Provider does not support OAuth"}
     end
@@ -496,6 +500,11 @@ defmodule Tymeslot.Integrations.Video do
         url = teams_oauth_helper().authorization_url(user_id, redirect_uri, opts)
         {:ok, url}
 
+      :zoom ->
+        redirect_uri = "#{Endpoint.url()}/auth/zoom/video/callback"
+        url = zoom_oauth_helper().authorization_url(user_id, redirect_uri, opts)
+        {:ok, url}
+
       _other ->
         {:error, "Provider does not support OAuth reconnection"}
     end
@@ -510,6 +519,10 @@ defmodule Tymeslot.Integrations.Video do
 
   defp teams_oauth_helper do
     Application.get_env(:tymeslot, :teams_oauth_helper, TeamsOAuthHelper)
+  end
+
+  defp zoom_oauth_helper do
+    Application.get_env(:tymeslot, :zoom_oauth_helper, ZoomOAuthHelper)
   end
 
   defp normalize_provider(p) when is_atom(p), do: p
@@ -568,4 +581,25 @@ defmodule Tymeslot.Integrations.Video do
   rescue
     error -> {:error, format_outlook_oauth_error(error)}
   end
+
+  defp zoom_oauth_authorization_url(user_id) do
+    redirect_uri = "#{Endpoint.url()}/auth/zoom/video/callback"
+    url = zoom_oauth_helper().authorization_url(user_id, redirect_uri)
+    {:ok, url}
+  rescue
+    error -> {:error, format_zoom_oauth_error(error)}
+  end
+
+  defp format_zoom_oauth_error(%RuntimeError{message: "Zoom OAuth State Secret not configured"}),
+    do:
+      "Zoom OAuth is not configured. Please set ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET, and ZOOM_STATE_SECRET environment variables."
+
+  defp format_zoom_oauth_error(%RuntimeError{message: "Zoom Client ID not configured"}),
+    do: "Zoom OAuth is not configured. Please set ZOOM_CLIENT_ID environment variable."
+
+  defp format_zoom_oauth_error(%RuntimeError{message: "Zoom Client Secret not configured"}),
+    do: "Zoom OAuth is not configured. Please set ZOOM_CLIENT_SECRET environment variable."
+
+  defp format_zoom_oauth_error(error),
+    do: "Failed to setup Zoom OAuth: #{Exception.message(error)}"
 end

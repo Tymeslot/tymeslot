@@ -14,7 +14,7 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
 
   alias Tymeslot.Integrations.Common.OAuth.State
 
-  @type provider :: :google | :outlook
+  @type provider :: :google | :outlook | :zoom
   @type failure_reason :: :invalid_state | :unauthenticated | :state_user_mismatch
 
   @sensitive_callback_keys ~w(code state id_token)
@@ -34,7 +34,7 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
 
   @spec enforce_user_match(Plug.Conn.t(), any(), provider()) :: :ok | {:error, failure_reason()}
   def enforce_user_match(conn, state, provider)
-      when is_binary(state) and provider in [:google, :outlook] do
+      when is_binary(state) and provider in [:google, :outlook, :zoom] do
     case State.validate(state, provider_secret(provider)) do
       {:ok, %{user_id: state_user_id}} ->
         check_current_user(conn, state_user_id, provider)
@@ -49,7 +49,7 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
     end
   end
 
-  def enforce_user_match(_conn, _state, provider) when provider in [:google, :outlook] do
+  def enforce_user_match(_conn, _state, provider) when provider in [:google, :outlook, :zoom] do
     Logger.warning("OAuth callback rejected: state parameter missing or non-binary",
       provider: provider
     )
@@ -91,5 +91,11 @@ defmodule TymeslotWeb.Helpers.OAuthStateGuard do
     Application.get_env(:tymeslot, :outlook_oauth)[:state_secret] ||
       System.get_env("OUTLOOK_STATE_SECRET") ||
       raise "Outlook OAuth state secret not configured"
+  end
+
+  defp provider_secret(:zoom) do
+    Application.get_env(:tymeslot, :zoom_oauth)[:state_secret] ||
+      System.get_env("ZOOM_STATE_SECRET") ||
+      raise "Zoom OAuth state secret not configured"
   end
 end
