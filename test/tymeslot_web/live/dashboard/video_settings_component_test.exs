@@ -30,8 +30,16 @@ defmodule TymeslotWeb.Dashboard.VideoSettingsComponentTest do
       assert render(view) =~ "Available Providers"
       assert render(view) =~ "Connect Google Meet"
       assert render(view) =~ "Connect Teams"
+      assert render(view) =~ "Connect Zoom"
       assert render(view) =~ "Connect MiroTalk"
       assert render(view) =~ "Add Custom Link"
+    end
+
+    test "renders Connect Zoom card on the providers grid", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/dashboard/video-integration")
+
+      assert html =~ "Connect Zoom"
+      assert html =~ ~s(phx-value-provider="zoom")
     end
 
     test "lists connected integrations", %{conn: conn, user: user} do
