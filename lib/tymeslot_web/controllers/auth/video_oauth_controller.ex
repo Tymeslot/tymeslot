@@ -1,6 +1,6 @@
 defmodule TymeslotWeb.VideoOAuthController do
   @moduledoc """
-  Handles OAuth authentication flows for video integrations (Google Meet, Microsoft Teams).
+  Handles OAuth authentication flows for video integrations (Google Meet, Microsoft Teams, Zoom).
   """
 
   use TymeslotWeb, :controller
@@ -10,6 +10,7 @@ defmodule TymeslotWeb.VideoOAuthController do
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
+  alias Tymeslot.Integrations.Video.Zoom.ZoomOAuthHelper
   alias Tymeslot.Security.RateLimiter
   alias TymeslotWeb.Endpoint
   alias TymeslotWeb.Helpers.ClientIP
@@ -116,6 +117,54 @@ defmodule TymeslotWeb.VideoOAuthController do
     |> redirect(to: ~p"/dashboard/video-integration")
   end
 
+  @doc """
+  Handles Zoom OAuth callback.
+  """
+  @spec zoom_callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
+  def zoom_callback(conn, %{"code" => code, "state" => state}) do
+    redirect_uri = "#{Endpoint.url()}/auth/zoom/video/callback"
+
+    with :ok <- OAuthStateGuard.enforce_user_match(conn, state, :zoom),
+         :ok <- RateLimiter.check_oauth_callback_rate_limit(ClientIP.get(conn)),
+         {:ok, tokens} <- ZoomOAuthHelper.exchange_code_for_tokens(code, redirect_uri, state),
+         :ok <- validate_zoom_tokens(tokens),
+         {:ok, _integration} <-
+           create_or_update_zoom_integration(tokens, tokens[:integration_id]) do
+      DashboardContext.invalidate_integration_status(tokens.user_id)
+
+      conn
+      |> put_flash(:info, "Zoom connected successfully!")
+      |> redirect(to: ~p"/dashboard/video-integration")
+    else
+      error -> handle_zoom_oauth_error(conn, error)
+    end
+  end
+
+  def zoom_callback(conn, %{"error" => error} = params) do
+    error_description = Map.get(params, "error_description", "")
+    Logger.warning("Zoom OAuth error", error: error, description: error_description)
+
+    error_message =
+      case error do
+        "access_denied" -> "Authorization was denied. Please try again."
+        _other -> "Authentication failed. Please try again."
+      end
+
+    conn
+    |> put_flash(:error, error_message)
+    |> redirect(to: ~p"/dashboard/video-integration")
+  end
+
+  def zoom_callback(conn, params) do
+    Logger.warning("Invalid Zoom OAuth callback params",
+      params: inspect(OAuthStateGuard.redact_callback_params(params))
+    )
+
+    conn
+    |> put_flash(:error, "Invalid authentication response. Please try again.")
+    |> redirect(to: ~p"/dashboard/video-integration")
+  end
+
   defp handle_google_meet_error(conn, error) do
     case error do
       {:error, guard_reason}
@@ -166,6 +215,31 @@ defmodule TymeslotWeb.VideoOAuthController do
     |> redirect(to: ~p"/dashboard/video-integration")
   end
 
+  defp handle_zoom_oauth_error(conn, {:error, guard_reason})
+       when guard_reason in [:state_user_mismatch, :unauthenticated, :invalid_state],
+       do: reject_callback(conn)
+
+  defp handle_zoom_oauth_error(conn, error) do
+    message =
+      case error do
+        {:error, :rate_limited, msg} ->
+          Logger.warning("Rate limit exceeded for Zoom OAuth callback")
+          msg
+
+        {:error, :missing_zoom_account_id} ->
+          Logger.warning("Zoom OAuth callback missing provider_account_id")
+          "Could not identify your Zoom account. Please try again."
+
+        {:error, reason} ->
+          Logger.error("Zoom OAuth flow failed", reason: inspect(reason))
+          "Failed to connect Zoom. Please try again."
+      end
+
+    conn
+    |> put_flash(:error, message)
+    |> redirect(to: ~p"/dashboard/video-integration")
+  end
+
   defp reject_callback(conn) do
     conn
     |> put_flash(:error, "Authentication session mismatch. Please sign in and try again.")
@@ -204,6 +278,35 @@ defmodule TymeslotWeb.VideoOAuthController do
       tokens.user_id,
       "google_meet",
       "Google Meet",
+      tokens[:provider_account_id],
+      integration_id,
+      token_attrs
+    )
+  end
+
+  defp validate_zoom_tokens(tokens) do
+    if is_binary(tokens[:provider_account_id]) and tokens[:provider_account_id] != "" do
+      :ok
+    else
+      {:error, :missing_zoom_account_id}
+    end
+  end
+
+  defp create_or_update_zoom_integration(tokens, integration_id) do
+    token_attrs = %{
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      token_expires_at: tokens.expires_at,
+      oauth_scope: tokens.scope,
+      is_active: true,
+      provider_account_id: tokens[:provider_account_id],
+      provider_account_email: tokens[:provider_account_email]
+    }
+
+    Video.match_or_create_oauth_integration(
+      tokens.user_id,
+      "zoom",
+      "Zoom",
       tokens[:provider_account_id],
       integration_id,
       token_attrs

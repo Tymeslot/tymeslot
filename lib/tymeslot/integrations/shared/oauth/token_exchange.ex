@@ -34,10 +34,19 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
           String.t(),
           String.t(),
           String.t(),
-          String.t()
+          String.t(),
+          keyword()
         ) ::
           {:ok, map()} | {:error, String.t()}
-  def exchange_code_for_tokens(code, redirect_uri, token_url, client_id, client_secret, scope) do
+  def exchange_code_for_tokens(
+        code,
+        redirect_uri,
+        token_url,
+        client_id,
+        client_secret,
+        scope,
+        opts \\ []
+      ) do
     body = %{
       code: code,
       client_id: client_id,
@@ -47,7 +56,9 @@ defmodule Tymeslot.Integrations.Common.OAuth.TokenExchange do
       scope: scope
     }
 
-    case http_client().request(:post, token_url, URI.encode_query(body), @default_headers, []) do
+    headers = Keyword.get(opts, :headers, @default_headers)
+
+    case http_client().request(:post, token_url, URI.encode_query(body), headers, []) do
       {:ok, response} ->
         %{status: status, body: resp_body} = normalize_response(response)
 
