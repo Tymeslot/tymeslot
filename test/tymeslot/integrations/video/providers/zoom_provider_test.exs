@@ -314,7 +314,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
       }
 
       # Stub: validate_token says we need to refresh (current process's view)
-      stub(ZoomOAuthHelperMock, :validate_token, fn _ -> {:ok, :needs_refresh} end)
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :needs_refresh} end)
 
       # We expect refresh_access_token NOT to be called: another process already
       # refreshed. The HTTP call should use the fresh DB token.
@@ -351,7 +351,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
         meeting_end_time: DateTime.add(DateTime.utc_now(), 5400, :second)
       }
 
-      stub(ZoomOAuthHelperMock, :validate_token, fn _ -> {:ok, :needs_refresh} end)
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :needs_refresh} end)
 
       # Refresh IS called because the integration vanished and we can't
       # double-check.
@@ -386,7 +386,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
     end
 
     test "returns error tuple for malformed meeting_start_time" do
-      stub(ZoomOAuthHelperMock, :validate_token, fn _ -> {:ok, :valid} end)
+      stub(ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
 
       config = %{
         access_token: "tok",
