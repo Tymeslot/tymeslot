@@ -172,6 +172,30 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
     end
   end
 
+  describe "changeset/2 - zoom provider specific fields" do
+    test "accepts zoom as a valid provider" do
+      attrs = %{
+        name: "My Zoom",
+        provider: "zoom",
+        user_id: 1,
+        access_token: "fake-access",
+        refresh_token: "fake-refresh",
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+      }
+
+      changeset = VideoIntegrationSchema.changeset(%VideoIntegrationSchema{}, attrs)
+      assert changeset.valid?
+    end
+
+    test "zoom provider requires access_token and refresh_token when none persisted" do
+      attrs = %{name: "My Zoom", provider: "zoom", user_id: 1}
+      changeset = VideoIntegrationSchema.changeset(%VideoIntegrationSchema{}, attrs)
+      refute changeset.valid?
+      assert %{access_token: ["can't be blank"]} = errors_on(changeset)
+      assert %{refresh_token: ["can't be blank"]} = errors_on(changeset)
+    end
+  end
+
   describe "changeset/2 - custom provider specific fields" do
     test "requires custom_meeting_url for custom provider" do
       user = insert(:user)

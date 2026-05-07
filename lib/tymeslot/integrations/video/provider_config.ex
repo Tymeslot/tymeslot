@@ -10,8 +10,8 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   alias Tymeslot.Infrastructure.Config
   alias Tymeslot.Integrations.Shared.{ProviderConfigHelper, ProviderToggle}
 
-  @providers [:mirotalk, :google_meet, :teams, :custom]
-  @oauth_providers [:google_meet, :teams]
+  @providers [:mirotalk, :google_meet, :teams, :zoom, :custom]
+  @oauth_providers [:google_meet, :teams, :zoom]
   @dev_only_providers []
 
   # Provider metadata - single source of truth for all provider information
@@ -35,6 +35,13 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
       description: "Microsoft Teams meetings",
       button_text: "Connect Teams",
       click_event: "connect_teams",
+      circuit_breaker_enabled: true
+    },
+    zoom: %{
+      icon: "zoom",
+      description: "Zoom meetings via OAuth",
+      button_text: "Connect Zoom",
+      click_event: "connect_zoom",
       circuit_breaker_enabled: true
     },
     custom: %{
@@ -182,6 +189,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
   def display_name(:mirotalk), do: "MiroTalk P2P"
   def display_name(:google_meet), do: "Google Meet"
   def display_name(:teams), do: "Microsoft Teams"
+  def display_name(:zoom), do: "Zoom"
   def display_name(:custom), do: "Custom Video Link"
   def display_name(_provider), do: "Unknown Provider"
 
@@ -207,6 +215,7 @@ defmodule Tymeslot.Integrations.Video.ProviderConfig do
     do: Tymeslot.Integrations.Video.Providers.GoogleMeetProvider
 
   def get_provider_module(:teams), do: Tymeslot.Integrations.Video.Providers.TeamsProvider
+  def get_provider_module(:zoom), do: Tymeslot.Integrations.Video.Providers.ZoomProvider
   def get_provider_module(:custom), do: Tymeslot.Integrations.Video.Providers.CustomProvider
   def get_provider_module(_provider), do: nil
 
