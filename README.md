@@ -95,6 +95,7 @@ Plus: two themes (Quill, Rhythm) with dark mode, five languages (English, German
 <img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="44" title="Google Meet" />&nbsp;
 <img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="44" title="Microsoft Teams" />&nbsp;
 <img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="44" title="MiroTalk P2P" />&nbsp;
+<img src="./priv/static/icons/providers/video/medium/zoom.png" alt="Zoom" height="44" title="Zoom" />&nbsp;
 <img src="./priv/static/icons/providers/video/medium/local.png" alt="In-Person / Phone" height="44" title="In-Person / Phone" />&nbsp;
 <img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom" height="44" title="Custom Links" />
 
