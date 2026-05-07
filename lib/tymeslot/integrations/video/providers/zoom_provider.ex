@@ -29,7 +29,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     Logger.info("Creating Zoom meeting room")
 
     with {:ok, token} <- get_access_token(config),
-         {:ok, meeting} <- create_scheduled_meeting(token, config) do
+         {:ok, {start_time, end_time}} <- get_meeting_times(config),
+         {:ok, meeting} <- create_scheduled_meeting(token, start_time, end_time, config) do
       room_data = %{
         room_id: to_string(meeting["id"]),
         meeting_url: meeting["join_url"],
@@ -269,10 +270,9 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     end
   end
 
-  defp create_scheduled_meeting(token, config) do
-    {start_time, _end_time} = get_meeting_times(config)
-    duration_minutes = duration_minutes(config)
-    payload = build_meeting_payload(start_time, duration_minutes, config)
+  defp create_scheduled_meeting(token, start_time, end_time, config) do
+    duration = max(div(DateTime.diff(end_time, start_time, :second), 60), 15)
+    payload = build_meeting_payload(start_time, duration, config)
 
     headers = [
       {"Authorization", "Bearer #{token}"},
@@ -294,31 +294,25 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   end
 
   defp get_meeting_times(config) do
-    start_time =
-      case Map.get(config, :meeting_start_time) do
-        nil -> DateTime.add(DateTime.utc_now(), 3600, :second)
-        dt when is_binary(dt) -> parse_iso8601!(dt)
-        dt -> dt
-      end
-
-    end_time =
-      case Map.get(config, :meeting_end_time) do
-        nil -> DateTime.add(start_time, 1800, :second)
-        dt when is_binary(dt) -> parse_iso8601!(dt)
-        dt -> dt
-      end
-
-    {start_time, end_time}
+    with {:ok, start_time} <- resolve_start_time(Map.get(config, :meeting_start_time)),
+         {:ok, end_time} <- resolve_end_time(Map.get(config, :meeting_end_time), start_time) do
+      {:ok, {start_time, end_time}}
+    end
   end
 
-  defp duration_minutes(config) do
-    {start_time, end_time} = get_meeting_times(config)
-    max(div(DateTime.diff(end_time, start_time, :second), 60), 15)
-  end
+  defp resolve_start_time(nil), do: {:ok, DateTime.add(DateTime.utc_now(), 3600, :second)}
+  defp resolve_start_time(dt) when is_binary(dt), do: parse_iso8601(dt)
+  defp resolve_start_time(%DateTime{} = dt), do: {:ok, dt}
 
-  defp parse_iso8601!(dt) do
-    {:ok, parsed, _offset} = DateTime.from_iso8601(dt)
-    parsed
+  defp resolve_end_time(nil, start_time), do: {:ok, DateTime.add(start_time, 1800, :second)}
+  defp resolve_end_time(dt, _start_time) when is_binary(dt), do: parse_iso8601(dt)
+  defp resolve_end_time(%DateTime{} = dt, _start_time), do: {:ok, dt}
+
+  defp parse_iso8601(dt) when is_binary(dt) do
+    case DateTime.from_iso8601(dt) do
+      {:ok, parsed, _offset} -> {:ok, parsed}
+      {:error, reason} -> {:error, "Invalid datetime: #{inspect(dt)} (#{reason})"}
+    end
   end
 
   defp build_meeting_payload(start_time, duration_minutes, config) do

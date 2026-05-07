@@ -286,6 +286,121 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
       assert {:ok, room} = ZoomProvider.create_meeting_room(config)
       assert room.room_id == "555"
     end
+
+    test "skips refresh and uses fresh DB token when token already refreshed concurrently" do
+      user = insert(:user)
+      fresh_expiry = DateTime.add(DateTime.utc_now(), 3600, :second)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "fresh-token-from-other-process",
+          refresh_token: "ref",
+          token_expires_at: fresh_expiry,
+          oauth_scope: "meeting:write:meeting"
+        })
+
+      config = %{
+        access_token: "stale-token-current-process",
+        refresh_token: "ref",
+        token_expires_at: DateTime.add(DateTime.utc_now(), -10, :second),
+        integration_id: integration.id,
+        user_id: user.id,
+        meeting_topic: "Concurrent test",
+        meeting_start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
+        meeting_end_time: DateTime.add(DateTime.utc_now(), 5400, :second)
+      }
+
+      # Stub: validate_token says we need to refresh (current process's view)
+      stub(ZoomOAuthHelperMock, :validate_token, fn _ -> {:ok, :needs_refresh} end)
+
+      # We expect refresh_access_token NOT to be called: another process already
+      # refreshed. The HTTP call should use the fresh DB token.
+      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
+        assert {"Authorization", "Bearer fresh-token-from-other-process"} in headers
+
+        {:ok,
+         %Req.Response{
+           status: 201,
+           body:
+             Jason.encode!(%{
+               "id" => 111,
+               "join_url" => "https://zoom.us/j/111",
+               "start_url" => "https://zoom.us/s/111",
+               "password" => nil,
+               "host_email" => nil
+             })
+         }}
+      end)
+
+      assert {:ok, _room} = ZoomProvider.create_meeting_room(config)
+    end
+
+    test "falls back to direct refresh when integration disappears mid-flight" do
+      config = %{
+        access_token: "stale",
+        refresh_token: "ref",
+        token_expires_at: DateTime.add(DateTime.utc_now(), -10, :second),
+        # nonexistent
+        integration_id: 9_999_999,
+        user_id: 9_999_999,
+        meeting_topic: "Vanished integration",
+        meeting_start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
+        meeting_end_time: DateTime.add(DateTime.utc_now(), 5400, :second)
+      }
+
+      stub(ZoomOAuthHelperMock, :validate_token, fn _ -> {:ok, :needs_refresh} end)
+
+      # Refresh IS called because the integration vanished and we can't
+      # double-check.
+      expect(ZoomOAuthHelperMock, :refresh_access_token, fn "ref", _scope ->
+        {:ok,
+         %{
+           access_token: "after-refresh",
+           refresh_token: "new-ref",
+           expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+           scope: "meeting:write:meeting"
+         }}
+      end)
+
+      expect(HTTPClientMock, :request, fn :post, _url, _body, headers, _opts ->
+        assert {"Authorization", "Bearer after-refresh"} in headers
+
+        {:ok,
+         %Req.Response{
+           status: 201,
+           body:
+             Jason.encode!(%{
+               "id" => 222,
+               "join_url" => "https://zoom.us/j/222",
+               "start_url" => "https://zoom.us/s/222",
+               "password" => nil,
+               "host_email" => nil
+             })
+         }}
+      end)
+
+      assert {:ok, _room} = ZoomProvider.create_meeting_room(config)
+    end
+
+    test "returns error tuple for malformed meeting_start_time" do
+      stub(ZoomOAuthHelperMock, :validate_token, fn _ -> {:ok, :valid} end)
+
+      config = %{
+        access_token: "tok",
+        refresh_token: "ref",
+        token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+        meeting_topic: "Bad time",
+        meeting_start_time: "not-a-real-date",
+        meeting_end_time: DateTime.add(DateTime.utc_now(), 5400, :second)
+      }
+
+      assert {:error, msg} = ZoomProvider.create_meeting_room(config)
+      assert msg =~ "Invalid datetime"
+      refute msg =~ "MatchError"
+    end
   end
 
   describe "create_join_url/5" do
