@@ -263,6 +263,19 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Sets or clears a user's marketing unsubscribe timestamp.
+
+  Pass a `DateTime` to mark the user as unsubscribed, or `nil` to resubscribe.
+  """
+  @spec set_marketing_unsubscribed_at(UserSchema.t(), DateTime.t() | nil) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def set_marketing_unsubscribed_at(%UserSchema{} = user, value) do
+    user
+    |> Changeset.change(%{marketing_unsubscribed_at: value})
+    |> Repo.update()
+  end
+
+  @doc """
   Gets a user by ID with profile preloaded.
   """
   @spec get_user_with_profile!(integer()) :: UserSchema.t()

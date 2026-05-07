@@ -127,4 +127,52 @@ defmodule Tymeslot.AuthTest do
       assert_receive {:user_registered, %{user: %{id: ^user_id}}}, 500
     end
   end
+
+  describe "marketing_unsubscribed?/1" do
+    test "returns false for a freshly inserted user" do
+      user = insert(:user)
+      refute Auth.marketing_unsubscribed?(user)
+    end
+
+    test "returns true once the timestamp is set" do
+      user = insert(:user, marketing_unsubscribed_at: DateTime.utc_now(:second))
+      assert Auth.marketing_unsubscribed?(user)
+    end
+  end
+
+  describe "unsubscribe_user_from_marketing/1 and resubscribe_user_to_marketing/1" do
+    test "unsubscribe sets the timestamp" do
+      user = insert(:user)
+
+      assert {:ok, unsubscribed} = Auth.unsubscribe_user_from_marketing(user)
+      assert Auth.marketing_unsubscribed?(unsubscribed)
+    end
+
+    test "unsubscribe is idempotent — calling twice keeps the user unsubscribed" do
+      user = insert(:user)
+
+      {:ok, first} = Auth.unsubscribe_user_from_marketing(user)
+      {:ok, second} = Auth.unsubscribe_user_from_marketing(first)
+
+      assert Auth.marketing_unsubscribed?(second)
+      assert second.marketing_unsubscribed_at == first.marketing_unsubscribed_at
+    end
+
+    test "resubscribe clears the timestamp" do
+      user = insert(:user, marketing_unsubscribed_at: DateTime.utc_now(:second))
+
+      assert {:ok, resubscribed} = Auth.resubscribe_user_to_marketing(user)
+      refute Auth.marketing_unsubscribed?(resubscribed)
+    end
+
+    test "resubscribe is idempotent — calling twice on an already-subscribed user succeeds" do
+      user = insert(:user)
+
+      {:ok, first} = Auth.resubscribe_user_to_marketing(user)
+      refute Auth.marketing_unsubscribed?(first)
+
+      {:ok, second} = Auth.resubscribe_user_to_marketing(first)
+      refute Auth.marketing_unsubscribed?(second)
+    end
+  end
 end

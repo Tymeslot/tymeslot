@@ -136,4 +136,23 @@ defmodule Tymeslot.Auth.UserQueriesTest do
       refute changeset.valid?
     end
   end
+
+  describe "set_marketing_unsubscribed_at/2" do
+    test "sets the timestamp when given a DateTime" do
+      user = insert(:user)
+      now = DateTime.utc_now(:second)
+
+      {:ok, updated} = UserQueries.set_marketing_unsubscribed_at(user, now)
+
+      assert DateTime.compare(updated.marketing_unsubscribed_at, now) == :eq
+    end
+
+    test "clears the timestamp when given nil" do
+      user = insert(:user, marketing_unsubscribed_at: DateTime.utc_now(:second))
+
+      {:ok, updated} = UserQueries.set_marketing_unsubscribed_at(user, nil)
+
+      assert is_nil(updated.marketing_unsubscribed_at)
+    end
+  end
 end

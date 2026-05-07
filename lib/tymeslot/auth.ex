@@ -244,6 +244,40 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Checks if a user has unsubscribed from marketing emails.
+  """
+  @spec marketing_unsubscribed?(Ecto.Schema.t()) :: boolean()
+  def marketing_unsubscribed?(user) do
+    not is_nil(user.marketing_unsubscribed_at)
+  end
+
+  @doc """
+  Marks a user as unsubscribed from marketing emails. Idempotent.
+  """
+  @spec unsubscribe_user_from_marketing(Ecto.Schema.t()) ::
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def unsubscribe_user_from_marketing(user) do
+    if marketing_unsubscribed?(user) do
+      {:ok, user}
+    else
+      UserQueries.set_marketing_unsubscribed_at(user, DateTime.utc_now(:second))
+    end
+  end
+
+  @doc """
+  Resubscribes a user to marketing emails. Idempotent.
+  """
+  @spec resubscribe_user_to_marketing(Ecto.Schema.t()) ::
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def resubscribe_user_to_marketing(user) do
+    if marketing_unsubscribed?(user) do
+      UserQueries.set_marketing_unsubscribed_at(user, nil)
+    else
+      {:ok, user}
+    end
+  end
+
+  @doc """
   Checks if an email is available for registration.
   Returns :ok if available, {:error, reason} otherwise.
   """

@@ -39,6 +39,7 @@ defmodule Tymeslot.Auth.UserSchema do
           github_user_id: String.t() | nil,
           google_user_id: String.t() | nil,
           onboarding_completed_at: DateTime.t() | nil,
+          marketing_unsubscribed_at: DateTime.t() | nil,
           profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integrations: [CalendarIntegrationSchema.t()] | Ecto.Association.NotLoaded.t(),
           video_integrations: [VideoIntegrationSchema.t()] | Ecto.Association.NotLoaded.t(),
@@ -72,6 +73,7 @@ defmodule Tymeslot.Auth.UserSchema do
     field(:github_user_id, :string)
     field(:google_user_id, :string)
     field(:onboarding_completed_at, :utc_datetime)
+    field(:marketing_unsubscribed_at, :utc_datetime)
 
     has_one(:profile, Tymeslot.Profiles.ProfileSchema, foreign_key: :user_id)
 
