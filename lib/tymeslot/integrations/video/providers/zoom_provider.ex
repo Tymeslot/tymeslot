@@ -28,7 +28,8 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
   def create_meeting_room(config) do
     Logger.info("Creating Zoom meeting room")
 
-    with {:ok, token} <- get_access_token(config),
+    with {:ok, :valid} <- validate_zoom_scope(config),
+         {:ok, token} <- get_access_token(config),
          {:ok, {start_time, end_time}} <- get_meeting_times(config),
          {:ok, meeting} <- create_scheduled_meeting(token, start_time, end_time, config) do
       room_data = %{
@@ -156,6 +157,22 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   # ----- Private -----
 
+  defp validate_zoom_scope(config) do
+    stored_scope = Map.get(config, :oauth_scope) || ""
+    required_scope = "meeting:write:meeting"
+
+    if String.contains?(String.downcase(stored_scope), required_scope) do
+      {:ok, :valid}
+    else
+      Logger.error("Zoom integration missing required scope",
+        stored_scope: stored_scope,
+        required_scope: required_scope
+      )
+
+      {:error, "Zoom scopes are insufficient. Please reconnect your Zoom account."}
+    end
+  end
+
   defp get_access_token(config) do
     case zoom_oauth_helper().validate_token(config) do
       {:ok, :valid} ->
@@ -223,16 +240,24 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     case zoom_oauth_helper().refresh_access_token(refresh_token, nil) do
       {:ok, refreshed} ->
         Logger.info("Successfully refreshed Zoom OAuth token")
-
-        if integration_id = Map.get(config, :integration_id) do
-          update_integration_tokens(integration_id, Map.get(config, :user_id), refreshed)
-        end
-
-        {:ok, refreshed}
+        persist_refreshed_tokens(config, refreshed)
 
       {:error, reason} ->
         Logger.error("Failed to refresh Zoom OAuth token", reason: inspect(reason))
         {:error, "Token refresh failed: #{reason}"}
+    end
+  end
+
+  defp persist_refreshed_tokens(config, refreshed) do
+    case Map.get(config, :integration_id) do
+      nil ->
+        {:ok, refreshed}
+
+      integration_id ->
+        case update_integration_tokens(integration_id, Map.get(config, :user_id), refreshed) do
+          :ok -> {:ok, refreshed}
+          {:error, _reason} -> {:error, :token_persist_failed}
+        end
     end
   end
 
@@ -255,18 +280,23 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         case VideoIntegrationQueries.update(integration, attrs) do
           {:ok, _updated} ->
             Logger.info("Updated Zoom OAuth tokens", integration_id: integration_id)
+            :ok
 
           {:error, reason} ->
             Logger.error("Failed to persist Zoom tokens",
               integration_id: integration_id,
               reason: inspect(reason)
             )
+
+            {:error, reason}
         end
 
       {:error, :not_found} ->
         Logger.warning("Zoom integration vanished before token update",
           integration_id: integration_id
         )
+
+        :ok
     end
   end
 

@@ -207,6 +207,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
         access_token: "expired_token",
         refresh_token: "valid_refresh",
         token_expires_at: DateTime.add(DateTime.utc_now(), -3600, :second),
+        oauth_scope: "meeting:write:meeting",
         integration_id: integration.id,
         user_id: user.id,
         meeting_topic: "Test Meeting",
@@ -306,6 +307,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
         access_token: "stale-token-current-process",
         refresh_token: "ref",
         token_expires_at: DateTime.add(DateTime.utc_now(), -10, :second),
+        oauth_scope: "meeting:write:meeting",
         integration_id: integration.id,
         user_id: user.id,
         meeting_topic: "Concurrent test",
@@ -343,6 +345,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
         access_token: "stale",
         refresh_token: "ref",
         token_expires_at: DateTime.add(DateTime.utc_now(), -10, :second),
+        oauth_scope: "meeting:write:meeting",
         # nonexistent
         integration_id: 9_999_999,
         user_id: 9_999_999,
@@ -392,6 +395,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
         access_token: "tok",
         refresh_token: "ref",
         token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+        oauth_scope: "meeting:write:meeting",
         meeting_topic: "Bad time",
         meeting_start_time: "not-a-real-date",
         meeting_end_time: DateTime.add(DateTime.utc_now(), 5400, :second)
@@ -498,6 +502,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProviderTest do
       access_token: "valid_token",
       refresh_token: "valid_refresh",
       token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+      oauth_scope: "meeting:write:meeting meeting:read:meeting user:read:user",
       meeting_topic: "Test Meeting",
       meeting_start_time: DateTime.add(DateTime.utc_now(), 3600, :second),
       meeting_end_time: DateTime.add(DateTime.utc_now(), 5400, :second)

@@ -220,6 +220,29 @@ defmodule Tymeslot.Integrations.VideoTest do
       assert String.contains?(url, "login.microsoftonline.com")
     end
 
+    test "generates zoom auth URL" do
+      user = insert(:user)
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri ->
+        "https://zoom.us/oauth/authorize?client_id=test-client-id&response_type=code"
+      end)
+
+      assert {:ok, url} = Video.oauth_authorization_url(user.id, :zoom)
+      assert String.contains?(url, "zoom.us")
+    end
+
+    test "returns error when zoom oauth helper raises" do
+      user = insert(:user)
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :authorization_url, fn _uid, _uri ->
+        raise RuntimeError, "Zoom Client ID not configured"
+      end)
+
+      assert {:error, message} = Video.oauth_authorization_url(user.id, :zoom)
+      assert is_binary(message)
+      assert String.contains?(message, "Zoom")
+    end
+
     test "returns error for non-oauth provider" do
       assert {:error, _reason} = Video.oauth_authorization_url(1, :mirotalk)
     end
