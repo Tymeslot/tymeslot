@@ -24,23 +24,27 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
 
   @impl ProviderBehaviour
   def create_join_url(room_data, participant_name, _participant_email, _role, _meeting_time) do
-    base_url = room_data.meeting_url
+    case room_data.meeting_url do
+      nil ->
+        {:error, "Missing meeting URL in room data"}
 
-    url =
-      if String.contains?(base_url, "?") do
-        "#{base_url}&uname=#{URI.encode(participant_name)}"
-      else
-        "#{base_url}?uname=#{URI.encode(participant_name)}"
-      end
+      base_url ->
+        url =
+          if String.contains?(base_url, "?") do
+            "#{base_url}&uname=#{URI.encode(participant_name)}"
+          else
+            "#{base_url}?uname=#{URI.encode(participant_name)}"
+          end
 
-    {:ok, url}
+        {:ok, url}
+    end
   end
 
   @impl ProviderBehaviour
   def extract_room_id(meeting_url) when is_binary(meeting_url) do
     case Regex.run(~r/zoom\.us\/(?:j|my|w)\/(\d+)/, meeting_url) do
       [_full, id] -> id
-      _other -> meeting_url
+      _no_match -> nil
     end
   end
 

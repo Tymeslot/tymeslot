@@ -173,11 +173,13 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
   end
 
   describe "changeset/2 - zoom provider specific fields" do
-    test "accepts zoom as a valid provider" do
+    test "accepts zoom as a valid provider and round-trips to the database" do
+      user = insert(:user)
+
       attrs = %{
         name: "My Zoom",
         provider: "zoom",
-        user_id: 1,
+        user_id: user.id,
         access_token: "fake-access",
         refresh_token: "fake-refresh",
         token_expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
@@ -185,10 +187,15 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationSchemaTest do
 
       changeset = VideoIntegrationSchema.changeset(%VideoIntegrationSchema{}, attrs)
       assert changeset.valid?
+
+      assert {:ok, integration} = Repo.insert(changeset)
+      assert integration.provider == "zoom"
+      assert integration.user_id == user.id
     end
 
     test "zoom provider requires access_token and refresh_token when none persisted" do
-      attrs = %{name: "My Zoom", provider: "zoom", user_id: 1}
+      user = insert(:user)
+      attrs = %{name: "My Zoom", provider: "zoom", user_id: user.id}
       changeset = VideoIntegrationSchema.changeset(%VideoIntegrationSchema{}, attrs)
       refute changeset.valid?
       assert %{access_token: ["can't be blank"]} = errors_on(changeset)

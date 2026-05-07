@@ -232,6 +232,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
       {["mirotalk", "talk."], :mirotalk},
       {["meet.google.com"], :google_meet},
       {["teams.microsoft.com"], :teams},
+      {["zoom.us"], :zoom},
       {["webex.com"], :webex},
       {["meet.jit.si"], :jitsi},
       {["whereby.com"], :whereby}

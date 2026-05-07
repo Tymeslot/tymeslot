@@ -42,6 +42,11 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       end
     end
 
+    test "returns ZoomProvider for :zoom" do
+      assert {:ok, Tymeslot.Integrations.Video.Providers.ZoomProvider} =
+               ProviderRegistry.get_provider(:zoom)
+    end
+
     test "returns provider module for valid custom provider" do
       assert {:ok, module} = ProviderRegistry.get_provider(:custom)
       assert module == Tymeslot.Integrations.Video.Providers.CustomProvider
@@ -90,6 +95,10 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderRegistryTest do
       assert ProviderRegistry.valid_provider?(:google_meet)
       assert ProviderRegistry.valid_provider?(:custom)
       # Teams provider may not be available in all environments
+    end
+
+    test "returns true for :zoom" do
+      assert ProviderRegistry.valid_provider?(:zoom)
     end
 
     test "returns false for invalid video providers" do
