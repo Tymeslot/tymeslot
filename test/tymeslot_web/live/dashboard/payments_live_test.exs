@@ -8,6 +8,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
   import Tymeslot.AuthTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.MeetingPayments.ConnectAccountQueries
+
   defp create_onboarded_user do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
     insert(:profile, user: user)
@@ -66,6 +68,84 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
 
       {:ok, _view, html} = live(conn, "/dashboard/payments")
       assert html =~ "Connect Stripe"
+    end
+  end
+
+  describe "/dashboard/payments — with active Stripe account" do
+    setup do
+      Application.put_env(:tymeslot, :meeting_payments_enabled, true)
+      on_exit(fn -> Application.put_env(:tymeslot, :meeting_payments_enabled, false) end)
+      :ok
+    end
+
+    test "shows green status when charges_enabled and payouts_enabled", %{conn: conn} do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_green",
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, _view, html} = live(conn, "/dashboard/payments")
+
+      assert html =~ "Connected and ready"
+      assert html =~ "Recent payments"
+    end
+
+    test "shows amber when details submitted but charges disabled", %{conn: conn} do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_amber",
+        charges_enabled: false,
+        payouts_enabled: false,
+        details_submitted: true
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, _view, html} = live(conn, "/dashboard/payments")
+
+      assert html =~ "Pending Stripe review"
+    end
+
+    test "shows red when disabled_reason is set", %{conn: conn} do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_red",
+        disabled_reason: "rejected.fraud"
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, _view, html} = live(conn, "/dashboard/payments")
+
+      assert html =~ "Restricted"
+      assert html =~ "rejected.fraud"
+    end
+
+    test "disconnect button soft-deletes the connect_account", %{conn: conn} do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_disco",
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/payments")
+
+      view |> element("button[phx-click=disconnect]") |> render_click()
+
+      refute ConnectAccountQueries.live_for_user(user.id)
     end
   end
 end

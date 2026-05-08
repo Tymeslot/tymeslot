@@ -13,6 +13,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
   alias Tymeslot.Integrations.Calendar.ProviderCalendarEventSchema
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
+  alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias Tymeslot.Payments.PaymentTransactionSchema
@@ -309,6 +310,20 @@ defmodule Tymeslot.Factory do
       status: "pending",
       metadata: %{},
       stripe_id: sequence(:stripe_id, &"sess_#{&1}")
+    }
+  end
+
+  @spec connect_account_factory() :: Tymeslot.MeetingPayments.ConnectAccountSchema.t()
+  def connect_account_factory do
+    %ConnectAccountSchema{
+      stripe_account_id: sequence(:stripe_account_id, &"acct_#{&1}"),
+      country: "ch",
+      default_currency: "chf",
+      charges_enabled: false,
+      payouts_enabled: false,
+      details_submitted: false,
+      status: "active",
+      user: build(:user)
     }
   end
 end
