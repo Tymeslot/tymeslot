@@ -199,7 +199,10 @@ defmodule TymeslotWeb.Router do
       live "/dashboard/theme/customize/:theme_id", DashboardLive, :theme_customization
       live "/dashboard/meetings", DashboardLive, :meetings
       live "/dashboard/embed", DashboardLive, :embed
+      live "/dashboard/payments", Dashboard.PaymentsLive, :index
     end
+
+    post "/dashboard/payments/connect", Dashboard.PaymentsController, :connect
   end
 
   # Onboarding routes
