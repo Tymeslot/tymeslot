@@ -55,4 +55,24 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
       assert Meeting.future?(meeting)
     end
   end
+
+  describe "status enum" do
+    test "accepts awaiting_payment" do
+      changeset = Meeting.changeset(%Meeting{}, %{status: "awaiting_payment"})
+
+      refute Map.has_key?(errors_on(changeset), :status)
+    end
+
+    test "accepts expired" do
+      changeset = Meeting.changeset(%Meeting{}, %{status: "expired"})
+
+      refute Map.has_key?(errors_on(changeset), :status)
+    end
+
+    test "rejects unknown status" do
+      changeset = Meeting.changeset(%Meeting{}, %{status: "not_a_real_status"})
+
+      assert "is invalid" in errors_on(changeset).status
+    end
+  end
 end
