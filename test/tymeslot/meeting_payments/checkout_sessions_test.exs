@@ -1,0 +1,138 @@
+defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
+  use Tymeslot.DataCase, async: true
+
+  @moduletag :database
+  @moduletag :payments
+
+  import Mox
+
+  alias Tymeslot.MeetingPayments.CheckoutSessions
+  alias Tymeslot.MeetingPayments.StripeAdapterMock
+
+  setup :verify_on_exit!
+
+  setup do
+    user = insert(:user)
+    {:ok, profile} = Tymeslot.Profiles.get_or_create_profile(user.id)
+    {:ok, _profile} = Tymeslot.Profiles.update_profile(profile, %{booking_theme: "1"})
+
+    insert(:connect_account,
+      user: user,
+      stripe_account_id: "acct_HOST",
+      default_currency: "eur",
+      charges_enabled: true
+    )
+
+    meeting_type =
+      insert(:meeting_type,
+        user: user,
+        name: "Consult",
+        payment_required: true,
+        price_cents: 5000
+      )
+
+    %{user: user, meeting_type: meeting_type}
+  end
+
+  describe "create_session_for_booking/1" do
+    test "creates session with correct application_fee, currency, theme slug, and snapshot",
+         %{user: user, meeting_type: mt} do
+      Application.put_env(:tymeslot, :payment_application_fee_bp, 50)
+      on_exit(fn -> Application.put_env(:tymeslot, :payment_application_fee_bp, 0) end)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          attendee_email: "alice@example.com",
+          attendee_name: "Alice",
+          attendee_locale: "en",
+          status: "awaiting_payment"
+        )
+
+      expect(StripeAdapterMock, :create_checkout_session, fn params, opts ->
+        assert opts[:connect_account] == "acct_HOST"
+        assert opts[:idempotency_key] == "checkout:#{meeting.id}"
+        assert hd(params.line_items).price_data.currency == "eur"
+        assert hd(params.line_items).price_data.unit_amount == 5000
+        assert params.payment_intent_data.application_fee_amount == 25
+        assert params.success_url =~ "/themes/quill/payment-processing/#{meeting.id}"
+        assert params.success_url =~ "session_id={CHECKOUT_SESSION_ID}"
+        assert params.cancel_url =~ "/themes/quill/payment-cancelled/#{meeting.id}"
+        assert params.client_reference_id == meeting.id
+        assert params.automatic_payment_methods == %{enabled: true}
+        assert params.customer_email == "alice@example.com"
+        assert params.locale == "en"
+        {:ok, %{id: "cs_TEST", url: "https://checkout.stripe.com/cs_TEST"}}
+      end)
+
+      assert {:ok, %{checkout_url: url, booking_payment: bp}} =
+               CheckoutSessions.create_session_for_booking(meeting)
+
+      assert url =~ "checkout.stripe.com"
+      assert bp.amount_cents == 5000
+      assert bp.application_fee_cents == 25
+      assert bp.currency == "eur"
+      assert bp.attendee_email == "alice@example.com"
+      assert bp.host_user_id == user.id
+      assert bp.host_email == user.email
+      assert bp.meeting_type_name == "Consult"
+      assert bp.booking_theme_id == "1"
+      assert bp.stripe_account_id == "acct_HOST"
+      assert bp.stripe_checkout_session_id == "cs_TEST"
+      assert bp.status == "pending"
+    end
+
+    test "returns :payments_unavailable when host has no charges-enabled account",
+         %{user: user, meeting_type: mt} do
+      # Manually disable charges via direct query
+      account = Tymeslot.MeetingPayments.ConnectAccountQueries.live_for_user(user.id)
+
+      {:ok, _disabled} =
+        Tymeslot.MeetingPayments.ConnectAccountQueries.update(account, %{
+          charges_enabled: false
+        })
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          attendee_email: "alice@example.com",
+          status: "awaiting_payment"
+        )
+
+      assert {:error, :payments_unavailable} =
+               CheckoutSessions.create_session_for_booking(meeting)
+    end
+
+    test "rolls back booking_payment when Stripe Checkout fails",
+         %{user: user, meeting_type: mt} do
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          attendee_email: "alice@example.com",
+          status: "awaiting_payment"
+        )
+
+      expect(StripeAdapterMock, :create_checkout_session, fn _params, _opts ->
+        {:error, :stripe_unreachable}
+      end)
+
+      assert {:error, :stripe_unreachable} =
+               CheckoutSessions.create_session_for_booking(meeting)
+
+      # No booking_payment row should exist after rollback
+      refute Tymeslot.MeetingPayments.BookingPaymentQueries.by_meeting_id(meeting.id)
+    end
+
+    test "stripe_locale/1 maps known locales and falls back to auto" do
+      assert "auto" = CheckoutSessions.stripe_locale(nil)
+      assert "auto" = CheckoutSessions.stripe_locale("uk")
+      assert "en" = CheckoutSessions.stripe_locale("en")
+      assert "de" = CheckoutSessions.stripe_locale("de")
+      assert "fr" = CheckoutSessions.stripe_locale("fr")
+      assert "it" = CheckoutSessions.stripe_locale("it")
+    end
+  end
+end
