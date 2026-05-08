@@ -271,6 +271,26 @@ defmodule Tymeslot.Integrations.Video.VideoIntegrationQueries do
   end
 
   @doc """
+  Deletes every integration matching `(provider, provider_account_id)` regardless
+  of the owning user. Used by provider-initiated revocation flows (e.g. the Zoom
+  deauthorization webhook) where the only identifier we receive is the provider's
+  account ID. Returns the number of rows deleted.
+  """
+  @spec delete_by_provider_account(String.t(), String.t()) :: {:ok, non_neg_integer()}
+  def delete_by_provider_account(provider, provider_account_id)
+      when is_binary(provider) and is_binary(provider_account_id) and provider_account_id != "" do
+    {count, _rows} =
+      VideoIntegrationSchema
+      |> where(
+        [v],
+        v.provider == ^provider and v.provider_account_id == ^provider_account_id
+      )
+      |> Repo.delete_all()
+
+    {:ok, count}
+  end
+
+  @doc """
   Toggles the active status of an integration.
 
   When reactivating, checks that no other active integration exists for the same

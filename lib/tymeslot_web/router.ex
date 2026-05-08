@@ -33,6 +33,15 @@ defmodule TymeslotWeb.Router do
     post "/outlook-lifecycle", OutlookLifecycleController, :webhook
   end
 
+  # Zoom app deauthorization endpoint — POSTed by Zoom when a user uninstalls
+  # the Marketplace app. Lives under /auth to mirror the OAuth callback path
+  # and runs through the unauthenticated :api pipeline (no CSRF).
+  scope "/", TymeslotWeb do
+    pipe_through :api
+
+    post "/auth/zoom/deauthorize", ZoomDeauthController, :deauthorize
+  end
+
   # Telegram bot webhook (unauthenticated, outside :browser pipeline)
   scope "/api/telegram", TymeslotWeb do
     pipe_through :api
