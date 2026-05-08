@@ -14,6 +14,13 @@ config :tymeslot,
   registration_enabled: true,
   # Controls whether users must accept T&C/Privacy during registration
   enforce_legal_agreements: false,
+  # Whether meeting payments (booker pays at booking time) is enabled.
+  # Self-hosters opt in by setting :meeting_payments_enabled to true.
+  # SaaS overrides this in apps/tymeslot_saas/config/config.exs.
+  meeting_payments_enabled: false,
+  # Application fee charged on top of meeting payments, in basis points
+  # (1 bp = 0.01%). 0 = no fee. SaaS may override per environment.
+  payment_application_fee_bp: 0,
   # Whether to show marketing-related links (Docs, etc) in navigation
   show_marketing_links: false,
   # Whether the logo links to a marketing site or the login page
@@ -76,8 +83,10 @@ config :tymeslot,
   dashboard_action_components: %{}
 
 # Feature Assigns - Default to allowing all features
-# SaaS can override these via on_mount hooks based on subscription status
-config :tymeslot, :feature_assigns, automations_allowed: true
+# SaaS can override these via on_mount hooks based on subscription status.
+# `:meeting_payments` defaults to false because Core treats it as a self-host
+# opt-in feature; LiveViews use the assign to hide payment-related UI bits.
+config :tymeslot, :feature_assigns, automations_allowed: true, meeting_payments: false
 
 # Dashboard Feature Gates - Maps live_action atoms to feature flag assign keys.
 # When an action is listed here, the corresponding assign must be true for the

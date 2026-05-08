@@ -7,7 +7,7 @@ defmodule Tymeslot.Features do
 
   require Logger
 
-  @type access_error :: :insufficient_plan | :feature_access_checker_failed
+  @type access_error :: :insufficient_plan | :feature_disabled | :feature_access_checker_failed
 
   @spec check_access(integer(), atom()) :: :ok | {:error, access_error()}
   def check_access(user_id, feature) when is_integer(user_id) and is_atom(feature) do
@@ -25,6 +25,9 @@ defmodule Tymeslot.Features do
           :ok
 
         {:error, :insufficient_plan} = error ->
+          error
+
+        {:error, :feature_disabled} = error ->
           error
 
         {:error, reason} ->
