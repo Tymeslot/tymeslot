@@ -16,13 +16,13 @@ defmodule Tymeslot.AnnouncementsTest do
       Repo.insert!(%UserSeenAnnouncementSchema{
         user_id: user.id,
         announcement_key: "feature_a",
-        seen_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        seen_at: DateTime.utc_now(:second)
       })
 
       Repo.insert!(%UserSeenAnnouncementSchema{
         user_id: other_user.id,
         announcement_key: "feature_b",
-        seen_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        seen_at: DateTime.utc_now(:second)
       })
 
       assert AnnouncementQueries.seen_keys_for(user.id) == ["feature_a"]
