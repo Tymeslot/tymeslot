@@ -85,4 +85,142 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
       assert "cannot have more than 3 reminders" in errors_on(changeset).reminder_config
     end
   end
+
+  describe "payment_required validation" do
+    test "free meeting type does not require price" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Free Chat",
+        duration_minutes: 30,
+        payment_required: false,
+        user_id: user.id
+      }
+
+      changeset = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
+      refute Map.has_key?(errors_on(changeset), :price_cents)
+    end
+
+    test "paid meeting type requires price_cents" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Paid",
+        duration_minutes: 30,
+        payment_required: true,
+        user_id: user.id
+      }
+
+      changeset =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
+          host_currency: "eur",
+          host_charges_enabled: true
+        )
+
+      refute changeset.valid?
+      assert "can't be blank" in errors_on(changeset).price_cents
+    end
+
+    test "rejects price below currency minimum" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Paid",
+        duration_minutes: 30,
+        payment_required: true,
+        price_cents: 25,
+        user_id: user.id
+      }
+
+      changeset =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
+          host_currency: "eur",
+          host_charges_enabled: true
+        )
+
+      refute changeset.valid?
+      assert "must be greater than or equal to 50" in errors_on(changeset).price_cents
+    end
+
+    test "accepts price at or above currency minimum" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Paid",
+        duration_minutes: 30,
+        payment_required: true,
+        price_cents: 5000,
+        user_id: user.id
+      }
+
+      changeset =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
+          host_currency: "eur",
+          host_charges_enabled: true
+        )
+
+      refute Map.has_key?(errors_on(changeset), :price_cents)
+      refute Map.has_key?(errors_on(changeset), :payment_required)
+    end
+
+    test "rejects payment_required without connected Stripe" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Paid",
+        duration_minutes: 30,
+        payment_required: true,
+        price_cents: 5000,
+        user_id: user.id
+      }
+
+      changeset =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
+          host_currency: "eur",
+          host_charges_enabled: false
+        )
+
+      refute changeset.valid?
+      assert "Stripe must be connected" in errors_on(changeset).payment_required
+    end
+
+    test "reports both errors when price is missing and Stripe is not connected" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Paid",
+        duration_minutes: 30,
+        payment_required: true,
+        user_id: user.id
+      }
+
+      changeset =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs,
+          host_currency: "eur",
+          host_charges_enabled: false
+        )
+
+      refute changeset.valid?
+      assert "can't be blank" in errors_on(changeset).price_cents
+      assert "Stripe must be connected" in errors_on(changeset).payment_required
+    end
+
+    test "defaults host_currency to eur when opt is omitted" do
+      user = insert(:user)
+
+      attrs = %{
+        name: "Paid",
+        duration_minutes: 30,
+        payment_required: true,
+        price_cents: 25,
+        user_id: user.id
+      }
+
+      changeset =
+        MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs, host_charges_enabled: true)
+
+      refute changeset.valid?
+      assert "must be greater than or equal to 50" in errors_on(changeset).price_cents
+    end
+  end
 end

@@ -4,6 +4,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  alias Tymeslot.MeetingPayments.Currency
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
@@ -17,6 +18,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           allow_video: boolean(),
           sort_order: integer(),
           reminder_config: [map()],
+          payment_required: boolean(),
+          price_cents: integer() | nil,
+          is_archived: boolean(),
           user_id: integer() | nil,
           video_integration_id: integer() | nil,
           calendar_integration_id: integer() | nil,
@@ -35,6 +39,9 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     field(:sort_order, :integer, default: 0)
     field(:target_calendar_id, :string)
     field(:reminder_config, {:array, :map}, default: nil)
+    field(:payment_required, :boolean, default: false)
+    field(:price_cents, :integer)
+    field(:is_archived, :boolean, default: false)
 
     belongs_to(:user, Tymeslot.Auth.UserSchema)
     belongs_to(:video_integration, Tymeslot.Integrations.Video.VideoIntegrationSchema)
@@ -61,9 +68,17 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
 
   @doc """
   Changeset for creating/updating meeting types.
+
+  Payment-related validation is performed when `payment_required` is true.
+  Because the host's currency and Stripe Connect status live on a separate
+  schema, callers pass them in via `opts`:
+
+    * `:host_currency` (default `"eur"`) — host's payout currency.
+    * `:host_charges_enabled` (default `false`) — whether the host's Stripe
+      Connect account can accept charges.
   """
-  @spec changeset(Ecto.Schema.t(), map()) :: Ecto.Changeset.t()
-  def changeset(meeting_type, attrs) do
+  @spec changeset(Ecto.Schema.t(), map(), keyword()) :: Ecto.Changeset.t()
+  def changeset(meeting_type, attrs, opts \\ []) do
     meeting_type
     |> cast(attrs, [
       :name,
@@ -77,7 +92,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
       :video_integration_id,
       :calendar_integration_id,
       :target_calendar_id,
-      :reminder_config
+      :reminder_config,
+      :payment_required,
+      :price_cents,
+      :is_archived
     ])
     |> validate_required([:name, :duration_minutes, :user_id])
     |> validate_length(:name, Constraints.name_length_opts())
@@ -88,6 +106,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     |> validate_video_integration()
     |> validate_calendar_destination()
     |> validate_reminder_config()
+    |> validate_payment_fields(opts)
     |> unique_constraint([:user_id, :name],
       message: "You already have a meeting type with this name"
     )
@@ -176,6 +195,32 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
         end
       end
     end
+  end
+
+  defp validate_payment_fields(changeset, opts) do
+    if get_field(changeset, :payment_required) do
+      currency = Keyword.get(opts, :host_currency, "eur")
+
+      changeset
+      |> validate_required([:price_cents])
+      |> validate_charges_enabled(opts)
+      |> validate_currency_minimum(currency)
+    else
+      changeset
+    end
+  end
+
+  defp validate_charges_enabled(changeset, opts) do
+    if Keyword.get(opts, :host_charges_enabled, false) do
+      changeset
+    else
+      add_error(changeset, :payment_required, "Stripe must be connected")
+    end
+  end
+
+  defp validate_currency_minimum(changeset, currency) do
+    minimum = Currency.minimum_cents(currency)
+    validate_number(changeset, :price_cents, greater_than_or_equal_to: minimum)
   end
 
   @doc """
