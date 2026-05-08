@@ -18,7 +18,7 @@ defmodule Tymeslot.Meetings.MeetingConflictQueries do
     query =
       from(m in Meeting,
         where:
-          m.status in ["confirmed", "pending"] and
+          m.status in ["confirmed", "pending", "awaiting_payment"] and
             (m.start_time < ^end_time and m.end_time > ^start_time)
       )
 
@@ -44,7 +44,7 @@ defmodule Tymeslot.Meetings.MeetingConflictQueries do
     base =
       from(m in Meeting,
         where:
-          m.status in ["confirmed", "pending"] and
+          m.status in ["confirmed", "pending", "awaiting_payment"] and
             m.start_time < ^buffered_end and
             m.end_time > ^buffered_start
       )
