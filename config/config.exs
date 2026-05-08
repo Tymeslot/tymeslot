@@ -75,6 +75,10 @@ config :tymeslot,
   dashboard_sidebar_extensions: [],
   dashboard_action_components: %{}
 
+# Feature Announcements - Catalog modules that contribute to the
+# what's-new modal shown on dashboard mount. SaaS appends its own catalog.
+config :tymeslot, :announcement_catalogs, [Tymeslot.Announcements.Catalog]
+
 # Feature Assigns - Default to allowing all features
 # SaaS can override these via on_mount hooks based on subscription status
 config :tymeslot, :feature_assigns, automations_allowed: true
