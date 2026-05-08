@@ -1,5 +1,5 @@
 defmodule TymeslotWeb.Hooks.AnnouncementsHookTest do
-  use TymeslotWeb.ConnCase, async: true
+  use TymeslotWeb.ConnCase, async: false
 
   @moduletag :utils
 

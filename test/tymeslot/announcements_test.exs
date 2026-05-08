@@ -1,5 +1,5 @@
 defmodule Tymeslot.AnnouncementsTest do
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
 
   @moduletag :database
   @moduletag :queries
