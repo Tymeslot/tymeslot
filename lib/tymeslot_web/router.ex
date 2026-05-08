@@ -243,6 +243,29 @@ defmodule TymeslotWeb.Router do
     end
   end
 
+  # Theme-aware payment return pages (Stripe Checkout success/cancel)
+  scope "/", TymeslotWeb do
+    pipe_through :theme_browser
+
+    live_session :payment_return,
+      on_mount: [
+        TymeslotWeb.Hooks.LocaleHook,
+        TymeslotWeb.Hooks.ClientInfoHook
+      ] do
+      live "/themes/quill/payment-processing/:meeting_id",
+           Themes.Quill.PaymentProcessingLive
+
+      live "/themes/quill/payment-cancelled/:meeting_id",
+           Themes.Quill.PaymentCancelledLive
+
+      live "/themes/rhythm/payment-processing/:meeting_id",
+           Themes.Rhythm.PaymentProcessingLive
+
+      live "/themes/rhythm/payment-cancelled/:meeting_id",
+           Themes.Rhythm.PaymentCancelledLive
+    end
+  end
+
   # Username-based scheduling routes (must be before catch-all)
   scope "/", TymeslotWeb do
     pipe_through :theme_browser
