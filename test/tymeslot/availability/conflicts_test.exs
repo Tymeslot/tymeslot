@@ -34,9 +34,13 @@ defmodule Tymeslot.Availability.ConflictsTest do
   end
 
   property "date_has_slots_with_events? matches available_slots availability" do
-    # This property test verifies that the optimized month-view check (date_has_slots_with_events?)
-    # returns 'true' if and only if there is at least one slot returned by the full
-    # calculation (available_slots).
+    # This property test verifies that the optimized month-view check
+    # (date_has_slots_with_events?) returns 'true' if and only if
+    # `available_slots/6` returns at least one slot. Both directions are
+    # required: a one-way assertion previously allowed the boolean check
+    # to be falsely-optimistic and customers saw "no times available"
+    # empty states after clicking on a day the calendar grid marked as
+    # bookable.
 
     check all(
             timezone <-
@@ -130,17 +134,13 @@ defmodule Tymeslot.Availability.ConflictsTest do
 
         has_slots_full = slots != []
 
-        # The optimized check is "optimistic" - it may return true even if no slots are available
-        # (e.g. if multiple events combine to block the day), but it should NEVER return false
-        # if there are actually slots available.
-        if has_slots_full do
-          assert has_slots_optimized,
-                 """
-                 LIVENESS BUG: Optimized check says NO slots, but full check found slots!
-                 Date: #{date}, TZ: #{timezone}
-                 Events: #{inspect(events_in_tz)}
-                 """
-        end
+        assert has_slots_optimized == has_slots_full,
+               """
+               EQUIVALENCE BUG: optimized=#{has_slots_optimized}, full=#{has_slots_full}
+               Date: #{date}, TZ: #{timezone}
+               Events: #{inspect(events_in_tz)}
+               Slots from full check: #{inspect(slots)}
+               """
       end
     end
   end
@@ -531,6 +531,53 @@ defmodule Tymeslot.Availability.ConflictsTest do
         Overlap window: #{window_start} to #{window_end}
         """
       end
+    end
+  end
+
+  describe "max_advance_booking_days enforcement" do
+    # Pin `now` to a fixed past date so these tests never depend on wall-clock time.
+    # now = 2026-01-01 09:00:00Z
+
+    test "returns false when date is beyond max_advance_booking_days" do
+      # Window: now + 1 day = 2026-01-02 09:00:00Z
+      # Slots on 2026-01-05 (Monday) start at 11:00 UTC at the earliest,
+      # which is past the window end → within_booking_window? rejects them.
+      now = ~U[2026-01-01 09:00:00Z]
+      date = ~D[2026-01-05]
+
+      result =
+        Conflicts.date_has_slots_with_events?(
+          date,
+          "Etc/UTC",
+          "Etc/UTC",
+          [],
+          now,
+          %{max_advance_booking_days: 1, min_advance_hours: 0}
+        )
+
+      assert result == false,
+             "Expected no bookable slots when date is beyond the 1-day booking window"
+    end
+
+    test "returns true when date is within max_advance_booking_days" do
+      # Window: now + 2 days = 2026-01-03 09:00:00Z
+      # Slots on 2026-01-02 (Friday) start at 11:00 UTC, which is before the
+      # window end → within_booking_window? admits them.
+      now = ~U[2026-01-01 09:00:00Z]
+      date = ~D[2026-01-02]
+
+      result =
+        Conflicts.date_has_slots_with_events?(
+          date,
+          "Etc/UTC",
+          "Etc/UTC",
+          [],
+          now,
+          %{max_advance_booking_days: 2, min_advance_hours: 0}
+        )
+
+      assert result == true,
+             "Expected bookable slots when date is within the 2-day booking window"
     end
   end
 
