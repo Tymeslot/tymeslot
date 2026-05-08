@@ -150,7 +150,10 @@ defmodule TymeslotWeb.Router do
             Phoenix.LiveView.Socket.t()
           ) :: {:cont, Phoenix.LiveView.Socket.t()} | {:halt, Phoenix.LiveView.Socket.t()}
     def on_mount(:dashboard_hooks, params, session, socket) do
-      hooks = @dashboard_hooks ++ dashboard_additional_hooks()
+      hooks =
+        @dashboard_hooks ++
+          dashboard_additional_hooks() ++
+          [{TymeslotWeb.Hooks.AnnouncementsHook, :load_unseen_announcements}]
 
       Enum.reduce_while(hooks, {:cont, socket}, fn
         {module, function}, {:cont, socket} ->
