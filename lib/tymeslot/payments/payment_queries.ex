@@ -257,4 +257,27 @@ defmodule Tymeslot.Payments.PaymentQueries do
       coordinate_successful_payment(transaction, tax_info, discount_amount)
     end
   end
+
+  @doc """
+  Anonymises payment transactions for a deleted host.
+
+  Nilifies user_id and stamps host_deleted_at so the row stands alone as
+  a tax record after the user is removed. host_email and host_name are
+  retained — they're the snapshotted counterparty identity required for
+  compliance and are not scrubbed here.
+  """
+  @spec anonymise_for_host(integer(), DateTime.t()) :: {non_neg_integer(), nil}
+  def anonymise_for_host(user_id, now) do
+    query =
+      from t in PaymentTransaction,
+        where: t.user_id == ^user_id and is_nil(t.host_deleted_at)
+
+    Repo.update_all(query,
+      set: [
+        host_deleted_at: now,
+        user_id: nil,
+        updated_at: now
+      ]
+    )
+  end
 end

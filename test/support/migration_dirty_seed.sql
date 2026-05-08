@@ -191,6 +191,52 @@ SELECT 'seed-evt-null-status@example.com',
        NOW(),
        NOW();
 
+-- ============================================================================
+-- PAYMENT TRANSACTIONS (pre-retention-migration shape)
+-- ============================================================================
+--
+-- The 20260508164247_add_retention_columns_to_payment_transactions migration:
+--   1. Drops the NOT NULL FK on user_id and re-adds it as :nilify_all
+--   2. Adds host_email, host_name, host_deleted_at columns
+--   3. Backfills host_email/host_name via UPDATE ... FROM users WHERE pt.user_id = u.id
+--   4. Creates an index on host_deleted_at
+--
+-- These rows exercise all three branches of the backfill.
+--
+-- Note: row 3 (orphaned user) bypasses the pre-migration FK using
+-- session_replication_role so we can simulate a user deleted before the
+-- migration ran. The FK is dropped as the first step of up/0, so this
+-- state is valid once the migration proceeds.
+
+-- Row 1: Standard row — user with a name. Backfill should populate both
+-- host_email and host_name from the matching users row.
+INSERT INTO payment_transactions (user_id, amount, status, stripe_id, metadata, inserted_at, updated_at)
+SELECT id, 1999, 'succeeded', 'ch_seed_pt_1', '{}', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'
+FROM users WHERE email = 'seed-user-1@example.com';
+
+-- Row 2: User with NULL name. The backfill assigns NULL to host_name but
+-- still populates host_email. Verifies the UPDATE tolerates NULL name.
+INSERT INTO payment_transactions (user_id, amount, status, stripe_id, metadata, inserted_at, updated_at)
+SELECT id, 999, 'succeeded', 'ch_seed_pt_2', '{}', NOW() - INTERVAL '9 days', NOW() - INTERVAL '9 days'
+FROM users WHERE email = 'seed-user-2@example.com';
+
+-- Row 3: User was hard-deleted before the migration ran. The UPDATE ... FROM
+-- users WHERE pt.user_id = u.id finds no match, so host_email and host_name
+-- remain NULL after the ALTER TABLE. Verifies the backfill does not abort
+-- on orphaned rows. Uses session_replication_role to bypass the pre-migration
+-- on_delete: :delete_all FK that would otherwise cascade-delete this row.
+INSERT INTO users (id, email, password_hash, inserted_at, updated_at)
+VALUES (999999999, 'deleted-seed-host@example.com', '$2b$12$K4fE6xkGz0qYkN2wQpYDOeG0G0G0G0G0G0G0G0G0G0G0G0G0G0', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days');
+
+INSERT INTO payment_transactions (user_id, amount, status, stripe_id, metadata, inserted_at, updated_at)
+VALUES (999999999, 499, 'succeeded', 'ch_seed_pt_3', '{}', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days');
+
+SET session_replication_role = replica;
+DELETE FROM users WHERE id = 999999999;
+SET session_replication_role = DEFAULT;
+
+-- ============================================================================
+
 -- Regression: add_attendee_notification_tracking backfill must survive rows
 -- where every field the backfill references is NULL or degenerate. title,
 -- description, location are all NULL (so the rename migration leaves summary
