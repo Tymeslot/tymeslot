@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.Component
+  alias Phoenix.LiveView
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Demo
   alias Tymeslot.Infrastructure.Security.RecaptchaHelpers
@@ -49,15 +50,24 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
   3. Calls the booking orchestrator
   4. Handles success/error responses
 
+  Returns:
+    * `{:ok, socket}` — booking confirmed, theme should advance to confirmation
+    * `{:redirect, socket}` — paid booking awaiting payment, socket already
+      carries an external redirect to the Stripe Checkout URL
+    * `{:error, socket}` — validation or persistence failure
+
   ## Examples
 
       case BookingSubmissionHandlerComponent.submit_booking(socket, booking_params) do
         {:ok, updated_socket} -> {:noreply, updated_socket}
+        {:redirect, redirect_socket} -> {:noreply, redirect_socket}
         {:error, error_socket} -> {:noreply, error_socket}
       end
   """
   @spec submit_booking(Phoenix.LiveView.Socket.t(), map()) ::
-          {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
+          {:ok, Phoenix.LiveView.Socket.t()}
+          | {:redirect, Phoenix.LiveView.Socket.t()}
+          | {:error, Phoenix.LiveView.Socket.t()}
   def submit_booking(socket, booking_params) do
     Logger.info("Submit event triggered for booking form")
 
@@ -339,6 +349,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     orchestrator = Demo.get_orchestrator(socket)
 
     case orchestrator.submit_booking(params, opts) do
+      {:ok, :payment_required, %{checkout_url: url}} ->
+        handle_payment_required(socket, url)
+
       {:ok, meeting} ->
         handle_booking_success(socket, meeting, sanitized_params)
 
@@ -358,6 +371,17 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       {:error, reason} ->
         handle_booking_error(socket, reason)
     end
+  end
+
+  defp handle_payment_required(socket, url) do
+    Logger.info("Booking redirecting to Stripe Checkout for payment", checkout_url: url)
+
+    socket =
+      socket
+      |> assign(:submitting, false)
+      |> LiveView.redirect(external: url)
+
+    {:redirect, socket}
   end
 
   defp resolve_duration_minutes(socket) do

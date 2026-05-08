@@ -11,7 +11,9 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
+  alias Tymeslot.MeetingPayments.CheckoutSessions
   alias Tymeslot.Meetings.Scheduling
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoRoomWorker
   alias UUID
@@ -28,6 +30,12 @@ defmodule Tymeslot.Bookings.Create do
 
   @type error_reason :: String.t() | atom() | {:validation_error, any()}
 
+  @typedoc "Result returned by `execute/3` and `execute_with_video_room/3`."
+  @type execute_result ::
+          {:ok, map()}
+          | {:ok, :payment_required, %{meeting: map(), checkout_url: String.t()}}
+          | {:error, String.t()}
+
   @doc """
   Creates a booking with fresh calendar validation.
 
@@ -36,9 +44,14 @@ defmodule Tymeslot.Bookings.Create do
   Options:
     - :skip_calendar_check - Skip calendar availability validation
     - :with_video_room - Create with video room integration
+
+  When the booking's meeting type has `payment_required: true`, the meeting
+  is persisted with status `awaiting_payment`, side effects (calendar, video,
+  email) are deferred until payment confirmation, and a Stripe Checkout
+  Session URL is returned alongside the meeting via the
+  `{:ok, :payment_required, ...}` tuple.
   """
-  @spec execute(meeting_params(), form_data(), keyword()) ::
-          {:ok, map()} | {:error, String.t()}
+  @spec execute(meeting_params(), form_data(), keyword()) :: execute_result()
   def execute(meeting_params, form_data, opts \\ []) do
     with {:ok, booking_data} <- prepare_booking_data(meeting_params, form_data),
          {:ok, :validated} <- validate_booking(booking_data, opts) do
@@ -54,8 +67,7 @@ defmodule Tymeslot.Bookings.Create do
   Includes optional calendar pre-check for better UX.
   Same options as execute/3 plus video room is automatically enabled.
   """
-  @spec execute_with_video_room(meeting_params(), form_data(), keyword()) ::
-          {:ok, map()} | {:error, String.t()}
+  @spec execute_with_video_room(meeting_params(), form_data(), keyword()) :: execute_result()
   def execute_with_video_room(meeting_params, form_data, opts \\ []) do
     opts = Keyword.put(opts, :with_video_room, true)
 
@@ -243,9 +255,49 @@ defmodule Tymeslot.Bookings.Create do
   defp create_meeting_and_all_side_effects_atomically(booking_data, opts) do
     meeting_attrs = Policy.build_meeting_attributes(booking_data)
 
-    meeting_attrs
-    |> run_meeting_transaction(opts)
-    |> map_transaction_result()
+    if paid_meeting_type?(booking_data) do
+      create_paid_booking(meeting_attrs)
+    else
+      meeting_attrs
+      |> run_meeting_transaction(opts)
+      |> map_transaction_result()
+    end
+  end
+
+  defp paid_meeting_type?(%{meeting_type_id: nil}), do: false
+
+  defp paid_meeting_type?(%{meeting_type_id: type_id, organizer_user_id: user_id})
+       when is_integer(user_id) do
+    case MeetingTypes.get_meeting_type(type_id, user_id) do
+      %{payment_required: true} -> true
+      _other -> false
+    end
+  end
+
+  defp paid_meeting_type?(_other), do: false
+
+  defp create_paid_booking(meeting_attrs) do
+    paid_attrs = Map.put(meeting_attrs, :status, "awaiting_payment")
+
+    case run_paid_meeting_transaction(paid_attrs) do
+      {:ok, %{meeting: meeting, checkout_url: url}} ->
+        {:ok, :payment_required, %{meeting: meeting, checkout_url: url}}
+
+      {:error, reason} ->
+        {:error, map_error_to_message(reason)}
+    end
+  end
+
+  defp run_paid_meeting_transaction(paid_attrs) do
+    Repo.transaction(fn ->
+      with {:ok, meeting} <- create_meeting(paid_attrs),
+           {:ok, %{checkout_url: url}} <-
+             CheckoutSessions.create_session_for_booking(meeting) do
+        %{meeting: meeting, checkout_url: url}
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   defp run_meeting_transaction(meeting_attrs, opts) do
@@ -300,6 +352,18 @@ defmodule Tymeslot.Bookings.Create do
 
       :validation_error ->
         "Failed to save meeting to database"
+
+      :payments_unavailable ->
+        "Payments are not available for this booking. Please contact the host."
+
+      :host_not_found ->
+        "Host could not be found. Please refresh and try again."
+
+      :host_missing ->
+        "Host could not be found. Please refresh and try again."
+
+      :meeting_type_missing ->
+        "This meeting type is no longer available. Please go back and select another."
 
       reason when is_binary(reason) ->
         reason
