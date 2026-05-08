@@ -20,7 +20,7 @@ defmodule Tymeslot.Announcements.AnnouncementQueries do
   @spec mark_seen!(integer(), String.t()) :: :ok
   def mark_seen!(user_id, announcement_key)
       when is_integer(user_id) and is_binary(announcement_key) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    now = DateTime.utc_now(:second)
 
     %UserSeenAnnouncementSchema{}
     |> UserSeenAnnouncementSchema.changeset(%{
