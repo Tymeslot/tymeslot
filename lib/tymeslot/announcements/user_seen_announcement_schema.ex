@@ -10,9 +10,9 @@ defmodule Tymeslot.Announcements.UserSeenAnnouncementSchema do
 
   @type t :: %__MODULE__{
           id: integer() | nil,
-          user_id: integer(),
-          announcement_key: String.t(),
-          seen_at: DateTime.t()
+          user_id: integer() | nil,
+          announcement_key: String.t() | nil,
+          seen_at: DateTime.t() | nil
         }
 
   schema "user_seen_announcements" do
