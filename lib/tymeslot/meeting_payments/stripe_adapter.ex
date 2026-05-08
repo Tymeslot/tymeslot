@@ -1,0 +1,93 @@
+defmodule Tymeslot.MeetingPayments.StripeAdapter do
+  @moduledoc """
+  Single seam for every Stripe API call made by the meeting_payments
+  context. The default implementation passes calls through to
+  stripity_stripe; tests replace it with a Mox stub via the
+  `:tymeslot, :stripe_adapter` config.
+  """
+
+  @callback create_account(params :: map(), opts :: keyword()) ::
+              {:ok, map()} | {:error, term()}
+  @callback retrieve_account(account_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+  @callback create_account_link(params :: map()) ::
+              {:ok, map()} | {:error, term()}
+  @callback create_checkout_session(params :: map(), opts :: keyword()) ::
+              {:ok, map()} | {:error, term()}
+  @callback retrieve_checkout_session(session_id :: String.t(), opts :: keyword()) ::
+              {:ok, map()} | {:error, term()}
+  @callback retrieve_charge(charge_id :: String.t(), opts :: keyword()) ::
+              {:ok, map()} | {:error, term()}
+  @callback create_refund(params :: map(), opts :: keyword()) ::
+              {:ok, map()} | {:error, term()}
+
+  @spec create_account(map(), keyword()) :: {:ok, map()} | {:error, term()}
+  def create_account(params, opts \\ []), do: impl().create_account(params, opts)
+
+  @spec retrieve_account(String.t()) :: {:ok, map()} | {:error, term()}
+  def retrieve_account(id), do: impl().retrieve_account(id)
+
+  @spec create_account_link(map()) :: {:ok, map()} | {:error, term()}
+  def create_account_link(params), do: impl().create_account_link(params)
+
+  @spec create_checkout_session(map(), keyword()) :: {:ok, map()} | {:error, term()}
+  def create_checkout_session(params, opts \\ []),
+    do: impl().create_checkout_session(params, opts)
+
+  @spec retrieve_checkout_session(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
+  def retrieve_checkout_session(id, opts \\ []),
+    do: impl().retrieve_checkout_session(id, opts)
+
+  @spec retrieve_charge(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
+  def retrieve_charge(id, opts \\ []),
+    do: impl().retrieve_charge(id, opts)
+
+  @spec create_refund(map(), keyword()) :: {:ok, map()} | {:error, term()}
+  def create_refund(params, opts \\ []),
+    do: impl().create_refund(params, opts)
+
+  defp impl, do: Application.get_env(:tymeslot, :stripe_adapter, __MODULE__.Stripity)
+end
+
+defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
+  @moduledoc """
+  Production implementation: passes through to stripity_stripe.
+
+  Connect endpoints take a `connect_account` opt that becomes the
+  `Stripe-Account` request header. For `retrieve_account/1` the
+  account ID is forwarded as `connect_account` because stripity_stripe
+  v3's `Stripe.Account.retrieve/2` retrieves the account scoped to the
+  current API key — the only way to fetch a connected account is via
+  the `Stripe-Account` header.
+  """
+
+  @behaviour Tymeslot.MeetingPayments.StripeAdapter
+
+  alias Stripe.Account
+  alias Stripe.AccountLink
+  alias Stripe.Charge
+  alias Stripe.Checkout.Session, as: CheckoutSession
+  alias Stripe.Refund
+  alias Tymeslot.MeetingPayments.StripeAdapter
+
+  @impl StripeAdapter
+  def create_account(params, opts), do: Account.create(params, opts)
+
+  @impl StripeAdapter
+  def retrieve_account(id), do: Account.retrieve(%{}, connect_account: id)
+
+  @impl StripeAdapter
+  def create_account_link(params), do: AccountLink.create(params)
+
+  @impl StripeAdapter
+  def create_checkout_session(params, opts), do: CheckoutSession.create(params, opts)
+
+  @impl StripeAdapter
+  def retrieve_checkout_session(id, opts), do: CheckoutSession.retrieve(id, %{}, opts)
+
+  @impl StripeAdapter
+  def retrieve_charge(id, opts), do: Charge.retrieve(id, %{}, opts)
+
+  @impl StripeAdapter
+  def create_refund(params, opts), do: Refund.create(params, opts)
+end
