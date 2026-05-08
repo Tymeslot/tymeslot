@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
   import Tymeslot.Factory
 
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
 
   defp create_onboarded_user do
     user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
@@ -146,6 +147,36 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
       view |> element("button[phx-click=disconnect]") |> render_click()
 
       refute ConnectAccountQueries.live_for_user(user.id)
+    end
+
+    test "change_currency updates the account currency and resets paid event types", %{conn: conn} do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_currency",
+        default_currency: "eur",
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true
+      )
+
+      paid_mt =
+        insert(:meeting_type, user: user, payment_required: true, price_cents: 5000)
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, "/dashboard/payments")
+
+      view
+      |> form("form[phx-change=change_currency]", %{"currency" => "gbp"})
+      |> render_change()
+
+      account = ConnectAccountQueries.live_for_user(user.id)
+      assert account.default_currency == "gbp"
+
+      reloaded = MeetingTypeQueries.get_meeting_type!(paid_mt.id)
+      assert reloaded.payment_required == false
+      assert reloaded.price_cents == nil
     end
   end
 end

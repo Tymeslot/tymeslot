@@ -13,6 +13,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccounts
+  alias Tymeslot.MeetingPayments.Currency
+  alias Tymeslot.MeetingTypes.MeetingTypeQueries
+  alias Tymeslot.Repo
 
   @refund_window_days 60
 
@@ -51,6 +54,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
         <.connect_cta />
       <% else %>
         <.status_card account={@connect_account} />
+        <.currency_selector account={@connect_account} />
         <.payments_table payments={@payments} />
         <.lifetime_stats stats={@stats} />
         <.disconnect_zone />
@@ -95,6 +99,68 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
      socket
      |> put_flash(:info, "Stripe disconnected.")
      |> assign_payments_state(user)}
+  end
+
+  def handle_event("change_currency", %{"currency" => currency}, socket) do
+    user = socket.assigns.current_user
+
+    cond do
+      not Currency.allowed?(currency) ->
+        {:noreply, put_flash(socket, :error, "Currency not supported.")}
+
+      currency == socket.assigns.connect_account.default_currency ->
+        {:noreply, socket}
+
+      true ->
+        :ok = apply_currency_change(socket.assigns.connect_account, user.id, currency)
+
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           "Currency updated. Paid event-type prices have been reset."
+         )
+         |> assign_payments_state(user)}
+    end
+  end
+
+  defp apply_currency_change(account, user_id, currency) do
+    {:ok, _result} =
+      Repo.transaction(fn ->
+        {:ok, _account} = ConnectAccountQueries.update(account, %{default_currency: currency})
+        MeetingTypeQueries.clear_payments_for_user(user_id)
+      end)
+
+    :ok
+  end
+
+  defp currency_selector(assigns) do
+    assigns = assign(assigns, :currencies, Currency.allowlist())
+
+    ~H"""
+    <div class="rounded-token-lg border border-tymeslot-200 bg-white p-4 mb-6">
+      <h3 class="text-token-sm text-tymeslot-500 mb-2">Default currency</h3>
+      <p class="text-token-sm text-tymeslot-700 mb-3">
+        Changing the currency will reset every paid event type to free —
+        existing prices are recorded in the previous currency and would
+        otherwise be charged at the new one.
+      </p>
+      <form phx-change="change_currency">
+        <select
+          name="currency"
+          class="rounded-token-md border border-tymeslot-200 px-3 py-2"
+        >
+          <option
+            :for={code <- @currencies}
+            value={code}
+            selected={code == @account.default_currency}
+          >
+            {String.upcase(code)}
+          </option>
+        </select>
+      </form>
+    </div>
+    """
   end
 
   defp status_card(assigns) do

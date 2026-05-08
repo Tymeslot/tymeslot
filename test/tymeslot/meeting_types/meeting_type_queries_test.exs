@@ -637,4 +637,31 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueriesTest do
       assert reloaded_other.target_calendar_id == "other-cal"
     end
   end
+
+  describe "clear_payments_for_user/1" do
+    test "resets payment_required and price_cents on the user's meeting types" do
+      user = insert(:user)
+      paid_mt = insert(:meeting_type, user: user, payment_required: true, price_cents: 5000)
+      free_mt = insert(:meeting_type, user: user, payment_required: false, price_cents: nil)
+
+      MeetingTypeQueries.clear_payments_for_user(user.id)
+
+      assert %MeetingTypeSchema{payment_required: false, price_cents: nil} =
+               Repo.reload(paid_mt)
+
+      assert %MeetingTypeSchema{payment_required: false, price_cents: nil} =
+               Repo.reload(free_mt)
+    end
+
+    test "leaves other users' meeting types untouched" do
+      user = insert(:user)
+      other = insert(:user)
+      paid_mt = insert(:meeting_type, user: other, payment_required: true, price_cents: 7500)
+
+      MeetingTypeQueries.clear_payments_for_user(user.id)
+
+      assert %MeetingTypeSchema{payment_required: true, price_cents: 7500} =
+               Repo.reload(paid_mt)
+    end
+  end
 end

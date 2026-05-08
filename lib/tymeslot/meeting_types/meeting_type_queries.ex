@@ -138,6 +138,24 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeQueries do
   end
 
   @doc """
+  Resets `payment_required` and `price_cents` on every meeting type owned
+  by the given user. Used when the host changes their Stripe Connect
+  default currency — paid prices recorded in the old currency must not
+  silently re-bill at the new one.
+  """
+  @spec clear_payments_for_user(integer()) :: {non_neg_integer(), nil}
+  def clear_payments_for_user(user_id) when is_integer(user_id) do
+    Repo.update_all(
+      from(mt in MeetingTypeSchema, where: mt.user_id == ^user_id),
+      set: [
+        payment_required: false,
+        price_cents: nil,
+        updated_at: NaiveDateTime.utc_now(:second)
+      ]
+    )
+  end
+
+  @doc """
   Clears calendar references (`calendar_integration_id` and `target_calendar_id`)
   on all meeting types pointing to the given calendar integration.
 
