@@ -1,4 +1,7 @@
 
+[1.0.0]
+* saas: Send founder welcome email with one-click unsubscribe
+* core: Add marketing-list opt-out helpers to Auth
 [0.100.16]
 * core: Apply calendar deselection to CalDAV sync immediately
 * core: Prevent calendar dashboard crash on 3+ overlapping all-day events
