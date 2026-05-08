@@ -107,7 +107,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   defp fetch_connect_account(user_id) do
     case ConnectAccountQueries.live_for_user(user_id) do
       %{charges_enabled: true} = account -> {:ok, account}
-      _ -> {:error, :payments_unavailable}
+      _account_or_nil -> {:error, :payments_unavailable}
     end
   end
 
@@ -122,7 +122,7 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   defp resolve_theme_id(user_id) do
     case Profiles.get_profile(user_id) do
       %{booking_theme: theme_id} when is_binary(theme_id) -> theme_id
-      _ -> ThemeRegistry.default_theme_id()
+      _missing_or_default -> ThemeRegistry.default_theme_id()
     end
   end
 
@@ -208,5 +208,5 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
   def stripe_locale("de"), do: "de"
   def stripe_locale("fr"), do: "fr"
   def stripe_locale("it"), do: "it"
-  def stripe_locale(_), do: "auto"
+  def stripe_locale(_other), do: "auto"
 end

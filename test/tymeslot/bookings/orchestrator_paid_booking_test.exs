@@ -27,6 +27,7 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
   alias Tymeslot.Bookings.Orchestrator
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Profiles
   alias Tymeslot.TestMocks
   alias Tymeslot.Workers.EmailWorker
   alias Tymeslot.Workers.VideoRoomWorker
@@ -47,8 +48,8 @@ defmodule Tymeslot.Bookings.OrchestratorPaidBookingTest do
     end)
 
     user = insert(:user, email: "host@example.com", name: "Host")
-    {:ok, profile} = Tymeslot.Profiles.get_or_create_profile(user.id)
-    {:ok, _profile} = Tymeslot.Profiles.update_profile(profile, %{timezone: "Europe/Berlin"})
+    {:ok, profile} = Profiles.get_or_create_profile(user.id)
+    {:ok, _profile} = Profiles.update_profile(profile, %{timezone: "Europe/Berlin"})
 
     insert(:connect_account,
       user: user,

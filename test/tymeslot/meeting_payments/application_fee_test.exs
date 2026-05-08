@@ -1,6 +1,9 @@
 defmodule Tymeslot.MeetingPayments.ApplicationFeeTest do
   use ExUnit.Case, async: true
 
+  @moduletag :payments
+  @moduletag :unit
+
   alias Tymeslot.MeetingPayments.ApplicationFee
 
   describe "calculate/2" do

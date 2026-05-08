@@ -11,8 +11,8 @@ defmodule Tymeslot.MeetingPayments.ApplicationFee do
 
   @spec calculate(price_cents :: non_neg_integer(), bp :: non_neg_integer()) ::
           non_neg_integer()
-  def calculate(0, _), do: 0
-  def calculate(_, 0), do: 0
+  def calculate(0, _bp), do: 0
+  def calculate(_price_cents, 0), do: 0
 
   def calculate(price_cents, bp)
       when is_integer(price_cents) and is_integer(bp) and

@@ -6,15 +6,18 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
 
   import Mox
 
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.CheckoutSessions
+  alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Profiles
 
   setup :verify_on_exit!
 
   setup do
     user = insert(:user)
-    {:ok, profile} = Tymeslot.Profiles.get_or_create_profile(user.id)
-    {:ok, _profile} = Tymeslot.Profiles.update_profile(profile, %{booking_theme: "1"})
+    {:ok, profile} = Profiles.get_or_create_profile(user.id)
+    {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "1"})
 
     insert(:connect_account,
       user: user,
@@ -86,10 +89,10 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
     test "returns :payments_unavailable when host has no charges-enabled account",
          %{user: user, meeting_type: mt} do
       # Manually disable charges via direct query
-      account = Tymeslot.MeetingPayments.ConnectAccountQueries.live_for_user(user.id)
+      account = ConnectAccountQueries.live_for_user(user.id)
 
       {:ok, _disabled} =
-        Tymeslot.MeetingPayments.ConnectAccountQueries.update(account, %{
+        ConnectAccountQueries.update(account, %{
           charges_enabled: false
         })
 
@@ -123,16 +126,16 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
                CheckoutSessions.create_session_for_booking(meeting)
 
       # No booking_payment row should exist after rollback
-      refute Tymeslot.MeetingPayments.BookingPaymentQueries.by_meeting_id(meeting.id)
+      refute BookingPaymentQueries.by_meeting_id(meeting.id)
     end
 
     test "stripe_locale/1 maps known locales and falls back to auto" do
-      assert "auto" = CheckoutSessions.stripe_locale(nil)
-      assert "auto" = CheckoutSessions.stripe_locale("uk")
-      assert "en" = CheckoutSessions.stripe_locale("en")
-      assert "de" = CheckoutSessions.stripe_locale("de")
-      assert "fr" = CheckoutSessions.stripe_locale("fr")
-      assert "it" = CheckoutSessions.stripe_locale("it")
+      assert CheckoutSessions.stripe_locale(nil) == "auto"
+      assert CheckoutSessions.stripe_locale("uk") == "auto"
+      assert CheckoutSessions.stripe_locale("en") == "en"
+      assert CheckoutSessions.stripe_locale("de") == "de"
+      assert CheckoutSessions.stripe_locale("fr") == "fr"
+      assert CheckoutSessions.stripe_locale("it") == "it"
     end
   end
 end

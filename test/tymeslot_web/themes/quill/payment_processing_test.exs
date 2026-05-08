@@ -20,10 +20,14 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingTest do
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
+  alias Phoenix.PubSub
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.Profiles
+
   setup do
     user = insert(:user)
-    {:ok, profile} = Tymeslot.Profiles.get_or_create_profile(user.id)
-    {:ok, profile} = Tymeslot.Profiles.update_profile(profile, %{booking_theme: "1"})
+    {:ok, profile} = Profiles.get_or_create_profile(user.id)
+    {:ok, profile} = Profiles.update_profile(profile, %{booking_theme: "1"})
 
     %{user: user, profile: profile}
   end
@@ -59,16 +63,12 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingTest do
 
     # Flip the row to paid (simulating the webhook side effect) and broadcast
     {:ok, _bp} =
-      Tymeslot.MeetingPayments.BookingPaymentQueries.update(bp, %{
+      BookingPaymentQueries.update(bp, %{
         status: "paid",
-        paid_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        paid_at: DateTime.utc_now(:second)
       })
 
-    Phoenix.PubSub.broadcast(
-      Tymeslot.PubSub,
-      "meeting_payment:#{meeting.id}",
-      :paid
-    )
+    PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting.id}", :paid)
 
     assert render(view) =~ "Booking confirmed"
   end
@@ -87,8 +87,8 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingTest do
   end
 
   test "rejects mismatched theme slug (host uses Rhythm)", %{conn: conn, user: user} do
-    {:ok, profile} = Tymeslot.Profiles.get_profile_by_user_id(user.id)
-    {:ok, _profile} = Tymeslot.Profiles.update_profile(profile, %{booking_theme: "2"})
+    {:ok, profile} = Profiles.get_profile_by_user_id(user.id)
+    {:ok, _profile} = Profiles.update_profile(profile, %{booking_theme: "2"})
 
     meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
 
