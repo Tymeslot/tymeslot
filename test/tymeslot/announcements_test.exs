@@ -46,12 +46,19 @@ defmodule Tymeslot.AnnouncementsTest do
 
       assert AnnouncementQueries.seen_keys_for(user.id) == ["feature_a"]
     end
+
+    test "raises when the user does not exist (FK violation)" do
+      assert_raise Ecto.InvalidChangesetError, fn ->
+        AnnouncementQueries.mark_seen!(-1, "feature_a")
+      end
+    end
   end
 
   describe "FK cascade on user delete" do
     test "deleting a user removes their seen records" do
       user = insert(:user)
       AnnouncementQueries.mark_seen!(user.id, "feature_a")
+      assert AnnouncementQueries.seen_keys_for(user.id) == ["feature_a"]
 
       Repo.delete!(user)
 

@@ -23,7 +23,7 @@ defmodule Tymeslot.Announcements.UserSeenAnnouncementSchema do
 
   @doc false
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
-  def changeset(record \\ %__MODULE__{}, attrs) do
+  def changeset(%__MODULE__{} = record, attrs) do
     record
     |> cast(attrs, [:user_id, :announcement_key, :seen_at])
     |> validate_required([:user_id, :announcement_key, :seen_at])

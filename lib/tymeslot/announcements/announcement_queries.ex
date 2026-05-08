@@ -28,7 +28,7 @@ defmodule Tymeslot.Announcements.AnnouncementQueries do
       announcement_key: announcement_key,
       seen_at: now
     })
-    |> Repo.insert(on_conflict: :nothing, conflict_target: [:user_id, :announcement_key])
+    |> Repo.insert!(on_conflict: :nothing, conflict_target: [:user_id, :announcement_key])
 
     :ok
   end
