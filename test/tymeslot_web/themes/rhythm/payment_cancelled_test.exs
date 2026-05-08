@@ -1,0 +1,39 @@
+defmodule TymeslotWeb.Themes.Rhythm.PaymentCancelledTest do
+  @moduledoc """
+  Mirrors the Quill cancellation-page contract for Rhythm.
+  """
+
+  use TymeslotWeb.ConnCase, async: false
+
+  @moduletag :payments
+  @moduletag :integration
+
+  import Phoenix.LiveViewTest
+  import Tymeslot.Factory
+
+  setup do
+    user = insert(:user)
+    {:ok, profile} = Tymeslot.Profiles.get_or_create_profile(user.id)
+    {:ok, _profile} = Tymeslot.Profiles.update_profile(profile, %{booking_theme: "2"})
+    %{user: user}
+  end
+
+  test "renders the cancellation copy", %{conn: conn, user: user} do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    {:ok, _view, html} =
+      live(conn, ~p"/themes/rhythm/payment-cancelled/#{meeting.id}")
+
+    assert html =~ "Payment cancelled"
+  end
+
+  test "redirects to / when meeting belongs to a different theme", %{conn: conn, user: user} do
+    {:ok, profile} = Tymeslot.Profiles.get_profile_by_user_id(user.id)
+    {:ok, _profile} = Tymeslot.Profiles.update_profile(profile, %{booking_theme: "1"})
+
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    assert {:error, {:redirect, %{to: "/"}}} =
+             live(conn, ~p"/themes/rhythm/payment-cancelled/#{meeting.id}")
+  end
+end
