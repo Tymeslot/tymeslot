@@ -104,7 +104,7 @@ defmodule Tymeslot.MixProject do
       {:dotenvy, "~> 1.1"},
       {:bandit, "~> 1.8"},
       {:caldav_client, "~> 2.0"},
-{:tz, "~> 0.28"},
+      {:tz, "~> 0.28"},
       {:uuid, "~> 1.1"},
       {:bcrypt_elixir, "~> 3.2"},
       {:oauth2, "~> 2.1"},
