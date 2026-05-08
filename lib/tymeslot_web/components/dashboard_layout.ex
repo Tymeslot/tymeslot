@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Components.DashboardLayout do
   attr :automations_allowed, :boolean, default: true
   attr :full_width, :boolean, default: false
   attr :sidebar_extensions, :list, default: []
+  attr :unseen_announcements, :list, default: []
   slot :inner_block, required: true
 
   @spec dashboard_layout(map()) :: Phoenix.LiveView.Rendered.t()
@@ -30,6 +31,15 @@ defmodule TymeslotWeb.Components.DashboardLayout do
       id="dashboard-root"
       phx-hook="ClipboardCopy"
     >
+      <%!-- Feature-announcement carousel. Renders nothing when the list is empty. --%>
+      <.live_component
+        :if={@unseen_announcements != []}
+        module={TymeslotWeb.Components.AnnouncementModalComponent}
+        id="announcement-modal"
+        announcements={@unseen_announcements}
+        current_user={@current_user}
+      />
+
       <%!-- Top Navigation --%>
       <div class={if @full_width, do: "flex-shrink-0"}>
         <.top_navigation
