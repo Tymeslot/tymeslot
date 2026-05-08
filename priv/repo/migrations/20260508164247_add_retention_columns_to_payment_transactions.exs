@@ -9,8 +9,6 @@ defmodule Tymeslot.Repo.Migrations.AddRetentionColumnsToPaymentTransactions do
   host_name is backfilled from users.name (the existing display-name column
   on Tymeslot.Auth.UserSchema). Both snapshot columns are nullable; rows
   whose user has no name fall back to NULL.
-<<<<<<< HEAD
-=======
 
   ## Rollback
 
@@ -21,7 +19,6 @@ defmodule Tymeslot.Repo.Migrations.AddRetentionColumnsToPaymentTransactions do
   FK partially applied). Tax-compliance data must never be silently destroyed
   by a partial rollback — raise instead so the operator can make an explicit,
   informed decision.
->>>>>>> 7eab33731 (fixup! feat(core): retain payment_transactions past user deletion for tax compliance)
   """
 
   use Ecto.Migration

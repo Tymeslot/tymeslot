@@ -23,7 +23,31 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
 
   @valid_statuses ~w(pending paid failed refunded partially_refunded disputed)
 
-  @type t :: %__MODULE__{}
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t() | nil,
+          stripe_account_id: String.t() | nil,
+          host_user_id: integer() | nil,
+          host_email: String.t() | nil,
+          host_name: String.t() | nil,
+          attendee_email: String.t() | nil,
+          attendee_name: String.t() | nil,
+          meeting_type_name: String.t() | nil,
+          booking_theme_id: String.t() | nil,
+          stripe_checkout_session_id: String.t() | nil,
+          stripe_payment_intent_id: String.t() | nil,
+          stripe_charge_id: String.t() | nil,
+          amount_cents: integer() | nil,
+          currency: String.t() | nil,
+          application_fee_cents: integer() | nil,
+          status: String.t(),
+          paid_at: DateTime.t() | nil,
+          refunded_amount_cents: integer(),
+          last_event_id: String.t() | nil,
+          host_deleted_at: DateTime.t() | nil,
+          meeting_id: Ecto.UUID.t() | nil,
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
+        }
 
   schema "booking_payments" do
     field :stripe_account_id, :string

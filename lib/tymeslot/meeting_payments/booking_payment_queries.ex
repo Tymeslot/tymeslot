@@ -50,7 +50,7 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
           platform_fee: coalesce(sum(b.application_fee_cents), 0)
         }
 
-    Repo.one(query) || %{received: 0, refunded: 0, platform_fee: 0}
+    Repo.one(query)
   end
 
   @spec insert(map()) :: {:ok, BookingPaymentSchema.t()} | {:error, Ecto.Changeset.t()}
