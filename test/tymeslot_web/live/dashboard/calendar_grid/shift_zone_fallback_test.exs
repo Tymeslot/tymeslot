@@ -57,12 +57,15 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ShiftZoneFallbackTest do
     end
 
     test "does not log for a valid timezone" do
+      # capture_log/1 captures from every process in the VM, so unrelated logs
+      # from concurrent async tests can leak in. Assert the absence of this
+      # function's specific warning rather than the entire log being empty.
       log =
         capture_log(fn ->
           Timezones.validate_or_utc(@good_tz, user_id: 99)
         end)
 
-      assert log == ""
+      refute log =~ "Invalid user timezone"
     end
   end
 
@@ -123,7 +126,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.ShiftZoneFallbackTest do
           DataLoading.precompute_derived(socket)
         end)
 
-      assert log == ""
+      refute log =~ "Invalid user timezone"
     end
   end
 end
