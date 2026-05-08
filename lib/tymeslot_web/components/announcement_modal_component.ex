@@ -52,11 +52,13 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
       >
         <:header>{@current.title}</:header>
 
-        <div :if={@current.image_path} class="mb-4">
-          <img src={@current.image_path} alt="" class="w-full h-auto rounded-token-lg" />
-        </div>
+        <div aria-live="polite" aria-atomic="true">
+          <div :if={@current.image_path} class="mb-4">
+            <img src={@current.image_path} alt="" class="w-full h-auto rounded-token-lg" />
+          </div>
 
-        <p class="text-token-base text-tymeslot-700 leading-relaxed">{@current.body}</p>
+          <p class="text-token-base text-tymeslot-700 leading-relaxed">{@current.body}</p>
+        </div>
 
         <:footer>
           <div class="flex items-center justify-between gap-3 w-full">
@@ -119,15 +121,19 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
 
   @impl Phoenix.LiveComponent
   def handle_event("next", _params, socket) do
-    current = Enum.at(socket.assigns.announcements, socket.assigns.current_index)
-    Announcements.mark_seen!(socket.assigns.current_user, current.key)
+    case Enum.at(socket.assigns.announcements, socket.assigns.current_index) do
+      nil ->
+        {:noreply, socket}
 
-    new_index = socket.assigns.current_index + 1
+      current ->
+        Announcements.mark_seen!(socket.assigns.current_user, current.key)
+        new_index = socket.assigns.current_index + 1
 
-    if new_index >= length(socket.assigns.announcements) do
-      {:noreply, assign(socket, closed?: true)}
-    else
-      {:noreply, assign(socket, current_index: new_index)}
+        if new_index >= length(socket.assigns.announcements) do
+          {:noreply, assign(socket, closed?: true)}
+        else
+          {:noreply, assign(socket, current_index: new_index)}
+        end
     end
   end
 
@@ -137,17 +143,25 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
   end
 
   def handle_event("close", _params, socket) do
-    current = Enum.at(socket.assigns.announcements, socket.assigns.current_index)
-    Announcements.mark_seen!(socket.assigns.current_user, current.key)
-    {:noreply, assign(socket, closed?: true)}
+    case Enum.at(socket.assigns.announcements, socket.assigns.current_index) do
+      nil ->
+        {:noreply, assign(socket, closed?: true)}
+
+      current ->
+        Announcements.mark_seen!(socket.assigns.current_user, current.key)
+        {:noreply, assign(socket, closed?: true)}
+    end
   end
 
   def handle_event("cta", _params, socket) do
-    current = Enum.at(socket.assigns.announcements, socket.assigns.current_index)
-    Announcements.mark_seen!(socket.assigns.current_user, current.key)
+    case Enum.at(socket.assigns.announcements, socket.assigns.current_index) do
+      nil ->
+        {:noreply, assign(socket, closed?: true)}
 
-    send(self(), {:announcement_cta_navigate, current.cta_path})
-
-    {:noreply, assign(socket, closed?: true)}
+      current ->
+        Announcements.mark_seen!(socket.assigns.current_user, current.key)
+        send(self(), {:announcement_cta_navigate, current.cta_path})
+        {:noreply, assign(socket, closed?: true)}
+    end
   end
 end
