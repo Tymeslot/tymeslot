@@ -225,6 +225,7 @@ defmodule TymeslotWeb.DashboardLive do
       automations_allowed={@automations_allowed}
       full_width={@live_action == :calendar}
       sidebar_extensions={@sidebar_extensions}
+      unseen_announcements={@unseen_announcements}
     >
       <.flash_group flash={@flash} id="dashboard-flash-group" />
 
@@ -356,6 +357,12 @@ defmodule TymeslotWeb.DashboardLive do
 
         {:noreply, put_flash(socket, :error, "Invalid redirect URL")}
     end
+  end
+
+  @spec handle_info({:announcement_cta_navigate, String.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:announcement_cta_navigate, path}, socket) when is_binary(path) do
+    {:noreply, push_navigate(socket, to: path)}
   end
 
   @spec handle_info({:reload_schedule}, Phoenix.LiveView.Socket.t()) ::
