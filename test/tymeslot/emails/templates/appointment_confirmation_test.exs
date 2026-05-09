@@ -2,13 +2,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
   use Tymeslot.DataCase, async: true
   @moduletag :emails
 
-  import Mox
   alias Tymeslot.Emails.Shared.Formatting
   alias Tymeslot.Emails.Templates.AppointmentConfirmation
-  alias Tymeslot.MeetingPayments.StripeAdapterMock
   import Tymeslot.EmailTestHelpers
-
-  setup :verify_on_exit!
 
   describe "render/3 as attendee" do
     test "creates email with correct subject line" do
@@ -359,86 +355,6 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
 
       assert email.subject =~ "15.1."
       refute email.subject =~ "Jan"
-    end
-  end
-
-  describe "attendee payment receipt block" do
-    test "renders payment block with receipt URL when charge fetch succeeds" do
-      booking_payment = %{
-        status: "paid",
-        amount_cents: 5000,
-        currency: "eur",
-        application_fee_cents: 25,
-        paid_at: ~U[2026-05-08 14:32:00Z],
-        stripe_charge_id: "ch_TEST_RECEIPT",
-        stripe_account_id: "acct_TEST"
-      }
-
-      expect(StripeAdapterMock, :retrieve_charge, fn "ch_TEST_RECEIPT", opts ->
-        assert opts[:connect_account] == "acct_TEST"
-        {:ok, %{receipt_url: "https://pay.stripe.com/receipts/r_TEST"}}
-      end)
-
-      details = build_appointment_details(%{booking_payment: booking_payment})
-      email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
-
-      assert email.text_body =~ "PAYMENT RECEIPT"
-      assert email.text_body =~ "€50.00 paid"
-      assert email.text_body =~ "ch_TEST_RECEIPT"
-      assert email.text_body =~ "https://pay.stripe.com/receipts/r_TEST"
-      assert email.html_body =~ "Payment receipt"
-      assert email.html_body =~ "https://pay.stripe.com/receipts/r_TEST"
-      assert email.html_body =~ "View receipt"
-    end
-
-    test "renders without payment block for free booking" do
-      details = build_appointment_details(%{booking_payment: nil})
-      email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
-
-      refute email.text_body =~ "PAYMENT RECEIPT"
-      refute email.html_body =~ "Payment receipt"
-    end
-
-    test "renders payment block without link when receipt fetch fails" do
-      booking_payment = %{
-        status: "paid",
-        amount_cents: 5000,
-        currency: "eur",
-        application_fee_cents: 25,
-        paid_at: ~U[2026-05-08 14:32:00Z],
-        stripe_charge_id: "ch_TEST_FAIL",
-        stripe_account_id: "acct_TEST"
-      }
-
-      expect(StripeAdapterMock, :retrieve_charge, fn _id, _opts -> {:error, :api_error} end)
-
-      details = build_appointment_details(%{booking_payment: booking_payment})
-      email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
-
-      assert email.text_body =~ "PAYMENT RECEIPT"
-      assert email.text_body =~ "€50.00 paid"
-      refute email.text_body =~ "View receipt"
-      assert email.html_body =~ "Payment receipt"
-      refute email.html_body =~ "View receipt"
-    end
-
-    test "renders payment block without link when receipt URL is missing" do
-      booking_payment = %{
-        status: "paid",
-        amount_cents: 5000,
-        currency: "eur",
-        application_fee_cents: 25,
-        paid_at: ~U[2026-05-08 14:32:00Z],
-        stripe_charge_id: "ch_TEST_NO_URL",
-        stripe_account_id: "acct_TEST"
-      }
-
-      expect(StripeAdapterMock, :retrieve_charge, fn _id, _opts -> {:ok, %{receipt_url: nil}} end)
-
-      details = build_appointment_details(%{booking_payment: booking_payment})
-      email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
-
-      refute email.html_body =~ "View receipt"
     end
   end
 

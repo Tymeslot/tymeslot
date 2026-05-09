@@ -121,12 +121,16 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
   def render(:organizer, organizer_email, appointment_details) do
     Gettext.with_locale(TymeslotWeb.Gettext, organizer_locale(appointment_details), fn ->
+      organiser_payment = build_organizer_payment(appointment_details)
+
       mjml_content = """
       #{MeetingComponents.attendee_info_section(@intent, %{name: appointment_details.attendee_name, email: appointment_details.attendee_email})}
 
       #{MeetingComponents.attendee_message_box(@intent, appointment_details[:attendee_message])}
 
       #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type, video_url: Map.get(appointment_details, :meeting_url), video_url_role: "host"}, organizer_locale(appointment_details))}
+
+      #{if organiser_payment, do: organizer_payment_block_html(organiser_payment)}
 
       #{Text.section_title(dgettext("emails", "Need to make changes?"))}
 
@@ -165,7 +169,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         )
       )
       |> html_body(html_body)
-      |> text_body(build_organizer_text_body(appointment_details))
+      |> text_body(build_organizer_text_body(appointment_details, organiser_payment))
     end)
   end
 
@@ -204,7 +208,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     """
   end
 
-  defp build_organizer_text_body(appointment_details) do
+  defp build_organizer_text_body(appointment_details, organiser_payment) do
     meeting_details =
       TextBodyHelper.format_meeting_details(
         appointment_details,
@@ -229,14 +233,19 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         organizer_locale(appointment_details)
       )
 
+    payment_section =
+      case organiser_payment do
+        nil -> ""
+        payment -> "\n#{organizer_payment_block_text(payment)}\n"
+      end
+
     """
     #{dgettext("emails", "New Appointment Booked!")}
 
     #{dgettext("emails", "%{name} has scheduled a meeting with you.", name: appointment_details.attendee_name)}#{attendee_info}
 
     #{dgettext("emails", "MEETING DETAILS:")}
-    #{meeting_details}#{video_section}#{action_links}
-
+    #{meeting_details}#{video_section}#{action_links}#{payment_section}
     #{dgettext("emails", "PREPARATION REMINDERS:")}
     #{dgettext("emails", "- Review any relevant materials")}
     #{dgettext("emails", "- Prepare an agenda if needed")}
@@ -276,6 +285,77 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   defp reminder_to_minutes(value, _unit), do: value
 
   defp organizer_locale(_appointment_details), do: Locales.default_locale()
+
+  # Organiser-facing payment summary. Host emails are intentionally English-only
+  # to match the spec; the block shows the gross amount, the platform fee, and
+  # the net the host will receive (before Stripe processing fees, which are
+  # billed against the host's Stripe balance separately).
+  defp build_organizer_payment(appointment_details) do
+    case Map.get(appointment_details, :booking_payment) do
+      nil ->
+        nil
+
+      %{status: status, amount_cents: amount, currency: currency} = bp
+      when status in ["paid", "partially_refunded", "refunded"] and is_integer(amount) ->
+        application_fee = Map.get(bp, :application_fee_cents) || 0
+        net = max(amount - application_fee, 0)
+
+        %{
+          attendee_paid: Formatting.format_currency(amount, currency),
+          platform_fee: Formatting.format_currency(application_fee, currency),
+          net_received: Formatting.format_currency(net, currency)
+        }
+
+      _other ->
+        nil
+    end
+  end
+
+  defp organizer_payment_block_html(payment) do
+    """
+    #{Text.section_title("You received #{Sanitise.sanitize_for_email(payment.net_received)}")}
+    <mj-section
+      background-color="#{Styles.canvas_soft()}"
+      border-radius="#{Styles.card_radius()}"
+      padding="20px 26px"
+      css-class="mobile-card email-canvas-soft"
+    >
+      <mj-column>
+        <mj-text
+          font-size="15px"
+          color="#{Styles.text_color(:primary)}"
+          line-height="1.7"
+          align="left"
+        >
+          Attendee paid: <strong>#{Sanitise.sanitize_for_email(payment.attendee_paid)}</strong><br/>
+          Tymeslot platform fee: <strong>#{Sanitise.sanitize_for_email(payment.platform_fee)}</strong><br/>
+          You received: <strong>#{Sanitise.sanitize_for_email(payment.net_received)}</strong> (less Stripe processing fees)
+        </mj-text>
+        <mj-text
+          font-size="13px"
+          color="#{Styles.text_color(:muted)}"
+          line-height="1.55"
+          align="left"
+          padding-top="12px"
+        >
+          Funds will arrive on your usual Stripe payout schedule.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    """
+  end
+
+  defp organizer_payment_block_text(payment) do
+    String.trim_trailing("""
+    PAYMENT RECEIVED:
+    You received #{payment.net_received}
+    Attendee paid:           #{payment.attendee_paid}
+    Tymeslot platform fee:   #{payment.platform_fee}
+    You received:            #{payment.net_received} (less Stripe processing fees)
+
+    Funds will arrive on your usual Stripe payout schedule.
+    """)
+  end
 
   # Build the attendee-facing payment receipt block from a booking_payment
   # snapshot embedded in `appointment_details`. Returns nil when the
