@@ -1081,3 +1081,39 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply."
 msgstr ""
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex:42
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex:39
+#, elixir-autogen, elixir-format
+msgid "Booking confirmed"
+msgstr ""
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex:51
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex:48
+#, elixir-autogen, elixir-format
+msgid "Confirming your payment…"
+msgstr ""
+
+#: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex:39
+#: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex:36
+#, elixir-autogen, elixir-format
+msgid "Payment cancelled"
+msgstr ""
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex:54
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex:51
+#, elixir-autogen, elixir-format
+msgid "Please wait while we confirm your booking."
+msgstr ""
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex:45
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex:42
+#, elixir-autogen, elixir-format
+msgid "Thank you, your booking is confirmed for %{date}."
+msgstr ""
+
+#: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex:42
+#: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex:39
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed. You can return and try again at any time."
+msgstr ""
