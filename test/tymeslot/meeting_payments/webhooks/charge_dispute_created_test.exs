@@ -1,5 +1,6 @@
 defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
   use Tymeslot.DataCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :payments
   @moduletag :integration
@@ -8,6 +9,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
 
   alias Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated
   alias Tymeslot.Repo
+  alias Tymeslot.Workers.SendChargeDisputeOpened
 
   describe "handle/1" do
     test "transitions a paid booking_payment to disputed" do
@@ -66,6 +68,43 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreatedTest do
     test "returns :ok when no booking_payment matches the charge id" do
       event = dispute_event("evt_NOMATCH", "ch_GHOST")
       assert :ok = ChargeDisputeCreated.handle(event)
+    end
+
+    test "enqueues the host dispute email after marking disputed" do
+      bp =
+        insert(:booking_payment,
+          status: "paid",
+          amount_cents: 5000,
+          stripe_charge_id: "ch_EMAIL_DISP"
+        )
+
+      event = dispute_event("evt_EMAIL_DISP", "ch_EMAIL_DISP")
+
+      assert :ok = ChargeDisputeCreated.handle(event)
+
+      assert_enqueued(
+        worker: SendChargeDisputeOpened,
+        args: %{booking_payment_id: bp.id, reason: "fraudulent"}
+      )
+    end
+
+    test "does not enqueue the email when replaying the same event id" do
+      bp =
+        insert(:booking_payment,
+          status: "disputed",
+          amount_cents: 5000,
+          stripe_charge_id: "ch_REPLAY_NOEMAIL",
+          last_event_id: "evt_REPLAY_NOEMAIL"
+        )
+
+      event = dispute_event("evt_REPLAY_NOEMAIL", "ch_REPLAY_NOEMAIL")
+
+      assert :ok = ChargeDisputeCreated.handle(event)
+
+      refute_enqueued(
+        worker: SendChargeDisputeOpened,
+        args: %{booking_payment_id: bp.id}
+      )
     end
   end
 

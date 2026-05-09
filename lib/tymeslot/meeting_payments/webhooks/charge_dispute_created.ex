@@ -3,10 +3,8 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
   Handler for the Stripe `charge.dispute.created` Connect event.
 
   Transitions the matching booking_payment to `disputed` while preserving
-  `refunded_amount_cents`. The host email notifying them of the dispute
-  is wired in Chunk 6 once the email template ships — for now this
-  handler only records the status change, which is enough to drive the
-  dashboard "Disputed" filter and disable the refund button.
+  `refunded_amount_cents`, and enqueues the host dispute notification
+  email so the host can act on the dispute in the Stripe dashboard.
 
   Idempotent on `last_event_id`.
   """
@@ -15,6 +13,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.Workers.SendChargeDisputeOpened
 
   @spec handle(map()) :: :ok | {:error, term()}
   def handle(%{"id" => event_id, "data" => %{"object" => object}}) do
@@ -30,7 +29,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
         :ok
 
       payment ->
-        mark_disputed(payment, event_id)
+        mark_disputed(payment, event_id, object)
     end
   end
 
@@ -42,10 +41,23 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
 
   defp lookup_payment(_object), do: nil
 
-  defp mark_disputed(payment, event_id) do
+  defp mark_disputed(payment, event_id, object) do
     case BookingPaymentQueries.update(payment, %{status: "disputed", last_event_id: event_id}) do
-      {:ok, _bp} -> :ok
-      {:error, reason} -> {:error, reason}
+      {:ok, updated} ->
+        enqueue_dispute_email(updated, object)
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  defp enqueue_dispute_email(payment, object) do
+    %{
+      booking_payment_id: payment.id,
+      reason: object["reason"]
+    }
+    |> SendChargeDisputeOpened.new()
+    |> Oban.insert()
   end
 end
