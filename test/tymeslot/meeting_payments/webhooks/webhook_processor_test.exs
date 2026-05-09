@@ -1,0 +1,75 @@
+defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
+  use ExUnit.Case, async: true
+
+  @moduletag :payments
+  @moduletag :unit
+
+  import Mox
+
+  alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Webhooks.WebhookProcessor
+
+  setup :verify_on_exit!
+
+  describe "process/3" do
+    test "normalises signature verification failures to :signature_failure" do
+      expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
+        {:error, "bad signature"}
+      end)
+
+      assert {:error, :signature_failure} =
+               WebhookProcessor.process("{}", "t=1,v1=BAD", "whsec_secret")
+    end
+
+    test "accepts events older than 5 minutes (Stripe retry semantics)" do
+      # Stripe retries failed deliveries for up to 72 hours, always carrying the
+      # ORIGINAL `created` timestamp. A redundant age check would permanently
+      # drop any event whose first delivery failed transiently — replay
+      # protection lives in the signature's `t=` tolerance (300 s).
+      old_created = System.os_time(:second) - 6 * 60
+
+      expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
+        {:ok, %{"id" => "evt_OLD", "type" => "ping.event", "created" => old_created}}
+      end)
+
+      assert :ok = WebhookProcessor.process(~s({}), "t=1,v1=GOOD", "whsec_secret")
+    end
+
+    test "returns :ok and ignores events that have no registered handler" do
+      now = System.os_time(:second)
+
+      expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
+        {:ok, %{"id" => "evt_X", "type" => "ping.event", "created" => now}}
+      end)
+
+      assert :ok = WebhookProcessor.process(~s({}), "t=1,v1=GOOD", "whsec_secret")
+    end
+
+    test "dispatches to the registered handler when type is known" do
+      now = System.os_time(:second)
+
+      expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
+        {:ok,
+         %{
+           "id" => "evt_OK",
+           "type" => "account.updated",
+           "created" => now,
+           "data" => %{"object" => %{"id" => "acct_TEST"}}
+         }}
+      end)
+
+      assert :ok = WebhookProcessor.process(~s({}), "t=1,v1=GOOD", "whsec_secret")
+    end
+
+    test "dispatches events with missing created timestamp to handlers" do
+      # Per-handler logic uses an epoch-0 fallback for missing `created` so a
+      # subsequent real event with a genuine timestamp is always considered
+      # newer. The processor itself does not validate the field.
+      expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
+        {:ok, %{"id" => "evt_NO_CREATED", "type" => "ping.event"}}
+      end)
+
+      assert :ok = WebhookProcessor.process(~s({}), "t=1,v1=GOOD", "whsec_secret")
+    end
+  end
+end

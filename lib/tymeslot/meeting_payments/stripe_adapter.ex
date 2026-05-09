@@ -20,6 +20,12 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
               {:ok, map()} | {:error, term()}
   @callback create_refund(params :: map(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
+  @callback construct_webhook_event(
+              payload :: binary(),
+              signature :: String.t(),
+              secret :: String.t()
+            ) ::
+              {:ok, map()} | {:error, term()}
 
   @spec create_account(map(), keyword()) :: {:ok, map()} | {:error, term()}
   def create_account(params, opts \\ []), do: impl().create_account(params, opts)
@@ -46,6 +52,11 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   def create_refund(params, opts \\ []),
     do: impl().create_refund(params, opts)
 
+  @spec construct_webhook_event(binary(), String.t(), String.t()) ::
+          {:ok, map()} | {:error, term()}
+  def construct_webhook_event(payload, signature, secret),
+    do: impl().construct_webhook_event(payload, signature, secret)
+
   defp impl, do: Application.get_env(:tymeslot, :stripe_adapter, __MODULE__.Stripity)
 end
 
@@ -68,6 +79,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
   alias Stripe.Charge
   alias Stripe.Checkout.Session, as: CheckoutSession
   alias Stripe.Refund
+  alias Stripe.Webhook
   alias Tymeslot.MeetingPayments.StripeAdapter
 
   @impl StripeAdapter
@@ -90,4 +102,30 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
 
   @impl StripeAdapter
   def create_refund(params, opts), do: Refund.create(params, opts)
+
+  @impl StripeAdapter
+  def construct_webhook_event(payload, signature, secret) do
+    case Webhook.construct_event(payload, signature, secret) do
+      {:ok, event} -> {:ok, normalise_event(event)}
+      {:error, _reason} = err -> err
+    end
+  end
+
+  # Stripity returns a struct; normalise to a string-keyed map so the
+  # rest of the pipeline doesn't depend on stripity-internal layout.
+  defp normalise_event(value) when is_struct(value) do
+    value
+    |> Map.from_struct()
+    |> Enum.map(fn {k, v} -> {to_string(k), normalise_event(v)} end)
+    |> Map.new()
+  end
+
+  defp normalise_event(value) when is_map(value) do
+    value
+    |> Enum.map(fn {k, v} -> {to_string(k), normalise_event(v)} end)
+    |> Map.new()
+  end
+
+  defp normalise_event(value) when is_list(value), do: Enum.map(value, &normalise_event/1)
+  defp normalise_event(value), do: value
 end

@@ -132,7 +132,7 @@ config :tymeslot, :oban_queues,
 
 # Webhook configuration
 config :tymeslot, :webhook_base_url, nil
-config :tymeslot, :webhook_paths, ["/webhooks/stripe"]
+config :tymeslot, :webhook_paths, ["/webhooks/stripe", "/webhooks/stripe/connect"]
 
 # Webhook idempotency cache TTLs
 config :tymeslot, :webhook_idempotency,

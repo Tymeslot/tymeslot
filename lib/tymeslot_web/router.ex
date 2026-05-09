@@ -28,6 +28,7 @@ defmodule TymeslotWeb.Router do
   scope "/webhooks", TymeslotWeb do
     pipe_through :api
 
+    post "/stripe/connect", StripeConnectWebhookController, :handle
     post "/google-calendar", GoogleCalendarWebhookController, :webhook
     post "/outlook-calendar", OutlookCalendarWebhookController, :webhook
     post "/outlook-lifecycle", OutlookLifecycleController, :webhook

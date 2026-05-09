@@ -549,6 +549,13 @@ if config_env() == :prod do
     else
       IO.warn("STRIPE_WEBHOOK_SECRET not set - webhook signature verification disabled")
     end
+
+    # Stripe Connect webhook secret (separate from the platform webhook secret)
+    stripe_connect_webhook_secret = System.get_env("STRIPE_CONNECT_WEBHOOK_SECRET")
+
+    if stripe_connect_webhook_secret do
+      config :tymeslot, :stripe_connect_webhook_secret, stripe_connect_webhook_secret
+    end
   end
 
   # Trial period configuration (default 7 days)
@@ -561,6 +568,10 @@ if config_env() in [:dev, :test] do
     api_key: System.get_env("STRIPE_SECRET_KEY", "sk_test_fake")
 
   config :tymeslot, :stripe_webhook_secret, System.get_env("STRIPE_WEBHOOK_SECRET")
+
+  config :tymeslot,
+         :stripe_connect_webhook_secret,
+         System.get_env("STRIPE_CONNECT_WEBHOOK_SECRET")
 
   # Trial period configuration (default 7 days)
   config :tymeslot, :trial_period_days, parse_int.("TRIAL_PERIOD_DAYS", 7)
