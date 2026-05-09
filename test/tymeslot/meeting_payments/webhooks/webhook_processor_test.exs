@@ -1,5 +1,7 @@
 defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
-  use ExUnit.Case, async: true
+  # Connect handlers (`account.updated`) hit the DB, so we lean on
+  # DataCase's sandbox rather than `ExUnit.Case, async: true`.
+  use Tymeslot.DataCase, async: false
 
   @moduletag :payments
   @moduletag :unit
@@ -49,12 +51,20 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessorTest do
       now = System.os_time(:second)
 
       expect(StripeAdapterMock, :construct_webhook_event, fn _payload, _sig, _secret ->
+        # account.updated dispatches to AccountUpdated which delegates to
+        # ConnectAccounts.apply_account_event/1; with no row in the DB it
+        # short-circuits to :ok without needing a sandbox connection.
         {:ok,
          %{
            "id" => "evt_OK",
            "type" => "account.updated",
            "created" => now,
-           "data" => %{"object" => %{"id" => "acct_TEST"}}
+           "data" => %{
+             "object" => %{
+               "id" => "acct_NEVER_EXISTS_#{System.unique_integer([:positive])}",
+               "created" => now
+             }
+           }
          }}
       end)
 

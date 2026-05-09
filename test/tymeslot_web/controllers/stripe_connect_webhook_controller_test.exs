@@ -66,7 +66,7 @@ defmodule TymeslotWeb.StripeConnectWebhookControllerTest do
            "id" => "evt_OK",
            "type" => "account.updated",
            "created" => now,
-           "data" => %{"object" => %{"id" => "acct_UNKNOWN"}}
+           "data" => %{"object" => %{"id" => "acct_UNKNOWN", "created" => now}}
          }}
       end)
 

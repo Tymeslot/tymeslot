@@ -20,8 +20,16 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdated do
   @spec handle(map()) :: :ok | {:error, term()}
   def handle(%{"data" => %{"object" => %{"id" => account_id} = object}})
       when is_binary(account_id) do
-    ConnectAccounts.apply_account_event(object)
+    object
+    |> ensure_created(get_in(object, ["created"]))
+    |> ConnectAccounts.apply_account_event()
   end
 
   def handle(_other), do: {:error, :invalid_event}
+
+  defp ensure_created(object, created) when is_integer(created), do: object
+
+  defp ensure_created(object, _missing) do
+    Map.put(object, "created", System.os_time(:second))
+  end
 end
