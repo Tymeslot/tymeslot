@@ -1,5 +1,6 @@
 defmodule Tymeslot.MeetingPayments.RefundsTest do
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :database
   @moduletag :payments
@@ -9,6 +10,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   setup :verify_on_exit!
 
@@ -180,6 +182,35 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
       assert reloaded.status == "paid"
       assert reloaded.refunded_amount_cents == 0
+    end
+  end
+
+  describe "issue_refund/3 — email enqueueing" do
+    test "enqueues a SendBookingPaymentRefunded job after a successful refund" do
+      payment = paid_booking_payment()
+
+      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
+        {:ok, %{id: "re_email"}}
+      end)
+
+      assert {:ok, _updated} = Refunds.issue_refund(payment, 5000)
+
+      assert_enqueued(
+        worker: SendBookingPaymentRefunded,
+        args: %{booking_payment_id: payment.id}
+      )
+    end
+
+    test "does not enqueue email when Stripe call fails" do
+      payment = paid_booking_payment()
+
+      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
+        {:error, :stripe_failure}
+      end)
+
+      assert {:error, :stripe_failure} = Refunds.issue_refund(payment, 5000)
+
+      refute_enqueued(worker: SendBookingPaymentRefunded)
     end
   end
 

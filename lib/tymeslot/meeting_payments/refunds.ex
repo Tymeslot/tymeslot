@@ -17,14 +17,14 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       errors if asked to refund a fee that was never collected.
     * Updates the local `booking_payments` row, transitioning status
       to `partially_refunded` or `refunded` based on the new total.
-    * Synchronously enqueues an attendee refund email (Chunk 6 work
-      provides the worker; this module guards the call so it no-ops
-      cleanly if the worker module is not yet available).
+    * Synchronously enqueues an attendee refund email via
+      `Tymeslot.Workers.SendBookingPaymentRefunded`.
   """
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
+  alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   @refund_window_days 60
 
@@ -118,25 +118,9 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     })
   end
 
-  # The refund email worker is delivered in Chunk 6. Until it lands,
-  # guard the enqueue so this module compiles and runs cleanly. The
-  # worker module name is read through a module attribute resolved
-  # at compile time so the compiler does not warn about the
-  # currently-undefined module, and `Kernel.apply/3` is used to
-  # invoke `:new/1` so the static reference can be elided once the
-  # worker is added in Chunk 6.
   defp enqueue_refund_email(payment) do
-    worker = refund_email_worker()
-
-    if Code.ensure_loaded?(worker) and function_exported?(worker, :new, 1) do
-      changeset = Kernel.apply(worker, :new, [%{booking_payment_id: payment.id}])
-      Oban.insert(changeset)
-    else
-      :ok
-    end
+    %{booking_payment_id: payment.id}
+    |> SendBookingPaymentRefunded.new()
+    |> Oban.insert()
   end
-
-  # Once Tymeslot.Workers.SendBookingPaymentRefunded ships in Chunk 6
-  # this dynamic lookup can be replaced with a direct module reference.
-  defp refund_email_worker, do: Tymeslot.Workers.SendBookingPaymentRefunded
 end
