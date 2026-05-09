@@ -11,6 +11,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
+  alias Tymeslot.Workers.SendConnectAccountRestricted
   alias TymeslotWeb.Endpoint
 
   @type account :: ConnectAccountSchema.t()
@@ -53,21 +54,54 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
           :ok
         else
           now = DateTime.utc_now(:second)
+          new_disabled_reason = get_in(event, ["requirements", "disabled_reason"])
 
-          {:ok, _updated} =
+          {:ok, updated} =
             ConnectAccountQueries.update(local, %{
               charges_enabled: event["charges_enabled"],
               payouts_enabled: event["payouts_enabled"],
               details_submitted: event["details_submitted"],
-              disabled_reason: get_in(event, ["requirements", "disabled_reason"]),
+              disabled_reason: new_disabled_reason,
               last_synced_at: now,
               last_account_event_at: event_dt
             })
 
+          maybe_notify_restriction(updated, local.disabled_reason)
           :ok
         end
     end
   end
+
+  # Fire the restriction email only when the disabled_reason transitions into
+  # a different value — nil → non-nil, or between two different non-nil
+  # values. This mirrors the spec's "transition only" rule and keeps repeated
+  # account.updated events for the same restriction state silent.
+  defp maybe_notify_restriction(
+         %ConnectAccountSchema{user_id: user_id, disabled_reason: new_reason} = account,
+         previous_reason
+       )
+       when is_integer(user_id) and is_binary(new_reason) and new_reason != "" and
+              new_reason != previous_reason do
+    %{
+      connect_account_id: account.id,
+      user_id: user_id,
+      stripe_account_id: account.stripe_account_id,
+      disabled_reason: new_reason,
+      previous_disabled_reason: previous_reason,
+      dashboard_url: stripe_dashboard_url()
+    }
+    |> SendConnectAccountRestricted.new()
+    |> Oban.insert()
+
+    :ok
+  end
+
+  defp maybe_notify_restriction(_updated, _previous), do: :ok
+
+  # Stripe Express dashboard always lives at this canonical URL; we keep the
+  # link generic rather than per-account because account_link sessions are
+  # short-lived and would force us to call into Stripe synchronously.
+  defp stripe_dashboard_url, do: "https://dashboard.stripe.com/"
 
   @spec ensure_placeholder(integer(), String.t()) ::
           {:ok, account()} | {:error, Ecto.Changeset.t()}

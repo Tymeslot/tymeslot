@@ -1,5 +1,6 @@
 defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
   use Tymeslot.DataCase, async: true
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :database
   @moduletag :payments
@@ -9,6 +10,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.Workers.SendConnectAccountRestricted
 
   setup :verify_on_exit!
 
@@ -114,6 +116,122 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       }
 
       assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+    end
+
+    test "enqueues a restriction email when disabled_reason transitions from nil to a value" do
+      user = insert(:user)
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      {:ok, _updated} =
+        ConnectAccountQueries.update(account, %{
+          stripe_account_id: "acct_RESTRICT",
+          status: "active",
+          disabled_reason: nil
+        })
+
+      stripe_event = %{
+        "id" => "acct_RESTRICT",
+        "created" => DateTime.to_unix(DateTime.utc_now()),
+        "charges_enabled" => false,
+        "payouts_enabled" => false,
+        "details_submitted" => true,
+        "requirements" => %{"disabled_reason" => "requirements.past_due"}
+      }
+
+      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+
+      reloaded = ConnectAccountQueries.live_for_user(user.id)
+
+      assert_enqueued(
+        worker: SendConnectAccountRestricted,
+        args: %{
+          connect_account_id: reloaded.id,
+          user_id: user.id,
+          stripe_account_id: "acct_RESTRICT",
+          disabled_reason: "requirements.past_due"
+        }
+      )
+    end
+
+    test "does not enqueue a restriction email when disabled_reason is unchanged" do
+      user = insert(:user)
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      {:ok, _updated} =
+        ConnectAccountQueries.update(account, %{
+          stripe_account_id: "acct_SAME",
+          status: "active",
+          disabled_reason: "requirements.past_due"
+        })
+
+      stripe_event = %{
+        "id" => "acct_SAME",
+        "created" => DateTime.to_unix(DateTime.utc_now()),
+        "charges_enabled" => false,
+        "payouts_enabled" => false,
+        "details_submitted" => true,
+        "requirements" => %{"disabled_reason" => "requirements.past_due"}
+      }
+
+      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+
+      refute_enqueued(worker: SendConnectAccountRestricted)
+    end
+
+    test "enqueues a restriction email when disabled_reason changes between two values" do
+      user = insert(:user)
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      {:ok, _updated} =
+        ConnectAccountQueries.update(account, %{
+          stripe_account_id: "acct_CHANGE",
+          status: "active",
+          disabled_reason: "requirements.past_due"
+        })
+
+      stripe_event = %{
+        "id" => "acct_CHANGE",
+        "created" => DateTime.to_unix(DateTime.utc_now()),
+        "charges_enabled" => false,
+        "payouts_enabled" => false,
+        "details_submitted" => true,
+        "requirements" => %{"disabled_reason" => "rejected.fraud"}
+      }
+
+      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+
+      assert_enqueued(
+        worker: SendConnectAccountRestricted,
+        args: %{
+          disabled_reason: "rejected.fraud",
+          previous_disabled_reason: "requirements.past_due"
+        }
+      )
+    end
+
+    test "does not enqueue a restriction email when disabled_reason clears (non-nil → nil)" do
+      user = insert(:user)
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      {:ok, _updated} =
+        ConnectAccountQueries.update(account, %{
+          stripe_account_id: "acct_CLEAR",
+          status: "active",
+          disabled_reason: "requirements.past_due"
+        })
+
+      stripe_event = %{
+        "id" => "acct_CLEAR",
+        "created" => DateTime.to_unix(DateTime.utc_now()),
+        "charges_enabled" => true,
+        "payouts_enabled" => true,
+        "details_submitted" => true,
+        "requirements" => %{"disabled_reason" => nil}
+      }
+
+      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+
+      refute_enqueued(worker: SendConnectAccountRestricted)
     end
 
     test "ignores out-of-order older events" do

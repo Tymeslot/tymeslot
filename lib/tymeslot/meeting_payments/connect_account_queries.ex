@@ -7,6 +7,9 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueries do
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.Repo
 
+  @spec get(Ecto.UUID.t()) :: ConnectAccountSchema.t() | nil
+  def get(id), do: Repo.get(ConnectAccountSchema, id)
+
   @spec live_for_user(integer()) :: ConnectAccountSchema.t() | nil
   def live_for_user(user_id) do
     Repo.one(
