@@ -1,6 +1,11 @@
 defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   @moduledoc """
   Modal component for confirming meeting cancellation.
+
+  When the meeting has an associated paid `booking_payment`, the modal
+  shows three refund options: full refund, partial refund, or cancel
+  without refunding (gated behind a confirmation tickbox). For free
+  bookings the modal preserves the original confirm-or-keep flow.
   """
 
   use Phoenix.Component
@@ -19,19 +24,11 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     * `meeting` - The meeting to be cancelled (required)
     * `timezone` - The timezone to display times in (optional, defaults to UTC)
     * `cancelling` - Boolean indicating if cancellation is in progress (required)
-    * `on_cancel` - JS command to execute when canceling (required)
-    * `on_confirm` - JS command to execute when confirming cancellation (required)
-
-  ## Examples
-
-      <CancelMeetingModal.cancel_meeting_modal
-        id="cancel-meeting-modal"
-        show={@show_cancel_meeting_modal}
-        meeting={@cancel_meeting_modal_data}
-        cancelling={@cancelling_meeting == @cancel_meeting_modal_data.id}
-        on_cancel={JS.push("hide_cancel_modal", target: @myself)}
-        on_confirm={JS.push("confirm_cancel_meeting", target: @myself)}
-      />
+    * `on_cancel` - JS command to execute when cancelling (required)
+    * `confirm_event` - Event name pushed when the form is submitted (required)
+    * `target` - phx-target reference for the confirm event (required)
+    * `booking_payment` - Optional booking_payment record. When set and
+      refundable, the modal exposes refund options.
   """
   attr :id, :string, required: true
   attr :show, :boolean, required: true
@@ -39,10 +36,14 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   attr :timezone, :string, default: "UTC"
   attr :cancelling, :boolean, required: true
   attr :on_cancel, JS, required: true
-  attr :on_confirm, JS, required: true
+  attr :confirm_event, :string, required: true
+  attr :target, :any, required: true
+  attr :booking_payment, :map, default: nil
 
   @spec cancel_meeting_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_meeting_modal(assigns) do
+    assigns = assign(assigns, :paid?, paid_refundable?(assigns[:booking_payment]))
+
     ~H"""
     <CoreComponents.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
       <:header>
@@ -60,15 +61,25 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
       </:header>
 
       <%= if @meeting do %>
-        <div class="space-y-4">
+        <form
+          id="cancel-meeting-form"
+          phx-submit={@confirm_event}
+          phx-target={@target}
+          class="space-y-4"
+        >
           <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
             Are you sure you want to cancel the meeting with <strong>{@meeting.attendee_name}</strong>
             scheduled for <strong><%= Helpers.format_meeting_date(@meeting, @timezone) %> • <%= Helpers.format_meeting_time(@meeting, @timezone) %></strong>?
           </p>
-          <p class="text-tymeslot-500 font-medium">
-            This action cannot be undone. The attendee will be notified of the cancellation.
-          </p>
-        </div>
+
+          <%= if @paid? do %>
+            <.paid_options booking_payment={@booking_payment} />
+          <% else %>
+            <p class="text-tymeslot-500 font-medium">
+              This action cannot be undone. The attendee will be notified of the cancellation.
+            </p>
+          <% end %>
+        </form>
       <% end %>
 
       <:footer>
@@ -77,16 +88,121 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             Keep Meeting
           </CoreComponents.action_button>
           <CoreComponents.loading_button
+            type="submit"
+            form="cancel-meeting-form"
             variant={:danger}
-            phx-click={@on_confirm}
             loading={@cancelling}
             loading_text="Cancelling..."
           >
-            Cancel Meeting
+            <%= if @paid?, do: "Confirm cancellation", else: "Cancel Meeting" %>
           </CoreComponents.loading_button>
         </div>
       </:footer>
     </CoreComponents.modal>
     """
   end
+
+  defp paid_options(assigns) do
+    assigns = assign(assigns, :remaining, refundable_remaining(assigns.booking_payment))
+
+    ~H"""
+    <div class="rounded-token-md border border-tymeslot-200 bg-tymeslot-50 p-3 text-token-sm space-y-3">
+      <p>
+        This booking was paid. Choose how to handle the refund — the attendee always
+        receives the full amount you refund.
+      </p>
+
+      <div class="space-y-2">
+        <label class="flex items-start gap-2">
+          <input
+            type="radio"
+            name="cancel_refund_choice"
+            value="full"
+            checked
+          />
+          <span>
+            <strong>Full refund.</strong>
+            Refunds the remaining balance ({format_amount(@remaining, @booking_payment.currency)}).
+          </span>
+        </label>
+
+        <label class="flex items-start gap-2">
+          <input
+            type="radio"
+            name="cancel_refund_choice"
+            value="partial"
+          />
+          <span>
+            <strong>Partial refund.</strong>
+            Refund only part of the booking amount.
+          </span>
+        </label>
+
+        <div class="ml-6">
+          <CoreComponents.input
+            type="number"
+            name="cancel_refund_amount"
+            label="Partial amount"
+            min="0.01"
+            max={@remaining / 100}
+            step="0.01"
+            placeholder={"0.00 #{String.upcase(@booking_payment.currency || "")}"}
+          />
+        </div>
+
+        <label class="flex items-start gap-2">
+          <input
+            type="radio"
+            name="cancel_refund_choice"
+            value="none"
+          />
+          <span>
+            <strong>Cancel without refund.</strong>
+            The attendee keeps no money. Use only if the attendee already agreed.
+          </span>
+        </label>
+
+        <label class="flex items-start gap-2 ml-6">
+          <input
+            type="checkbox"
+            name="cancel_refund_no_refund_ack"
+            value="true"
+          />
+          <span class="text-tymeslot-700">
+            I understand the attendee will not receive a refund.
+          </span>
+        </label>
+      </div>
+    </div>
+    """
+  end
+
+  defp paid_refundable?(nil), do: false
+
+  defp paid_refundable?(%{status: status, refunded_amount_cents: refunded, amount_cents: amount})
+       when status in ["paid", "partially_refunded"] and is_integer(refunded) and
+              is_integer(amount) and amount - refunded > 0,
+       do: true
+
+  defp paid_refundable?(_other), do: false
+
+  defp refundable_remaining(%{amount_cents: amount, refunded_amount_cents: refunded}),
+    do: max(amount - refunded, 0)
+
+  defp refundable_remaining(_payment), do: 0
+
+  defp format_amount(cents, currency) when is_integer(cents) and is_binary(currency) do
+    amount = cents / 100
+    symbol = currency_symbol(currency)
+    "#{symbol}#{:erlang.float_to_binary(amount, decimals: 2)}"
+  end
+
+  defp format_amount(_cents, _currency), do: ""
+
+  defp currency_symbol("eur"), do: "€"
+  defp currency_symbol("usd"), do: "$"
+  defp currency_symbol("gbp"), do: "£"
+  defp currency_symbol("chf"), do: "CHF "
+  defp currency_symbol(other) when is_binary(other), do: String.upcase(other) <> " "
+  defp currency_symbol(_currency), do: ""
 end

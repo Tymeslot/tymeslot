@@ -8,6 +8,9 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Repo
 
+  @spec get(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
+  def get(id), do: Repo.get(BookingPaymentSchema, id)
+
   @spec by_meeting_id(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
   def by_meeting_id(meeting_id),
     do: Repo.get_by(BookingPaymentSchema, meeting_id: meeting_id)

@@ -1,0 +1,209 @@
+defmodule Tymeslot.MeetingPayments.RefundsTest do
+  use Tymeslot.DataCase, async: true
+
+  @moduletag :database
+  @moduletag :payments
+
+  import Mox
+
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.StripeAdapterMock
+
+  setup :verify_on_exit!
+
+  defp paid_booking_payment(attrs \\ %{}) do
+    defaults = %{
+      stripe_charge_id: "ch_TEST_#{System.unique_integer([:positive])}",
+      stripe_payment_intent_id: "pi_TEST_#{System.unique_integer([:positive])}",
+      stripe_checkout_session_id: "cs_TEST_#{System.unique_integer([:positive])}",
+      amount_cents: 5000,
+      application_fee_cents: 25,
+      currency: "eur",
+      status: "paid",
+      paid_at: DateTime.utc_now(:second),
+      refunded_amount_cents: 0,
+      stripe_account_id: "acct_TEST"
+    }
+
+    insert(:booking_payment, Map.merge(defaults, Map.new(attrs)))
+  end
+
+  describe "issue_refund/3 — full refund" do
+    test "transitions paid → refunded and updates refunded_amount_cents" do
+      payment = paid_booking_payment()
+
+      expect(StripeAdapterMock, :create_refund, fn params, opts ->
+        assert params.charge == payment.stripe_charge_id
+        assert params.amount == 5000
+        assert params.refund_application_fee == true
+        assert params.metadata.meeting_id == payment.meeting_id
+        assert params.metadata.booking_payment_id == payment.id
+        assert opts[:connect_account] == payment.stripe_account_id
+        assert opts[:idempotency_key] == "refund:#{payment.id}:5000:5000"
+        {:ok, %{id: "re_full"}}
+      end)
+
+      assert {:ok, updated} = Refunds.issue_refund(payment, 5000)
+      assert updated.status == "refunded"
+      assert updated.refunded_amount_cents == 5000
+
+      reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
+      assert reloaded.status == "refunded"
+      assert reloaded.refunded_amount_cents == 5000
+    end
+  end
+
+  describe "issue_refund/3 — partial refund" do
+    test "transitions paid → partially_refunded and tracks running total" do
+      payment = paid_booking_payment()
+
+      expect(StripeAdapterMock, :create_refund, fn params, opts ->
+        assert params.amount == 2000
+        assert opts[:idempotency_key] == "refund:#{payment.id}:2000:2000"
+        {:ok, %{id: "re_partial"}}
+      end)
+
+      assert {:ok, updated} = Refunds.issue_refund(payment, 2000)
+      assert updated.status == "partially_refunded"
+      assert updated.refunded_amount_cents == 2000
+    end
+
+    test "second partial reaching total transitions to refunded" do
+      payment = paid_booking_payment(%{refunded_amount_cents: 2000, status: "partially_refunded"})
+
+      expect(StripeAdapterMock, :create_refund, fn params, opts ->
+        assert params.amount == 3000
+        # cumulative after = 2000 (existing) + 3000 (this call) = 5000
+        assert opts[:idempotency_key] == "refund:#{payment.id}:5000:3000"
+        {:ok, %{id: "re_top_up"}}
+      end)
+
+      assert {:ok, updated} = Refunds.issue_refund(payment, 3000)
+      assert updated.status == "refunded"
+      assert updated.refunded_amount_cents == 5000
+    end
+
+    test "second partial below total stays partially_refunded" do
+      payment = paid_booking_payment(%{refunded_amount_cents: 1000, status: "partially_refunded"})
+
+      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
+        {:ok, %{id: "re_partial2"}}
+      end)
+
+      assert {:ok, updated} = Refunds.issue_refund(payment, 1500)
+      assert updated.status == "partially_refunded"
+      assert updated.refunded_amount_cents == 2500
+    end
+  end
+
+  describe "issue_refund/3 — validation" do
+    test "rejects over-refund without calling Stripe" do
+      payment = paid_booking_payment()
+
+      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 6000)
+    end
+
+    test "rejects refund that exceeds remaining refundable balance" do
+      payment = paid_booking_payment(%{refunded_amount_cents: 4500, status: "partially_refunded"})
+
+      # remaining = 500; asking for 600 must error
+      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 600)
+    end
+
+    test "rejects zero or negative amounts" do
+      payment = paid_booking_payment()
+
+      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, 0)
+      assert {:error, :invalid_amount} = Refunds.issue_refund(payment, -100)
+    end
+
+    test "rejects already-refunded payment" do
+      payment =
+        paid_booking_payment(%{
+          status: "refunded",
+          refunded_amount_cents: 5000
+        })
+
+      assert {:error, :already_refunded} = Refunds.issue_refund(payment, 100)
+    end
+
+    test "rejects refund outside the 60-day window" do
+      old_paid_at = DateTime.add(DateTime.utc_now(:second), -61, :day)
+      payment = paid_booking_payment(%{paid_at: old_paid_at})
+
+      assert {:error, :outside_refund_window} = Refunds.issue_refund(payment, 100)
+    end
+
+    test "rejects refund when paid_at is missing" do
+      payment = paid_booking_payment(%{paid_at: nil, status: "pending"})
+
+      assert {:error, :not_paid} = Refunds.issue_refund(payment, 100)
+    end
+  end
+
+  describe "issue_refund/3 — application fee handling" do
+    test "omits refund_application_fee when application_fee_cents is 0" do
+      payment = paid_booking_payment(%{application_fee_cents: 0})
+
+      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
+        refute Map.has_key?(params, :refund_application_fee)
+        {:ok, %{id: "re_zero_fee"}}
+      end)
+
+      assert {:ok, updated} = Refunds.issue_refund(payment, 1000)
+      assert updated.status == "partially_refunded"
+    end
+
+    test "includes refund_application_fee=true when application_fee_cents > 0" do
+      payment = paid_booking_payment(%{application_fee_cents: 25})
+
+      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
+        assert params.refund_application_fee == true
+        {:ok, %{id: "re_with_fee"}}
+      end)
+
+      assert {:ok, _payment} = Refunds.issue_refund(payment, 1000)
+    end
+  end
+
+  describe "issue_refund/3 — Stripe failure" do
+    test "returns the Stripe error and does not update the row" do
+      payment = paid_booking_payment()
+
+      expect(StripeAdapterMock, :create_refund, fn _params, _opts ->
+        {:error, :stripe_failure}
+      end)
+
+      assert {:error, :stripe_failure} = Refunds.issue_refund(payment, 1000)
+
+      reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
+      assert reloaded.status == "paid"
+      assert reloaded.refunded_amount_cents == 0
+    end
+  end
+
+  describe "issue_refund/3 — reason metadata" do
+    test "passes the supplied reason through to Stripe" do
+      payment = paid_booking_payment()
+
+      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
+        assert params.reason == "requested_by_customer"
+        {:ok, %{id: "re_reason"}}
+      end)
+
+      assert {:ok, _payment} = Refunds.issue_refund(payment, 500, "requested_by_customer")
+    end
+
+    test "passes nil reason when none supplied" do
+      payment = paid_booking_payment()
+
+      expect(StripeAdapterMock, :create_refund, fn params, _opts ->
+        assert params.reason == nil
+        {:ok, %{id: "re_no_reason"}}
+      end)
+
+      assert {:ok, _payment} = Refunds.issue_refund(payment, 500)
+    end
+  end
+end

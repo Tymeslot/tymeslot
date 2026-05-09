@@ -14,8 +14,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.Currency
+  alias Tymeslot.MeetingPayments.Refunds
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Repo
+  alias TymeslotWeb.Components.CoreComponents
 
   @refund_window_days 60
 
@@ -28,6 +30,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
         {:ok,
          socket
          |> assign(:page_title, "Payments")
+         |> assign(:refund_modal_payment, nil)
+         |> assign(:refund_submitting, false)
          |> assign_payments_state(user)}
 
       {:error, :insufficient_plan} ->
@@ -55,10 +59,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
       <% else %>
         <.status_card account={@connect_account} />
         <.currency_selector account={@connect_account} />
-        <.payments_table payments={@payments} />
+        <.payments_table payments={@payments} account={@connect_account} />
         <.lifetime_stats stats={@stats} />
         <.disconnect_zone />
       <% end %>
+
+      <.refund_modal
+        payment={@refund_modal_payment}
+        submitting={@refund_submitting}
+      />
     </div>
     """
   end
@@ -123,6 +132,134 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
          |> assign_payments_state(user)}
     end
   end
+
+  def handle_event("open_refund_modal", %{"id" => id}, socket) do
+    user = socket.assigns.current_user
+    payment = BookingPaymentQueries.get(id)
+
+    cond do
+      is_nil(payment) ->
+        {:noreply, socket}
+
+      payment.host_user_id != user.id ->
+        {:noreply, socket}
+
+      not can_refund?(payment) ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "This payment can no longer be refunded from Tymeslot. " <>
+             "Refunds older than 60 days must be processed in your Stripe dashboard."
+         )}
+
+      true ->
+        {:noreply, assign(socket, :refund_modal_payment, payment)}
+    end
+  end
+
+  def handle_event("close_refund_modal", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:refund_modal_payment, nil)
+     |> assign(:refund_submitting, false)}
+  end
+
+  def handle_event("submit_refund", params, socket) do
+    user = socket.assigns.current_user
+    payment = socket.assigns.refund_modal_payment
+
+    cond do
+      is_nil(payment) ->
+        {:noreply, socket}
+
+      payment.host_user_id != user.id ->
+        {:noreply, socket}
+
+      true ->
+        do_submit_refund(socket, payment, params)
+    end
+  end
+
+  defp do_submit_refund(socket, payment, params) do
+    case parse_refund_amount(payment, params) do
+      {:ok, amount_cents} ->
+        socket = assign(socket, :refund_submitting, true)
+        process_refund(socket, payment, amount_cents)
+
+      {:error, message} ->
+        {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
+  defp process_refund(socket, payment, amount_cents) do
+    user = socket.assigns.current_user
+
+    case Refunds.issue_refund(payment, amount_cents) do
+      {:ok, _payment} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Refund issued. The attendee will receive a confirmation email.")
+         |> assign(:refund_modal_payment, nil)
+         |> assign(:refund_submitting, false)
+         |> assign_payments_state(user)}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, refund_error_message(reason))
+         |> assign(:refund_submitting, false)}
+    end
+  end
+
+  defp parse_refund_amount(payment, %{"refund_type" => "full"}) do
+    {:ok, refundable_remaining(payment)}
+  end
+
+  defp parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => amount}) do
+    case parse_amount_cents(amount) do
+      {:ok, cents} when cents > 0 ->
+        if cents <= refundable_remaining(payment) do
+          {:ok, cents}
+        else
+          {:error, "Amount exceeds the remaining refundable balance."}
+        end
+
+      _other ->
+        {:error, "Enter a valid refund amount."}
+    end
+  end
+
+  defp parse_refund_amount(_payment, _params), do: {:error, "Choose a refund type."}
+
+  defp parse_amount_cents(amount) when is_binary(amount) do
+    cleaned = amount |> String.replace(",", ".") |> String.trim()
+
+    case Float.parse(cleaned) do
+      {decimal, ""} when decimal > 0 -> {:ok, round(decimal * 100)}
+      _other -> :error
+    end
+  end
+
+  defp parse_amount_cents(_amount), do: :error
+
+  defp refund_error_message(:outside_refund_window),
+    do: "Refunds older than 60 days must be processed in your Stripe dashboard."
+
+  defp refund_error_message(:already_refunded),
+    do: "This payment has already been fully refunded."
+
+  defp refund_error_message(:invalid_amount),
+    do: "Refund amount must be greater than zero and within the remaining balance."
+
+  defp refund_error_message(:not_paid),
+    do: "This booking has not been paid yet, so it cannot be refunded."
+
+  defp refund_error_message(:missing_charge),
+    do: "Stripe has not yet captured a charge for this booking. Try again in a moment."
+
+  defp refund_error_message(_other),
+    do: "Something went wrong while issuing the refund. Please try again."
 
   defp apply_currency_change(account, user_id, currency) do
     {:ok, _result} =
@@ -206,7 +343,18 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
                 {format_amount(p.amount_cents, p.currency)}
               </td>
               <td class="p-2 text-token-sm">{format_status(p.status)}</td>
-              <td class="p-2 text-right"></td>
+              <td class="p-2 text-right">
+                <%= if can_refund?(p) and not connect_account_deleted?(@account) do %>
+                  <button
+                    type="button"
+                    class="text-token-sm text-tymeslot-700 underline"
+                    phx-click="open_refund_modal"
+                    phx-value-id={p.id}
+                  >
+                    Refund
+                  </button>
+                <% end %>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -214,6 +362,110 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
     </div>
     """
   end
+
+  defp refund_modal(assigns) do
+    ~H"""
+    <CoreComponents.modal
+      :if={@payment}
+      id="refund-modal"
+      show={true}
+      on_cancel={Phoenix.LiveView.JS.push("close_refund_modal")}
+      size={:medium}
+    >
+      <:header>
+        <span class="display-md">Refund payment</span>
+      </:header>
+
+      <div class="space-y-4">
+        <p class="text-tymeslot-700">
+          Refund <strong>{@payment.attendee_name || @payment.attendee_email}</strong>
+          for <strong>{@payment.meeting_type_name}</strong>.
+        </p>
+
+        <div class="rounded-token-md border border-tymeslot-200 bg-tymeslot-50 p-3 text-token-sm">
+          <p>
+            Original charge: <strong>{format_amount(@payment.amount_cents, @payment.currency)}</strong>
+          </p>
+          <p>
+            Already refunded:
+            <strong>{format_amount(@payment.refunded_amount_cents, @payment.currency)}</strong>
+          </p>
+          <p>
+            Remaining refundable:
+            <strong>{format_amount(refundable_remaining(@payment), @payment.currency)}</strong>
+          </p>
+        </div>
+
+        <p class="text-token-sm text-tymeslot-700">
+          The attendee receives the full amount you refund. Tymeslot's platform fee is
+          reversed proportionally; Stripe processing fees on the original charge stay
+          with you.
+        </p>
+
+        <form id="refund-form" phx-submit="submit_refund" class="space-y-4">
+          <input type="hidden" name="payment_id" value={@payment.id} />
+
+          <fieldset class="space-y-2">
+            <legend class="text-token-sm font-semibold text-tymeslot-700">Refund type</legend>
+            <label class="flex items-center gap-2 text-token-sm">
+              <input
+                type="radio"
+                name="refund_type"
+                value="full"
+                checked
+                phx-click={Phoenix.LiveView.JS.set_attribute({"data-refund-type", "full"}, to: "#refund-form")}
+              /> Full refund ({format_amount(refundable_remaining(@payment), @payment.currency)})
+            </label>
+            <label class="flex items-center gap-2 text-token-sm">
+              <input
+                type="radio"
+                name="refund_type"
+                value="partial"
+                phx-click={Phoenix.LiveView.JS.set_attribute({"data-refund-type", "partial"}, to: "#refund-form")}
+              /> Partial refund
+            </label>
+          </fieldset>
+
+          <CoreComponents.input
+            type="number"
+            name="amount"
+            label="Partial amount"
+            min="0.01"
+            max={refundable_remaining(@payment) / 100}
+            step="0.01"
+            placeholder={"0.00 #{String.upcase(@payment.currency || "")}"}
+          />
+        </form>
+      </div>
+
+      <:footer>
+        <div class="flex justify-end gap-3">
+          <CoreComponents.action_button
+            variant={:secondary}
+            phx-click="close_refund_modal"
+          >
+            Cancel
+          </CoreComponents.action_button>
+          <CoreComponents.loading_button
+            type="submit"
+            form="refund-form"
+            variant={:danger}
+            loading={@submitting}
+            loading_text="Refunding..."
+          >
+            Issue refund
+          </CoreComponents.loading_button>
+        </div>
+      </:footer>
+    </CoreComponents.modal>
+    """
+  end
+
+  defp connect_account_deleted?(%{deleted_at: %DateTime{}}), do: true
+  defp connect_account_deleted?(_account), do: false
+
+  defp refundable_remaining(payment),
+    do: max(payment.amount_cents - payment.refunded_amount_cents, 0)
 
   defp lifetime_stats(assigns) do
     ~H"""
