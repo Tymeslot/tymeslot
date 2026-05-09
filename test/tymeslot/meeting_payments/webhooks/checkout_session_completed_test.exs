@@ -140,7 +140,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
     test "leaves a non-awaiting_payment meeting unchanged (replay safety)" do
       meeting = insert(:meeting, status: "confirmed")
 
-      bp =
+      _bp =
         insert(:booking_payment,
           meeting: meeting,
           status: "paid",
