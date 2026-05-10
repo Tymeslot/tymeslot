@@ -6,6 +6,7 @@ defmodule Tymeslot.Auth.UserQueries do
 
   alias Ecto.Changeset
   alias Tymeslot.Auth.UserSchema
+  alias Tymeslot.MeetingPayments.DataRetention
   alias Tymeslot.Repo
   alias Tymeslot.Security.Password
 
@@ -210,10 +211,24 @@ defmodule Tymeslot.Auth.UserQueries do
 
   @doc """
   Deletes a user.
+
+  Runs `Tymeslot.MeetingPayments.DataRetention.anonymise_host/1` before the
+  delete so booking-payment and payment-transaction rows are scrubbed and
+  marked retained — the FKs on those tables are `:nilify_all`, so the
+  rows survive the user delete and must be anonymised in the same
+  transaction. Required for tax-record retention under EU and Swiss
+  commercial law (GDPR Art. 17(3)(b) carve-out).
   """
-  @spec delete_user(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  @spec delete_user(UserSchema.t()) :: {:ok, UserSchema.t()} | {:error, Changeset.t() | term()}
   def delete_user(%UserSchema{} = user) do
-    Repo.delete(user)
+    Repo.transaction(fn ->
+      with :ok <- DataRetention.anonymise_host(user.id),
+           {:ok, deleted} <- Repo.delete(user) do
+        deleted
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   @doc """
