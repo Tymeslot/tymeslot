@@ -73,9 +73,19 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired do
       end)
 
     case result do
-      {:ok, :ok} -> :ok
-      {:error, reason} -> {:error, reason}
+      {:ok, :ok} ->
+        broadcast_expired(payment.meeting_id)
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  defp broadcast_expired(nil), do: :ok
+
+  defp broadcast_expired(meeting_id) do
+    Phoenix.PubSub.broadcast(Tymeslot.PubSub, "meeting_payment:#{meeting_id}", :expired)
   end
 
   defp mark_failed(payment, event_id) do

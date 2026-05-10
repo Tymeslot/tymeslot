@@ -6,10 +6,16 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
   alias Tymeslot.Availability.Calculate
   alias Tymeslot.MeetingTypes
 
+  # `awaiting_payment` is a transitional state used by embedded paid
+  # bookings: Stripe Checkout opens in a new tab and the iframe waits for
+  # the webhook to broadcast `:paid` (→ `:confirmation`) or `:expired`
+  # (→ `:booking`). It shares step 4 with `:confirmation` so step
+  # navigation does not let the attendee jump back during payment.
   @default_states %{
     overview: %{step: 1, next: :schedule, prev: nil},
     schedule: %{step: 2, next: :booking, prev: :overview},
     booking: %{step: 3, next: :confirmation, prev: :schedule},
+    awaiting_payment: %{step: 4, prev: :booking},
     confirmation: %{step: 4, prev: :booking}
   }
 

@@ -18,6 +18,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
   }
 
   alias TymeslotWeb.Themes.Quill.Scheduling.Wrapper, as: QuillThemeWrapper
+  alias TymeslotWeb.Themes.Shared.Components.AwaitingPayment
 
   # Handle month navigation (Quill has a full monthly calendar grid)
   defp handle_theme_schedule_event(socket, event, _data)
@@ -84,6 +85,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
             <.live_component module={ScheduleComponent} id="schedule-step" {assigns} />
           <% :booking -> %>
             <.live_component module={BookingComponent} id="booking-step" {assigns} />
+          <% :awaiting_payment -> %>
+            <AwaitingPayment.awaiting_payment checkout_url={@awaiting_payment_checkout_url} />
           <% :confirmation -> %>
             <.live_component module={ConfirmationComponent} id="confirmation-step" {assigns} />
           <% _ -> %>

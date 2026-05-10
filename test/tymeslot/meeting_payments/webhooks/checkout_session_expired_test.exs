@@ -93,6 +93,28 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
 
       assert :ok = CheckoutSessionExpired.handle(event)
     end
+
+    test "broadcasts :expired via PubSub after a successful transition" do
+      meeting = insert(:meeting, status: "awaiting_payment")
+
+      _bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "pending",
+          stripe_checkout_session_id: "cs_BCAST_EXPIRED"
+        )
+
+      Phoenix.PubSub.subscribe(Tymeslot.PubSub, "meeting_payment:#{meeting.id}")
+
+      event =
+        expired_event("evt_BCAST_EXPIRED", %{
+          "id" => "cs_BCAST_EXPIRED",
+          "client_reference_id" => meeting.id
+        })
+
+      assert :ok = CheckoutSessionExpired.handle(event)
+      assert_receive :expired, 1_000
+    end
   end
 
   defp expired_event(event_id, object) do
