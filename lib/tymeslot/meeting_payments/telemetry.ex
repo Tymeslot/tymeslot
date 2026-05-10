@@ -26,6 +26,18 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
   @webhook_event [:tymeslot, :meeting_payments, :webhook, :received]
   @status_changed_event [:tymeslot, :meeting_payments, :booking_payment, :status_changed]
 
+  # Mirror of `BookingPaymentSchema.valid_statuses()` materialised at
+  # compile time so `to_atom/1` can rely on `String.to_existing_atom/1`
+  # without depending on call-order to seed the atom table.
+  @status_atoms %{
+    "pending" => :pending,
+    "paid" => :paid,
+    "failed" => :failed,
+    "refunded" => :refunded,
+    "partially_refunded" => :partially_refunded,
+    "disputed" => :disputed
+  }
+
   @typedoc "Reason for a booking_payment status transition."
   @type status_change_reason ::
           :webhook_paid
@@ -112,7 +124,7 @@ defmodule Tymeslot.MeetingPayments.Telemetry do
   end
 
   defp to_atom(nil), do: nil
-  defp to_atom(value) when is_binary(value), do: String.to_atom(value)
+  defp to_atom(value) when is_binary(value), do: Map.get(@status_atoms, value, :unknown)
 
   defp status_for({:ok, _value}), do: :ok
   defp status_for({:error, _reason}), do: :error
