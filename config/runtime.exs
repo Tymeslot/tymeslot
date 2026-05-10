@@ -355,7 +355,9 @@ if config_env() == :prod do
          # Run daily at 03:30 UTC to prune old/inactive calendar event cache
          {"30 3 * * *", Tymeslot.Workers.CalendarCachePruneWorker},
          # Run daily at 05:00 UTC to auto-pause integrations stuck unhealthy past the configured cutoff
-         {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker}
+         {"0 5 * * *", Tymeslot.Workers.IntegrationAutoPauseWorker},
+         # Run every 15 min to reconcile awaiting_payment meetings whose webhook never arrived
+         {"*/15 * * * *", Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments}
        ]}
     ]
 

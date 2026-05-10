@@ -23,6 +23,30 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   def by_charge_id(charge_id),
     do: Repo.get_by(BookingPaymentSchema, stripe_charge_id: charge_id)
 
+  @doc """
+  Lists `pending` booking payments that were created on or before `cutoff`
+  and still carry a `stripe_checkout_session_id`.
+
+  Used by `Tymeslot.MeetingPayments.Workers.ReconcileAwaitingPayments` to
+  identify rows whose webhook never arrived so that they can be reconciled
+  by polling Stripe directly.
+  """
+  @spec list_stale_pending(DateTime.t(), keyword()) :: [BookingPaymentSchema.t()]
+  def list_stale_pending(%DateTime{} = cutoff, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 200)
+
+    query =
+      from b in BookingPaymentSchema,
+        where:
+          b.status == "pending" and
+            b.inserted_at <= ^cutoff and
+            not is_nil(b.stripe_checkout_session_id),
+        order_by: [asc: b.inserted_at],
+        limit: ^limit
+
+    Repo.all(query)
+  end
+
   @spec for_host(integer(), keyword()) :: [BookingPaymentSchema.t()]
   def for_host(host_user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 25)
