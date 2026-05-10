@@ -3,12 +3,16 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   Sends the attendee email confirming a booking-payment refund.
 
   Enqueued synchronously by `Tymeslot.MeetingPayments.Refunds.issue_refund/3`
-  whenever a refund (full or partial) succeeds, and idempotently by the
-  `charge.refunded` webhook handler.
+  whenever a refund (full or partial) succeeds. The Stripe `charge.refunded`
+  webhook reconciles `refunded_amount_cents` and `status` but does not
+  re-enqueue the email — host-initiated refunds are the only path that
+  notifies the attendee, matching §7 of the meeting-payments design.
 
   Loads a fresh booking-payment row inside `perform/1` so the email reflects
   the row's committed state, not whatever was in flight when the job was
-  enqueued.
+  enqueued. Standard Oban retry semantics apply: up to five attempts on
+  the `:emails` queue with the platform's CircuitBreaker handling
+  upstream-mailer failures.
   """
 
   use Oban.Worker,
