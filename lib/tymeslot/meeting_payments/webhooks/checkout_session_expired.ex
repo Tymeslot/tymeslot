@@ -18,28 +18,38 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Repo
 
+  @event_type "checkout.session.expired"
+
   @spec handle(map()) :: :ok | {:error, term()}
-  def handle(%{"id" => event_id, "data" => %{"object" => object}}) do
+  def handle(event) do
+    Telemetry.span_webhook(@event_type, fn -> do_handle(event) end)
+  end
+
+  defp do_handle(%{"id" => event_id, "data" => %{"object" => object}}) do
     case lookup_payment(object) do
       nil ->
         Logger.info("checkout.session.expired: no booking_payment matched",
           checkout_session_id: object["id"]
         )
 
-        :ok
+        {:ok, :ok}
 
       %BookingPaymentSchema{last_event_id: ^event_id} ->
-        :ok
+        {:ok, :idempotent_replay}
 
       payment ->
-        run(payment, event_id)
+        classify(run(payment, event_id))
     end
   end
 
-  def handle(_other), do: {:error, :invalid_event}
+  defp do_handle(_other), do: {{:error, :invalid_event}, :error}
+
+  defp classify(:ok), do: {:ok, :ok}
+  defp classify({:error, _reason} = err), do: {err, :error}
 
   defp lookup_payment(%{"client_reference_id" => meeting_id}) when is_binary(meeting_id) do
     BookingPaymentQueries.by_meeting_id(meeting_id)
@@ -69,7 +79,14 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired do
   end
 
   defp mark_failed(payment, event_id) do
-    BookingPaymentQueries.update(payment, %{status: "failed", last_event_id: event_id})
+    case BookingPaymentQueries.update(payment, %{status: "failed", last_event_id: event_id}) do
+      {:ok, updated} = result ->
+        Telemetry.emit_status_changed(payment.status, updated.status, :webhook_expired)
+        result
+
+      {:error, _changeset} = err ->
+        err
+    end
   end
 
   defp maybe_expire_meeting(nil), do: :ok

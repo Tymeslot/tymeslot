@@ -21,26 +21,36 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Telemetry
+
+  @event_type "charge.dispute.closed"
 
   @spec handle(map()) :: :ok | {:error, term()}
-  def handle(%{"id" => event_id, "data" => %{"object" => object}}) do
+  def handle(event) do
+    Telemetry.span_webhook(@event_type, fn -> do_handle(event) end)
+  end
+
+  defp do_handle(%{"id" => event_id, "data" => %{"object" => object}}) do
     case lookup_payment(object) do
       nil ->
         Logger.info("charge.dispute.closed: no booking_payment matched",
           charge_id: object["charge"]
         )
 
-        :ok
+        {:ok, :ok}
 
       %BookingPaymentSchema{last_event_id: ^event_id} ->
-        :ok
+        {:ok, :idempotent_replay}
 
       payment ->
-        apply_outcome(payment, event_id, object["status"], object["amount"] || 0)
+        classify(apply_outcome(payment, event_id, object["status"], object["amount"] || 0))
     end
   end
 
-  def handle(_other), do: {:error, :invalid_event}
+  defp do_handle(_other), do: {{:error, :invalid_event}, :error}
+
+  defp classify(:ok), do: {:ok, :ok}
+  defp classify({:error, _reason} = err), do: {err, :error}
 
   defp lookup_payment(%{"charge" => charge_id}) when is_binary(charge_id) do
     BookingPaymentQueries.by_charge_id(charge_id)
@@ -76,8 +86,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeClosed do
 
   defp update(payment, event_id, attrs) do
     case BookingPaymentQueries.update(payment, Map.put(attrs, :last_event_id, event_id)) do
-      {:ok, _bp} -> :ok
-      {:error, reason} -> {:error, reason}
+      {:ok, updated} ->
+        Telemetry.emit_status_changed(payment.status, updated.status, :webhook_dispute_closed)
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 end

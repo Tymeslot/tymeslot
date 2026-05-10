@@ -24,6 +24,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
+  alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   @refund_window_days 60
@@ -112,10 +113,17 @@ defmodule Tymeslot.MeetingPayments.Refunds do
         true -> payment.status
       end
 
-    BookingPaymentQueries.update(payment, %{
-      refunded_amount_cents: new_total,
-      status: new_status
-    })
+    case BookingPaymentQueries.update(payment, %{
+           refunded_amount_cents: new_total,
+           status: new_status
+         }) do
+      {:ok, updated} = result ->
+        Telemetry.emit_status_changed(payment.status, updated.status, :host_refund)
+        result
+
+      {:error, _changeset} = err ->
+        err
+    end
   end
 
   defp enqueue_refund_email(payment) do

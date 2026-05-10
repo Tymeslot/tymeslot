@@ -4,7 +4,13 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   context. The default implementation passes calls through to
   stripity_stripe; tests replace it with a Mox stub via the
   `:tymeslot, :stripe_adapter` config.
+
+  Every call is wrapped in `Tymeslot.MeetingPayments.Telemetry.span_stripe/3`
+  so dashboards can chart per-operation latency and error rate. Webhook
+  signature construction is excluded — it never makes a network call.
   """
+
+  alias Tymeslot.MeetingPayments.Telemetry
 
   @callback create_account(params :: map(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
@@ -28,29 +34,49 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
               {:ok, map()} | {:error, term()}
 
   @spec create_account(map(), keyword()) :: {:ok, map()} | {:error, term()}
-  def create_account(params, opts \\ []), do: impl().create_account(params, opts)
+  def create_account(params, opts \\ []) do
+    Telemetry.span_stripe(:create_account, nil, fn -> impl().create_account(params, opts) end)
+  end
 
   @spec retrieve_account(String.t()) :: {:ok, map()} | {:error, term()}
-  def retrieve_account(id), do: impl().retrieve_account(id)
+  def retrieve_account(id) do
+    Telemetry.span_stripe(:retrieve_account, id, fn -> impl().retrieve_account(id) end)
+  end
 
   @spec create_account_link(map()) :: {:ok, map()} | {:error, term()}
-  def create_account_link(params), do: impl().create_account_link(params)
+  def create_account_link(params) do
+    Telemetry.span_stripe(:create_account_link, params[:account] || params["account"], fn ->
+      impl().create_account_link(params)
+    end)
+  end
 
   @spec create_checkout_session(map(), keyword()) :: {:ok, map()} | {:error, term()}
-  def create_checkout_session(params, opts \\ []),
-    do: impl().create_checkout_session(params, opts)
+  def create_checkout_session(params, opts \\ []) do
+    Telemetry.span_stripe(:create_checkout_session, opts[:connect_account], fn ->
+      impl().create_checkout_session(params, opts)
+    end)
+  end
 
   @spec retrieve_checkout_session(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
-  def retrieve_checkout_session(id, opts \\ []),
-    do: impl().retrieve_checkout_session(id, opts)
+  def retrieve_checkout_session(id, opts \\ []) do
+    Telemetry.span_stripe(:retrieve_checkout_session, opts[:connect_account], fn ->
+      impl().retrieve_checkout_session(id, opts)
+    end)
+  end
 
   @spec retrieve_charge(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
-  def retrieve_charge(id, opts \\ []),
-    do: impl().retrieve_charge(id, opts)
+  def retrieve_charge(id, opts \\ []) do
+    Telemetry.span_stripe(:retrieve_charge, opts[:connect_account], fn ->
+      impl().retrieve_charge(id, opts)
+    end)
+  end
 
   @spec create_refund(map(), keyword()) :: {:ok, map()} | {:error, term()}
-  def create_refund(params, opts \\ []),
-    do: impl().create_refund(params, opts)
+  def create_refund(params, opts \\ []) do
+    Telemetry.span_stripe(:create_refund, opts[:connect_account], fn ->
+      impl().create_refund(params, opts)
+    end)
+  end
 
   @spec construct_webhook_event(binary(), String.t(), String.t()) ::
           {:ok, map()} | {:error, term()}

@@ -17,13 +17,20 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Repo
   alias Tymeslot.Workers.VideoRoomWorker
 
+  @event_type "checkout.session.completed"
+
   @spec handle(map()) :: :ok | {:error, term()}
-  def handle(%{"id" => event_id, "data" => %{"object" => object}}) do
+  def handle(event) do
+    Telemetry.span_webhook(@event_type, fn -> do_handle(event) end)
+  end
+
+  defp do_handle(%{"id" => event_id, "data" => %{"object" => object}}) do
     case lookup_payment(object) do
       nil ->
         Logger.info("checkout.session.completed: no booking_payment matched",
@@ -31,18 +38,21 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
           meeting_id: object["client_reference_id"]
         )
 
-        :ok
+        {:ok, :ok}
 
       %BookingPaymentSchema{last_event_id: ^event_id} ->
         Logger.info("checkout.session.completed: idempotent replay", event_id: event_id)
-        :ok
+        {:ok, :idempotent_replay}
 
       payment ->
-        run(payment, event_id, object)
+        classify(run(payment, event_id, object))
     end
   end
 
-  def handle(_other), do: {:error, :invalid_event}
+  defp do_handle(_other), do: {{:error, :invalid_event}, :error}
+
+  defp classify(:ok), do: {:ok, :ok}
+  defp classify({:error, _reason} = err), do: {err, :error}
 
   defp lookup_payment(%{"client_reference_id" => meeting_id} = object)
        when is_binary(meeting_id) do
@@ -99,12 +109,19 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   defp ensure_awaiting_payment(_other), do: :no_op
 
   defp mark_paid(payment, event_id, object) do
-    BookingPaymentQueries.update(payment, %{
-      status: "paid",
-      paid_at: DateTime.utc_now(:second),
-      stripe_payment_intent_id: object["payment_intent"],
-      last_event_id: event_id
-    })
+    case BookingPaymentQueries.update(payment, %{
+           status: "paid",
+           paid_at: DateTime.utc_now(:second),
+           stripe_payment_intent_id: object["payment_intent"],
+           last_event_id: event_id
+         }) do
+      {:ok, updated} = result ->
+        Telemetry.emit_status_changed(payment.status, updated.status, :webhook_paid)
+        result
+
+      {:error, _changeset} = err ->
+        err
+    end
   end
 
   defp broadcast_paid(meeting_id) do

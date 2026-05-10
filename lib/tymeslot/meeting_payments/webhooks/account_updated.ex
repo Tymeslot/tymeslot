@@ -16,16 +16,29 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdated do
   require Logger
 
   alias Tymeslot.MeetingPayments.ConnectAccounts
+  alias Tymeslot.MeetingPayments.Telemetry
+
+  @event_type "account.updated"
 
   @spec handle(map()) :: :ok | {:error, term()}
-  def handle(%{"data" => %{"object" => %{"id" => account_id} = object}})
-      when is_binary(account_id) do
-    object
-    |> ensure_created(get_in(object, ["created"]))
-    |> ConnectAccounts.apply_account_event()
+  def handle(event) do
+    Telemetry.span_webhook(@event_type, fn -> do_handle(event) end)
   end
 
-  def handle(_other), do: {:error, :invalid_event}
+  defp do_handle(%{"data" => %{"object" => %{"id" => account_id} = object}})
+       when is_binary(account_id) do
+    result =
+      object
+      |> ensure_created(get_in(object, ["created"]))
+      |> ConnectAccounts.apply_account_event()
+
+    case result do
+      :ok -> {:ok, :ok}
+      {:error, _reason} = err -> {err, :error}
+    end
+  end
+
+  defp do_handle(_other), do: {{:error, :invalid_event}, :error}
 
   defp ensure_created(object, created) when is_integer(created), do: object
 

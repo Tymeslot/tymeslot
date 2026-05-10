@@ -19,25 +19,35 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.Telemetry
+
+  @event_type "charge.refunded"
 
   @spec handle(map()) :: :ok | {:error, term()}
-  def handle(%{"id" => event_id, "data" => %{"object" => %{"id" => charge_id} = object}})
-      when is_binary(charge_id) do
+  def handle(event) do
+    Telemetry.span_webhook(@event_type, fn -> do_handle(event) end)
+  end
+
+  defp do_handle(%{"id" => event_id, "data" => %{"object" => %{"id" => charge_id} = object}})
+       when is_binary(charge_id) do
     case BookingPaymentQueries.by_charge_id(charge_id) do
       nil ->
         Logger.info("charge.refunded: no booking_payment matched", charge_id: charge_id)
-        :ok
+        {:ok, :ok}
 
       %BookingPaymentSchema{last_event_id: ^event_id} ->
-        :ok
+        {:ok, :idempotent_replay}
 
       payment ->
         amount_refunded = object["amount_refunded"] || 0
-        update_payment(payment, event_id, amount_refunded)
+        classify(update_payment(payment, event_id, amount_refunded))
     end
   end
 
-  def handle(_other), do: {:error, :invalid_event}
+  defp do_handle(_other), do: {{:error, :invalid_event}, :error}
+
+  defp classify(:ok), do: {:ok, :ok}
+  defp classify({:error, _reason} = err), do: {err, :error}
 
   defp update_payment(payment, event_id, amount_refunded) do
     new_total = max(payment.refunded_amount_cents, amount_refunded)
@@ -48,8 +58,12 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
            status: new_status,
            last_event_id: event_id
          }) do
-      {:ok, _bp} -> :ok
-      {:error, reason} -> {:error, reason}
+      {:ok, updated} ->
+        Telemetry.emit_status_changed(payment.status, updated.status, :webhook_charge_refunded)
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
