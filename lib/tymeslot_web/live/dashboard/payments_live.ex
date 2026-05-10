@@ -15,6 +15,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.Currency
   alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Repo
   alias TymeslotWeb.Components.CoreComponents
@@ -46,6 +47,18 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
          |> put_flash(:error, "Meeting payments are not available on this instance.")
          |> push_navigate(to: ~p"/dashboard")}
     end
+  end
+
+  @impl Phoenix.LiveView
+  def handle_params(params, _uri, socket) do
+    socket =
+      if Map.has_key?(params, "return") or Map.has_key?(params, "refresh") do
+        maybe_enqueue_resync(socket)
+      else
+        socket
+      end
+
+    {:noreply, socket}
   end
 
   @impl Phoenix.LiveView
@@ -81,6 +94,25 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
     |> assign(:connect_account, account)
     |> assign(:payments, payments)
     |> assign(:stats, stats)
+  end
+
+  # Enqueue a Stripe resync when the host returns from the Express
+  # onboarding flow so the dashboard shows fresh capability flags
+  # without waiting on the next `account.updated` webhook. Worker
+  # uniqueness keeps repeated returns within a 60-second window from
+  # piling up duplicate jobs.
+  defp maybe_enqueue_resync(socket) do
+    case socket.assigns[:connect_account] do
+      %{stripe_account_id: stripe_account_id} when is_binary(stripe_account_id) ->
+        %{stripe_account_id: stripe_account_id}
+        |> ResyncConnectAccount.new()
+        |> Oban.insert()
+
+        socket
+
+      _missing ->
+        socket
+    end
   end
 
   defp connect_cta(assigns) do

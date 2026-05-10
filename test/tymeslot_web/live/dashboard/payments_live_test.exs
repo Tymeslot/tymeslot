@@ -1,5 +1,6 @@
 defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
   use TymeslotWeb.ConnCase, async: false
+  use Oban.Testing, repo: Tymeslot.Repo
 
   @moduletag :database
   @moduletag :payments
@@ -12,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.StripeAdapterMock
+  alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
 
   setup :verify_on_exit!
@@ -134,6 +136,65 @@ defmodule TymeslotWeb.Dashboard.PaymentsLiveTest do
 
       assert html =~ "Restricted"
       assert html =~ "rejected.fraud"
+    end
+
+    test "enqueues a Stripe resync when the host returns from onboarding", %{conn: conn} do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_return",
+        charges_enabled: false,
+        payouts_enabled: false,
+        details_submitted: false
+      )
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, _html} = live(conn, "/dashboard/payments?return=1")
+
+      assert_enqueued(
+        worker: ResyncConnectAccount,
+        args: %{stripe_account_id: "acct_return"}
+      )
+    end
+
+    test "enqueues a Stripe resync when the host returns via refresh URL", %{conn: conn} do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_refresh",
+        charges_enabled: false,
+        payouts_enabled: false,
+        details_submitted: false
+      )
+
+      conn = log_in_user(conn, user)
+
+      {:ok, _view, _html} = live(conn, "/dashboard/payments?refresh=1")
+
+      assert_enqueued(
+        worker: ResyncConnectAccount,
+        args: %{stripe_account_id: "acct_refresh"}
+      )
+    end
+
+    test "does not enqueue a Stripe resync without return/refresh params", %{conn: conn} do
+      user = create_onboarded_user()
+
+      insert(:connect_account,
+        user: user,
+        stripe_account_id: "acct_quiet",
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true
+      )
+
+      conn = log_in_user(conn, user)
+      {:ok, _view, _html} = live(conn, "/dashboard/payments")
+
+      refute_enqueued(worker: ResyncConnectAccount)
     end
 
     test "disconnect button soft-deletes the connect_account", %{conn: conn} do
