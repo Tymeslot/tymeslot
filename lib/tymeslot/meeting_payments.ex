@@ -42,6 +42,7 @@ defmodule Tymeslot.MeetingPayments do
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Webhooks.WebhookProcessor
   alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
+  alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.MeetingTypes.MeetingTypeQueries
   alias Tymeslot.Repo
 
@@ -233,27 +234,35 @@ defmodule Tymeslot.MeetingPayments do
   paid meeting types to free.
 
   Runs atomically. Returns `{:ok, :reset}` when paid meeting types were
-  cleared, `{:ok, :no_reset}` when the account had no paid types, or
-  `{:error, reason}` on failure.
+  cleared, `{:ok, :no_reset}` when the account had no paid types,
+  `{:error, :pending_payments_exist}` when the host has meetings in
+  `awaiting_payment` status (the host must resolve those bookings first),
+  or `{:error, reason}` on other failures.
 
   Callers must not call this when `currency` is equal to the account's
   current default currency — they should guard that upstream and skip
   the call entirely.
   """
   @spec change_default_currency(account(), String.t()) ::
-          {:ok, :reset | :no_reset} | {:error, term()}
+          {:ok, :reset | :no_reset}
+          | {:error, :pending_payments_exist}
+          | {:error, term()}
   def change_default_currency(%ConnectAccountSchema{user_id: user_id} = account, currency) do
-    Repo.transaction(fn ->
-      case ConnectAccountQueries.update(account, %{default_currency: currency}) do
-        {:ok, _updated} ->
-          {count, _rows} = MeetingTypeQueries.clear_payments_for_user(user_id)
+    if MeetingQueries.count_awaiting_payment_for_organizer(user_id) > 0 do
+      {:error, :pending_payments_exist}
+    else
+      Repo.transaction(fn ->
+        case ConnectAccountQueries.update(account, %{default_currency: currency}) do
+          {:ok, _updated} ->
+            {count, _rows} = MeetingTypeQueries.clear_payments_for_user(user_id)
 
-          if count > 0, do: :reset, else: :no_reset
+            if count > 0, do: :reset, else: :no_reset
 
-        {:error, reason} ->
-          Repo.rollback(reason)
-      end
-    end)
+          {:error, reason} ->
+            Repo.rollback(reason)
+        end
+      end)
+    end
   end
 
   # ---------------------------------------------------------------------------
