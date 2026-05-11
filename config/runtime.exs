@@ -564,6 +564,40 @@ if config_env() == :prod do
   config :tymeslot, :trial_period_days, parse_int.("TRIAL_PERIOD_DAYS", 7)
 end
 
+# Self-host opt-in for the meeting-payments feature. Off by default — flipping
+# MEETING_PAYMENTS_ENABLED=true requires the instance owner to register their
+# instance as a Stripe platform and supply STRIPE_SECRET_KEY plus
+# STRIPE_CONNECT_WEBHOOK_SECRET above. The optional application fee is taken
+# from each charge in basis points (0–10000); defaults to 0 so no platform cut
+# is taken unless the operator explicitly sets one.
+case String.downcase(System.get_env("MEETING_PAYMENTS_ENABLED", "false")) do
+  truthy when truthy in ["true", "1", "yes"] ->
+    config :tymeslot, :meeting_payments_enabled, true
+
+  _ ->
+    :ok
+end
+
+case System.get_env("MEETING_PAYMENTS_APPLICATION_FEE_BP") do
+  nil ->
+    :ok
+
+  "" ->
+    :ok
+
+  raw ->
+    case Integer.parse(raw) do
+      {bp, _} when bp >= 0 and bp <= 10_000 ->
+        config :tymeslot, :payment_application_fee_bp, bp
+
+      _other ->
+        raise """
+        MEETING_PAYMENTS_APPLICATION_FEE_BP must be an integer between 0 and 10000
+        (basis points: 100 = 1%). Got: #{inspect(raw)}
+        """
+    end
+end
+
 # Development/test environment Stripe configuration
 if config_env() in [:dev, :test] do
   config :stripity_stripe,
