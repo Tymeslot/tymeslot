@@ -17,6 +17,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
+  alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Telemetry
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Notifications.Events
@@ -70,6 +71,13 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   defp run(payment, event_id, object) do
     case Repo.transaction(fn -> run_in_transaction(payment, event_id, object) end) do
       {:ok, {:advanced, paid, meeting}} ->
+        # Backfill stripe_charge_id outside the transaction — this requires a
+        # Stripe API call (expanding payment_intent.latest_charge) which must
+        # not be made inside a DB transaction.  Charge handlers (refund/dispute)
+        # all look up the row via stripe_charge_id so this field is required for
+        # them to work.  A failure here is logged but does not roll back the
+        # payment transition; the reconciler can retry if needed.
+        backfill_charge_id(paid, object)
         broadcast_paid(meeting.id)
         enqueue_post_payment_effects(meeting, paid)
         :ok
@@ -86,6 +94,46 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
         {:error, reason}
     end
   end
+
+  # The checkout.session.completed event carries payment_intent as a bare ID.
+  # The actual charge ID lives on PaymentIntent.latest_charge, which requires
+  # a Stripe API expansion call.  We write it as a separate DB update so the
+  # charge.refunded / charge.dispute.* handlers can look up the row.
+  defp backfill_charge_id(payment, object) do
+    with intent_id when is_binary(intent_id) <- object["payment_intent"],
+         {:ok, intent} <-
+           StripeAdapter.retrieve_payment_intent(intent_id,
+             connect_account: payment.stripe_account_id
+           ),
+         charge_id when is_binary(charge_id) <- extract_charge_id(intent) do
+      case BookingPaymentQueries.update(payment, %{stripe_charge_id: charge_id}) do
+        {:ok, _updated} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.error("checkout.session.completed: failed to persist stripe_charge_id",
+            payment_id: payment.id,
+            reason: inspect(reason)
+          )
+      end
+    else
+      nil ->
+        Logger.warning("checkout.session.completed: charge ID not available on payment intent",
+          payment_id: payment.id
+        )
+
+      {:error, reason} ->
+        Logger.error(
+          "checkout.session.completed: failed to retrieve payment intent for charge id",
+          payment_id: payment.id,
+          reason: inspect(reason)
+        )
+    end
+  end
+
+  defp extract_charge_id(%{"latest_charge" => %{"id" => id}}) when is_binary(id), do: id
+  defp extract_charge_id(%{"latest_charge" => id}) when is_binary(id), do: id
+  defp extract_charge_id(_other), do: nil
 
   defp run_in_transaction(payment, event_id, object) do
     with {:ok, meeting} <- fetch_meeting(payment.meeting_id),

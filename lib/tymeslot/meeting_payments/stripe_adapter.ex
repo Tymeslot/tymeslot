@@ -22,6 +22,8 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
               {:ok, map()} | {:error, term()}
   @callback retrieve_checkout_session(session_id :: String.t(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
+  @callback retrieve_payment_intent(intent_id :: String.t(), opts :: keyword()) ::
+              {:ok, map()} | {:error, term()}
   @callback retrieve_charge(charge_id :: String.t(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
   @callback create_refund(params :: map(), opts :: keyword()) ::
@@ -61,6 +63,13 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   def retrieve_checkout_session(id, opts \\ []) do
     Telemetry.span_stripe(:retrieve_checkout_session, opts[:connect_account], fn ->
       impl().retrieve_checkout_session(id, opts)
+    end)
+  end
+
+  @spec retrieve_payment_intent(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
+  def retrieve_payment_intent(id, opts \\ []) do
+    Telemetry.span_stripe(:retrieve_payment_intent, opts[:connect_account], fn ->
+      impl().retrieve_payment_intent(id, opts)
     end)
   end
 
@@ -104,6 +113,7 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
   alias Stripe.AccountLink
   alias Stripe.Charge
   alias Stripe.Checkout.Session, as: CheckoutSession
+  alias Stripe.PaymentIntent
   alias Stripe.Refund
   alias Stripe.Webhook
   alias Tymeslot.MeetingPayments.StripeAdapter
@@ -122,6 +132,10 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
 
   @impl StripeAdapter
   def retrieve_checkout_session(id, opts), do: CheckoutSession.retrieve(id, %{}, opts)
+
+  @impl StripeAdapter
+  def retrieve_payment_intent(id, opts),
+    do: PaymentIntent.retrieve(id, %{expand: ["latest_charge"]}, opts)
 
   @impl StripeAdapter
   def retrieve_charge(id, opts), do: Charge.retrieve(id, %{}, opts)
