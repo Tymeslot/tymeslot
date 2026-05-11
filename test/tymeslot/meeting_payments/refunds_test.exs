@@ -130,10 +130,22 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
       assert {:ok, 2999} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "29.99"})
     end
 
+    test "partial type returns :invalid_amount for scientific notation" do
+      payment = payment_stub()
+      assert {:error, :invalid_amount} =
+               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "1e2"})
+    end
+
     test "partial type returns :invalid_amount for negative amount" do
       payment = payment_stub()
       assert {:error, :invalid_amount} =
                Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "-1"})
+    end
+
+    test "partial type returns :invalid_amount for sub-cent precision" do
+      payment = payment_stub()
+      assert {:error, :invalid_amount} =
+               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "10.005"})
     end
 
     test "partial type returns :exceeds_remaining when amount is too large" do

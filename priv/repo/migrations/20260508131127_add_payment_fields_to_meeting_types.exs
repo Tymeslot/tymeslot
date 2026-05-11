@@ -9,7 +9,7 @@ defmodule Tymeslot.Repo.Migrations.AddPaymentFieldsToMeetingTypes do
   def change do
     alter table(:meeting_types) do
       add(:payment_required, :boolean, default: false, null: false)
-      add(:price_cents, :integer)
+      add(:price_cents, :bigint)
       add(:is_archived, :boolean, default: false, null: false)
     end
 

@@ -29,13 +29,13 @@ defmodule Tymeslot.Repo.Migrations.CreateBookingPayments do
       add(:stripe_payment_intent_id, :string)
       add(:stripe_charge_id, :string)
 
-      add(:amount_cents, :integer, null: false)
+      add(:amount_cents, :bigint, null: false)
       add(:currency, :string, size: 3, null: false)
-      add(:application_fee_cents, :integer, null: false)
+      add(:application_fee_cents, :bigint, null: false)
 
       add(:status, :string, null: false, default: "pending")
       add(:paid_at, :utc_datetime)
-      add(:refunded_amount_cents, :integer, null: false, default: 0)
+      add(:refunded_amount_cents, :bigint, null: false, default: 0)
 
       add(:last_event_id, :string)
       add(:host_deleted_at, :utc_datetime)

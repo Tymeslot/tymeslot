@@ -17,8 +17,6 @@ defmodule Tymeslot.MeetingPayments.ApplicationFee do
   def calculate(price_cents, bp)
       when is_integer(price_cents) and is_integer(bp) and
              price_cents > 0 and bp > 0 do
-    raw = price_cents * bp / 10_000
-    ceil = trunc(:math.ceil(raw))
-    max(ceil, 1)
+    max(div(price_cents * bp + 9_999, 10_000), 1)
   end
 end

@@ -221,14 +221,53 @@ defmodule Tymeslot.MeetingPayments.Refunds do
     end
   end
 
+  # Parses a decimal-string amount (e.g. "29.99" or "10,00") into a positive
+  # integer number of cents. Only accepts canonical INT or INT.NN forms — no
+  # scientific notation, no sub-cent precision, no non-positive values.
   defp parse_amount_cents(amount) when is_binary(amount) do
     cleaned = amount |> String.replace(",", ".") |> String.trim()
 
-    case Float.parse(cleaned) do
-      {decimal, ""} when decimal > 0 -> {:ok, round(decimal * 100)}
-      _other -> :error
+    # Reject immediately if the string contains a scientific-notation marker.
+    if String.contains?(cleaned, ["e", "E"]) do
+      :error
+    else
+      parse_canonical(cleaned)
     end
   end
 
   defp parse_amount_cents(_amount), do: :error
+
+  defp parse_canonical(str) do
+    case String.split(str, ".") do
+      [major_str] ->
+        with {:ok, major} <- parse_non_negative_integer(major_str),
+             true <- major > 0 do
+          {:ok, major * 100}
+        else
+          _ -> :error
+        end
+
+      [major_str, minor_str] when byte_size(minor_str) == 2 ->
+        with {:ok, major} <- parse_non_negative_integer(major_str),
+             {:ok, minor} <- parse_non_negative_integer(minor_str),
+             cents = major * 100 + minor,
+             true <- cents > 0 do
+          {:ok, cents}
+        else
+          _ -> :error
+        end
+
+      _other ->
+        :error
+    end
+  end
+
+  defp parse_non_negative_integer(str) when is_binary(str) and str != "" do
+    case Integer.parse(str) do
+      {n, ""} when n >= 0 -> {:ok, n}
+      _ -> :error
+    end
+  end
+
+  defp parse_non_negative_integer(_str), do: :error
 end
