@@ -27,7 +27,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
     user = socket.assigns.current_user
 
     case Features.check_access(user.id, :meeting_payments) do
-      :ok ->
+      access when access == :ok or access == {:error, :stripe_required} ->
         {:ok,
          socket
          |> assign(:page_title, "Payments")
@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
          |> assign(:refund_submitting, false)
          |> assign_payments_state(user)}
 
-      {:error, :insufficient_plan} ->
+      {:error, plan_error} when plan_error in [:insufficient_plan, :pro_required] ->
         {:ok,
          socket
          |> put_flash(:error, "Meeting payments require an upgraded plan.")

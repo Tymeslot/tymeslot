@@ -8,5 +8,7 @@ defmodule Tymeslot.Features.CheckerBehaviour do
   """
 
   @callback check_access(user_id :: integer(), feature :: atom()) ::
-              :ok | {:error, :insufficient_plan | :feature_disabled}
+              :ok
+              | {:error,
+                 :insufficient_plan | :feature_disabled | :pro_required | :stripe_required}
 end

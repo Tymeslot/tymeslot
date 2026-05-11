@@ -11,7 +11,8 @@ defmodule Tymeslot.Features.DefaultAccessChecker do
   @behaviour Tymeslot.Features.CheckerBehaviour
 
   @impl Tymeslot.Features.CheckerBehaviour
-  @spec check_access(integer(), atom()) :: :ok | {:error, :feature_disabled}
+  @spec check_access(integer(), atom()) ::
+          :ok | {:error, :feature_disabled}
   def check_access(_user_id, :meeting_payments) do
     if Application.get_env(:tymeslot, :meeting_payments_enabled, false),
       do: :ok,
