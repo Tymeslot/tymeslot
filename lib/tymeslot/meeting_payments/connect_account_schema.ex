@@ -29,7 +29,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
     field :last_synced_at, :utc_datetime
     field :last_account_event_at, :utc_datetime
     field :deleted_at, :utc_datetime
-    field :status, :string, default: "active"
+    field :status, :string, default: "creating"
 
     belongs_to :user, UserSchema, type: :id
     timestamps()

@@ -6,6 +6,23 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchemaTest do
 
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
 
+  test "default status is 'creating' when none is supplied" do
+    # Verifies I-4: both the Ecto schema default and the DB column default are
+    # aligned to "creating" so any insert path that omits status is safe.
+    user = insert(:user)
+
+    {:ok, account} =
+      %ConnectAccountSchema{}
+      |> ConnectAccountSchema.changeset(%{user_id: user.id, country: "ch"})
+      |> Repo.insert()
+
+    assert account.status == "creating"
+
+    # Reload from DB to confirm the column default (not just the in-memory struct).
+    reloaded = Repo.get!(ConnectAccountSchema, account.id)
+    assert reloaded.status == "creating"
+  end
+
   test "creating placeholder is valid" do
     cs =
       ConnectAccountSchema.changeset(%ConnectAccountSchema{}, %{
