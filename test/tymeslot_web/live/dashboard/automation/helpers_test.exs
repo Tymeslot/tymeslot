@@ -41,6 +41,53 @@ defmodule TymeslotWeb.Dashboard.Automation.HelpersTest do
     end
   end
 
+  describe "handle_feature_access_error/2" do
+    setup do
+      socket = %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}}}
+      {:ok, socket: socket}
+    end
+
+    test "returns socket unchanged for :insufficient_plan and sends error flash", %{socket: socket} do
+      result = Helpers.handle_feature_access_error(socket, :insufficient_plan)
+      assert result == socket
+      assert_received {:flash, {:error, "Automation is available on Pro plans."}}
+    end
+
+    test "returns socket unchanged for :pro_required and sends error flash", %{socket: socket} do
+      result = Helpers.handle_feature_access_error(socket, :pro_required)
+      assert result == socket
+      assert_received {:flash, {:error, "This automation feature is available on the Pro plan."}}
+    end
+
+    test "returns socket unchanged for :feature_disabled and sends error flash", %{socket: socket} do
+      result = Helpers.handle_feature_access_error(socket, :feature_disabled)
+      assert result == socket
+      assert_received {:flash, {:error, "This automation feature is available on the Pro plan."}}
+    end
+
+    test "returns socket unchanged for :stripe_required and sends error flash", %{socket: socket} do
+      result = Helpers.handle_feature_access_error(socket, :stripe_required)
+      assert result == socket
+      assert_received {:flash, {:error, "Connect a Stripe account to use this automation."}}
+    end
+
+    test "returns socket unchanged for :feature_access_checker_failed and sends error flash", %{
+      socket: socket
+    } do
+      result = Helpers.handle_feature_access_error(socket, :feature_access_checker_failed)
+      assert result == socket
+
+      assert_received {:flash,
+                       {:error, "Unable to verify subscription status. Please try again."}}
+    end
+
+    test "catch-all clause handles unknown atom and sends generic error flash", %{socket: socket} do
+      result = Helpers.handle_feature_access_error(socket, :some_future_reason)
+      assert result == socket
+      assert_received {:flash, {:error, "Unable to perform this action. Please try again."}}
+    end
+  end
+
   describe "format_changeset_errors/1" do
     test "formats changeset errors into a flat map" do
       import Ecto.Changeset
