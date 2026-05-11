@@ -20,7 +20,7 @@ defmodule Tymeslot.Repo.Migrations.CreateBookingPayments do
       add(:host_user_id, :integer, null: false)
       add(:host_email, :string, null: false)
       add(:host_name, :string)
-      add(:attendee_email, :string, null: false)
+      add(:attendee_email, :string)
       add(:attendee_name, :string)
       add(:meeting_type_name, :string, null: false)
       add(:booking_theme_id, :string)

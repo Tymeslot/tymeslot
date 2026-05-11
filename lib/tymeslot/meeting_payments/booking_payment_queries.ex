@@ -135,21 +135,14 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
 
   @spec anonymise_for_host(integer(), DateTime.t()) :: {non_neg_integer(), nil}
   def anonymise_for_host(host_user_id, now) do
-    hash =
-      :crypto.hash(:sha256, to_string(host_user_id))
-      |> Base.encode16(case: :lower)
-      |> binary_part(0, 8)
-
-    deleted_email = "deleted-#{hash}@deleted.local"
-
     query =
       from b in BookingPaymentSchema,
         where: b.host_user_id == ^host_user_id and is_nil(b.host_deleted_at)
 
     Repo.update_all(query,
       set: [
-        attendee_email: deleted_email,
-        attendee_name: "Deleted Attendee",
+        attendee_email: nil,
+        attendee_name: nil,
         meeting_type_name: "[deleted]",
         booking_theme_id: nil,
         host_deleted_at: now,

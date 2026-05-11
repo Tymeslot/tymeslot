@@ -206,11 +206,11 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       assert retained_bp.host_user_id == user.id, "booking_payment.host_user_id must be retained"
       assert retained_bp.host_deleted_at != nil, "booking_payment.host_deleted_at must be set"
 
-      assert retained_bp.attendee_email =~ "@deleted.local",
-             "attendee_email must be scrubbed"
+      assert is_nil(retained_bp.attendee_email),
+             "attendee_email must be scrubbed to nil"
 
-      assert retained_bp.attendee_name == "Deleted Attendee",
-             "attendee_name must be scrubbed"
+      assert is_nil(retained_bp.attendee_name),
+             "attendee_name must be scrubbed to nil"
 
       assert retained_bp.meeting_type_name == "[deleted]",
              "meeting_type_name must be scrubbed"

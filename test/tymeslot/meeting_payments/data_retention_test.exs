@@ -36,9 +36,9 @@ defmodule Tymeslot.MeetingPayments.DataRetentionTest do
       assert bp.host_email == "host@example.com"
       assert bp.host_name == "Host Person"
       assert bp.host_user_id == user.id
-      # attendee PII scrubbed
-      assert bp.attendee_email =~ "@deleted.local"
-      assert bp.attendee_name == "Deleted Attendee"
+      # attendee PII scrubbed to nil
+      assert is_nil(bp.attendee_email)
+      assert is_nil(bp.attendee_name)
       assert bp.meeting_type_name == "[deleted]"
       assert bp.host_deleted_at != nil
 

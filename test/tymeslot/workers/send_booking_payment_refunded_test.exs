@@ -69,5 +69,14 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
       assert {:discard, "missing booking_payment_id"} =
                perform_job(SendBookingPaymentRefunded, %{})
     end
+
+    test "discards when attendee_email has been anonymised to nil" do
+      payment = insert_payment(%{attendee_email: nil})
+
+      assert {:discard, "missing attendee_email"} =
+               perform_job(SendBookingPaymentRefunded, %{
+                 "booking_payment_id" => payment.id
+               })
+    end
   end
 end

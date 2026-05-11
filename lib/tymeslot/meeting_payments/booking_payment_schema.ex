@@ -81,13 +81,13 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentSchema do
 
   @required_on_create ~w(
     stripe_account_id host_user_id host_email
-    attendee_email meeting_type_name
+    meeting_type_name
     amount_cents currency application_fee_cents
   )a
 
   @castable @required_on_create ++
               ~w(
-                meeting_id host_name attendee_name booking_theme_id
+                meeting_id host_name attendee_email attendee_name booking_theme_id
                 stripe_checkout_session_id stripe_payment_intent_id stripe_charge_id
                 status paid_at refunded_amount_cents last_event_id host_deleted_at
               )a
