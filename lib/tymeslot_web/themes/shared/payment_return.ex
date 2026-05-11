@@ -80,26 +80,29 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
           theme_slug :: String.t()
         ) :: {:ok, LiveView.Socket.t()}
   def mount_payment_processing(%{"meeting_id" => meeting_id} = params, socket, theme_slug) do
-    case authorize(meeting_id, theme_slug, params["session_id"]) do
-      {:ok, %{meeting: meeting, payment: payment}} ->
-        if LiveView.connected?(socket) do
+    if LiveView.connected?(socket) do
+      case authorize(meeting_id, theme_slug, params["session_id"]) do
+        {:ok, %{meeting: meeting, payment: payment}} ->
           PubSub.subscribe(Tymeslot.PubSub, topic(meeting.id))
-        end
 
-        socket =
-          socket
-          |> Component.assign(:meeting, meeting)
-          |> Component.assign(:payment, payment)
+          socket =
+            socket
+            |> Component.assign(:loading, false)
+            |> Component.assign(:meeting, meeting)
+            |> Component.assign(:payment, payment)
 
-        {:ok, socket}
+          {:ok, socket}
 
-      {:error, _reason} ->
-        socket =
-          socket
-          |> LiveView.put_flash(:error, "Payment not found.")
-          |> LiveView.redirect(to: "/")
+        {:error, _reason} ->
+          socket =
+            socket
+            |> LiveView.put_flash(:error, "Payment not found.")
+            |> LiveView.redirect(to: "/")
 
-        {:ok, socket}
+          {:ok, socket}
+      end
+    else
+      {:ok, Component.assign(socket, loading: true, meeting: nil, payment: nil)}
     end
   end
 

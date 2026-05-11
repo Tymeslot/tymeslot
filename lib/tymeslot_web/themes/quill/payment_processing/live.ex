@@ -30,27 +30,24 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingLive do
   def render(assigns) do
     ~H"""
     <div class="quill-theme-wrapper theme-1" data-testid="quill-payment-processing">
-      <div class="main-gradient theme-grid min-h-screen flex items-center justify-center px-4 py-8">
-        <div class="w-full max-w-2xl">
-          <div
-            class="glass-morphism-card"
-            style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 1rem;"
-          >
-            <div class="p-8 text-center">
-              <%= if @payment.status == "paid" do %>
-                <h1 class="text-3xl font-bold mb-3" style="color: white;">
+      <div class="main-gradient theme-grid payment-page-layout">
+        <div class="payment-page-inner">
+          <div class="payment-page-card">
+            <div class="payment-page-card-body">
+              <%= if !@loading && @payment.status == "paid" do %>
+                <h1 class="payment-page-heading">
                   {gettext("Booking confirmed")}
                 </h1>
-                <p class="text-lg" style="color: rgba(255,255,255,0.9);">
+                <p class="payment-page-body">
                   {gettext("Thank you, your booking is confirmed for %{date}.",
                     date: format_dt(@meeting.start_time)
                   )}
                 </p>
               <% else %>
-                <h1 class="text-3xl font-bold mb-3" style="color: white;">
+                <h1 class="payment-page-heading">
                   {gettext("Confirming your payment…")}
                 </h1>
-                <p class="text-lg" style="color: rgba(255,255,255,0.9);">
+                <p class="payment-page-body">
                   {gettext("Please wait while we confirm your booking.")}
                 </p>
               <% end %>

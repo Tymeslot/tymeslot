@@ -1,0 +1,55 @@
+/* Payment Pages — post-Stripe-Checkout return pages (processing, cancelled)
+   Uses the same glassmorphism token system as the rest of the Quill theme.
+
+   Semantic text colours:
+   - .payment-page-heading  → white (full opacity) — primary display text
+   - .payment-page-body     → var(--text-opacity-medium-high) = rgba(255,255,255,0.9)
+     Chosen as the canonical "muted on dark" value; matches the existing
+     --text-opacity-medium-high token already defined in variables.css. */
+
+/* Full-viewport centred wrapper — replaces min-h-screen flex items-center
+   justify-center px-4 py-8 on .main-gradient.theme-grid */
+.payment-page-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--space-lg) var(--space-md);
+}
+
+/* Inner width constraint — replaces w-full max-w-2xl */
+.payment-page-inner {
+  width: 100%;
+  max-width: 42rem; /* ~672px — equivalent to Tailwind max-w-2xl */
+}
+
+/* Card surface — replaces the inline style="background: rgba(255,255,255,0.08);
+   border: 1px solid rgba(255,255,255,0.15); border-radius: 1rem;" */
+.payment-page-card {
+  background: var(--surface-very-light);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-radius: var(--radius-xl);
+}
+
+/* Card body padding — replaces p-8 text-center */
+.payment-page-card-body {
+  padding: var(--space-2xl);
+  text-align: center;
+}
+
+/* Display heading — replaces text-3xl font-bold + style="color: white;" */
+.payment-page-heading {
+  font-size: var(--theme-font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-opacity-high);
+  margin-bottom: var(--space-sm);
+  margin-top: 0;
+}
+
+/* Body text — replaces text-lg + style="color: rgba(255,255,255,0.9);" */
+.payment-page-body {
+  font-size: var(--theme-font-size-lg);
+  color: var(--text-opacity-medium-high);
+  margin: 0;
+}

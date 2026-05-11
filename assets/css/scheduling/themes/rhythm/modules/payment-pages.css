@@ -1,0 +1,59 @@
+/* Payment Pages — post-Stripe-Checkout return pages (processing, cancelled)
+   Uses the same sliding-box token system as the rest of the Rhythm theme.
+
+   Semantic text colours:
+   - .payment-page-heading  → white (full opacity) — primary display text
+   - .payment-page-body     → var(--text-opacity-medium-high) = rgba(255,255,255,0.9)
+     Standardised to match Quill. The original Rhythm value was 0.85; both
+     themes now share a single canonical "muted on dark" opacity (0.9) via the
+     --text-opacity-medium-high token, matching variables.css. No documented
+     design reason existed for the 0.85 vs 0.9 divergence. */
+
+/* Full-viewport centred wrapper — replaces min-h-screen flex items-center
+   justify-center px-4 py-8 on .rhythm-slide-container */
+.payment-page-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--space-lg) var(--space-md);
+}
+
+/* Inner width constraint — replaces w-full max-w-xl */
+.payment-page-inner {
+  width: 100%;
+  max-width: 36rem; /* ~576px — equivalent to Tailwind max-w-xl */
+}
+
+/* Card surface — replaces the inline style="background: rgba(0,0,0,0.55);
+   border: 1px solid rgba(255,255,255,0.12); border-radius: 1rem;" */
+.payment-page-card {
+  background: rgba(0, 0, 0, var(--box-opacity)); /* --box-opacity = 0.55 */
+  border: var(--border-width-thin) solid var(--border-subtle);
+  border-radius: var(--radius-2xl);
+}
+
+/* Card body padding — replaces p-8 text-center */
+.payment-page-card-body {
+  padding: var(--space-2xl);
+  text-align: center;
+}
+
+/* Display heading — replaces text-3xl font-bold + style="color: white;" */
+.payment-page-heading {
+  font-size: var(--theme-font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  /* --text-opacity-high not defined in rhythm variables.css; use white directly */
+  color: white;
+  margin-bottom: var(--space-sm);
+  margin-top: 0;
+}
+
+/* Body text — replaces text-lg + style="color: rgba(255,255,255,0.85);"
+   Standardised to 0.9 opacity (see module header note). */
+.payment-page-body {
+  font-size: var(--theme-font-size-lg);
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+}

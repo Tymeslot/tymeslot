@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingTest do
   @moduletag :payments
   @moduletag :integration
 
+  import Phoenix.ConnTest
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
@@ -100,5 +101,44 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingTest do
 
     assert {:error, {:redirect, _info}} =
              live(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+  end
+
+  test "dead render does not load page data", %{conn: conn, user: user} do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    insert(:booking_payment,
+      meeting: meeting,
+      host_user_id: user.id,
+      stripe_checkout_session_id: "cs_TEST"
+    )
+
+    ref = make_ref()
+    parent = self()
+    handler_id = "quill-payment-processing-dead-render-#{inspect(ref)}"
+    data_sources = ~w(meetings booking_payments)
+
+    :telemetry.attach(
+      handler_id,
+      [:tymeslot, :repo, :query],
+      fn _event, _measurements, %{source: source}, _config ->
+        if source in data_sources, do: send(parent, {:db_query, ref, source})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+
+    get(conn, ~p"/themes/quill/payment-processing/#{meeting.id}?session_id=cs_TEST")
+
+    received_sources =
+      Enum.flat_map(1..50, fn _ ->
+        receive do
+          {:db_query, ^ref, source} -> [source]
+        after
+          0 -> []
+        end
+      end)
+
+    assert received_sources == [], "Data-loading queries fired during dead render: #{inspect(received_sources)}"
   end
 end

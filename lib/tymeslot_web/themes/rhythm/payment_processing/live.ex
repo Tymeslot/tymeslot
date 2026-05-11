@@ -28,29 +28,28 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingLive do
   def render(assigns) do
     ~H"""
     <div class="rhythm-theme-wrapper theme-2" data-testid="rhythm-payment-processing">
-      <div class="rhythm-slide-container min-h-screen flex items-center justify-center px-4 py-8">
-        <div
-          class="w-full max-w-xl rhythm-card"
-          style="background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.12); border-radius: 1rem;"
-        >
-          <div class="p-8 text-center">
-            <%= if @payment.status == "paid" do %>
-              <h1 class="text-3xl font-bold mb-3" style="color: white;">
-                {gettext("Booking confirmed")}
-              </h1>
-              <p class="text-lg" style="color: rgba(255,255,255,0.85);">
-                {gettext("Thank you, your booking is confirmed for %{date}.",
-                  date: format_dt(@meeting.start_time)
-                )}
-              </p>
-            <% else %>
-              <h1 class="text-3xl font-bold mb-3" style="color: white;">
-                {gettext("Confirming your payment…")}
-              </h1>
-              <p class="text-lg" style="color: rgba(255,255,255,0.85);">
-                {gettext("Please wait while we confirm your booking.")}
-              </p>
-            <% end %>
+      <div class="payment-page-layout">
+        <div class="payment-page-inner">
+          <div class="payment-page-card">
+            <div class="payment-page-card-body">
+              <%= if !@loading && @payment.status == "paid" do %>
+                <h1 class="payment-page-heading">
+                  {gettext("Booking confirmed")}
+                </h1>
+                <p class="payment-page-body">
+                  {gettext("Thank you, your booking is confirmed for %{date}.",
+                    date: format_dt(@meeting.start_time)
+                  )}
+                </p>
+              <% else %>
+                <h1 class="payment-page-heading">
+                  {gettext("Confirming your payment…")}
+                </h1>
+                <p class="payment-page-body">
+                  {gettext("Please wait while we confirm your booking.")}
+                </p>
+              <% end %>
+            </div>
           </div>
         </div>
       </div>

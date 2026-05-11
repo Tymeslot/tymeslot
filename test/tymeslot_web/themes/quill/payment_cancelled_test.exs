@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Quill.PaymentCancelledTest do
   @moduletag :payments
   @moduletag :integration
 
+  import Phoenix.ConnTest
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
 
@@ -41,5 +42,29 @@ defmodule TymeslotWeb.Themes.Quill.PaymentCancelledTest do
 
     assert {:error, {:redirect, %{to: "/"}}} =
              live(conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")
+  end
+
+  test "dead render does not load page data", %{conn: conn, user: user} do
+    meeting = insert(:meeting, organizer_user_id: user.id, status: "awaiting_payment")
+
+    ref = make_ref()
+    parent = self()
+    handler_id = "quill-payment-cancelled-dead-render-#{inspect(ref)}"
+    data_sources = ~w(meetings booking_payments)
+
+    :telemetry.attach(
+      handler_id,
+      [:tymeslot, :repo, :query],
+      fn _event, _measurements, %{source: source}, _config ->
+        if source in data_sources, do: send(parent, {:db_query, ref, source})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler_id) end)
+
+    get(conn, ~p"/themes/quill/payment-cancelled/#{meeting.id}")
+
+    refute_received {:db_query, ^ref, _source}, "Data-loading query fired during dead render"
   end
 end

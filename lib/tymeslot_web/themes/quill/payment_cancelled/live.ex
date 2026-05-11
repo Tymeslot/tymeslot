@@ -11,16 +11,21 @@ defmodule TymeslotWeb.Themes.Quill.PaymentCancelledLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Phoenix.LiveView
   alias TymeslotWeb.Themes.Shared.PaymentReturn
 
   @impl Phoenix.LiveView
   def mount(%{"meeting_id" => meeting_id}, _session, socket) do
-    case PaymentReturn.lookup_for_cancel(meeting_id, "quill") do
-      {:ok, %{meeting: meeting}} ->
-        {:ok, assign(socket, :meeting, meeting)}
+    if LiveView.connected?(socket) do
+      case PaymentReturn.lookup_for_cancel(meeting_id, "quill") do
+        {:ok, %{meeting: meeting}} ->
+          {:ok, assign(socket, loading: false, meeting: meeting)}
 
-      {:error, _reason} ->
-        {:ok, redirect(socket, to: ~p"/")}
+        {:error, _reason} ->
+          {:ok, redirect(socket, to: ~p"/")}
+      end
+    else
+      {:ok, assign(socket, loading: true, meeting: nil)}
     end
   end
 
@@ -28,17 +33,14 @@ defmodule TymeslotWeb.Themes.Quill.PaymentCancelledLive do
   def render(assigns) do
     ~H"""
     <div class="quill-theme-wrapper theme-1" data-testid="quill-payment-cancelled">
-      <div class="main-gradient theme-grid min-h-screen flex items-center justify-center px-4 py-8">
-        <div class="w-full max-w-2xl">
-          <div
-            class="glass-morphism-card"
-            style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 1rem;"
-          >
-            <div class="p-8 text-center">
-              <h1 class="text-3xl font-bold mb-3" style="color: white;">
+      <div class="main-gradient theme-grid payment-page-layout">
+        <div class="payment-page-inner">
+          <div class="payment-page-card">
+            <div class="payment-page-card-body">
+              <h1 class="payment-page-heading">
                 {gettext("Payment cancelled")}
               </h1>
-              <p class="text-lg" style="color: rgba(255,255,255,0.9);">
+              <p class="payment-page-body">
                 {gettext(
                   "Your booking is not confirmed. You can return and try again at any time."
                 )}
