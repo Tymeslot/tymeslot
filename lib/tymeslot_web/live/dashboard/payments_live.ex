@@ -12,8 +12,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   alias Tymeslot.Features
   alias Tymeslot.MeetingPayments
   alias TymeslotWeb.Components.CoreComponents
-
-  @refund_window_days 60
+  alias TymeslotWeb.Components.PaymentHelpers
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -93,7 +92,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
     account = MeetingPayments.get_connect_account_for_user(user.id)
     payments = MeetingPayments.list_payments_for_host(user.id)
     stats = MeetingPayments.lifetime_stats_for_host(user.id)
-    pending_count = Enum.count(payments, &(&1.status == "pending"))
+    pending_count = MeetingPayments.count_pending_payments_for_host(user.id)
 
     socket
     |> assign(:connect_account, account)
@@ -155,6 +154,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
            "Stripe account disconnected. #{n} pending #{noun} cancelled."
          )
          |> assign_payments_state(user)}
+
+      {:error, _reason} ->
+        {:noreply,
+         put_flash(socket, :error, "Could not disconnect Stripe. Please try again.")}
     end
   end
 
@@ -204,7 +207,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
       payment.host_user_id != user.id ->
         {:noreply, socket}
 
-      not can_refund?(payment) ->
+      not MeetingPayments.refundable?(payment) ->
         {:noreply,
          put_flash(
            socket,
@@ -251,15 +254,19 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   end
 
   defp do_submit_refund(socket, payment, params) do
-    case parse_refund_amount(payment, params) do
+    case MeetingPayments.parse_refund_amount(payment, params) do
       {:ok, amount_cents} ->
         socket = assign(socket, :refund_submitting, true)
         process_refund(socket, payment, amount_cents)
 
-      {:error, message} ->
-        {:noreply, put_flash(socket, :error, message)}
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, parse_refund_error_message(reason))}
     end
   end
+
+  defp parse_refund_error_message(:choose_type), do: "Choose a refund type."
+  defp parse_refund_error_message(:invalid_amount), do: "Enter a valid refund amount."
+  defp parse_refund_error_message(:exceeds_remaining), do: "Amount exceeds the remaining refundable balance."
 
   defp process_refund(socket, payment, amount_cents) do
     user = socket.assigns.current_user
@@ -280,37 +287,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
          |> assign(:refund_submitting, false)}
     end
   end
-
-  defp parse_refund_amount(payment, %{"refund_type" => "full"}) do
-    {:ok, refundable_remaining(payment)}
-  end
-
-  defp parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => amount}) do
-    case parse_amount_cents(amount) do
-      {:ok, cents} when cents > 0 ->
-        if cents <= refundable_remaining(payment) do
-          {:ok, cents}
-        else
-          {:error, "Amount exceeds the remaining refundable balance."}
-        end
-
-      _other ->
-        {:error, "Enter a valid refund amount."}
-    end
-  end
-
-  defp parse_refund_amount(_payment, _params), do: {:error, "Choose a refund type."}
-
-  defp parse_amount_cents(amount) when is_binary(amount) do
-    cleaned = amount |> String.replace(",", ".") |> String.trim()
-
-    case Float.parse(cleaned) do
-      {decimal, ""} when decimal > 0 -> {:ok, round(decimal * 100)}
-      _other -> :error
-    end
-  end
-
-  defp parse_amount_cents(_amount), do: :error
 
   defp refund_error_message(:outside_refund_window),
     do: "Refunds older than 60 days must be processed in your Stripe dashboard."
@@ -342,18 +318,13 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
         otherwise be charged at the new one.
       </p>
       <form phx-change="change_currency">
-        <select
+        <CoreComponents.input
+          type="select"
           name="currency"
-          class="rounded-token-md border border-tymeslot-200 px-3 py-2"
-        >
-          <option
-            :for={code <- @currencies}
-            value={code}
-            selected={code == @account.default_currency}
-          >
-            {String.upcase(code)}
-          </option>
-        </select>
+          label="Default currency"
+          options={Enum.map(@currencies, fn code -> {String.upcase(code), code} end)}
+          value={@account.default_currency}
+        />
       </form>
     </div>
     """
@@ -402,7 +373,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
             <td class="p-2 text-token-sm">{format_status(p.status)}</td>
             <td class="p-2 text-right">
               <button
-                :if={can_refund?(p) and not connect_account_deleted?(@account)}
+                :if={MeetingPayments.refundable?(p) and not connect_account_deleted?(@account)}
                 type="button"
                 class="text-token-sm text-tymeslot-700 underline"
                 phx-click="open_refund_modal"
@@ -447,7 +418,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
           </p>
           <p>
             Remaining refundable:
-            <strong>{format_amount(refundable_remaining(@payment), @payment.currency)}</strong>
+            <strong>{format_amount(MeetingPayments.refundable_remaining_cents(@payment), @payment.currency)}</strong>
           </p>
         </div>
 
@@ -469,7 +440,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
                 value="full"
                 checked
                 phx-click={Phoenix.LiveView.JS.set_attribute({"data-refund-type", "full"}, to: "#refund-form")}
-              /> Full refund ({format_amount(refundable_remaining(@payment), @payment.currency)})
+              /> Full refund ({format_amount(MeetingPayments.refundable_remaining_cents(@payment), @payment.currency)})
             </label>
             <label class="flex items-center gap-2 text-token-sm">
               <input
@@ -486,7 +457,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
             name="amount"
             label="Partial amount"
             min="0.01"
-            max={refundable_remaining(@payment) / 100}
+            max={MeetingPayments.refundable_remaining_cents(@payment) / 100}
             step="0.01"
             placeholder={"0.00 #{String.upcase(@payment.currency || "")}"}
           />
@@ -518,9 +489,6 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
 
   defp connect_account_deleted?(%{deleted_at: %DateTime{}}), do: true
   defp connect_account_deleted?(_account), do: false
-
-  defp refundable_remaining(payment),
-    do: max(payment.amount_cents - payment.refunded_amount_cents, 0)
 
   # `lifetime_stats` is only rendered when `connect_account` is non-nil (see
   # the `:if={not is_nil(@connect_account)}` guard in render/1), so
@@ -622,20 +590,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
 
   # Formatters ---------------------------------------------------------
 
-  defp format_amount(cents, currency) when is_integer(cents) do
-    amount = cents / 100
-    symbol = currency_symbol(currency)
-    "#{symbol}#{:erlang.float_to_binary(amount, decimals: 2)}"
-  end
-
-  defp format_amount(_cents, _currency), do: ""
-
-  defp currency_symbol("eur"), do: "€"
-  defp currency_symbol("usd"), do: "$"
-  defp currency_symbol("gbp"), do: "£"
-  defp currency_symbol("chf"), do: "CHF "
-  defp currency_symbol(other) when is_binary(other), do: String.upcase(other) <> " "
-  defp currency_symbol(_currency), do: ""
+  defp format_amount(cents, currency), do: PaymentHelpers.format_amount(cents, currency)
 
   defp format_status("paid"), do: "Paid"
   defp format_status("partially_refunded"), do: "Partially refunded"
@@ -645,15 +600,4 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   defp format_status("failed"), do: "Failed"
   defp format_status(other), do: other
 
-  # Used by the refund button rendering once the modal lands; kept here
-  # so the helper is colocated with the rest of the row presentation.
-  @doc false
-  @spec can_refund?(map()) :: boolean()
-  def can_refund?(%{status: status, paid_at: paid_at})
-      when status in ["paid", "partially_refunded"] do
-    not is_nil(paid_at) and
-      DateTime.diff(DateTime.utc_now(), paid_at, :day) <= @refund_window_days
-  end
-
-  def can_refund?(_payment), do: false
 end

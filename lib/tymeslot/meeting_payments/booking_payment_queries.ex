@@ -98,6 +98,22 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     Repo.all(query)
   end
 
+  @doc """
+  Returns the count of `pending` booking payments for a host.
+
+  Used by the payments dashboard to display an accurate pending count
+  regardless of the paginated window returned by `for_host/2`.
+  """
+  @spec count_pending_for_host(integer()) :: non_neg_integer()
+  def count_pending_for_host(host_user_id) do
+    query =
+      from b in BookingPaymentSchema,
+        where: b.host_user_id == ^host_user_id and b.status == "pending",
+        select: count(b.id)
+
+    Repo.one(query)
+  end
+
   @spec lifetime_stats(integer()) :: %{
           received: integer(),
           refunded: integer(),

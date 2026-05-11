@@ -366,21 +366,22 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   defp prepare_refund_action(payment, %{"cancel_refund_choice" => "partial"} = params) do
-    case parse_amount_cents(params["cancel_refund_amount"]) do
-      {:ok, cents} when cents > 0 ->
-        if cents <= refundable_remaining(payment) do
-          {:ok, {:refund, cents}}
-        else
-          {:error, "Refund amount exceeds the remaining refundable balance."}
-        end
+    raw = params["cancel_refund_amount"]
 
-      _other ->
+    case MeetingPayments.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => raw}) do
+      {:ok, cents} ->
+        {:ok, {:refund, cents}}
+
+      {:error, :exceeds_remaining} ->
+        {:error, "Refund amount exceeds the remaining refundable balance."}
+
+      {:error, _} ->
         {:error, "Enter a valid partial refund amount."}
     end
   end
 
   defp prepare_refund_action(payment, _params) do
-    case refundable_remaining(payment) do
+    case MeetingPayments.refundable_remaining_cents(payment) do
       remaining when remaining > 0 -> {:ok, {:refund, remaining}}
       _zero -> {:ok, :none}
     end
@@ -440,6 +441,11 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           }
         )
 
+        Logger.error("cancel_meeting_failed",
+          reason: inspect(reason),
+          meeting_id: meeting.id
+        )
+
         Flash.error(cancel_error_flash(reason))
         {:noreply, assign(socket, :cancelling_meeting, nil)}
     end
@@ -459,26 +465,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   defp cancel_success_flash(:none), do: "Meeting cancelled successfully"
 
-  defp cancel_error_flash({:refund_failed, reason}),
-    do: "Refund could not be issued: #{inspect(reason)}"
-
-  defp cancel_error_flash(reason), do: "Failed to cancel meeting: #{inspect(reason)}"
-
-  defp parse_amount_cents(amount) when is_binary(amount) do
-    cleaned = amount |> String.replace(",", ".") |> String.trim()
-
-    case Float.parse(cleaned) do
-      {decimal, ""} when decimal > 0 -> {:ok, round(decimal * 100)}
-      _other -> :error
-    end
-  end
-
-  defp parse_amount_cents(_amount), do: :error
-
-  defp refundable_remaining(%{amount_cents: amount, refunded_amount_cents: refunded}),
-    do: max(amount - refunded, 0)
-
-  defp refundable_remaining(_payment), do: 0
+  defp cancel_error_flash(_reason), do: "Failed to cancel meeting. Please try again."
 
   defp do_send_reschedule_request(socket) do
     meeting = socket.assigns.reschedule_request_modal_data
@@ -512,7 +499,12 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
           }
         )
 
-        Flash.error("Failed to send reschedule request: #{inspect(reason)}")
+        Logger.error("send_reschedule_request_failed",
+          reason: inspect(reason),
+          meeting_id: meeting.id
+        )
+
+        Flash.error("Failed to send reschedule request. Please try again.")
         {:noreply, assign(socket, :sending_reschedule, nil)}
     end
   end

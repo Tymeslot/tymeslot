@@ -66,7 +66,8 @@ defmodule Tymeslot.MeetingPayments do
   @doc """
   Soft-deletes the host's Stripe Connect account row.
   """
-  @spec disconnect(user :: %{id: integer()}) :: :ok
+  @spec disconnect(user :: %{id: integer()}) ::
+          {:ok, %{cancelled_count: non_neg_integer()}} | {:error, term()}
   defdelegate disconnect(user), to: ConnectAccounts
 
   @doc """
@@ -135,6 +136,16 @@ defmodule Tymeslot.MeetingPayments do
   @spec list_payments_for_host(integer(), keyword()) :: [booking_payment()]
   def list_payments_for_host(host_user_id, opts \\ []),
     do: BookingPaymentQueries.for_host(host_user_id, opts)
+
+  @doc """
+  Returns the total count of pending booking payments for a host.
+
+  Unlike `list_payments_for_host/2`, this is not bounded by any pagination
+  limit and always reflects the true pending count across all rows.
+  """
+  @spec count_pending_payments_for_host(integer()) :: non_neg_integer()
+  def count_pending_payments_for_host(host_user_id),
+    do: BookingPaymentQueries.count_pending_for_host(host_user_id)
 
   @doc """
   Returns lifetime payment totals for a host.
