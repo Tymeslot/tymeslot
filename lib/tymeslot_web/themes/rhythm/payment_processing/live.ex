@@ -10,7 +10,7 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingLive do
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments
   alias TymeslotWeb.Themes.Shared.PaymentReturn
 
   @impl Phoenix.LiveView
@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Themes.Rhythm.PaymentProcessingLive do
 
   @impl Phoenix.LiveView
   def handle_info(:paid, socket) do
-    payment = BookingPaymentQueries.by_meeting_id(socket.assigns.meeting.id)
+    payment = MeetingPayments.payment_for_meeting(socket.assigns.meeting.id)
     {:noreply, assign(socket, :payment, payment)}
   end
 

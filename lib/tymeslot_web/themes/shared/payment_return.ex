@@ -20,14 +20,14 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Phoenix.PubSub
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Profiles
   alias TymeslotWeb.Themes.Core.Registry, as: ThemeRegistry
 
   @type ctx :: %{
           meeting: Tymeslot.Meetings.MeetingSchema.t(),
-          payment: Tymeslot.MeetingPayments.BookingPaymentSchema.t(),
+          payment: MeetingPayments.booking_payment(),
           profile: Tymeslot.Profiles.ProfileSchema.t()
         }
 
@@ -128,7 +128,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
   end
 
   defp get_payment(meeting_id) do
-    case BookingPaymentQueries.by_meeting_id(meeting_id) do
+    case MeetingPayments.payment_for_meeting(meeting_id) do
       nil -> {:error, :payment_not_found}
       payment -> {:ok, payment}
     end

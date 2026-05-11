@@ -4,7 +4,6 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   """
   use Ecto.Schema
   import Ecto.Changeset
-  alias Tymeslot.MeetingPayments.Currency
   alias Tymeslot.Utils.ReminderUtils
   alias Tymeslot.Validation.Constraints
 
@@ -70,12 +69,14 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
   Changeset for creating/updating meeting types.
 
   Payment-related validation is performed when `payment_required` is true.
-  Because the host's currency and Stripe Connect status live on a separate
-  schema, callers pass them in via `opts`:
+  Because the host's payment context lives in a separate domain, callers
+  pass it in via `opts`:
 
-    * `:host_currency` (default `"eur"`) — host's payout currency.
     * `:host_charges_enabled` (default `false`) — whether the host's Stripe
       Connect account can accept charges.
+    * `:currency_minimum_cents` (default `50`) — minimum charge amount in
+      cents for the host's currency. Callers should retrieve this via
+      `Tymeslot.MeetingPayments.currency_minimum_cents/1`.
   """
   @spec changeset(Ecto.Schema.t(), map(), keyword()) :: Ecto.Changeset.t()
   def changeset(meeting_type, attrs, opts \\ []) do
@@ -199,12 +200,10 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
 
   defp validate_payment_fields(changeset, opts) do
     if get_field(changeset, :payment_required) do
-      currency = Keyword.get(opts, :host_currency, "eur")
-
       changeset
       |> validate_required([:price_cents])
       |> validate_charges_enabled(opts)
-      |> validate_currency_minimum(currency)
+      |> validate_currency_minimum(opts)
     else
       changeset
     end
@@ -218,8 +217,8 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
     end
   end
 
-  defp validate_currency_minimum(changeset, currency) do
-    minimum = Currency.minimum_cents(currency)
+  defp validate_currency_minimum(changeset, opts) do
+    minimum = Keyword.get(opts, :currency_minimum_cents, 50)
     validate_number(changeset, :price_cents, greater_than_or_equal_to: minimum)
   end
 

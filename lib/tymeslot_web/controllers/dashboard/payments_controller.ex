@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
 
   use TymeslotWeb, :controller
 
-  alias Tymeslot.MeetingPayments.ConnectAccounts
+  alias Tymeslot.MeetingPayments
 
   @default_country "ch"
 
@@ -15,7 +15,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsController do
   def connect(conn, _params) do
     user = conn.assigns.current_user
 
-    case ConnectAccounts.start_onboarding(user, country: country_for_user(user)) do
+    case MeetingPayments.start_onboarding(user, country: country_for_user(user)) do
       {:ok, %{url: url}} ->
         redirect(conn, external: url)
 

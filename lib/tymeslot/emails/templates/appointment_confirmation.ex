@@ -8,7 +8,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
   alias Tymeslot.Integrations.Calendar.IcsGenerator
   alias Tymeslot.Locales
-  alias Tymeslot.MeetingPayments.StripeAdapter
+  alias Tymeslot.MeetingPayments
 
   alias Tymeslot.Emails.Shared.{
     Callouts,
@@ -392,12 +392,9 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
   defp receipt_url_for(%{stripe_charge_id: charge_id, stripe_account_id: account_id})
        when is_binary(charge_id) and charge_id != "" and is_binary(account_id) and
               account_id != "" do
-    case StripeAdapter.retrieve_charge(charge_id, connect_account: account_id) do
-      {:ok, %{receipt_url: url}} when is_binary(url) and url != "" ->
+    case MeetingPayments.retrieve_charge_receipt_url(charge_id, account_id) do
+      {:ok, url} ->
         url
-
-      {:ok, _other} ->
-        nil
 
       {:error, reason} ->
         Logger.warning("Failed to fetch Stripe receipt URL for confirmation email",

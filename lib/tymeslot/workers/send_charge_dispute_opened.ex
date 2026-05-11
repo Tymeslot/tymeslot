@@ -18,13 +18,13 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Templates.ChargeDisputeOpened
   alias Tymeslot.Emails.Templates.ChargeDisputeOpened.DisputeContext
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Meetings.MeetingQueries
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"booking_payment_id" => booking_payment_id} = args}) do
-    case BookingPaymentQueries.get(booking_payment_id) do
+    case MeetingPayments.get_payment(booking_payment_id) do
       nil ->
         Logger.warning("Dispute email skipped — booking_payment not found",
           booking_payment_id: booking_payment_id

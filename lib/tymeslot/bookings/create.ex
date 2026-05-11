@@ -11,7 +11,7 @@ defmodule Tymeslot.Bookings.Create do
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Locales
-  alias Tymeslot.MeetingPayments.CheckoutSessions
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
@@ -292,7 +292,7 @@ defmodule Tymeslot.Bookings.Create do
     Repo.transaction(fn ->
       with {:ok, meeting} <- create_meeting(paid_attrs),
            {:ok, %{checkout_url: url}} <-
-             CheckoutSessions.create_session_for_booking(meeting) do
+             MeetingPayments.create_checkout_session(meeting) do
         %{meeting: meeting, checkout_url: url}
       else
         {:error, reason} -> Repo.rollback(reason)

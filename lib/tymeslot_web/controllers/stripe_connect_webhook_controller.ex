@@ -21,7 +21,7 @@ defmodule TymeslotWeb.StripeConnectWebhookController do
 
   require Logger
 
-  alias Tymeslot.MeetingPayments.Webhooks.WebhookProcessor
+  alias Tymeslot.MeetingPayments
 
   @spec handle(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def handle(conn, _params) do
@@ -47,7 +47,7 @@ defmodule TymeslotWeb.StripeConnectWebhookController do
   @permanent_errors [:signature_failure, :invalid_event]
 
   defp process(conn, payload, signature, secret) do
-    case WebhookProcessor.process(payload, signature, secret) do
+    case MeetingPayments.process_webhook(payload, signature, secret) do
       :ok ->
         send_resp(conn, 200, "")
 

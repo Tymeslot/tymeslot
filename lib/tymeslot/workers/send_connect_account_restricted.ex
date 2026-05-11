@@ -23,12 +23,12 @@ defmodule Tymeslot.Workers.SendConnectAccountRestricted do
   alias Tymeslot.Emails.Delivery
   alias Tymeslot.Emails.Templates.ConnectAccountRestricted
   alias Tymeslot.Emails.Templates.ConnectAccountRestricted.RestrictionContext
-  alias Tymeslot.MeetingPayments.ConnectAccountQueries
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"connect_account_id" => id} = args}) do
-    case ConnectAccountQueries.get(id) do
+    case MeetingPayments.get_connect_account(id) do
       nil ->
         Logger.warning("Connect-restricted email skipped — connect_account not found",
           connect_account_id: id

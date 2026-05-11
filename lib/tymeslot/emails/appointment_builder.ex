@@ -5,7 +5,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   """
 
   require Logger
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
   alias Tymeslot.Utils.ReminderUtils
@@ -44,7 +44,7 @@ defmodule Tymeslot.Emails.AppointmentBuilder do
   # Free bookings have no booking_payment row, so this returns nil and the
   # email template short-circuits the receipt block.
   defp booking_payment_for(%{id: meeting_id}) when is_binary(meeting_id),
-    do: BookingPaymentQueries.by_meeting_id(meeting_id)
+    do: MeetingPayments.payment_for_meeting(meeting_id)
 
   defp booking_payment_for(_meeting), do: nil
 
