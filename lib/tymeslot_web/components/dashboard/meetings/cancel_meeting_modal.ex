@@ -204,5 +204,4 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   defp currency_symbol("gbp"), do: "£"
   defp currency_symbol("chf"), do: "CHF "
   defp currency_symbol(other) when is_binary(other), do: String.upcase(other) <> " "
-  defp currency_symbol(_currency), do: ""
 end

@@ -58,7 +58,7 @@ defmodule TymeslotWeb.Themes.Shared.PaymentReturn do
     with {:ok, meeting} <- get_meeting(meeting_id),
          {:ok, profile} <- get_profile(meeting),
          :ok <- validate_theme(profile, theme_slug) do
-      {:ok, %{meeting: meeting, profile: profile}}
+      {:ok, %{meeting: meeting}}
     end
   end
 

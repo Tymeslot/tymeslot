@@ -59,8 +59,6 @@ defmodule Tymeslot.MeetingPayments.Webhooks.WebhookProcessor do
     Map.get(map, key) || atom_lookup(map, key)
   end
 
-  defp fetch(_other, _key), do: nil
-
   defp atom_lookup(map, key) do
     Map.get(map, String.to_existing_atom(key))
   rescue

@@ -27,15 +27,11 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdated do
 
   defp do_handle(%{"data" => %{"object" => %{"id" => account_id} = object}})
        when is_binary(account_id) do
-    result =
-      object
-      |> ensure_created(get_in(object, ["created"]))
-      |> ConnectAccounts.apply_account_event()
+    object
+    |> ensure_created(get_in(object, ["created"]))
+    |> ConnectAccounts.apply_account_event()
 
-    case result do
-      :ok -> {:ok, :ok}
-      {:error, _reason} = err -> {err, :error}
-    end
+    {:ok, :ok}
   end
 
   defp do_handle(_other), do: {{:error, :invalid_event}, :error}
