@@ -12,7 +12,8 @@
 -- 4. Comments explain WHY each row is adversarial, not what it contains.
 --
 -- Tables seeded: users, profiles, calendar_integrations, video_integrations,
---                calendar_events (renamed to provider_calendar_events by migration)
+--                calendar_events (renamed to provider_calendar_events by migration),
+--                connect_accounts, booking_payments
 
 -- ============================================================================
 -- USERS
@@ -260,3 +261,154 @@ SELECT 'seed-evt-attnotif-adversarial@example.com',
        NOW(),
        NOW(),
        NOW();
+
+-- ============================================================================
+-- CONNECT ACCOUNTS
+-- ============================================================================
+--
+-- These rows are present before:
+--   * 20260508170000_add_connect_accounts_user_id_unique_index — adds a partial
+--     unique index on user_id WHERE deleted_at IS NULL. The soft-deleted row
+--     below verifies the index build tolerates non-live rows without treating
+--     them as conflicts.
+--   * 20260511084206_fix_connect_accounts_status_default — changes the column
+--     default from "active" to "creating". Existing rows are not changed by the
+--     migration; these rows verify the ALTER TABLE succeeds with live data.
+--
+-- Row 1: Active account — charges_enabled = true, live (deleted_at IS NULL).
+-- Exercises the live-row branch of the partial unique index.
+INSERT INTO connect_accounts (id, user_id, stripe_account_id, country, default_currency, charges_enabled, payouts_enabled, details_submitted, status, inserted_at, updated_at)
+SELECT gen_random_uuid(),
+       (SELECT id FROM users WHERE email = 'seed-user-1@example.com'),
+       'acct_seed_active_1',
+       'de',
+       'eur',
+       true,
+       true,
+       true,
+       'active',
+       NOW(),
+       NOW();
+
+-- Row 2: Soft-deleted account (deleted_at IS NOT NULL, user_id IS NULL after
+-- nilify). The live-only partial unique index must not count this row against
+-- the uniqueness constraint for user_id or stripe_account_id.
+INSERT INTO connect_accounts (id, user_id, stripe_account_id, country, default_currency, charges_enabled, payouts_enabled, details_submitted, status, deleted_at, inserted_at, updated_at)
+VALUES (gen_random_uuid(),
+        NULL,
+        'acct_seed_deleted_2',
+        'de',
+        'eur',
+        false,
+        false,
+        false,
+        'deleted',
+        NOW() - INTERVAL '5 days',
+        NOW() - INTERVAL '10 days',
+        NOW() - INTERVAL '5 days');
+
+-- ============================================================================
+-- BOOKING PAYMENTS
+-- ============================================================================
+--
+-- These rows are present before:
+--   * 20260511084157_add_stale_pending_index_to_booking_payments — adds a
+--     partial composite index on (status, inserted_at) WHERE status = 'pending'
+--     AND stripe_checkout_session_id IS NOT NULL. The pending row below
+--     exercises the index predicate.
+--
+-- host_user_id is a bare integer (no FK) so arbitrary values are safe.
+-- meeting_id is nullable; all rows use NULL to avoid FK dependency on meetings.
+
+-- Row 1: Pending payment with a checkout session ID.
+-- Exercises the stale-pending index predicate (status = 'pending' AND
+-- stripe_checkout_session_id IS NOT NULL).
+INSERT INTO booking_payments (id, stripe_account_id, host_user_id, host_email, host_name, attendee_email, attendee_name, meeting_type_name, stripe_checkout_session_id, amount_cents, currency, application_fee_cents, status, refunded_amount_cents, inserted_at, updated_at)
+VALUES (gen_random_uuid(),
+        'acct_seed_active_1',
+        1,
+        'host-seed@example.com',
+        'Seed Host',
+        'attendee-seed@example.com',
+        'Seed Attendee',
+        'Discovery Call',
+        'cs_seed_pending_1',
+        5000,
+        'eur',
+        25,
+        'pending',
+        0,
+        NOW() - INTERVAL '2 days',
+        NOW() - INTERVAL '2 days');
+
+-- Row 2: Paid payment with paid_at set. Baseline non-pending row.
+INSERT INTO booking_payments (id, stripe_account_id, host_user_id, host_email, host_name, attendee_email, attendee_name, meeting_type_name, stripe_checkout_session_id, stripe_payment_intent_id, stripe_charge_id, amount_cents, currency, application_fee_cents, status, paid_at, refunded_amount_cents, inserted_at, updated_at)
+VALUES (gen_random_uuid(),
+        'acct_seed_active_1',
+        1,
+        'host-seed@example.com',
+        'Seed Host',
+        'attendee-seed2@example.com',
+        'Seed Attendee 2',
+        'Strategy Session',
+        'cs_seed_paid_2',
+        'pi_seed_paid_2',
+        'ch_seed_paid_2',
+        10000,
+        'eur',
+        50,
+        'paid',
+        NOW() - INTERVAL '1 day',
+        0,
+        NOW() - INTERVAL '1 day',
+        NOW() - INTERVAL '1 day');
+
+-- Row 3: Anonymised payment (host_deleted_at set, attendee_email NULL,
+-- attendee_name NULL, meeting_type_name '[deleted]'). Exercises the
+-- host_deleted_at index and verifies NULL attendee columns do not violate
+-- any NOT NULL constraints.
+INSERT INTO booking_payments (id, stripe_account_id, host_user_id, host_email, host_name, attendee_email, attendee_name, meeting_type_name, stripe_checkout_session_id, stripe_payment_intent_id, stripe_charge_id, amount_cents, currency, application_fee_cents, status, paid_at, refunded_amount_cents, host_deleted_at, inserted_at, updated_at)
+VALUES (gen_random_uuid(),
+        'acct_seed_deleted_2',
+        99999,
+        'deleted-host-seed@example.com',
+        NULL,
+        NULL,
+        NULL,
+        '[deleted]',
+        'cs_seed_anon_3',
+        'pi_seed_anon_3',
+        'ch_seed_anon_3',
+        7500,
+        'eur',
+        0,
+        'paid',
+        NOW() - INTERVAL '30 days',
+        0,
+        NOW() - INTERVAL '5 days',
+        NOW() - INTERVAL '30 days',
+        NOW() - INTERVAL '5 days');
+
+-- Row 4: Fully refunded payment (refunded_amount_cents = amount_cents).
+-- Exercises the refunded_amount_within_bounds check constraint and verifies
+-- the index build handles the refunded status.
+INSERT INTO booking_payments (id, stripe_account_id, host_user_id, host_email, host_name, attendee_email, attendee_name, meeting_type_name, stripe_checkout_session_id, stripe_payment_intent_id, stripe_charge_id, amount_cents, currency, application_fee_cents, status, paid_at, refunded_amount_cents, inserted_at, updated_at)
+VALUES (gen_random_uuid(),
+        'acct_seed_active_1',
+        1,
+        'host-seed@example.com',
+        'Seed Host',
+        'attendee-seed4@example.com',
+        'Seed Attendee 4',
+        'Coaching Call',
+        'cs_seed_refunded_4',
+        'pi_seed_refunded_4',
+        'ch_seed_refunded_4',
+        3000,
+        'eur',
+        15,
+        'refunded',
+        NOW() - INTERVAL '7 days',
+        3000,
+        NOW() - INTERVAL '7 days',
+        NOW() - INTERVAL '7 days');
