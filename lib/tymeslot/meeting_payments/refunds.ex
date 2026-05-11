@@ -41,6 +41,70 @@ defmodule Tymeslot.MeetingPayments.Refunds do
           | :missing_charge
           | term()
 
+  @doc """
+  Returns the remaining refundable balance in cents for a booking payment.
+
+  Computes `max(amount_cents - refunded_amount_cents, 0)`.
+  """
+  @spec refundable_remaining_cents(BookingPaymentSchema.t()) :: non_neg_integer()
+  def refundable_remaining_cents(%{amount_cents: amount, refunded_amount_cents: refunded}),
+    do: max(amount - refunded, 0)
+
+  @doc """
+  Returns `true` when the payment is in a refundable status and was paid
+  within the #{@refund_window_days}-day refund window.
+
+  Encapsulates both the status check and the time-window check so the
+  constant has a single source of truth.
+  """
+  @spec refundable?(BookingPaymentSchema.t()) :: boolean()
+  def refundable?(%{status: status} = payment) when status in ["paid", "partially_refunded"],
+    do: within_refund_window?(payment)
+
+  def refundable?(_payment), do: false
+
+  defp within_refund_window?(%{paid_at: %DateTime{} = paid_at}),
+    do: DateTime.diff(DateTime.utc_now(), paid_at, :day) <= @refund_window_days
+
+  defp within_refund_window?(_payment), do: false
+
+  @doc """
+  Parses raw refund-form params into a validated `{:ok, pos_integer()}` or
+  a tagged `{:error, atom()}`.
+
+  Accepts the standard `"refund_type"` param shape used by the payments UI:
+
+    * `%{"refund_type" => "full"}` — issues the full remaining balance
+    * `%{"refund_type" => "partial", "amount" => "15.00"}` — decimal string,
+      commas normalised to periods
+
+  Error atoms:
+    * `:choose_type` — `refund_type` key is absent or unrecognised
+    * `:invalid_amount` — amount string cannot be parsed or is not positive
+    * `:exceeds_remaining` — parsed amount exceeds the remaining balance
+  """
+  @spec parse_refund_amount(BookingPaymentSchema.t(), map()) ::
+          {:ok, pos_integer()} | {:error, :invalid_amount | :exceeds_remaining | :choose_type}
+  def parse_refund_amount(payment, %{"refund_type" => "full"}) do
+    {:ok, refundable_remaining_cents(payment)}
+  end
+
+  def parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => raw}) do
+    case parse_amount_cents(raw) do
+      {:ok, cents} ->
+        if cents <= refundable_remaining_cents(payment) do
+          {:ok, cents}
+        else
+          {:error, :exceeds_remaining}
+        end
+
+      :error ->
+        {:error, :invalid_amount}
+    end
+  end
+
+  def parse_refund_amount(_payment, _params), do: {:error, :choose_type}
+
   @spec issue_refund(BookingPaymentSchema.t(), pos_integer(), String.t() | nil) ::
           {:ok, BookingPaymentSchema.t()} | {:error, refund_error()}
   def issue_refund(payment, amount_cents, reason \\ nil) do
@@ -70,12 +134,8 @@ defmodule Tymeslot.MeetingPayments.Refunds do
 
   defp validate_within_window(%{paid_at: nil}), do: {:error, :not_paid}
 
-  defp validate_within_window(%{paid_at: %DateTime{} = paid_at}) do
-    if DateTime.diff(DateTime.utc_now(), paid_at, :day) <= @refund_window_days do
-      :ok
-    else
-      {:error, :outside_refund_window}
-    end
+  defp validate_within_window(payment) do
+    if within_refund_window?(payment), do: :ok, else: {:error, :outside_refund_window}
   end
 
   defp validate_amount(%{status: "refunded"}, _amount_cents), do: {:error, :already_refunded}
@@ -160,4 +220,15 @@ defmodule Tymeslot.MeetingPayments.Refunds do
         :ok
     end
   end
+
+  defp parse_amount_cents(amount) when is_binary(amount) do
+    cleaned = amount |> String.replace(",", ".") |> String.trim()
+
+    case Float.parse(cleaned) do
+      {decimal, ""} when decimal > 0 -> {:ok, round(decimal * 100)}
+      _other -> :error
+    end
+  end
+
+  defp parse_amount_cents(_amount), do: :error
 end

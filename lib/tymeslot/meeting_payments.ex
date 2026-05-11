@@ -7,6 +7,25 @@ defmodule Tymeslot.MeetingPayments do
   All external callers (web, workers, email templates, cross-domain
   modules, SaaS) must interact with this module — never with submodules
   directly.
+
+  ## Public struct types
+
+  `BookingPaymentSchema` and `ConnectAccountSchema` are intentionally
+  part of this module's public API surface, exposed via the `t:booking_payment/0`
+  and `t:account/0` type declarations respectively. Callers may alias these
+  schema modules **solely to pattern-match on structs returned by facade
+  functions** — for example, in `perform/1` clause heads of Oban workers
+  that dispatch on struct fields.
+
+  The following uses remain prohibited for all external callers:
+
+    * Direct `Repo.*` calls against these schemas
+    * Constructing or applying changesets (`Ecto.Changeset`)
+    * Calling any function defined in the submodule itself
+
+  Pattern-matching on a `%BookingPaymentSchema{}` or `%ConnectAccountSchema{}`
+  value that was *returned by this facade* is permitted and does not constitute
+  a layering violation.
   """
 
   require Logger
@@ -138,6 +157,32 @@ defmodule Tymeslot.MeetingPayments do
   """
   @spec payment_for_meeting(Ecto.UUID.t()) :: booking_payment() | nil
   def payment_for_meeting(meeting_id), do: BookingPaymentQueries.by_meeting_id(meeting_id)
+
+  @doc """
+  Returns the remaining refundable balance in cents for a booking payment.
+
+  Computes `max(amount_cents - refunded_amount_cents, 0)`.
+  """
+  @spec refundable_remaining_cents(booking_payment()) :: non_neg_integer()
+  defdelegate refundable_remaining_cents(payment), to: Refunds
+
+  @doc """
+  Returns `true` when the payment is in a refundable status and was paid
+  within the 60-day refund window.
+  """
+  @spec refundable?(booking_payment()) :: boolean()
+  defdelegate refundable?(payment), to: Refunds
+
+  @doc """
+  Parses raw refund-form params into a validated `{:ok, pos_integer()}` or
+  a tagged `{:error, atom()}`.
+
+  Accepts the standard `"refund_type"` param shape used by the payments UI.
+  Error atoms: `:choose_type`, `:invalid_amount`, `:exceeds_remaining`.
+  """
+  @spec parse_refund_amount(booking_payment(), map()) ::
+          {:ok, pos_integer()} | {:error, :invalid_amount | :exceeds_remaining | :choose_type}
+  defdelegate parse_refund_amount(payment, params), to: Refunds
 
   @doc """
   Issues a full or partial refund for a booking payment.

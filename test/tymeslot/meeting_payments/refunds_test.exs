@@ -14,6 +14,170 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
   setup :verify_on_exit!
 
+  # ---------------------------------------------------------------------------
+  # Helpers shared across unit tests (no DB needed)
+  # ---------------------------------------------------------------------------
+
+  defp payment_stub(attrs \\ %{}) do
+    defaults = %{
+      amount_cents: 5000,
+      refunded_amount_cents: 0,
+      status: "paid",
+      paid_at: DateTime.utc_now(:second)
+    }
+
+    Map.merge(defaults, Map.new(attrs))
+  end
+
+  # ---------------------------------------------------------------------------
+  # refundable_remaining_cents/1
+  # ---------------------------------------------------------------------------
+
+  describe "refundable_remaining_cents/1" do
+    test "returns amount_cents when nothing has been refunded" do
+      payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 0})
+      assert Refunds.refundable_remaining_cents(payment) == 5000
+    end
+
+    test "returns the difference when partially refunded" do
+      payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 2000})
+      assert Refunds.refundable_remaining_cents(payment) == 3000
+    end
+
+    test "returns 0 when fully refunded" do
+      payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 5000})
+      assert Refunds.refundable_remaining_cents(payment) == 0
+    end
+
+    test "clamps to 0 when refunded exceeds amount (defensive)" do
+      payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 6000})
+      assert Refunds.refundable_remaining_cents(payment) == 0
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # refundable?/1
+  # ---------------------------------------------------------------------------
+
+  describe "refundable?/1" do
+    test "returns true for a paid payment within the window" do
+      payment = payment_stub(%{status: "paid", paid_at: DateTime.utc_now(:second)})
+      assert Refunds.refundable?(payment)
+    end
+
+    test "returns true for a partially_refunded payment within the window" do
+      payment =
+        payment_stub(%{status: "partially_refunded", paid_at: DateTime.utc_now(:second)})
+
+      assert Refunds.refundable?(payment)
+    end
+
+    test "returns false when paid_at is nil" do
+      payment = payment_stub(%{status: "paid", paid_at: nil})
+      refute Refunds.refundable?(payment)
+    end
+
+    test "returns false for a fully refunded payment" do
+      payment = payment_stub(%{status: "refunded", paid_at: DateTime.utc_now(:second)})
+      refute Refunds.refundable?(payment)
+    end
+
+    test "returns false when outside the 60-day window" do
+      old_paid_at = DateTime.add(DateTime.utc_now(:second), -61, :day)
+      payment = payment_stub(%{status: "paid", paid_at: old_paid_at})
+      refute Refunds.refundable?(payment)
+    end
+
+    test "returns true on the last day of the window (boundary)" do
+      paid_at = DateTime.add(DateTime.utc_now(:second), -60, :day)
+      payment = payment_stub(%{status: "paid", paid_at: paid_at})
+      assert Refunds.refundable?(payment)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # parse_refund_amount/2
+  # ---------------------------------------------------------------------------
+
+  describe "parse_refund_amount/2" do
+    test "full type returns the remaining refundable amount" do
+      payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 1000})
+      assert {:ok, 4000} = Refunds.parse_refund_amount(payment, %{"refund_type" => "full"})
+    end
+
+    test "partial type with valid decimal amount returns cents" do
+      payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 0})
+      assert {:ok, 1500} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "15.00"})
+    end
+
+    test "partial type normalises comma as decimal separator" do
+      payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 0})
+      assert {:ok, 1500} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "15,00"})
+    end
+
+    test "partial type parses whole-number amount (no decimal point)" do
+      payment = payment_stub(%{amount_cents: 10_000, refunded_amount_cents: 0})
+      assert {:ok, 1000} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "10"})
+    end
+
+    test "partial type parses sub-dollar amount correctly" do
+      payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 0})
+      assert {:ok, 50} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "0.50"})
+    end
+
+    test "partial type parses 29.99 correctly (no float rounding hazard)" do
+      payment = payment_stub(%{amount_cents: 10_000, refunded_amount_cents: 0})
+      assert {:ok, 2999} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "29.99"})
+    end
+
+    test "partial type returns :invalid_amount for negative amount" do
+      payment = payment_stub()
+      assert {:error, :invalid_amount} =
+               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "-1"})
+    end
+
+    test "partial type returns :exceeds_remaining when amount is too large" do
+      payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 4500})
+      assert {:error, :exceeds_remaining} =
+               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "10.00"})
+    end
+
+    test "partial type returns :invalid_amount for zero" do
+      payment = payment_stub()
+      assert {:error, :invalid_amount} =
+               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "0"})
+    end
+
+    test "partial type returns :invalid_amount for zero with decimal" do
+      payment = payment_stub()
+      assert {:error, :invalid_amount} =
+               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "0.00"})
+    end
+
+    test "partial type returns :invalid_amount for non-numeric string" do
+      payment = payment_stub()
+      assert {:error, :invalid_amount} =
+               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "abc"})
+    end
+
+    test "partial type returns :invalid_amount for empty string" do
+      payment = payment_stub()
+      assert {:error, :invalid_amount} =
+               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => ""})
+    end
+
+    test "returns :choose_type when refund_type key is absent" do
+      payment = payment_stub()
+      assert {:error, :choose_type} = Refunds.parse_refund_amount(payment, %{})
+    end
+
+    test "returns :choose_type for an unrecognised refund_type value" do
+      payment = payment_stub()
+      assert {:error, :choose_type} =
+               Refunds.parse_refund_amount(payment, %{"refund_type" => "unknown"})
+    end
+  end
+
   defp paid_booking_payment(attrs \\ %{}) do
     defaults = %{
       stripe_charge_id: "ch_TEST_#{System.unique_integer([:positive])}",
