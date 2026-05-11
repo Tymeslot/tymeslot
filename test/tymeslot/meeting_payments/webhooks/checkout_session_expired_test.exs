@@ -94,6 +94,36 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpiredTest do
       assert :ok = CheckoutSessionExpired.handle(event)
     end
 
+    test "falls back to checkout_session_id lookup when client_reference_id yields no row" do
+      # Regression for W3: by_meeting_id returns nil (stale/mismatched reference)
+      # but the session IS in the DB. The handler must fall back to
+      # by_checkout_session and still expire the payment and free the slot.
+      meeting_a = insert(:meeting, status: "awaiting_payment")
+      meeting_b = insert(:meeting, status: "awaiting_payment")
+
+      # booking_payment belongs to meeting_a by session id, but the event
+      # arrives with meeting_b as the client_reference_id, so by_meeting_id
+      # returns nil — only the session fallback can find this row.
+      bp =
+        insert(:booking_payment,
+          meeting: meeting_a,
+          status: "pending",
+          stripe_checkout_session_id: "cs_FALLBACK_W3"
+        )
+
+      event =
+        expired_event("evt_FALLBACK_W3", %{
+          "id" => "cs_FALLBACK_W3",
+          "client_reference_id" => meeting_b.id
+        })
+
+      assert :ok = CheckoutSessionExpired.handle(event)
+
+      reloaded = Repo.reload!(bp)
+      assert reloaded.status == "failed"
+      assert reloaded.last_event_id == "evt_FALLBACK_W3"
+    end
+
     test "broadcasts :expired via PubSub after a successful transition" do
       meeting = insert(:meeting, status: "awaiting_payment")
 

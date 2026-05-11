@@ -160,6 +160,45 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompletedTest do
       bp_reloaded = BookingPaymentQueries.by_checkout_session("cs_ALREADY_CONFIRMED")
       assert bp_reloaded.status == "paid"
     end
+
+    test "recovers when expired webhook beat the completed webhook (race E3)" do
+      # Regression for E3: checkout.session.expired arrived first, transitioning
+      # the meeting to expired and booking_payment to failed. The subsequent
+      # completed event must recover: re-confirm the meeting and mark payment paid.
+      user = insert(:user)
+
+      meeting =
+        insert(:meeting,
+          status: "expired",
+          organizer_user_id: user.id,
+          organizer_email: user.email
+        )
+
+      bp =
+        insert(:booking_payment,
+          meeting: meeting,
+          status: "failed",
+          stripe_checkout_session_id: "cs_RACE_E3"
+        )
+
+      event =
+        completed_event("evt_RACE_E3", %{
+          "id" => "cs_RACE_E3",
+          "client_reference_id" => meeting.id,
+          "payment_intent" => "pi_RACE_E3"
+        })
+
+      assert :ok = CheckoutSessionCompleted.handle(event)
+
+      reloaded_bp = Repo.reload!(bp)
+      assert reloaded_bp.status == "paid"
+      assert reloaded_bp.paid_at
+      assert reloaded_bp.stripe_payment_intent_id == "pi_RACE_E3"
+      assert reloaded_bp.last_event_id == "evt_RACE_E3"
+
+      {:ok, reloaded_meeting} = MeetingQueries.get_meeting(meeting.id)
+      assert reloaded_meeting.status == "confirmed"
+    end
   end
 
   defp completed_event(event_id, object) do

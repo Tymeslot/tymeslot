@@ -82,6 +82,19 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
         enqueue_post_payment_effects(meeting, paid)
         :ok
 
+      {:ok, {:recovered, paid, meeting}} ->
+        Logger.warning(
+          "checkout.session.completed: recovery transition — completed event arrived after expiry",
+          meeting_id: meeting.id,
+          payment_id: paid.id,
+          event_id: event_id
+        )
+
+        backfill_charge_id(paid, object)
+        broadcast_paid(meeting.id)
+        enqueue_post_payment_effects(meeting, paid)
+        :ok
+
       {:ok, :no_op} ->
         :ok
 
@@ -137,10 +150,10 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
 
   defp run_in_transaction(payment, event_id, object) do
     with {:ok, meeting} <- fetch_meeting(payment.meeting_id),
-         :ok <- ensure_awaiting_payment(meeting),
+         {:proceed, transition} <- check_transition(meeting, payment),
          {:ok, paid} <- mark_paid(payment, event_id, object),
-         {:ok, meeting} <- MeetingQueries.update_meeting(meeting, %{status: "confirmed"}) do
-      {:advanced, paid, meeting}
+         {:ok, confirmed} <- MeetingQueries.update_meeting(meeting, %{status: "confirmed"}) do
+      {transition, paid, confirmed}
     else
       :no_op ->
         :no_op
@@ -153,8 +166,22 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionCompleted do
   defp fetch_meeting(nil), do: {:error, :meeting_missing}
   defp fetch_meeting(meeting_id), do: MeetingQueries.get_meeting(meeting_id)
 
-  defp ensure_awaiting_payment(%{status: "awaiting_payment"}), do: :ok
-  defp ensure_awaiting_payment(_other), do: :no_op
+  # Determine the transition type based on meeting and payment state.
+  # Returns `{:proceed, type}` to continue the with-chain, or `:no_op` to
+  # short-circuit (falls to the else clause).
+  #
+  # Transitions:
+  #   :advanced  — normal happy path (meeting awaiting_payment)
+  #   :recovered — race: completed event arrived after the expired webhook ran;
+  #                both events are authoritative; we recover by re-confirming
+  #   :no_op     — meeting already in a non-recoverable terminal state; skip
+  defp check_transition(%{status: "awaiting_payment"}, _payment), do: {:proceed, :advanced}
+
+  defp check_transition(%{status: "expired"}, %{status: payment_status})
+       when payment_status in ["failed", "cancelled"],
+       do: {:proceed, :recovered}
+
+  defp check_transition(_meeting, _payment), do: :no_op
 
   defp mark_paid(payment, event_id, object) do
     case BookingPaymentQueries.update(payment, %{

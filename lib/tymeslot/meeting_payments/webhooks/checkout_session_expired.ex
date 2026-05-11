@@ -51,15 +51,18 @@ defmodule Tymeslot.MeetingPayments.Webhooks.CheckoutSessionExpired do
   defp classify(:ok), do: {:ok, :ok}
   defp classify({:error, _reason} = err), do: {err, :error}
 
-  defp lookup_payment(%{"client_reference_id" => meeting_id}) when is_binary(meeting_id) do
-    BookingPaymentQueries.by_meeting_id(meeting_id)
+  defp lookup_payment(%{"client_reference_id" => meeting_id} = object)
+       when is_binary(meeting_id) do
+    BookingPaymentQueries.by_meeting_id(meeting_id) || lookup_by_session(object)
   end
 
-  defp lookup_payment(%{"id" => session_id}) when is_binary(session_id) do
+  defp lookup_payment(object), do: lookup_by_session(object)
+
+  defp lookup_by_session(%{"id" => session_id}) when is_binary(session_id) do
     BookingPaymentQueries.by_checkout_session(session_id)
   end
 
-  defp lookup_payment(_object), do: nil
+  defp lookup_by_session(_object), do: nil
 
   defp run(payment, event_id) do
     result =
