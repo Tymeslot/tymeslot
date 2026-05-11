@@ -35,7 +35,7 @@ defmodule TymeslotWeb.StripeConnectWebhookController do
 
       _missing ->
         Logger.error("Connect webhook secret is not configured")
-        send_resp(conn, 400, "")
+        send_resp(conn, 503, "")
     end
   end
 

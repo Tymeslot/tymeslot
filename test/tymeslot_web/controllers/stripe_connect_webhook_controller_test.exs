@@ -102,7 +102,7 @@ defmodule TymeslotWeb.StripeConnectWebhookControllerTest do
       assert response(conn, 200)
     end
 
-    test "returns 400 when the webhook secret is not configured", %{conn: conn} do
+    test "returns 503 when the webhook secret is not configured (so Stripe retries)", %{conn: conn} do
       Application.delete_env(:tymeslot, :stripe_connect_webhook_secret)
 
       payload = ~s({"id":"evt_X","type":"account.updated"})
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.StripeConnectWebhookControllerTest do
         |> assign(:raw_body, payload)
         |> post("/webhooks/stripe/connect", payload)
 
-      assert response(conn, 400)
+      assert response(conn, 503)
     end
   end
 end
