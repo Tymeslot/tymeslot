@@ -578,6 +578,12 @@ case String.downcase(System.get_env("MEETING_PAYMENTS_ENABLED", "false")) do
     :ok
 end
 
+case System.get_env("MEETING_PAYMENTS_DEFAULT_COUNTRY") do
+  nil -> :ok
+  "" -> :ok
+  code -> config :tymeslot, :meeting_payments_default_country, String.downcase(code)
+end
+
 case System.get_env("MEETING_PAYMENTS_APPLICATION_FEE_BP") do
   nil ->
     :ok

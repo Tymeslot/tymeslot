@@ -295,6 +295,11 @@ config :tymeslot, :integration_locks,
   outlook: 60_000,
   teams: 120_000
 
+# Default country code (ISO 3166-1 alpha-2) for Stripe Connect onboarding when
+# the host's profile carries no explicit country. Configurable via the
+# MEETING_PAYMENTS_DEFAULT_COUNTRY env var (read in runtime.exs).
+config :tymeslot, :meeting_payments_default_country, "ch"
+
 # Payment rate limiting configuration
 config :tymeslot, :payment_rate_limits,
   # Maximum number of payment initiation attempts per user

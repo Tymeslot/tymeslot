@@ -67,4 +67,35 @@ defmodule TymeslotWeb.Dashboard.PaymentsControllerTest do
     assert redirected_to(conn) == "/dashboard/payments"
     assert Flash.get(conn.assigns.flash, :error) =~ "Could not start"
   end
+
+  test "POST /dashboard/payments/connect respects MEETING_PAYMENTS_DEFAULT_COUNTRY override",
+       %{conn: conn} do
+    user = insert(:user, onboarding_completed_at: DateTime.utc_now(:second))
+    insert(:profile, user: user)
+    conn = log_in_user(conn, user)
+
+    previous = Application.get_env(:tymeslot, :meeting_payments_default_country)
+
+    Application.put_env(:tymeslot, :meeting_payments_default_country, "de")
+
+    on_exit(fn ->
+      if previous do
+        Application.put_env(:tymeslot, :meeting_payments_default_country, previous)
+      else
+        Application.delete_env(:tymeslot, :meeting_payments_default_country)
+      end
+    end)
+
+    expect(StripeAdapterMock, :create_account, fn params, _opts ->
+      assert params.country == "de"
+      {:ok, %{id: "acct_DE", default_currency: "eur"}}
+    end)
+
+    expect(StripeAdapterMock, :create_account_link, fn _params ->
+      {:ok, %{url: "https://connect.stripe.com/de"}}
+    end)
+
+    conn = post(conn, "/dashboard/payments/connect")
+    assert redirected_to(conn, 302) == "https://connect.stripe.com/de"
+  end
 end
