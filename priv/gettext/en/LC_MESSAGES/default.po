@@ -1082,3 +1082,59 @@ msgstr "Terms of Service"
 #, elixir-autogen, elixir-format
 msgid "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply."
 msgstr "This site is protected by reCAPTCHA and the Google %{privacy_link} and %{terms_link} apply."
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex:42
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex:39
+#, elixir-autogen, elixir-format
+msgid "Booking confirmed"
+msgstr "Booking confirmed"
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex:51
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex:48
+#, elixir-autogen, elixir-format
+msgid "Confirming your payment…"
+msgstr "Confirming your payment…"
+
+#: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex:39
+#: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex:36
+#, elixir-autogen, elixir-format
+msgid "Payment cancelled"
+msgstr "Payment cancelled"
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex:54
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex:51
+#, elixir-autogen, elixir-format
+msgid "Please wait while we confirm your booking."
+msgstr "Please wait while we confirm your booking."
+
+#: lib/tymeslot_web/themes/quill/payment_processing/live.ex:45
+#: lib/tymeslot_web/themes/rhythm/payment_processing/live.ex:42
+#, elixir-autogen, elixir-format
+msgid "Thank you, your booking is confirmed for %{date}."
+msgstr "Thank you, your booking is confirmed for %{date}."
+
+#: lib/tymeslot_web/themes/quill/payment_cancelled/live.ex:42
+#: lib/tymeslot_web/themes/rhythm/payment_cancelled/live.ex:39
+#, elixir-autogen, elixir-format
+msgid "Your booking is not confirmed. You can return and try again at any time."
+msgstr "Your booking is not confirmed. You can return and try again at any time."
+
+#: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex:44
+#, elixir-autogen, elixir-format
+msgid "Complete your payment in the new tab"
+msgstr "Complete your payment in the new tab"
+
+#: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex:52
+#, elixir-autogen, elixir-format
+msgid "Did the new tab not open?"
+msgstr "Did the new tab not open?"
+
+#: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex:59
+#, elixir-autogen, elixir-format
+msgid "Open Stripe Checkout"
+msgstr "Open Stripe Checkout"
+
+#: lib/tymeslot_web/themes/shared/components/awaiting_payment.ex:47
+#, elixir-autogen, elixir-format
+msgid "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
+msgstr "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."

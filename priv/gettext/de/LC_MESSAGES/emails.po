@@ -21,17 +21,17 @@ msgstr "AKTIONEN:"
 msgid "ATTENDEE INFORMATION:"
 msgstr "TEILNEHMER-INFORMATIONEN:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:96
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:105
 #, elixir-autogen, elixir-format
 msgid "Appointment Confirmed - %{date} with %{name}"
 msgstr "Termin bestätigt – %{date} mit %{name}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:175
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:194
 #, elixir-autogen, elixir-format
 msgid "Appointment Confirmed!"
 msgstr "Termin bestätigt!"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:231
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:255
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:163
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:206
 #, elixir-autogen, elixir-format
@@ -51,8 +51,8 @@ msgstr "DETAILS ZUM ABGESAGTEN TERMIN:"
 msgid "Cancel"
 msgstr "Absagen"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:69
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:124
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:78
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:137
 #, elixir-autogen, elixir-format
 msgid "Cancel Appointment"
 msgstr "Termin absagen"
@@ -108,7 +108,7 @@ msgid "Email:"
 msgstr "E-Mail:"
 
 #: lib/tymeslot/emails/templates/appointment_cancellation.ex:130
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:177
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:196
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:153
 #: lib/tymeslot/emails/templates/email_change_verification.ex:18
 #: lib/tymeslot/emails/templates/email_change_verification.ex:98
@@ -143,8 +143,8 @@ msgstr ""
 "Ich muss unser anstehendes Treffen leider verschieben. Bitte wählen Sie "
 "einen neuen Termin, der Ihnen passt."
 
-#: lib/tymeslot/emails/appointment_builder.ex:192
-#: lib/tymeslot/emails/appointment_builder.ex:210
+#: lib/tymeslot/emails/appointment_builder.ex:202
+#: lib/tymeslot/emails/appointment_builder.ex:220
 #, elixir-autogen, elixir-format
 msgid "I'll send you a reminder %{label} before our appointment."
 msgstr "Ich sende Ihnen %{label} vor unserem Termin eine Erinnerung."
@@ -154,7 +154,7 @@ msgstr "Ich sende Ihnen %{label} vor unserem Termin eine Erinnerung."
 msgid "I'm looking forward to our conversation!"
 msgstr "Ich freue mich auf unser Gespräch!"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:179
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:198
 #, elixir-autogen, elixir-format
 msgid "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you."
 msgstr ""
@@ -179,7 +179,7 @@ msgid "Join Meeting"
 msgstr "Meeting beitreten"
 
 #: lib/tymeslot/emails/shared/meeting_components.ex:100
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:64
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:71
 #, elixir-autogen, elixir-format
 msgid "Join Video Meeting"
 msgstr "Video-Meeting beitreten"
@@ -199,13 +199,13 @@ msgstr "Ort"
 msgid "Location:"
 msgstr "Ort:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:187
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:206
 #, elixir-autogen, elixir-format
 msgid "Looking forward to meeting you!"
 msgstr "Ich freue mich auf unseren Termin!"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:181
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:222
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:200
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:247
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:198
 #: lib/tymeslot/emails/templates/calendar_invitation.ex:117
 #: lib/tymeslot/emails/templates/event_update_notification.ex:225
@@ -239,7 +239,7 @@ msgstr "Termin abgesagt"
 msgid "Meeting Cancelled - %{date} with %{name}"
 msgstr "Termin abgesagt – %{date} mit %{name}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:86
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:95
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:120
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:196
 #, elixir-autogen, elixir-format
@@ -267,13 +267,13 @@ msgstr "Name:"
 msgid "Need to change plans?"
 msgstr "Müssen Sie umplanen?"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:67
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:122
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:76
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:135
 #, elixir-autogen, elixir-format
 msgid "Need to make changes?"
 msgstr "Möchten Sie Änderungen vornehmen?"
 
-#: lib/tymeslot/emails/appointment_builder.ex:181
+#: lib/tymeslot/emails/appointment_builder.ex:191
 #, elixir-autogen, elixir-format
 msgid "No reminder emails are scheduled for this appointment."
 msgstr "Für diesen Termin sind keine Erinnerungs-E-Mails geplant."
@@ -287,12 +287,12 @@ msgstr ""
 "mit den aktualisierten Details. Bei Fragen oder für andere Optionen melden "
 "Sie sich gerne."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:184
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:203
 #, elixir-autogen, elixir-format
 msgid "QUESTIONS?"
 msgstr "FRAGEN?"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:72
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:81
 #, elixir-autogen, elixir-format
 msgid "Questions? %{contact_info}"
 msgstr "Fragen? %{contact_info}"
@@ -302,7 +302,7 @@ msgstr "Fragen? %{contact_info}"
 msgid "REMINDER: Our meeting in %{time_until}"
 msgstr "ERINNERUNG: Unser Termin in %{time_until}"
 
-#: lib/tymeslot/emails/appointment_builder.ex:167
+#: lib/tymeslot/emails/appointment_builder.ex:177
 #, elixir-autogen, elixir-format
 msgid "Reminder %{label} before the appointment."
 msgstr "Erinnerung %{label} vor dem Termin."
@@ -312,13 +312,13 @@ msgstr "Erinnerung %{label} vor dem Termin."
 msgid "Reminder: Our meeting is %{time_until}"
 msgstr "Erinnerung: Unser Termin ist in %{time_until}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:76
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:85
 #, elixir-autogen, elixir-format
 msgid "Reminders Scheduled"
 msgstr "Geplante Erinnerungen"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:69
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:124
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:78
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:137
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:56
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:112
 #: lib/tymeslot/emails/templates/reschedule_request.ex:77
@@ -353,7 +353,7 @@ msgstr "Neuen Termin vereinbaren"
 msgid "See you %{time_until}!"
 msgstr "Bis %{time_until}!"
 
-#: lib/tymeslot/emails/shared/formatting.ex:187
+#: lib/tymeslot/emails/shared/formatting.ex:188
 #: lib/tymeslot/emails/shared/meeting_components.ex:267
 #, elixir-autogen, elixir-format
 msgid "TBD"
@@ -395,7 +395,7 @@ msgstr "Zeitzone:"
 msgid "Type:"
 msgstr "Art:"
 
-#: lib/tymeslot/emails/shared/formatting.ex:185
+#: lib/tymeslot/emails/shared/formatting.ex:186
 #: lib/tymeslot/integrations/calendar/utils/ics_generator.ex:211
 #, elixir-autogen, elixir-format
 msgid "Video Call"
@@ -422,7 +422,7 @@ msgstr "Hiermit bestätigen wir, dass Ihr Termin abgesagt wurde."
 msgid "Would you like to schedule a new appointment?"
 msgstr "Möchten Sie einen neuen Termin vereinbaren?"
 
-#: lib/tymeslot/emails/appointment_builder.ex:232
+#: lib/tymeslot/emails/appointment_builder.ex:242
 #, elixir-autogen, elixir-format
 msgid "You'll receive %{count} reminders before the appointment."
 msgstr "Sie erhalten vor dem Termin %{count} Erinnerungen."
@@ -432,37 +432,38 @@ msgstr "Sie erhalten vor dem Termin %{count} Erinnerungen."
 msgid "attendee"
 msgstr "Teilnehmer"
 
-#: lib/tymeslot/emails/appointment_builder.ex:164
-#: lib/tymeslot/emails/appointment_builder.ex:189
-#: lib/tymeslot/emails/appointment_builder.ex:207
-#: lib/tymeslot/emails/appointment_builder.ex:229
+#: lib/tymeslot/emails/appointment_builder.ex:174
+#: lib/tymeslot/emails/appointment_builder.ex:199
+#: lib/tymeslot/emails/appointment_builder.ex:217
+#: lib/tymeslot/emails/appointment_builder.ex:239
 #, elixir-autogen, elixir-format
 msgid "in %{label}"
 msgstr "in %{label}"
 
-#: lib/tymeslot/emails/appointment_builder.ex:128
+#: lib/tymeslot/emails/appointment_builder.ex:138
 #, elixir-autogen, elixir-format
 msgid "in 30 minutes"
 msgstr "in 30 Minuten"
 
-#: lib/tymeslot/emails/appointment_builder.ex:274
-#: lib/tymeslot/emails/appointment_builder.ex:277
-#: lib/tymeslot/emails/shared/formatting.ex:265
-#: lib/tymeslot/emails/shared/formatting.ex:280
+#: lib/tymeslot/emails/appointment_builder.ex:280
+#: lib/tymeslot/emails/appointment_builder.ex:283
+#: lib/tymeslot/emails/shared/formatting.ex:266
+#: lib/tymeslot/emails/shared/formatting.ex:281
 #, elixir-autogen, elixir-format
 msgid "minute"
 msgid_plural "minutes"
 msgstr[0] "Minute"
 msgstr[1] "Minuten"
 
-#: lib/tymeslot/emails/appointment_builder.ex:113
-#: lib/tymeslot/emails/appointment_builder.ex:126
+#: lib/tymeslot/emails/appointment_builder.ex:123
+#: lib/tymeslot/emails/appointment_builder.ex:136
 #, elixir-autogen, elixir-format
 msgid "reply to this email"
 msgstr "auf diese E-Mail antworten"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:58
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:161
+#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:100
 #, elixir-autogen, elixir-format
 msgid "soon"
 msgstr "bald"
@@ -477,72 +478,73 @@ msgstr "Probleme mit dem Button? Kopieren Sie diesen Link in Ihren Browser:"
 msgid "Meeting will start at the scheduled time"
 msgstr "Das Meeting beginnt zur geplanten Zeit"
 
-#: lib/tymeslot/emails/appointment_builder.ex:276
+#: lib/tymeslot/emails/appointment_builder.ex:282
 #, elixir-autogen, elixir-format
 msgid "day"
 msgid_plural "days"
 msgstr[0] "Tag"
 msgstr[1] "Tage"
 
-#: lib/tymeslot/emails/appointment_builder.ex:275
-#: lib/tymeslot/emails/shared/formatting.ex:268
+#: dev_support/email_testing/helpers.ex:76
+#: lib/tymeslot/emails/appointment_builder.ex:281
 #: lib/tymeslot/emails/shared/formatting.ex:269
-#: lib/tymeslot/emails/shared/formatting.ex:273
-#: lib/tymeslot/emails/shared/formatting.ex:280
+#: lib/tymeslot/emails/shared/formatting.ex:270
+#: lib/tymeslot/emails/shared/formatting.ex:274
+#: lib/tymeslot/emails/shared/formatting.ex:281
 #, elixir-autogen, elixir-format
 msgid "hour"
 msgid_plural "hours"
 msgstr[0] "Stunde"
 msgstr[1] "Stunden"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:133
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:220
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:146
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:245
 #, elixir-autogen, elixir-format
 msgid "%{name} has scheduled a meeting with you."
 msgstr "%{name} hat einen Termin mit Ihnen vereinbart."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:241
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:265
 #, elixir-autogen, elixir-format
 msgid "- No reminder emails are scheduled for this appointment"
 msgstr "- Für diesen Termin sind keine Erinnerungs-E-Mails geplant."
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:227
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:251
 #, elixir-autogen, elixir-format
 msgid "- Prepare an agenda if needed"
 msgstr "- Bei Bedarf eine Tagesordnung vorbereiten"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:226
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:250
 #, elixir-autogen, elixir-format
 msgid "- Review any relevant materials"
 msgstr "- Relevante Unterlagen durchsehen"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:239
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:263
 #, elixir-autogen, elixir-format
 msgid "- Set a reminder %{time} before"
 msgstr "- Eine Erinnerung %{time} vorher einstellen"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:228
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:252
 #, elixir-autogen, elixir-format
 msgid "- Test video/audio setup if virtual"
 msgstr "- Video-/Audio-Einrichtung testen, falls virtuell"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:255
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:279
 #, elixir-autogen, elixir-format
 msgid "15 minutes"
 msgstr "15 Minuten"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:131
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:218
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:144
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:243
 #, elixir-autogen, elixir-format
 msgid "New Appointment Booked!"
 msgstr "Neuer Termin gebucht!"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:149
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:162
 #, elixir-autogen, elixir-format
 msgid "New Appointment: %{name} - %{date}"
 msgstr "Neuer Termin: %{name} - %{date}"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:225
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:249
 #, elixir-autogen, elixir-format
 msgid "PREPARATION REMINDERS:"
 msgstr "VORBEREITUNGSHINWEISE:"
@@ -599,7 +601,7 @@ msgstr "• Materialien vorbereitet"
 msgid "⏰ Meeting with %{name} in %{time_until}"
 msgstr "⏰ Treffen mit %{name} in %{time_until}"
 
-#: lib/tymeslot/emails/shared/formatting.ex:186
+#: lib/tymeslot/emails/shared/formatting.ex:187
 #, elixir-autogen, elixir-format
 msgid "Phone Call"
 msgstr "Telefonat"
@@ -769,7 +771,7 @@ msgstr "Bestätigen Sie die neue E-Mail-Adresse Ihres Tymeslot-Kontos."
 msgid "Confirm your new email"
 msgstr "Neue E-Mail-Adresse bestätigen"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:83
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:92
 #: lib/tymeslot/emails/templates/email_change_confirmed.ex:66
 #, elixir-autogen, elixir-format
 msgid "Confirmed"
@@ -824,7 +826,7 @@ msgstr ""
 "Aus Sicherheitsgründen läuft dieser Link in 24 Stunden ab. Falls Sie sich "
 "nicht bei Tymeslot registriert haben, können Sie diese E-Mail ignorieren."
 
-#: lib/tymeslot/emails/shared/formatting.ex:244
+#: lib/tymeslot/emails/shared/formatting.ex:245
 #, elixir-autogen, elixir-format
 msgid "Friday"
 msgstr "Freitag"
@@ -834,7 +836,7 @@ msgstr "Freitag"
 msgid "Heads up"
 msgstr "Hinweis"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:50
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:55
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} — I've blocked the time on my calendar and I'm looking forward to our meeting."
 msgstr ""
@@ -964,7 +966,7 @@ msgstr "Meeting"
 msgid "Message from attendee"
 msgstr "Nachricht vom Teilnehmer"
 
-#: lib/tymeslot/emails/shared/formatting.ex:240
+#: lib/tymeslot/emails/shared/formatting.ex:241
 #, elixir-autogen, elixir-format
 msgid "Monday"
 msgstr "Montag"
@@ -974,7 +976,7 @@ msgstr "Montag"
 msgid "Name"
 msgstr "Name:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:130
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:143
 #, elixir-autogen, elixir-format
 msgid "New booking"
 msgstr "Neue Buchung"
@@ -1025,7 +1027,7 @@ msgstr "Schnellaktionen:"
 msgid "REQUEST DETAILS:"
 msgstr "TERMIN-DETAILS:"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:63
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:70
 #, elixir-autogen, elixir-format
 msgid "Ready to join when it's time?"
 msgstr "Bereit, pünktlich beizutreten?"
@@ -1045,7 +1047,7 @@ msgstr "Passwort zurücksetzen"
 msgid "Reset your password"
 msgstr "Passwort zurücksetzen"
 
-#: lib/tymeslot/emails/shared/formatting.ex:245
+#: lib/tymeslot/emails/shared/formatting.ex:246
 #, elixir-autogen, elixir-format
 msgid "Saturday"
 msgstr "Samstag"
@@ -1087,7 +1089,7 @@ msgstr "Beginnt bald"
 msgid "Status:"
 msgstr "Status:"
 
-#: lib/tymeslot/emails/shared/formatting.ex:246
+#: lib/tymeslot/emails/shared/formatting.ex:247
 #, elixir-autogen, elixir-format
 msgid "Sunday"
 msgstr "Sonntag"
@@ -1189,7 +1191,7 @@ msgstr ""
 "Diese Benachrichtigung wurde automatisch ausgelöst, als eine Änderung in "
 "Ihrem externen Kalender erkannt wurde."
 
-#: lib/tymeslot/emails/shared/formatting.ex:243
+#: lib/tymeslot/emails/shared/formatting.ex:244
 #, elixir-autogen, elixir-format
 msgid "Thursday"
 msgstr "Donnerstag"
@@ -1205,7 +1207,7 @@ msgid "To confirm this change, visit the link below:"
 msgstr ""
 "Um diese Änderung zu bestätigen, rufen Sie den untenstehenden Link auf:"
 
-#: lib/tymeslot/emails/shared/formatting.ex:241
+#: lib/tymeslot/emails/shared/formatting.ex:242
 #, elixir-autogen, elixir-format
 msgid "Tuesday"
 msgstr "Dienstag"
@@ -1283,7 +1285,7 @@ msgstr ""
 msgid "We're letting you know in case it wasn't you."
 msgstr "Wir informieren Sie, falls Sie das nicht selbst waren."
 
-#: lib/tymeslot/emails/shared/formatting.ex:242
+#: lib/tymeslot/emails/shared/formatting.ex:243
 #, elixir-autogen, elixir-format
 msgid "Wednesday"
 msgstr "Mittwoch"
@@ -1328,7 +1330,7 @@ msgstr ""
 msgid "You may need to sign in again on other devices"
 msgstr "Auf anderen Geräten müssen Sie sich möglicherweise erneut anmelden"
 
-#: lib/tymeslot/emails/templates/appointment_confirmation.ex:84
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:93
 #, elixir-autogen, elixir-format
 msgid "You're booked."
 msgstr "Der Termin steht."
@@ -1523,7 +1525,7 @@ msgstr "Angefordert am:"
 msgid "Security notification"
 msgstr "Sicherheitsbenachrichtigung"
 
-#: lib/tymeslot/emails/shared/mjml_email.ex:279
+#: lib/tymeslot/emails/shared/mjml_email.ex:324
 #, elixir-autogen, elixir-format
 msgid "Sent with care by"
 msgstr "Gesendet von"
@@ -1560,7 +1562,7 @@ msgid "What you need to know"
 msgstr "Was Sie wissen sollten"
 
 #: lib/tymeslot/emails/shared/layouts.ex:152
-#: lib/tymeslot/emails/shared/mjml_email.ex:281
+#: lib/tymeslot/emails/shared/mjml_email.ex:326
 #, elixir-autogen, elixir-format
 msgid "scheduling that respects your time"
 msgstr "Terminplanung, die deine Zeit respektiert"
@@ -1572,3 +1574,190 @@ msgid "For security, a copy of this confirmation was sent to your previous email
 msgstr ""
 "Aus Sicherheitsgründen wurde eine Kopie dieser Bestätigung an Ihre bisherige"
 " E-Mail-Adresse gesendet."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:418
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:483
+#, elixir-autogen, elixir-format
+msgid "%{amount} paid"
+msgstr "%{amount} bezahlt"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:387
+#, elixir-autogen, elixir-format
+msgid "%{date} at %{time}"
+msgstr "%{date} um %{time}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:422
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:486
+#, elixir-autogen, elixir-format
+msgid "Date: %{date}"
+msgstr "Datum: %{date}"
+
+#: dev_support/email_testing/helpers.ex:80
+#, elixir-autogen, elixir-format
+msgid "I'll send you a reminder 24 hours before our appointment."
+msgstr "Ich sende Ihnen 24 Stunden vor unserem Termin eine Erinnerung."
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:481
+#, elixir-autogen, elixir-format
+msgid "PAYMENT RECEIPT:"
+msgstr "ZAHLUNGSBELEG:"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:415
+#, elixir-autogen, elixir-format
+msgid "Payment receipt"
+msgstr "Zahlungsbeleg"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:427
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:489
+#, elixir-autogen, elixir-format
+msgid "Reference: %{ref}"
+msgstr "Referenz: %{ref}"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:434
+#, elixir-autogen, elixir-format
+msgid "View receipt"
+msgstr "Beleg ansehen"
+
+#: lib/tymeslot/emails/templates/appointment_confirmation.ex:493
+#, elixir-autogen, elixir-format
+msgid "View receipt: %{url}"
+msgstr "Beleg ansehen: %{url}"
+
+#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:126
+#, elixir-autogen, elixir-format
+msgid "in %{count} day"
+msgid_plural "in %{count} days"
+msgstr[0] "in %{count} Tag"
+msgstr[1] "in %{count} Tagen"
+
+#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:115
+#, elixir-autogen, elixir-format
+msgid "in %{count} hour"
+msgid_plural "in %{count} hours"
+msgstr[0] "in %{count} Stunde"
+msgstr[1] "in %{count} Stunden"
+
+#: dev_support/email_testing/helpers.ex:77
+#, elixir-autogen, elixir-format
+msgid "in %{time_until}"
+msgstr "in %{time_until}"
+
+#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:132
+#, elixir-autogen, elixir-format
+msgid "today"
+msgstr "heute"
+
+#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:129
+#, elixir-autogen, elixir-format
+msgid "tomorrow"
+msgstr "morgen"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:150
+#, elixir-autogen, elixir-format
+msgid "%{amount} returned for “%{title}”"
+msgstr "%{amount} für „%{title}“ erstattet"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:154
+#, elixir-autogen, elixir-format
+msgid "%{amount} returned to your card"
+msgstr "%{amount} auf Ihre Karte erstattet"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:127
+#, elixir-autogen, elixir-format
+msgid "A partial refund was issued."
+msgstr "Eine Teilrückerstattung wurde veranlasst."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:96
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} — %{amount} of your %{original} payment has been refunded."
+msgstr "Hallo %{name}, %{amount} Ihrer Zahlung von %{original} wurden erstattet."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:89
+#, elixir-autogen, elixir-format
+msgid "Hi %{name} — your payment of %{amount} has been refunded in full."
+msgstr "Hallo %{name}, Ihre Zahlung in Höhe von %{amount} wurde vollständig erstattet."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:214
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, %{amount} of your %{original} payment has been refunded."
+msgstr "Hallo %{name}, %{amount} Ihrer Zahlung von %{original} wurden erstattet."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:207
+#, elixir-autogen, elixir-format
+msgid "Hi %{name}, your payment of %{amount} has been refunded in full."
+msgstr "Hallo %{name}, Ihre Zahlung in Höhe von %{amount} wurde vollständig erstattet."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:111
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:242
+#, elixir-autogen, elixir-format
+msgid "If you have any questions, please reply to this email and %{name} will be happy to help."
+msgstr "Falls Sie Fragen haben, antworten Sie einfach auf diese E-Mail. %{name} hilft Ihnen gerne weiter."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:173
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:225
+#, elixir-autogen, elixir-format
+msgid "Meeting: %{title}"
+msgstr "Termin: %{title}"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:167
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:234
+#, elixir-autogen, elixir-format
+msgid "Original payment: %{amount}"
+msgstr "Ursprüngliche Zahlung: %{amount}"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:140
+#, elixir-autogen, elixir-format
+msgid "Partial Refund Issued - %{amount}"
+msgstr "Teilrückerstattung veranlasst – %{amount}"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:232
+#, elixir-autogen, elixir-format
+msgid "REFUND DETAILS:"
+msgstr "DETAILS ZUR RÜCKERSTATTUNG:"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:228
+#, elixir-autogen, elixir-format
+msgid "REFUND ISSUED"
+msgstr "RÜCKERSTATTUNG VERANLASST"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:138
+#, elixir-autogen, elixir-format
+msgid "Refund Issued - %{amount}"
+msgstr "Rückerstattung veranlasst – %{amount}"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:158
+#, elixir-autogen, elixir-format
+msgid "Refund details"
+msgstr "Details zur Rückerstattung"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:123
+#, elixir-autogen, elixir-format
+msgid "Refunded"
+msgstr "Erstattet"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:162
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:233
+#, elixir-autogen, elixir-format
+msgid "Refunded amount: %{amount}"
+msgstr "Erstatteter Betrag: %{amount}"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:110
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:237
+#, elixir-autogen, elixir-format
+msgid "Refunds typically take 5–10 business days to appear on your original payment method, depending on your bank."
+msgstr "Je nach Bank dauert es in der Regel 5 bis 10 Werktage, bis die Rückerstattung auf Ihrer ursprünglichen Zahlungsmethode verbucht ist."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:126
+#, elixir-autogen, elixir-format
+msgid "Your payment was refunded."
+msgstr "Ihre Zahlung wurde erstattet."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:79
+#, elixir-autogen, elixir-format
+msgid "there"
+msgstr "dort"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:80
+#, elixir-autogen, elixir-format
+msgid "your host"
+msgstr "Ihr Gastgeber"
