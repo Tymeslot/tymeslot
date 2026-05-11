@@ -11,7 +11,12 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpened do
   use Oban.Worker,
     queue: :emails,
     max_attempts: 5,
-    priority: 0
+    priority: 0,
+    unique: [
+      keys: [:booking_payment_id],
+      states: [:available, :scheduled, :executing, :retryable],
+      period: 86_400
+    ]
 
   require Logger
 

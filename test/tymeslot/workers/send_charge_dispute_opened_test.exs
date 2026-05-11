@@ -49,4 +49,14 @@ defmodule Tymeslot.Workers.SendChargeDisputeOpenedTest do
                perform_job(SendChargeDisputeOpened, %{})
     end
   end
+
+  describe "uniqueness" do
+    test "second Oban.insert for the same booking_payment_id within 24 h is a conflict" do
+      payment = insert_payment()
+      args = %{"booking_payment_id" => payment.id, "reason" => "fraudulent"}
+
+      assert {:ok, %{conflict?: false}} = Oban.insert(SendChargeDisputeOpened.new(args))
+      assert {:ok, %{conflict?: true}} = Oban.insert(SendChargeDisputeOpened.new(args))
+    end
+  end
 end

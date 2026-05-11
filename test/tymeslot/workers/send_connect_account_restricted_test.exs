@@ -69,4 +69,20 @@ defmodule Tymeslot.Workers.SendConnectAccountRestrictedTest do
                perform_job(SendConnectAccountRestricted, %{})
     end
   end
+
+  describe "uniqueness" do
+    test "second Oban.insert for the same connect_account_id within 24 h is a conflict" do
+      account = insert_account()
+
+      args = %{
+        "connect_account_id" => account.id,
+        "user_id" => account.user_id,
+        "stripe_account_id" => account.stripe_account_id,
+        "disabled_reason" => "requirements.past_due"
+      }
+
+      assert {:ok, %{conflict?: false}} = Oban.insert(SendConnectAccountRestricted.new(args))
+      assert {:ok, %{conflict?: true}} = Oban.insert(SendConnectAccountRestricted.new(args))
+    end
+  end
 end

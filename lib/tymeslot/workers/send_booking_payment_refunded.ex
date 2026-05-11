@@ -18,7 +18,12 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefunded do
   use Oban.Worker,
     queue: :emails,
     max_attempts: 5,
-    priority: 1
+    priority: 1,
+    unique: [
+      keys: [:booking_payment_id],
+      states: [:available, :scheduled, :executing, :retryable],
+      period: 86_400
+    ]
 
   require Logger
 

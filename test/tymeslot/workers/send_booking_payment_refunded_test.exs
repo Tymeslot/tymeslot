@@ -79,4 +79,14 @@ defmodule Tymeslot.Workers.SendBookingPaymentRefundedTest do
                })
     end
   end
+
+  describe "uniqueness" do
+    test "second Oban.insert for the same booking_payment_id within 24 h is a conflict" do
+      payment = insert_payment()
+      args = %{"booking_payment_id" => payment.id}
+
+      assert {:ok, %{conflict?: false}} = Oban.insert(SendBookingPaymentRefunded.new(args))
+      assert {:ok, %{conflict?: true}} = Oban.insert(SendBookingPaymentRefunded.new(args))
+    end
+  end
 end
