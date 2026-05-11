@@ -549,7 +549,7 @@ if config_env() == :prod do
     if stripe_webhook_secret do
       config :tymeslot, :stripe_webhook_secret, stripe_webhook_secret
     else
-      IO.warn("STRIPE_WEBHOOK_SECRET not set - webhook signature verification disabled")
+      Logger.warning("STRIPE_WEBHOOK_SECRET not set — webhook signature verification disabled")
     end
 
     # Stripe Connect webhook secret (separate from the platform webhook secret)
