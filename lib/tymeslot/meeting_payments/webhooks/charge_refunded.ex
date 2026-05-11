@@ -20,6 +20,7 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.Repo
 
   @event_type "charge.refunded"
 
@@ -50,16 +51,40 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeRefunded do
   defp classify({:error, _reason} = err), do: {err, :error}
 
   defp update_payment(payment, event_id, amount_refunded) do
-    new_total = max(payment.refunded_amount_cents, amount_refunded)
-    new_status = derive_status(payment, new_total)
+    result =
+      Repo.transaction(fn ->
+        with {:ok, locked} <- BookingPaymentQueries.get_for_update(payment.id) do
+          # Re-check idempotency after acquiring the lock to avoid reprocessing
+          # during a concurrent in-app refund race.
+          if locked.last_event_id == event_id do
+            :idempotent_replay
+          else
+            new_total = max(locked.refunded_amount_cents, amount_refunded)
+            new_status = derive_status(locked, new_total)
 
-    case BookingPaymentQueries.update(payment, %{
-           refunded_amount_cents: new_total,
-           status: new_status,
-           last_event_id: event_id
-         }) do
-      {:ok, updated} ->
-        Telemetry.emit_status_changed(payment.status, updated.status, :webhook_charge_refunded)
+            case BookingPaymentQueries.update(locked, %{
+                   refunded_amount_cents: new_total,
+                   status: new_status,
+                   last_event_id: event_id
+                 }) do
+              {:ok, updated} ->
+                {locked.status, updated.status}
+
+              {:error, reason} ->
+                Repo.rollback(reason)
+            end
+          end
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+
+    case result do
+      {:ok, :idempotent_replay} ->
+        :ok
+
+      {:ok, {old_status, new_status}} ->
+        Telemetry.emit_status_changed(old_status, new_status, :webhook_charge_refunded)
         :ok
 
       {:error, reason} ->
