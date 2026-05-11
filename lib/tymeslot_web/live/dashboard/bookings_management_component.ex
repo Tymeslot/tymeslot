@@ -6,8 +6,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
 
   alias Ecto.UUID
   alias Tymeslot.Bookings.Policy
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.Refunds
+  alias Tymeslot.MeetingPayments
   alias Tymeslot.Meetings
   alias Tymeslot.Security.RateLimiter
 
@@ -115,7 +114,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
     case fetch_meeting_for_modal(socket, params, policy_fun: &Policy.can_cancel_meeting?/1) do
       {:ok, meeting} ->
         emit_cancel_open_telemetry(socket.assigns.current_user.id, meeting.id)
-        booking_payment = BookingPaymentQueries.by_meeting_id(meeting.id)
+        booking_payment = MeetingPayments.payment_for_meeting(meeting.id)
 
         {:noreply,
          socket
@@ -388,8 +387,8 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   end
 
   defp execute_cancel_with_refund(socket, meeting, booking_payment, refund_action) do
-    with :ok <- maybe_issue_refund(booking_payment, refund_action),
-         {:ok, _cancelled_meeting} <- Meetings.cancel_meeting(meeting) do
+    with {:ok, _cancelled_meeting} <- Meetings.cancel_meeting(meeting),
+         :ok <- maybe_issue_refund(booking_payment, refund_action) do
       :telemetry.execute(
         [:tymeslot, :dashboard, :meetings, :cancel, :confirm],
         %{},
@@ -405,6 +404,30 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
        |> load_meetings()
        |> ModalHook.hide_modal(:cancel_meeting)}
     else
+      {:error, {:refund_failed, reason}} ->
+        :telemetry.execute(
+          [:tymeslot, :dashboard, :meetings, :cancel, :confirm],
+          %{},
+          %{
+            user_id: socket.assigns.current_user.id,
+            meeting_id: meeting.id,
+            result: :error,
+            reason: inspect(reason)
+          }
+        )
+
+        Flash.error(
+          "Meeting cancelled but refund could not be issued. " <>
+            "Please issue the refund manually from your Stripe dashboard."
+        )
+
+        {:noreply,
+         socket
+         |> assign(:cancelling_meeting, nil)
+         |> assign(:cancel_booking_payment, nil)
+         |> load_meetings()
+         |> ModalHook.hide_modal(:cancel_meeting)}
+
       {:error, reason} ->
         :telemetry.execute(
           [:tymeslot, :dashboard, :meetings, :cancel, :confirm],
@@ -425,7 +448,7 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   defp maybe_issue_refund(_payment, :none), do: :ok
 
   defp maybe_issue_refund(payment, {:refund, amount_cents}) do
-    case Refunds.issue_refund(payment, amount_cents) do
+    case MeetingPayments.issue_refund(payment, amount_cents) do
       {:ok, _payment} -> :ok
       {:error, reason} -> {:error, {:refund_failed, reason}}
     end

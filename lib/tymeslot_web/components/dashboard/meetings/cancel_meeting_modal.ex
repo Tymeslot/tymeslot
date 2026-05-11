@@ -60,27 +60,23 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
         </div>
       </:header>
 
-      <%= if @meeting do %>
-        <form
-          id="cancel-meeting-form"
-          phx-submit={@confirm_event}
-          phx-target={@target}
-          class="space-y-4"
-        >
-          <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
-            Are you sure you want to cancel the meeting with <strong>{@meeting.attendee_name}</strong>
-            scheduled for <strong><%= Helpers.format_meeting_date(@meeting, @timezone) %> • <%= Helpers.format_meeting_time(@meeting, @timezone) %></strong>?
-          </p>
+      <form
+        :if={@meeting}
+        id="cancel-meeting-form"
+        phx-submit={@confirm_event}
+        phx-target={@target}
+        class="space-y-4"
+      >
+        <p class="text-tymeslot-600 font-medium text-lg leading-relaxed">
+          Are you sure you want to cancel the meeting with <strong>{@meeting.attendee_name}</strong>
+          scheduled for <strong>{Helpers.format_meeting_date(@meeting, @timezone)} • {Helpers.format_meeting_time(@meeting, @timezone)}</strong>?
+        </p>
 
-          <%= if @paid? do %>
-            <.paid_options booking_payment={@booking_payment} />
-          <% else %>
-            <p class="text-tymeslot-500 font-medium">
-              This action cannot be undone. The attendee will be notified of the cancellation.
-            </p>
-          <% end %>
-        </form>
-      <% end %>
+        <.paid_options :if={@paid?} booking_payment={@booking_payment} />
+        <p :if={not @paid?} class="text-tymeslot-500 font-medium">
+          This action cannot be undone. The attendee will be notified of the cancellation.
+        </p>
+      </form>
 
       <:footer>
         <div class="flex justify-end gap-3">
@@ -94,7 +90,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
             loading={@cancelling}
             loading_text="Cancelling..."
           >
-            <%= if @paid?, do: "Confirm cancellation", else: "Cancel Meeting" %>
+            {if @paid?, do: "Confirm cancellation", else: "Cancel Meeting"}
           </CoreComponents.loading_button>
         </div>
       </:footer>

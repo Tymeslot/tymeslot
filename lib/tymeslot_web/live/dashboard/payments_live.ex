@@ -10,14 +10,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   use TymeslotWeb, :live_view
 
   alias Tymeslot.Features
-  alias Tymeslot.MeetingPayments.BookingPaymentQueries
-  alias Tymeslot.MeetingPayments.ConnectAccountQueries
-  alias Tymeslot.MeetingPayments.ConnectAccounts
-  alias Tymeslot.MeetingPayments.Currency
-  alias Tymeslot.MeetingPayments.Refunds
-  alias Tymeslot.MeetingPayments.Workers.ResyncConnectAccount
-  alias Tymeslot.MeetingTypes.MeetingTypeQueries
-  alias Tymeslot.Repo
+  alias Tymeslot.MeetingPayments
   alias TymeslotWeb.Components.CoreComponents
 
   @refund_window_days 60
@@ -33,7 +26,10 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
          |> assign(:page_title, "Payments")
          |> assign(:refund_modal_payment, nil)
          |> assign(:refund_submitting, false)
-         |> assign_payments_state(user)}
+         |> assign(:connect_account, nil)
+         |> assign(:payments, [])
+         |> assign(:stats, %{received: 0, refunded: 0, platform_fee: 0})
+         |> assign(:pending_payments_count, 0)}
 
       {:error, plan_error} when plan_error in [:insufficient_plan, :pro_required] ->
         {:ok,
@@ -52,8 +48,15 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   @impl Phoenix.LiveView
   def handle_params(params, _uri, socket) do
     socket =
-      if Map.has_key?(params, "return") or Map.has_key?(params, "refresh") do
-        maybe_enqueue_resync(socket)
+      if connected?(socket) do
+        user = socket.assigns.current_user
+        socket = assign_payments_state(socket, user)
+
+        if Map.has_key?(params, "return") or Map.has_key?(params, "refresh") do
+          maybe_enqueue_resync(socket)
+        else
+          socket
+        end
       else
         socket
       end
@@ -67,15 +70,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
     <div class="container mx-auto px-4 py-8">
       <h1 class="display-md mb-6">Payments</h1>
 
-      <%= if is_nil(@connect_account) do %>
+      <div :if={is_nil(@connect_account)}>
         <.connect_cta />
-      <% else %>
+      </div>
+      <div :if={not is_nil(@connect_account)}>
         <.status_card account={@connect_account} />
         <.currency_selector account={@connect_account} />
         <.payments_table payments={@payments} account={@connect_account} />
-        <.lifetime_stats stats={@stats} />
-        <.disconnect_zone />
-      <% end %>
+        <.lifetime_stats stats={@stats} account={@connect_account} />
+        <.disconnect_zone pending_count={@pending_payments_count} />
+      </div>
 
       <.refund_modal
         payment={@refund_modal_payment}
@@ -86,14 +90,16 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   end
 
   defp assign_payments_state(socket, user) do
-    account = ConnectAccountQueries.live_for_user(user.id)
-    payments = BookingPaymentQueries.for_host(user.id)
-    stats = BookingPaymentQueries.lifetime_stats(user.id)
+    account = MeetingPayments.get_connect_account_for_user(user.id)
+    payments = MeetingPayments.list_payments_for_host(user.id)
+    stats = MeetingPayments.lifetime_stats_for_host(user.id)
+    pending_count = Enum.count(payments, &(&1.status == "pending"))
 
     socket
     |> assign(:connect_account, account)
     |> assign(:payments, payments)
     |> assign(:stats, stats)
+    |> assign(:pending_payments_count, pending_count)
   end
 
   # Enqueue a Stripe resync when the host returns from the Express
@@ -104,10 +110,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   defp maybe_enqueue_resync(socket) do
     case socket.assigns[:connect_account] do
       %{stripe_account_id: stripe_account_id} when is_binary(stripe_account_id) ->
-        %{stripe_account_id: stripe_account_id}
-        |> ResyncConnectAccount.new()
-        |> Oban.insert()
-
+        MeetingPayments.enqueue_resync_for_account(stripe_account_id)
         socket
 
       _missing ->
@@ -134,40 +137,65 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   @impl Phoenix.LiveView
   def handle_event("disconnect", _params, socket) do
     user = socket.assigns.current_user
-    :ok = ConnectAccounts.disconnect(user)
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "Stripe disconnected.")
-     |> assign_payments_state(user)}
+    case MeetingPayments.disconnect(user) do
+      {:ok, %{cancelled_count: 0}} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Stripe account disconnected.")
+         |> assign_payments_state(user)}
+
+      {:ok, %{cancelled_count: n}} ->
+        noun = if n == 1, do: "booking", else: "bookings"
+
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           "Stripe account disconnected. #{n} pending #{noun} cancelled."
+         )
+         |> assign_payments_state(user)}
+    end
   end
 
+  @impl Phoenix.LiveView
   def handle_event("change_currency", %{"currency" => currency}, socket) do
     user = socket.assigns.current_user
 
     cond do
-      not Currency.allowed?(currency) ->
+      is_nil(socket.assigns.connect_account) ->
+        {:noreply, socket}
+
+      not MeetingPayments.currency_allowed?(currency) ->
         {:noreply, put_flash(socket, :error, "Currency not supported.")}
 
       currency == socket.assigns.connect_account.default_currency ->
         {:noreply, socket}
 
       true ->
-        :ok = apply_currency_change(socket.assigns.connect_account, user.id, currency)
+        case MeetingPayments.change_default_currency(socket.assigns.connect_account, currency) do
+          {:ok, :reset} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, "Currency updated. Paid event-type prices have been reset.")
+             |> assign_payments_state(user)}
 
-        {:noreply,
-         socket
-         |> put_flash(
-           :info,
-           "Currency updated. Paid event-type prices have been reset."
-         )
-         |> assign_payments_state(user)}
+          {:ok, :no_reset} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, "Currency updated.")
+             |> assign_payments_state(user)}
+
+          {:error, _reason} ->
+            {:noreply, put_flash(socket, :error, "Could not update currency. Please try again.")}
+        end
     end
   end
 
+  @impl Phoenix.LiveView
   def handle_event("open_refund_modal", %{"id" => id}, socket) do
     user = socket.assigns.current_user
-    payment = BookingPaymentQueries.get(id)
+    payment = MeetingPayments.get_payment(id)
 
     cond do
       is_nil(payment) ->
@@ -190,6 +218,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
     end
   end
 
+  @impl Phoenix.LiveView
   def handle_event("close_refund_modal", _params, socket) do
     {:noreply,
      socket
@@ -197,6 +226,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
      |> assign(:refund_submitting, false)}
   end
 
+  @impl Phoenix.LiveView
   def handle_event("submit_refund", params, socket) do
     user = socket.assigns.current_user
     payment = socket.assigns.refund_modal_payment
@@ -209,7 +239,14 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
         {:noreply, socket}
 
       true ->
-        do_submit_refund(socket, payment, params)
+        # Re-fetch from DB to pick up any concurrent state changes (e.g. a
+        # refund issued from another tab) before parsing the amount. The
+        # Refunds.issue_refund/3 call still acquires a FOR UPDATE lock, so
+        # this is defence-in-depth rather than a guarantee.
+        case MeetingPayments.get_payment(payment.id) do
+          nil -> {:noreply, socket}
+          fresh_payment -> do_submit_refund(socket, fresh_payment, params)
+        end
     end
   end
 
@@ -227,7 +264,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   defp process_refund(socket, payment, amount_cents) do
     user = socket.assigns.current_user
 
-    case Refunds.issue_refund(payment, amount_cents) do
+    case MeetingPayments.issue_refund(payment, amount_cents) do
       {:ok, _payment} ->
         {:noreply,
          socket
@@ -293,18 +330,8 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   defp refund_error_message(_other),
     do: "Something went wrong while issuing the refund. Please try again."
 
-  defp apply_currency_change(account, user_id, currency) do
-    {:ok, _result} =
-      Repo.transaction(fn ->
-        {:ok, _account} = ConnectAccountQueries.update(account, %{default_currency: currency})
-        MeetingTypeQueries.clear_payments_for_user(user_id)
-      end)
-
-    :ok
-  end
-
   defp currency_selector(assigns) do
-    assigns = assign(assigns, :currencies, Currency.allowlist())
+    assigns = assign(assigns, :currencies, MeetingPayments.currency_allowlist())
 
     ~H"""
     <div class="rounded-token-lg border border-tymeslot-200 bg-white p-4 mb-6">
@@ -352,45 +379,41 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
     ~H"""
     <div class="rounded-token-lg border border-tymeslot-200 bg-white mb-6">
       <h2 class="display-md p-4 border-b border-tymeslot-200">Recent payments</h2>
-      <%= if @payments == [] do %>
-        <p class="p-4 text-tymeslot-500">No payments yet.</p>
-      <% else %>
-        <table class="w-full">
-          <thead class="text-left text-token-sm text-tymeslot-500">
-            <tr>
-              <th class="p-2">Date</th>
-              <th class="p-2">Attendee</th>
-              <th class="p-2">Meeting type</th>
-              <th class="p-2 text-right">Amount</th>
-              <th class="p-2">Status</th>
-              <th class="p-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr :for={p <- @payments} class="border-t border-tymeslot-200">
-              <td class="p-2 text-token-sm">{Calendar.strftime(p.inserted_at, "%-d %b %Y")}</td>
-              <td class="p-2 text-token-sm">{p.attendee_email}</td>
-              <td class="p-2 text-token-sm">{p.meeting_type_name}</td>
-              <td class="p-2 text-token-sm text-right">
-                {format_amount(p.amount_cents, p.currency)}
-              </td>
-              <td class="p-2 text-token-sm">{format_status(p.status)}</td>
-              <td class="p-2 text-right">
-                <%= if can_refund?(p) and not connect_account_deleted?(@account) do %>
-                  <button
-                    type="button"
-                    class="text-token-sm text-tymeslot-700 underline"
-                    phx-click="open_refund_modal"
-                    phx-value-id={p.id}
-                  >
-                    Refund
-                  </button>
-                <% end %>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      <% end %>
+      <p :if={@payments == []} class="p-4 text-tymeslot-500">No payments yet.</p>
+      <table :if={@payments != []} class="w-full">
+        <thead class="text-left text-token-sm text-tymeslot-500">
+          <tr>
+            <th class="p-2">Date</th>
+            <th class="p-2">Attendee</th>
+            <th class="p-2">Meeting type</th>
+            <th class="p-2 text-right">Amount</th>
+            <th class="p-2">Status</th>
+            <th class="p-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={p <- @payments} class="border-t border-tymeslot-200">
+            <td class="p-2 text-token-sm">{Calendar.strftime(p.inserted_at, "%-d %b %Y")}</td>
+            <td class="p-2 text-token-sm">{p.attendee_email}</td>
+            <td class="p-2 text-token-sm">{p.meeting_type_name}</td>
+            <td class="p-2 text-token-sm text-right">
+              {format_amount(p.amount_cents, p.currency)}
+            </td>
+            <td class="p-2 text-token-sm">{format_status(p.status)}</td>
+            <td class="p-2 text-right">
+              <button
+                :if={can_refund?(p) and not connect_account_deleted?(@account)}
+                type="button"
+                class="text-token-sm text-tymeslot-700 underline"
+                phx-click="open_refund_modal"
+                phx-value-id={p.id}
+              >
+                Refund
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     """
   end
@@ -499,26 +522,42 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   defp refundable_remaining(payment),
     do: max(payment.amount_cents - payment.refunded_amount_cents, 0)
 
+  # `lifetime_stats` is only rendered when `connect_account` is non-nil (see
+  # the `:if={not is_nil(@connect_account)}` guard in render/1), so
+  # `account.default_currency` is always available here.
   defp lifetime_stats(assigns) do
     ~H"""
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <div class="rounded-token-lg border border-tymeslot-200 bg-white p-4">
         <h3 class="text-token-sm text-tymeslot-500">Total received</h3>
-        <p class="text-token-2xl font-semibold">{format_amount(@stats.received, "eur")}</p>
+        <p class="text-token-2xl font-semibold">
+          {format_amount(@stats.received, @account.default_currency)}
+        </p>
       </div>
       <div class="rounded-token-lg border border-tymeslot-200 bg-white p-4">
         <h3 class="text-token-sm text-tymeslot-500">Refunded</h3>
-        <p class="text-token-2xl font-semibold">{format_amount(@stats.refunded, "eur")}</p>
+        <p class="text-token-2xl font-semibold">
+          {format_amount(@stats.refunded, @account.default_currency)}
+        </p>
       </div>
       <div class="rounded-token-lg border border-tymeslot-200 bg-white p-4">
         <h3 class="text-token-sm text-tymeslot-500">Platform fee paid</h3>
-        <p class="text-token-2xl font-semibold">{format_amount(@stats.platform_fee, "eur")}</p>
+        <p class="text-token-2xl font-semibold">
+          {format_amount(@stats.platform_fee, @account.default_currency)}
+        </p>
       </div>
     </div>
     """
   end
 
   defp disconnect_zone(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :confirm_message,
+        disconnect_confirm_message(assigns.pending_count)
+      )
+
     ~H"""
     <details class="rounded-token-lg border border-tymeslot-200 bg-white">
       <summary class="p-4 cursor-pointer text-red-600">Disconnect Stripe</summary>
@@ -527,17 +566,31 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
           Disconnect your Stripe account from Tymeslot. Existing payments
           remain visible. New paid bookings will fail until you reconnect.
         </p>
+        <p :if={@pending_count > 0} class="text-token-sm text-amber-700 mb-3">
+          You have {@pending_count} pending {if @pending_count == 1,
+            do: "booking",
+            else: "bookings"} awaiting payment. Disconnecting will cancel {if @pending_count == 1,
+            do: "it",
+            else: "them"}.
+        </p>
         <button
           type="button"
           class="btn-danger"
           phx-click="disconnect"
-          data-confirm="Disconnect Stripe?"
+          data-confirm={@confirm_message}
         >
           Disconnect Stripe
         </button>
       </div>
     </details>
     """
+  end
+
+  defp disconnect_confirm_message(0), do: "Disconnect Stripe?"
+
+  defp disconnect_confirm_message(n) do
+    noun = if n == 1, do: "booking", else: "bookings"
+    "Disconnect Stripe? This will cancel #{n} pending #{noun}."
   end
 
   # Status state machine -----------------------------------------------
