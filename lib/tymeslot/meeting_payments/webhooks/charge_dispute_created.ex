@@ -64,11 +64,22 @@ defmodule Tymeslot.MeetingPayments.Webhooks.ChargeDisputeCreated do
   end
 
   defp enqueue_dispute_email(payment, object) do
-    %{
-      booking_payment_id: payment.id,
-      reason: object["reason"]
-    }
-    |> SendChargeDisputeOpened.new()
-    |> Oban.insert()
+    case %{
+           booking_payment_id: payment.id,
+           reason: object["reason"]
+         }
+         |> SendChargeDisputeOpened.new()
+         |> Oban.insert() do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue dispute email",
+          booking_payment_id: payment.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
   end
 end

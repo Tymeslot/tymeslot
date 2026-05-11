@@ -21,10 +21,13 @@ defmodule Tymeslot.MeetingPayments.Refunds do
       `Tymeslot.Workers.SendBookingPaymentRefunded`.
   """
 
+  require Logger
+
   alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
   alias Tymeslot.MeetingPayments.Telemetry
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.SendBookingPaymentRefunded
 
   @refund_window_days 60
@@ -33,6 +36,7 @@ defmodule Tymeslot.MeetingPayments.Refunds do
           :not_paid
           | :outside_refund_window
           | :already_refunded
+          | :under_dispute
           | :invalid_amount
           | :missing_charge
           | term()
@@ -40,14 +44,28 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   @spec issue_refund(BookingPaymentSchema.t(), pos_integer(), String.t() | nil) ::
           {:ok, BookingPaymentSchema.t()} | {:error, refund_error()}
   def issue_refund(payment, amount_cents, reason \\ nil) do
-    with :ok <- validate_within_window(payment),
-         :ok <- validate_amount(payment, amount_cents),
-         :ok <- validate_charge(payment),
-         {:ok, _stripe_refund} <- create_stripe_refund(payment, amount_cents, reason),
-         {:ok, updated_payment} <- update_payment_after_refund(payment, amount_cents) do
-      enqueue_refund_email(updated_payment)
-      {:ok, updated_payment}
-    end
+    # Run the full validate → Stripe call → DB update sequence inside a
+    # serialised transaction with a row lock so that two concurrent host
+    # clicks cannot both pass validation against stale `refunded_amount_cents`
+    # and issue duplicate refunds via Stripe.
+    #
+    # The second concurrent caller blocks on the lock, then re-fetches the
+    # updated row and re-validates — at which point the remaining refundable
+    # balance will reflect the first refund, causing the over-refund attempt
+    # to return {:error, :invalid_amount}.
+    Repo.transaction(fn ->
+      with {:ok, locked} <- BookingPaymentQueries.get_for_update(payment.id),
+           :ok <- validate_within_window(locked),
+           :ok <- validate_amount(locked, amount_cents),
+           :ok <- validate_charge(locked),
+           {:ok, _stripe_refund} <- create_stripe_refund(locked, amount_cents, reason),
+           {:ok, updated_payment} <- update_payment_after_refund(locked, amount_cents) do
+        enqueue_refund_email(updated_payment)
+        updated_payment
+      else
+        {:error, rollback_reason} -> Repo.rollback(rollback_reason)
+      end
+    end)
   end
 
   defp validate_within_window(%{paid_at: nil}), do: {:error, :not_paid}
@@ -127,8 +145,19 @@ defmodule Tymeslot.MeetingPayments.Refunds do
   end
 
   defp enqueue_refund_email(payment) do
-    %{booking_payment_id: payment.id}
-    |> SendBookingPaymentRefunded.new()
-    |> Oban.insert()
+    case %{booking_payment_id: payment.id}
+         |> SendBookingPaymentRefunded.new()
+         |> Oban.insert() do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Failed to enqueue refund email",
+          booking_payment_id: payment.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
   end
 end

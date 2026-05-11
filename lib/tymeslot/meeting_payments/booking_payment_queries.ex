@@ -8,6 +8,24 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
   alias Tymeslot.MeetingPayments.BookingPaymentSchema
   alias Tymeslot.Repo
 
+  @doc """
+  Fetches a `booking_payment` by id and acquires a `SELECT … FOR UPDATE` row
+  lock for the duration of the current transaction.
+
+  Must be called inside a `Repo.transaction/1`. Returns
+  `{:ok, schema}` or `{:error, :not_found}`.
+  """
+  @spec get_for_update(Ecto.UUID.t()) ::
+          {:ok, BookingPaymentSchema.t()} | {:error, :not_found}
+  def get_for_update(id) do
+    query = from(b in BookingPaymentSchema, where: b.id == ^id, lock: "FOR UPDATE")
+
+    case Repo.one(query) do
+      nil -> {:error, :not_found}
+      schema -> {:ok, schema}
+    end
+  end
+
   @spec get(Ecto.UUID.t()) :: BookingPaymentSchema.t() | nil
   def get(id), do: Repo.get(BookingPaymentSchema, id)
 
