@@ -160,6 +160,8 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
          cancel_url,
          currency
        ) do
+    payment_intent_data = payment_intent_data(meeting, account, fee_cents)
+
     %{
       mode: "payment",
       automatic_payment_methods: %{enabled: true},
@@ -173,19 +175,32 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessions do
           quantity: 1
         }
       ],
-      payment_intent_data: %{
-        application_fee_amount: fee_cents,
-        metadata: %{
-          meeting_id: meeting.id,
-          host_user_id: account.user_id
-        }
-      },
+      payment_intent_data: payment_intent_data,
       customer_email: meeting.attendee_email,
       client_reference_id: meeting.id,
       expires_at: System.os_time(:second) + @session_expiry_seconds,
       success_url: success_url <> "?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: cancel_url,
       locale: stripe_locale(meeting.attendee_locale)
+    }
+  end
+
+  defp payment_intent_data(meeting, account, fee_cents) when fee_cents > 0 do
+    %{
+      application_fee_amount: fee_cents,
+      metadata: %{
+        meeting_id: meeting.id,
+        host_user_id: account.user_id
+      }
+    }
+  end
+
+  defp payment_intent_data(meeting, account, _fee_cents) do
+    %{
+      metadata: %{
+        meeting_id: meeting.id,
+        host_user_id: account.user_id
+      }
     }
   end
 

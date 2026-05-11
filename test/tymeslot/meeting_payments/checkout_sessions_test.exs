@@ -108,6 +108,33 @@ defmodule Tymeslot.MeetingPayments.CheckoutSessionsTest do
                CheckoutSessions.create_session_for_booking(meeting)
     end
 
+    test "omits application_fee_amount from payment_intent_data when fee is zero",
+         %{user: user, meeting_type: mt} do
+      Application.put_env(:tymeslot, :payment_application_fee_bp, 0)
+      on_exit(fn -> Application.put_env(:tymeslot, :payment_application_fee_bp, 0) end)
+
+      meeting =
+        insert(:meeting,
+          organizer_user_id: user.id,
+          meeting_type_ref: mt,
+          attendee_email: "bob@example.com",
+          attendee_name: "Bob",
+          attendee_locale: "en",
+          status: "awaiting_payment"
+        )
+
+      expect(StripeAdapterMock, :create_checkout_session, fn params, _opts ->
+        refute Map.has_key?(params.payment_intent_data, :application_fee_amount)
+        assert params.payment_intent_data.metadata.meeting_id == meeting.id
+        {:ok, %{id: "cs_ZERO_FEE", url: "https://checkout.stripe.com/cs_ZERO_FEE"}}
+      end)
+
+      assert {:ok, %{booking_payment: bp}} =
+               CheckoutSessions.create_session_for_booking(meeting)
+
+      assert bp.application_fee_cents == 0
+    end
+
     test "rolls back booking_payment when Stripe Checkout fails",
          %{user: user, meeting_type: mt} do
       meeting =
