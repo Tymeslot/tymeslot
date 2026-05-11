@@ -21,7 +21,11 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountQueries do
 
   @spec by_stripe_account_id(String.t()) :: ConnectAccountSchema.t() | nil
   def by_stripe_account_id(stripe_account_id) do
-    Repo.get_by(ConnectAccountSchema, stripe_account_id: stripe_account_id)
+    Repo.one(
+      from c in ConnectAccountSchema,
+        where: c.stripe_account_id == ^stripe_account_id and is_nil(c.deleted_at),
+        limit: 1
+    )
   end
 
   @spec insert_placeholder(integer(), String.t()) ::

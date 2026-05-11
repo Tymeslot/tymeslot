@@ -47,7 +47,10 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountSchema do
     |> cast(attrs, @castable)
     |> validate_required([:status])
     |> validate_inclusion(:status, @valid_statuses)
-    |> unique_constraint(:stripe_account_id)
+    |> unique_constraint(:stripe_account_id,
+      name: :connect_accounts_stripe_account_id_live_unique_index
+    )
+    |> unique_constraint(:user_id, name: :connect_accounts_user_id_live_unique_index)
     |> foreign_key_constraint(:user_id)
   end
 

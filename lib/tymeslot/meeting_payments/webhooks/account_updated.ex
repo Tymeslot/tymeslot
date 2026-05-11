@@ -39,6 +39,9 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdated do
   defp ensure_created(object, created) when is_integer(created), do: object
 
   defp ensure_created(object, _missing) do
-    Map.put(object, "created", System.os_time(:second))
+    # Treat a missing `created` field as the oldest possible event (Unix
+    # epoch = 0) so any subsequent real Stripe event with a genuine timestamp
+    # is always considered newer and never rejected as stale.
+    Map.put(object, "created", 0)
   end
 end

@@ -104,5 +104,61 @@ defmodule Tymeslot.MeetingPayments.Webhooks.AccountUpdatedTest do
 
       assert :ok = AccountUpdated.handle(event)
     end
+
+    test "a real event with an older-but-genuine timestamp is accepted after a missing-created event" do
+      user = insert(:user)
+
+      _ca =
+        insert(:connect_account,
+          user: user,
+          stripe_account_id: "acct_EPOCH_FALLBACK",
+          charges_enabled: false,
+          payouts_enabled: false
+        )
+
+      # First event: no `created` field — fallback is epoch 0.
+      missing_created_event = %{
+        "id" => "evt_NO_TS",
+        "type" => "account.updated",
+        "created" => System.os_time(:second),
+        "data" => %{
+          "object" => %{
+            "id" => "acct_EPOCH_FALLBACK",
+            # `created` deliberately absent — ensure_created sets it to 0
+            "charges_enabled" => false,
+            "payouts_enabled" => false,
+            "details_submitted" => false,
+            "requirements" => %{"disabled_reason" => nil}
+          }
+        }
+      }
+
+      assert :ok = AccountUpdated.handle(missing_created_event)
+
+      # Subsequent real event with a genuine (but older-than-now) timestamp
+      # must NOT be rejected as stale because epoch 0 is always older.
+      real_ts = System.os_time(:second) - 3600
+
+      real_event = %{
+        "id" => "evt_REAL",
+        "type" => "account.updated",
+        "created" => real_ts,
+        "data" => %{
+          "object" => %{
+            "id" => "acct_EPOCH_FALLBACK",
+            "created" => real_ts,
+            "charges_enabled" => true,
+            "payouts_enabled" => true,
+            "details_submitted" => true,
+            "requirements" => %{"disabled_reason" => nil}
+          }
+        }
+      }
+
+      assert :ok = AccountUpdated.handle(real_event)
+
+      reloaded = ConnectAccountQueries.by_stripe_account_id("acct_EPOCH_FALLBACK")
+      assert reloaded.charges_enabled == true
+    end
   end
 end
