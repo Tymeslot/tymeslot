@@ -73,12 +73,14 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefundedTest do
   end
 
   describe "render/1 with missing optional fields" do
-    test "falls back gracefully when attendee_name is nil" do
+    test "drops the personal greeting when attendee_name is nil" do
       ctx = build_context(%{attendee_name: nil})
       email = BookingPaymentRefunded.render(ctx)
 
-      assert email.to == [{"there", "alice@example.com"}]
-      assert email.text_body =~ "Hi there"
+      assert email.to == [{"", "alice@example.com"}]
+      refute email.text_body =~ "Hi there"
+      refute email.text_body =~ "Hi ,"
+      assert email.text_body =~ "Hi, "
     end
 
     test "does not include meeting line when meeting_title is nil" do

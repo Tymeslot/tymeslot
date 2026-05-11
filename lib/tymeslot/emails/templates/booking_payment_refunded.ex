@@ -76,7 +76,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
     locale = context.locale || Locales.default_locale()
 
     Gettext.with_locale(TymeslotWeb.Gettext, locale, fn ->
-      attendee_name = context.attendee_name || dgettext("emails", "there")
+      has_name? = is_binary(context.attendee_name) and context.attendee_name != ""
       host_name = context.host_name || dgettext("emails", "your host")
 
       refunded_amount =
@@ -84,23 +84,7 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
 
       original_amount = Formatting.format_currency(context.amount_cents, context.currency)
 
-      intro_copy =
-        if context.is_full_refund? do
-          dgettext(
-            "emails",
-            "Hi %{name} — your payment of %{amount} has been refunded in full.",
-            name: attendee_name,
-            amount: refunded_amount
-          )
-        else
-          dgettext(
-            "emails",
-            "Hi %{name} — %{amount} of your %{original} payment has been refunded.",
-            name: attendee_name,
-            amount: refunded_amount,
-            original: original_amount
-          )
-        end
+      intro_copy = html_intro(context, has_name?, refunded_amount, original_amount)
 
       mjml_content = """
       #{Text.centered_text(intro_copy, padding: "8px 0 16px 0")}
@@ -132,7 +116,11 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
       html_body = TemplateHelper.compile_template(mjml_content, organizer_details)
 
       MjmlEmail.base_email()
-      |> to({attendee_name, context.attendee_email})
+      |> to(
+        if has_name?,
+          do: {context.attendee_name, context.attendee_email},
+          else: context.attendee_email
+      )
       |> subject(
         if context.is_full_refund? do
           dgettext("emails", "Refund Issued - %{amount}", amount: refunded_amount)
@@ -141,8 +129,44 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
         end
       )
       |> html_body(html_body)
-      |> text_body(text_body(context, refunded_amount, original_amount, attendee_name, host_name))
+      |> text_body(text_body(context, refunded_amount, original_amount, has_name?, host_name))
     end)
+  end
+
+  defp html_intro(context, true = _has_name?, refunded_amount, original_amount) do
+    if context.is_full_refund? do
+      dgettext(
+        "emails",
+        "Hi %{name} — your payment of %{amount} has been refunded in full.",
+        name: context.attendee_name,
+        amount: refunded_amount
+      )
+    else
+      dgettext(
+        "emails",
+        "Hi %{name} — %{amount} of your %{original} payment has been refunded.",
+        name: context.attendee_name,
+        amount: refunded_amount,
+        original: original_amount
+      )
+    end
+  end
+
+  defp html_intro(context, false = _has_name?, refunded_amount, original_amount) do
+    if context.is_full_refund? do
+      dgettext(
+        "emails",
+        "Hi — your payment of %{amount} has been refunded in full.",
+        amount: refunded_amount
+      )
+    else
+      dgettext(
+        "emails",
+        "Hi — %{amount} of your %{original} payment has been refunded.",
+        amount: refunded_amount,
+        original: original_amount
+      )
+    end
   end
 
   defp refund_subtitle(%RefundContext{meeting_title: title}, refunded_amount)
@@ -201,24 +225,8 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
     """
   end
 
-  defp text_body(context, refunded_amount, original_amount, attendee_name, host_name) do
-    intro =
-      if context.is_full_refund? do
-        dgettext(
-          "emails",
-          "Hi %{name}, your payment of %{amount} has been refunded in full.",
-          name: attendee_name,
-          amount: refunded_amount
-        )
-      else
-        dgettext(
-          "emails",
-          "Hi %{name}, %{amount} of your %{original} payment has been refunded.",
-          name: attendee_name,
-          amount: refunded_amount,
-          original: original_amount
-        )
-      end
+  defp text_body(context, refunded_amount, original_amount, has_name?, host_name) do
+    intro = text_intro(context, has_name?, refunded_amount, original_amount)
 
     title_line =
       if context.meeting_title,
@@ -247,5 +255,41 @@ defmodule Tymeslot.Emails.Templates.BookingPaymentRefunded do
     ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join("\n")
+  end
+
+  defp text_intro(context, true = _has_name?, refunded_amount, original_amount) do
+    if context.is_full_refund? do
+      dgettext(
+        "emails",
+        "Hi %{name}, your payment of %{amount} has been refunded in full.",
+        name: context.attendee_name,
+        amount: refunded_amount
+      )
+    else
+      dgettext(
+        "emails",
+        "Hi %{name}, %{amount} of your %{original} payment has been refunded.",
+        name: context.attendee_name,
+        amount: refunded_amount,
+        original: original_amount
+      )
+    end
+  end
+
+  defp text_intro(context, false = _has_name?, refunded_amount, original_amount) do
+    if context.is_full_refund? do
+      dgettext(
+        "emails",
+        "Hi, your payment of %{amount} has been refunded in full.",
+        amount: refunded_amount
+      )
+    else
+      dgettext(
+        "emails",
+        "Hi, %{amount} of your %{original} payment has been refunded.",
+        amount: refunded_amount,
+        original: original_amount
+      )
+    end
   end
 end

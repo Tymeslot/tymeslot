@@ -463,7 +463,6 @@ msgstr "відповісти на цей лист"
 
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:58
 #: lib/tymeslot/emails/templates/appointment_reminder.ex:161
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:100
 #, elixir-autogen, elixir-format
 msgid "soon"
 msgstr "незабаром"
@@ -486,7 +485,6 @@ msgstr[0] "день"
 msgstr[1] "дні"
 msgstr[2] "днів"
 
-#: dev_support/email_testing/helpers.ex:76
 #: lib/tymeslot/emails/appointment_builder.ex:281
 #: lib/tymeslot/emails/shared/formatting.ex:269
 #: lib/tymeslot/emails/shared/formatting.ex:270
@@ -1582,11 +1580,6 @@ msgstr "%{date} о %{time}"
 msgid "Date: %{date}"
 msgstr "Дата: %{date}"
 
-#: dev_support/email_testing/helpers.ex:80
-#, elixir-autogen, elixir-format
-msgid "I'll send you a reminder 24 hours before our appointment."
-msgstr "Я надішлю вам нагадування за 24 години до нашої зустрічі."
-
 #: lib/tymeslot/emails/templates/appointment_confirmation.ex:481
 #, elixir-autogen, elixir-format
 msgid "PAYMENT RECEIPT:"
@@ -1613,143 +1606,127 @@ msgstr "Переглянути квитанцію"
 msgid "View receipt: %{url}"
 msgstr "Переглянути квитанцію: %{url}"
 
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:126
-#, elixir-autogen, elixir-format
-msgid "in %{count} day"
-msgid_plural "in %{count} days"
-msgstr[0] "через %{count} день"
-msgstr[1] "через %{count} дні"
-msgstr[2] "через %{count} днів"
-
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:115
-#, elixir-autogen, elixir-format
-msgid "in %{count} hour"
-msgid_plural "in %{count} hours"
-msgstr[0] "через %{count} годину"
-msgstr[1] "через %{count} години"
-msgstr[2] "через %{count} годин"
-
-#: dev_support/email_testing/helpers.ex:77
-#, elixir-autogen, elixir-format
-msgid "in %{time_until}"
-msgstr "через %{time_until}"
-
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:132
-#, elixir-autogen, elixir-format
-msgid "today"
-msgstr "сьогодні"
-
-#: lib/tymeslot_saas/emails/templates/trial_ending_reminder.ex:129
-#, elixir-autogen, elixir-format
-msgid "tomorrow"
-msgstr "завтра"
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:150
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:174
 #, elixir-autogen, elixir-format
 msgid "%{amount} returned for “%{title}”"
 msgstr "Повернуто %{amount} за «%{title}»"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:154
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:178
 #, elixir-autogen, elixir-format
 msgid "%{amount} returned to your card"
 msgstr "%{amount} повернуто на вашу картку"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:127
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:111
 #, elixir-autogen, elixir-format
 msgid "A partial refund was issued."
 msgstr "Здійснено часткове повернення коштів."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:96
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:145
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} — %{amount} of your %{original} payment has been refunded."
 msgstr "Привіт, %{name} — %{amount} з вашого початкового платежу на суму %{original} було повернуто."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:89
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:138
 #, elixir-autogen, elixir-format
 msgid "Hi %{name} — your payment of %{amount} has been refunded in full."
 msgstr "Привіт, %{name} — ваш платіж на суму %{amount} було повністю повернуто."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:214
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:269
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, %{amount} of your %{original} payment has been refunded."
 msgstr "Привіт, %{name}, %{amount} з вашого початкового платежу на суму %{original} було повернуто."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:207
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:262
 #, elixir-autogen, elixir-format
 msgid "Hi %{name}, your payment of %{amount} has been refunded in full."
 msgstr "Привіт, %{name}, ваш платіж на суму %{amount} було повністю повернуто."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:111
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:242
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:95
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:250
 #, elixir-autogen, elixir-format
 msgid "If you have any questions, please reply to this email and %{name} will be happy to help."
 msgstr "Якщо у вас виникнуть запитання, дайте відповідь на цей лист, і %{name} із радістю вам допоможе."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:173
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:225
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:197
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:233
 #, elixir-autogen, elixir-format
 msgid "Meeting: %{title}"
 msgstr "Зустріч: %{title}"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:167
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:234
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:191
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:242
 #, elixir-autogen, elixir-format
 msgid "Original payment: %{amount}"
 msgstr "Початковий платіж: %{amount}"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:140
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:128
 #, elixir-autogen, elixir-format
 msgid "Partial Refund Issued - %{amount}"
 msgstr "Часткове повернення коштів — %{amount}"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:232
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:240
 #, elixir-autogen, elixir-format
 msgid "REFUND DETAILS:"
 msgstr "ДЕТАЛІ ПОВЕРНЕННЯ:"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:228
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:236
 #, elixir-autogen, elixir-format
 msgid "REFUND ISSUED"
 msgstr "КОШТИ ПОВЕРНУТО"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:138
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:126
 #, elixir-autogen, elixir-format
 msgid "Refund Issued - %{amount}"
 msgstr "Кошти повернуто — %{amount}"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:158
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:182
 #, elixir-autogen, elixir-format
 msgid "Refund details"
 msgstr "Деталі повернення"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:123
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:107
 #, elixir-autogen, elixir-format
 msgid "Refunded"
 msgstr "Повернуто"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:162
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:233
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:186
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:241
 #, elixir-autogen, elixir-format
 msgid "Refunded amount: %{amount}"
 msgstr "Сума повернення: %{amount}"
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:110
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:237
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:94
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:245
 #, elixir-autogen, elixir-format
 msgid "Refunds typically take 5–10 business days to appear on your original payment method, depending on your bank."
 msgstr "Зазвичай кошти надходять на початковий спосіб оплати протягом 5–10 робочих днів, залежно від вашого банку."
 
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:126
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:110
 #, elixir-autogen, elixir-format
 msgid "Your payment was refunded."
 msgstr "Ваш платіж було повернуто."
-
-#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:79
-#, elixir-autogen, elixir-format
-msgid "there"
-msgstr "там"
 
 #: lib/tymeslot/emails/templates/booking_payment_refunded.ex:80
 #, elixir-autogen, elixir-format
 msgid "your host"
 msgstr "ваш організатор"
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:163
+#, elixir-autogen, elixir-format
+msgid "Hi — %{amount} of your %{original} payment has been refunded."
+msgstr "Привіт — %{amount} з вашого початкового платежу на суму %{original} було повернуто."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:157
+#, elixir-autogen, elixir-format
+msgid "Hi — your payment of %{amount} has been refunded in full."
+msgstr "Привіт — ваш платіж на суму %{amount} було повністю повернуто."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:287
+#, elixir-autogen, elixir-format
+msgid "Hi, %{amount} of your %{original} payment has been refunded."
+msgstr "Привіт, %{amount} з вашого початкового платежу на суму %{original} було повернуто."
+
+#: lib/tymeslot/emails/templates/booking_payment_refunded.ex:281
+#, elixir-autogen, elixir-format
+msgid "Hi, your payment of %{amount} has been refunded in full."
+msgstr "Привіт, ваш платіж на суму %{amount} було повністю повернуто."
