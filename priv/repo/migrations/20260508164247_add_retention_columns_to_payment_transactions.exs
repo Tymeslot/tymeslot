@@ -42,8 +42,6 @@ defmodule Tymeslot.Repo.Migrations.AddRetentionColumnsToPaymentTransactions do
     FROM users u
     WHERE pt.user_id = u.id;
     """)
-
-    create(index(:payment_transactions, [:host_deleted_at]))
   end
 
   def down do
