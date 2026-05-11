@@ -133,6 +133,34 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     |> Repo.update()
   end
 
+  @doc """
+  Atomically marks a booking payment as `failed` only when its current status is
+  `pending`.
+
+  Uses a conditional `UPDATE … WHERE id = ? AND status = 'pending'` so a
+  concurrent `checkout.session.completed` webhook that has already flipped the
+  row to `paid` will not be overwritten. Must be called inside a
+  `Repo.transaction/1`.
+
+  Returns `{:ok, :cancelled}` when the row was updated, `{:ok, :skipped}` when
+  the row was not in `pending` status (or was not found), and `{:error, reason}`
+  on unexpected failures.
+  """
+  @spec cancel_if_pending(Ecto.UUID.t(), DateTime.t()) ::
+          {:ok, :cancelled | :skipped} | {:error, term()}
+  def cancel_if_pending(id, now) do
+    query =
+      from b in BookingPaymentSchema,
+        where: b.id == ^id and b.status == "pending"
+
+    case Repo.update_all(query, set: [status: "failed", updated_at: now]) do
+      {1, _} -> {:ok, :cancelled}
+      {0, _} -> {:ok, :skipped}
+    end
+  rescue
+    exception -> {:error, exception}
+  end
+
   @spec anonymise_for_host(integer(), DateTime.t()) :: {non_neg_integer(), nil}
   def anonymise_for_host(host_user_id, now) do
     query =

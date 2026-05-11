@@ -7,6 +7,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
   import Mox
 
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccounts
   alias Tymeslot.MeetingPayments.StripeAdapterMock
@@ -95,6 +96,39 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
     test "is a noop when no account exists" do
       user = insert(:user)
       assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
+    end
+
+    test "does not overwrite a payment that was concurrently transitioned to paid" do
+      # Regression for the TOCTOU race: list_pending_for_host runs outside the
+      # transaction and snapshots the payment as "pending". Before the transaction
+      # executes, a concurrent checkout.session.completed webhook flips the same
+      # row to "paid". The conditional UPDATE (status = 'pending') must skip that
+      # row so the paid status is preserved and cancelled_count stays accurate.
+      user = insert(:user)
+      {:ok, _account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      payment =
+        insert(:booking_payment,
+          host_user_id: user.id,
+          stripe_checkout_session_id: "cs_race_test",
+          status: "pending"
+        )
+
+      # Simulate the concurrent webhook arriving: flip the row to "paid" directly.
+      {:ok, _} = BookingPaymentQueries.update(payment, %{status: "paid"})
+
+      # disconnect/1 pre-fetches the payment as "pending" (it was pending when
+      # list_pending_for_host ran), but inside the transaction the conditional
+      # UPDATE finds status = 'paid' and must not overwrite it.
+      stub(StripeAdapterMock, :expire_checkout_session, fn _session_id, _opts ->
+        {:error, %{message: "already paid"}}
+      end)
+
+      assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
+
+      # The payment row must still be "paid" — not "failed".
+      reloaded = BookingPaymentQueries.get(payment.id)
+      assert reloaded.status == "paid"
     end
   end
 

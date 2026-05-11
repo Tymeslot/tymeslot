@@ -48,21 +48,25 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
     1. Collect pending booking_payments for this host (no lock needed).
     2. Expire each open Stripe Checkout Session (HTTP calls, outside any
        DB transaction to avoid holding the connection open).
-    3. Atomic transaction: mark each booking_payment as `cancelled`, transition
-       the linked `awaiting_payment` meeting to `expired`, then soft-delete the
-       connect_account row.
+    3. Atomic transaction: mark each booking_payment as `failed` (conditional
+       UPDATE — only when `status = 'pending'`, so a concurrent
+       `checkout.session.completed` webhook that has already moved the row to
+       `paid` is not overwritten), transition the linked `awaiting_payment`
+       meeting to `expired`, then soft-delete the connect_account row.
 
   Returns `{:ok, %{cancelled_count: n}}` on success, `{:error, reason}` if the
   transaction fails.
 
   ## Race with checkout.session.completed
 
-  A `checkout.session.completed` webhook arriving after step 2 but before step 3
-  completes is harmless: `CheckoutSessionCompleted.ensure_awaiting_payment/1` will
-  find the meeting already in `expired` status (set in step 3) and return `:no_op`,
-  leaving the booking_payment untouched. The same guard applies if the webhook
-  arrives after step 3 — the meeting is `expired`, not `awaiting_payment`, so the
-  handler short-circuits without writing any state.
+  The conditional `UPDATE … WHERE status = 'pending'` in step 3 means a
+  `checkout.session.completed` webhook that has already flipped a row to `paid`
+  will not be overwritten — the update silently skips that row, and
+  `cancelled_count` reflects only the rows that were actually cancelled.
+
+  If the webhook arrives *after* step 3 sets the meeting to `expired`, the
+  `CheckoutSessionCompleted.ensure_awaiting_payment/1` guard will find the
+  meeting in `expired` status and return `:no_op`, leaving the payment untouched.
 
   ## Stripe session expiry failures
 
@@ -99,20 +103,25 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   # Cancel a pending booking_payment and, if it has a linked awaiting_payment
   # meeting, transition that meeting to expired so the slot is released.
   #
-  # Returns :ok when the payment was cancelled, :skipped when the payment was
-  # already in a terminal state (concurrent webhook beat us to it).
-  defp cancel_pending_booking(%{status: "pending"} = payment, now) do
-    case BookingPaymentQueries.update(payment, %{status: "failed", updated_at: now}) do
-      {:ok, _updated} ->
+  # Uses a conditional UPDATE that only writes when status = 'pending', so a
+  # concurrent checkout.session.completed webhook that has already flipped the
+  # row to 'paid' is not overwritten.
+  #
+  # Returns :ok when the row was cancelled, :skipped when the row was already
+  # in a terminal state (concurrent webhook beat us to it).
+  defp cancel_pending_booking(payment, now) do
+    case BookingPaymentQueries.cancel_if_pending(payment.id, now) do
+      {:ok, :cancelled} ->
         maybe_expire_meeting(payment.meeting)
         :ok
+
+      {:ok, :skipped} ->
+        :skipped
 
       {:error, _reason} ->
         :skipped
     end
   end
-
-  defp cancel_pending_booking(_payment, _now), do: :skipped
 
   defp maybe_expire_meeting(nil), do: :ok
 
