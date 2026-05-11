@@ -24,6 +24,26 @@ defmodule Tymeslot.MeetingPayments.BookingPaymentQueries do
     do: Repo.get_by(BookingPaymentSchema, stripe_charge_id: charge_id)
 
   @doc """
+  Lists all `pending` booking payments for a host that still carry a
+  `stripe_checkout_session_id`, with the associated meeting preloaded.
+
+  Used by `Tymeslot.MeetingPayments.ConnectAccounts.disconnect/1` to
+  collect open checkout sessions that must be expired before disconnecting.
+  """
+  @spec list_pending_for_host(integer()) :: [BookingPaymentSchema.t()]
+  def list_pending_for_host(host_user_id) do
+    query =
+      from b in BookingPaymentSchema,
+        where:
+          b.host_user_id == ^host_user_id and
+            b.status == "pending" and
+            not is_nil(b.stripe_checkout_session_id),
+        preload: [:meeting]
+
+    Repo.all(query)
+  end
+
+  @doc """
   Lists `pending` booking payments that were created on or before `cutoff`
   and still carry a `stripe_checkout_session_id`.
 

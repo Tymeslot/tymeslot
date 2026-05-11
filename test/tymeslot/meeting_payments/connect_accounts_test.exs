@@ -59,6 +59,27 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       account = ConnectAccountQueries.live_for_user(user.id)
       assert account.stripe_account_id == "acct_RESUMED"
     end
+
+    test "row stays in recoverable 'creating' state when create_account_link fails" do
+      user = insert(:user)
+      country = "ch"
+
+      expect(StripeAdapterMock, :create_account, fn _params, _opts ->
+        {:ok, %{id: "acct_FAIL_LINK", default_currency: "chf"}}
+      end)
+
+      expect(StripeAdapterMock, :create_account_link, fn _params ->
+        {:error, %{message: "Stripe link creation failed"}}
+      end)
+
+      assert {:error, _reason} = ConnectAccounts.start_onboarding(user, country: country)
+
+      # Row must still exist in "creating" state — not left in "active" with a
+      # stripe_account_id set, since the link never succeeded.
+      account = ConnectAccountQueries.live_for_user(user.id)
+      assert account.status == "creating"
+      assert is_nil(account.stripe_account_id)
+    end
   end
 
   describe "disconnect/1" do
@@ -66,14 +87,14 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
       user = insert(:user)
       {:ok, _placeholder} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
 
-      :ok = ConnectAccounts.disconnect(user)
+      assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
 
       refute ConnectAccountQueries.live_for_user(user.id)
     end
 
     test "is a noop when no account exists" do
       user = insert(:user)
-      assert :ok = ConnectAccounts.disconnect(user)
+      assert {:ok, %{cancelled_count: 0}} = ConnectAccounts.disconnect(user)
     end
   end
 
@@ -263,6 +284,68 @@ defmodule Tymeslot.MeetingPayments.ConnectAccountsTest do
 
       reloaded = ConnectAccountQueries.live_for_user(user.id)
       assert reloaded.charges_enabled == true
+    end
+
+    test "does not enqueue a duplicate job when the same event is delivered twice" do
+      user = insert(:user)
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      {:ok, _updated} =
+        ConnectAccountQueries.update(account, %{
+          stripe_account_id: "acct_REPLAY",
+          status: "active",
+          disabled_reason: nil
+        })
+
+      # Stripe replays carry the same `created` timestamp.
+      timestamp = DateTime.to_unix(DateTime.utc_now(:second))
+
+      event = %{
+        "id" => "acct_REPLAY",
+        "created" => timestamp,
+        "charges_enabled" => false,
+        "payouts_enabled" => false,
+        "details_submitted" => true,
+        "requirements" => %{"disabled_reason" => "requirements.past_due"}
+      }
+
+      assert :ok = ConnectAccounts.apply_account_event(event)
+      # Second delivery with identical timestamp must be a no-op.
+      assert :ok = ConnectAccounts.apply_account_event(event)
+
+      assert [_single_job] =
+               all_enqueued(
+                 worker: SendConnectAccountRestricted,
+                 args: %{stripe_account_id: "acct_REPLAY"}
+               )
+    end
+
+    test "is a no-op for a stripe_account_id belonging to a soft-deleted account" do
+      user = insert(:user)
+      {:ok, account} = ConnectAccountQueries.insert_placeholder(user.id, "ch")
+
+      {:ok, _updated} =
+        ConnectAccountQueries.update(account, %{
+          stripe_account_id: "acct_DELETED",
+          status: "active",
+          charges_enabled: true
+        })
+
+      ConnectAccounts.disconnect(user)
+
+      stripe_event = %{
+        "id" => "acct_DELETED",
+        "created" => DateTime.to_unix(DateTime.utc_now()),
+        "charges_enabled" => false,
+        "payouts_enabled" => false,
+        "details_submitted" => false,
+        "requirements" => %{"disabled_reason" => nil}
+      }
+
+      assert :ok = ConnectAccounts.apply_account_event(stripe_event)
+      # The deleted row must not have been updated.
+      refute ConnectAccountQueries.live_for_user(user.id)
+      refute_enqueued(worker: SendConnectAccountRestricted)
     end
   end
 end

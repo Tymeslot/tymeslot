@@ -26,6 +26,8 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
               {:ok, map()} | {:error, term()}
   @callback retrieve_charge(charge_id :: String.t(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
+  @callback expire_checkout_session(session_id :: String.t(), opts :: keyword()) ::
+              {:ok, map()} | {:error, term()}
   @callback create_refund(params :: map(), opts :: keyword()) ::
               {:ok, map()} | {:error, term()}
   @callback construct_webhook_event(
@@ -77,6 +79,13 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter do
   def retrieve_charge(id, opts \\ []) do
     Telemetry.span_stripe(:retrieve_charge, opts[:connect_account], fn ->
       impl().retrieve_charge(id, opts)
+    end)
+  end
+
+  @spec expire_checkout_session(String.t(), keyword()) :: {:ok, map()} | {:error, term()}
+  def expire_checkout_session(session_id, opts \\ []) do
+    Telemetry.span_stripe(:expire_checkout_session, opts[:connect_account], fn ->
+      impl().expire_checkout_session(session_id, opts)
     end)
   end
 
@@ -139,6 +148,10 @@ defmodule Tymeslot.MeetingPayments.StripeAdapter.Stripity do
 
   @impl StripeAdapter
   def retrieve_charge(id, opts), do: Charge.retrieve(id, %{}, opts)
+
+  @impl StripeAdapter
+  def expire_checkout_session(session_id, opts),
+    do: CheckoutSession.expire(session_id, %{}, opts)
 
   @impl StripeAdapter
   def create_refund(params, opts), do: Refund.create(params, opts)

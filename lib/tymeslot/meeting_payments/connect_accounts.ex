@@ -8,9 +8,14 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   user id, which makes a retry after a crash safe.
   """
 
+  require Logger
+
+  alias Tymeslot.MeetingPayments.BookingPaymentQueries
   alias Tymeslot.MeetingPayments.ConnectAccountQueries
   alias Tymeslot.MeetingPayments.ConnectAccountSchema
   alias Tymeslot.MeetingPayments.StripeAdapter
+  alias Tymeslot.Meetings.MeetingQueries
+  alias Tymeslot.Repo
   alias Tymeslot.Workers.SendConnectAccountRestricted
   alias TymeslotWeb.Endpoint
 
@@ -21,24 +26,133 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
   def start_onboarding(user, opts) do
     country = Keyword.fetch!(opts, :country)
 
-    with {:ok, account} <- ensure_placeholder(user.id, country),
+    with {:ok, placeholder} <- ensure_placeholder(user.id, country),
          {:ok, stripe_account} <- create_stripe_account(user.id, country),
+         {:ok, link} <- create_account_link(stripe_account.id),
          {:ok, account} <-
-           ConnectAccountQueries.update(account, %{
+           ConnectAccountQueries.update(placeholder, %{
              stripe_account_id: stripe_account.id,
              default_currency: stripe_account.default_currency,
              status: "active"
-           }),
-         {:ok, link} <- create_account_link(stripe_account.id) do
+           }) do
       {:ok, %{url: link.url, account: account}}
     end
   end
 
-  @spec disconnect(user :: %{id: integer()}) :: :ok
+  @doc """
+  Disconnects the host's Stripe account.
+
+  Performs three steps in order so attendees cannot complete payment after
+  the account is gone:
+
+    1. Collect pending booking_payments for this host (no lock needed).
+    2. Expire each open Stripe Checkout Session (HTTP calls, outside any
+       DB transaction to avoid holding the connection open).
+    3. Atomic transaction: mark each booking_payment as `cancelled`, transition
+       the linked `awaiting_payment` meeting to `expired`, then soft-delete the
+       connect_account row.
+
+  Returns `{:ok, %{cancelled_count: n}}` on success, `{:error, reason}` if the
+  transaction fails.
+
+  ## Race with checkout.session.completed
+
+  A `checkout.session.completed` webhook arriving after step 2 but before step 3
+  completes is harmless: `CheckoutSessionCompleted.ensure_awaiting_payment/1` will
+  find the meeting already in `expired` status (set in step 3) and return `:no_op`,
+  leaving the booking_payment untouched. The same guard applies if the webhook
+  arrives after step 3 — the meeting is `expired`, not `awaiting_payment`, so the
+  handler short-circuits without writing any state.
+
+  ## Stripe session expiry failures
+
+  Stripe session expiry is best-effort. If a call fails (network error, session
+  already expired/completed) we log and continue — the meeting and booking_payment
+  are cancelled locally regardless, so the attendee cannot complete the booking
+  even if the Stripe session is still technically open.
+  """
+  @spec disconnect(user :: %{id: integer()}) ::
+          {:ok, %{cancelled_count: non_neg_integer()}} | {:error, term()}
   def disconnect(user) do
+    pending = BookingPaymentQueries.list_pending_for_host(user.id)
+    account = ConnectAccountQueries.live_for_user(user.id)
+
+    expire_stripe_sessions(pending, account)
+
     now = DateTime.utc_now(:second)
-    ConnectAccountQueries.soft_delete_for_user(user.id, now)
-    :ok
+
+    Repo.transaction(fn ->
+      cancelled_count =
+        Enum.reduce(pending, 0, fn payment, acc ->
+          case cancel_pending_booking(payment, now) do
+            :ok -> acc + 1
+            :skipped -> acc
+          end
+        end)
+
+      ConnectAccountQueries.soft_delete_for_user(user.id, now)
+
+      %{cancelled_count: cancelled_count}
+    end)
+  end
+
+  # Cancel a pending booking_payment and, if it has a linked awaiting_payment
+  # meeting, transition that meeting to expired so the slot is released.
+  #
+  # Returns :ok when the payment was cancelled, :skipped when the payment was
+  # already in a terminal state (concurrent webhook beat us to it).
+  defp cancel_pending_booking(%{status: "pending"} = payment, now) do
+    case BookingPaymentQueries.update(payment, %{status: "failed", updated_at: now}) do
+      {:ok, _updated} ->
+        maybe_expire_meeting(payment.meeting)
+        :ok
+
+      {:error, _reason} ->
+        :skipped
+    end
+  end
+
+  defp cancel_pending_booking(_payment, _now), do: :skipped
+
+  defp maybe_expire_meeting(nil), do: :ok
+
+  defp maybe_expire_meeting(%{status: "awaiting_payment"} = meeting) do
+    case MeetingQueries.update_meeting(meeting, %{status: "expired"}) do
+      {:ok, _updated} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("disconnect: failed to expire meeting",
+          meeting_id: meeting.id,
+          reason: inspect(reason)
+        )
+    end
+  end
+
+  defp maybe_expire_meeting(_meeting), do: :ok
+
+  defp expire_stripe_sessions(pending, account) do
+    stripe_account_id = account && account.stripe_account_id
+
+    Enum.each(pending, fn payment ->
+      session_id = payment.stripe_checkout_session_id
+
+      result =
+        StripeAdapter.expire_checkout_session(session_id,
+          connect_account: stripe_account_id
+        )
+
+      case result do
+        {:ok, _session} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("disconnect: failed to expire Stripe checkout session",
+            session_id: session_id,
+            reason: inspect(reason)
+          )
+      end
+    end)
   end
 
   @spec apply_account_event(map()) :: :ok
@@ -50,7 +164,7 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
       %ConnectAccountSchema{} = local ->
         event_dt = DateTime.from_unix!(stripe_created)
 
-        if older?(event_dt, local.last_account_event_at) do
+        if stale_or_equal?(event_dt, local.last_account_event_at) do
           :ok
         else
           now = DateTime.utc_now(:second)
@@ -107,8 +221,29 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
           {:ok, account()} | {:error, Ecto.Changeset.t()}
   defp ensure_placeholder(user_id, country) do
     case ConnectAccountQueries.live_for_user(user_id) do
-      nil -> ConnectAccountQueries.insert_placeholder(user_id, country)
+      nil -> insert_or_fetch_placeholder(user_id, country)
       %ConnectAccountSchema{} = account -> {:ok, account}
+    end
+  end
+
+  # On concurrent requests the unique index on (user_id) WHERE deleted_at IS
+  # NULL means only one insert wins. The loser gets a unique-constraint error;
+  # we re-fetch to return the winner's row instead of propagating the error.
+  defp insert_or_fetch_placeholder(user_id, country) do
+    case ConnectAccountQueries.insert_placeholder(user_id, country) do
+      {:ok, _account} = ok ->
+        ok
+
+      {:error, %Ecto.Changeset{errors: [user_id: {_message, constraint_opts}]}}
+      when is_list(constraint_opts) ->
+        if Keyword.get(constraint_opts, :constraint) == :unique do
+          {:ok, ConnectAccountQueries.live_for_user(user_id)}
+        else
+          {:error, :unexpected_constraint}
+        end
+
+      {:error, _reason} = err ->
+        err
     end
   end
 
@@ -137,6 +272,10 @@ defmodule Tymeslot.MeetingPayments.ConnectAccounts do
 
   defp dashboard_url(path), do: Endpoint.url() <> path
 
-  defp older?(_event_dt, nil), do: false
-  defp older?(event_dt, last), do: DateTime.compare(event_dt, last) == :lt
+  # Drop events whose timestamp is older than OR equal to the last recorded
+  # event. Equal-timestamp replays (Stripe may redeliver with the same
+  # `created` value) would otherwise trigger a second DB write and potentially
+  # enqueue a duplicate SendConnectAccountRestricted job.
+  defp stale_or_equal?(_event_dt, nil), do: false
+  defp stale_or_equal?(event_dt, last), do: DateTime.compare(event_dt, last) in [:lt, :eq]
 end
