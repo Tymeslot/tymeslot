@@ -11,8 +11,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.MeetingPayments
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
+  alias TymeslotWeb.Components.PaymentHelpers
 
   @doc """
   Renders a cancel meeting confirmation modal.
@@ -42,7 +44,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
 
   @spec cancel_meeting_modal(map()) :: Phoenix.LiveView.Rendered.t()
   def cancel_meeting_modal(assigns) do
-    assigns = assign(assigns, :paid?, paid_refundable?(assigns[:booking_payment]))
+    assigns = assign(assigns, :paid?, MeetingPayments.refundable?(assigns[:booking_payment]))
 
     ~H"""
     <CoreComponents.modal id={@id} show={@show} on_cancel={@on_cancel} size={:medium}>
@@ -173,31 +175,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.CancelMeetingModal do
     """
   end
 
-  defp paid_refundable?(nil), do: false
-
-  defp paid_refundable?(%{status: status, refunded_amount_cents: refunded, amount_cents: amount})
-       when status in ["paid", "partially_refunded"] and is_integer(refunded) and
-              is_integer(amount) and amount - refunded > 0,
-       do: true
-
-  defp paid_refundable?(_other), do: false
-
   defp refundable_remaining(%{amount_cents: amount, refunded_amount_cents: refunded}),
     do: max(amount - refunded, 0)
 
   defp refundable_remaining(_payment), do: 0
 
-  defp format_amount(cents, currency) when is_integer(cents) and is_binary(currency) do
-    amount = cents / 100
-    symbol = currency_symbol(currency)
-    "#{symbol}#{:erlang.float_to_binary(amount, decimals: 2)}"
-  end
-
-  defp format_amount(_cents, _currency), do: ""
-
-  defp currency_symbol("eur"), do: "€"
-  defp currency_symbol("usd"), do: "$"
-  defp currency_symbol("gbp"), do: "£"
-  defp currency_symbol("chf"), do: "CHF "
-  defp currency_symbol(other) when is_binary(other), do: String.upcase(other) <> " "
+  defp format_amount(cents, currency), do: PaymentHelpers.format_amount(cents, currency)
 end
