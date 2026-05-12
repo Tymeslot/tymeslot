@@ -115,7 +115,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
              )
     end
 
-    test "tags attendees with SCHEDULE-AGENT=CLIENT when provided" do
+    # Issue #41: Zimbra (and other scheduling-aware CalDAV servers) strip
+    # `SCHEDULE-AGENT` on ingest and run iTIP for any event that carries an
+    # ATTENDEE block, duplicating Tymeslot's own notification email. The
+    # only reliable fix is to omit ATTENDEE entirely on the write path and
+    # surface the attendees via the (non-scheduling) CONTACT property.
+    test "emits CONTACT (never ATTENDEE) for each attendee" do
       event_data = %{
         summary: "Meeting",
         attendees: ["john@example.com", "jane@example.com"],
@@ -125,9 +130,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
 
       ical = ICalBuilder.build_event(event_data)
 
-      assert String.contains?(ical, "ATTENDEE;SCHEDULE-AGENT=CLIENT")
-      assert String.contains?(ical, "john@example.com")
-      assert String.contains?(ical, "jane@example.com")
+      refute String.contains?(ical, "ATTENDEE")
+      assert String.contains?(ical, "CONTACT:john@example.com")
+      assert String.contains?(ical, "CONTACT:jane@example.com")
     end
 
     test "includes status when provided" do
@@ -269,7 +274,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
       refute String.contains?(ical, "ORGANIZER")
     end
 
-    test "tags ATTENDEE with SCHEDULE-AGENT=CLIENT when attendee_email is present" do
+    # Issue #41: Zimbra strips `SCHEDULE-AGENT` on ingest and auto-iTIPs any
+    # event with an ATTENDEE block — empirically confirmed against a real
+    # Zimbra instance. Tymeslot now surfaces the attendee via CONTACT and
+    # the description instead. Do not re-introduce ATTENDEE on the CalDAV
+    # write path.
+    test "emits CONTACT (never ATTENDEE) when attendee_email is present" do
       event_data = %{
         summary: "Meeting",
         start_time: ~U[2024-01-15 10:00:00Z],
@@ -280,10 +290,35 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
 
       ical = ICalBuilder.build_simple_event("uid-4", event_data)
 
-      assert String.contains?(
-               ical,
-               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;CN=Guest Person:mailto:guest@example.com"
-             )
+      refute String.contains?(ical, "ATTENDEE")
+      assert String.contains?(ical, "CONTACT:Guest Person <guest@example.com>")
+    end
+
+    test "emits CONTACT without name when attendee_name is missing" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z],
+        attendee_email: "guest@example.com"
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-5", event_data)
+
+      refute String.contains?(ical, "ATTENDEE")
+      assert String.contains?(ical, "CONTACT:guest@example.com")
+    end
+
+    test "emits neither ATTENDEE nor CONTACT when attendee data is absent" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-6", event_data)
+
+      refute String.contains?(ical, "ATTENDEE")
+      refute String.contains?(ical, "CONTACT:")
     end
   end
 
