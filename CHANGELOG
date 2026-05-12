@@ -1,4 +1,7 @@
 
+[1.0.2]
+* core: Prevent duplicate booking invites from CalDAV servers (closes #41)
+* saas: Redesign profession hub to match site design system
 [1.0.1]
 * core: Correct availability and slot ordering in the booking calendar
 * core: Fix pixelated Cloudron dashboard icon
