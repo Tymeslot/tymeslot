@@ -468,6 +468,125 @@ defmodule Tymeslot.Integrations.Video.RoomsTest do
     end
   end
 
+  describe "update_meeting_room/2" do
+    test "returns error when room_id opt is missing" do
+      user = insert(:user)
+
+      # No HTTP call expected — fetch_required_opt short-circuits before any
+      # provider dispatch.
+      assert {:error, {:missing_required_opt, :room_id}} =
+               Rooms.update_meeting_room(user.id, [])
+    end
+
+    test "returns error when user has no matching video integration" do
+      user = insert(:user)
+
+      # No integration_id in opts → get_provider_config returns not-found error.
+      assert {:error, message} =
+               Rooms.update_meeting_room(user.id, room_id: "123456789")
+
+      assert is_binary(message)
+      assert String.contains?(message, "integration")
+    end
+
+    test "dispatches PATCH to Zoom and returns :ok on success" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "valid_token",
+          refresh_token: "refresh_token",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+          oauth_scope: "meeting:write:meeting"
+        })
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :patch, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               Rooms.update_meeting_room(user.id,
+                 integration_id: integration.id,
+                 room_id: "987654321",
+                 topic: "Rescheduled Meeting"
+               )
+    end
+  end
+
+  describe "delete_meeting_room/2" do
+    test "returns error when room_id opt is missing" do
+      user = insert(:user)
+
+      assert {:error, {:missing_required_opt, :room_id}} =
+               Rooms.delete_meeting_room(user.id, [])
+    end
+
+    test "returns error when user has no matching video integration" do
+      user = insert(:user)
+
+      assert {:error, message} =
+               Rooms.delete_meeting_room(user.id, room_id: "123456789")
+
+      assert is_binary(message)
+      assert String.contains?(message, "integration")
+    end
+
+    test "dispatches DELETE to Zoom and returns :ok on success" do
+      user = insert(:user)
+
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "Zoom",
+          provider: "zoom",
+          access_token: "valid_token",
+          refresh_token: "refresh_token",
+          token_expires_at: DateTime.add(DateTime.utc_now(), 3600),
+          oauth_scope: "meeting:write:meeting"
+        })
+
+      expect(Tymeslot.ZoomOAuthHelperMock, :validate_token, fn _config -> {:ok, :valid} end)
+
+      expect(Tymeslot.HTTPClientMock, :request, fn :delete, _url, _body, _headers, _opts ->
+        {:ok, %Req.Response{status: 204, body: ""}}
+      end)
+
+      assert :ok =
+               Rooms.delete_meeting_room(user.id,
+                 integration_id: integration.id,
+                 room_id: "987654321"
+               )
+    end
+
+    test "returns :ok without an HTTP call for a provider that lacks delete_meeting_room" do
+      user = insert(:user)
+
+      # MiroTalk does not implement delete_meeting_room/2, so the
+      # callback_exported? guard in ProviderAdapter returns :ok without any
+      # network call. No mock expectation is registered — verify_on_exit! will
+      # fail the test if an unexpected call is made.
+      {:ok, integration} =
+        VideoIntegrationQueries.create(%{
+          user_id: user.id,
+          name: "MiroTalk",
+          provider: "mirotalk",
+          base_url: "https://mirotalk.test",
+          api_key: "test-key"
+        })
+
+      assert :ok =
+               Rooms.delete_meeting_room(user.id,
+                 integration_id: integration.id,
+                 room_id: "some-room-id"
+               )
+    end
+  end
+
   describe "provider integration" do
     test "supports MiroTalk provider type" do
       meeting_context = %{
