@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "0.100.16",
+      version: "1.0.1",
       elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -104,7 +104,6 @@ defmodule Tymeslot.MixProject do
       {:dotenvy, "~> 1.1"},
       {:bandit, "~> 1.8"},
       {:caldav_client, "~> 2.0"},
-      {:webdavex, "~> 0.3.3"},
       {:tz, "~> 0.28"},
       {:uuid, "~> 1.1"},
       {:bcrypt_elixir, "~> 3.2"},
@@ -112,7 +111,7 @@ defmodule Tymeslot.MixProject do
       {:mox, "~> 1.0", only: :test},
       {:meck, "~> 1.1", only: :test},
       {:ex_machina, "~> 2.8", only: :test},
-      {:stripity_stripe, "~> 3.2.0"},
+      {:stripity_stripe, "~> 3.2"},
       {:hammer, "~> 7.1"},
       {:html_sanitize_ex, "~> 1.4"},
       {:gen_smtp, "~> 1.2"},

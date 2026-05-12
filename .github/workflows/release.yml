@@ -29,11 +29,7 @@ jobs:
 
       - name: Create releases
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            TAGS="${GITHUB_REF#refs/tags/}"
-          else
-            TAGS=$(git tag -l 'v*' | sort -V)
-          fi
+          TAGS=$(git tag -l 'v*' | sort -V)
 
           for TAG in $TAGS; do
             if gh api "repos/${{ github.repository }}/releases/tags/$TAG" &>/dev/null 2>&1; then
