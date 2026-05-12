@@ -155,6 +155,47 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     }
   end
 
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def update_meeting_room(room_id, config) when is_binary(room_id) do
+    Logger.info("Updating Zoom meeting room", room_id: room_id)
+
+    with {:ok, :valid} <- validate_zoom_scope(config),
+         {:ok, token} <- get_access_token(config),
+         {:ok, {start_time, end_time}} <- get_meeting_times(config),
+         :ok <- patch_scheduled_meeting(token, room_id, start_time, end_time, config) do
+      Logger.info("Successfully updated Zoom meeting", room_id: room_id)
+      :ok
+    else
+      {:error, reason} = error ->
+        Logger.error("Failed to update Zoom meeting",
+          room_id: room_id,
+          error: inspect(reason)
+        )
+
+        error
+    end
+  end
+
+  @impl Tymeslot.Integrations.Video.Providers.ProviderBehaviour
+  def delete_meeting_room(room_id, config) when is_binary(room_id) do
+    Logger.info("Deleting Zoom meeting room", room_id: room_id)
+
+    with {:ok, :valid} <- validate_zoom_scope(config),
+         {:ok, token} <- get_access_token(config),
+         :ok <- delete_scheduled_meeting(token, room_id, config) do
+      Logger.info("Successfully deleted Zoom meeting", room_id: room_id)
+      :ok
+    else
+      {:error, reason} = error ->
+        Logger.error("Failed to delete Zoom meeting",
+          room_id: room_id,
+          error: inspect(reason)
+        )
+
+        error
+    end
+  end
+
   # ----- Private -----
 
   defp validate_zoom_scope(config) do
@@ -323,6 +364,171 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
     end
   end
 
+  defp patch_scheduled_meeting(token, room_id, start_time, end_time, config) do
+    duration = max(div(DateTime.diff(end_time, start_time, :second), 60), 15)
+    payload = build_meeting_payload(start_time, duration, config)
+
+    headers = [
+      {"Authorization", "Bearer #{token}"},
+      {"Content-Type", "application/json"}
+    ]
+
+    url = "#{@api_base_url}/meetings/#{room_id}"
+
+    case http_client().request(:patch, url, Jason.encode!(payload), headers, []) do
+      {:ok, %Req.Response{status: 204}} ->
+        :ok
+
+      {:ok, %Req.Response{status: 404, body: body}} ->
+        Logger.warning("Zoom meeting no longer exists on reschedule",
+          room_id: room_id,
+          body: inspect(body)
+        )
+
+        {:error, :meeting_not_found}
+
+      {:ok, %Req.Response{status: 401, body: body}} ->
+        # Token may have been server-side revoked. Attempt one forced refresh
+        # and retry. If refresh fails or the retry also returns 401, flag the
+        # integration for reauthentication.
+        handle_patch_401(token, room_id, start_time, end_time, config, body)
+
+      {:ok, %Req.Response{status: status, body: body}} ->
+        decode_and_format_error(status, body)
+
+      {:error, reason} ->
+        {:error, "Network error: #{inspect(reason)}"}
+    end
+  end
+
+  defp handle_patch_401(_token, room_id, start_time, end_time, config, _body) do
+    case refresh_and_update_token(config) do
+      {:ok, fresh_token} ->
+        duration = max(div(DateTime.diff(end_time, start_time, :second), 60), 15)
+        payload = build_meeting_payload(start_time, duration, config)
+
+        headers = [
+          {"Authorization", "Bearer #{fresh_token}"},
+          {"Content-Type", "application/json"}
+        ]
+
+        url = "#{@api_base_url}/meetings/#{room_id}"
+
+        case http_client().request(:patch, url, Jason.encode!(payload), headers, []) do
+          {:ok, %Req.Response{status: 204}} ->
+            :ok
+
+          {:ok, %Req.Response{status: 401, body: body}} ->
+            # Refresh succeeded but Zoom still rejects — token is revoked.
+            flag_revoked_token(config)
+            decode_and_format_error(401, body)
+
+          {:ok, %Req.Response{status: status, body: body}} ->
+            decode_and_format_error(status, body)
+
+          {:error, reason} ->
+            {:error, "Network error: #{inspect(reason)}"}
+        end
+
+      {:error, _reason} ->
+        # Refresh itself failed — credentials are no longer usable.
+        flag_revoked_token(config)
+        {:error, "Zoom token refresh failed after 401. Please reconnect your Zoom account."}
+    end
+  end
+
+  defp delete_scheduled_meeting(token, room_id, config) do
+    headers = [{"Authorization", "Bearer #{token}"}]
+    url = "#{@api_base_url}/meetings/#{room_id}"
+
+    case http_client().request(:delete, url, "", headers, []) do
+      {:ok, %Req.Response{status: status}} when status in [204, 200] ->
+        :ok
+
+      # Zoom returns 404 when the meeting is already gone — treat as success
+      # so cancellation is idempotent.
+      {:ok, %Req.Response{status: 404}} ->
+        Logger.info("Zoom meeting already deleted", room_id: room_id)
+        :ok
+
+      {:ok, %Req.Response{status: 401, body: body}} ->
+        # Token may have been server-side revoked. Attempt one forced refresh
+        # and retry. If refresh fails or the retry also returns 401, flag the
+        # integration for reauthentication.
+        handle_delete_401(token, room_id, config, body)
+
+      {:ok, %Req.Response{status: status, body: body}} ->
+        decode_and_format_error(status, body)
+
+      {:error, reason} ->
+        {:error, "Network error: #{inspect(reason)}"}
+    end
+  end
+
+  defp handle_delete_401(_token, room_id, config, _body) do
+    case refresh_and_update_token(config) do
+      {:ok, fresh_token} ->
+        headers = [{"Authorization", "Bearer #{fresh_token}"}]
+        url = "#{@api_base_url}/meetings/#{room_id}"
+
+        case http_client().request(:delete, url, "", headers, []) do
+          {:ok, %Req.Response{status: status}} when status in [204, 200] ->
+            :ok
+
+          {:ok, %Req.Response{status: 404}} ->
+            Logger.info("Zoom meeting already deleted", room_id: room_id)
+            :ok
+
+          {:ok, %Req.Response{status: 401, body: body}} ->
+            # Refresh succeeded but Zoom still rejects — token is revoked.
+            flag_revoked_token(config)
+            decode_and_format_error(401, body)
+
+          {:ok, %Req.Response{status: status, body: body}} ->
+            decode_and_format_error(status, body)
+
+          {:error, reason} ->
+            {:error, "Network error: #{inspect(reason)}"}
+        end
+
+      {:error, _reason} ->
+        # Refresh itself failed — credentials are no longer usable.
+        flag_revoked_token(config)
+        {:error, "Zoom token refresh failed after 401. Please reconnect your Zoom account."}
+    end
+  end
+
+  # Flags the integration as needing reauthentication after a 401 that survived
+  # a forced token refresh — this indicates server-side revocation at zoom.us.
+  # TODO: once needs_reauth is wired to a user-visible reconnect prompt for video
+  # integrations (tracking issue: zoom reauth UX), surface this in the dashboard.
+  defp flag_revoked_token(config) do
+    integration_id = Map.get(config, :integration_id)
+    user_id = Map.get(config, :user_id)
+
+    if is_nil(integration_id) or is_nil(user_id) do
+      Logger.warning("Zoom token appears revoked but no integration_id to flag",
+        event: "zoom_token_revoked"
+      )
+    else
+      Logger.warning("Zoom token revoked; flagging integration for reauth",
+        event: "zoom_token_revoked",
+        integration_id: integration_id
+      )
+
+      case Video.fetch_integration_for_user(integration_id, user_id) do
+        {:ok, integration} ->
+          VideoIntegrationQueries.mark_needs_reauth(
+            integration,
+            "Zoom access was revoked. Please reconnect your Zoom account."
+          )
+
+        {:error, :not_found} ->
+          :ok
+      end
+    end
+  end
+
   defp get_meeting_times(config) do
     with {:ok, start_time} <- resolve_start_time(Map.get(config, :meeting_start_time)),
          {:ok, end_time} <- resolve_end_time(Map.get(config, :meeting_end_time), start_time) do
@@ -374,7 +580,7 @@ defmodule Tymeslot.Integrations.Video.Providers.ZoomProvider do
         {:error, "Zoom API error (#{status}): code #{code} - #{message}"}
 
       _other ->
-        {:error, "Failed to create Zoom meeting with status #{status}: #{body}"}
+        {:error, "Zoom API error (#{status}): #{body}"}
     end
   end
 

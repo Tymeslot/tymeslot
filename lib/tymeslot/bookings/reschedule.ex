@@ -8,6 +8,7 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Bookings.{CalendarJobs, Policy, Validation}
+  alias Tymeslot.Integrations.Video
   alias Tymeslot.Meetings.MeetingQueries
   alias Tymeslot.Meetings.Scheduling
   alias Tymeslot.Notifications.Events
@@ -45,6 +46,7 @@ defmodule Tymeslot.Bookings.Reschedule do
          :ok <- validate_can_reschedule(original_meeting),
          {:ok, new_times} <- prepare_new_times(new_params, original_meeting.organizer_user_id),
          {:ok, updated_meeting} <- apply_time_update_and_schedule_job(original_meeting, new_times) do
+      sync_provider_video_room(updated_meeting)
       send_reschedule_notifications(updated_meeting, original_meeting)
       {:ok, updated_meeting}
     else
@@ -116,6 +118,50 @@ defmodule Tymeslot.Bookings.Reschedule do
 
   defp schedule_calendar_job(updated) do
     CalendarJobs.schedule_job(updated, "update")
+  end
+
+  # Updates the provider-side video meeting (e.g. Zoom) so its scheduled start
+  # time and duration match the new booking time. Failures are logged but do
+  # not block the reschedule: the booking is already updated locally and the
+  # join URL remains valid.
+  defp sync_provider_video_room(%{video_integration_id: nil}), do: :ok
+  defp sync_provider_video_room(%{video_room_id: nil}), do: :ok
+
+  defp sync_provider_video_room(%{
+         organizer_user_id: nil
+       }),
+       do: :ok
+
+  defp sync_provider_video_room(meeting) do
+    try do
+      case Video.update_meeting_room(meeting.organizer_user_id,
+             integration_id: meeting.video_integration_id,
+             room_id: meeting.video_room_id,
+             topic: meeting.title,
+             start_time: meeting.start_time,
+             end_time: meeting.end_time
+           ) do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("Failed to update provider video meeting on reschedule",
+            meeting_id: meeting.id,
+            reason: inspect(reason)
+          )
+
+          :ok
+      end
+    rescue
+      exception ->
+        Logger.warning("Exception while updating provider video meeting on reschedule",
+          meeting_id: meeting.id,
+          exception_class: exception.__struct__,
+          exception_message: Exception.message(exception)
+        )
+
+        :ok
+    end
   end
 
   defp send_reschedule_notifications(updated_meeting, original_meeting) do

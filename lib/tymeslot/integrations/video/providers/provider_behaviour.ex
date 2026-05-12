@@ -109,4 +109,46 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderBehaviour do
   across different providers in email templates, calendar invites, etc.
   """
   @callback generate_meeting_metadata(room_data :: map()) :: map()
+
+  @doc """
+  Updates an existing meeting room on the provider's side after the
+  underlying booking changes (e.g. on reschedule).
+
+  ## Parameters
+    - room_id: Provider-specific identifier returned by `create_meeting_room/1`.
+    - config: The same provider config used to create the room, merged with
+      the new meeting attributes (`meeting_topic`, `meeting_start_time`,
+      `meeting_end_time`).
+
+  Note: callers invoke `Rooms.update_meeting_room/2` with `:topic`,
+  `:start_time`, and `:end_time` opts. The `Rooms` layer renames these to
+  `:meeting_topic`, `:meeting_start_time`, and `:meeting_end_time` before
+  passing `config` here, so provider implementations should read the renamed
+  keys directly from `config`.
+
+  Providers that don't have a server-side meeting object (e.g. Google Meet,
+  MiroTalk, Custom) should return `:ok` without performing any action.
+
+  Returns `:ok` on success or `{:error, reason}` on failure.
+  """
+  @callback update_meeting_room(room_id :: String.t(), config :: map()) ::
+              :ok | {:error, any()}
+
+  @doc """
+  Deletes a meeting room on the provider's side (e.g. on cancellation).
+
+  ## Parameters
+    - room_id: Provider-specific identifier returned by `create_meeting_room/1`.
+    - config: The same provider config used to create the room.
+
+  Providers that don't have a server-side meeting object should return `:ok`
+  without performing any action. A "not found" response from the provider
+  should also resolve to `:ok` so cancellation is idempotent.
+
+  Returns `:ok` on success or `{:error, reason}` on failure.
+  """
+  @callback delete_meeting_room(room_id :: String.t(), config :: map()) ::
+              :ok | {:error, any()}
+
+  @optional_callbacks update_meeting_room: 2, delete_meeting_room: 2
 end

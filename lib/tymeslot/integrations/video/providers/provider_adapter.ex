@@ -170,6 +170,64 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   end
 
   @doc """
+  Updates an existing meeting room on the provider's side.
+
+  Providers without a server-side meeting object return `:ok` without action.
+  """
+  @spec update_meeting_room(atom(), String.t(), map()) :: :ok | {:error, term()}
+  def update_meeting_room(provider_type, room_id, config) do
+    Metrics.time_operation(:video_update_room, %{provider: provider_type}, fn ->
+      Logger.info("Updating meeting room", provider: provider_type, room_id: room_id)
+
+      case ProviderRegistry.get_provider(provider_type) do
+        {:ok, provider_module} ->
+          if callback_exported?(provider_module, :update_meeting_room, 2) do
+            provider_module.update_meeting_room(room_id, config)
+          else
+            Logger.debug("Provider does not support update_meeting_room; treating as no-op",
+              provider: provider_type
+            )
+
+            :ok
+          end
+
+        {:error, _reason} = error ->
+          Logger.error("Unknown video provider", provider_type: provider_type)
+          error
+      end
+    end)
+  end
+
+  @doc """
+  Deletes a meeting room on the provider's side.
+
+  Providers without a server-side meeting object return `:ok` without action.
+  """
+  @spec delete_meeting_room(atom(), String.t(), map()) :: :ok | {:error, term()}
+  def delete_meeting_room(provider_type, room_id, config) do
+    Metrics.time_operation(:video_delete_room, %{provider: provider_type}, fn ->
+      Logger.info("Deleting meeting room", provider: provider_type, room_id: room_id)
+
+      case ProviderRegistry.get_provider(provider_type) do
+        {:ok, provider_module} ->
+          if callback_exported?(provider_module, :delete_meeting_room, 2) do
+            provider_module.delete_meeting_room(room_id, config)
+          else
+            Logger.debug("Provider does not support delete_meeting_room; treating as no-op",
+              provider: provider_type
+            )
+
+            :ok
+          end
+
+        {:error, _reason} = error ->
+          Logger.error("Unknown video provider", provider_type: provider_type)
+          error
+      end
+    end)
+  end
+
+  @doc """
   Handles meeting lifecycle events.
   """
   @spec handle_meeting_event(map(), atom(), map()) :: :ok | {:error, term()}
@@ -226,6 +284,13 @@ defmodule Tymeslot.Integrations.Video.Providers.ProviderAdapter do
   end
 
   # Private helper functions
+
+  # function_exported?/3 returns false for modules that haven't been loaded
+  # yet, which silently turns optional callbacks into no-ops in tests that
+  # haven't touched the provider module before. Force-load first.
+  defp callback_exported?(module, fun, arity) do
+    Code.ensure_loaded?(module) and function_exported?(module, fun, arity)
+  end
 
   defp detect_provider_from_url(meeting_url) when is_binary(meeting_url) do
     provider_patterns = [

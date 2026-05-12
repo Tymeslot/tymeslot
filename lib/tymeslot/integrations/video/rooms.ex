@@ -77,6 +77,76 @@ defmodule Tymeslot.Integrations.Video.Rooms do
   end
 
   @doc """
+  Updates a meeting room on the provider's side after the underlying
+  booking changes (e.g. on reschedule).
+
+  Looks up the provider for `integration_id`, merges the meeting attributes
+  into the provider config, then dispatches to the provider's
+  `update_meeting_room/2` callback. Providers without a server-side meeting
+  object (Google Meet, MiroTalk, Custom) silently succeed.
+
+  ## Required opts
+    - `:integration_id` — the video integration that owns the room
+    - `:room_id` — provider-specific room identifier
+
+  ## Optional opts
+    - `:topic`, `:start_time`, `:end_time` — new meeting attributes
+  """
+  @spec update_meeting_room(pos_integer() | nil, keyword()) :: :ok | {:error, any()}
+  def update_meeting_room(user_id, opts) do
+    Metrics.time_operation(:video_update_meeting_room, %{}, fn ->
+      with {:ok, room_id} <- fetch_required_opt(opts, :room_id),
+           {:ok, provider_type, config} <- get_provider_config(user_id, opts) do
+        ProviderAdapter.update_meeting_room(
+          provider_type,
+          room_id,
+          merge_meeting_attrs(config, opts)
+        )
+      end
+    end)
+  end
+
+  @doc """
+  Deletes a meeting room on the provider's side (e.g. on cancellation).
+
+  Looks up the provider for `integration_id`, dispatches to the provider's
+  `delete_meeting_room/2` callback. Providers without a server-side meeting
+  object silently succeed. A "not found" response from the provider also
+  resolves to `:ok` so cancellation is idempotent.
+
+  ## Required opts
+    - `:integration_id` — the video integration that owns the room
+    - `:room_id` — provider-specific room identifier
+  """
+  @spec delete_meeting_room(pos_integer() | nil, keyword()) :: :ok | {:error, any()}
+  def delete_meeting_room(user_id, opts) do
+    Metrics.time_operation(:video_delete_meeting_room, %{}, fn ->
+      with {:ok, room_id} <- fetch_required_opt(opts, :room_id),
+           {:ok, provider_type, config} <- get_provider_config(user_id, opts) do
+        ProviderAdapter.delete_meeting_room(provider_type, room_id, config)
+      end
+    end)
+  end
+
+  defp fetch_required_opt(opts, key) do
+    case Keyword.get(opts, key) do
+      nil -> {:error, {:missing_required_opt, key}}
+      "" -> {:error, {:missing_required_opt, key}}
+      value -> {:ok, value}
+    end
+  end
+
+  defp merge_meeting_attrs(config, opts) do
+    config
+    |> maybe_put(:meeting_topic, Keyword.get(opts, :topic))
+    |> maybe_put(:meeting_start_time, Keyword.get(opts, :start_time))
+    |> maybe_put(:meeting_end_time, Keyword.get(opts, :end_time))
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  @doc """
   Creates a join URL for a meeting participant.
   """
   @spec create_join_url(map(), String.t(), String.t(), String.t(), DateTime.t()) ::

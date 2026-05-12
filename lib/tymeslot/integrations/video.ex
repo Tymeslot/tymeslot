@@ -331,6 +331,12 @@ defmodule Tymeslot.Integrations.Video do
   @spec handle_meeting_event(map(), atom(), map()) :: :ok | {:error, any()}
   defdelegate handle_meeting_event(meeting_context, event, additional_data \\ %{}), to: Rooms
 
+  @spec update_meeting_room(pos_integer() | nil, keyword()) :: :ok | {:error, any()}
+  defdelegate update_meeting_room(user_id, opts), to: Rooms
+
+  @spec delete_meeting_room(pos_integer() | nil, keyword()) :: :ok | {:error, any()}
+  defdelegate delete_meeting_room(user_id, opts), to: Rooms
+
   @spec generate_meeting_metadata(map()) :: map()
   defdelegate generate_meeting_metadata(meeting_context), to: Rooms
 
