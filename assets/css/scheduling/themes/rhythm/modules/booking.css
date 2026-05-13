@@ -293,3 +293,89 @@
     padding-top: var(--space-3xs);
   }
 }
+
+/* ============================================================================
+   CUSTOM QUESTIONS STEP
+   ============================================================================ */
+
+/* Progress dots row */
+.rhythm-progress-dots {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.rhythm-progress-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--border-strong);
+  opacity: 0.3;
+  transition: opacity var(--transition-normal);
+}
+
+.rhythm-progress-dot.is-done { opacity: 0.6; }
+.rhythm-progress-dot.is-active { opacity: 1; }
+
+/* Help text beneath the question label */
+.rhythm-questions-help {
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-sm);
+  margin-bottom: var(--space-sm);
+}
+
+/* Inline field validation error */
+.rhythm-form-error {
+  display: block;
+  margin-top: var(--space-3xs);
+  font-size: var(--theme-font-size-sm);
+  color: var(--theme-error);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Input shared across question types */
+.custom-question-input {
+  width: 100%;
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  border: var(--border-width-thin) solid var(--border-strong);
+  background: var(--surface-light);
+  color: var(--theme-text);
+  font-size: var(--theme-font-size-base);
+  transition: border-color var(--transition-normal), background var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.custom-question-input:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+  background: var(--surface-strong);
+  box-shadow: none;
+}
+
+.custom-question-input::placeholder {
+  color: var(--theme-text-secondary);
+}
+
+/* Radio / checkbox groups */
+.custom-question-radios,
+.custom-question-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.custom-question-radio,
+.custom-question-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--theme-text);
+}
+
+/* Note type */
+.custom-question-note-body {
+  white-space: pre-wrap;
+  margin-bottom: var(--space-sm);
+  color: var(--theme-text-secondary);
+  font-size: var(--theme-font-size-sm);
+}
