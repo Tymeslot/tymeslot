@@ -87,6 +87,14 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
   end
 
   @impl Phoenix.LiveComponent
+  def handle_event("slack_refresh_channels", _params, socket) do
+    case socket.assigns[:integration] do
+      %{} = integration -> {:noreply, reload_channels(socket, integration)}
+      _other -> {:noreply, socket}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
   def handle_async(:load_channels, {:ok, {:ok, channels}}, socket) do
     {:noreply,
      socket
@@ -198,6 +206,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                   channels={@channels}
                   loading?={@channels_loading?}
                   error={@channels_error}
+                  target={@myself}
                 />
             <% end %>
           </div>
@@ -264,13 +273,30 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
   attr :channels, :list, required: true
   attr :loading?, :boolean, required: true
   attr :error, :any, required: true
+  attr :target, :any, required: true
 
   defp channel_picker(assigns) do
     ~H"""
     <div>
-      <label class="block text-token-sm font-black text-tymeslot-900 mb-2">
-        Channel <span class="text-red-500">*</span>
-      </label>
+      <div class="flex items-center justify-between mb-2">
+        <label class="block text-token-sm font-black text-tymeslot-900">
+          Channel <span class="text-red-500">*</span>
+        </label>
+        <button
+          type="button"
+          phx-click="slack_refresh_channels"
+          phx-target={@target}
+          disabled={@loading?}
+          class="flex items-center gap-1.5 px-3 py-1.5 text-token-xs font-bold text-tymeslot-600 bg-tymeslot-50 rounded-token-lg border-2 border-tymeslot-100 hover:bg-tymeslot-100 hover:text-tymeslot-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Refresh channel list from Slack"
+        >
+          <.icon
+            name="hero-arrow-path"
+            class={"w-3.5 h-3.5" <> if(@loading?, do: " animate-spin", else: "")}
+          />
+          Refresh
+        </button>
+      </div>
 
       <%= cond do %>
         <% @loading? -> %>
@@ -288,7 +314,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
 
         <% @channels == [] -> %>
           <div class="p-4 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50 text-token-sm text-tymeslot-600 font-medium">
-            No channels available. Invite the Tymeslot bot to at least one channel in Slack, then reopen this form.
+            No channels available. Invite the Tymeslot bot to at least one channel in Slack, then click Refresh.
           </div>
 
         <% true -> %>
@@ -373,17 +399,26 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
   defp maybe_start_channel_load(socket, mode, integration)
        when mode in [:oauth_pending, :oauth_existing] and not is_nil(integration) do
     # Only fire the async load on the first update for this integration to
-    # avoid re-fetching channels on every parent re-render.
+    # avoid re-fetching channels on every parent re-render. A manual refresh
+    # goes through `reload_channels/2`, which clears `:channels_loaded_for`.
     if socket.assigns[:channels_loaded_for] == integration.id do
       socket
     else
-      socket
-      |> assign(:channels_loading?, true)
-      |> assign(:channels_error, nil)
-      |> assign(:channels_loaded_for, integration.id)
-      |> start_async(:load_channels, fn -> Slack.list_channels(integration) end)
+      reload_channels(socket, integration)
     end
   end
 
   defp maybe_start_channel_load(socket, _mode, _integration), do: socket
+
+  # Cancels any in-flight load (later-wins guard) and fires a fresh async
+  # request for the integration's channels. Shared by initial mount and the
+  # manual refresh button.
+  defp reload_channels(socket, integration) do
+    socket
+    |> cancel_async(:load_channels)
+    |> assign(:channels_loading?, true)
+    |> assign(:channels_error, nil)
+    |> assign(:channels_loaded_for, integration.id)
+    |> start_async(:load_channels, fn -> Slack.list_channels(integration) end)
+  end
 end
