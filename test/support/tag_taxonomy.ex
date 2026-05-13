@@ -53,7 +53,8 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :video,
       :workers,
       :seo,
-      :telegram
+      :telegram,
+      :custom_fields
     ],
     web_layer: [
       :components,
