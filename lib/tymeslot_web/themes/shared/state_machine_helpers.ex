@@ -94,6 +94,7 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpers do
     )
   end
 
+  # Same precondition as :booking — booker must have selected a date and time.
   def validate_step_requirements(socket, :questions),
     do: validate_step_requirements(socket, :booking)
 

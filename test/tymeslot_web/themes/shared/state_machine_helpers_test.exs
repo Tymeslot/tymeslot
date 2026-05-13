@@ -32,4 +32,22 @@ defmodule TymeslotWeb.Themes.Shared.StateMachineHelpersTest do
       assert states[:confirmation].step == 5
     end
   end
+
+  describe "validate_state_transition/3 for the new questions state" do
+    test "schedule → questions fails when no time selected" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{selected_date: nil, selected_time: nil, available_slots: [], __changed__: %{}}
+      }
+
+      assert {:error, _reason} =
+               StateMachineHelpers.validate_state_transition(socket, :schedule, :questions)
+    end
+
+    test "questions → booking is always ok" do
+      socket = %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}}}
+
+      assert :ok =
+               StateMachineHelpers.validate_state_transition(socket, :questions, :booking)
+    end
+  end
 end
