@@ -63,7 +63,7 @@ defmodule Tymeslot.Infrastructure.VideoCircuitBreaker do
       ...> end)
       {:error, :circuit_open}
   """
-  @spec call(atom(), (-> any())) :: {:ok, any()} | {:error, atom()}
+  @spec call(atom(), (-> any())) :: :ok | {:ok, any()} | {:error, atom()}
   def call(provider, fun) when provider in @video_providers and is_function(fun, 0) do
     breaker_name = breaker_name(provider)
     CircuitBreakerHelpers.call_with_breaker(breaker_name, provider, "Video", fun)
