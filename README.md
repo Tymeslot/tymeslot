@@ -43,29 +43,67 @@ Open [http://localhost:4000](http://localhost:4000) — your scheduling platform
 
 ## What you get
 
-<table>
+<table width="100%">
 <tr>
 <td width="50%" valign="top">
 
-**No double-bookings**<br>
+<img src="./priv/static/images/ui/spacer.png" width="450" height="1" alt="" />
+
+### No double-bookings
+
+<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
+
 Every connected calendar is checked at the moment of booking — one conflict anywhere blocks the slot everywhere.
-
-**Email that delivers**<br>
-Responsive MJML templates, `.ics` on every send, configurable reminders, signed cancel and reschedule links — no logins, no support tickets.
-
-**Embed anywhere**<br>
-Inline, popup, or floating button. Signed, domain-locked tokens — your widget, only on your site.
 
 </td>
 <td width="50%" valign="top">
 
-**Availability that mirrors reality**<br>
+<img src="./priv/static/images/ui/spacer.png" width="450" height="1" alt="" />
+
+### Availability that mirrors reality
+
+<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
+
 Working hours, date-specific overrides, vacation blocks, per-meeting buffers, booking windows, minimum notice — without touching a calendar.
 
-**SSO-first auth**<br>
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### Email that delivers
+
+<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
+
+Responsive MJML templates, `.ics` on every send, configurable reminders, signed cancel and reschedule links — no logins, no support tickets.
+
+</td>
+<td valign="top">
+
+### SSO-first auth
+
+<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
+
 Email/password, Google, GitHub, plus generic OAuth/OIDC — Keycloak, Authentik, Okta, Azure AD. Disable registration or password auth independently.
 
-**Privacy by design**<br>
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### Embed anywhere
+
+<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
+
+Inline, popup, or floating button. Signed, domain-locked tokens — your widget, only on your site.
+
+</td>
+<td valign="top">
+
+### Privacy by design
+
+<sub>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</sub>
+
 AES-encrypted credentials at rest, no third-party analytics or tracking pixels, rate-limited public endpoints, HMAC-signed webhooks, CSRF and signed tokens throughout.
 
 </td>
@@ -78,27 +116,39 @@ Plus: two themes (Quill, Rhythm) with dark mode, five languages (English, German
 
 ## Integrations
 
-<div align="center">
-
 **Calendars**
 
-<img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="44" title="Google Calendar" />&nbsp;
-<img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook" height="44" title="Outlook" />&nbsp;
-<img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="44" title="CalDAV" />&nbsp;
-<img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="44" title="Nextcloud" />&nbsp;
-<img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="44" title="Radicale" />&nbsp;
-<img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="44" title="Zimbra" />&nbsp;
-<img src="./priv/static/icons/providers/calendar/medium/mailbox_org.png" alt="mailbox.org" height="44" title="mailbox.org" />
+<table width="100%">
+<tr>
+<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/calendar/medium/google.png" alt="Google Calendar" height="44" /><br><sub>Google Calendar</sub></td>
+<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/calendar/medium/outlook.png" alt="Outlook" height="44" /><br><sub>Outlook</sub></td>
+<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/calendar/medium/caldav.png" alt="CalDAV" height="44" /><br><sub>CalDAV</sub></td>
+<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/calendar/medium/nextcloud.png" alt="Nextcloud" height="44" /><br><sub>Nextcloud</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/radicale.png" alt="Radicale" height="44" /><br><sub>Radicale</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/zimbra.png" alt="Zimbra" height="44" /><br><sub>Zimbra</sub></td>
+<td align="center"><img src="./priv/static/icons/providers/calendar/medium/mailbox_org.png" alt="mailbox.org" height="44" /><br><sub>mailbox.org</sub></td>
+<td>&nbsp;</td>
+</tr>
+</table>
 
 **Video & location**
 
-<img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="44" title="Google Meet" />&nbsp;
-<img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="44" title="Microsoft Teams" />&nbsp;
-<img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="44" title="MiroTalk P2P" />&nbsp;
-<img src="./priv/static/icons/providers/video/medium/local.png" alt="In-Person / Phone" height="44" title="In-Person / Phone" />&nbsp;
-<img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom" height="44" title="Custom Links" />
-
-</div>
+<table width="100%">
+<tr>
+<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/google_meet.png" alt="Google Meet" height="44" /><br><sub>Google Meet</sub></td>
+<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/teams.png" alt="Microsoft Teams" height="44" /><br><sub>Microsoft Teams</sub></td>
+<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/mirotalk.png" alt="MiroTalk P2P" height="44" /><br><sub>MiroTalk P2P</sub></td>
+<td width="25%" align="center"><img src="./priv/static/images/ui/spacer.png" width="220" height="1" alt="" /><br><img src="./priv/static/icons/providers/video/medium/local.png" alt="In-Person / Phone" height="44" /><br><sub>In-Person / Phone</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="./priv/static/icons/providers/video/medium/custom.png" alt="Custom" height="44" /><br><sub>Custom Links</sub></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</table>
 
 Webhooks (`meeting_created`, `meeting_cancelled`, `meeting_rescheduled`) plug into n8n, Zapier, Make, or your own backend. HMAC-signed payloads.
 
@@ -130,14 +180,78 @@ Full configuration reference (SMTP, OAuth, OIDC, reCAPTCHA, external Postgres, S
 
 ## Stack
 
-Elixir 1.19 / OTP 28 · Phoenix 1.8 · LiveView 1.1 · PostgreSQL 14+ · Oban · Tailwind · Swoosh + MJML · Docker · Cloudron
+<div align="center">
+
+<img src="https://img.shields.io/badge/Elixir-1.19-4B275F?logo=elixir&logoColor=white" alt="Elixir 1.19" />&nbsp;
+<img src="https://img.shields.io/badge/OTP-28-A90533?logo=erlang&logoColor=white" alt="Erlang/OTP 28" />&nbsp;
+<img src="https://img.shields.io/badge/Phoenix-1.8-FD4F00?logo=phoenixframework&logoColor=white" alt="Phoenix 1.8" />&nbsp;
+<img src="https://img.shields.io/badge/LiveView-1.1-E34F26?logo=phoenixframework&logoColor=white" alt="LiveView 1.1" />&nbsp;
+<img src="https://img.shields.io/badge/PostgreSQL-14+-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 14+" />&nbsp;
+<img src="https://img.shields.io/badge/Oban-Background_jobs-1E293B?logo=elixir&logoColor=white" alt="Oban" />
+
+<img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />&nbsp;
+<img src="https://img.shields.io/badge/Swoosh_+_MJML-Email-EF4444?logo=maildotru&logoColor=white" alt="Swoosh + MJML" />&nbsp;
+<img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" alt="Docker" />&nbsp;
+<img src="https://img.shields.io/badge/Cloudron-Self--host-1F6FEB" alt="Cloudron" />
+
+</div>
 
 ---
 
 ## Pricing
 
-**Self-hosted** — free forever. Full feature set, all integrations, unlimited bookings.<br>
-**Cloud Pro — €5/month** — managed hosting, white-label branding, priority support.
+<table width="100%">
+<tr>
+<td width="50%" valign="top">
+
+<img src="./priv/static/images/ui/spacer.png" width="450" height="1" alt="" />
+
+### Self-hosted
+
+<h2>Free</h2>
+
+<sub>forever — Elastic Licence 2.0</sub>
+
+<br>
+
+✓&nbsp;Full feature set<br>
+✓&nbsp;All integrations<br>
+✓&nbsp;Unlimited bookings<br>
+✓&nbsp;Community support
+
+</td>
+<td width="50%" valign="top">
+
+<img src="./priv/static/images/ui/spacer.png" width="450" height="1" alt="" />
+
+### Managed Cloud
+
+<h2>Free <small>·</small> €5<small>/mo</small></h2>
+
+<sub>free plan — €5/mo for Pro</sub>
+
+<br>
+
+✓&nbsp;Zero maintenance<br>
+✓&nbsp;Automatic updates<br>
+✓&nbsp;Free plan included<br>
+✓&nbsp;Priority support
+
+</td>
+</tr>
+<tr>
+<td valign="bottom">
+
+<a href="README-Docker.md"><b>Self-host with Docker →</b></a>
+
+</td>
+<td valign="bottom">
+
+<a href="https://tymeslot.app"><b>Try the cloud →</b></a>
+
+</td>
+</tr>
+</table>
 
 ---
 
