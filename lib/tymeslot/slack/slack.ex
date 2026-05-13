@@ -20,7 +20,6 @@ defmodule Tymeslot.Slack do
 
   @spec list_integrations(integer()) :: [SlackIntegrationSchema.t()]
   def list_integrations(user_id) do
-    SlackQueries.cleanup_orphaned_stubs(user_id)
     SlackQueries.list_integrations(user_id)
   end
 
@@ -292,7 +291,7 @@ defmodule Tymeslot.Slack do
   def record_failure(%SlackIntegrationSchema{} = integration, reason) do
     with {:ok, updated} <- SlackQueries.increment_failure(integration) do
       if updated.failure_count >= max_failure_count() do
-        SlackQueries.update_integration(updated, %{
+        SlackQueries.update_state(updated, %{
           is_active: false,
           disabled_at: DateTime.utc_now(),
           disabled_reason: "Too many consecutive failures: #{reason}"
@@ -306,7 +305,7 @@ defmodule Tymeslot.Slack do
   @spec auto_disable(SlackIntegrationSchema.t(), String.t()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def auto_disable(%SlackIntegrationSchema{} = integration, reason) do
-    SlackQueries.update_integration(integration, %{
+    SlackQueries.update_state(integration, %{
       is_active: false,
       disabled_at: DateTime.utc_now(),
       disabled_reason: reason
@@ -415,12 +414,23 @@ defmodule Tymeslot.Slack do
   def translate_error(code) when is_binary(code), do: translate_error_code(code)
   def translate_error(:no_token), do: "Slack credentials are missing. Reconnect to continue."
   def translate_error(:no_webhook_url), do: "Webhook URL is missing. Add it again to continue."
+
+  def translate_error(:missing_bot_token),
+    do:
+      "Slack app is not configured as a bot token app. Check your Slack app settings and ensure the OAuth scopes grant a bot token."
+
   def translate_error({:unknown_mode, _mode}), do: "Slack integration is misconfigured."
 
   def translate_error(%Ecto.Changeset{} = changeset) do
     case changeset.errors do
-      [{field, {msg, _opts}} | _rest] -> "#{field} #{msg}"
-      _other -> "Could not save Slack integration."
+      [{_field, {"workspace already connected", _opts}} | _rest] ->
+        "This Slack workspace is already connected. Disconnect the existing integration first."
+
+      [{field, {msg, _opts}} | _rest] ->
+        "#{field} #{msg}"
+
+      _other ->
+        "Could not save Slack integration."
     end
   end
 

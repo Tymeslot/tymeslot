@@ -67,6 +67,43 @@ defmodule Tymeslot.SlackTest do
     end
   end
 
+  describe "reenable_integration/1" do
+    test "re-enables an auto-disabled integration, clearing disabled fields" do
+      integration =
+        insert(:slack_integration,
+          is_active: false,
+          disabled_at: DateTime.utc_now(),
+          disabled_reason: "Too many consecutive failures: channel_not_found",
+          failure_count: 10
+        )
+
+      assert {:ok, reenabled} = Slack.reenable_integration(integration)
+      assert reenabled.is_active == true
+      assert is_nil(reenabled.disabled_at)
+      assert is_nil(reenabled.disabled_reason)
+    end
+
+    test "returns {:error, :insufficient_plan} when Features.check_access denies access" do
+      setup_config(:tymeslot,
+        feature_access_checker: Tymeslot.SlackTest.DenyAccessChecker
+      )
+
+      integration =
+        insert(:slack_integration,
+          is_active: false,
+          disabled_at: DateTime.utc_now(),
+          disabled_reason: "failures"
+        )
+
+      assert {:error, :insufficient_plan} = Slack.reenable_integration(integration)
+
+      # Integration must remain unchanged
+      assert {:ok, unchanged} = Slack.get_integration(integration.id, integration.user_id)
+      assert unchanged.is_active == false
+      refute is_nil(unchanged.disabled_at)
+    end
+  end
+
   describe "toggle_integration/1" do
     test "toggles active to paused" do
       integration = insert(:slack_integration, is_active: true)
@@ -334,6 +371,15 @@ defmodule Tymeslot.SlackTest do
 
     test "falls back to generic Slack error message for unknown codes" do
       assert Slack.translate_error("bogus_code") == "Slack error: bogus_code"
+    end
+
+    test "maps :missing_bot_token to Slack app configuration guidance" do
+      assert Slack.translate_error(:missing_bot_token) =~ "bot token app"
+    end
+
+    test "maps workspace already connected changeset to a clear message" do
+      cs = %Ecto.Changeset{errors: [{:user_id, {"workspace already connected", []}}]}
+      assert Slack.translate_error(cs) =~ "already connected"
     end
   end
 

@@ -66,14 +66,20 @@ defmodule Tymeslot.Slack.OAuth do
     client_secret = require_config!(:slack_client_secret)
 
     with {:ok, body} <- API.oauth_v2_access(client_id, client_secret, code, redirect_uri) do
-      {:ok,
-       %{
-         bot_token: body["access_token"],
-         team_id: get_in(body, ["team", "id"]),
-         team_name: get_in(body, ["team", "name"]),
-         authed_user_id: get_in(body, ["authed_user", "id"]),
-         scope: body["scope"]
-       }}
+      case body["access_token"] do
+        nil ->
+          {:error, :missing_bot_token}
+
+        bot_token ->
+          {:ok,
+           %{
+             bot_token: bot_token,
+             team_id: get_in(body, ["team", "id"]),
+             team_name: get_in(body, ["team", "name"]),
+             authed_user_id: get_in(body, ["authed_user", "id"]),
+             scope: body["scope"]
+           }}
+      end
     end
   end
 

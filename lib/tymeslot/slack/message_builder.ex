@@ -9,6 +9,8 @@ defmodule Tymeslot.Slack.MessageBuilder do
   Block Kit reference: https://api.slack.com/block-kit
   """
 
+  alias Tymeslot.Utils.UrlBuilder
+
   @max_reason_length 500
 
   @doc "Builds the blocks list for a given event and meeting."
@@ -199,17 +201,8 @@ defmodule Tymeslot.Slack.MessageBuilder do
 
   defp meeting_url(meeting) do
     case Map.get(meeting, :uid) do
-      nil ->
-        nil
-
-      _uid ->
-        endpoint_config = Application.get_env(:tymeslot, TymeslotWeb.Endpoint, [])
-        host = System.get_env("PHX_HOST") || get_in(endpoint_config, [:url, :host]) || "localhost"
-
-        scheme =
-          System.get_env("PHX_SCHEME") || get_in(endpoint_config, [:url, :scheme]) || "https"
-
-        "#{scheme}://#{host}/dashboard/meetings"
+      nil -> nil
+      _uid -> UrlBuilder.build_url("/dashboard/meetings")
     end
   end
 

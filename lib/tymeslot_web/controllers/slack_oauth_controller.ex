@@ -28,10 +28,18 @@ defmodule TymeslotWeb.SlackOAuthController do
 
   @spec callback(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def callback(conn, %{"error" => error}) do
-    Logger.info("Slack OAuth cancelled by user", error: error)
+    Logger.info("Slack OAuth error returned by Slack", error: error)
+
+    message =
+      if error == "access_denied" do
+        "Slack connection cancelled."
+      else
+        Logger.info("Slack OAuth returned unrecognised error code", error: error)
+        "Slack connection could not be completed. Please try again."
+      end
 
     conn
-    |> put_flash(:error, "Slack connection cancelled: #{error}")
+    |> put_flash(:error, message)
     |> redirect(to: ~p"/dashboard/automation")
   end
 
@@ -66,7 +74,7 @@ defmodule TymeslotWeb.SlackOAuthController do
         Logger.warning("Slack OAuth callback failed", reason: inspect(reason))
 
         conn
-        |> put_flash(:error, "Slack connection failed: #{inspect(reason)}")
+        |> put_flash(:error, Slack.translate_error(reason))
         |> redirect(to: ~p"/dashboard/automation")
     end
   end
