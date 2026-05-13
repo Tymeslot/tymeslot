@@ -97,6 +97,24 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
       assert html =~ "Server URL"
     end
 
+    test "renders config view for baikal" do
+      assigns = %{
+        selected_provider: :baikal,
+        myself: "target",
+        security_metadata: %{},
+        form_errors: %{},
+        form_values: %{},
+        discovered_calendars: [],
+        show_calendar_selection: false,
+        discovery_credentials: %{},
+        is_saving: false
+      }
+
+      html = render_component(&Components.config_view/1, assigns)
+      assert html =~ "Setup Baikal"
+      assert html =~ "PHP-based CalDAV/CardDAV server"
+    end
+
     test "renders fallback for unknown provider" do
       assigns = %{
         selected_provider: :unknown,

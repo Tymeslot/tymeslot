@@ -93,7 +93,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
           {"radicale", "Radicale"},
           {"nextcloud", "Nextcloud"},
           {"zimbra", "Zimbra"},
-          {"mailbox_org", "mailbox.org"}
+          {"mailbox_org", "mailbox.org"},
+          {"baikal", "Baikal"}
         ] do
       @provider provider
       @label label

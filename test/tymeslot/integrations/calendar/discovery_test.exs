@@ -1,8 +1,12 @@
 defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
-  use Tymeslot.DataCase, async: true
+  # async: false — CalDAV discovery runs HTTP calls inside a circuit-breaker
+  # GenServer; in async (private) mode that process has no Mox allowance and
+  # the stub is bypassed, causing the success branch to never fire.
+  use Tymeslot.DataCase, async: false
   @moduletag :integrations
 
   alias Tymeslot.Integrations.Calendar.Discovery
+  alias Tymeslot.Security.Encryption
   import Tymeslot.Factory
   import Mox
 
@@ -36,6 +40,48 @@ defmodule Tymeslot.Integrations.Calendar.DiscoveryTest do
     test "handles unknown provider" do
       assert {:error, "Unknown provider: unknown"} =
                Discovery.discover_calendars_for_integration(%{provider: "unknown"})
+    end
+
+    test "discovers for baikal provider via decrypt chain" do
+      # Exercises the full credential-decrypt → resolve_provider_atom →
+      # provider_module_for → Baikal.Provider.new → Baikal.Provider.discover_calendars
+      # chain, which was previously uncovered by mock-based tests.
+      integration =
+        insert(:calendar_integration,
+          provider: "baikal",
+          base_url: "https://baikal.example.com/dav.php",
+          username_encrypted: Encryption.encrypt("testuser"),
+          password_encrypted: Encryption.encrypt("testpass")
+        )
+
+      stub(Tymeslot.HTTPClientMock, :request, fn _method, _url, _body, _headers, _opts ->
+        {:ok,
+         %Req.Response{
+           status: 207,
+           body: """
+           <D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+             <D:response>
+               <D:href>/dav.php/calendars/testuser/default/</D:href>
+               <D:propstat>
+                 <D:prop>
+                   <D:displayname>Personal</D:displayname>
+                   <D:resourcetype>
+                     <D:collection/>
+                     <C:calendar/>
+                   </D:resourcetype>
+                 </D:prop>
+                 <D:status>HTTP/1.1 200 OK</D:status>
+               </D:propstat>
+             </D:response>
+           </D:multistatus>
+           """
+         }}
+      end)
+
+      assert {:ok, calendars} = Discovery.discover_calendars_for_integration(integration)
+      assert is_list(calendars)
+      assert calendars != []
+      assert Enum.all?(calendars, fn cal -> is_binary(cal.name) end)
     end
   end
 
