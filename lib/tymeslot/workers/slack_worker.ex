@@ -175,6 +175,11 @@ defmodule Tymeslot.Workers.SlackWorker do
     {:error, {:http_error, status}}
   end
 
+  # A 404 from an Incoming Webhook URL means the user revoked the hook in Slack.
+  # Retries will never succeed — auto-disable the same way we do for token_revoked.
+  defp handle_error(integration, delivery_attrs, _attempt, {:webhook_error, 404, _body}),
+    do: auto_disable_and_log(integration, "webhook_url_revoked", delivery_attrs)
+
   defp handle_error(integration, delivery_attrs, attempt, {:webhook_error, status, body}) do
     log_failure(delivery_attrs, "webhook_#{status}", body)
     if attempt == 1, do: Slack.record_failure(integration, "webhook_#{status}")
