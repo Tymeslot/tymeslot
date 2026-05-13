@@ -30,7 +30,9 @@ defmodule Tymeslot.Auth.UserQueries do
   @spec get_user_by_email(String.t(), module()) ::
           {:ok, UserSchema.t()} | {:error, :not_found}
   def get_user_by_email(email, repo \\ Repo) when is_binary(email) do
-    case repo.get_by(UserSchema, email: String.downcase(email)) do
+    normalised = email |> String.trim() |> String.downcase()
+
+    case repo.get_by(UserSchema, email: normalised) do
       nil -> {:error, :not_found}
       user -> {:ok, user}
     end
@@ -58,12 +60,12 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Lists all users in the system.
+  Lists all users in the system, ordered by id ascending.
   Returns a list of user records (can be empty).
   """
   @spec list_all_users() :: [UserSchema.t()]
   def list_all_users do
-    Repo.all(UserSchema)
+    Repo.all(from(u in UserSchema, order_by: u.id))
   end
 
   @doc """
@@ -166,6 +168,84 @@ defmodule Tymeslot.Auth.UserQueries do
     user
     |> UserSchema.changeset(attrs)
     |> repo.update()
+  end
+
+  @doc """
+  Returns `true` if `user` is the only row in the `users` table.
+
+  Accepts an optional `repo` argument for use within transactions — the call
+  site is expected to run this inside the same transaction as the insert it
+  is gating, to keep the "first user becomes admin" bootstrap race-free for a
+  single-instance install.
+  """
+  @spec only_user?(UserSchema.t(), module()) :: boolean()
+  def only_user?(%UserSchema{id: id}, repo \\ Repo) do
+    not repo.exists?(from(u in UserSchema, where: u.id != ^id, select: 1, limit: 1))
+  end
+
+  @doc """
+  Returns `true` if at least one row in `users` has `is_admin = true`.
+  """
+  @spec any_admin?(module()) :: boolean()
+  def any_admin?(repo \\ Repo) do
+    repo.exists?(from(u in UserSchema, where: u.is_admin, select: 1, limit: 1))
+  end
+
+  @doc """
+  Returns `true` if the `users` table has at least one row.
+  """
+  @spec any_user?(module()) :: boolean()
+  def any_user?(repo \\ Repo) do
+    repo.exists?(from(u in UserSchema, select: 1, limit: 1))
+  end
+
+  @doc """
+  Sets `is_admin` on a user. Internal-only — callers must have already
+  verified that the actor is authorised to make this change.
+
+  Accepts an optional `repo` argument for use within transactions.
+  """
+  @spec set_admin(UserSchema.t(), boolean(), module()) ::
+          {:ok, UserSchema.t()} | {:error, Changeset.t()}
+  def set_admin(%UserSchema{} = user, is_admin, repo \\ Repo) when is_boolean(is_admin) do
+    user
+    |> UserSchema.admin_changeset(is_admin)
+    |> repo.update()
+  end
+
+  @doc """
+  Returns every admin user, ordered by id.
+  """
+  @spec list_admins(module()) :: [UserSchema.t()]
+  def list_admins(repo \\ Repo) do
+    repo.all(from(u in UserSchema, where: u.is_admin, order_by: u.id))
+  end
+
+  @doc """
+  Acquires a `FOR UPDATE` row lock on every admin user and returns them.
+
+  Must be called inside a transaction. Used by `AdminRoles` to prevent
+  concurrent demotions from racing past the last-admin invariant.
+  """
+  @spec lock_admins() :: [UserSchema.t()]
+  def lock_admins do
+    Repo.all(from(u in UserSchema, where: u.is_admin == true, lock: "FOR UPDATE"))
+  end
+
+  @doc """
+  Counts users in the table.
+  """
+  @spec count_users(module()) :: non_neg_integer()
+  def count_users(repo \\ Repo) do
+    repo.aggregate(UserSchema, :count, :id)
+  end
+
+  @doc """
+  Counts admin users.
+  """
+  @spec count_admins(module()) :: non_neg_integer()
+  def count_admins(repo \\ Repo) do
+    repo.aggregate(from(u in UserSchema, where: u.is_admin), :count, :id)
   end
 
   @doc """

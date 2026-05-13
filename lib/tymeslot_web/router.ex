@@ -213,6 +213,28 @@ defmodule TymeslotWeb.Router do
     end
   end
 
+  # =============================================================================
+  # Admin Routes (self-hosted only — locked down in SaaS via enable_admin_ui)
+  # =============================================================================
+  scope "/admin", TymeslotWeb do
+    pipe_through [
+      :browser,
+      :require_authenticated_user,
+      TymeslotWeb.Plugs.RequireAdminUiEnabled,
+      TymeslotWeb.Plugs.RequireAdmin
+    ]
+
+    live_session :admin,
+      on_mount: [
+        {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+        TymeslotWeb.Hooks.EnsureAdminHook
+      ] do
+      live "/", AdminLive, :overview
+      live "/settings", AdminLive, :settings
+      live "/users", AdminLive, :users
+    end
+  end
+
   # Onboarding routes
   scope "/", TymeslotWeb do
     pipe_through [:browser, :require_authenticated_user]

@@ -10,7 +10,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   require Logger
 
   alias Ecto.Changeset
-  alias Tymeslot.Auth.{UserQueries, UserSchema}
+  alias Tymeslot.Auth.{AdminBootstrap, UserQueries, UserSchema}
   alias Tymeslot.Availability.WeeklySchedule
   alias Tymeslot.Profiles.ProfileQueries
   alias Tymeslot.Repo
@@ -150,9 +150,11 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreation do
   end
 
   defp create_new_user(repo, auth_params) do
-    case UserQueries.create_social_user(auth_params, repo) do
-      {:ok, user} -> {:ok, {user, true}}
-      {:error, changeset} -> {:error, {:find_or_create, changeset}}
+    with {:ok, user} <- UserQueries.create_social_user(auth_params, repo),
+         {:ok, bootstrapped} <- AdminBootstrap.maybe_promote_first_user(user, repo) do
+      {:ok, {bootstrapped, true}}
+    else
+      {:error, %Ecto.Changeset{} = changeset} -> {:error, {:find_or_create, changeset}}
     end
   end
 
