@@ -585,6 +585,20 @@ else
     telegram_shared_bot: false
 end
 
+# Slack integration feature flags (Core defaults)
+# Webhook-URL mode: set SLACK_ENABLED=true; users paste their own Incoming Webhook URL.
+# OAuth mode: set SLACK_CLIENT_ID + SLACK_CLIENT_SECRET; users connect via a Slack App.
+# Presence of SLACK_CLIENT_ID also enables Slack notifications (webhook-URL mode still works).
+slack_client_id = System.get_env("SLACK_CLIENT_ID")
+slack_client_secret = System.get_env("SLACK_CLIENT_SECRET")
+slack_enabled_flag = System.get_env("SLACK_ENABLED") == "true"
+
+config :tymeslot,
+  slack_notifications_allowed: slack_enabled_flag or not is_nil(slack_client_id),
+  slack_oauth_available: not is_nil(slack_client_id) and not is_nil(slack_client_secret),
+  slack_client_id: slack_client_id,
+  slack_client_secret: slack_client_secret
+
 config :tymeslot, registration_enabled: System.get_env("REGISTRATION_ENABLED", "true") == "true"
 config :tymeslot, password_auth_enabled: System.get_env("PASSWORD_AUTH_ENABLED", "true") == "true"
 
