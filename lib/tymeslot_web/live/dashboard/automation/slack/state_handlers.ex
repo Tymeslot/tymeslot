@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
 
   import Phoenix.Component, only: [assign: 3]
 
+  alias Phoenix.LiveView
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Slack
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
@@ -114,7 +115,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
   @spec handle_reconnect(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_reconnect(_params, socket) do
-    {:noreply, Phoenix.LiveView.redirect(socket, to: "/api/slack/oauth/start")}
+    {:noreply, LiveView.redirect(socket, to: "/api/slack/oauth/start")}
   end
 
   @spec handle_reenable(map(), Phoenix.LiveView.Socket.t()) ::

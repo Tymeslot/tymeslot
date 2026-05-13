@@ -17,6 +17,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Dashboard.Automation.Modals
+  alias TymeslotWeb.Dashboard.Automation.Slack.FormHandlers, as: SlackFormHandlers
   alias TymeslotWeb.Dashboard.Automation.SlackCard
   alias TymeslotWeb.Dashboard.Automation.SlackEmptyState
   alias TymeslotWeb.Dashboard.Automation.SlackEventHandlers
@@ -210,7 +211,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   # Slack Events — delegated to SlackEventHandlers.handle/3 by event name
   # ============================================================================
 
-  def handle_event("slack_" <> _ = event, params, socket),
+  def handle_event("slack_" <> _suffix = event, params, socket),
     do: SlackEventHandlers.handle(event, params, socket)
 
   # ============================================================================
@@ -628,7 +629,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       socket
       |> assign(:active_tab, :slack)
       |> assign(:slack_pending_opened_for, parsed_id)
-      |> TymeslotWeb.Dashboard.Automation.Slack.FormHandlers.open_oauth_form(integration)
+      |> SlackFormHandlers.open_oauth_form(integration)
     else
       _other -> socket
     end

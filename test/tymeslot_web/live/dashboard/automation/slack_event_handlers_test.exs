@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
 
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.ConfigTestHelpers
+  alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack
 
   setup %{conn: conn} do
@@ -80,7 +81,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       html = render(view)
 
       assert html =~ "Slack Webhook URL"
-      assert html =~ "hooks.slack.com"
+      assert html =~ "Incoming Webhook"
     end
 
     test "creates an integration on successful submit and shows it in the list",
@@ -152,9 +153,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
           user: user,
           app_mode: "webhook_url",
           webhook_url_encrypted:
-            Tymeslot.Security.Encryption.encrypt(
-              "https://hooks.slack.com/services/TABC/BABC/secrettoken"
-            ),
+            Encryption.encrypt("https://hooks.slack.com/services/TABC/BABC/secrettoken"),
           bot_token_encrypted: nil,
           team_id: nil,
           channel_id: nil,
@@ -193,9 +192,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
           user: user,
           app_mode: "webhook_url",
           webhook_url_encrypted:
-            Tymeslot.Security.Encryption.encrypt(
-              "https://hooks.slack.com/services/TABC/BABC/secrettoken"
-            ),
+            Encryption.encrypt("https://hooks.slack.com/services/TABC/BABC/secrettoken"),
           bot_token_encrypted: nil,
           team_id: nil,
           channel_id: nil,
@@ -250,9 +247,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
           user: user,
           app_mode: "webhook_url",
           webhook_url_encrypted:
-            Tymeslot.Security.Encryption.encrypt(
-              "https://hooks.slack.com/services/TABC/BABC/secrettoken"
-            ),
+            Encryption.encrypt("https://hooks.slack.com/services/TABC/BABC/secrettoken"),
           bot_token_encrypted: nil,
           team_id: nil,
           channel_id: nil,
