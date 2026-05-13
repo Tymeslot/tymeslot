@@ -28,11 +28,13 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
     {:noreply, socket}
   end
 
+  @impl Phoenix.LiveComponent
   def handle_event("next", _params, socket) do
     send(self(), {:step_event, :questions, :next, nil})
     {:noreply, socket}
   end
 
+  @impl Phoenix.LiveComponent
   def handle_event("back", _params, socket) do
     send(self(), {:step_event, :questions, :back, nil})
     {:noreply, socket}
@@ -86,7 +88,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
                   />
 
                   <%= if @error do %>
-                    <p class="text-red-600 text-sm mt-1">{@error}</p>
+                    <p class="form-field__error">{@error}</p>
                   <% end %>
 
                   <div class="booking-actions">
@@ -259,6 +261,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
        when length(opts) <= 5 do
     ~H"""
     <fieldset class="custom-question-radios">
+      <legend class="sr-only">{@definition["label"]}</legend>
       <%= for opt <- @definition["options"] do %>
         <label class="custom-question-radio">
           <input
@@ -291,6 +294,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.CustomQuestionsComponen
   defp field_input(%{definition: %{"type" => "multi_select"}} = assigns) do
     ~H"""
     <fieldset class="custom-question-checkboxes">
+      <legend class="sr-only">{@definition["label"]}</legend>
       <%= for opt <- @definition["options"] do %>
         <label class="custom-question-checkbox">
           <input
