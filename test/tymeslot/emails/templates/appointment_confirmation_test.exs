@@ -650,4 +650,48 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmationTest do
       assert email.text_body != nil
     end
   end
+
+  describe "render/3 with custom field answers" do
+    test "HTML body includes custom field labels and answers" do
+      details =
+        build_appointment_details(%{
+          custom_fields_snapshot: [
+            %{
+              "id" => "cf-text-001",
+              "type" => "short_text",
+              "label" => "Notes",
+              "required" => true,
+              "position" => 0
+            }
+          ],
+          custom_field_answers: %{"cf-text-001" => "Please bring documents."}
+        })
+
+      email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
+
+      assert email.html_body =~ "Notes"
+      assert email.html_body =~ "Please bring documents."
+    end
+
+    test "text body includes custom field labels and answers" do
+      details =
+        build_appointment_details(%{
+          custom_fields_snapshot: [
+            %{
+              "id" => "cf-text-001",
+              "type" => "short_text",
+              "label" => "Notes",
+              "required" => true,
+              "position" => 0
+            }
+          ],
+          custom_field_answers: %{"cf-text-001" => "Please bring documents."}
+        })
+
+      email = AppointmentConfirmation.render(:attendee, "attendee@example.com", details)
+
+      assert email.text_body =~ "Notes"
+      assert email.text_body =~ "Please bring documents."
+    end
+  end
 end
