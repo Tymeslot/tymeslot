@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerNormaliser
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine
 
   @impl Phoenix.LiveComponent
@@ -22,7 +23,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
     %Engine{} = engine = socket.assigns.engine
     id = Engine.current_definition(engine)["id"]
     raw = Map.get(params, "value", params)
-    value = normalise_answer(raw)
+    value = AnswerNormaliser.normalise(raw)
     send(self(), {:step_event, :questions, :answer, {id, value}})
     {:noreply, socket}
   end
@@ -123,15 +124,6 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
     </div>
     """
   end
-
-  # "acknowledge" is the token sent by the note checkbox. Convert it to the
-  # validated map shape that NoteAckValidator expects so the engine can pass
-  # validation on the first `next` press after ticking.
-  defp normalise_answer("acknowledge") do
-    %{"confirmed" => true, "confirmed_at" => DateTime.to_iso8601(DateTime.utc_now())}
-  end
-
-  defp normalise_answer(value), do: value
 
   attr :definition, :map, required: true
   attr :value, :any, required: true
