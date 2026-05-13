@@ -167,6 +167,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
       id={@id}
       name={@name}
       rows={@rows}
+      placeholder={@placeholder}
       class={[
         "input min-h-[120px] py-3",
         @has_leading_icon && "input-with-icon",
@@ -212,19 +213,20 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     assigns = assign_new(assigns, :rest, fn -> %{} end)
 
     ~H"""
-      <input
-        type={@type}
-        id={@id}
-        name={@name}
-        value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-        class={[
-          "input",
-          @has_leading_icon && "input-with-icon",
-          @has_trailing_icon && "input-with-trailing-icon",
-          @errors != [] && "input-error"
-        ]}
-        {@rest}
-      />
+    <input
+      type={@type}
+      id={@id}
+      name={@name}
+      value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+      placeholder={@placeholder}
+      class={[
+        "input",
+        @has_leading_icon && "input-with-icon",
+        @has_trailing_icon && "input-with-trailing-icon",
+        @errors != [] && "input-error"
+      ]}
+      {@rest}
+    />
     """
   end
 
@@ -255,7 +257,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
     ~H"""
     <%= if Enum.any?(@errors) do %>
       <div class="mt-2 flex items-center gap-2 text-red-600 font-bold text-sm">
-        <TymeslotWeb.Components.CoreComponents.Icons.icon name="hero-exclamation-circle-solid" class="w-4 h-4" />
+        <TymeslotWeb.Components.CoreComponents.Icons.icon
+          name="hero-exclamation-circle-solid"
+          class="w-4 h-4"
+        />
         <div class="flex flex-col">
           <%= for error <- @errors do %>
             <span>{translate_error(error)}</span>
@@ -292,7 +297,9 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   def password_requirements(assigns) do
     ~H"""
     <div id="password-requirements" class="mt-2 text-xs sm:text-sm space-y-1.5">
-      <p class="text-tymeslot-500 font-bold uppercase tracking-wider text-token-2xs">Password must contain:</p>
+      <p class="text-tymeslot-500 font-bold uppercase tracking-wider text-token-2xs">
+        Password must contain:
+      </p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-x-4">
         <ul class="space-y-1">
           <li id="req-length" class="flex items-center text-tymeslot-600 font-medium">
