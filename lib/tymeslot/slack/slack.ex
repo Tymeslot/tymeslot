@@ -119,7 +119,7 @@ defmodule Tymeslot.Slack do
 
         transaction_result =
           Repo.transaction(fn ->
-            SlackQueries.delete_pending_oauth_stubs_for_user(user_id)
+            SlackQueries.delete_pending_stubs(user_id)
 
             case SlackQueries.create_oauth_stub(stub_attrs) do
               {:ok, integration} -> integration
