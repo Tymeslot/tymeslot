@@ -10,8 +10,10 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
   import Tymeslot.Factory
 
   alias Phoenix.Flash
+  alias Phoenix.Token
   alias Tymeslot.Repo
   alias Tymeslot.Slack.SlackIntegrationSchema
+  alias TymeslotWeb.Endpoint
 
   setup :verify_on_exit!
 
@@ -124,8 +126,8 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
       user = insert(:user)
 
       expired =
-        Phoenix.Token.sign(
-          TymeslotWeb.Endpoint,
+        Token.sign(
+          Endpoint,
           "slack_oauth_state",
           user.id,
           signed_at: System.system_time(:second) - 3_600
@@ -160,6 +162,6 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
   end
 
   defp sign_state(user_id) do
-    Phoenix.Token.sign(TymeslotWeb.Endpoint, "slack_oauth_state", user_id)
+    Token.sign(Endpoint, "slack_oauth_state", user_id)
   end
 end
