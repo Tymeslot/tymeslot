@@ -26,6 +26,7 @@ defmodule Tymeslot.CustomFields.Snapshot do
 
   defp position(%FieldDefinition{position: p}), do: p || 0
   defp position(%{"position" => p}), do: p || 0
+  defp position(%{position: p}), do: p || 0
   defp position(_), do: 0
 
   defp to_plain_map(%FieldDefinition{} = d) do
@@ -50,5 +51,5 @@ defmodule Tymeslot.CustomFields.Snapshot do
     drop_nils(stringified)
   end
 
-  defp drop_nils(map), do: :maps.filter(fn _, v -> not is_nil(v) end, map)
+  defp drop_nils(map), do: Map.reject(map, fn {_, v} -> is_nil(v) end)
 end

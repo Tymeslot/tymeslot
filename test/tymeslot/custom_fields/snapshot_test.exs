@@ -9,8 +9,12 @@ defmodule Tymeslot.CustomFields.SnapshotTest do
     mt = %{
       custom_fields: [
         %FieldDefinition{
-          id: "a", type: "short_text", label: "Company", required: true,
-          options: [], position: 0
+          id: "a",
+          type: "short_text",
+          label: "Company",
+          required: true,
+          options: [],
+          position: 0
         }
       ]
     }
@@ -28,8 +32,12 @@ defmodule Tymeslot.CustomFields.SnapshotTest do
     mt = %{
       custom_fields: [
         %FieldDefinition{
-          id: "f1", type: "single_select", label: "Pick", required: true,
-          options: [%FieldOption{key: "r", label: "Red"}], position: 0
+          id: "f1",
+          type: "single_select",
+          label: "Pick",
+          required: true,
+          options: [%FieldOption{key: "r", label: "Red"}],
+          position: 0
         }
       ]
     }
@@ -61,10 +69,28 @@ defmodule Tymeslot.CustomFields.SnapshotTest do
     assert Snapshot.from_definitions(plain) == plain
   end
 
+  test "from_definitions/1 sorts atom-keyed plain maps by position" do
+    defs = [
+      %{id: "b", type: "short_text", label: "B", position: 2},
+      %{id: "a", type: "short_text", label: "A", position: 1}
+    ]
+
+    [first, _second] = Snapshot.from_definitions(defs)
+    assert first["id"] == "a"
+  end
+
   test "from_definitions/1 strips nil-valued keys" do
     mt = %{
       custom_fields: [
-        %FieldDefinition{id: "a", type: "short_text", label: "X", help_text: nil, body: nil, min: nil, max: nil}
+        %FieldDefinition{
+          id: "a",
+          type: "short_text",
+          label: "X",
+          help_text: nil,
+          body: nil,
+          min: nil,
+          max: nil
+        }
       ]
     }
 
