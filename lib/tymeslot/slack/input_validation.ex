@@ -137,7 +137,11 @@ defmodule Tymeslot.Slack.InputValidation do
     {String.trim_leading(String.trim(name), "#"), errors}
   end
 
-  defp drop_nils(map), do: Enum.reject(map, fn {_k, v} -> is_nil(v) end) |> Map.new()
+  defp drop_nils(map) do
+    map
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+    |> Map.new()
+  end
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)

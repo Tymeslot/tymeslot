@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackCompositionTest do
       html = render(view)
 
       assert html =~ "Slack Webhook URL"
-      assert html =~ "hooks.slack.com"
+      assert html =~ "Incoming Webhook"
     end
 
     test "hides the Slack tab entirely when the feature flag is off",

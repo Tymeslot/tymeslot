@@ -32,44 +32,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
   def update(assigns, socket) do
     mode = assigns[:mode] || :webhook_url
     integration = assigns[:integration]
-
-    form_values =
-      cond do
-        Map.has_key?(assigns, :form_values) and assigns.form_values != %{} ->
-          assigns.form_values
-
-        integration && mode == :oauth_pending ->
-          %{
-            "name" => integration.name || "",
-            "events" => integration.events || Slack.default_events_for_new_integration(),
-            "channel_id" => "",
-            "channel_name" => ""
-          }
-
-        integration && mode == :oauth_existing ->
-          %{
-            "name" => integration.name,
-            "events" => integration.events,
-            "channel_id" => integration.channel_id || "",
-            "channel_name" => integration.channel_name || ""
-          }
-
-        integration && mode == :webhook_url ->
-          %{
-            "name" => integration.name,
-            "events" => integration.events,
-            "webhook_url" => "",
-            "webhook_channel_hint" => integration.webhook_channel_hint || ""
-          }
-
-        true ->
-          %{
-            "name" => "",
-            "events" => Slack.default_events_for_new_integration(),
-            "webhook_url" => "",
-            "webhook_channel_hint" => ""
-          }
-      end
+    form_values = resolve_form_values(assigns, integration, mode)
 
     socket =
       socket
@@ -81,6 +44,46 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
       |> maybe_start_channel_load(mode, integration)
 
     {:ok, socket}
+  end
+
+  defp resolve_form_values(%{form_values: %{} = values}, _integration, _mode)
+       when map_size(values) > 0,
+       do: values
+
+  defp resolve_form_values(_assigns, %{} = integration, :oauth_pending) do
+    %{
+      "name" => integration.name || "",
+      "events" => integration.events || Slack.default_events_for_new_integration(),
+      "channel_id" => "",
+      "channel_name" => ""
+    }
+  end
+
+  defp resolve_form_values(_assigns, %{} = integration, :oauth_existing) do
+    %{
+      "name" => integration.name,
+      "events" => integration.events,
+      "channel_id" => integration.channel_id || "",
+      "channel_name" => integration.channel_name || ""
+    }
+  end
+
+  defp resolve_form_values(_assigns, %{} = integration, :webhook_url) do
+    %{
+      "name" => integration.name,
+      "events" => integration.events,
+      "webhook_url" => "",
+      "webhook_channel_hint" => integration.webhook_channel_hint || ""
+    }
+  end
+
+  defp resolve_form_values(_assigns, _integration, _mode) do
+    %{
+      "name" => "",
+      "events" => Slack.default_events_for_new_integration(),
+      "webhook_url" => "",
+      "webhook_channel_hint" => ""
+    }
   end
 
   @impl Phoenix.LiveComponent
@@ -312,7 +315,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
     """
   end
 
-  defp lookup_channel_name(channels, channel_id) when is_binary(channel_id) and channel_id != "" do
+  defp lookup_channel_name(channels, channel_id)
+       when is_binary(channel_id) and channel_id != "" do
     case Enum.find(channels, &(&1.id == channel_id)) do
       nil -> ""
       %{name: name} -> name
