@@ -306,6 +306,33 @@ defmodule Tymeslot.SlackTest do
                SlackIntegrationSchema.valid_events()
     end
   end
+
+  describe "translate_error/1" do
+    test "maps channel_not_found to private-channel guidance" do
+      assert Slack.translate_error({:slack_error, "channel_not_found", %{}}) =~
+               "Channel not accessible"
+    end
+
+    test "maps token_revoked and account_inactive to reconnect copy" do
+      assert Slack.translate_error({:error, {:slack_error, "token_revoked", %{}}}) =~
+               "Reconnect"
+
+      assert Slack.translate_error("account_inactive") =~ "Reconnect"
+    end
+
+    test "maps not_in_channel and ratelimited to specific copy" do
+      assert Slack.translate_error("not_in_channel") =~ "not in this channel"
+      assert Slack.translate_error("ratelimited") =~ "rate-limiting"
+    end
+
+    test "maps webhook_url_revoked to guidance to generate a new URL" do
+      assert Slack.translate_error("webhook_url_revoked") =~ "Generate a new one"
+    end
+
+    test "falls back to generic Slack error message for unknown codes" do
+      assert Slack.translate_error("bogus_code") == "Slack error: bogus_code"
+    end
+  end
 end
 
 defmodule Tymeslot.SlackTest.DenyAccessChecker do
