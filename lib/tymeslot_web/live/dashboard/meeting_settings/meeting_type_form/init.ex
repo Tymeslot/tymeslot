@@ -25,6 +25,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
     )
     |> Component.assign(:selected_target_calendar_id, get_target_calendar_id(type))
     |> Component.assign(:reminders, get_reminders(type))
+    |> Component.assign(:custom_fields, get_custom_fields(type))
     |> then(fn socket ->
       if id = socket.assigns.selected_calendar_integration_id do
         Component.assign(
@@ -119,4 +120,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   end
 
   def get_reminders(_arg), do: [%{value: 30, unit: "minutes"}]
+
+  @doc "Returns the custom_fields list from an existing meeting type, or an empty list."
+  @spec get_custom_fields(Ecto.Schema.t() | nil) :: list()
+  def get_custom_fields(nil), do: []
+
+  def get_custom_fields(%{custom_fields: fields}) when is_list(fields) do
+    Enum.sort_by(fields, & &1.position)
+  end
+
+  def get_custom_fields(_arg), do: []
 end
