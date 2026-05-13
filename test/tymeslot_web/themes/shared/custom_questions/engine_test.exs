@@ -113,4 +113,23 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
     s = Engine.init([d1, d2])
     assert Engine.current_definition(s)["id"] == d1["id"]
   end
+
+  test "next/1 at the last question is a no-op on current_index (clamp)" do
+    [d1, d2] = [build_def("short_text"), build_def("short_text")]
+    s = Engine.init([d1, d2])
+
+    s = Engine.answer(s, d1["id"], "Acme")
+    {:ok, s} = Engine.next(s)
+    assert s.current_index == 1
+
+    s = Engine.answer(s, d2["id"], "Beta")
+    {:ok, s} = Engine.next(s)
+    # current_index stayed at 1 (the last index, since total = 2).
+    assert s.current_index == 1
+  end
+
+  test "next/1 on an empty engine returns {:error, s} without crashing" do
+    s = Engine.init([])
+    assert {:error, ^s} = Engine.next(s)
+  end
 end

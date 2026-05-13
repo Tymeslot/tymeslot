@@ -6,6 +6,11 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
   answers, per-question errors, and the current sub-page index. Has no
   knowledge of LiveView — themes wrap the state and render one
   definition at a time.
+
+  The `touched` MapSet tracks which question ids the booker has already
+  answered at least once. It's reserved for the theme integration to gate
+  inline error rendering ("show errors only on touched fields"). The
+  engine itself does not enforce this rule.
   """
 
   alias Tymeslot.CustomFields
@@ -50,6 +55,8 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
   end
 
   @spec next(t()) :: {:ok, t()} | {:error, t()}
+  def next(%__MODULE__{definitions: []} = s), do: {:error, s}
+
   def next(%__MODULE__{} = s) do
     case validate_current(s) do
       {:ok, normalised} ->
