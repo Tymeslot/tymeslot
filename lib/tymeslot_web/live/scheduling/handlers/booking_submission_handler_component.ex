@@ -58,7 +58,9 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       end
   """
   @spec submit_booking(Phoenix.LiveView.Socket.t(), map()) ::
-          {:ok, Phoenix.LiveView.Socket.t()} | {:error, Phoenix.LiveView.Socket.t()}
+          {:ok, Phoenix.LiveView.Socket.t()}
+          | {:honeypot, Phoenix.LiveView.Socket.t()}
+          | {:error, Phoenix.LiveView.Socket.t()}
   def submit_booking(socket, booking_params) do
     Logger.info("Submit event triggered for booking form")
 
@@ -286,12 +288,10 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
     socket =
       socket
       |> assign(:submitting, false)
-      |> Flash.put_flash(
-        :info,
-        "Booking submitted successfully! You'll receive a confirmation email shortly."
-      )
+      |> assign(:custom_fields_snapshot, [])
+      |> assign(:custom_field_answers, %{})
 
-    {:ok, socket}
+    {:honeypot, socket}
   end
 
   defp log_honeypot(socket) do
