@@ -268,6 +268,11 @@ defmodule Tymeslot.SlackTest do
       setup_config(:tymeslot, slack_client_id: nil)
       refute Slack.oauth_mode_available?()
     end
+
+    test "default_events_for_new_integration/0 matches the schema's valid_events" do
+      assert Slack.default_events_for_new_integration() ==
+               SlackIntegrationSchema.valid_events()
+    end
   end
 end
 
