@@ -83,8 +83,8 @@ defmodule Tymeslot.Workers.SlackWorker do
       |> Oban.insert()
 
     case result do
+      {:ok, %Oban.Job{conflict?: true}} -> :ok
       {:ok, _job} -> :ok
-      {:error, %Ecto.Changeset{errors: [unique: _msg]}} -> :ok
       {:error, reason} -> {:error, reason}
     end
   end
@@ -109,8 +109,21 @@ defmodule Tymeslot.Workers.SlackWorker do
   end
 
   defp handle_revoked_access(integration_id) do
-    with {:ok, integration} <- SlackQueries.get_integration(integration_id) do
-      Slack.auto_disable(integration, "Plan no longer permits automations")
+    case SlackQueries.get_integration(integration_id) do
+      {:ok, integration} ->
+        case Slack.auto_disable(integration, "Plan no longer permits automations") do
+          {:ok, _integration} ->
+            :ok
+
+          {:error, reason} ->
+            Logger.warning("Failed to auto-disable Slack integration after plan revocation",
+              integration_id: integration_id,
+              reason: inspect(reason)
+            )
+        end
+
+      {:error, _reason} ->
+        :ok
     end
 
     {:discard, "Insufficient plan"}
@@ -158,20 +171,25 @@ defmodule Tymeslot.Workers.SlackWorker do
        when err in @auto_disable_errors,
        do: auto_disable_and_log(integration, err, delivery_attrs)
 
-  defp handle_error(_integration, delivery_attrs, _attempt, {:slack_error, "ratelimited", body}) do
+  defp handle_error(
+         _integration,
+         delivery_attrs,
+         _attempt,
+         {:slack_error, "ratelimited", body, retry_after}
+       ) do
     log_failure(delivery_attrs, "ratelimited", body)
-    {:snooze, retry_after_from(body)}
+    {:snooze, retry_after_from(retry_after)}
   end
 
   defp handle_error(integration, delivery_attrs, attempt, {:slack_error, err, body}) do
     log_failure(delivery_attrs, err, body)
-    if attempt == 1, do: Slack.record_failure(integration, err)
+    if attempt == 5, do: Slack.record_failure(integration, err)
     {:error, err}
   end
 
   defp handle_error(integration, delivery_attrs, attempt, {:http_error, status, body}) do
     log_failure(delivery_attrs, "http_#{status}", body)
-    if attempt == 1, do: Slack.record_failure(integration, "http_#{status}")
+    if attempt == 5, do: Slack.record_failure(integration, "http_#{status}")
     {:error, {:http_error, status}}
   end
 
@@ -182,19 +200,19 @@ defmodule Tymeslot.Workers.SlackWorker do
 
   defp handle_error(integration, delivery_attrs, attempt, {:webhook_error, status, body}) do
     log_failure(delivery_attrs, "webhook_#{status}", body)
-    if attempt == 1, do: Slack.record_failure(integration, "webhook_#{status}")
+    if attempt == 5, do: Slack.record_failure(integration, "webhook_#{status}")
     {:error, {:webhook_error, status}}
   end
 
   defp handle_error(integration, delivery_attrs, attempt, {:transport_error, reason}) do
     log_failure(delivery_attrs, "transport_error", reason)
-    if attempt == 1, do: Slack.record_failure(integration, inspect(reason))
+    if attempt == 5, do: Slack.record_failure(integration, inspect(reason))
     {:error, :transport_error}
   end
 
   defp handle_error(integration, delivery_attrs, attempt, reason) do
     log_failure(delivery_attrs, inspect(reason), nil)
-    if attempt == 1, do: Slack.record_failure(integration, inspect(reason))
+    if attempt == 5, do: Slack.record_failure(integration, inspect(reason))
     {:error, reason}
   end
 
@@ -261,7 +279,7 @@ defmodule Tymeslot.Workers.SlackWorker do
   defp sanitize_body(body) when is_binary(body), do: body
   defp sanitize_body(body), do: inspect(body)
 
-  defp retry_after_from(%{"retry_after" => seconds}) when is_integer(seconds), do: seconds
+  defp retry_after_from(seconds) when is_integer(seconds) and seconds >= 0, do: min(seconds, 600)
   defp retry_after_from(_other), do: 30
 
   defp truncate(text, max) when is_binary(text) do
