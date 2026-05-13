@@ -4,6 +4,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
   @moduletag :database
   @moduletag :schema
 
+  alias Ecto.Changeset
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
 
   describe "changeset/2 with custom_fields" do
@@ -15,7 +16,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
           "user_id" => 1
         })
 
-      assert Ecto.Changeset.get_field(cs, :custom_fields) == []
+      assert Changeset.get_field(cs, :custom_fields) == []
     end
 
     test "accepts an array of field definitions" do
@@ -31,7 +32,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
       cs = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
       assert cs.valid?
-      assert length(Ecto.Changeset.get_field(cs, :custom_fields)) == 2
+      assert length(Changeset.get_field(cs, :custom_fields)) == 2
     end
 
     test "invalid field definitions surface errors" do
@@ -44,6 +45,11 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchemaTest do
 
       cs = MeetingTypeSchema.changeset(%MeetingTypeSchema{}, attrs)
       refute cs.valid?
+
+      # Error must originate from the embedded changeset, not the parent.
+      [embed_cs] = Changeset.get_change(cs, :custom_fields)
+      refute embed_cs.valid?
+      assert "is invalid" in errors_on(embed_cs).type
     end
   end
 

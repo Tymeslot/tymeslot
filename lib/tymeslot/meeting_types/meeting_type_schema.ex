@@ -18,7 +18,7 @@ defmodule Tymeslot.MeetingTypes.MeetingTypeSchema do
           allow_video: boolean(),
           sort_order: integer(),
           reminder_config: [map()],
-          custom_fields: [map()],
+          custom_fields: [FieldDefinition.t()],
           user_id: integer() | nil,
           video_integration_id: integer() | nil,
           calendar_integration_id: integer() | nil,
