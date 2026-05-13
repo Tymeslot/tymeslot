@@ -6,7 +6,9 @@ defmodule Tymeslot.Slack.OAuthTest do
 
   import Mox
 
+  alias Phoenix.Token
   alias Tymeslot.Slack.OAuth
+  alias TymeslotWeb.Endpoint
 
   setup :verify_on_exit!
 
@@ -69,8 +71,8 @@ defmodule Tymeslot.Slack.OAuthTest do
       backdated_signed_at = System.system_time(:second) - 3_600
 
       state =
-        Phoenix.Token.sign(
-          TymeslotWeb.Endpoint,
+        Token.sign(
+          Endpoint,
           "slack_oauth_state",
           99,
           signed_at: backdated_signed_at

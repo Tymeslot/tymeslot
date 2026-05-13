@@ -9,7 +9,6 @@ defmodule Tymeslot.Slack do
 
   require Logger
 
-  alias Ecto.Multi
   alias Tymeslot.Features
   alias Tymeslot.Repo
   alias Tymeslot.Slack.{API, MessageBuilder, SlackIntegrationSchema, SlackQueries}
@@ -118,18 +117,20 @@ defmodule Tymeslot.Slack do
           |> Map.put(:user_id, user_id)
           |> Map.put(:app_mode, "oauth")
 
-        Multi.new()
-        |> Multi.run(:delete_stale_stubs, fn _repo, _changes ->
-          {:ok, SlackQueries.delete_pending_oauth_stubs_for_user(user_id)}
-        end)
-        |> Multi.run(:create_stub, fn _repo, _changes ->
-          SlackQueries.create_oauth_stub(stub_attrs)
-        end)
-        |> Repo.transaction()
-        |> case do
-          {:ok, %{create_stub: integration}} -> {:ok, integration}
-          {:error, :create_stub, changeset, _changes} -> {:error, changeset}
-          {:error, _step, reason, _changes} -> {:error, reason}
+        transaction_result =
+          Repo.transaction(fn ->
+            SlackQueries.delete_pending_oauth_stubs_for_user(user_id)
+
+            case SlackQueries.create_oauth_stub(stub_attrs) do
+              {:ok, integration} -> integration
+              {:error, changeset} -> Repo.rollback(changeset)
+            end
+          end)
+
+        case transaction_result do
+          {:ok, integration} -> {:ok, integration}
+          {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset}
+          {:error, reason} -> {:error, reason}
         end
       end
     else

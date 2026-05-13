@@ -7,6 +7,7 @@ defmodule Tymeslot.Slack.OAuth do
   - Exchanges the code for a bot token via `Tymeslot.Slack.API`.
   """
 
+  alias Phoenix.Token
   alias Tymeslot.Slack.API
   alias TymeslotWeb.Endpoint
 
@@ -24,7 +25,7 @@ defmodule Tymeslot.Slack.OAuth do
   @spec authorize_url(integer(), String.t()) :: String.t()
   def authorize_url(user_id, redirect_uri) do
     client_id = require_config!(:slack_client_id)
-    state = Phoenix.Token.sign(Endpoint, @state_salt, user_id)
+    state = Token.sign(Endpoint, @state_salt, user_id)
 
     query =
       URI.encode_query(%{
@@ -46,7 +47,7 @@ defmodule Tymeslot.Slack.OAuth do
   @spec verify_state(String.t()) ::
           {:ok, integer()} | {:error, :expired_state | :invalid_state}
   def verify_state(state) do
-    case Phoenix.Token.verify(Endpoint, @state_salt, state, max_age: @state_max_age) do
+    case Token.verify(Endpoint, @state_salt, state, max_age: @state_max_age) do
       {:ok, user_id} -> {:ok, user_id}
       {:error, :expired} -> {:error, :expired_state}
       {:error, _reason} -> {:error, :invalid_state}
