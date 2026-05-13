@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
   @moduletag :live
   @moduletag :integration
 
+  import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.AuthTestHelpers
   import Tymeslot.TestFixtures
@@ -14,6 +15,8 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
   alias Tymeslot.ConfigTestHelpers
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack
+
+  setup :verify_on_exit!
 
   setup %{conn: conn} do
     user = create_user_fixture()
@@ -25,8 +28,17 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
       slack_client_id: nil,
       feature_access_checker: Tymeslot.Features.DefaultAccessChecker,
       dashboard_additional_hooks: [],
-      feature_placeholder_components: %{}
+      feature_placeholder_components: %{},
+      http_client_module: Tymeslot.HTTPClientMock
     )
+
+    # Safe fallback for Slack `conversations.list` so the channel-picker form's
+    # `start_async` does not raise `Mox.UnexpectedCallError` in tests that
+    # don't care about channel loading. Tests that do care override with
+    # `expect/4`.
+    stub(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
+      {:error, %Mint.TransportError{reason: :timeout}}
+    end)
 
     conn = log_in_user(conn, user)
     {:ok, conn: conn, user: user}
@@ -302,6 +314,76 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlersTest do
 
       assert html =~ "Finish Slack setup"
       assert html =~ "Pick a channel"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Refresh channels button
+  # ---------------------------------------------------------------------------
+
+  describe "channel-picker refresh button" do
+    setup %{user: user} do
+      ConfigTestHelpers.setup_config(:tymeslot,
+        slack_oauth_available: true,
+        slack_client_id: "test-client-id"
+      )
+
+      pending =
+        insert(:slack_integration,
+          user: user,
+          app_mode: "oauth",
+          channel_id: nil,
+          channel_name: nil
+        )
+
+      {:ok, pending: pending}
+    end
+
+    test "re-invokes Slack.list_channels and refreshes the dropdown options", %{
+      conn: conn,
+      pending: pending
+    } do
+      # First load: a single channel
+      expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
+        body =
+          Jason.encode!(%{
+            "ok" => true,
+            "channels" => [
+              %{"id" => "C1", "name" => "bookings", "is_private" => false}
+            ],
+            "response_metadata" => %{"next_cursor" => ""}
+          })
+
+        {:ok, %{status: 200, body: body}}
+      end)
+
+      {:ok, view, _html} = live(conn, "/dashboard/automation?slack_pending=#{pending.id}")
+
+      initial_html = render_async(view)
+      assert initial_html =~ "Finish Slack setup"
+      assert initial_html =~ "#bookings"
+      refute initial_html =~ "#new-channel"
+
+      # Refresh load: a freshly-invited channel appears
+      expect(Tymeslot.HTTPClientMock, :get, fn _url, _headers, _opts ->
+        body =
+          Jason.encode!(%{
+            "ok" => true,
+            "channels" => [
+              %{"id" => "C1", "name" => "bookings", "is_private" => false},
+              %{"id" => "C2", "name" => "new-channel", "is_private" => false}
+            ],
+            "response_metadata" => %{"next_cursor" => ""}
+          })
+
+        {:ok, %{status: 200, body: body}}
+      end)
+
+      view |> element("button", "Refresh") |> render_click()
+
+      refreshed_html = render_async(view)
+      assert refreshed_html =~ "#bookings"
+      assert refreshed_html =~ "#new-channel"
     end
   end
 
