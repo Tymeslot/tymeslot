@@ -1,10 +1,16 @@
 defmodule Tymeslot.Slack.SlackQueries do
   @moduledoc """
   Database queries for Slack integrations and deliveries.
+
+  Shared CRUD operations across notification providers live in
+  `Tymeslot.Notifications.IntegrationQueries`; this module owns Slack-specific
+  query logic (OAuth-pending stub cleanup, status post-filtering, delivery
+  stats) and delegates the rest.
   """
 
   import Ecto.Query, warn: false
 
+  alias Tymeslot.Notifications.IntegrationQueries
   alias Tymeslot.Repo
   alias Tymeslot.Slack.{SlackDeliverySchema, SlackIntegrationSchema}
 
@@ -15,12 +21,8 @@ defmodule Tymeslot.Slack.SlackQueries do
   @stub_ttl_minutes 30
 
   @spec list_integrations(integer()) :: [SlackIntegrationSchema.t()]
-  def list_integrations(user_id) do
-    SlackIntegrationSchema
-    |> where([i], i.user_id == ^user_id)
-    |> order_by([i], desc: i.inserted_at)
-    |> Repo.all()
-  end
+  def list_integrations(user_id),
+    do: IntegrationQueries.list_for_user(SlackIntegrationSchema, user_id)
 
   @doc """
   Deletes every OAuth-mode integration for the user that has not yet had its
@@ -39,14 +41,11 @@ defmodule Tymeslot.Slack.SlackQueries do
 
   @spec cleanup_orphaned_stubs(integer()) :: {non_neg_integer(), nil | [term()]}
   def cleanup_orphaned_stubs(user_id) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@stub_ttl_minutes * 60, :second)
-
     SlackIntegrationSchema
     |> where([i], i.user_id == ^user_id)
     |> where([i], i.app_mode == "oauth")
     |> where([i], is_nil(i.channel_id))
-    |> where([i], i.inserted_at < ^cutoff)
-    |> Repo.delete_all()
+    |> IntegrationQueries.delete_stubs_older_than(@stub_ttl_minutes)
   end
 
   @spec list_active_integrations_for_event(integer(), String.t()) :: [
@@ -54,11 +53,7 @@ defmodule Tymeslot.Slack.SlackQueries do
         ]
   def list_active_integrations_for_event(user_id, event_type) do
     SlackIntegrationSchema
-    |> where([i], i.user_id == ^user_id)
-    |> where([i], i.is_active == true)
-    |> where([i], is_nil(i.disabled_at))
-    |> where([i], fragment("? = ANY(?)", ^event_type, i.events))
-    |> Repo.all()
+    |> IntegrationQueries.list_active_for_event(user_id, event_type)
     |> Enum.filter(&active_status?/1)
   end
 
@@ -78,28 +73,19 @@ defmodule Tymeslot.Slack.SlackQueries do
 
   @spec get_integration(integer(), integer()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, :not_found}
-  def get_integration(id, user_id) do
-    case Repo.get_by(SlackIntegrationSchema, id: id, user_id: user_id) do
-      nil -> {:error, :not_found}
-      integration -> {:ok, integration}
-    end
-  end
+  def get_integration(id, user_id),
+    do: IntegrationQueries.get_for_user(SlackIntegrationSchema, id, user_id)
 
   @spec get_integration(integer()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, :not_found}
-  def get_integration(id) do
-    case Repo.get(SlackIntegrationSchema, id) do
-      nil -> {:error, :not_found}
-      integration -> {:ok, integration}
-    end
-  end
+  def get_integration(id), do: IntegrationQueries.get(SlackIntegrationSchema, id)
 
   @spec create_integration(map()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
   def create_integration(attrs) do
     %SlackIntegrationSchema{}
     |> SlackIntegrationSchema.changeset(attrs)
-    |> Repo.insert()
+    |> IntegrationQueries.insert()
   end
 
   @spec create_oauth_stub(map()) ::
@@ -107,7 +93,7 @@ defmodule Tymeslot.Slack.SlackQueries do
   def create_oauth_stub(attrs) do
     %SlackIntegrationSchema{}
     |> SlackIntegrationSchema.oauth_init_changeset(attrs)
-    |> Repo.insert()
+    |> IntegrationQueries.insert()
   end
 
   @spec update_integration(SlackIntegrationSchema.t(), map()) ::
@@ -115,7 +101,7 @@ defmodule Tymeslot.Slack.SlackQueries do
   def update_integration(%SlackIntegrationSchema{} = integration, attrs) do
     integration
     |> SlackIntegrationSchema.changeset(attrs)
-    |> Repo.update()
+    |> IntegrationQueries.update()
   end
 
   @spec set_channel(SlackIntegrationSchema.t(), map()) ::
@@ -123,55 +109,33 @@ defmodule Tymeslot.Slack.SlackQueries do
   def set_channel(%SlackIntegrationSchema{} = integration, attrs) do
     integration
     |> SlackIntegrationSchema.set_channel_changeset(attrs)
-    |> Repo.update()
+    |> IntegrationQueries.update()
   end
 
   @spec delete_integration(SlackIntegrationSchema.t()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def delete_integration(%SlackIntegrationSchema{} = integration) do
-    Repo.delete(integration)
-  end
+  def delete_integration(%SlackIntegrationSchema{} = integration),
+    do: IntegrationQueries.delete(integration)
 
   @spec toggle_integration(SlackIntegrationSchema.t()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def toggle_integration(%SlackIntegrationSchema{} = integration) do
-    update_integration(integration, %{is_active: !integration.is_active})
-  end
+  def toggle_integration(%SlackIntegrationSchema{} = integration),
+    do: IntegrationQueries.toggle_active(SlackIntegrationSchema, integration)
 
   @spec record_success(SlackIntegrationSchema.t()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def record_success(%SlackIntegrationSchema{} = integration) do
-    update_integration(integration, %{
-      last_triggered_at: DateTime.utc_now(),
-      failure_count: 0
-    })
-  end
+  def record_success(%SlackIntegrationSchema{} = integration),
+    do: IntegrationQueries.record_success(SlackIntegrationSchema, integration)
 
   @spec increment_failure(SlackIntegrationSchema.t()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, :not_found}
-  def increment_failure(%SlackIntegrationSchema{id: id}) do
-    case SlackIntegrationSchema
-         |> where([i], i.id == ^id)
-         |> select([i], i)
-         |> Repo.update_all(inc: [failure_count: 1]) do
-      {0, _rows} ->
-        {:error, :not_found}
-
-      {_count, [updated]} ->
-        {:ok, updated}
-    end
-  end
+  def increment_failure(%SlackIntegrationSchema{id: id}),
+    do: IntegrationQueries.increment_failure(SlackIntegrationSchema, id)
 
   @spec enable_integration(SlackIntegrationSchema.t()) ::
           {:ok, SlackIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
-  def enable_integration(%SlackIntegrationSchema{} = integration) do
-    update_integration(integration, %{
-      is_active: true,
-      disabled_at: nil,
-      disabled_reason: nil,
-      failure_count: 0
-    })
-  end
+  def enable_integration(%SlackIntegrationSchema{} = integration),
+    do: IntegrationQueries.enable(SlackIntegrationSchema, integration)
 
   # ============================================================================
   # Delivery Queries
@@ -199,26 +163,7 @@ defmodule Tymeslot.Slack.SlackQueries do
   @spec get_delivery_stats(integer(), keyword()) :: map()
   def get_delivery_stats(integration_id, opts \\ []) do
     days_ago = Keyword.get(opts, :days, 7)
-    since = DateTime.add(DateTime.utc_now(), -days_ago, :day)
-
-    %{total: total, successful: successful, failed: failed} =
-      Repo.one(
-        from d in SlackDeliverySchema,
-          where: d.integration_id == ^integration_id and d.inserted_at >= ^since,
-          select: %{
-            total: count(d.id),
-            successful: filter(count(d.id), d.response_status >= 200 and d.response_status < 300),
-            failed: filter(count(d.id), d.response_status >= 400 or not is_nil(d.error_message))
-          }
-      )
-
-    %{
-      total: total,
-      successful: successful,
-      failed: failed,
-      success_rate: if(total > 0, do: Float.round(successful / total * 100, 1), else: 0.0),
-      period_days: days_ago
-    }
+    IntegrationQueries.delivery_stats(SlackDeliverySchema, integration_id, days_ago)
   end
 
   # ============================================================================
