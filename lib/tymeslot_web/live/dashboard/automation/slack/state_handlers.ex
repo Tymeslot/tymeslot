@@ -141,5 +141,4 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.StateHandlers do
         {:noreply, socket}
     end
   end
-
 end
