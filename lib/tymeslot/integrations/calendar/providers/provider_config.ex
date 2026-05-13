@@ -15,9 +15,19 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @sync_window_past_days 365
   @sync_window_future_days 365
 
-  @providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :google, :outlook, :demo]
+  @providers [
+    :caldav,
+    :radicale,
+    :nextcloud,
+    :zimbra,
+    :mailbox_org,
+    :baikal,
+    :google,
+    :outlook,
+    :demo
+  ]
   @oauth_providers [:google, :outlook]
-  @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org]
+  @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :baikal]
   @dev_only_providers [:debug]
 
   # Providers whose CalDAV server URL is fixed and must never be edited by the
@@ -69,6 +79,13 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       description: "Sync calendars from your mailbox.org account",
       button_text: "Connect mailbox.org",
       click_event: "connect_provider",
+      circuit_breaker_enabled: true
+    },
+    baikal: %{
+      icon: "baikal",
+      description: "PHP-based CalDAV/CardDAV server integration",
+      button_text: "Connect Baikal",
+      click_event: "connect_baikal_calendar",
       circuit_breaker_enabled: true
     },
     google: %{
@@ -307,6 +324,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def display_name(:nextcloud), do: "Nextcloud"
   def display_name(:zimbra), do: "Zimbra"
   def display_name(:mailbox_org), do: "mailbox.org"
+  def display_name(:baikal), do: "Baikal"
   def display_name(:google), do: "Google Calendar"
   def display_name(:outlook), do: "Outlook Calendar"
   def display_name(:debug), do: "Debug Provider"
@@ -324,6 +342,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   def get_provider_module(:mailbox_org),
     do: Tymeslot.Integrations.Calendar.MailboxOrg.Provider
+
+  def get_provider_module(:baikal), do: Tymeslot.Integrations.Calendar.Baikal.Provider
 
   def get_provider_module(:google), do: Tymeslot.Integrations.Calendar.Google.Provider
   def get_provider_module(:outlook), do: Tymeslot.Integrations.Calendar.Outlook.Provider
