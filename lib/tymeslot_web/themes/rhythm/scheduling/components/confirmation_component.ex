@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ConfirmationComponent 
 
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
-  alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerRenderer
+  alias Tymeslot.CustomFields.AnswerRenderer
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   @impl Phoenix.LiveComponent
