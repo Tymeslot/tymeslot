@@ -30,6 +30,7 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Profiles.ProfileQueries
+  alias Tymeslot.Security.Encryption
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -670,6 +671,54 @@ defmodule Tymeslot.Integrations.Calendar do
       [] -> "Calendar discovery failed. Please check your credentials and try again."
       errors -> Enum.map_join(errors, ", ", &to_string/1)
     end
+  end
+
+  @doc """
+  Builds an unpersisted `CalendarIntegrationSchema` struct for a Baikal
+  ephemeral audit or test target — no database row is created or required.
+
+  Owns the encryption and virtual-field details so callers (e.g. SaaS Mix
+  tasks) only need to pass a plain config map. The returned struct is ready
+  to be passed into any runtime path that accepts an integration struct.
+
+  ## Example
+
+      Calendar.build_ephemeral_baikal_integration(%{
+        url: "http://localhost:8800/dav.php",
+        username: "testuser",
+        password: "testpass123",
+        calendar_path: "/dav.php/calendars/testuser/default/"
+      })
+
+  """
+  @spec build_ephemeral_baikal_integration(%{
+          required(:url) => String.t(),
+          required(:username) => String.t(),
+          required(:password) => String.t(),
+          required(:calendar_path) => String.t()
+        }) :: CalendarIntegrationSchema.t()
+  def build_ephemeral_baikal_integration(%{
+        url: url,
+        username: username,
+        password: password,
+        calendar_path: calendar_path
+      }) do
+    %CalendarIntegrationSchema{
+      id: 0,
+      provider: "baikal",
+      name: "#{ProviderConfig.display_name(:baikal)} (#{URI.parse(url).host})",
+      base_url: url,
+      username_encrypted: Encryption.encrypt(username),
+      password_encrypted: Encryption.encrypt(password),
+      username: username,
+      password: password,
+      calendar_paths: [calendar_path],
+      calendar_list: [],
+      default_booking_calendar_id: calendar_path,
+      verify_ssl: true,
+      is_active: true,
+      needs_reauth: false
+    }
   end
 
   @doc """
