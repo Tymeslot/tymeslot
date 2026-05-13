@@ -21,6 +21,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
+  alias Tymeslot.Slack.SlackDeliverySchema
   alias Tymeslot.Slack.SlackIntegrationSchema
   alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Telegram.TelegramIntegrationSchema
@@ -299,6 +300,18 @@ defmodule Tymeslot.Factory do
       integration: build(:telegram_integration),
       event_type: "meeting.created",
       message_text: "Test message",
+      response_status: 200,
+      attempt_count: 1,
+      inserted_at: DateTime.utc_now()
+    }
+  end
+
+  @spec slack_delivery_factory() :: SlackDeliverySchema.t()
+  def slack_delivery_factory do
+    %SlackDeliverySchema{
+      integration: build(:slack_integration),
+      event_type: "meeting.created",
+      message_blocks: %{"blocks" => []},
       response_status: 200,
       attempt_count: 1,
       inserted_at: DateTime.utc_now()
