@@ -31,15 +31,6 @@ defmodule Tymeslot.CustomFields.Validator do
     end
   end
 
-  # NameValidator always rejects empty strings regardless of `required`.
-  # For optional short_text, short-circuit before delegating.
-  defp validate_short_text("", false, _opts), do: {:ok, ""}
-  defp validate_short_text("", _required, _opts), do: {:error, "Name is required"}
-
-  defp validate_short_text(value, _required, opts) do
-    chain(FieldValidators.NameValidator, value, opts)
-  end
-
   defp chain(mod, value, opts) do
     case mod.validate(value, opts) do
       :ok -> {:ok, value}
