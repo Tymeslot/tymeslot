@@ -20,7 +20,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
           current_index: non_neg_integer(),
           answers: %{String.t() => any()},
           errors: %{String.t() => String.t()},
-          touched: MapSet.t()
+          touched: term()
         }
 
   defstruct definitions: [],

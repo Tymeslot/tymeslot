@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
   """
 
   import Phoenix.Component, only: [assign: 3]
+  import Phoenix.LiveView, only: [put_flash: 3]
 
   alias Phoenix.Component
   alias Tymeslot.Security.InputProcessor
@@ -31,6 +32,14 @@ defmodule TymeslotWeb.Themes.Shared.BookingFlow do
       case BookingSubmissionHandlerComponent.submit_booking(socket, booking_params) do
         {:ok, socket} ->
           {:noreply, transition_fun.(socket, :confirmation, %{})}
+
+        {:honeypot, socket} ->
+          {:noreply,
+           put_flash(
+             socket,
+             :info,
+             "Booking submitted successfully! You'll receive a confirmation email shortly."
+           )}
 
         {:error, socket} ->
           {:noreply, assign(socket, :submitting, false)}
