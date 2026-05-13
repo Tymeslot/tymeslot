@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth do
   require Logger
 
   alias Tymeslot.Auth.{
+    AdminRoles,
     AuthActions,
     Authentication,
     EmailChange,
@@ -321,6 +322,35 @@ defmodule Tymeslot.Auth do
   def get_user!(id) do
     UserQueries.get_user!(id)
   end
+
+  @doc """
+  Lists all users in the system, ordered by id ascending.
+  """
+  defdelegate list_users(), to: UserQueries, as: :list_all_users
+
+  @doc """
+  Counts all users in the system.
+  """
+  defdelegate count_users(), to: UserQueries
+
+  @doc """
+  Counts admin users in the system.
+  """
+  defdelegate count_admins(), to: UserQueries
+
+  @doc """
+  Promotes the user identified by `user_id` to admin.
+
+  See `Tymeslot.Auth.AdminRoles.promote/2` for the full contract.
+  """
+  defdelegate promote_admin(actor, user_id), to: AdminRoles, as: :promote
+
+  @doc """
+  Demotes the user identified by `user_id` from admin.
+
+  See `Tymeslot.Auth.AdminRoles.demote/2` for the full contract.
+  """
+  defdelegate demote_admin(actor, user_id), to: AdminRoles, as: :demote
 
   defp user_broadcaster do
     Application.get_env(:tymeslot, :user_broadcaster, Tymeslot.Infrastructure.PubSub)

@@ -12,6 +12,9 @@ config :tymeslot,
   # --- Feature Flags ---
   # Controls whether new user registration is allowed
   registration_enabled: true,
+  # Controls whether the self-host admin UI is mounted. SaaS overrides this
+  # to false so the /admin scope 404s in the cloud deployment.
+  enable_admin_ui: true,
   # Controls whether users must accept T&C/Privacy during registration
   enforce_legal_agreements: false,
   # Whether to show marketing-related links (Docs, etc) in navigation

@@ -176,6 +176,8 @@ Webhooks (`meeting_created`, `meeting_cancelled`, `meeting_rescheduled`) plug in
 
 Full configuration reference (SMTP, OAuth, OIDC, reCAPTCHA, external Postgres, SSO-only mode): [Docker guide](README-Docker.md).
 
+The first user to register on a fresh install is automatically promoted to admin and gets access to `/admin`, where they can toggle runtime settings (registration on/off, password auth on/off, video transcoding) without redeploying. For promoting additional admins on each deployment target — Docker, Cloudron, Railway, source — see [`docs/ADMIN.md`](docs/ADMIN.md).
+
 ---
 
 ## Stack

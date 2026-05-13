@@ -62,6 +62,48 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
     end
   end
 
+  describe "admin bootstrap" do
+    test "the first user created via OAuth is promoted to admin" do
+      auth_params = %{
+        "email" => "first-oauth@example.com",
+        "github_user_id" => "bootstrap-uid-1",
+        "provider" => "github",
+        "is_verified" => true
+      }
+
+      assert {:ok, %{user: user}} =
+               TransactionalUserCreation.find_or_create_oauth_user(:github, auth_params)
+
+      assert user.is_admin,
+             "Expected the first OAuth user to be promoted to admin via AdminBootstrap"
+    end
+
+    test "a second user created via OAuth is not promoted to admin" do
+      _first_auth_params = %{
+        "email" => "first-oauth-second-test@example.com",
+        "github_user_id" => "bootstrap-uid-first",
+        "provider" => "github",
+        "is_verified" => true
+      }
+
+      {:ok, %{user: _first}} =
+        TransactionalUserCreation.find_or_create_oauth_user(:github, _first_auth_params)
+
+      second_auth_params = %{
+        "email" => "second-oauth@example.com",
+        "google_user_id" => "bootstrap-uid-second",
+        "provider" => "google",
+        "is_verified" => true
+      }
+
+      assert {:ok, %{user: second}} =
+               TransactionalUserCreation.find_or_create_oauth_user(:google, second_auth_params)
+
+      refute second.is_admin,
+             "Expected the second OAuth user not to be promoted to admin"
+    end
+  end
+
   describe "find_or_create_oauth_user/4 weekly schedule" do
     test "creates default weekly schedule for new OAuth user" do
       auth_params = %{
