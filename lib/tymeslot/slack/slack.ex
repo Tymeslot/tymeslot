@@ -376,9 +376,19 @@ defmodule Tymeslot.Slack do
     Application.get_env(:tymeslot, :slack_notifications_allowed, false)
   end
 
+  @doc """
+  Returns true only when every prerequisite for the OAuth install flow is in
+  place: the feature is enabled, the deployment has declared OAuth available
+  via `:slack_oauth_available`, and a Slack client id is configured.
+
+  Self-hosters without a Slack app of their own keep `:slack_oauth_available`
+  false and only see the webhook URL flow in the dashboard.
+  """
   @spec oauth_mode_available?() :: boolean()
   def oauth_mode_available? do
-    slack_enabled?() and not is_nil(Application.get_env(:tymeslot, :slack_client_id))
+    slack_enabled?() and
+      Application.get_env(:tymeslot, :slack_oauth_available, false) == true and
+      not is_nil(Application.get_env(:tymeslot, :slack_client_id))
   end
 
   @spec webhook_url_mode_available?() :: boolean()
