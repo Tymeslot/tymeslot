@@ -431,5 +431,34 @@ defmodule Tymeslot.Emails.AppointmentBuilderTest do
 
       refute en_result.reminder_time == de_result.reminder_time
     end
+
+    test "threads custom_fields_snapshot and custom_field_answers through to appointment details" do
+      %{user: user} = create_user_with_profile()
+
+      snapshot = [
+        %{
+          "id" => "cf-text-001",
+          "type" => "short_text",
+          "label" => "Notes",
+          "required" => true,
+          "position" => 0
+        }
+      ]
+
+      answers = %{"cf-text-001" => "Please bring documents."}
+
+      meeting =
+        insert_meeting_for_user(user, %{
+          start_offset: 3600,
+          duration: 3600,
+          custom_fields_snapshot: snapshot,
+          custom_field_answers: answers
+        })
+
+      result = AppointmentBuilder.from_meeting(meeting)
+
+      assert result.custom_fields_snapshot == snapshot
+      assert result.custom_field_answers == answers
+    end
   end
 end
