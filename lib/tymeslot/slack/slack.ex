@@ -396,4 +396,53 @@ defmodule Tymeslot.Slack do
 
   @spec max_failure_count() :: integer()
   def max_failure_count, do: 10
+
+  # ============================================================================
+  # Error translation for the UI
+  # ============================================================================
+
+  @doc """
+  Translates a low-level Slack API error tuple or a stored
+  `disabled_reason` string into a user-facing message suitable for flash
+  notifications and inline error banners.
+
+  Accepts the exact `{:error, term()}` shapes returned by `test_integration/1`,
+  delivery worker callbacks, and `set_channel/2` failures.
+  """
+  @spec translate_error(term()) :: String.t()
+  def translate_error({:error, reason}), do: translate_error(reason)
+  def translate_error({:slack_error, code, _body}), do: translate_error_code(code)
+  def translate_error(code) when is_binary(code), do: translate_error_code(code)
+  def translate_error(:no_token), do: "Slack credentials are missing. Reconnect to continue."
+  def translate_error(:no_webhook_url), do: "Webhook URL is missing. Add it again to continue."
+  def translate_error({:unknown_mode, _mode}), do: "Slack integration is misconfigured."
+
+  def translate_error(%Ecto.Changeset{} = changeset) do
+    case changeset.errors do
+      [{field, {msg, _opts}} | _rest] -> "#{field} #{msg}"
+      _other -> "Could not save Slack integration."
+    end
+  end
+
+  def translate_error(other), do: "Slack error: #{inspect(other)}"
+
+  defp translate_error_code("channel_not_found"),
+    do: "Channel not accessible. If it's a private channel, invite the Tymeslot bot first."
+
+  defp translate_error_code("token_revoked"),
+    do: "Slack authorisation was revoked. Reconnect to continue."
+
+  defp translate_error_code("account_inactive"),
+    do: "Slack authorisation was revoked. Reconnect to continue."
+
+  defp translate_error_code("not_in_channel"),
+    do: "Bot is not in this channel. Either pick a public channel or invite the bot."
+
+  defp translate_error_code("ratelimited"),
+    do: "Slack is rate-limiting. Try again in a minute."
+
+  defp translate_error_code("webhook_url_revoked"),
+    do: "Webhook URL was revoked in Slack. Generate a new one."
+
+  defp translate_error_code(other), do: "Slack error: #{other}"
 end

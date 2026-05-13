@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.Security.RateLimiter
+  alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias Tymeslot.Utils.FormHelpers
   alias Tymeslot.Webhooks
@@ -130,6 +131,31 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
     else
       socket
     end
+  end
+
+  @doc """
+  Loads Slack integrations into the socket if Slack is enabled.
+  """
+  @spec maybe_load_slack(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
+  def maybe_load_slack(socket) do
+    if Map.get(socket.assigns, :slack_enabled, false) do
+      user_id = socket.assigns.current_user.id
+      integrations = Slack.list_integrations(user_id)
+      assign(socket, :slack_integrations, integrations)
+    else
+      socket
+    end
+  end
+
+  @doc """
+  Looks up a Slack integration by ID, scoped to the current user.
+  """
+  @spec get_slack_for_user(Phoenix.LiveView.Socket.t(), integer() | String.t()) ::
+          {:ok, term()} | {:error, term()}
+  def get_slack_for_user(socket, id) do
+    user_id = socket.assigns.current_user.id
+    integration_id = parse_id(id)
+    Slack.get_integration(integration_id, user_id)
   end
 
   @doc """

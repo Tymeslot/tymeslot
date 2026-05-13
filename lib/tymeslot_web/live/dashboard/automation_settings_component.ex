@@ -1,20 +1,26 @@
 defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
   @moduledoc """
   LiveComponent for managing automation in the dashboard.
-  Supports webhooks and Telegram integrations.
+  Supports webhooks, Telegram, and Slack integrations.
 
   Event handling is delegated to focused handler modules:
     - `WebhookEventHandlers` — all webhook CRUD and operational events
     - `TelegramEventHandlers` — all Telegram CRUD and operational events
+    - `SlackEventHandlers` — all Slack CRUD and operational events
   """
   use TymeslotWeb, :live_component
 
   alias Phoenix.LiveView.JS
+  alias Tymeslot.Slack
   alias Tymeslot.Telegram
   alias Tymeslot.Webhooks
   alias TymeslotWeb.Components.Icons.IconComponents
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Dashboard.Automation.Modals
+  alias TymeslotWeb.Dashboard.Automation.SlackCard
+  alias TymeslotWeb.Dashboard.Automation.SlackEmptyState
+  alias TymeslotWeb.Dashboard.Automation.SlackEventHandlers
+  alias TymeslotWeb.Dashboard.Automation.SlackFormComponent
   alias TymeslotWeb.Dashboard.Automation.TelegramCard
   alias TymeslotWeb.Dashboard.Automation.TelegramEmptyState
   alias TymeslotWeb.Dashboard.Automation.TelegramEventHandlers
@@ -33,18 +39,24 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       {:deliveries, false},
       {:regenerate_token, false},
       {:telegram_delete, false},
-      {:telegram_deliveries, false}
+      {:telegram_deliveries, false},
+      {:slack_delete, false},
+      {:slack_deliveries, false}
     ]
 
     telegram_enabled = Telegram.telegram_enabled?()
+    slack_enabled = Slack.slack_enabled?()
 
     {:ok,
      socket
      |> ModalHook.mount_modal(modal_configs)
      |> assign(:active_tab, :webhooks)
      |> assign(:telegram_enabled, telegram_enabled)
+     |> assign(:slack_enabled, slack_enabled)
+     |> assign(:slack_oauth_mode_available?, Slack.oauth_mode_available?())
      |> assign_webhook_defaults()
-     |> assign_telegram_defaults()}
+     |> assign_telegram_defaults()
+     |> assign_slack_defaults()}
   end
 
   @impl Phoenix.LiveComponent
@@ -63,7 +75,9 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       |> assign(assigns)
       |> AutomationHelpers.load_webhooks()
       |> AutomationHelpers.maybe_load_telegram()
+      |> AutomationHelpers.maybe_load_slack()
       |> maybe_subscribe_telegram()
+      |> maybe_open_slack_pending_form()
 
     {:ok, socket}
   end
@@ -193,6 +207,13 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     do: TelegramEventHandlers.handle_hide_deliveries(params, socket)
 
   # ============================================================================
+  # Slack Events — delegated to SlackEventHandlers.handle/3 by event name
+  # ============================================================================
+
+  def handle_event("slack_" <> _ = event, params, socket),
+    do: SlackEventHandlers.handle(event, params, socket)
+
+  # ============================================================================
   # Render
   # ============================================================================
 
@@ -243,6 +264,25 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
         />
       <% end %>
 
+      <%!-- Slack Delete Modal --%>
+      <Modals.delete_slack_modal
+        show={@show_slack_delete_modal}
+        on_cancel={JS.push("slack_hide_delete", target: @myself)}
+        on_confirm={JS.push("slack_delete", target: @myself)}
+      />
+
+      <%!-- Slack Deliveries Modal --%>
+      <%= if @show_slack_deliveries_modal && @selected_slack do %>
+        <Modals.slack_deliveries_modal
+          id="slack-deliveries-modal"
+          show={@show_slack_deliveries_modal}
+          integration={@selected_slack}
+          deliveries={@slack_deliveries}
+          stats={@slack_delivery_stats}
+          on_close={JS.push("slack_hide_deliveries", target: @myself)}
+        />
+      <% end %>
+
       <div class="space-y-10 pb-20">
       <%= cond do %>
         <% @show_webhook_form -> %>
@@ -273,6 +313,20 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
             wizard_step={@telegram_wizard_step}
             link_expired={@telegram_link_expired}
             deep_link={@telegram_deep_link}
+          />
+        </div>
+        <% @show_slack_form -> %>
+        <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <.live_component
+            module={SlackFormComponent}
+            id={"slack-form-#{@slack_form_mode}-#{@slack_form_timestamp}"}
+            mode={@slack_form_mode}
+            integration={@slack_form_data}
+            form_values={@slack_form_values}
+            form_errors={@slack_form_errors}
+            saving={@slack_saving}
+            current_user={@current_user}
+            parent_component={@myself}
           />
         </div>
         <% true -> %>
@@ -307,22 +361,42 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
               <span class="ml-2 text-token-2xs bg-tymeslot-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">Disabled</span>
             </div>
           <% end %>
+
+          <%= if @slack_enabled do %>
+            <button
+              phx-click={JS.push("switch_tab", value: %{"tab" => "slack"}, target: @myself)}
+              class={tab_class(@active_tab == :slack)}
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
+              </svg>
+              <span>Slack</span>
+            </button>
+          <% end %>
         </div>
 
         <%!-- Tab Content --%>
         <div class="space-y-12">
-          <%= if @active_tab == :webhooks do %>
-            <.webhook_tab_content
-              webhooks={@webhooks}
-              testing_connection={@testing_connection}
-              myself={@myself}
-            />
-          <% else %>
-            <.telegram_tab_content
-              integrations={@telegram_integrations}
-              telegram_testing={@telegram_testing}
-              myself={@myself}
-            />
+          <%= case @active_tab do %>
+            <% :webhooks -> %>
+              <.webhook_tab_content
+                webhooks={@webhooks}
+                testing_connection={@testing_connection}
+                myself={@myself}
+              />
+            <% :telegram -> %>
+              <.telegram_tab_content
+                integrations={@telegram_integrations}
+                telegram_testing={@telegram_testing}
+                myself={@myself}
+              />
+            <% :slack -> %>
+              <.slack_tab_content
+                integrations={@slack_integrations}
+                slack_testing={@slack_testing}
+                oauth_mode_available?={@slack_oauth_mode_available?}
+                myself={@myself}
+              />
           <% end %>
         </div>
       <% end %>
@@ -404,6 +478,59 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     """
   end
 
+  attr :integrations, :list, required: true
+  attr :slack_testing, :any, required: true
+  attr :oauth_mode_available?, :boolean, required: true
+  attr :myself, :any, required: true
+
+  defp slack_tab_content(assigns) do
+    ~H"""
+    <%= if @integrations != [] do %>
+      <div class="space-y-6">
+        <div class="flex items-center justify-between">
+          <.section_header level={2} title="Your Slack Integrations" count={length(@integrations)} />
+          <div class="flex items-center gap-3">
+            <%= if @oauth_mode_available? do %>
+              <.link href={~p"/api/slack/oauth/start"} class="btn-primary">Add to Slack</.link>
+            <% end %>
+            <button
+              phx-click="slack_show_webhook_form"
+              phx-target={@myself}
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-token-xl border-2 bg-white border-tymeslot-200 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all"
+            >
+              Use webhook URL instead
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6">
+          <%= for integration <- @integrations do %>
+            <SlackCard.slack_card
+              integration={integration}
+              testing={@slack_testing == integration.id}
+              target={@myself}
+              on_edit={JS.push("slack_show_edit_form", value: %{"id" => integration.id}, target: @myself)}
+              on_delete={JS.push("slack_confirm_delete", value: %{"id" => integration.id}, target: @myself)}
+              on_toggle="slack_toggle_active"
+              on_test={JS.push("slack_test", value: %{"id" => integration.id}, target: @myself)}
+              on_view_deliveries={JS.push("slack_show_deliveries", value: %{"id" => integration.id}, target: @myself)}
+              on_reenable={JS.push("slack_reenable", value: %{"id" => integration.id}, target: @myself)}
+              on_pick_channel={JS.push("slack_show_channel_picker", value: %{"id" => integration.id}, target: @myself)}
+              on_disconnect={JS.push("slack_disconnect", value: %{"id" => integration.id}, target: @myself)}
+            />
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <SlackEmptyState.slack_empty_state
+        oauth_mode_available?={@oauth_mode_available?}
+        oauth_start_path={~p"/api/slack/oauth/start"}
+        on_use_webhook_url={JS.push("slack_show_webhook_form", target: @myself)}
+      />
+    <% end %>
+    """
+  end
+
   # ============================================================================
   # Private Helpers
   # ============================================================================
@@ -449,6 +576,24 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
     |> assign(:telegram_subscribed, false)
   end
 
+  defp assign_slack_defaults(socket) do
+    socket
+    |> assign(:slack_integrations, [])
+    |> assign(:slack_form_errors, %{})
+    |> assign(:slack_form_values, %{})
+    |> assign(:slack_saving, false)
+    |> assign(:slack_testing, nil)
+    |> assign(:slack_to_delete, nil)
+    |> assign(:selected_slack, nil)
+    |> assign(:slack_deliveries, [])
+    |> assign(:slack_delivery_stats, nil)
+    |> assign(:show_slack_form, false)
+    |> assign(:slack_form_mode, :webhook_url)
+    |> assign(:slack_form_data, nil)
+    |> assign(:slack_form_timestamp, nil)
+    |> assign(:slack_pending_opened_for, nil)
+  end
+
   defp tab_class(true) do
     "flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-token-2xl text-token-sm font-black uppercase tracking-widest transition-all duration-300 border-2 bg-white border-white text-turquoise-600 shadow-xl shadow-tymeslot-200/50 scale-[1.02] cursor-default"
   end
@@ -466,6 +611,26 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
       assign(socket, :telegram_subscribed, true)
     else
       socket
+    end
+  end
+
+  # If the page arrived with `?slack_pending=<id>` from the OAuth callback,
+  # immediately surface the channel-picker form for that integration once per
+  # navigation. Tracked via `:slack_pending_opened_for` so re-renders don't
+  # re-open the form after the user closes it.
+  defp maybe_open_slack_pending_form(socket) do
+    with true <- Map.get(socket.assigns, :slack_enabled, false),
+         %{} = params <- socket.assigns[:params],
+         pending_id when is_binary(pending_id) <- params["slack_pending"],
+         {parsed_id, _rest} when is_integer(parsed_id) <- Integer.parse(pending_id),
+         true <- socket.assigns[:slack_pending_opened_for] != parsed_id,
+         {:ok, integration} <- AutomationHelpers.get_slack_for_user(socket, parsed_id) do
+      socket
+      |> assign(:active_tab, :slack)
+      |> assign(:slack_pending_opened_for, parsed_id)
+      |> TymeslotWeb.Dashboard.Automation.Slack.FormHandlers.open_oauth_form(integration)
+    else
+      _other -> socket
     end
   end
 end
