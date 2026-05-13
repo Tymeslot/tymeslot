@@ -1,9 +1,9 @@
-defmodule TymeslotWeb.Themes.Shared.CustomQuestions.AnswerRendererTest do
+defmodule Tymeslot.CustomFields.AnswerRendererTest do
   use Tymeslot.DataCase, async: true
 
   @moduletag :custom_fields
 
-  alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerRenderer
+  alias Tymeslot.CustomFields.AnswerRenderer
 
   describe "render/2" do
     test "yes_no true → Yes" do

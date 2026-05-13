@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Icons.IconComponents, as: Icons
-  alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerRenderer
+  alias Tymeslot.CustomFields.AnswerRenderer
 
   # Filter Tabs
   attr :active, :string, required: true

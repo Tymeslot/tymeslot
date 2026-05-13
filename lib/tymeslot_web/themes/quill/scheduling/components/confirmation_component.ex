@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
-  alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerRenderer
+  alias Tymeslot.CustomFields.AnswerRenderer
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.CoreComponents

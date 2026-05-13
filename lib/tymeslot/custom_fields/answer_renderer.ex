@@ -1,4 +1,4 @@
-defmodule TymeslotWeb.Themes.Shared.CustomQuestions.AnswerRenderer do
+defmodule Tymeslot.CustomFields.AnswerRenderer do
   @moduledoc """
   Renders a custom-field answer as a human-readable string for display in
   booking confirmations, emails, ICS descriptions, and the host dashboard.

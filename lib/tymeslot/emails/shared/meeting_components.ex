@@ -25,7 +25,7 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Styles, Urls}
   alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Security.{UniversalSanitizer, UrlValidation}
-  alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerRenderer
+  alias Tymeslot.CustomFields.AnswerRenderer
 
   @type attendee_info :: %{
           required(:name) => String.t(),

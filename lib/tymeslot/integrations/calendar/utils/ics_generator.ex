@@ -5,7 +5,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
 
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerRenderer
+  alias Tymeslot.CustomFields.AnswerRenderer
 
   @doc """
   Generates an ICS file content for a meeting/appointment.
