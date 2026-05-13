@@ -115,6 +115,48 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     |> foreign_key_constraint(:user_id)
   end
 
+  @doc """
+  Changeset for the partial OAuth-completed state, before the user has picked a channel.
+
+  Use this in `Slack.complete_oauth/2` to persist the bot_token + workspace info
+  immediately after a successful OAuth exchange. The integration stays in
+  `:pending_oauth` status until `set_channel_changeset/2` populates `channel_id`.
+  """
+  @spec oauth_init_changeset(t(), map()) :: Ecto.Changeset.t()
+  def oauth_init_changeset(integration, attrs) do
+    integration
+    |> cast(attrs, [
+      :user_id,
+      :name,
+      :app_mode,
+      :bot_token,
+      :team_id,
+      :team_name,
+      :authed_user_id,
+      :scope,
+      :link_token,
+      :events
+    ])
+    |> validate_required([:user_id, :name, :app_mode, :bot_token, :team_id, :events])
+    |> validate_inclusion(:app_mode, @valid_modes)
+    |> validate_subset(:events, @valid_events)
+    |> validate_length(:name, min: 1, max: 80)
+    |> encrypt_bot_token()
+    |> foreign_key_constraint(:user_id)
+  end
+
+  @doc """
+  Changeset for transitioning a `:pending_oauth` integration to `:active` by
+  setting the channel. Only the channel fields are cast; everything else on the
+  record is preserved.
+  """
+  @spec set_channel_changeset(t(), map()) :: Ecto.Changeset.t()
+  def set_channel_changeset(integration, attrs) do
+    integration
+    |> cast(attrs, [:channel_id, :channel_name])
+    |> validate_required([:channel_id])
+  end
+
   defp validate_by_mode(changeset) do
     case get_field(changeset, :app_mode) do
       "oauth" ->
