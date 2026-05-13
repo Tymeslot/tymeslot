@@ -13,6 +13,8 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Repo
+
   setup :setup_dashboard_user
 
   # Helper — opens the meeting type form for a given meeting type via the edit
@@ -66,6 +68,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       open_edit_form(view, meeting_type)
 
       view |> element("button", "Add question") |> render_click()
+      assert render(view) =~ "Add question"
 
       view
       |> form("form[phx-submit='save']", %{
@@ -86,6 +89,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       open_edit_form(view, meeting_type)
 
       view |> element("button", "Add question") |> render_click()
+      assert render(view) =~ "Add question"
 
       view
       |> form("form[phx-submit='save']", %{
@@ -171,6 +175,48 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       html = render(view)
       refute html =~ "To be deleted"
       assert html =~ "No custom questions yet"
+    end
+  end
+
+  describe "end-to-end persistence" do
+    test "custom question is persisted to the database after submitting the meeting type form", %{
+      conn: conn,
+      user: user
+    } do
+      meeting_type = insert(:meeting_type, user: user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      # Add a custom question in-memory via the editor
+      view |> element("button", "Add question") |> render_click()
+      assert render(view) =~ "Add question"
+
+      view
+      |> form("form[phx-submit='save']", %{
+        "definition" => %{"label" => "Company", "type" => "short_text"}
+      })
+      |> render_submit()
+
+      assert render(view) =~ "Company"
+
+      # Submit the outer meeting type form to persist everything to the DB.
+      # The hidden inputs serialising custom_fields are auto-collected by
+      # render_submit/1 from the current rendered HTML.
+      view
+      |> form("form[phx-submit='save_meeting_type']", %{
+        "meeting_type" => %{
+          "name" => meeting_type.name,
+          "duration" => to_string(meeting_type.duration_minutes)
+        }
+      })
+      |> render_submit()
+
+      assert render(view) =~ "Meeting type updated"
+
+      reloaded = Repo.reload!(meeting_type)
+      assert [%{label: "Company"}] = reloaded.custom_fields
     end
   end
 end

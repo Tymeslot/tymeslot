@@ -333,6 +333,13 @@ defmodule Tymeslot.MeetingTypes do
         reminder_config: reminder_config
       }
 
+      attrs =
+        if Map.has_key?(params, "custom_fields") do
+          Map.put(attrs, :custom_fields, params["custom_fields"])
+        else
+          attrs
+        end
+
       {:ok, attrs}
     end
   rescue

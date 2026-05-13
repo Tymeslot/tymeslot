@@ -313,4 +313,106 @@ defmodule Tymeslot.MeetingTypesTest do
       assert MeetingTypes.to_slug(mt) == ""
     end
   end
+
+  describe "update_meeting_type_from_form/3 custom fields preservation" do
+    test "preserves existing custom fields when params omit custom_fields key" do
+      user = insert(:user)
+
+      # Create a meeting type with a custom field definition
+      {:ok, meeting_type} =
+        MeetingTypes.create_meeting_type_from_form(
+          user.id,
+          %{
+            "name" => "With Fields",
+            "duration" => "30",
+            "description" => "",
+            "is_active" => "true",
+            "calendar_integration_id" => "",
+            "target_calendar_id" => nil,
+            "custom_fields" => [
+              %{"id" => "f1", "type" => "short_text", "label" => "Company", "required" => true}
+            ]
+          },
+          %{
+            meeting_mode: "in_person",
+            selected_video_integration_id: nil,
+            selected_icon: "none"
+          }
+        )
+
+      assert length(meeting_type.custom_fields) == 1
+
+      # Update without sending a custom_fields key — existing fields must be preserved
+      {:ok, updated} =
+        MeetingTypes.update_meeting_type_from_form(
+          meeting_type,
+          %{
+            "name" => "With Fields",
+            "duration" => "45",
+            "description" => "Updated description",
+            "is_active" => "true",
+            "calendar_integration_id" => "",
+            "target_calendar_id" => nil
+            # Deliberately no "custom_fields" key
+          },
+          %{
+            meeting_mode: "in_person",
+            selected_video_integration_id: nil,
+            selected_icon: "none"
+          }
+        )
+
+      assert length(updated.custom_fields) == 1
+      assert updated.duration_minutes == 45
+    end
+
+    test "replaces custom fields when params include an explicit custom_fields key" do
+      user = insert(:user)
+
+      {:ok, meeting_type} =
+        MeetingTypes.create_meeting_type_from_form(
+          user.id,
+          %{
+            "name" => "Replace Fields",
+            "duration" => "30",
+            "description" => "",
+            "is_active" => "true",
+            "calendar_integration_id" => "",
+            "target_calendar_id" => nil,
+            "custom_fields" => [
+              %{"id" => "f1", "type" => "short_text", "label" => "Company", "required" => true}
+            ]
+          },
+          %{
+            meeting_mode: "in_person",
+            selected_video_integration_id: nil,
+            selected_icon: "none"
+          }
+        )
+
+      assert length(meeting_type.custom_fields) == 1
+
+      # Explicitly pass an empty list — should wipe the existing fields
+      {:ok, updated} =
+        MeetingTypes.update_meeting_type_from_form(
+          meeting_type,
+          %{
+            "name" => "Replace Fields",
+            "duration" => "30",
+            "description" => "",
+            "is_active" => "true",
+            "calendar_integration_id" => "",
+            "target_calendar_id" => nil,
+            "custom_fields" => []
+          },
+          %{
+            meeting_mode: "in_person",
+            selected_video_integration_id: nil,
+            selected_icon: "none"
+          }
+        )
+
+      assert updated.custom_fields == []
+    end
+  end
 end
