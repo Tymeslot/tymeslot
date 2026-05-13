@@ -9,7 +9,9 @@ defmodule Tymeslot.Slack do
 
   require Logger
 
+  alias Ecto.Multi
   alias Tymeslot.Features
+  alias Tymeslot.Repo
   alias Tymeslot.Slack.{API, MessageBuilder, SlackIntegrationSchema, SlackQueries}
   alias Tymeslot.Workers.SlackWorker
 
@@ -111,10 +113,24 @@ defmodule Tymeslot.Slack do
   def complete_oauth(user_id, attrs) do
     if slack_enabled?() do
       with :ok <- Features.check_access(user_id, :automations_allowed) do
-        attrs
-        |> Map.put(:user_id, user_id)
-        |> Map.put(:app_mode, "oauth")
-        |> SlackQueries.create_oauth_stub()
+        stub_attrs =
+          attrs
+          |> Map.put(:user_id, user_id)
+          |> Map.put(:app_mode, "oauth")
+
+        Multi.new()
+        |> Multi.run(:delete_stale_stubs, fn _repo, _changes ->
+          {:ok, SlackQueries.delete_pending_oauth_stubs_for_user(user_id)}
+        end)
+        |> Multi.run(:create_stub, fn _repo, _changes ->
+          SlackQueries.create_oauth_stub(stub_attrs)
+        end)
+        |> Repo.transaction()
+        |> case do
+          {:ok, %{create_stub: integration}} -> {:ok, integration}
+          {:error, :create_stub, changeset, _changes} -> {:error, changeset}
+          {:error, _step, reason, _changes} -> {:error, reason}
+        end
       end
     else
       {:error, :feature_disabled}
