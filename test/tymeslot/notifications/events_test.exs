@@ -12,7 +12,6 @@ defmodule Tymeslot.Notifications.EventsTest do
   alias Tymeslot.Notifications.Events
   alias Tymeslot.Workers.{SlackWorker, TelegramWorker}
 
-  setup :set_mox_from_context
   setup :verify_on_exit!
 
   describe "should_trigger_notifications?/2" do
