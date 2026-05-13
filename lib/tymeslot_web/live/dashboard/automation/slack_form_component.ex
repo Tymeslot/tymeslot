@@ -132,9 +132,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
           phx-target={@parent_component}
           class="flex items-center gap-2 px-5 py-2.5 rounded-token-xl bg-tymeslot-50 text-tymeslot-600 font-bold hover:bg-tymeslot-100 transition-all border-2 border-transparent hover:border-tymeslot-200"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <.icon name="hero-x-mark" class="w-5 h-5" />
           Close
         </button>
       </div>
@@ -318,24 +316,19 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
           </div>
 
         <% true -> %>
-          <select
+          <.input
+            type="select"
             name="slack[channel_id]"
-            class="w-full px-4 py-3 rounded-token-xl border-2 border-tymeslot-100 bg-white text-tymeslot-900 font-medium focus:outline-none focus:border-turquoise-300"
-          >
-            <option value="">Pick a channel...</option>
-            <%= for channel <- @channels do %>
-              <option value={channel.id} selected={channel.id == Map.get(@form_values, "channel_id")}>
-                #<%= channel.name %><%= if channel.is_private, do: " (private)", else: "" %>
-              </option>
-            <% end %>
-          </select>
+            value={Map.get(@form_values, "channel_id")}
+            prompt="Pick a channel..."
+            options={Enum.map(@channels, fn c ->
+              {"##{c.name}#{if c.is_private, do: " (private)", else: ""}", c.id}
+            end)}
+            errors={FormValidationHelpers.field_errors(@form_errors, :channel_id)}
+          />
 
           <%!-- Hidden channel_name pairs with the chosen channel_id; submit handler resolves it via the channels list. --%>
           <input type="hidden" name="slack[channel_name]" value={lookup_channel_name(@channels, Map.get(@form_values, "channel_id"))} />
-      <% end %>
-
-      <%= for error <- FormValidationHelpers.field_errors(@form_errors, :channel_id) do %>
-        <p class="text-token-sm text-red-600 font-medium mt-2"><%= error %></p>
       <% end %>
     </div>
     """
