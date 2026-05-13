@@ -427,4 +427,87 @@ defmodule Tymeslot.Bookings.CreateTest do
                Create.execute_with_video_room(meeting_params, form_data)
     end
   end
+
+  describe "execute/3 with custom field validation" do
+    setup do
+      setup_booking_test()
+    end
+
+    test "rejects booking when a required custom field answer is missing", %{
+      user: user,
+      form_data: form_data
+    } do
+      set_calendar_empty()
+
+      snapshot = [
+        %{
+          "id" => "field-1",
+          "type" => "short_text",
+          "label" => "Company",
+          "required" => true
+        }
+      ]
+
+      meeting_params = %{
+        date: Date.add(Date.utc_today(), 1),
+        time: "15:00",
+        duration: "30min",
+        user_timezone: "UTC",
+        organizer_user_id: user.id,
+        custom_fields_snapshot: snapshot,
+        # No answer provided for the required field
+        custom_field_answers: %{}
+      }
+
+      result = Create.execute(meeting_params, form_data)
+
+      assert {:error, error_msg} = result
+      assert error_msg =~ "required"
+
+      # Verify nothing was persisted
+      assert Tymeslot.Repo.aggregate(Tymeslot.Meetings.MeetingSchema, :count) == 0
+    end
+
+    test "accepts booking when all required custom field answers are present", %{
+      user: user,
+      form_data: form_data
+    } do
+      set_calendar_empty()
+
+      snapshot = [
+        %{
+          "id" => "field-1",
+          "type" => "short_text",
+          "label" => "Company",
+          "required" => true
+        }
+      ]
+
+      meeting_params = %{
+        date: Date.add(Date.utc_today(), 1),
+        time: "15:30",
+        duration: "30min",
+        user_timezone: "UTC",
+        organizer_user_id: user.id,
+        custom_fields_snapshot: snapshot,
+        custom_field_answers: %{"field-1" => "Acme Corp"}
+      }
+
+      assert {:ok, meeting} = Create.execute(meeting_params, form_data)
+      assert meeting.uid != nil
+    end
+
+    test "accepts booking when there are no custom fields in the snapshot", %{
+      meeting_params: meeting_params,
+      form_data: form_data
+    } do
+      set_calendar_empty()
+
+      # No snapshot / empty snapshot — baseline behaviour must not regress
+      params = Map.merge(meeting_params, %{custom_fields_snapshot: [], custom_field_answers: %{}})
+
+      assert {:ok, meeting} = Create.execute(params, form_data)
+      assert meeting.uid != nil
+    end
+  end
 end
