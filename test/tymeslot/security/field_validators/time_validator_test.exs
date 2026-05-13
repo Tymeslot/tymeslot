@@ -23,5 +23,11 @@ defmodule Tymeslot.Security.FieldValidators.TimeValidatorTest do
     test "non-binary value returns error" do
       assert {:error, _} = TimeValidator.validate(1430)
     end
+
+    test "rejects timezone offset" do
+      assert {:error, _} = TimeValidator.validate("14:30:45+01:00")
+      assert {:error, _} = TimeValidator.validate("14:30:00Z")
+      assert {:error, _} = TimeValidator.validate("14:30:00-05:00")
+    end
   end
 end

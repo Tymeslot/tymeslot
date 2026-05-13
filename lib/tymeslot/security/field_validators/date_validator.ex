@@ -35,7 +35,7 @@ defmodule Tymeslot.Security.FieldValidators.DateValidator do
           else: {:error, "Date is before the earliest allowed date"}
 
       _ ->
-        :ok
+        {:error, "Date range configuration is invalid"}
     end
   end
 
@@ -47,7 +47,7 @@ defmodule Tymeslot.Security.FieldValidators.DateValidator do
           else: {:error, "Date is after the latest allowed date"}
 
       _ ->
-        :ok
+        {:error, "Date range configuration is invalid"}
     end
   end
 end

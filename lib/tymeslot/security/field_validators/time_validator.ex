@@ -7,16 +7,22 @@ defmodule Tymeslot.Security.FieldValidators.TimeValidator do
   def validate(nil, opts), do: blank(opts)
   def validate("", opts), do: blank(opts)
 
-  def validate(value, _) when is_binary(value) do
-    # Time.from_iso8601 requires seconds; pad if only HH:MM is given.
-    padded =
-      if String.contains?(value, ":") and length(String.split(value, ":")) == 2,
-        do: value <> ":00",
-        else: value
+  def validate(value, _opts) when is_binary(value) do
+    trimmed = String.trim(value)
 
-    case Time.from_iso8601(padded) do
-      {:ok, _} -> :ok
-      _ -> {:error, "Time must be in HH:MM format"}
+    if Regex.match?(~r/^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/, trimmed) do
+      # Time.from_iso8601 requires seconds; pad if missing.
+      padded =
+        if length(String.split(trimmed, ":")) == 2,
+          do: trimmed <> ":00",
+          else: trimmed
+
+      case Time.from_iso8601(padded) do
+        {:ok, _} -> :ok
+        _ -> {:error, "Time must be in HH:MM format"}
+      end
+    else
+      {:error, "Time must be in HH:MM format"}
     end
   end
 
