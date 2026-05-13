@@ -187,6 +187,8 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.BookingSubmissionHandlerComponent
       |> assign(:meeting_uid, meeting.uid)
       |> assign(:name, validated_data["name"])
       |> assign(:email, validated_data["email"])
+      |> assign(:custom_fields_snapshot, Map.get(validated_data, "custom_fields_snapshot", []))
+      |> assign(:custom_field_answers, Map.get(validated_data, "custom_field_answers", %{}))
       |> Flash.put_flash(:info, success_message)
 
     {:ok, socket}
