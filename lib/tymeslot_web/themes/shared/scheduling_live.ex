@@ -278,21 +278,39 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       # Advance within the questions wizard, or proceed to :booking when all
       # questions have been answered and validated.
+      #
+      # Transitions to :booking only when the booker is already on the last
+      # question and presses Next — this ensures a single optional question is
+      # always shown before the wizard exits, even when it validates as empty.
       defp handle_questions_next(socket) do
         engine = socket.assigns.engine
 
-        if QEngine.complete?(engine) do
-          case QEngine.validate_all(engine) do
-            {:ok, _answers} ->
-              {:noreply, transition_to(socket, :booking, %{})}
-
-            {:error, _errors} ->
-              {:noreply, assign(socket, :engine, engine)}
-          end
+        if QEngine.skipped?(engine) do
+          {:noreply, transition_to(socket, :booking, %{})}
         else
-          case QEngine.next(engine) do
-            {:ok, engine} -> {:noreply, assign(socket, :engine, engine)}
-            {:error, engine} -> {:noreply, assign(socket, :engine, engine)}
+          last_index = QEngine.total(engine) - 1
+
+          cond do
+            engine.current_index < last_index ->
+              case QEngine.next(engine) do
+                {:ok, engine} -> {:noreply, assign(socket, :engine, engine)}
+                {:error, engine} -> {:noreply, assign(socket, :engine, engine)}
+              end
+
+            engine.current_index == last_index ->
+              case QEngine.validate_all(engine) do
+                {:ok, _answers} ->
+                  {:noreply, transition_to(socket, :booking, %{})}
+
+                {:error, _errors} ->
+                  case QEngine.next(engine) do
+                    {:ok, engine} -> {:noreply, assign(socket, :engine, engine)}
+                    {:error, engine} -> {:noreply, assign(socket, :engine, engine)}
+                  end
+              end
+
+            true ->
+              {:noreply, socket}
           end
         end
       end
@@ -337,10 +355,17 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       defp handle_state_entry(socket, :questions, _params) do
         # Re-sync the engine snapshot on entry so that forward/back navigation always
-        # reflects the latest custom field definitions for this meeting type.
+        # reflects the latest custom field definitions for this meeting type. Only
+        # re-init when definitions actually changed so back-navigation preserves answers.
         meeting_type = socket.assigns[:meeting_type] || %{}
         defs = CustomFields.snapshot_for(meeting_type)
-        assign(socket, :engine, QEngine.init(defs))
+
+        engine =
+          if defs != socket.assigns.engine.definitions,
+            do: QEngine.init(defs),
+            else: socket.assigns.engine
+
+        assign(socket, :engine, engine)
       end
 
       defp handle_state_entry(socket, :booking, params) do
@@ -387,7 +412,11 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       defp handle_theme_event("navigate_to_step", %{"step" => step}, socket) do
         states = StateMachine.states_for(socket.assigns[:meeting_type] || %{})
 
-        target_step = elem(Integer.parse(step), 0)
+        target_step =
+          case Integer.parse(step) do
+            {n, _rest} -> n
+            :error -> nil
+          end
 
         target_state =
           case Enum.find(states, fn {_state, %{step: n}} -> n == target_step end) do
