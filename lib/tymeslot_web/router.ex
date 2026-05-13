@@ -52,6 +52,14 @@ defmodule TymeslotWeb.Router do
     end
 
     scope "/dev", TymeslotWeb do
+      pipe_through :browser
+
+      live_session :dev_announcements_preview do
+        live "/announcements", Dev.AnnouncementsPreviewLive, :index
+      end
+    end
+
+    scope "/dev", TymeslotWeb do
       pipe_through [:browser, :require_authenticated_user]
 
       live_session :dev_onboarding,
