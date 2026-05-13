@@ -49,8 +49,9 @@ defmodule Tymeslot.CustomFieldsTest do
       ]
 
       assert {:ok, normalised} = CustomFields.validate_answers(snapshot, %{})
-      # Optional missing field becomes nil-valued; either way the validator returned ok.
-      assert is_map(normalised)
+      # Optional field with no answer: validator returns :ok with nil, so the
+      # normalised map carries the id with a nil value. Pin this contract.
+      assert normalised == %{"a" => nil}
     end
 
     test "extra answer keys not in snapshot are silently dropped" do
