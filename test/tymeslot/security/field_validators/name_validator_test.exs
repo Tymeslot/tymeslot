@@ -16,6 +16,16 @@ defmodule Tymeslot.Security.FieldValidators.NameValidatorTest do
     test "returns error for nil or empty string" do
       assert {:error, "Name is required"} = NameValidator.validate(nil)
       assert {:error, "Name is required"} = NameValidator.validate("")
+      assert {:error, "Name is required"} = NameValidator.validate(nil, required: true)
+      assert {:error, "Name is required"} = NameValidator.validate("", required: true)
+    end
+
+    test "empty string with required: false is ok" do
+      assert :ok = NameValidator.validate("", required: false)
+    end
+
+    test "nil with required: false is ok" do
+      assert :ok = NameValidator.validate(nil, required: false)
     end
 
     test "returns error for blank string (only whitespace)" do
