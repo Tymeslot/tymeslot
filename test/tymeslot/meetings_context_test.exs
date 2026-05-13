@@ -80,6 +80,23 @@ defmodule Tymeslot.MeetingsContextTest do
       assert retrieved.attendee_email == form_data["email"]
     end
 
+    test "custom field snapshot and answers are persisted on the meeting row", %{user: user} do
+      snapshot = [%{"key" => "q1", "type" => "short_text", "label" => "What's your goal?"}]
+      answers = %{"q1" => "Ship the feature"}
+
+      meeting_params =
+        build_meeting_params(user, %{
+          custom_fields_snapshot: snapshot,
+          custom_field_answers: answers
+        })
+
+      form_data = build_form_data()
+
+      assert {:ok, meeting} = Meetings.create_appointment(meeting_params, form_data)
+      assert meeting.custom_fields_snapshot == snapshot
+      assert meeting.custom_field_answers == answers
+    end
+
     test "appointment generates unique meeting UID", %{user: user} do
       # Use different days and times to avoid any slot conflict
       meeting_params1 =
