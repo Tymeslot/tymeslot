@@ -198,6 +198,62 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
     end
   end
 
+  describe "questions step – back-navigation preserves answers" do
+    setup %{user: user} do
+      base_mt =
+        insert(:meeting_type,
+          user: user,
+          duration_minutes: 30,
+          name: "Preserve Answers Chat",
+          is_active: true
+        )
+
+      {:ok, mt} =
+        MeetingTypes.update_meeting_type(base_mt, %{
+          "custom_fields" => [
+            %{
+              "id" => "cf-preserve-001",
+              "type" => "short_text",
+              "label" => "Company",
+              "required" => true,
+              "position" => 0
+            }
+          ]
+        })
+
+      %{meeting_type: mt}
+    end
+
+    @tag :capture_log
+    test "navigating :booking → :questions keeps previously entered answers",
+         %{conn: conn, profile: profile} do
+      view = navigate_to_booking_form_with_questions(conn, profile)
+
+      # Fill in the answer and advance to :booking.
+      view
+      |> element("input[name='value']")
+      |> render_blur(%{"value" => "Acme Corp"})
+
+      view |> element("button[phx-click='next'][phx-target]") |> render_click()
+
+      assert render(view) =~ "Enter Your Details"
+
+      # Go back to :questions.
+      view |> element("button[data-testid='back-step']") |> render_click()
+
+      html = render(view)
+
+      # The questions step re-rendered (the question label is visible).
+      assert html =~ "Company"
+
+      # The previously entered answer is still present in the input — not wiped.
+      assert html =~ "Acme Corp"
+
+      # The booking details form is gone.
+      refute html =~ "Enter Your Details"
+    end
+  end
+
   describe "booking flow with custom fields on Rhythm theme (T18)" do
     setup %{user: user} do
       base_mt =
