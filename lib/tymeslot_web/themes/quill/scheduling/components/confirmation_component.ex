@@ -8,6 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
 
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
+  alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerRenderer
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.CoreComponents
@@ -125,7 +126,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
                           <div class="custom-answer-row">
                             <dt class="custom-answer-label">{d["label"]}</dt>
                             <dd class="custom-answer-value">
-                              {render_answer(d, @custom_field_answers[d["id"]])}
+                              {AnswerRenderer.render(d, @custom_field_answers[d["id"]])}
                             </dd>
                           </div>
                         <% end %>
@@ -222,32 +223,6 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   end
 
   # ========== PRIVATE HELPERS ==========
-
-  defp render_answer(%{"type" => "yes_no"}, true), do: gettext("Yes")
-  defp render_answer(%{"type" => "yes_no"}, _other), do: gettext("No")
-
-  defp render_answer(%{"type" => "multi_select", "options" => opts}, values)
-       when is_list(values) do
-    Enum.map_join(
-      Enum.filter(opts, &(&1["key"] in values)),
-      ", ",
-      & &1["label"]
-    )
-  end
-
-  defp render_answer(%{"type" => "single_select", "options" => opts}, value) do
-    case Enum.find(opts, &(&1["key"] == value)) do
-      %{"label" => label} -> label
-      _other -> to_string(value || "")
-    end
-  end
-
-  defp render_answer(%{"type" => "note"}, %{"confirmed" => true, "confirmed_at" => at}) do
-    gettext("✓ Acknowledged (%{at})", at: at)
-  end
-
-  defp render_answer(_d, nil), do: ""
-  defp render_answer(_d, value), do: to_string(value)
 
   defp get_organizer_text(nil), do: ""
 
