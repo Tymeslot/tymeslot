@@ -11,7 +11,8 @@ defmodule Tymeslot.Security.FieldValidators.NoteAckValidator do
   def validate(%{"confirmed" => true, "confirmed_at" => iso}, _, _)
       when is_binary(iso) do
     case DateTime.from_iso8601(iso) do
-      {:ok, _, _} -> :ok
+      {:ok, _, 0} -> :ok
+      {:ok, _, _} -> {:error, "Confirmation timestamp must be UTC"}
       _ -> {:error, "Confirmation timestamp is invalid"}
     end
   end

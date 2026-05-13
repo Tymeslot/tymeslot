@@ -51,5 +51,13 @@ defmodule Tymeslot.Security.FieldValidators.NoteAckValidatorTest do
       assert {:error, _} =
                NoteAckValidator.validate(%{"confirmed" => true, "confirmed_at" => nil}, %{})
     end
+
+    test "non-UTC offset rejected" do
+      assert {:error, _} =
+               NoteAckValidator.validate(
+                 %{"confirmed" => true, "confirmed_at" => "2026-05-13T10:00:00+05:30"},
+                 %{}
+               )
+    end
   end
 end
