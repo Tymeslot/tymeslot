@@ -103,6 +103,39 @@ defmodule Tymeslot.SlackTest do
       assert {:error, :feature_disabled} =
                Slack.complete_oauth(user.id, %{name: "x", bot_token: "t", team_id: "T"})
     end
+
+    test "removes stale pending OAuth stubs for the same user before inserting" do
+      user = insert(:user)
+
+      insert(:slack_integration,
+        user: user,
+        app_mode: "oauth",
+        channel_id: nil,
+        bot_token_encrypted: Encryption.encrypt("xoxb-old-1"),
+        name: "Stale 1"
+      )
+
+      insert(:slack_integration,
+        user: user,
+        app_mode: "oauth",
+        channel_id: nil,
+        bot_token_encrypted: Encryption.encrypt("xoxb-old-2"),
+        name: "Stale 2"
+      )
+
+      assert {:ok, latest} =
+               Slack.complete_oauth(user.id, %{
+                 name: "Latest",
+                 bot_token: "xoxb-new",
+                 team_id: "T1",
+                 events: ["meeting.created"]
+               })
+
+      remaining = Slack.list_integrations(user.id)
+
+      assert Enum.map(remaining, & &1.id) == [latest.id]
+      assert SlackIntegrationSchema.bot_token(latest) == "xoxb-new"
+    end
   end
 
   describe "set_channel/2" do

@@ -31,6 +31,23 @@ defmodule Tymeslot.Slack.SlackQueries do
     |> Repo.delete_all()
   end
 
+  @doc """
+  Deletes every OAuth stub for the user that has a bot token but no channel
+  yet — i.e. previous OAuth dances the user never completed. Run this before
+  inserting a fresh stub so a user who restarts the install flow does not
+  accumulate orphaned rows.
+  """
+  @spec delete_pending_oauth_stubs_for_user(integer()) ::
+          {non_neg_integer(), nil | [term()]}
+  def delete_pending_oauth_stubs_for_user(user_id) do
+    SlackIntegrationSchema
+    |> where([i], i.user_id == ^user_id)
+    |> where([i], i.app_mode == "oauth")
+    |> where([i], not is_nil(i.bot_token_encrypted))
+    |> where([i], is_nil(i.channel_id))
+    |> Repo.delete_all()
+  end
+
   @spec cleanup_orphaned_stubs(integer()) :: {non_neg_integer(), nil | [term()]}
   def cleanup_orphaned_stubs(user_id) do
     cutoff = DateTime.add(DateTime.utc_now(), -@stub_ttl_minutes * 60, :second)
