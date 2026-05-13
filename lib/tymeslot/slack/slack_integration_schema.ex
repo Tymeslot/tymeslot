@@ -160,17 +160,39 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
   defp validate_by_mode(changeset) do
     case get_field(changeset, :app_mode) do
       "oauth" ->
-        validate_required(changeset, [:bot_token, :channel_id])
+        changeset
+        |> validate_token_present()
+        |> validate_required([:channel_id])
 
       "webhook_url" ->
         changeset
-        |> validate_required([:webhook_url])
+        |> validate_webhook_url_present()
         |> validate_format(:webhook_url, @webhook_url_regex,
           message: "must be a Slack webhook URL (https://hooks.slack.com/services/...)"
         )
 
       _mode ->
         changeset
+    end
+  end
+
+  # bot_token is virtual; once the record is persisted, the plaintext is gone
+  # but bot_token_encrypted remains. Treat either as sufficient evidence the
+  # integration has a token, so updates of stored records succeed without
+  # re-supplying the token.
+  defp validate_token_present(changeset) do
+    cond do
+      get_field(changeset, :bot_token) not in [nil, ""] -> changeset
+      get_field(changeset, :bot_token_encrypted) not in [nil, ""] -> changeset
+      true -> add_error(changeset, :bot_token, "can't be blank")
+    end
+  end
+
+  defp validate_webhook_url_present(changeset) do
+    cond do
+      get_field(changeset, :webhook_url) not in [nil, ""] -> changeset
+      get_field(changeset, :webhook_url_encrypted) not in [nil, ""] -> changeset
+      true -> add_error(changeset, :webhook_url, "can't be blank")
     end
   end
 
