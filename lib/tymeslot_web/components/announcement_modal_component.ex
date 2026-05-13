@@ -19,7 +19,7 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
-    {:ok, assign(socket, current_index: 0, closed?: false)}
+    {:ok, assign(socket, current_index: 0, closed?: false, preview?: false)}
   end
 
   @impl Phoenix.LiveComponent
@@ -126,7 +126,7 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
         {:noreply, socket}
 
       current ->
-        Announcements.mark_seen!(socket.assigns.current_user, current.key)
+        maybe_mark_seen(socket, current)
         new_index = socket.assigns.current_index + 1
 
         if new_index >= length(socket.assigns.announcements) do
@@ -148,7 +148,7 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
         {:noreply, assign(socket, closed?: true)}
 
       current ->
-        Announcements.mark_seen!(socket.assigns.current_user, current.key)
+        maybe_mark_seen(socket, current)
         {:noreply, assign(socket, closed?: true)}
     end
   end
@@ -159,9 +159,18 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
         {:noreply, assign(socket, closed?: true)}
 
       current ->
-        Announcements.mark_seen!(socket.assigns.current_user, current.key)
+        maybe_mark_seen(socket, current)
         send(self(), {:announcement_cta_navigate, current.cta_path})
         {:noreply, assign(socket, closed?: true)}
     end
+  end
+
+  # Preview mode (used by the dev preview route) keeps the carousel
+  # idempotent — without it, walking through once would write to
+  # user_seen_announcements and hide every entry on the next reload.
+  defp maybe_mark_seen(%{assigns: %{preview?: true}}, _current), do: :ok
+
+  defp maybe_mark_seen(socket, current) do
+    Announcements.mark_seen!(socket.assigns.current_user, current.key)
   end
 end
