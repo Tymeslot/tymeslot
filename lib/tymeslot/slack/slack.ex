@@ -358,6 +358,19 @@ defmodule Tymeslot.Slack do
     ]
   end
 
+  @doc """
+  Default event subscriptions used when a brand-new integration is created
+  (e.g. immediately after an OAuth install, before the user has chosen which
+  events to subscribe to).
+
+  Returns the full list of valid events so that fresh integrations notify on
+  everything by default; the user can prune later from the dashboard form.
+  """
+  @spec default_events_for_new_integration() :: [String.t()]
+  def default_events_for_new_integration do
+    SlackIntegrationSchema.valid_events()
+  end
+
   @spec slack_enabled?() :: boolean()
   def slack_enabled? do
     Application.get_env(:tymeslot, :slack_notifications_allowed, false)

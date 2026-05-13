@@ -95,7 +95,7 @@ defmodule TymeslotWeb.SlackOAuthController do
       team_name: install[:team_name],
       authed_user_id: install[:authed_user_id],
       scope: install[:scope],
-      events: ["meeting.created", "meeting.cancelled", "meeting.rescheduled"]
+      events: Slack.default_events_for_new_integration()
     }
   end
 
