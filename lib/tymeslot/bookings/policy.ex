@@ -169,7 +169,9 @@ defmodule Tymeslot.Bookings.Policy do
         attendee_timezone: Timezones.normalize(user_timezone),
         attendee_locale: Map.get(params, :attendee_locale) || default_locale(),
         status: "confirmed",
-        reminders: reminders
+        reminders: reminders,
+        custom_fields_snapshot: Map.get(params, :custom_fields_snapshot, []),
+        custom_field_answers: Map.get(params, :custom_field_answers, %{})
       },
       build_meeting_action_urls(meeting_uid, org_username)
     )
