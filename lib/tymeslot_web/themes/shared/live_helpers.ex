@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   import Phoenix.LiveView, only: [connected?: 1, put_flash: 3, redirect: 2]
 
   alias Tymeslot.Bookings.SubmissionToken
+  alias Tymeslot.CustomFields
   alias Tymeslot.MeetingTypes
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.ThemeFlow
@@ -19,6 +20,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias TymeslotWeb.Live.Scheduling.{AvailabilityHelpers, OrganizerHelpers, ThemeUtils}
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
+  alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
 
   @doc """
   Shared mounting logic for scheduling themes.
@@ -127,8 +129,17 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
              socket.assigns[:organizer_user_id],
              duration_str
            ) do
-        nil -> socket
-        meeting_type -> assign(socket, :meeting_type, meeting_type)
+        nil ->
+          socket
+
+        meeting_type ->
+          # Re-initialise the engine with a fresh snapshot whenever the meeting type
+          # changes so the `:questions` step always reflects the current custom fields.
+          defs = CustomFields.snapshot_for(meeting_type)
+
+          socket
+          |> assign(:meeting_type, meeting_type)
+          |> assign(:engine, QEngine.init(defs))
       end
     else
       socket
@@ -214,8 +225,11 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       |> redirect(to: ~p"/#{socket.assigns[:username_context]}")
     else
       {:meeting_type, meeting_type} ->
+        defs = CustomFields.snapshot_for(meeting_type)
+
         socket
         |> assign(:meeting_type, meeting_type)
+        |> assign(:engine, QEngine.init(defs))
         |> do_handle_schedule_entry(params)
 
       _other ->
