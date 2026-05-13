@@ -26,7 +26,7 @@ defmodule Tymeslot.CustomFields.FieldOption do
     |> cast(attrs, [:key, :label])
     |> validate_required([:label])
     |> validate_length(:label, max: 80)
-    |> maybe_derive_key()
+    |> then(fn cs -> if cs.valid?, do: maybe_derive_key(cs), else: cs end)
   end
 
   defp maybe_derive_key(cs) do
@@ -48,14 +48,14 @@ defmodule Tymeslot.CustomFields.FieldOption do
 
     suffix =
       :crypto.strong_rand_bytes(3)
-      |> Base.url_encode64(padding: false)
-      |> String.downcase()
+      |> Base.encode16(case: :lower)
+      |> String.slice(0, 4)
 
     if slug == "", do: random_key(), else: slug <> "_" <> suffix
   end
 
   defp random_key do
-    encoded = Base.url_encode64(:crypto.strong_rand_bytes(4), padding: false)
+    encoded = Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)
     "opt_" <> encoded
   end
 end

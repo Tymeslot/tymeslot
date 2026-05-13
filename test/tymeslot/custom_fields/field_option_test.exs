@@ -32,7 +32,11 @@ defmodule Tymeslot.CustomFields.FieldOptionTest do
   end
 
   defp errors_on(cs) do
-    Ecto.Changeset.traverse_errors(cs, fn {msg, _} -> msg end)
+    Ecto.Changeset.traverse_errors(cs, fn {msg, opts} ->
+      Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+        opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+      end)
+    end)
   end
 
   defp get_change(cs, field), do: Ecto.Changeset.get_change(cs, field)
