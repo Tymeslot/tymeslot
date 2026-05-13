@@ -7,10 +7,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
   import Tymeslot.AuthTestHelpers
   import Mox
 
+  alias Ecto.UUID
+  alias Plug.Test
   alias Tymeslot.Meetings.MeetingSchema
   alias Tymeslot.Repo
-
-  alias Plug.Test
 
   setup :verify_on_exit!
 
@@ -116,6 +116,61 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementTest do
 
       assert render(view) =~ "Jane Smith"
       assert render(view) =~ "Acme Corp"
+    end
+
+    test "renders custom-field answers when the booking has them", %{conn: conn, user: user} do
+      field_id = UUID.generate()
+
+      insert(:meeting,
+        organizer_user: user,
+        organizer_email: user.email,
+        attendee_name: "Custom Fields Attendee",
+        custom_fields_snapshot: [
+          %{"id" => field_id, "type" => "short_text", "label" => "Company name"}
+        ],
+        custom_field_answers: %{field_id => "Acme Ltd"}
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      html = render(view)
+      assert html =~ "Custom answers"
+      assert html =~ "Company name"
+      assert html =~ "Acme Ltd"
+    end
+
+    test "does not render custom answers section when booking has no custom fields",
+         %{conn: conn, user: user} do
+      insert(:meeting,
+        organizer_user: user,
+        organizer_email: user.email,
+        attendee_name: "Plain Attendee",
+        custom_fields_snapshot: [],
+        custom_field_answers: %{}
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      refute render(view) =~ "Custom answers"
+    end
+
+    test "does not render custom answers section when all custom fields were skipped",
+         %{conn: conn, user: user} do
+      field_id = UUID.generate()
+
+      insert(:meeting,
+        organizer_user: user,
+        organizer_email: user.email,
+        attendee_name: "Skipped Fields Attendee",
+        custom_fields_snapshot: [
+          %{"id" => field_id, "type" => "short_text", "label" => "Company name"}
+        ],
+        custom_field_answers: %{}
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meetings")
+
+      refute render(view) =~ "Custom answers"
     end
 
     test "filters meetings by status", %{conn: conn, user: user} do
