@@ -4,13 +4,16 @@ defmodule Tymeslot.SlackTest do
   @moduletag :slack
   @moduletag :integration
 
+  use Oban.Testing, repo: Tymeslot.Repo
+
   import Mox
   import Tymeslot.ConfigTestHelpers
   import Tymeslot.Factory
 
+  alias Tymeslot.Notifications.Events
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Slack
-  alias Tymeslot.Slack.SlackIntegrationSchema
+  alias Tymeslot.Slack.{SlackIntegrationSchema, SlackQueries}
 
   setup :verify_on_exit!
 
@@ -331,6 +334,39 @@ defmodule Tymeslot.SlackTest do
 
     test "falls back to generic Slack error message for unknown codes" do
       assert Slack.translate_error("bogus_code") == "Slack error: bogus_code"
+    end
+  end
+
+  describe "end-to-end booking pipeline" do
+    @tag :integration
+    test "booking a meeting fires a Slack notification" do
+      user = insert(:user)
+
+      integration =
+        insert(:slack_integration,
+          user: user,
+          app_mode: "oauth",
+          events: ["meeting.created"],
+          is_active: true
+        )
+
+      meeting = insert(:meeting, organizer_user_id: user.id)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn url, _body, _headers, _opts ->
+        assert url == "https://slack.com/api/chat.postMessage"
+        {:ok, %{status: 200, body: ~s({"ok":true,"ts":"1234.5678"})}}
+      end)
+
+      Events.meeting_created(meeting)
+
+      assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :slack_messages)
+
+      assert [delivery] = SlackQueries.list_deliveries(integration.id, [])
+      assert delivery.response_status == 200
+      assert delivery.delivered_at
+
+      assert {:ok, reloaded} = SlackQueries.get_integration(integration.id)
+      assert reloaded.last_triggered_at
     end
   end
 end
