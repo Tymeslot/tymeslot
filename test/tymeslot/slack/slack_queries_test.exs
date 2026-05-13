@@ -236,24 +236,29 @@ defmodule Tymeslot.Slack.SlackQueriesTest do
     end
   end
 
-  describe "cleanup_orphaned_stubs/1" do
-    test "removes only stubs older than the TTL" do
+  describe "update_state/2" do
+    test "disables an integration without requiring channel_id or re-encryption" do
       user = insert(:user)
-      old_time = DateTime.add(DateTime.utc_now(), -60 * 60, :second)
 
-      old =
+      # A pending stub has no channel_id; the full changeset would reject this.
+      stub =
         insert(:slack_integration,
           user: user,
           app_mode: "oauth",
-          channel_id: nil,
-          inserted_at: old_time
+          channel_id: nil
         )
 
-      _recent = insert(:slack_integration, user: user, app_mode: "oauth", channel_id: nil)
+      now = DateTime.utc_now()
 
-      assert {1, _rows} = SlackQueries.cleanup_orphaned_stubs(user.id)
-      remaining_ids = Enum.map(SlackQueries.list_integrations(user.id), & &1.id)
-      refute old.id in remaining_ids
+      assert {:ok, updated} =
+               SlackQueries.update_state(stub, %{
+                 is_active: false,
+                 disabled_at: now,
+                 disabled_reason: "test auto-disable"
+               })
+
+      assert updated.is_active == false
+      assert updated.disabled_reason == "test auto-disable"
     end
   end
 

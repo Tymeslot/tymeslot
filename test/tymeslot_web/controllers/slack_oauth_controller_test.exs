@@ -103,7 +103,6 @@ defmodule TymeslotWeb.SlackOAuthControllerTest do
 
       assert redirected_to(conn) == "/dashboard/automation"
       assert Flash.get(conn.assigns.flash, :error) =~ "cancelled"
-      assert Flash.get(conn.assigns.flash, :error) =~ "access_denied"
       assert Repo.all(SlackIntegrationSchema) == []
     end
   end

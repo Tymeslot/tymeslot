@@ -121,6 +121,21 @@ defmodule Tymeslot.Slack.OAuthTest do
                OAuth.exchange_code("bad", "https://example.test/cb")
     end
 
+    test "returns :missing_bot_token when Slack response lacks access_token" do
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        # Simulates a user-token-only app where no bot token is granted
+        {:ok,
+         %{
+           status: 200,
+           body:
+             ~s({"ok":true,"authed_user":{"id":"U1","access_token":"xoxp-user-token"},"team":{"id":"T1","name":"Test"},"scope":"identify"})
+         }}
+      end)
+
+      assert {:error, :missing_bot_token} =
+               OAuth.exchange_code("user-only-code", "https://example.test/cb")
+    end
+
     test "raises when slack_client_secret is not configured" do
       Application.delete_env(:tymeslot, :slack_client_secret)
 

@@ -113,6 +113,10 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     |> encrypt_bot_token()
     |> encrypt_webhook_url()
     |> foreign_key_constraint(:user_id)
+    |> unique_constraint([:user_id, :team_id],
+      name: :slack_integrations_user_team_unique_index,
+      message: "workspace already connected"
+    )
   end
 
   @doc """
@@ -143,18 +147,44 @@ defmodule Tymeslot.Slack.SlackIntegrationSchema do
     |> validate_length(:name, min: 1, max: 80)
     |> encrypt_bot_token()
     |> foreign_key_constraint(:user_id)
+    |> unique_constraint([:user_id, :team_id],
+      name: :slack_integrations_user_team_unique_index,
+      message: "workspace already connected"
+    )
   end
 
   @doc """
   Changeset for transitioning a `:pending_oauth` integration to `:active` by
   setting the channel. Only the channel fields are cast; everything else on the
-  record is preserved.
+  record is preserved. Always sets `is_active: true` and clears any
+  `disabled_at`/`disabled_reason` so that a user who re-runs OAuth after
+  having previously paused or auto-disabled an integration gets an active one.
   """
   @spec set_channel_changeset(t(), map()) :: Ecto.Changeset.t()
   def set_channel_changeset(integration, attrs) do
     integration
     |> cast(attrs, [:channel_id, :channel_name])
     |> validate_required([:channel_id])
+    |> put_change(:is_active, true)
+    |> put_change(:disabled_at, nil)
+    |> put_change(:disabled_reason, nil)
+  end
+
+  @doc """
+  Minimal changeset for state-transition-only updates (enable/disable, failure
+  tracking, last-triggered stamp). Bypasses `validate_by_mode` and encryption
+  helpers so that records in any state — including `channel_id: nil` stubs —
+  can be updated without re-supplying credential fields.
+  """
+  @spec state_transition_changeset(t(), map()) :: Ecto.Changeset.t()
+  def state_transition_changeset(integration, attrs) do
+    cast(integration, attrs, [
+      :is_active,
+      :disabled_at,
+      :disabled_reason,
+      :last_triggered_at,
+      :failure_count
+    ])
   end
 
   defp validate_by_mode(changeset) do

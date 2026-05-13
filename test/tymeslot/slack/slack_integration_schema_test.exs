@@ -223,6 +223,42 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
       refute cs.valid?
       assert "can't be blank" in errors_on(cs).channel_id
     end
+
+    test "re-activates a previously paused integration", %{user: user} do
+      # Simulate an integration that was paused (is_active: false, no disabled_at)
+      pending_attrs = %{
+        user_id: user.id,
+        name: "Paused",
+        app_mode: "oauth",
+        bot_token: "xoxb-paused",
+        team_id: "T1",
+        events: ["meeting.created"]
+      }
+
+      {:ok, paused} =
+        %SlackIntegrationSchema{}
+        |> SlackIntegrationSchema.oauth_init_changeset(pending_attrs)
+        |> Repo.insert()
+
+      # Manually mark as paused via direct DB update to simulate prior pause
+      import Ecto.Changeset, only: [change: 2]
+      {:ok, paused} = Repo.update(change(paused, is_active: false))
+      # is_active: false takes priority in status/1 over the pending_oauth check
+      assert SlackIntegrationSchema.status(paused) == :paused
+
+      cs =
+        SlackIntegrationSchema.set_channel_changeset(paused, %{
+          channel_id: "C99",
+          channel_name: "#re-enabled"
+        })
+
+      assert cs.valid?
+      {:ok, updated} = Repo.update(cs)
+      assert updated.is_active == true
+      assert is_nil(updated.disabled_at)
+      assert is_nil(updated.disabled_reason)
+      assert SlackIntegrationSchema.status(updated) == :active
+    end
   end
 
   defp build_struct(attrs) do

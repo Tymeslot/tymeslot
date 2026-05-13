@@ -18,8 +18,6 @@ defmodule Tymeslot.Slack.SlackQueries do
   # Integration Queries
   # ============================================================================
 
-  @stub_ttl_minutes 30
-
   @spec list_integrations(integer()) :: [SlackIntegrationSchema.t()]
   def list_integrations(user_id),
     do: IntegrationQueries.list_for_user(SlackIntegrationSchema, user_id)
@@ -37,15 +35,6 @@ defmodule Tymeslot.Slack.SlackQueries do
     |> where([i], i.app_mode == "oauth")
     |> where([i], is_nil(i.channel_id))
     |> Repo.delete_all()
-  end
-
-  @spec cleanup_orphaned_stubs(integer()) :: {non_neg_integer(), nil | [term()]}
-  def cleanup_orphaned_stubs(user_id) do
-    SlackIntegrationSchema
-    |> where([i], i.user_id == ^user_id)
-    |> where([i], i.app_mode == "oauth")
-    |> where([i], is_nil(i.channel_id))
-    |> IntegrationQueries.delete_stubs_older_than(@stub_ttl_minutes)
   end
 
   @spec list_active_integrations_for_event(integer(), String.t()) :: [
@@ -101,6 +90,20 @@ defmodule Tymeslot.Slack.SlackQueries do
   def update_integration(%SlackIntegrationSchema{} = integration, attrs) do
     integration
     |> SlackIntegrationSchema.changeset(attrs)
+    |> IntegrationQueries.update()
+  end
+
+  @doc """
+  Applies a state-transition-only update (active/disabled flags, failure count,
+  last-triggered stamp) without running full validation or re-encrypting
+  credentials. Safe to call on records in any state, including pending stubs
+  where `channel_id` or `bot_token` may be nil.
+  """
+  @spec update_state(SlackIntegrationSchema.t(), map()) ::
+          {:ok, SlackIntegrationSchema.t()} | {:error, Ecto.Changeset.t()}
+  def update_state(%SlackIntegrationSchema{} = integration, attrs) do
+    integration
+    |> SlackIntegrationSchema.state_transition_changeset(attrs)
     |> IntegrationQueries.update()
   end
 
