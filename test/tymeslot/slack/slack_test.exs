@@ -261,12 +261,44 @@ defmodule Tymeslot.SlackTest do
       refute Slack.slack_enabled?()
     end
 
-    test "oauth_mode_available?/0 requires both flag and client_id" do
-      setup_config(:tymeslot, slack_notifications_allowed: true, slack_client_id: "xyz")
-      assert Slack.oauth_mode_available?()
+    test "oauth_mode_available?/0 is false when neither slack_oauth_available nor client_id is set" do
+      setup_config(:tymeslot,
+        slack_notifications_allowed: true,
+        slack_oauth_available: false,
+        slack_client_id: nil
+      )
 
-      setup_config(:tymeslot, slack_client_id: nil)
       refute Slack.oauth_mode_available?()
+    end
+
+    test "oauth_mode_available?/0 is false when only slack_client_id is set" do
+      setup_config(:tymeslot,
+        slack_notifications_allowed: true,
+        slack_oauth_available: false,
+        slack_client_id: "xyz"
+      )
+
+      refute Slack.oauth_mode_available?()
+    end
+
+    test "oauth_mode_available?/0 is false when only slack_oauth_available is set" do
+      setup_config(:tymeslot,
+        slack_notifications_allowed: true,
+        slack_oauth_available: true,
+        slack_client_id: nil
+      )
+
+      refute Slack.oauth_mode_available?()
+    end
+
+    test "oauth_mode_available?/0 is true when both slack_oauth_available and client_id are set" do
+      setup_config(:tymeslot,
+        slack_notifications_allowed: true,
+        slack_oauth_available: true,
+        slack_client_id: "xyz"
+      )
+
+      assert Slack.oauth_mode_available?()
     end
 
     test "default_events_for_new_integration/0 matches the schema's valid_events" do
