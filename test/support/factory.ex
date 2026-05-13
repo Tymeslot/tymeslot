@@ -21,6 +21,7 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
+  alias Tymeslot.Slack.SlackIntegrationSchema
   alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
@@ -271,6 +272,22 @@ defmodule Tymeslot.Factory do
       bot_token_encrypted: Encryption.encrypt("1234567890:ABCdefGHIjklMNOpqrSTUvwxyz123456789"),
       chat_id: sequence(:telegram_chat_id, &"#{&1 + 100_000}"),
       events: ["meeting.created", "meeting.cancelled"],
+      is_active: true,
+      user: build(:user)
+    }
+  end
+
+  @spec slack_integration_factory() :: SlackIntegrationSchema.t()
+  def slack_integration_factory do
+    %SlackIntegrationSchema{
+      name: sequence(:slack_name, &"Slack #{&1}"),
+      app_mode: "oauth",
+      bot_token_encrypted: Encryption.encrypt("xoxb-test-token"),
+      team_id: sequence(:slack_team_id, &"T#{&1 + 100_000}"),
+      team_name: "Test Workspace",
+      channel_id: sequence(:slack_channel_id, &"C#{&1 + 100_000}"),
+      channel_name: "#bookings",
+      events: ["meeting.created", "meeting.cancelled", "meeting.rescheduled"],
       is_active: true,
       user: build(:user)
     }
