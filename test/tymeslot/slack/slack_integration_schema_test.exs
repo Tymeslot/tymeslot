@@ -129,9 +129,118 @@ defmodule Tymeslot.Slack.SlackIntegrationSchemaTest do
     end
   end
 
+  describe "oauth_init_changeset/2" do
+    test "accepts attrs without channel_id and encrypts the bot_token", %{user: user} do
+      attrs = %{
+        user_id: user.id,
+        name: "My Workspace",
+        app_mode: "oauth",
+        bot_token: "xoxb-init-token",
+        team_id: "T123",
+        team_name: "Acme",
+        authed_user_id: "U7",
+        scope: "chat:write,channels:read",
+        link_token: "linktok",
+        events: ["meeting.created"]
+      }
+
+      cs = SlackIntegrationSchema.oauth_init_changeset(%SlackIntegrationSchema{}, attrs)
+      assert cs.valid?
+
+      assert {:ok, integration} = Repo.insert(cs)
+      assert is_nil(integration.channel_id)
+      refute integration.bot_token_encrypted == "xoxb-init-token"
+      assert SlackIntegrationSchema.bot_token(integration) == "xoxb-init-token"
+    end
+
+    test "requires user_id, name, app_mode, bot_token, team_id" do
+      cs = SlackIntegrationSchema.oauth_init_changeset(%SlackIntegrationSchema{}, %{})
+      refute cs.valid?
+      errors = errors_on(cs)
+      assert "can't be blank" in errors.user_id
+      assert "can't be blank" in errors.name
+      assert "can't be blank" in errors.app_mode
+      assert "can't be blank" in errors.bot_token
+      assert "can't be blank" in errors.team_id
+    end
+
+    test "status/1 returns :pending_oauth for an oauth-mode record without channel_id", %{
+      user: user
+    } do
+      attrs = %{
+        user_id: user.id,
+        name: "Pending",
+        app_mode: "oauth",
+        bot_token: "xoxb-pending",
+        team_id: "T999",
+        events: ["meeting.created"]
+      }
+
+      integration =
+        %SlackIntegrationSchema{}
+        |> SlackIntegrationSchema.oauth_init_changeset(attrs)
+        |> Changeset.apply_changes()
+
+      assert SlackIntegrationSchema.status(integration) == :pending_oauth
+    end
+  end
+
+  describe "set_channel_changeset/2" do
+    test "transitions a pending integration to active by setting channel_id", %{user: user} do
+      pending_attrs = %{
+        user_id: user.id,
+        name: "Pending",
+        app_mode: "oauth",
+        bot_token: "xoxb-pending",
+        team_id: "T1",
+        events: ["meeting.created"]
+      }
+
+      {:ok, pending} =
+        %SlackIntegrationSchema{}
+        |> SlackIntegrationSchema.oauth_init_changeset(pending_attrs)
+        |> Repo.insert()
+
+      assert SlackIntegrationSchema.status(pending) == :pending_oauth
+
+      cs =
+        SlackIntegrationSchema.set_channel_changeset(pending, %{
+          channel_id: "C42",
+          channel_name: "#bookings"
+        })
+
+      assert cs.valid?
+      assert {:ok, updated} = Repo.update(cs)
+      assert updated.channel_id == "C42"
+      assert updated.channel_name == "#bookings"
+      assert SlackIntegrationSchema.status(updated) == :active
+    end
+
+    test "requires channel_id", %{user: user} do
+      pending = build_pending(user)
+
+      cs = SlackIntegrationSchema.set_channel_changeset(pending, %{})
+      refute cs.valid?
+      assert "can't be blank" in errors_on(cs).channel_id
+    end
+  end
+
   defp build_struct(attrs) do
     %SlackIntegrationSchema{}
     |> SlackIntegrationSchema.changeset(attrs)
+    |> Changeset.apply_changes()
+  end
+
+  defp build_pending(user) do
+    %SlackIntegrationSchema{}
+    |> SlackIntegrationSchema.oauth_init_changeset(%{
+      user_id: user.id,
+      name: "Pending",
+      app_mode: "oauth",
+      bot_token: "xoxb-pending",
+      team_id: "T1",
+      events: ["meeting.created"]
+    })
     |> Changeset.apply_changes()
   end
 end
