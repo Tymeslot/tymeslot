@@ -133,6 +133,41 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
                  "meeting_id" => meeting.id
                })
     end
+
+    test "auto-disables when Slack returns 404 (webhook URL revoked)" do
+      user = insert(:user)
+
+      integration =
+        insert(:slack_integration,
+          user: user,
+          app_mode: "webhook_url",
+          channel_id: nil,
+          bot_token_encrypted: nil,
+          webhook_url_encrypted: Encryption.encrypt("https://hooks.slack.com/services/T/B/abc")
+        )
+
+      meeting = insert(:meeting, organizer_user_id: user.id)
+
+      expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
+        {:ok, %{status: 404, body: "no_service"}}
+      end)
+
+      assert {:discard, "webhook_url_revoked"} =
+               perform_job(SlackWorker, %{
+                 "integration_id" => integration.id,
+                 "event_type" => "meeting.created",
+                 "meeting_id" => meeting.id
+               })
+
+      updated = Repo.get(SlackIntegrationSchema, integration.id)
+      refute updated.is_active
+      assert updated.disabled_at
+      assert updated.disabled_reason == "webhook_url_revoked"
+
+      delivery = Repo.one(SlackDeliverySchema)
+      assert delivery.integration_id == integration.id
+      assert delivery.error_message =~ "webhook_url_revoked"
+    end
   end
 
   describe "perform/1 — Slack error handling" do
