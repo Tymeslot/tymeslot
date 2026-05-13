@@ -106,6 +106,8 @@ config :tymeslot, :oban_queues,
   webhooks: 5,
   # Telegram message delivery
   telegram_messages: 10,
+  # Slack message delivery
+  slack_messages: 10,
   # Payment processing (used by SaaS)
   payments: 5,
   # Video room creation and management
