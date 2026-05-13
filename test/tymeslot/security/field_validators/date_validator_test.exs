@@ -34,5 +34,13 @@ defmodule Tymeslot.Security.FieldValidators.DateValidatorTest do
     test "non-binary value returns error" do
       assert {:error, _} = DateValidator.validate(20_260_513)
     end
+
+    test "returns error tuple on invalid min bound config" do
+      assert {:error, _} = DateValidator.validate("2026-05-13", min: "not-a-date")
+    end
+
+    test "returns error tuple on invalid max bound config" do
+      assert {:error, _} = DateValidator.validate("2026-05-13", max: "13/05/2026")
+    end
   end
 end
