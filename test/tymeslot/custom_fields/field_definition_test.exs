@@ -4,7 +4,10 @@ defmodule Tymeslot.CustomFields.FieldDefinitionTest do
   @moduletag :custom_fields
   @moduletag :schema
 
+  alias Ecto.Changeset
+  alias Ecto.UUID
   alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.CustomFields.FieldOption
 
   describe "changeset/2 — common rules" do
     test "auto-generates a UUID id when missing" do
@@ -15,7 +18,7 @@ defmodule Tymeslot.CustomFields.FieldDefinitionTest do
         })
 
       assert cs.valid?
-      assert {:ok, _} = Ecto.UUID.cast(Ecto.Changeset.get_field(cs, :id))
+      assert {:ok, _} = UUID.cast(Changeset.get_field(cs, :id))
     end
 
     test "label is required" do
@@ -46,7 +49,7 @@ defmodule Tymeslot.CustomFields.FieldDefinitionTest do
     end
 
     test "preserves an existing id" do
-      uuid = Ecto.UUID.generate()
+      uuid = UUID.generate()
 
       cs =
         FieldDefinition.changeset(%FieldDefinition{}, %{
@@ -55,7 +58,7 @@ defmodule Tymeslot.CustomFields.FieldDefinitionTest do
           "label" => "X"
         })
 
-      assert Ecto.Changeset.get_field(cs, :id) == uuid
+      assert Changeset.get_field(cs, :id) == uuid
     end
   end
 
@@ -104,20 +107,69 @@ defmodule Tymeslot.CustomFields.FieldDefinitionTest do
       assert cs.valid?
     end
 
-    test "options cleared when type changes from select to short_text" do
+    test "type change clears all type-specific config (select → short_text)" do
       cs =
         FieldDefinition.changeset(
           %FieldDefinition{
-            id: Ecto.UUID.generate(),
+            id: UUID.generate(),
             type: "single_select",
             label: "X",
-            options: [%Tymeslot.CustomFields.FieldOption{key: "a", label: "A"}]
+            options: [
+              %FieldOption{key: "a", label: "A"},
+              %FieldOption{key: "b", label: "B"}
+            ],
+            body: nil,
+            min: nil,
+            max: nil
           },
           %{"type" => "short_text"}
         )
 
       assert cs.valid?
-      assert Ecto.Changeset.get_field(cs, :options) == []
+      assert Changeset.get_field(cs, :options) == []
+      assert Changeset.get_field(cs, :body) == nil
+      assert Changeset.get_field(cs, :min) == nil
+      assert Changeset.get_field(cs, :max) == nil
+    end
+
+    test "type change clears min/max (number → single_select)" do
+      cs =
+        FieldDefinition.changeset(
+          %FieldDefinition{
+            id: UUID.generate(),
+            type: "number",
+            label: "Quantity",
+            min: 1,
+            max: 10
+          },
+          %{"type" => "single_select", "options" => [%{"label" => "A"}, %{"label" => "B"}]}
+        )
+
+      assert cs.valid?
+      assert Changeset.get_field(cs, :min) == nil
+      assert Changeset.get_field(cs, :max) == nil
+    end
+
+    test "multi_select requires at least 2 options" do
+      cs =
+        FieldDefinition.changeset(%FieldDefinition{}, %{
+          "type" => "multi_select",
+          "label" => "Pick many",
+          "options" => [%{"label" => "Only"}]
+        })
+
+      refute cs.valid?
+    end
+
+    test "multi_select accepts 2+ options" do
+      cs =
+        FieldDefinition.changeset(%FieldDefinition{}, %{
+          "type" => "multi_select",
+          "label" => "Pick many",
+          "options" => [%{"label" => "Red"}, %{"label" => "Blue"}]
+        })
+
+      assert cs.valid?
     end
 
     test "new short_text record with stray options has options cleared" do
@@ -162,7 +214,7 @@ defmodule Tymeslot.CustomFields.FieldDefinitionTest do
   end
 
   defp errors_on(cs) do
-    Ecto.Changeset.traverse_errors(cs, fn {msg, opts} ->
+    Changeset.traverse_errors(cs, fn {msg, opts} ->
       Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)

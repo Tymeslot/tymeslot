@@ -47,7 +47,7 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
     |> validate_length(:label, max: 120)
     |> validate_length(:help_text, max: 300)
     |> clear_irrelevant_type_config(definition)
-    |> validate_type_specific()
+    |> then(fn cs -> if cs.valid?, do: validate_type_specific(cs), else: cs end)
   end
 
   @doc "All known field type strings."
@@ -61,24 +61,40 @@ defmodule Tymeslot.CustomFields.FieldDefinition do
     end
   end
 
-  # When the type changes, clear config from the previous type so we don't
-  # leak stale `options` after switching to `short_text`, or stale `min`
-  # after switching to `note`. Host-side UI shows a confirmation dialog
-  # before doing this — the data-layer change here is the safety net.
+  @select_types ~w(single_select multi_select)
+
+  # When the type changes, clear config that belongs exclusively to the
+  # *previous* type so we don't leak stale data. Fields that are also
+  # meaningful for the new type are left untouched — e.g. `options` are
+  # kept when switching between select types, and `min`/`max` are kept
+  # when switching between numeric/date types.
+  #
+  # Host-side UI shows a confirmation dialog before doing this — the
+  # data-layer change here is the safety net.
   defp clear_irrelevant_type_config(cs, old) do
     new_type = get_field(cs, :type)
     old_type = old.type
 
     if new_type && new_type != old_type do
       cs
-      |> put_change(:options, [])
-      |> put_change(:body, nil)
-      |> put_change(:min, nil)
-      |> put_change(:max, nil)
+      |> maybe_clear_options(new_type)
+      |> maybe_clear_body(new_type)
+      |> maybe_clear_min_max(new_type)
     else
       cs
     end
   end
+
+  defp maybe_clear_options(cs, new_type) when new_type in @select_types, do: cs
+  defp maybe_clear_options(cs, _), do: put_change(cs, :options, [])
+
+  defp maybe_clear_body(cs, "note"), do: cs
+  defp maybe_clear_body(cs, _), do: put_change(cs, :body, nil)
+
+  defp maybe_clear_min_max(cs, new_type) when new_type in ~w(number date), do: cs
+
+  defp maybe_clear_min_max(cs, _),
+    do: cs |> put_change(:min, nil) |> put_change(:max, nil)
 
   defp validate_type_specific(cs) do
     case get_field(cs, :type) do
