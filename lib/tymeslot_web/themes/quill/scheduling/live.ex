@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
   alias TymeslotWeb.Themes.Quill.Scheduling.Components.{
     BookingComponent,
     ConfirmationComponent,
+    CustomQuestionsComponent,
     OverviewComponent,
     ScheduleComponent
   }
@@ -82,6 +83,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
             <.live_component module={OverviewComponent} id="overview-step" {assigns} />
           <% :schedule -> %>
             <.live_component module={ScheduleComponent} id="schedule-step" {assigns} />
+          <% :questions -> %>
+            <.live_component module={CustomQuestionsComponent} id="questions-step" {assigns} />
           <% :booking -> %>
             <.live_component module={BookingComponent} id="booking-step" {assigns} />
           <% :confirmation -> %>

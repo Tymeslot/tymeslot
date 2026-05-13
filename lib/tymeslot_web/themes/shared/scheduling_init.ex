@@ -7,6 +7,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
 
   alias Phoenix.LiveView
   alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
 
   @spec assign_theme_state(LiveView.Socket.t(), String.t()) :: LiveView.Socket.t()
   def assign_theme_state(socket, theme_id) do
@@ -36,6 +37,9 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:client_ip, nil)
     |> assign(:submission_token, nil)
     |> assign(:meeting_types, [])
+    # Engine starts empty; it is re-initialised with the meeting type's custom
+    # field snapshot in maybe_assign_meeting_type/2 once the organiser is resolved.
+    |> assign(:engine, QEngine.init([]))
   end
 
   @spec assign_base_state(LiveView.Socket.t()) :: LiveView.Socket.t()
