@@ -50,7 +50,6 @@ defmodule Tymeslot.Workers.SlackWorker do
       {:error, :disabled} -> {:discard, "Integration is disabled"}
       {:error, :insufficient_plan} -> handle_revoked_access(integration_id)
       {:error, :feature_access_checker_failed} -> {:error, :feature_access_checker_failed}
-      {:error, reason} -> {:error, reason}
     end
   end
 
