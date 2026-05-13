@@ -46,6 +46,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
+      #{MeetingComponents.custom_answers_section(appointment_details)}
+
       #{if Map.get(appointment_details, :meeting_url) do
         MeetingComponents.video_meeting_section(@intent, appointment_details.meeting_url,
         title: dgettext("emails", "Join when you're ready"),
@@ -100,6 +102,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       mjml_content = """
       #{MeetingComponents.meeting_details_table(meeting_details, organizer_locale(appointment_details))}
 
+      #{MeetingComponents.custom_answers_section(appointment_details)}
+
       #{MeetingComponents.attendee_info_section(@intent, %{name: appointment_details.attendee_name, email: appointment_details.attendee_email})}
 
       #{MeetingComponents.attendee_message_box(@intent, appointment_details[:attendee_message])}
@@ -151,6 +155,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
       TextBodyHelper.format_video_section(Map.get(appointment_details, :meeting_url), locale)
 
     action_links = TextBodyHelper.format_action_links(appointment_details, locale)
+    custom_answers = TextBodyHelper.format_custom_answers(appointment_details, locale)
 
     """
     #{dgettext("emails", "REMINDER: Our meeting in %{time_until}", time_until: appointment_details.time_until)}
@@ -160,7 +165,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
     #{dgettext("emails", "I'm looking forward to our conversation!")}
 
     #{dgettext("emails", "DETAILS:")}
-    #{meeting_details}#{video_section}
+    #{meeting_details}#{video_section}#{custom_answers}
     #{dgettext("emails", "Need to change plans?")}#{action_links}
 
     #{dgettext("emails", "See you %{time_until}!", time_until: appointment_details.time_until_friendly || dgettext("emails", "soon"))}
@@ -195,13 +200,19 @@ defmodule Tymeslot.Emails.Templates.AppointmentReminder do
         organizer_locale(appointment_details)
       )
 
+    custom_answers =
+      TextBodyHelper.format_custom_answers(
+        appointment_details,
+        organizer_locale(appointment_details)
+      )
+
     """
     #{dgettext("emails", "STARTING IN %{time_until}", time_until: appointment_details.time_until)}
 
     #{dgettext("emails", "Meeting with %{name}", name: appointment_details.attendee_name)}
 
     #{dgettext("emails", "MEETING DETAILS:")}
-    #{meeting_details}#{video_section}#{attendee_info}
+    #{meeting_details}#{video_section}#{attendee_info}#{custom_answers}
 
     #{dgettext("emails", "QUICK PREP:")}
     #{if Map.get(appointment_details, :meeting_url), do: dgettext("emails", "• Camera & mic ready"), else: dgettext("emails", "• Location confirmed")}

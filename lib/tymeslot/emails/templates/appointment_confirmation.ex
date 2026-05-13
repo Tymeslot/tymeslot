@@ -59,6 +59,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       #{MeetingComponents.meeting_details_table(meeting_details, locale)}
 
+      #{MeetingComponents.custom_answers_section(appointment_details)}
+
       #{if attendee_video_url do
         MeetingComponents.video_meeting_section(@intent, attendee_video_url,
         title: dgettext("emails", "Ready to join when it's time?"),
@@ -122,6 +124,8 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
 
       #{MeetingComponents.meeting_details_table(%{date: appointment_details.date, start_time: appointment_details.start_time_owner_tz, duration: appointment_details.duration, location: appointment_details.location, location_type: Map.get(appointment_details, :location_type), meeting_type: appointment_details.meeting_type, video_url: Map.get(appointment_details, :meeting_url), video_url_role: "host"}, organizer_locale(appointment_details))}
 
+      #{MeetingComponents.custom_answers_section(appointment_details)}
+
       #{Text.section_title(dgettext("emails", "Need to make changes?"))}
 
       #{MeetingComponents.meeting_actions_bar(@intent, [%{text: dgettext("emails", "Reschedule"), url: Map.get(appointment_details, :reschedule_url, "#"), style: :secondary}, %{text: dgettext("emails", "Cancel Appointment"), url: Map.get(appointment_details, :cancel_url, "#"), style: :danger}])}
@@ -175,6 +179,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
       )
 
     action_links = TextBodyHelper.format_action_links(appointment_details, locale)
+    custom_answers = TextBodyHelper.format_custom_answers(appointment_details, locale)
 
     """
     #{dgettext("emails", "Appointment Confirmed!")}
@@ -184,7 +189,7 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
     #{dgettext("emails", "I'm looking forward to our meeting. I've blocked the time on my calendar and will be ready for you.")}
 
     #{dgettext("emails", "MEETING DETAILS:")}
-    #{meeting_details}#{video_section}
+    #{meeting_details}#{video_section}#{custom_answers}
     #{action_links}
     #{if appointment_details.organizer_contact_info, do: "\n#{dgettext("emails", "QUESTIONS?")}\n#{appointment_details.organizer_contact_info}\n"}
     #{if appointment_details.reminders_summary, do: "\n#{appointment_details.reminders_summary}\n", else: ""}
@@ -219,13 +224,19 @@ defmodule Tymeslot.Emails.Templates.AppointmentConfirmation do
         organizer_locale(appointment_details)
       )
 
+    custom_answers =
+      TextBodyHelper.format_custom_answers(
+        appointment_details,
+        organizer_locale(appointment_details)
+      )
+
     """
     #{dgettext("emails", "New Appointment Booked!")}
 
     #{dgettext("emails", "%{name} has scheduled a meeting with you.", name: appointment_details.attendee_name)}#{attendee_info}
 
     #{dgettext("emails", "MEETING DETAILS:")}
-    #{meeting_details}#{video_section}#{action_links}
+    #{meeting_details}#{video_section}#{custom_answers}#{action_links}
 
     #{dgettext("emails", "PREPARATION REMINDERS:")}
     #{dgettext("emails", "- Review any relevant materials")}
