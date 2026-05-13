@@ -53,6 +53,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :video,
       :workers,
       :seo,
+      :slack,
       :telegram
     ],
     web_layer: [
