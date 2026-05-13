@@ -357,5 +357,12 @@ config :tymeslot, :reconciliation,
   # Number of days to look back when fetching subscriptions for reconciliation
   days_back: 7
 
+# Slack notifications — credentials supplied via env at runtime
+config :tymeslot,
+  slack_notifications_allowed: false,
+  slack_oauth_available: false,
+  slack_client_id: nil,
+  slack_client_secret: nil
+
 # Import environment specific config
 import_config "#{config_env()}.exs"
