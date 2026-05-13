@@ -13,6 +13,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
+  alias Ecto.UUID
   alias Tymeslot.Repo
 
   setup :setup_dashboard_user
@@ -104,7 +105,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
 
   describe "editing a custom question" do
     test "label change is reflected in the list", %{conn: conn, user: user} do
-      question_id = Ecto.UUID.generate()
+      question_id = UUID.generate()
 
       meeting_type =
         insert(:meeting_type,
@@ -146,7 +147,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
 
   describe "deleting a custom question" do
     test "question is removed from the list immediately", %{conn: conn, user: user} do
-      question_id = Ecto.UUID.generate()
+      question_id = UUID.generate()
 
       meeting_type =
         insert(:meeting_type,
@@ -175,6 +176,185 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
       html = render(view)
       refute html =~ "To be deleted"
       assert html =~ "No custom questions yet"
+    end
+  end
+
+  describe "type-change confirmation" do
+    test "shows confirmation banner when changing type with existing options", %{
+      conn: conn,
+      user: user
+    } do
+      question_id = UUID.generate()
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          custom_fields: [
+            %{
+              id: question_id,
+              type: "single_select",
+              label: "Favourite colour",
+              required: false,
+              position: 0,
+              options: [
+                %{key: "red", label: "Red"},
+                %{key: "blue", label: "Blue"}
+              ]
+            }
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      view
+      |> element("button[phx-click='edit_question'][phx-value-id='#{question_id}']")
+      |> render_click()
+
+      assert render(view) =~ "Edit question"
+
+      view
+      |> form("form[phx-change='validate']", %{
+        "definition" => %{"type" => "short_text"}
+      })
+      |> render_change()
+
+      html = render(view)
+      assert html =~ "Changing the type will clear the configuration"
+      # Type select still shows the original type
+      assert html =~ ~s(selected="" value="single_select")
+      # Options are still present
+      assert html =~ "Red"
+    end
+
+    test "Continue button applies the change and clears options", %{conn: conn, user: user} do
+      question_id = UUID.generate()
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          custom_fields: [
+            %{
+              id: question_id,
+              type: "single_select",
+              label: "Favourite colour",
+              required: false,
+              position: 0,
+              options: [
+                %{key: "red", label: "Red"},
+                %{key: "blue", label: "Blue"}
+              ]
+            }
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      view
+      |> element("button[phx-click='edit_question'][phx-value-id='#{question_id}']")
+      |> render_click()
+
+      view
+      |> form("form[phx-change='validate']", %{
+        "definition" => %{"type" => "short_text"}
+      })
+      |> render_change()
+
+      assert render(view) =~ "Changing the type will clear the configuration"
+
+      view
+      |> element("button[phx-click='confirm_type_change']")
+      |> render_click()
+
+      html = render(view)
+      refute html =~ "Changing the type will clear the configuration"
+      assert html =~ ~s(selected="" value="short_text")
+      # Options textarea is gone — editor has cleared the options config for short_text
+      refute html =~ ~s(name="definition[options_text]")
+    end
+
+    test "Cancel button reverts the type and hides the banner", %{conn: conn, user: user} do
+      question_id = UUID.generate()
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          custom_fields: [
+            %{
+              id: question_id,
+              type: "single_select",
+              label: "Favourite colour",
+              required: false,
+              position: 0,
+              options: [
+                %{key: "red", label: "Red"},
+                %{key: "blue", label: "Blue"}
+              ]
+            }
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      view
+      |> element("button[phx-click='edit_question'][phx-value-id='#{question_id}']")
+      |> render_click()
+
+      view
+      |> form("form[phx-change='validate']", %{
+        "definition" => %{"type" => "short_text"}
+      })
+      |> render_change()
+
+      assert render(view) =~ "Changing the type will clear the configuration"
+
+      view
+      |> element("button[phx-click='cancel_type_change']")
+      |> render_click()
+
+      html = render(view)
+      refute html =~ "Changing the type will clear the configuration"
+      assert html =~ ~s(selected="" value="single_select")
+      assert html =~ "Red"
+    end
+
+    test "type change with no config does not show banner", %{conn: conn, user: user} do
+      question_id = UUID.generate()
+
+      meeting_type =
+        insert(:meeting_type,
+          user: user,
+          custom_fields: [
+            %{
+              id: question_id,
+              type: "short_text",
+              label: "Company name",
+              required: false,
+              position: 0
+            }
+          ]
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      open_edit_form(view, meeting_type)
+
+      view
+      |> element("button[phx-click='edit_question'][phx-value-id='#{question_id}']")
+      |> render_click()
+
+      view
+      |> form("form[phx-change='validate']", %{
+        "definition" => %{"type" => "single_select"}
+      })
+      |> render_change()
+
+      refute render(view) =~ "Changing the type will clear the configuration"
     end
   end
 

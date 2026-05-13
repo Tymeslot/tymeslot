@@ -25,19 +25,52 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
      socket
      |> assign(assigns)
      |> assign(:definition, definition)
-     |> assign(:changeset, changeset)}
+     |> assign(:changeset, changeset)
+     |> assign_new(:original_type, fn -> definition.type end)
+     |> assign_new(:pending_type_change, fn -> nil end)}
   end
 
   @impl Phoenix.LiveComponent
   def handle_event("validate", %{"definition" => params}, socket) do
     params = normalise_params(params)
+    new_type = params["type"]
+    original_type = socket.assigns.original_type
+
+    if destructive_type_change?(new_type, original_type, socket.assigns.changeset) do
+      {:noreply, assign(socket, :pending_type_change, new_type)}
+    else
+      changeset =
+        socket.assigns.definition
+        |> FieldDefinition.changeset(params)
+        |> Map.put(:action, :validate)
+
+      {:noreply,
+       socket
+       |> assign(:changeset, changeset)
+       |> assign(:pending_type_change, nil)}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("cancel_type_change", _params, socket) do
+    {:noreply, assign(socket, :pending_type_change, nil)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("confirm_type_change", _params, socket) do
+    new_type = socket.assigns.pending_type_change
+    definition = socket.assigns.definition
 
     changeset =
-      socket.assigns.definition
-      |> FieldDefinition.changeset(params)
+      definition
+      |> FieldDefinition.changeset(%{"type" => new_type})
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, :changeset, changeset)}
+    {:noreply,
+     socket
+     |> assign(:changeset, changeset)
+     |> assign(:original_type, new_type)
+     |> assign(:pending_type_change, nil)}
   end
 
   @impl Phoenix.LiveComponent
@@ -155,6 +188,34 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
               <%!-- No type-specific fields for short_text, yes_no, phone, url, time --%>
           <% end %>
 
+          <%= if @pending_type_change do %>
+            <div role="alertdialog" aria-live="polite" class="rounded-token-lg border-2 bg-amber-50 border-amber-200 text-amber-800 p-4">
+              <p class="font-medium text-token-sm mb-3">
+                {gettext(
+                  "Changing the type will clear the configuration you've defined (options, body, min/max). Past bookings keep their original answers. Continue?"
+                )}
+              </p>
+              <div class="flex gap-2">
+                <CoreComponents.action_button
+                  type="button"
+                  variant={:secondary}
+                  phx-click="cancel_type_change"
+                  phx-target={@myself}
+                >
+                  {gettext("Cancel")}
+                </CoreComponents.action_button>
+                <CoreComponents.action_button
+                  type="button"
+                  variant={:primary}
+                  phx-click="confirm_type_change"
+                  phx-target={@myself}
+                >
+                  {gettext("Yes, change type")}
+                </CoreComponents.action_button>
+              </div>
+            </div>
+          <% end %>
+
           <div class="flex justify-end gap-2 pt-2">
             <CoreComponents.action_button
               type="button"
@@ -203,6 +264,21 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
     </div>
     """
   end
+
+  # Returns true when the user has selected a different type AND the current
+  # changeset has non-empty type-specific config that would be silently cleared.
+  defp destructive_type_change?(new_type, original_type, changeset)
+       when is_binary(new_type) and is_binary(original_type) and new_type != original_type do
+    options = Changeset.get_field(changeset, :options)
+    has_options = is_list(options) and options != []
+    body = Changeset.get_field(changeset, :body)
+    has_body = is_binary(body) and body != ""
+    has_min = not is_nil(Changeset.get_field(changeset, :min))
+    has_max = not is_nil(Changeset.get_field(changeset, :max))
+    has_options or has_body or has_min or has_max
+  end
+
+  defp destructive_type_change?(_new_type, _original_type, _changeset), do: false
 
   # Converts a persisted/staged list of FieldOption structs or maps back into
   # the newline-delimited text representation for the textarea.
