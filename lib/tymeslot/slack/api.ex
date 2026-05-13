@@ -131,12 +131,23 @@ defmodule Tymeslot.Slack.API do
   defp maybe_put_cursor(params, cursor), do: params ++ [{"cursor", cursor}]
 
   # Slack Web API: 200 with `{"ok": true, ...}` or `{"ok": false, "error": "..."}`.
-  defp parse_web_api_response({:ok, %{status: 200, body: body}}) do
+  defp parse_web_api_response({:ok, %{status: 200, body: body} = response}) do
     case decode_body(body) do
-      {:ok, %{"ok" => true} = decoded} -> {:ok, decoded}
-      {:ok, %{"ok" => false, "error" => err} = decoded} -> {:error, {:slack_error, err, decoded}}
-      {:ok, decoded} -> {:error, {:slack_error, "unknown", decoded}}
-      {:error, _reason} -> {:error, {:http_error, 200, body}}
+      {:ok, %{"ok" => true} = decoded} ->
+        {:ok, decoded}
+
+      {:ok, %{"ok" => false, "error" => "ratelimited"} = decoded} ->
+        retry_after = extract_retry_after(response)
+        {:error, {:slack_error, "ratelimited", decoded, retry_after}}
+
+      {:ok, %{"ok" => false, "error" => err} = decoded} ->
+        {:error, {:slack_error, err, decoded}}
+
+      {:ok, decoded} ->
+        {:error, {:slack_error, "unknown", decoded}}
+
+      {:error, _reason} ->
+        {:error, {:http_error, 200, body}}
     end
   end
 
@@ -156,6 +167,27 @@ defmodule Tymeslot.Slack.API do
     do: {:error, {:http_error, status, body}}
 
   defp parse_webhook_response({:error, reason}), do: {:error, {:transport_error, reason}}
+
+  # Extracts the `Retry-After` seconds from an HTTP response.
+  # Slack's Web API sets this header on 429-equivalent ratelimited responses.
+  # Returns nil when the header is absent or unparseable.
+  defp extract_retry_after(response) do
+    response
+    |> Map.get(:headers, %{})
+    |> Map.get("retry-after", [])
+    |> List.first()
+    |> parse_retry_after_value()
+  end
+
+  defp parse_retry_after_value(nil), do: nil
+  defp parse_retry_after_value(value) when is_binary(value), do: parse_integer(value)
+
+  defp parse_integer(str) do
+    case Integer.parse(str) do
+      {n, _rest} when n >= 0 -> n
+      _other -> nil
+    end
+  end
 
   defp decode_body(body) when is_binary(body), do: Jason.decode(body)
   defp decode_body(body) when is_map(body), do: {:ok, body}

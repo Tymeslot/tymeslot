@@ -231,11 +231,16 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
       assert Repo.get(SlackIntegrationSchema, integration.id).disabled_at
     end
 
-    test "snoozes on ratelimited with retry_after value", %{user: user, meeting: meeting} do
+    test "snoozes on ratelimited with Retry-After header value", %{user: user, meeting: meeting} do
       integration = insert(:slack_integration, user: user)
 
       expect(Tymeslot.HTTPClientMock, :post, fn _url, _body, _headers, _opts ->
-        {:ok, %{status: 200, body: ~s({"ok":false,"error":"ratelimited","retry_after":12})}}
+        {:ok,
+         %{
+           status: 200,
+           body: ~s({"ok":false,"error":"ratelimited"}),
+           headers: %{"retry-after" => ["12"]}
+         }}
       end)
 
       assert {:snooze, 12} =
@@ -288,11 +293,13 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
       end)
 
       assert {:error, {:http_error, 503}} =
-               perform_job(SlackWorker, %{
-                 "integration_id" => integration.id,
-                 "event_type" => "meeting.created",
-                 "meeting_id" => meeting.id
-               })
+               perform_job(
+                 SlackWorker,
+                 %{
+                   "integration_id" => integration.id,
+                   "event_type" => "meeting.created",
+                   "meeting_id" => meeting.id
+                 }, attempt: 5)
 
       updated = Repo.get(SlackIntegrationSchema, integration.id)
       assert updated.failure_count == 1
