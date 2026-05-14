@@ -304,6 +304,8 @@ defmodule Tymeslot.TestMocks do
     |> stub(:get_booking_integration_info, fn _user_id ->
       {:error, :no_integration}
     end)
+    |> stub(:create_event, fn _event_data, _context -> {:ok, %{uid: "mock-created-uid"}} end)
+    |> stub(:update_event, fn _uid, _event_data, _context -> :ok end)
 
     # Setup OAuth helper mocks
     google_url =

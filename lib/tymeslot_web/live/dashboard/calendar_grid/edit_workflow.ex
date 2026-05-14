@@ -6,6 +6,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
   alias Tymeslot.Integrations.Calendar.ICalBuilder
   alias Tymeslot.Integrations.Calendar.Operations, as: EventOperations
   alias Tymeslot.Integrations.Video.Rooms, as: VideoRooms
@@ -152,7 +153,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       result =
-        EventOperations.update_event(
+        CalendarEvents.update_event(
           original_event.uid,
           event_data,
           {original_event.calendar_integration_id, user_id}
@@ -211,7 +212,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       result =
-        EventOperations.update_event(
+        CalendarEvents.update_event(
           original_event.uid,
           event_data,
           {original_event.calendar_integration_id, user_id}
@@ -303,6 +304,8 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   # has already moved the source server's state and needs the
   # OfflineQueue to finish the create on the destination.
   defp run_move_steps(ctx) do
+    # Uses EventOperations directly: the 3-arity delete_event/3 with opts
+    # (provider_event_id) is not exposed on the Calendar.Events public API.
     case EventOperations.delete_event(
            ctx.event.uid,
            {ctx.event.calendar_integration_id, ctx.user_id},
@@ -322,7 +325,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
   end
 
   defp run_move_create_step(ctx) do
-    case EventOperations.create_event(ctx.event_attrs, {ctx.new_integration_id, ctx.user_id}) do
+    case CalendarEvents.create_event(ctx.event_attrs, {ctx.new_integration_id, ctx.user_id}) do
       {:ok, created} ->
         finish_successful_move(ctx, created)
 
@@ -421,7 +424,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow do
 
     Task.Supervisor.start_child(Tymeslot.TaskSupervisor, fn ->
       result =
-        EventOperations.update_event(
+        CalendarEvents.update_event(
           event.uid,
           event_data,
           {event.calendar_integration_id, user_id}
