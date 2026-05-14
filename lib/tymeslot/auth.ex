@@ -278,6 +278,15 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Returns the IDs of users currently eligible to receive marketing email — i.e.
+  who have a verified email and have not unsubscribed from marketing.
+  """
+  @spec list_marketing_eligible_user_ids() :: [integer()]
+  def list_marketing_eligible_user_ids do
+    UserQueries.list_marketing_eligible_user_ids()
+  end
+
+  @doc """
   Checks if an email is available for registration.
   Returns :ok if available, {:error, reason} otherwise.
   """
