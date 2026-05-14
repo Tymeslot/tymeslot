@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Dev.AnnouncementsPreviewLive do
     ~H"""
     <div class="min-h-screen bg-tymeslot-50 p-8">
       <div class="mx-auto max-w-2xl space-y-4 text-center">
-        <h1 class="display-sm text-tymeslot-900">Announcement preview</h1>
+        <h1 class="display-md text-tymeslot-900">Announcement preview</h1>
         <p class="text-token-sm text-tymeslot-600">
           Dev-only. The modal below shows every announcement registered in
           <code class="rounded-token-sm bg-tymeslot-100 px-1 py-0.5 text-token-xs">:announcement_catalogs</code>
