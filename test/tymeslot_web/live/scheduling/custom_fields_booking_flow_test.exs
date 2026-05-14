@@ -254,6 +254,78 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
     end
   end
 
+  describe "submission rejects when custom-field answers are missing at booking time" do
+    setup %{user: user} do
+      base_mt =
+        insert(:meeting_type,
+          user: user,
+          duration_minutes: 30,
+          name: "Validate Answers Chat",
+          is_active: true
+        )
+
+      {:ok, mt} =
+        MeetingTypes.update_meeting_type(base_mt, %{
+          "custom_fields" => [
+            %{
+              "id" => "cf-text-001",
+              "type" => "short_text",
+              "label" => "Company",
+              "required" => true,
+              "position" => 0
+            }
+          ]
+        })
+
+      %{meeting_type: mt}
+    end
+
+    @tag :capture_log
+    test "blank required answer in engine state stops booking creation and surfaces an error",
+         %{conn: conn, profile: profile} do
+      view = navigate_to_booking_form_with_questions(conn, profile)
+
+      # Walk through the wizard normally, supplying a valid answer.
+      view
+      |> element("input[name='value']")
+      |> render_blur(%{"value" => "Acme Corp"})
+
+      view |> element("button[phx-click='next'][phx-target]") |> render_click()
+
+      assert render(view) =~ "Enter Your Details"
+
+      # Now wipe the answer from engine state (simulates tampered params /
+      # corrupted client state reaching the submit handler). The parent
+      # LiveView's `:step_event` info handler stores the new value without
+      # re-validating, so the engine.answers map ends up missing the
+      # required field by the time validate_and_submit runs.
+      send(view.pid, {:step_event, :questions, :answer, {"cf-text-001", ""}})
+      _drain = :sys.get_state(view.pid)
+
+      view
+      |> form("form[phx-submit='submit']", %{
+        "booking" => %{
+          "name" => "Mallory",
+          "email" => "mallory@example.com",
+          "message" => ""
+        }
+      })
+      |> render_submit()
+
+      _drain = :sys.get_state(view.pid)
+
+      # No booking was created — the error branch short-circuited before
+      # `Bookings.Create.execute/3`.
+      assert MeetingQueries.list_meetings_by_attendee_email("mallory@example.com") == []
+
+      html = render(view)
+
+      # The form stays visible (no transition to :confirmation).
+      assert html =~ "Enter Your Details"
+      refute html =~ "Your answers"
+    end
+  end
+
   describe "booking flow with custom fields on Rhythm theme (T18)" do
     setup %{user: user} do
       base_mt =
