@@ -276,6 +276,18 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
+  Returns the IDs of users currently eligible to receive marketing email — i.e.
+  who have a verified email and have not unsubscribed from marketing.
+  """
+  @spec list_marketing_eligible_user_ids() :: [integer()]
+  def list_marketing_eligible_user_ids do
+    UserSchema
+    |> where([u], not is_nil(u.verified_at) and is_nil(u.marketing_unsubscribed_at))
+    |> select([u], u.id)
+    |> Repo.all()
+  end
+
+  @doc """
   Gets a user by ID with profile preloaded.
   """
   @spec get_user_with_profile!(integer()) :: UserSchema.t()
