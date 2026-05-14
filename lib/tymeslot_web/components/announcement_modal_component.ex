@@ -95,14 +95,9 @@ defmodule TymeslotWeb.Components.AnnouncementModalComponent do
                     {gettext("Got it")}
                   </.action_button>
                 <% @has_cta? -> %>
-                  <button
-                    type="button"
-                    class="text-token-sm text-tymeslot-500 hover:text-tymeslot-700 underline transition-colors"
-                    phx-click="cta"
-                    phx-target={@myself}
-                  >
+                  <.action_button variant={:secondary} phx-click="cta" phx-target={@myself}>
                     {@current.cta_label}
-                  </button>
+                  </.action_button>
                   <.action_button variant={:primary} phx-click="next" phx-target={@myself}>
                     {gettext("Next")}
                   </.action_button>
