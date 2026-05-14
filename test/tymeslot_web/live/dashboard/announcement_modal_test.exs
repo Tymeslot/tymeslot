@@ -2,7 +2,6 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
   use TymeslotWeb.LiveCase, async: false
 
   @moduletag :live
-  @moduletag :dashboard
 
   import Phoenix.LiveViewTest
   import Tymeslot.Factory
@@ -11,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
   alias Plug.Test, as: PlugTest
   alias Tymeslot.Announcements
   alias Tymeslot.Announcements.AnnouncementQueries
+  alias Tymeslot.AnnouncementsMidCtaTestCatalog
   alias Tymeslot.AnnouncementsSingleTestCatalog
   alias Tymeslot.AnnouncementsTestCatalog
   alias Tymeslot.AuthTestHelpers
@@ -195,6 +195,56 @@ defmodule TymeslotWeb.Dashboard.AnnouncementModalTest do
       assert rendered =~ "Alpha"
       assert rendered =~ "1 / 2"
       assert Process.alive?(view.pid)
+    end
+  end
+
+  describe "non-last item with a CTA — secondary CTA button alongside Next" do
+    setup do
+      previous = Application.get_env(:tymeslot, :announcement_catalogs, [])
+      Application.put_env(:tymeslot, :announcement_catalogs, [AnnouncementsMidCtaTestCatalog])
+      on_exit(fn -> Application.put_env(:tymeslot, :announcement_catalogs, previous) end)
+      :ok
+    end
+
+    test "renders secondary CTA button and Next button on the middle item", %{conn: conn} do
+      user = pre_existing_user()
+      conn = log_in(conn, user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      # Advance from item 1 (test_alpha, no CTA) to item 2 (test_gamma, has CTA, non-last).
+      view |> element(~s|button[phx-click="next"]|) |> render_click()
+
+      rendered = render(view)
+      assert rendered =~ "Gamma"
+      assert rendered =~ "2 / 3"
+      # Secondary CTA button and Next button must both be present.
+      assert rendered =~ "Try Gamma"
+      assert rendered =~ "Next"
+    end
+
+    test "clicking the CTA on a non-last item marks only that item seen and navigates", %{
+      conn: conn
+    } do
+      user = pre_existing_user()
+      conn = log_in(conn, user)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+
+      # Advance to item 2 (test_gamma).
+      view |> element(~s|button[phx-click="next"]|) |> render_click()
+
+      # Click the secondary CTA button on test_gamma (a non-last carousel item).
+      view |> element(~s|button[phx-click="cta"]|) |> render_click()
+
+      # Only test_gamma must be marked seen — test_alpha was marked seen when
+      # "next" was clicked; test_beta was never reached.
+      seen = Enum.sort(AnnouncementQueries.seen_keys_for(user.id))
+      assert seen == ["test_alpha", "test_gamma"]
+      refute "test_beta" in seen
+
+      # The component sends {:announcement_cta_navigate, path} to the parent LiveView.
+      assert_redirect(view, "/dashboard/gamma")
     end
   end
 

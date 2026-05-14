@@ -1,5 +1,15 @@
+defmodule Tymeslot.RaisingTestCatalog do
+  @moduledoc false
+  # Fixture catalog that always raises — used to verify safe_list/1 degrades gracefully.
+
+  @spec list() :: no_return()
+  def list, do: raise("catalog boom")
+end
+
 defmodule Tymeslot.AnnouncementsTest do
   use Tymeslot.DataCase, async: false
+
+  import ExUnit.CaptureLog
 
   @moduletag :database
   @moduletag :queries
@@ -8,6 +18,7 @@ defmodule Tymeslot.AnnouncementsTest do
   alias Tymeslot.Announcements.AnnouncementQueries
   alias Tymeslot.Announcements.UserSeenAnnouncementSchema
   alias Tymeslot.AnnouncementsTestCatalog
+  alias Tymeslot.RaisingTestCatalog
   alias Tymeslot.Repo
 
   describe "AnnouncementQueries.seen_keys_for/1" do
@@ -128,6 +139,23 @@ defmodule Tymeslot.AnnouncementsTest do
 
       published_ats = Enum.map(result, & &1.published_at)
       assert published_ats == Enum.sort(published_ats, DateTime)
+    end
+
+    test "degrades gracefully when a catalog raises — returns entries from healthy catalogs" do
+      Application.put_env(:tymeslot, :announcement_catalogs, [
+        RaisingTestCatalog,
+        AnnouncementsTestCatalog
+      ])
+
+      user = insert(:user, inserted_at: ~N[2025-12-01 00:00:00])
+
+      log =
+        capture_log(fn ->
+          result = Announcements.list_for(user)
+          assert [%{key: "test_alpha"}, %{key: "test_beta"}] = result
+        end)
+
+      assert log =~ "Announcement catalog failed to load; skipping."
     end
 
     test "combines entries from multiple registered catalogs" do
