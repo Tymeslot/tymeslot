@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   use TymeslotWeb, :html
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.{
     BaikalConfig,
@@ -499,31 +500,81 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   @spec available_providers_section(map()) :: Phoenix.LiveView.Rendered.t()
   def available_providers_section(assigns) do
+    {caldav_providers, other_providers} =
+      Enum.split_with(assigns.available_calendar_providers, fn descp ->
+        ProviderConfig.caldav_based?(descp.type)
+      end)
+
+    assigns =
+      assigns
+      |> assign(:caldav_providers, caldav_providers)
+      |> assign(:other_providers, other_providers)
+
     ~H"""
-    <div class="space-y-8 mt-16 pt-12 border-t border-tymeslot-50">
-      <div class="max-w-2xl">
-        <h2 class="text-2xl font-black text-tymeslot-900 tracking-tight">Available Providers</h2>
-        <p class="text-tymeslot-500 font-medium text-lg mt-2">
+    <div class="space-y-8 mt-12">
+      <div class="max-w-4xl">
+        <.section_header level={2} title="Available Providers" />
+        <p class="text-tymeslot-500 font-medium text-token-lg ml-1">
           Connect your favorite calendar service to sync availability and automate your scheduling workflow.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <%= for descp <- @available_calendar_providers do %>
-          <% info = Helpers.provider_card_info(descp.type) %>
-          <% has_existing = Enum.any?(@integrations, &(&1.provider == info.provider)) %>
-          <ProviderCard.provider_card
-            provider={info.provider}
-            title={descp.display_name}
-            description={info.desc}
-            button_text={if has_existing, do: "Add Another Account", else: info.btn}
-            click_event={info.click}
-            target={@myself}
-            provider_value={info.provider}
-          />
-        <% end %>
+      <div class="space-y-10">
+        <div :if={@other_providers != []} class="space-y-5">
+          <h3 class="text-token-xl font-black text-tymeslot-800 tracking-tight">
+            OAuth Providers
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <.calendar_provider_card
+              :for={descp <- @other_providers}
+              descp={descp}
+              integrations={@integrations}
+              myself={@myself}
+            />
+          </div>
+        </div>
+
+        <div :if={@caldav_providers != []} class="space-y-5">
+          <h3 class="text-token-xl font-black text-tymeslot-800 tracking-tight">
+            CalDAV Servers
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <.calendar_provider_card
+              :for={descp <- @caldav_providers}
+              descp={descp}
+              integrations={@integrations}
+              myself={@myself}
+            />
+          </div>
+        </div>
       </div>
     </div>
+    """
+  end
+
+  attr :descp, :map, required: true
+  attr :integrations, :list, required: true
+  attr :myself, :any, required: true
+
+  defp calendar_provider_card(assigns) do
+    info = Helpers.provider_card_info(assigns.descp.type)
+    has_existing = Enum.any?(assigns.integrations, &(&1.provider == info.provider))
+
+    assigns =
+      assigns
+      |> assign(:info, info)
+      |> assign(:has_existing, has_existing)
+
+    ~H"""
+    <ProviderCard.provider_card
+      provider={@info.provider}
+      title={@descp.display_name}
+      description={@info.desc}
+      button_text={if @has_existing, do: "Add Another Account", else: @info.btn}
+      click_event={@info.click}
+      target={@myself}
+      provider_value={@info.provider}
+    />
     """
   end
 
