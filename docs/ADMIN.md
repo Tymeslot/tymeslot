@@ -136,7 +136,6 @@ the commands above.
 |---|---|
 | `registration_enabled` | Whether new user registration is open |
 | `password_auth_enabled` | Whether the email/password login form is available (OAuth still works when disabled) |
-| `video_transcoding_enabled` | Whether uploaded videos are transcoded server-side |
 
 Each setting has three layers of precedence:
 

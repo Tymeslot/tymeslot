@@ -107,23 +107,6 @@ defmodule Tymeslot.Workers.VideoTranscoderTest do
     end
   end
 
-  describe "perform/1 - transcoding disabled" do
-    setup do
-      Application.put_env(:tymeslot, :video_transcoding_enabled, false)
-      on_exit(fn -> Application.put_env(:tymeslot, :video_transcoding_enabled, true) end)
-    end
-
-    test "cancels job when video_transcoding_enabled is false" do
-      theme_customization = insert_theme_customization()
-
-      assert {:cancel, "transcoding disabled"} =
-               perform_job(VideoTranscoder, %{
-                 "theme_customization_id" => theme_customization.id,
-                 "video_path" => "uploads/test-video.mp4"
-               })
-    end
-  end
-
   describe "perform/1 - path traversal" do
     test "rejects video_path containing directory traversal and sets status to failed" do
       theme_customization = insert_theme_customization()

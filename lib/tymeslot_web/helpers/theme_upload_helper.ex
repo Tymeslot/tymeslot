@@ -92,16 +92,14 @@ defmodule TymeslotWeb.Helpers.ThemeUploadHelper do
 
         case ThemeCustomizations.upsert_theme_customization(profile.id, theme_id, attrs) do
           {:ok, customization} ->
-            if Application.get_env(:tymeslot, :video_transcoding_enabled, true) do
-              case VideoTranscoder.enqueue(customization.id, stored_path) do
-                {:ok, _job} ->
-                  :ok
+            case VideoTranscoder.enqueue(customization.id, stored_path) do
+              {:ok, _job} ->
+                :ok
 
-                {:error, _reason} ->
-                  ThemeCustomizations.upsert_theme_customization(profile.id, theme_id, %{
-                    "video_processing" => "failed"
-                  })
-              end
+              {:error, _reason} ->
+                ThemeCustomizations.upsert_theme_customization(profile.id, theme_id, %{
+                  "video_processing" => "failed"
+                })
             end
 
             {:ok, "Background video uploaded successfully"}
