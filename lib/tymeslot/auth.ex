@@ -339,6 +339,11 @@ defmodule Tymeslot.Auth do
   defdelegate count_admins(), to: UserQueries
 
   @doc """
+  Returns `true` if at least one admin can sign in via email + password.
+  """
+  defdelegate any_admin_uses_password_auth?(), to: UserQueries
+
+  @doc """
   Promotes the user identified by `user_id` to admin.
 
   See `Tymeslot.Auth.AdminRoles.promote/2` for the full contract.

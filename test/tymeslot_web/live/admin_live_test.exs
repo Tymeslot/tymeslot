@@ -169,19 +169,14 @@ defmodule TymeslotWeb.AdminLiveTest do
              )
     end
 
-    test "refuses to disable password auth when no OAuth provider is configured", %{conn: conn} do
-      original_social = Application.get_env(:tymeslot, :social_auth, [])
+    test "refuses to disable password auth while an admin signs in with email + password",
+         %{conn: conn} do
+      # The admin signed in by the describe-block setup uses the default
+      # factory, which sets a password_hash — so the lockout protection should
+      # engage when they try to flip password_auth_enabled off.
       original_password_auth = Application.get_env(:tymeslot, :password_auth_enabled)
 
-      Application.put_env(:tymeslot, :social_auth,
-        google_enabled: false,
-        github_enabled: false,
-        oauth_enabled: false
-      )
-
       on_exit(fn ->
-        Application.put_env(:tymeslot, :social_auth, original_social)
-
         if original_password_auth == nil do
           Application.delete_env(:tymeslot, :password_auth_enabled)
         else
@@ -196,7 +191,7 @@ defmodule TymeslotWeb.AdminLiveTest do
         |> setting_tag(:password_auth_enabled, "false")
         |> render_click()
 
-      assert html =~ "would lock every user out"
+      assert html =~ "at least one admin signs in with email and password"
       # The setting did not actually change.
       assert Application.get_env(:tymeslot, :password_auth_enabled) == true
     end

@@ -3,6 +3,8 @@ defmodule Tymeslot.AppSettingsTest do
 
   @moduletag :infrastructure
 
+  import Tymeslot.Factory
+
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
   alias Tymeslot.Auth.AuthActions
@@ -10,14 +12,8 @@ defmodule Tymeslot.AppSettingsTest do
   setup do
     # AppSettings.load!/0 runs on application boot. The tests below toggle
     # Application env directly, so restore it after each one.
-    #
-    # Snapshot all editable keys plus `:social_auth` (which the lockout
-    # protection consults) so on_exit is symmetric with the schema: adding a
-    # fourth key in future automatically gets cleaned up here.
-    snapshot_keys = [:social_auth | AppSettings.keys()]
-
     originals =
-      Map.new(snapshot_keys, fn key -> {key, Application.get_env(:tymeslot, key)} end)
+      Map.new(AppSettings.keys(), fn key -> {key, Application.get_env(:tymeslot, key)} end)
 
     on_exit(fn ->
       # Clear any DB override that a test may have applied for every editable key.
@@ -32,14 +28,6 @@ defmodule Tymeslot.AppSettingsTest do
     end)
 
     :ok
-  end
-
-  # Enables the generic OAuth provider for the duration of a single test.
-  # Required when a test needs to disable `password_auth_enabled`, because
-  # `update/1` refuses the change otherwise.
-  defp enable_oauth_for_test do
-    existing = Application.get_env(:tymeslot, :social_auth, [])
-    Application.put_env(:tymeslot, :social_auth, Keyword.put(existing, :oauth_enabled, true))
   end
 
   describe "update/1 + load!/0" do
@@ -109,7 +97,7 @@ defmodule Tymeslot.AppSettingsTest do
     end
 
     test "disabling password_auth_enabled blocks password-based registration" do
-      enable_oauth_for_test()
+      # No admin exists, so the lockout protection does not engage.
       {:ok, _settings} = AppSettings.update(%{password_auth_enabled: false})
 
       socket = %Phoenix.LiveView.Socket{
@@ -121,7 +109,7 @@ defmodule Tymeslot.AppSettingsTest do
     end
 
     test "disabling password_auth_enabled blocks password reset requests" do
-      enable_oauth_for_test()
+      # No admin exists, so the lockout protection does not engage.
       {:ok, _settings} = AppSettings.update(%{password_auth_enabled: false})
 
       socket = %Phoenix.LiveView.Socket{
@@ -133,16 +121,15 @@ defmodule Tymeslot.AppSettingsTest do
     end
   end
 
-  # Lockout protection: disabling password auth with no OAuth fallback would
-  # leave the instance with no working sign-in path, locking out every user
-  # including the admin who triggered it. update/1 must refuse the change.
+  # Lockout protection: disabling password auth while at least one admin
+  # signs in with email + password would lock that admin out of their own
+  # account — having OAuth configured globally does not help if their
+  # personal account has no OAuth identity linked. update/1 must refuse the
+  # change in that situation.
   describe "lockout protection" do
-    test "refuses to disable password_auth_enabled when no OAuth is configured" do
-      Application.put_env(:tymeslot, :social_auth,
-        google_enabled: false,
-        github_enabled: false,
-        oauth_enabled: false
-      )
+    test "refuses to disable password_auth_enabled while a password-auth admin exists" do
+      # Default factory user has a password_hash → counts as using password auth.
+      insert(:user, is_admin: true)
 
       assert {:error, :would_lock_out} =
                AppSettings.update(%{password_auth_enabled: false})
@@ -151,19 +138,20 @@ defmodule Tymeslot.AppSettingsTest do
       assert Application.get_env(:tymeslot, :password_auth_enabled) == true
     end
 
-    test "allows disabling password_auth_enabled when an OAuth provider is configured" do
-      enable_oauth_for_test()
+    test "allows disabling password_auth_enabled when no admin uses password auth" do
+      # OAuth-only admin: password auth is not their sign-in path, so disabling
+      # it does not lock them out.
+      insert(:user, is_admin: true, password_hash: nil, google_user_id: "google-123")
+
+      # Non-admin password users do not block the toggle.
+      insert(:user, is_admin: false)
 
       assert {:ok, _settings} = AppSettings.update(%{password_auth_enabled: false})
       assert Application.get_env(:tymeslot, :password_auth_enabled) == false
     end
 
-    test "allows updates to unrelated settings even with no OAuth configured" do
-      Application.put_env(:tymeslot, :social_auth,
-        google_enabled: false,
-        github_enabled: false,
-        oauth_enabled: false
-      )
+    test "allows updates to unrelated settings even with a password-auth admin" do
+      insert(:user, is_admin: true)
 
       assert {:ok, _settings} = AppSettings.update(%{registration_enabled: false})
     end
@@ -171,15 +159,13 @@ defmodule Tymeslot.AppSettingsTest do
     test "allows re-enabling password_auth_enabled from an already locked-out state" do
       # Force the system into a locked-out state without going through update/1
       # (mirrors what could happen if env vars + DB were misconfigured at boot).
-      Application.put_env(:tymeslot, :social_auth,
-        google_enabled: false,
-        github_enabled: false,
-        oauth_enabled: false
-      )
-
       Application.put_env(:tymeslot, :password_auth_enabled, false)
 
-      # Admin recovers via a still-valid session — re-enabling must succeed.
+      # Admin recovers via a still-valid session — re-enabling must succeed
+      # even though a password-auth admin exists (re-enabling can't lock anyone
+      # out; it restores their sign-in path).
+      insert(:user, is_admin: true)
+
       assert {:ok, _settings} = AppSettings.update(%{password_auth_enabled: true})
       assert Application.get_env(:tymeslot, :password_auth_enabled) == true
     end
