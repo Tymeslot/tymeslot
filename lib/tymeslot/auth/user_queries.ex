@@ -61,11 +61,13 @@ defmodule Tymeslot.Auth.UserQueries do
 
   @doc """
   Lists all users in the system, ordered by id ascending.
+  Profiles are preloaded so callers (e.g. the admin users tab) can show
+  booking slug and display name without N+1 queries.
   Returns a list of user records (can be empty).
   """
   @spec list_all_users() :: [UserSchema.t()]
   def list_all_users do
-    Repo.all(from(u in UserSchema, order_by: u.id))
+    Repo.all(from(u in UserSchema, order_by: u.id, preload: [:profile]))
   end
 
   @doc """

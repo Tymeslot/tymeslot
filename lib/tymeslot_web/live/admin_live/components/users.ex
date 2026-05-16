@@ -8,6 +8,7 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
   use TymeslotWeb, :html
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.Profiles.ProfileSchema
   alias TymeslotWeb.AdminLive.Components.{ConfirmRoleChangeModal, Shared}
 
   attr :users, :list, required: true
@@ -30,6 +31,8 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
         <thead class="bg-tymeslot-50/60">
           <tr>
             <Shared.th>{gettext("Email")}</Shared.th>
+            <Shared.th>{gettext("Display name")}</Shared.th>
+            <Shared.th>{gettext("Booking slug")}</Shared.th>
             <Shared.th>{gettext("Role")}</Shared.th>
             <Shared.th class="text-right">{gettext("Actions")}</Shared.th>
           </tr>
@@ -44,6 +47,14 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
               >
                 {gettext("(you)")}
               </span>
+            </td>
+            <td class="px-6 py-4 text-sm text-tymeslot-900">
+              <span :if={profile_full_name(user)}>{profile_full_name(user)}</span>
+              <span :if={!profile_full_name(user)} class="text-tymeslot-400">—</span>
+            </td>
+            <td class="px-6 py-4 text-sm text-tymeslot-700">
+              <span :if={profile_username(user)} class="font-mono">{profile_username(user)}</span>
+              <span :if={!profile_username(user)} class="text-tymeslot-400">—</span>
             </td>
             <td class="px-6 py-4">
               <span
@@ -87,6 +98,18 @@ defmodule TymeslotWeb.AdminLive.Components.Users do
     </div>
     """
   end
+
+  defp profile_full_name(%{profile: %ProfileSchema{full_name: name}})
+       when is_binary(name) and name != "",
+       do: name
+
+  defp profile_full_name(_user), do: nil
+
+  defp profile_username(%{profile: %ProfileSchema{username: username}})
+       when is_binary(username) and username != "",
+       do: username
+
+  defp profile_username(_user), do: nil
 
   attr :user, :map, required: true
   attr :is_self, :boolean, required: true
