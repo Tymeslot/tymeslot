@@ -95,7 +95,22 @@ defmodule TymeslotWeb.Components.UserDropdownComponent do
             </div>
             Account Settings
           </div>
-          
+
+    <%!-- Admin (visible only to admin users) --%>
+          <.link
+            :if={@current_user.is_admin}
+            navigate={~p"/admin"}
+            class="group flex items-center px-4 py-3 text-sm font-bold text-tymeslot-700 hover:bg-turquoise-50 hover:text-turquoise-700 transition-colors"
+            role="menuitem"
+            phx-click="hide_user_dropdown"
+            phx-target={@myself}
+          >
+            <div class="w-8 h-8 rounded-lg bg-tymeslot-50 flex items-center justify-center mr-3 group-hover:bg-white transition-colors shadow-sm">
+              <.icon name="hero-shield-check" class="h-4 w-4 text-tymeslot-400 group-hover:text-turquoise-600" />
+            </div>
+            Admin Settings
+          </.link>
+
     <%!-- Divider --%>
           <div class="border-t-2 border-tymeslot-50 my-1"></div>
           

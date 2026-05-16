@@ -239,7 +239,7 @@ defmodule TymeslotWeb.Router do
         {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
         TymeslotWeb.Hooks.EnsureAdminHook
       ] do
-      live "/", AdminLive, :overview
+      live "/", AdminLive, :settings
       live "/settings", AdminLive, :settings
       live "/users", AdminLive, :users
     end

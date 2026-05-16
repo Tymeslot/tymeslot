@@ -29,10 +29,17 @@ defmodule Tymeslot.AppSettings do
   require Logger
 
   alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema}
+  alias Tymeslot.Infrastructure.Config
 
   @type setting_key :: :registration_enabled | :password_auth_enabled
   @type effective_source :: :db | :config | :default
   @type effective_value :: %{value: term(), source: effective_source(), db_value: term() | nil}
+
+  # Baseline = the config-layer value that was in effect before any DB
+  # override was applied. Captured once per BEAM lifetime in `:persistent_term`
+  # (purpose-built for read-heavy, write-rare configuration data) so reset/1
+  # can restore the original config value.
+  @baseline_sentinel :__app_settings_baseline_not_captured__
 
   @doc """
   Returns the list of admin-editable setting keys.
@@ -85,9 +92,29 @@ defmodule Tymeslot.AppSettings do
   Updates one or more settings. Pass `nil` for a key to clear the DB override
   and fall back to the config/default. The new values are pushed to
   `Application.put_env` on success so the change takes effect immediately.
+
+  Returns `{:error, :would_lock_out}` if the update would transition
+  `password_auth_enabled` from true to false while no social auth provider is
+  configured — without an alternative log-in path every user, including the
+  admin making the change, would be locked out. Updates from an already
+  locked-out state (e.g. an admin recovering via a still-valid session) are
+  allowed through unchanged.
   """
-  @spec update(map()) :: {:ok, AppSettingsSchema.t()} | {:error, Ecto.Changeset.t()}
+  @spec update(map()) ::
+          {:ok, AppSettingsSchema.t()} | {:error, Ecto.Changeset.t() | :would_lock_out}
   def update(attrs) when is_map(attrs) do
+    if would_cause_lockout?(attrs) do
+      Logger.warning("App settings update blocked: would lock out all users",
+        keys: Map.keys(attrs)
+      )
+
+      {:error, :would_lock_out}
+    else
+      apply_update(attrs)
+    end
+  end
+
+  defp apply_update(attrs) do
     case AppSettingsQueries.update_settings(attrs) do
       {:ok, settings} ->
         Enum.each(keys(), fn key -> apply_override(key, Map.get(settings, key)) end)
@@ -100,11 +127,44 @@ defmodule Tymeslot.AppSettings do
     end
   end
 
+  # Lockout protection: refuse to flip password_auth_enabled from true to false
+  # when no OAuth provider is configured. Recovery from an already locked-out
+  # state stays unblocked.
+  defp would_cause_lockout?(attrs) do
+    not Config.any_social_auth_enabled?() and
+      current_password_auth_enabled?() and
+      next_effective_value(:password_auth_enabled, attrs) == false
+  end
+
+  defp current_password_auth_enabled? do
+    Application.get_env(:tymeslot, :password_auth_enabled, default_for(:password_auth_enabled)) ==
+      true
+  end
+
+  # Computes what the effective value of `key` would be after applying `attrs`,
+  # without performing any side effects. Mirrors the same precedence rules
+  # `apply_override/2` and `restore_baseline/1` enforce on commit.
+  defp next_effective_value(key, attrs) do
+    case Map.fetch(attrs, key) do
+      {:ok, nil} -> baseline_or_default(key)
+      {:ok, value} -> value
+      :error -> Application.get_env(:tymeslot, key, default_for(key))
+    end
+  end
+
+  defp baseline_or_default(key) do
+    case :persistent_term.get(baseline_term(key), @baseline_sentinel) do
+      {:ok, value} -> value
+      _other -> default_for(key)
+    end
+  end
+
   @doc """
   Clears the DB override for `key`, falling back to the config layer or
   built-in default. Convenience wrapper over `update/1`.
   """
-  @spec reset(setting_key()) :: {:ok, AppSettingsSchema.t()} | {:error, Ecto.Changeset.t()}
+  @spec reset(setting_key()) ::
+          {:ok, AppSettingsSchema.t()} | {:error, Ecto.Changeset.t() | :would_lock_out}
   def reset(key) when is_atom(key), do: update(%{key => nil})
 
   @doc """
@@ -114,12 +174,6 @@ defmodule Tymeslot.AppSettings do
   @spec default_for(setting_key()) :: term()
   def default_for(:registration_enabled), do: true
   def default_for(:password_auth_enabled), do: true
-
-  # Baseline = the config-layer value that was in effect before any DB
-  # override was applied. Captured once per BEAM lifetime in `:persistent_term`
-  # (purpose-built for read-heavy, write-rare configuration data) so reset/1
-  # can restore the original config value.
-  @baseline_sentinel :__app_settings_baseline_not_captured__
 
   defp capture_baseline(key) do
     term = baseline_term(key)

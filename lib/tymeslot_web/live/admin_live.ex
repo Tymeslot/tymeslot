@@ -1,27 +1,40 @@
 defmodule TymeslotWeb.AdminLive do
   @moduledoc """
-  Self-hosted admin control panel. Three tabs:
+  Self-hosted admin control panel. Two tabs:
 
-    * `:overview` — install summary (counts, source of truth for each setting)
     * `:settings` — toggle admin-editable runtime settings (registration,
-      password auth, video transcoding)
-    * `:users` — list users and promote/demote admin status
+      password auth). These overrides shadow any matching environment
+      variable / application config value.
+    * `:users` — list users with counts at the top and
+      promote/demote admin actions.
 
   Mounted under `/admin` with the `RequireAdminUiEnabled` + `RequireAdmin`
   plugs on the static path and the `EnsureAdminHook` on_mount on the live
   socket. Returning here from a non-admin context 404s rather than 403s.
+
+  `/admin` resolves to `:settings`; each tab's rendering lives in its own
+  component module under `TymeslotWeb.AdminLive.Components.*`. This module
+  owns the LiveView callbacks, data loading, and event handling.
   """
 
   use TymeslotWeb, :live_view
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Ecto.Changeset
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
+  alias Tymeslot.Profiles
+  alias Tymeslot.Profiles.ProfileSchema
+  alias TymeslotWeb.AdminLive.Components.{Layout, Settings, Users}
+  alias TymeslotWeb.AdminLive.Formatters
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Admin")}
+    {:ok,
+     socket
+     |> assign(:page_title, "Admin")
+     |> assign(:profile, nil)
+     |> assign(:pending_action, nil)
+     |> assign(:role_change_submitting, false)}
   end
 
   @impl Phoenix.LiveView
@@ -29,51 +42,97 @@ defmodule TymeslotWeb.AdminLive do
     {:noreply, load_data(socket)}
   end
 
-  @impl Phoenix.LiveView
-  def handle_event("update_settings", %{"app_settings" => params}, socket) do
-    case AppSettings.update(coerce_setting_values(params)) do
-      {:ok, _settings} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, gettext("Settings updated."))
-         |> load_data()}
+  # --- Settings tab events ---
 
-      {:error, changeset} ->
-        {:noreply, assign(socket, :settings_form, to_form(changeset, as: "app_settings"))}
+  @impl Phoenix.LiveView
+  def handle_event("set_setting", %{"key" => key, "state" => state}, socket) do
+    with {:ok, atom_key} <- parse_setting_key(key),
+         {:ok, parsed} <- parse_setting_value(state) do
+      handle_setting_update(socket, atom_key, parsed, state)
+    else
+      _other -> {:noreply, put_flash(socket, :error, gettext("Could not update setting."))}
     end
   end
 
-  def handle_event("reset_setting", %{"key" => key}, socket) do
-    valid_keys = Map.new(AppSettings.keys(), fn k -> {Atom.to_string(k), k} end)
+  # --- Users tab events: role-change flow ---
 
-    case Map.fetch(valid_keys, key) do
-      {:ok, atom_key} ->
-        case AppSettings.reset(atom_key) do
-          {:ok, _settings} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, gettext("Setting reset to default."))
-             |> load_data()}
+  def handle_event("request_promote", params, socket),
+    do: open_pending_action(:promote, params, socket)
 
-          {:error, _changeset} ->
-            {:noreply, put_flash(socket, :error, gettext("Failed to reset setting."))}
-        end
+  def handle_event("request_demote", params, socket),
+    do: open_pending_action(:demote, params, socket)
 
-      :error ->
-        {:noreply, put_flash(socket, :error, gettext("Unknown setting."))}
-    end
+  def handle_event("cancel_pending_action", _params, socket) do
+    {:noreply, clear_pending_action(socket)}
   end
 
   def handle_event("promote_user", %{"id" => id}, socket) do
-    case parse_user_id(id) do
-      {:ok, user_id} -> handle_promote(user_id, socket)
-      :error -> {:noreply, put_flash(socket, :error, gettext("Invalid user id."))}
-    end
+    with_user_id(id, socket, &handle_promote(&1, assign(socket, :role_change_submitting, true)))
   end
 
   def handle_event("demote_user", %{"id" => id}, socket) do
+    with_user_id(id, socket, &handle_demote(&1, assign(socket, :role_change_submitting, true)))
+  end
+
+  defp handle_setting_update(socket, atom_key, parsed, state) do
+    case AppSettings.update(%{atom_key => parsed}) do
+      {:ok, _settings} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, setting_change_message(atom_key, state))
+         |> load_data()}
+
+      {:error, :would_lock_out} ->
+        {:noreply, put_flash(socket, :error, lockout_protection_message())}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not update setting."))}
+    end
+  end
+
+  defp lockout_protection_message do
+    gettext(
+      "Cannot disable password authentication while no OAuth provider is configured — doing so would lock every user out. Configure an OAuth provider first."
+    )
+  end
+
+  # --- Settings helpers ---
+
+  defp parse_setting_key(key) do
+    AppSettings.keys()
+    |> Map.new(fn k -> {Atom.to_string(k), k} end)
+    |> Map.fetch(key)
+  end
+
+  defp parse_setting_value("true"), do: {:ok, true}
+  defp parse_setting_value("false"), do: {:ok, false}
+  defp parse_setting_value(_other), do: :error
+
+  defp setting_change_message(key, "true"),
+    do: gettext("%{name} enabled.", name: Formatters.humanise(key))
+
+  defp setting_change_message(key, "false"),
+    do: gettext("%{name} disabled.", name: Formatters.humanise(key))
+
+  # --- Role-change helpers ---
+
+  defp open_pending_action(kind, %{"id" => id, "email" => email}, socket) do
     case parse_user_id(id) do
-      {:ok, user_id} -> handle_demote(user_id, socket)
+      {:ok, user_id} ->
+        {:noreply, assign(socket, :pending_action, %{kind: kind, id: user_id, email: email})}
+
+      :error ->
+        {:noreply, put_flash(socket, :error, gettext("Invalid user id."))}
+    end
+  end
+
+  defp open_pending_action(_kind, _params, socket) do
+    {:noreply, put_flash(socket, :error, gettext("Invalid request."))}
+  end
+
+  defp with_user_id(id, socket, fun) do
+    case parse_user_id(id) do
+      {:ok, user_id} -> fun.(user_id)
       :error -> {:noreply, put_flash(socket, :error, gettext("Invalid user id."))}
     end
   end
@@ -92,388 +151,112 @@ defmodule TymeslotWeb.AdminLive do
       {:ok, _user} ->
         {:noreply,
          socket
+         |> clear_pending_action()
          |> put_flash(:info, gettext("User promoted to admin."))
          |> push_patch(to: ~p"/admin/users")}
 
-      {:error, :not_found} ->
-        {:noreply, put_flash(socket, :error, gettext("User not found."))}
-
-      {:error, :admin_ui_disabled} ->
-        {:noreply, put_flash(socket, :error, gettext("Admin UI is disabled."))}
-
-      {:error, %Ecto.Changeset{}} ->
-        {:noreply, put_flash(socket, :error, gettext("Could not promote user."))}
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> clear_pending_action()
+         |> put_flash(:error, role_change_error_message(:promote, reason))}
     end
   end
 
   defp handle_demote(user_id, socket) do
+    self_demote? = user_id == socket.assigns.current_user.id
+
     case Auth.demote_admin(socket.assigns.current_user, user_id) do
+      {:ok, _user} when self_demote? ->
+        # Self-demote: force a full reload of /dashboard so the new request
+        # runs through the plug pipeline with the now-demoted user, dropping
+        # the admin menu entry and blocking /admin reentry.
+        {:noreply,
+         socket
+         |> clear_pending_action()
+         |> put_flash(:info, gettext("You have been demoted from admin."))
+         |> redirect(to: ~p"/dashboard")}
+
       {:ok, _user} ->
         {:noreply,
          socket
+         |> clear_pending_action()
          |> put_flash(:info, gettext("User demoted from admin."))
          |> push_patch(to: ~p"/admin/users")}
 
-      {:error, :not_found} ->
-        {:noreply, put_flash(socket, :error, gettext("User not found."))}
-
-      {:error, :last_admin} ->
+      {:error, reason} ->
         {:noreply,
-         put_flash(
-           socket,
-           :error,
-           gettext("Cannot demote the last admin. Promote someone else first.")
-         )}
-
-      {:error, :self_demotion} ->
-        {:noreply, put_flash(socket, :error, gettext("You cannot demote yourself."))}
-
-      {:error, :admin_ui_disabled} ->
-        {:noreply, put_flash(socket, :error, gettext("Admin UI is disabled."))}
-
-      {:error, %Ecto.Changeset{}} ->
-        {:noreply, put_flash(socket, :error, gettext("Could not demote user."))}
+         socket
+         |> clear_pending_action()
+         |> put_flash(:error, role_change_error_message(:demote, reason))}
     end
   end
 
+  defp role_change_error_message(_action, :not_found), do: gettext("User not found.")
+
+  defp role_change_error_message(_action, :admin_ui_disabled),
+    do: gettext("Admin UI is disabled.")
+
+  defp role_change_error_message(:demote, :last_admin),
+    do: gettext("Cannot demote the last admin. Promote someone else first.")
+
+  defp role_change_error_message(:promote, %Ecto.Changeset{}),
+    do: gettext("Could not promote user.")
+
+  defp role_change_error_message(:demote, %Ecto.Changeset{}),
+    do: gettext("Could not demote user.")
+
+  defp clear_pending_action(socket) do
+    socket
+    |> assign(:pending_action, nil)
+    |> assign(:role_change_submitting, false)
+  end
+
+  # --- Data loading ---
+
   defp load_data(socket) do
-    settings = AppSettings.get!()
+    user = socket.assigns.current_user
+    profile = Profiles.get_profile(user.id) || %ProfileSchema{user_id: user.id}
 
     socket
-    |> assign(:settings, settings)
-    |> assign(:settings_form, to_form(Changeset.change(settings), as: "app_settings"))
+    |> assign(:profile, profile)
     |> assign(:effective_values, AppSettings.effective_values())
     |> assign(:users, Auth.list_users())
     |> assign(:user_count, Auth.count_users())
     |> assign(:admin_count, Auth.count_admins())
   end
 
-  # The select sends "" for "Use default", which maps to nil so the DB row
-  # holds a NULL and the baseline/config value takes over again.
-  defp coerce_setting_values(params) do
-    params
-    |> Map.take(Enum.map(AppSettings.keys(), &Atom.to_string/1))
-    |> Map.new(fn {key, value} -> {key, coerce(value)} end)
-  end
-
-  defp coerce(""), do: nil
-  defp coerce("true"), do: true
-  defp coerce("false"), do: false
-  defp coerce(other), do: other
+  # --- Render: each tab is a thin shell around its component module ---
 
   @impl Phoenix.LiveView
-  def render(%{live_action: :overview} = assigns) do
-    ~H"""
-    <.admin_layout {assigns}>
-      <div class="grid gap-6 sm:grid-cols-3">
-        <.stat_card label={gettext("Total users")} value={@user_count} />
-        <.stat_card label={gettext("Admins")} value={@admin_count} />
-        <.stat_card label={gettext("DB overrides active")} value={count_db_overrides(@effective_values)} />
-      </div>
-
-      <div class="mt-8">
-        <h2 class="text-token-xl font-semibold text-tymeslot-900 mb-4">{gettext("Effective settings")}</h2>
-        <.settings_table effective_values={@effective_values} />
-      </div>
-    </.admin_layout>
-    """
-  end
-
   def render(%{live_action: :settings} = assigns) do
     ~H"""
-    <.admin_layout {assigns}>
-      <.form
-        for={@settings_form}
-        id="app-settings-form"
-        phx-submit="update_settings"
-        class="space-y-6"
-      >
-        <.setting_row
-          :for={key <- AppSettings.keys()}
-          field={@settings_form[key]}
-          key={key}
-          effective={Map.fetch!(@effective_values, key)}
-        />
-
-        <div class="flex justify-end">
-          <.action_button type="submit" variant={:primary}>{gettext("Save changes")}</.action_button>
-        </div>
-      </.form>
-    </.admin_layout>
+    <Layout.admin_layout
+      live_action={@live_action}
+      current_user={@current_user}
+      profile={@profile}
+    >
+      <Settings.settings_tab effective_values={@effective_values} />
+    </Layout.admin_layout>
     """
   end
 
   def render(%{live_action: :users} = assigns) do
     ~H"""
-    <.admin_layout {assigns}>
-      <div class="overflow-hidden rounded-token-lg border border-tymeslot-200 bg-white">
-        <table class="min-w-full divide-y divide-tymeslot-200">
-          <thead class="bg-tymeslot-50">
-            <tr>
-              <.th>{gettext("Email")}</.th>
-              <.th>{gettext("Role")}</.th>
-              <.th class="text-right">{gettext("Actions")}</.th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-tymeslot-100">
-            <tr :for={user <- @users}>
-              <td class="px-4 py-3 text-token-sm text-tymeslot-900">
-                {user.email}
-                <span :if={user.id == @current_user.id} class="ml-2 text-token-xs text-tymeslot-500">
-                  {gettext("(you)")}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-token-sm">
-                <span
-                  :if={user.is_admin}
-                  class="inline-flex items-center rounded-token-full bg-turquoise-100 px-2 py-0.5 text-token-xs font-medium text-turquoise-700"
-                >
-                  {gettext("Admin")}
-                </span>
-                <span :if={!user.is_admin} class="text-tymeslot-500">{gettext("User")}</span>
-              </td>
-              <td class="px-4 py-3 text-right">
-                <button
-                  :if={user.is_admin}
-                  type="button"
-                  phx-click="demote_user"
-                  phx-value-id={user.id}
-                  aria-label={gettext("Demote %{email} from admin", email: user.email)}
-                  data-confirm={gettext("Demote %{email} from admin?", email: user.email)}
-                  class="text-token-sm font-medium text-red-600 hover:text-red-800"
-                >
-                  {gettext("Demote")}
-                </button>
-                <button
-                  :if={!user.is_admin}
-                  type="button"
-                  phx-click="promote_user"
-                  phx-value-id={user.id}
-                  aria-label={gettext("Promote %{email} to admin", email: user.email)}
-                  data-confirm={gettext("Promote %{email} to admin?", email: user.email)}
-                  class="text-token-sm font-medium text-turquoise-600 hover:text-turquoise-800"
-                >
-                  {gettext("Promote")}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </.admin_layout>
-    """
-  end
-
-  # ----- Layout & UI helpers -----
-
-  attr :live_action, :atom, required: true
-  attr :current_user, :map, required: true
-  slot :inner_block, required: true
-
-  defp admin_layout(assigns) do
-    ~H"""
-    <div class="min-h-screen bg-tymeslot-50">
-      <div class="container mx-auto px-4 py-8">
-        <header class="mb-8 flex items-center justify-between">
-          <div>
-            <h1 class="display-lg text-tymeslot-900">{gettext("Admin")}</h1>
-            <p class="mt-1 text-token-sm text-tymeslot-600">
-              {gettext("Manage this self-hosted Tymeslot install.")}
-            </p>
-          </div>
-          <.link
-            navigate={~p"/dashboard"}
-            class="text-token-sm font-medium text-turquoise-600 hover:text-turquoise-800"
-          >
-            {gettext("← Back to dashboard")}
-          </.link>
-        </header>
-
-        <nav class="mb-6 flex gap-1 border-b border-tymeslot-200">
-          <.tab_link to={~p"/admin"} active={@live_action == :overview}>{gettext("Overview")}</.tab_link>
-          <.tab_link to={~p"/admin/settings"} active={@live_action == :settings}>{gettext("Settings")}</.tab_link>
-          <.tab_link to={~p"/admin/users"} active={@live_action == :users}>{gettext("Users")}</.tab_link>
-        </nav>
-
-        <main>
-          {render_slot(@inner_block)}
-        </main>
-      </div>
-    </div>
-    """
-  end
-
-  attr :to, :string, required: true
-  attr :active, :boolean, required: true
-  slot :inner_block, required: true
-
-  defp tab_link(assigns) do
-    ~H"""
-    <.link
-      navigate={@to}
-      class={[
-        "px-4 py-2 text-token-sm font-medium border-b-2 -mb-px transition-colors",
-        if(@active,
-          do: "border-turquoise-500 text-turquoise-700",
-          else: "border-transparent text-tymeslot-600 hover:text-tymeslot-900"
-        )
-      ]}
+    <Layout.admin_layout
+      live_action={@live_action}
+      current_user={@current_user}
+      profile={@profile}
     >
-      {render_slot(@inner_block)}
-    </.link>
+      <Users.users_tab
+        users={@users}
+        current_user={@current_user}
+        user_count={@user_count}
+        admin_count={@admin_count}
+        pending_action={@pending_action}
+        role_change_submitting={@role_change_submitting}
+      />
+    </Layout.admin_layout>
     """
-  end
-
-  attr :label, :string, required: true
-  attr :value, :integer, required: true
-
-  defp stat_card(assigns) do
-    ~H"""
-    <div class="rounded-token-lg border border-tymeslot-200 bg-white p-6">
-      <p class="text-token-xs font-medium uppercase tracking-wide text-tymeslot-500">{@label}</p>
-      <p class="mt-2 text-token-3xl font-semibold text-tymeslot-900">{@value}</p>
-    </div>
-    """
-  end
-
-  attr :effective_values, :map, required: true
-
-  defp settings_table(assigns) do
-    ~H"""
-    <div class="overflow-hidden rounded-token-lg border border-tymeslot-200 bg-white">
-      <table class="min-w-full divide-y divide-tymeslot-200">
-        <thead class="bg-tymeslot-50">
-          <tr>
-            <.th>{gettext("Setting")}</.th>
-            <.th>{gettext("Value")}</.th>
-            <.th>{gettext("Source")}</.th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-tymeslot-100">
-          <%!-- Iterate in AppSettings.keys/0 order so the table is deterministic across renders. --%>
-          <tr :for={key <- AppSettings.keys()}>
-            <td class="px-4 py-3 text-token-sm font-medium text-tymeslot-900">
-              {humanise(key)}
-            </td>
-            <td class="px-4 py-3 text-token-sm text-tymeslot-700">
-              {format_value(Map.fetch!(@effective_values, key).value)}
-            </td>
-            <td class="px-4 py-3 text-token-sm">
-              <.source_badge source={Map.fetch!(@effective_values, key).source} />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    """
-  end
-
-  attr :field, Phoenix.HTML.FormField, required: true
-  attr :key, :atom, required: true
-  attr :effective, :map, required: true
-
-  defp setting_row(assigns) do
-    ~H"""
-    <div class="rounded-token-lg border border-tymeslot-200 bg-white p-6">
-      <div class="flex items-start justify-between gap-6">
-        <div class="flex-1">
-          <h3 class="text-token-base font-semibold text-tymeslot-900">{humanise(@key)}</h3>
-          <p class="mt-1 text-token-sm text-tymeslot-600">
-            {gettext("Currently")} <span class="font-medium">{format_value(@effective.value)}</span>
-            (<.source_badge source={@effective.source} inline />).
-          </p>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <.input
-            type="select"
-            field={@field}
-            value={value_to_select_value(@field.value)}
-            options={[{gettext("Enabled"), "true"}, {gettext("Disabled"), "false"}]}
-            prompt={gettext("Use config / default")}
-          />
-
-          <button
-            :if={@effective.source == :db}
-            type="button"
-            phx-click="reset_setting"
-            phx-value-key={@key}
-            class="text-token-xs font-medium text-tymeslot-500 hover:text-tymeslot-900"
-          >
-            {gettext("Reset")}
-          </button>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  attr :source, :atom, required: true
-  attr :inline, :boolean, default: false
-
-  defp source_badge(assigns) do
-    classes =
-      case assigns.source do
-        :db -> "bg-turquoise-100 text-turquoise-700"
-        :config -> "bg-blue-100 text-blue-700"
-        :default -> "bg-tymeslot-100 text-tymeslot-700"
-      end
-
-    label =
-      case assigns.source do
-        :db -> gettext("DB override")
-        :config -> gettext("Environment / config")
-        :default -> gettext("Built-in default")
-      end
-
-    assigns = assign(assigns, classes: classes, label: label)
-
-    ~H"""
-    <span class={[
-      "inline-flex items-center rounded-token-full px-2 py-0.5 text-token-xs font-medium",
-      @classes,
-      if(@inline, do: "ml-0", else: "")
-    ]}>
-      {@label}
-    </span>
-    """
-  end
-
-  attr :class, :string, default: ""
-  slot :inner_block, required: true
-
-  defp th(assigns) do
-    ~H"""
-    <th
-      scope="col"
-      class={[
-        "px-4 py-3 text-left text-token-xs font-medium uppercase tracking-wide text-tymeslot-500",
-        @class
-      ]}
-    >
-      {render_slot(@inner_block)}
-    </th>
-    """
-  end
-
-  defp humanise(:registration_enabled), do: gettext("Registration enabled")
-  defp humanise(:password_auth_enabled), do: gettext("Password authentication")
-  defp humanise(:video_transcoding_enabled), do: gettext("Video transcoding")
-
-  defp humanise(key),
-    do: key |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
-
-  defp format_value(true), do: gettext("Enabled")
-  defp format_value(false), do: gettext("Disabled")
-  defp format_value(nil), do: "—"
-  defp format_value(other), do: inspect(other)
-
-  defp value_to_select_value(nil), do: ""
-  defp value_to_select_value(true), do: "true"
-  defp value_to_select_value(false), do: "false"
-  defp value_to_select_value(value) when is_binary(value), do: value
-
-  defp count_db_overrides(effective_values) do
-    Enum.count(effective_values, fn {_key, info} -> info.source == :db end)
   end
 end
