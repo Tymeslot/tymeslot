@@ -102,9 +102,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     {:noreply, socket}
   end
 
-  def handle_event("connect_baikal_calendar", _params, socket),
-    do: {:noreply, setup_config_view(socket, :baikal)}
-
   def handle_event("refresh_all_calendars", _params, socket) do
     if socket.assigns.is_refreshing do
       {:noreply, socket}
