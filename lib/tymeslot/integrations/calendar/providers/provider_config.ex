@@ -40,49 +40,49 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       icon: "caldav",
       description: "Universal CalDAV server support",
       button_text: "Connect CalDAV",
-      click_event: "connect_caldav_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     radicale: %{
       icon: "radicale",
       description: "Lightweight self-hosted calendar server",
       button_text: "Connect Radicale",
-      click_event: "connect_radicale_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     nextcloud: %{
       icon: "nextcloud",
       description: "Self-hosted Nextcloud calendar sync",
       button_text: "Connect Nextcloud",
-      click_event: "connect_nextcloud_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     zimbra: %{
       icon: "zimbra",
       description: "Enterprise Zimbra calendar integration",
       button_text: "Connect Zimbra",
-      click_event: "connect_zimbra_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     mailbox_org: %{
       icon: "mailbox_org",
       description: "Sync calendars from your mailbox.org account",
       button_text: "Connect mailbox.org",
-      click_event: "connect_mailbox_org_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     google: %{
       icon: "google",
       description: "Full OAuth integration with Google Meet support",
       button_text: "Connect Google",
-      click_event: "connect_google_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     outlook: %{
       icon: "outlook",
       description: "Microsoft 365 and Outlook.com integration",
       button_text: "Connect Outlook",
-      click_event: "connect_outlook_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     demo: %{

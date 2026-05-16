@@ -117,7 +117,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
   end
 
   describe "calendar_item reconnect button" do
-    test "renders a Reconnect button for Google integrations" do
+    test "renders an OAuth Reconnect button for Google integrations" do
       integration = %{
         id: 42,
         name: "Work Google",
@@ -139,12 +139,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
           myself: "target"
         )
 
-      assert html =~ ~s(phx-click="reconnect_integration")
-      assert html =~ ~s(phx-value-id="42")
+      assert html =~ ~s(phx-click="connect_provider")
+      assert html =~ ~s(phx-value-provider="google")
       assert html =~ "Reconnect"
     end
 
-    test "renders a Reconnect button for CalDAV integrations" do
+    test "renders a modal-targeted Reconnect button for CalDAV integrations" do
       integration = %{
         id: 7,
         name: "My CalDAV",
@@ -166,8 +166,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ComponentsTest do
           myself: "target"
         )
 
-      assert html =~ ~s(phx-click="reconnect_integration")
+      assert html =~ ~s(phx-click="show_reconnect")
       assert html =~ ~s(phx-value-id="7")
+      assert html =~ ~s(phx-target="#caldav-reconnect-modal")
       assert html =~ "Reconnect"
     end
   end

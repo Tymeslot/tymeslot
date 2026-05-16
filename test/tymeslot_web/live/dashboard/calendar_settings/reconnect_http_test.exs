@@ -93,7 +93,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       html =
@@ -149,7 +149,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       view
@@ -202,7 +202,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       html =
@@ -260,7 +260,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       view
@@ -303,7 +303,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       html =
@@ -343,7 +343,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       # Phase 1: submit changed credentials (username flip triggers :account_change).
@@ -375,7 +375,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       assert reloaded.calendar_paths == [new_calendar_href]
       assert reloaded.needs_reauth == false
 
-      # Modal must close: the reconnect_integration assign is cleared.
+      # Modal must close: CaldavReconnectModal resets its `:show` flag.
       refute has_element?(view, "form[phx-submit='reconnect_caldav_submit']")
     end
   end
@@ -433,7 +433,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       )
 
       view
-      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> element("button[phx-click='show_reconnect'][phx-value-id='#{integration.id}']")
       |> render_click()
 
       view
