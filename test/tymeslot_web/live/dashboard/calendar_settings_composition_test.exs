@@ -93,7 +93,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
           {"connect_radicale_calendar", "Radicale"},
           {"connect_nextcloud_calendar", "Nextcloud"},
           {"connect_zimbra_calendar", "Zimbra"},
-          {"connect_mailbox_org_calendar", "mailbox.org"}
+          {"connect_mailbox_org_calendar", "mailbox.org"},
+          {"connect_baikal_calendar", "Baikal"}
         ] do
       @event event
       @label label

@@ -11,7 +11,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
                "radicale",
                "nextcloud",
                "zimbra",
-               "mailbox_org"
+               "mailbox_org",
+               "baikal"
              ]
     end
 
