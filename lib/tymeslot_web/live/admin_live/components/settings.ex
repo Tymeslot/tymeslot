@@ -63,8 +63,22 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
         aria-label={gettext("Set %{name}", name: Formatters.humanise(@key))}
         class="inline-flex p-1 bg-white border-2 border-tymeslot-100 rounded-token-xl shadow-sm gap-1 flex-shrink-0"
       >
-        <.setting_tag key={@key} state="true" label={gettext("Enabled")} active={@effective.value == true} />
-        <.setting_tag key={@key} state="false" label={gettext("Disabled")} active={@effective.value == false} />
+        <.setting_tag
+          key={@key}
+          state="true"
+          label={gettext("Enabled")}
+          active={@effective.value == true}
+          locked={true in @effective.locked_states}
+          lock_reason={Formatters.lock_reason(@key, true)}
+        />
+        <.setting_tag
+          key={@key}
+          state="false"
+          label={gettext("Disabled")}
+          active={@effective.value == false}
+          locked={false in @effective.locked_states}
+          lock_reason={Formatters.lock_reason(@key, false)}
+        />
       </div>
     </div>
     """
@@ -87,6 +101,8 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
   attr :state, :string, required: true
   attr :label, :string, required: true
   attr :active, :boolean, required: true
+  attr :locked, :boolean, default: false
+  attr :lock_reason, :string, default: nil
 
   # NOTE: the param is named `state`, not `value`, because Phoenix LiveView's
   # client-side serialisation reads the button's native `value` IDL property
@@ -98,14 +114,17 @@ defmodule TymeslotWeb.AdminLive.Components.Settings do
       phx-click="set_setting"
       phx-value-key={@key}
       phx-value-state={@state}
-      disabled={@active}
+      disabled={@active or @locked}
       aria-pressed={@active}
+      aria-disabled={@locked}
+      title={@lock_reason}
       class={[
         "px-3 py-1.5 rounded-token-lg text-xs font-black uppercase tracking-wider transition-all",
-        if(@active,
-          do: "bg-turquoise-600 text-white shadow-md shadow-turquoise-200/40 cursor-default",
-          else: "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900 cursor-pointer"
-        )
+        cond do
+          @active -> "bg-turquoise-600 text-white shadow-md shadow-turquoise-200/40 cursor-default"
+          @locked -> "text-tymeslot-300 cursor-not-allowed"
+          true -> "text-tymeslot-500 hover:bg-tymeslot-50 hover:text-tymeslot-900 cursor-pointer"
+        end
       ]}
     >
       {@label}

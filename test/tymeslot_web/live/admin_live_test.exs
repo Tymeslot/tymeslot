@@ -169,11 +169,25 @@ defmodule TymeslotWeb.AdminLiveTest do
              )
     end
 
-    test "refuses to disable password auth while an admin signs in with email + password",
+    test "Disabled tag for password auth is locked when an admin uses password auth",
          %{conn: conn} do
-      # The admin signed in by the describe-block setup uses the default
-      # factory, which sets a password_hash — so the lockout protection should
-      # engage when they try to flip password_auth_enabled off.
+      # The setup admin has a password_hash, so disabling password auth would
+      # lock them out. The toggle should be rendered as disabled upfront —
+      # never relying on the after-click flash to communicate the block.
+      {:ok, _lv, html} = live(conn, ~p"/admin/settings")
+
+      assert html =~
+               ~s(phx-value-key="password_auth_enabled" phx-value-state="false" disabled)
+
+      assert html =~ "Cannot disable password authentication"
+    end
+
+    test "stale set_setting event surfaces the lockout reason as a flash",
+         %{conn: conn} do
+      # In steady state the Disabled tag is rendered with `disabled`, so a real
+      # browser can't fire this event. The server-side guard still has to hold
+      # for the race where the lockout state changes between page render and
+      # click — exercise it by firing the event directly.
       original_password_auth = Application.get_env(:tymeslot, :password_auth_enabled)
 
       on_exit(fn ->
@@ -187,9 +201,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/settings")
 
       html =
-        lv
-        |> setting_tag(:password_auth_enabled, "false")
-        |> render_click()
+        render_click(lv, "set_setting", %{"key" => "password_auth_enabled", "state" => "false"})
 
       assert html =~ "at least one admin signs in with email and password"
       # The setting did not actually change.
