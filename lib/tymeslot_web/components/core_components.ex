@@ -347,7 +347,11 @@ defmodule TymeslotWeb.Components.CoreComponents do
   attr :id, :string, required: true
   attr :show, :boolean, default: false
   attr :on_cancel, JS, default: %JS{}
-  attr :size, :atom, default: :medium, values: [:small, :medium, :large, :xlarge, :full]
+
+  attr :size, :atom,
+    default: :medium,
+    values: [:xsmall, :small, :medium, :large, :xlarge, :full]
+
   slot :header, required: false
   slot :inner_block, required: true
   slot :footer, required: false

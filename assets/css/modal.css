@@ -46,6 +46,10 @@
 }
 
 /* Size Variants */
+.modal-content--xsmall {
+  @apply max-w-sm;
+}
+
 .modal-content--small {
   @apply max-w-md;
 }

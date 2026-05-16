@@ -4,12 +4,14 @@ defmodule Tymeslot.Auth.AdminRoles do
 
   This module is the single entry point for promoting and demoting admin users.
   Both the LiveView admin UI and the CLI release helpers route through here,
-  ensuring that all business rules (last-admin guard, self-demotion guard,
-  audit logging) are applied consistently.
+  ensuring that all business rules (last-admin guard, audit logging) are
+  applied consistently.
 
-  The `:cli` actor skips the self-demotion and last-admin guards, providing an
-  operator escape hatch when the UI cannot be used (e.g. to recover a stranded
-  install where every admin has been demoted).
+  Self-demotion is allowed for `%UserSchema{}` actors as long as at least one
+  other admin remains; the `:last_admin` guard is what prevents stranding the
+  install. The `:cli` actor additionally skips the last-admin guard, providing
+  an operator escape hatch when the UI cannot be used (e.g. to recover a
+  stranded install where every admin has been demoted).
   """
 
   require Logger
@@ -61,9 +63,11 @@ defmodule Tymeslot.Auth.AdminRoles do
   @doc """
   Demotes the user identified by `target_user_id` from admin.
 
-  Guards (skipped when actor is `:cli`):
-    * Returns `{:error, :self_demotion}` when a `%UserSchema{}` actor tries to
-      demote themselves.
+  Self-demotion is allowed: an admin may demote themselves provided at least
+  one other admin will remain afterwards. The `:last_admin` guard below
+  prevents stranding the install.
+
+  Guard (skipped when actor is `:cli`):
     * Returns `{:error, :last_admin}` when the target is the only remaining
       admin user (checked inside a locked transaction to prevent races).
 
@@ -71,17 +75,14 @@ defmodule Tymeslot.Auth.AdminRoles do
     * `{:ok, %UserSchema{}}` on success
     * `{:error, :admin_ui_disabled}` if the admin UI feature flag is off
     * `{:error, :not_found}` if no user has that ID
-    * `{:error, :self_demotion}` if the actor attempts to demote themselves
     * `{:error, :last_admin}` if the target is the only admin
     * `{:error, changeset}` if the database update fails
   """
   @spec demote(actor(), pos_integer()) ::
           {:ok, UserSchema.t()}
-          | {:error,
-             :not_found | :last_admin | :self_demotion | :admin_ui_disabled | Ecto.Changeset.t()}
+          | {:error, :not_found | :last_admin | :admin_ui_disabled | Ecto.Changeset.t()}
   def demote(actor, target_user_id) do
-    with :ok <- ensure_admin_ui_enabled(),
-         :ok <- check_self_demotion(actor, target_user_id) do
+    with :ok <- ensure_admin_ui_enabled() do
       Repo.transaction(fn -> demote_in_transaction(actor, target_user_id) end)
     end
   end
@@ -126,15 +127,6 @@ defmodule Tymeslot.Auth.AdminRoles do
       {:error, :admin_ui_disabled}
     end
   end
-
-  # CLI actor: no self-demotion restriction.
-  defp check_self_demotion(:cli, _target_user_id), do: :ok
-
-  defp check_self_demotion(%UserSchema{id: actor_id}, target_user_id)
-       when actor_id == target_user_id,
-       do: {:error, :self_demotion}
-
-  defp check_self_demotion(_actor, _target_user_id), do: :ok
 
   # CLI actor: skips the last-admin guard — it is the operator escape hatch.
   defp check_last_admin(:cli, _target), do: :ok
