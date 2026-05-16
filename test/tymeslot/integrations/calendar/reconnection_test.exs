@@ -79,54 +79,64 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
     end
   end
 
-  describe "reconnect/3 (password-only)" do
+  describe "reconnect/3" do
     setup do
       integration = insert_decrypted_caldav_integration(%{needs_reauth: true})
       %{integration: integration}
     end
 
-    test "password-only: test passes, record updated, needs_reauth cleared", %{
-      integration: integration
-    } do
+    test "same credentials: returns :needs_calendar_selection so caller can add more calendars",
+         %{integration: integration} do
+      # Bug fix: previously `:password_only` short-circuited straight to a
+      # save, hiding the calendar picker. Users with partial selections then
+      # had no way to add the unselected ones without deleting the
+      # integration. Reconnect now always surfaces the full calendar list.
       params = %{
         "url" => "https://caldav.example.com",
         "username" => "alice",
         "password" => "newpass"
       }
 
-      ok_connection = fn _params -> :ok end
+      discover = fn _provider, _url, _username, _password ->
+        {:ok,
+         %{
+           calendars: [
+             %{
+               "id" => "/calendars/alice/default/",
+               "path" => "/calendars/alice/default/",
+               "name" => "Default",
+               "type" => "calendar"
+             },
+             %{
+               "id" => "/calendars/alice/work/",
+               "path" => "/calendars/alice/work/",
+               "name" => "Work",
+               "type" => "calendar"
+             }
+           ],
+           discovery_credentials: %{
+             url: "https://caldav.example.com",
+             username: "alice",
+             password: "newpass"
+           }
+         }}
+      end
 
-      assert {:ok, :updated, updated} =
-               Reconnection.reconnect(integration, params, test_connection: ok_connection)
+      assert {:ok, :needs_calendar_selection, payload} =
+               Reconnection.reconnect(integration, params, discover: discover)
 
-      reloaded = Repo.get!(CalendarIntegrationSchema, updated.id)
-      assert reloaded.needs_reauth == false
-      assert length(reloaded.calendar_list) == length(integration.calendar_list)
-    end
+      assert Enum.map(payload.calendars, & &1["path"]) == [
+               "/calendars/alice/default/",
+               "/calendars/alice/work/"
+             ]
 
-    test "password-only: invalid credentials short-circuits and does not update", %{
-      integration: integration
-    } do
-      params = %{
-        "url" => "https://caldav.example.com",
-        "username" => "alice",
-        "password" => "wrongpass"
-      }
+      assert payload.credentials.url == "https://caldav.example.com"
+      assert payload.credentials.username == "alice"
 
-      failing_connection = fn _params -> {:error, :unauthorized} end
-
-      assert {:error, :invalid_credentials} =
-               Reconnection.reconnect(integration, params, test_connection: failing_connection)
-
+      # The DB record is untouched until the caller calls
+      # finalise_account_change/3 with the user's picks.
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == true
-    end
-  end
-
-  describe "reconnect/3 (account change)" do
-    setup do
-      integration = insert_decrypted_caldav_integration(%{})
-      %{integration: integration}
     end
 
     test "url change: returns :needs_calendar_selection with discovered calendars", %{
@@ -137,8 +147,6 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
         "username" => "alice",
         "password" => "newpass"
       }
-
-      ok_connection = fn _params -> :ok end
 
       discover = fn _provider, _url, _username, _password ->
         {:ok,
@@ -160,32 +168,46 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
       end
 
       assert {:ok, :needs_calendar_selection, payload} =
-               Reconnection.reconnect(integration, params,
-                 test_connection: ok_connection,
-                 discover: discover
-               )
+               Reconnection.reconnect(integration, params, discover: discover)
 
       assert [%{"path" => "/new-path/"}] = payload.calendars
       assert payload.credentials.url == "https://caldav.new.example.com"
     end
 
-    test "url change + discovery failure: returns the discovery error", %{
-      integration: integration
-    } do
+    test "discovery failure: propagates the discovery error", %{integration: integration} do
       params = %{
         "url" => "https://caldav.new.example.com",
         "username" => "alice",
         "password" => "newpass"
       }
 
-      ok_connection = fn _params -> :ok end
       discover_fail = fn _provider, _url, _username, _password -> {:error, :timeout} end
 
       assert {:error, :timeout} =
-               Reconnection.reconnect(integration, params,
-                 test_connection: ok_connection,
-                 discover: discover_fail
-               )
+               Reconnection.reconnect(integration, params, discover: discover_fail)
+    end
+
+    test "auth-style discovery error maps to :invalid_credentials", %{integration: integration} do
+      # `Calendar.discover_and_filter_calendars/4` surfaces auth failures as
+      # string reasons (e.g. "401 Unauthorized"). The ErrorHandler classifies
+      # them as `:auth`, which Reconnection must translate so the modal can
+      # show a credentials-style error rather than a generic "something went
+      # wrong" message.
+      params = %{
+        "url" => "https://caldav.example.com",
+        "username" => "alice",
+        "password" => "wrongpass"
+      }
+
+      discover_auth_fail = fn _provider, _url, _username, _password ->
+        {:error, "401 Unauthorized"}
+      end
+
+      assert {:error, :invalid_credentials} =
+               Reconnection.reconnect(integration, params, discover: discover_auth_fail)
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth == true
     end
 
     test "passes the integration's provider through to discover for non-caldav providers" do
@@ -220,10 +242,7 @@ defmodule Tymeslot.Integrations.Calendar.ReconnectionTest do
       end
 
       assert {:ok, :needs_calendar_selection, _payload} =
-               Reconnection.reconnect(integration, params,
-                 test_connection: fn _params -> :ok end,
-                 discover: discover
-               )
+               Reconnection.reconnect(integration, params, discover: discover)
 
       assert_received {:discover_called_with, "nextcloud"}
     end

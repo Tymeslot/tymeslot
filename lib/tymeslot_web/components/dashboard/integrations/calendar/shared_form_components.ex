@@ -93,6 +93,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
               <.locked_url_field
                 value={@url_value}
                 tooltip={@url_locked_tooltip}
+                name="integration[url]"
               />
             <% else %>
               <.text_field
@@ -215,8 +216,10 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
 
   attr :value, :string, required: true
   attr :tooltip, :string, required: true
+  attr :name, :string, default: "integration[url]"
 
-  defp locked_url_field(assigns) do
+  @spec locked_url_field(map()) :: Phoenix.LiveView.Rendered.t()
+  def locked_url_field(assigns) do
     ~H"""
     <div class="form-field-wrapper">
       <div class="flex items-center gap-1.5 mb-2">
@@ -231,7 +234,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormCompo
           </svg>
         </span>
       </div>
-      <input type="hidden" name="integration[url]" value={@value} />
+      <input type="hidden" name={@name} value={@value} />
       <div class="relative" title={@tooltip}>
         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-tymeslot-300 pointer-events-none">
           <TymeslotWeb.Components.CoreComponents.Icons.icon name="hero-lock-closed" class="w-5 h-5" />

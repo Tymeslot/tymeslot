@@ -146,6 +146,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias Phoenix.Naming
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Profiles
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Helpers.PageTitles
@@ -333,7 +334,7 @@ defmodule TymeslotWeb.DashboardLive do
     send_update(TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm,
       id: form_id,
       refreshing_calendars: false,
-      available_calendars: calendars
+      available_calendars: Selection.selected_calendars(calendars)
     )
 
     {:noreply, socket}
@@ -490,7 +491,7 @@ defmodule TymeslotWeb.DashboardLive do
     <% else %>
       <%!-- Core fallback: just show a simple message --%>
       <div class="p-8 text-center text-tymeslot-500">
-        <p>This feature (<%= @feature_name %>) is not available on your current plan.</p>
+        <p>This feature ({@feature_name}) is not available on your current plan.</p>
       </div>
     <% end %>
     """

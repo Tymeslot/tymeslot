@@ -305,7 +305,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     # track_form_change
     {:noreply, socket} =
-      CalendarSettingsComponent.handle_event(
+      TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent.handle_event(
         "track_form_change",
         %{"integration" => %{"name" => "My CalDAV"}},
         socket
@@ -315,7 +315,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     # validate_field
     {:noreply, socket} =
-      CalendarSettingsComponent.handle_event(
+      TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent.handle_event(
         "validate_field",
         %{"field" => "url", "value" => "https://example.com/dav"},
         socket
@@ -325,7 +325,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     # discover_calendars with invalid credentials
     {:noreply, socket} =
-      CalendarSettingsComponent.handle_event(
+      TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent.handle_event(
         "discover_calendars",
         %{
           "integration" => %{
