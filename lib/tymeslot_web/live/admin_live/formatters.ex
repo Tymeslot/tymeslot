@@ -51,4 +51,19 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   @spec recommended_label(boolean()) :: String.t()
   def recommended_label(true), do: gettext("Enabled")
   def recommended_label(false), do: gettext("Disabled")
+
+  @doc """
+  Explanation shown to an admin for why a particular setting state is
+  currently locked. Returns `nil` when the transition is not blocked. The
+  string is used both as a tooltip on the disabled toggle and as the flash
+  message when a race-conditioned write reaches `AppSettings.update/1`.
+  """
+  @spec lock_reason(atom(), term()) :: String.t() | nil
+  def lock_reason(:password_auth_enabled, false) do
+    gettext(
+      "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
+    )
+  end
+
+  def lock_reason(_key, _state), do: nil
 end

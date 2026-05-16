@@ -67,6 +67,41 @@ defmodule Tymeslot.AppSettingsTest do
 
       assert values[:registration_enabled].source == :config
     end
+
+    test "locked_states flags password_auth_enabled -> false when an admin signs in with password" do
+      Application.put_env(:tymeslot, :password_auth_enabled, true)
+      insert(:user, is_admin: true)
+
+      values = AppSettings.effective_values()
+
+      assert values[:password_auth_enabled].locked_states == [false]
+    end
+
+    test "locked_states is empty for password_auth_enabled when no admin uses password auth" do
+      Application.put_env(:tymeslot, :password_auth_enabled, true)
+      insert(:user, is_admin: true, password_hash: nil)
+
+      values = AppSettings.effective_values()
+
+      assert values[:password_auth_enabled].locked_states == []
+    end
+
+    test "locked_states is empty for password_auth_enabled when password auth is already disabled" do
+      Application.put_env(:tymeslot, :password_auth_enabled, false)
+      insert(:user, is_admin: true)
+
+      values = AppSettings.effective_values()
+
+      assert values[:password_auth_enabled].locked_states == []
+    end
+
+    test "locked_states is empty for registration_enabled" do
+      insert(:user, is_admin: true)
+
+      values = AppSettings.effective_values()
+
+      assert values[:registration_enabled].locked_states == []
+    end
   end
 
   # Bridge tests: prove that toggling a setting through the admin code path

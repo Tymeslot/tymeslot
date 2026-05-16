@@ -33,7 +33,12 @@ defmodule Tymeslot.AppSettings do
 
   @type setting_key :: :registration_enabled | :password_auth_enabled
   @type effective_source :: :db | :config | :default
-  @type effective_value :: %{value: term(), source: effective_source(), db_value: term() | nil}
+  @type effective_value :: %{
+          value: term(),
+          source: effective_source(),
+          db_value: term() | nil,
+          locked_states: [term()]
+        }
 
   # Baseline = the config-layer value that was in effect before any DB
   # override was applied. Captured once per BEAM lifetime in `:persistent_term`
@@ -68,9 +73,13 @@ defmodule Tymeslot.AppSettings do
   def get!, do: AppSettingsQueries.get_settings()
 
   @doc """
-  Returns a map of `key -> %{value, source, db_value}` for every editable
-  setting. `value` is the effective value an admin would see; `source` shows
-  whether it came from the DB, the config layer, or the built-in default.
+  Returns a map of `key -> %{value, source, db_value, locked_states}` for
+  every editable setting. `value` is the effective value an admin would see;
+  `source` shows whether it came from the DB, the config layer, or the
+  built-in default; `locked_states` lists values the setting cannot currently
+  transition to because `update/1` would reject the change (e.g. would lock
+  out admins). The admin UI uses `locked_states` to disable controls
+  upfront so the user never has to click and read an error.
   """
   @spec effective_values() :: %{setting_key() => effective_value()}
   def effective_values do
@@ -83,7 +92,8 @@ defmodule Tymeslot.AppSettings do
        %{
          value: effective_value(key, db_value),
          source: source_for(key, db_value),
-         db_value: db_value
+         db_value: db_value,
+         locked_states: locked_states_for(key)
        }}
     end)
   end
@@ -139,6 +149,16 @@ defmodule Tymeslot.AppSettings do
       next_effective_value(:password_auth_enabled, attrs) == false and
       Auth.any_admin_uses_password_auth?()
   end
+
+  # The set of state values that `update/1` would currently reject for a
+  # given setting. Mirrors the same checks `apply_update/1` enforces so the
+  # admin UI can grey out the matching toggle in advance rather than
+  # surfacing the rejection after the click.
+  defp locked_states_for(:password_auth_enabled) do
+    if would_cause_lockout?(%{password_auth_enabled: false}), do: [false], else: []
+  end
+
+  defp locked_states_for(_key), do: []
 
   defp current_password_auth_enabled? do
     Application.get_env(:tymeslot, :password_auth_enabled, default_for(:password_auth_enabled)) ==

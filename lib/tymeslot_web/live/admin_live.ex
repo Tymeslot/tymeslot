@@ -83,17 +83,12 @@ defmodule TymeslotWeb.AdminLive do
          |> load_data()}
 
       {:error, :would_lock_out} ->
-        {:noreply, put_flash(socket, :error, lockout_protection_message())}
+        {:noreply,
+         put_flash(socket, :error, Formatters.lock_reason(:password_auth_enabled, false))}
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, gettext("Could not update setting."))}
     end
-  end
-
-  defp lockout_protection_message do
-    gettext(
-      "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
-    )
   end
 
   # --- Settings helpers ---
