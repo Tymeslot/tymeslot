@@ -185,4 +185,47 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectTest do
       refute html =~ ~s(name="reconnect[password]" value="oldpass")
     end
   end
+
+  describe "CalDAV reconnect modal (mailbox.org URL is locked)" do
+    test "the URL field is disabled and pinned to https://dav.mailbox.org",
+         %{conn: conn, user: user} do
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          name: "My mailbox.org",
+          provider: "mailbox_org",
+          base_url: "https://dav.mailbox.org",
+          username_encrypted: Encryption.encrypt("alice@mailbox.org"),
+          password_encrypted: Encryption.encrypt("oldpass"),
+          calendar_paths: ["/caldav/abc123/"],
+          provider_account_id: "https://dav.mailbox.org||alice@mailbox.org",
+          is_active: true,
+          needs_reauth: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      html =
+        view
+        |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+        |> render_click()
+
+      doc = Floki.parse_document!(html)
+
+      hidden_url =
+        Floki.find(doc, ~s|input[type="hidden"][name="reconnect[url]"]|)
+
+      assert hidden_url != [], "expected a hidden reconnect[url] input for the locked field"
+      assert Floki.attribute(hidden_url, "value") == ["https://dav.mailbox.org"]
+
+      disabled_input =
+        Floki.find(doc, ~s|input[type="text"][value="https://dav.mailbox.org"][disabled]|)
+
+      assert disabled_input != [],
+             "expected a disabled, greyed-out URL input for mailbox.org reconnect"
+
+      # The editable URL input from the non-locked branch must not be rendered.
+      refute Floki.find(doc, ~s|input[type="url"][name="reconnect[url]"]|) != []
+    end
+  end
 end

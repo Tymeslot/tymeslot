@@ -1,23 +1,28 @@
 defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnectModal do
   @moduledoc """
   Modal for reconnecting an existing CalDAV-family calendar integration.
-  See `Tymeslot.Integrations.Calendar.Reconnection` for the underlying
-  branching rules.
+  See `Tymeslot.Integrations.Calendar.Reconnection`.
 
-  Two phases:
+  Two phases, both always shown:
 
-  - `:credentials` — user enters new URL, username, and password. The
-    parent LiveView handles `reconnect_caldav_discover` on submit.
-  - `:calendar_selection` — shown only when the new credentials point at a
-    different account than the stored ones. User picks which calendars to
-    sync. The parent LiveView handles `reconnect_caldav_submit` on submit.
+  - `:credentials` — user enters URL, username, and password. The parent
+    LiveView handles `reconnect_caldav_discover` on submit.
+  - `:calendar_selection` — user confirms which calendars to sync.
+    Previously selected calendars are pre-ticked via `selected_paths`,
+    so the user only needs to add or remove calendars. The parent
+    LiveView handles `reconnect_caldav_submit` on submit.
 
   The component is a thin presentation wrapper: every event targets
   `@parent_target` (`@myself` of the parent LiveView or LiveComponent).
   """
   use TymeslotWeb, :live_component
 
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias TymeslotWeb.Components.CoreComponents
+
+  alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
+    as: SharedForm
+
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @impl Phoenix.LiveComponent
@@ -25,6 +30,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
     socket =
       socket
       |> assign(assigns)
+      |> assign(:locked_url, ProviderConfig.locked_url_for(integration.provider))
       |> assign_new(:phase, fn -> :credentials end)
       |> assign_new(:form_errors, fn -> %{} end)
       |> assign_new(:form_values, fn ->
@@ -60,6 +66,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
               form_errors={@form_errors}
               is_submitting={@is_submitting}
               parent_target={@parent_target}
+              locked_url={@locked_url}
             />
           <% :calendar_selection -> %>
             <.calendar_selection
@@ -79,25 +86,34 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
   attr :form_errors, :map, required: true
   attr :is_submitting, :boolean, required: true
   attr :parent_target, :any, required: true
+  attr :locked_url, :map, default: nil
 
   defp credentials_form(assigns) do
     ~H"""
     <form phx-submit="reconnect_caldav_discover" phx-target={@parent_target} class="space-y-5">
       <p class="text-sm text-tymeslot-500">
-        Update the server URL and credentials for this integration. Existing
-        calendar selections are preserved when only the password changes.
+        Confirm or update the server URL and credentials for this integration.
+        You'll be able to review and adjust the synced calendars on the next step.
       </p>
 
-      <.input
-        id="reconnect_url"
-        name="reconnect[url]"
-        type="url"
-        label="Server URL"
-        value={@form_values["url"]}
-        required
-        icon="hero-globe-alt"
-        errors={FormValidationHelpers.field_errors(@form_errors, :url)}
-      />
+      <%= if @locked_url do %>
+        <SharedForm.locked_url_field
+          value={@locked_url.url}
+          tooltip={@locked_url.tooltip}
+          name="reconnect[url]"
+        />
+      <% else %>
+        <.input
+          id="reconnect_url"
+          name="reconnect[url]"
+          type="url"
+          label="Server URL"
+          value={@form_values["url"]}
+          required
+          icon="hero-globe-alt"
+          errors={FormValidationHelpers.field_errors(@form_errors, :url)}
+        />
+      <% end %>
 
       <.input
         id="reconnect_username"
@@ -160,8 +176,9 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
     ~H"""
     <form phx-submit="reconnect_caldav_submit" phx-target={@parent_target} class="space-y-5">
       <p class="text-sm text-tymeslot-500">
-        The new credentials belong to a different account. Select the calendars
-        you want to sync for availability checks.
+        Select the calendars you want to sync for availability checks.
+        Calendars you previously synced are already ticked — untick to stop
+        syncing them, or tick new calendars to add them.
       </p>
 
       <%= if error = form_level_error(@form_errors) do %>

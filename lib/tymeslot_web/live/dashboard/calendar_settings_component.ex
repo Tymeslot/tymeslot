@@ -47,6 +47,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
      |> assign(:reconnect_form_values, %{})
      |> assign(:reconnect_form_errors, %{})
      |> assign(:reconnect_discovery_payload, nil)
+     |> assign(:reconnect_selected_paths, [])
      |> assign(:reconnect_submitting, false)}
   end
 
@@ -408,12 +409,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   end
 
   def handle_event("close_reconnect_modal", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:reconnect_integration, nil)
-     |> assign(:reconnect_phase, :credentials)
-     |> assign(:reconnect_discovery_payload, nil)
-     |> assign(:reconnect_submitting, false)}
+    {:noreply, reset_reconnect_assigns(socket)}
   end
 
   def handle_event("reconnect_caldav_discover", %{"reconnect" => params}, socket) do
@@ -422,21 +418,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     socket = assign(socket, :reconnect_submitting, true)
 
     case Calendar.reconnect_caldav_integration(user_id, integration.id, params) do
-      {:ok, :updated, _updated} ->
-        send(self(), {:integration_updated, :calendar})
-        Flash.info("Calendar reconnected")
-
-        {:noreply,
-         socket
-         |> assign(:reconnect_integration, nil)
-         |> assign(:reconnect_submitting, false)
-         |> load_integrations()}
-
       {:ok, :needs_calendar_selection, payload} ->
+        selected_paths = Enum.filter(integration.calendar_paths || [], &is_binary/1)
+
         {:noreply,
          socket
          |> assign(:reconnect_phase, :calendar_selection)
          |> assign(:reconnect_discovery_payload, payload)
+         |> assign(:reconnect_selected_paths, selected_paths)
+         |> assign(:reconnect_form_errors, %{})
          |> assign(:reconnect_submitting, false)}
 
       {:error, :invalid_credentials} ->
@@ -470,6 +460,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     end
   end
 
+  def handle_event("reconnect_caldav_submit", _params, socket)
+      when is_nil(socket.assigns.reconnect_discovery_payload) do
+    Flash.error("Session expired. Please start the reconnect process again.")
+    {:noreply, reset_reconnect_assigns(socket)}
+  end
+
   def handle_event("reconnect_caldav_submit", params, socket) do
     integration = socket.assigns.reconnect_integration
     user_id = socket.assigns.current_user.id
@@ -487,10 +483,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
         {:noreply,
          socket
-         |> assign(:reconnect_integration, nil)
-         |> assign(:reconnect_phase, :credentials)
-         |> assign(:reconnect_discovery_payload, nil)
-         |> assign(:reconnect_submitting, false)
+         |> reset_reconnect_assigns()
          |> load_integrations()}
 
       {:error, :no_calendars_selected} ->
@@ -503,7 +496,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
 
       {:error, :not_found} ->
         Flash.error("Integration not found")
-        {:noreply, assign(socket, :reconnect_submitting, false)}
+        {:noreply, reset_reconnect_assigns(socket)}
 
       {:error, {:changeset, cs}} ->
         Flash.error("Could not save: #{ChangesetUtils.get_first_error(cs)}")
@@ -664,6 +657,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
        "password" => ""
      })
      |> assign(:reconnect_discovery_payload, nil)
+     |> assign(:reconnect_selected_paths, [])
      |> assign(:reconnect_submitting, false)}
   end
 
@@ -671,6 +665,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
     Logger.warning("Reconnect requested for unsupported provider", provider: provider)
     Flash.error("Reconnect is not supported for this provider yet.")
     {:noreply, socket}
+  end
+
+  defp reset_reconnect_assigns(socket) do
+    socket
+    |> assign(:reconnect_integration, nil)
+    |> assign(:reconnect_phase, :credentials)
+    |> assign(:reconnect_discovery_payload, nil)
+    |> assign(:reconnect_selected_paths, [])
+    |> assign(:reconnect_form_errors, %{})
+    |> assign(:reconnect_submitting, false)
   end
 
   defp parse_int(id) when is_integer(id), do: {:ok, id}
@@ -735,7 +739,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
         form_values={@reconnect_form_values}
         form_errors={@reconnect_form_errors}
         discovery_payload={@reconnect_discovery_payload}
-        selected_paths={[]}
+        selected_paths={@reconnect_selected_paths}
         is_submitting={@reconnect_submitting}
         parent_target={@myself}
       />

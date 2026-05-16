@@ -20,6 +20,20 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org]
   @dev_only_providers [:debug]
 
+  # Providers whose CalDAV server URL is fixed and must never be edited by the
+  # user — both during initial connection and reconnection. A provider absent
+  # from this map allows the user to enter their own server URL.
+  @locked_url_providers %{
+    mailbox_org: %{
+      url: "https://dav.mailbox.org",
+      tooltip: "mailbox.org always uses this CalDAV server — the address cannot be changed"
+    }
+  }
+
+  @locked_url_providers_by_string Map.new(@locked_url_providers, fn {atom_key, value} ->
+                                    {Atom.to_string(atom_key), value}
+                                  end)
+
   # Provider metadata - single source of truth for all provider information
   @provider_metadata %{
     caldav: %{
@@ -188,6 +202,24 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   end
 
   def caldav_based?(_provider), do: false
+
+  @doc """
+  Returns the fixed CalDAV server URL for a provider, or `nil` if the user
+  is free to choose their own.
+
+  Used by both connect and reconnect UIs to render a locked, greyed-out URL
+  field for providers like mailbox.org whose server address is invariant.
+  Accepts atom or string provider identifiers (database values are strings).
+  """
+  @spec locked_url_for(atom() | String.t()) ::
+          %{url: String.t(), tooltip: String.t()} | nil
+  def locked_url_for(provider) when is_atom(provider),
+    do: Map.get(@locked_url_providers, provider)
+
+  def locked_url_for(provider) when is_binary(provider),
+    do: Map.get(@locked_url_providers_by_string, provider)
+
+  def locked_url_for(_provider), do: nil
 
   @doc """
   Gets full metadata for a provider.

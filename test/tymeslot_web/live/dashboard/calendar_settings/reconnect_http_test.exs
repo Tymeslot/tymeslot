@@ -53,7 +53,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
 
   setup :setup_dashboard_user
 
-  describe "CalDAV reconnect submit (password-only, live HTTP)" do
+  describe "CalDAV reconnect submit (same-account, live HTTP)" do
     setup %{user: user} do
       # Port 65432 is unused on the CI host; Req.Test intercepts the request
       # at the transport plug so no actual socket is opened.
@@ -76,11 +76,75 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       %{integration: integration, base_url: base_url}
     end
 
-    test "valid new password: updates record and clears needs_reauth", %{
-      conn: conn,
-      integration: integration
-    } do
-      stub_caldav_server(accept: "alice:newpass")
+    test "valid new password: advances to picker, existing calendar pre-ticked, save persists",
+         %{conn: conn, integration: integration} do
+      # Unified reconnect: even with unchanged URL + username we always run
+      # discovery so the user can review and adjust calendar selections.
+      # Existing selections must come back pre-ticked so a pure password
+      # rotation only needs one extra click.
+      stub_caldav_discovery_server(
+        accept: "alice:newpass",
+        principal_path: "/principals/alice/",
+        home_set_path: "/calendars/alice/",
+        calendar_href: "/calendars/alice/default/",
+        calendar_name: "Default"
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
+
+      view
+      |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
+      |> render_click()
+
+      html =
+        view
+        |> form("form[phx-submit='reconnect_caldav_discover']",
+          reconnect: %{
+            url: integration.base_url,
+            username: "alice",
+            password: "newpass"
+          }
+        )
+        |> render_submit()
+
+      # Modal must have advanced to the calendar-selection phase with the
+      # existing calendar pre-ticked.
+      assert has_element?(view, "form[phx-submit='reconnect_caldav_submit']")
+      assert html =~ "Default"
+
+      assert has_element?(
+               view,
+               "input[type=checkbox][checked][value='/calendars/alice/default/']"
+             )
+
+      # Submitting the (pre-ticked) selection persists the new password.
+      view
+      |> form("form[phx-submit='reconnect_caldav_submit']", %{
+        "selected_paths" => ["/calendars/alice/default/"]
+      })
+      |> render_submit()
+
+      reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
+      assert reloaded.needs_reauth == false
+      assert Encryption.decrypt(reloaded.password_encrypted) == "newpass"
+      assert reloaded.calendar_paths == ["/calendars/alice/default/"]
+    end
+
+    test "user can tick a previously-unselected calendar to add it",
+         %{conn: conn, integration: integration} do
+      # Bug fix coverage: discovery returns both the already-synced calendar
+      # and a previously-unselected "Work" calendar. The user ticks the new
+      # one and saves — both paths must end up in `calendar_paths` without
+      # having to delete and recreate the integration.
+      stub_two_calendar_discovery_server(
+        accept: "alice:oldpass",
+        principal_path: "/principals/alice/",
+        home_set_path: "/calendars/alice/",
+        calendars: [
+          {"/calendars/alice/default/", "Default"},
+          {"/calendars/alice/work/", "Work"}
+        ]
+      )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
@@ -93,23 +157,46 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
         reconnect: %{
           url: integration.base_url,
           username: "alice",
-          password: "newpass"
+          password: "oldpass"
         }
       )
       |> render_submit()
 
+      # The previously-unselected calendar is visible and unticked; the
+      # already-synced one is ticked.
+      assert has_element?(
+               view,
+               "input[type=checkbox][checked][value='/calendars/alice/default/']"
+             )
+
+      refute has_element?(
+               view,
+               "input[type=checkbox][checked][value='/calendars/alice/work/']"
+             )
+
+      # User ticks the new calendar and saves.
+      view
+      |> form("form[phx-submit='reconnect_caldav_submit']", %{
+        "selected_paths" => [
+          "/calendars/alice/default/",
+          "/calendars/alice/work/"
+        ]
+      })
+      |> render_submit()
+
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
-      assert reloaded.needs_reauth == false
-      assert Encryption.decrypt(reloaded.password_encrypted) == "newpass"
+
+      assert Enum.sort(reloaded.calendar_paths) ==
+               Enum.sort(["/calendars/alice/default/", "/calendars/alice/work/"])
     end
 
-    test "invalid password: error shown, record unchanged", %{
+    test "invalid password: error shown on credentials phase, record unchanged", %{
       conn: conn,
       integration: integration
     } do
-      # All requests return 401 — CalDAV HTTP maps both 401 and 403 to
-      # {:error, :unauthorized}, which the Reconnection module translates
-      # into {:error, :invalid_credentials}.
+      # All requests return 401 — discovery surfaces an auth-style error
+      # which Reconnection translates into {:error, :invalid_credentials}.
+      # The modal must stay on the credentials phase.
       ReqTest.stub(:tymeslot_http, fn conn -> Conn.resp(conn, 401, "") end)
 
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
@@ -130,6 +217,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
         |> render_submit()
 
       assert html =~ "Could not sign in with those credentials"
+      refute has_element?(view, "form[phx-submit='reconnect_caldav_submit']")
 
       reloaded = Repo.get!(CalendarIntegrationSchema, integration.id)
       assert reloaded.needs_reauth == true
@@ -333,8 +421,16 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
       assert html =~ "Reconnect required"
 
       # Phase 2: the server now accepts the rotated password and the user
-      # reconnects through the modal. The badge must disappear.
-      stub_caldav_server(accept: "alice:newpass")
+      # reconnects through the modal. Unified reconnect always shows the
+      # calendar picker, so submit credentials then confirm the existing
+      # selection. The badge must disappear after the final save.
+      stub_caldav_discovery_server(
+        accept: "alice:newpass",
+        principal_path: "/principals/alice/",
+        home_set_path: "/calendars/alice/",
+        calendar_href: "/calendars/alice/default/",
+        calendar_name: "Default"
+      )
 
       view
       |> element("button[phx-click='reconnect_integration'][phx-value-id='#{integration.id}']")
@@ -348,6 +444,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
           password: "newpass"
         }
       )
+      |> render_submit()
+
+      view
+      |> form("form[phx-submit='reconnect_caldav_submit']", %{
+        "selected_paths" => ["/calendars/alice/default/"]
+      })
       |> render_submit()
 
       refute render(view) =~ "Reconnect required"
@@ -390,20 +492,39 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
   # happy-path test where calendar selection must be exercised.
   defp stub_caldav_discovery_server(opts) do
     accept_basic = Keyword.fetch!(opts, :accept)
+    principal_path = Keyword.get(opts, :principal_path, "/principals/bob/")
+    home_set_path = Keyword.get(opts, :home_set_path, "/calendars/bob/")
     calendar_href = Keyword.fetch!(opts, :calendar_href)
     calendar_name = Keyword.fetch!(opts, :calendar_name)
 
+    stub_discovery(accept_basic, principal_path, home_set_path, [
+      {calendar_href, calendar_name}
+    ])
+  end
+
+  # Variant that responds with multiple calendars — used to verify the user
+  # can tick a previously-unselected calendar during reconnect.
+  defp stub_two_calendar_discovery_server(opts) do
+    accept_basic = Keyword.fetch!(opts, :accept)
+    principal_path = Keyword.fetch!(opts, :principal_path)
+    home_set_path = Keyword.fetch!(opts, :home_set_path)
+    calendars = Keyword.fetch!(opts, :calendars)
+
+    stub_discovery(accept_basic, principal_path, home_set_path, calendars)
+  end
+
+  defp stub_discovery(accept_basic, principal_path, home_set_path, calendars) do
     ReqTest.stub(:tymeslot_http, fn http_conn ->
       with ["Basic " <> encoded] <- Conn.get_req_header(http_conn, "authorization"),
            {:ok, ^accept_basic} <- Base.decode64(encoded) do
-        respond_caldav(http_conn, calendar_href, calendar_name)
+        respond_caldav(http_conn, principal_path, home_set_path, calendars)
       else
         _no_match -> Conn.resp(http_conn, 401, "")
       end
     end)
   end
 
-  defp respond_caldav(conn, calendar_href, calendar_name) do
+  defp respond_caldav(conn, principal_path, home_set_path, calendars) do
     {:ok, body, conn} = Conn.read_body(conn)
 
     cond do
@@ -413,7 +534,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
             <href>#{conn.request_path}</href>
             <propstat>
               <prop>
-                <current-user-principal xmlns="DAV:"><href>/principals/bob/</href></current-user-principal>
+                <current-user-principal xmlns="DAV:"><href>#{principal_path}</href></current-user-principal>
               </prop>
               <status>HTTP/1.1 200 OK</status>
             </propstat>
@@ -427,7 +548,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
             <propstat>
               <prop>
                 <calendar-home-set xmlns="urn:ietf:params:xml:ns:caldav">
-                  <href xmlns="DAV:">/calendars/bob/</href>
+                  <href xmlns="DAV:">#{home_set_path}</href>
                 </calendar-home-set>
               </prop>
               <status>HTTP/1.1 200 OK</status>
@@ -436,22 +557,27 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ReconnectHttpTest do
         """)
 
       true ->
-        # Calendar listing — return one valid calendar at the requested href.
-        xml_multistatus(conn, """
-          <response>
-            <href>#{calendar_href}</href>
-            <propstat>
-              <prop>
-                <displayname>#{calendar_name}</displayname>
-                <resourcetype>
-                  <collection/>
-                  <calendar xmlns="urn:ietf:params:xml:ns:caldav"/>
-                </resourcetype>
-              </prop>
-              <status>HTTP/1.1 200 OK</status>
-            </propstat>
-          </response>
-        """)
+        # Calendar listing — emit one <response> per requested calendar.
+        inner =
+          Enum.map_join(calendars, "\n", fn {href, name} ->
+            """
+              <response>
+                <href>#{href}</href>
+                <propstat>
+                  <prop>
+                    <displayname>#{name}</displayname>
+                    <resourcetype>
+                      <collection/>
+                      <calendar xmlns="urn:ietf:params:xml:ns:caldav"/>
+                    </resourcetype>
+                  </prop>
+                  <status>HTTP/1.1 200 OK</status>
+                </propstat>
+              </response>
+            """
+          end)
+
+        xml_multistatus(conn, inner)
     end
   end
 
