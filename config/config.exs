@@ -279,8 +279,13 @@ config :tymeslot, :calendar_providers, %{
   nextcloud: [enabled: true],
   zimbra: [enabled: true],
   mailbox_org: [enabled: true],
+  baikal: [enabled: true],
   google: [enabled: true],
-  outlook: [enabled: true]
+  outlook: [enabled: true],
+  # Internal providers — never user-connectable. Disabled explicitly because
+  # the runtime toggle defaults to enabled for any provider in @providers.
+  demo: [enabled: false],
+  debug: [enabled: false]
 }
 
 # Integration locking configuration

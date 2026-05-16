@@ -4,7 +4,21 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   This module serves as the single source of truth for provider types,
   classifications, and validation across the calendar integration system.
-  Supports enabling/disabling providers via config (config.exs).
+  Supports enabling/disabling providers via config (config.exs); providers
+  listed in `@providers` are enabled by default unless explicitly turned off.
+
+  ## Internal providers
+
+  `:demo` (fake availability for the public homepage demo) and `:debug`
+  (dev/test pipeline debugging) are not user-connectable but live in this
+  module so the registry, schema validation, and DB constraint list still
+  recognise them. Because the runtime toggle defaults to enabled, each is
+  pinned off via `config :tymeslot, :calendar_providers` in all three
+  config sites — `apps/tymeslot/config/config.exs`,
+  `apps/tymeslot/config/test.exs`, and `config/test.exs` — otherwise they
+  surface as cards in `/dashboard/calendar-integration`. Add
+  `<name>: [enabled: false]` to the same three blocks when introducing
+  any further internal-only provider.
   """
 
   alias Tymeslot.Infrastructure.Config
@@ -107,7 +121,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @doc false
   @spec provider_enabled?(atom()) :: boolean()
   def provider_enabled?(type) when is_atom(type) do
-    ProviderToggle.enabled?(provider_settings(), type, default_enabled: false)
+    ProviderToggle.enabled?(provider_settings(), type, default_enabled: true)
   end
 
   defp effective_providers(include_dev) do
