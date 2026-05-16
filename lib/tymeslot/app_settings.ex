@@ -29,7 +29,7 @@ defmodule Tymeslot.AppSettings do
   require Logger
 
   alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema}
-  alias Tymeslot.Infrastructure.Config
+  alias Tymeslot.Auth
 
   @type setting_key :: :registration_enabled | :password_auth_enabled
   @type effective_source :: :db | :config | :default
@@ -94,11 +94,13 @@ defmodule Tymeslot.AppSettings do
   `Application.put_env` on success so the change takes effect immediately.
 
   Returns `{:error, :would_lock_out}` if the update would transition
-  `password_auth_enabled` from true to false while no social auth provider is
-  configured — without an alternative log-in path every user, including the
-  admin making the change, would be locked out. Updates from an already
-  locked-out state (e.g. an admin recovering via a still-valid session) are
-  allowed through unchanged.
+  `password_auth_enabled` from true to false while at least one admin still
+  signs in via email + password. Whether the install has OAuth configured
+  globally is irrelevant — an admin whose own account has no linked OAuth
+  identity would still be locked out. The acting admin must demote those
+  password-auth admins (or have them link an OAuth identity) before the
+  toggle can flip. Updates from an already locked-out state (e.g. an admin
+  recovering via a still-valid session) are allowed through unchanged.
   """
   @spec update(map()) ::
           {:ok, AppSettingsSchema.t()} | {:error, Ecto.Changeset.t() | :would_lock_out}
@@ -128,12 +130,14 @@ defmodule Tymeslot.AppSettings do
   end
 
   # Lockout protection: refuse to flip password_auth_enabled from true to false
-  # when no OAuth provider is configured. Recovery from an already locked-out
-  # state stays unblocked.
+  # while at least one admin still relies on email + password to sign in.
+  # Whether OAuth is configured at all is irrelevant — an admin whose own
+  # account has no linked OAuth identity would still be locked out. Recovery
+  # from an already locked-out state stays unblocked.
   defp would_cause_lockout?(attrs) do
-    not Config.any_social_auth_enabled?() and
-      current_password_auth_enabled?() and
-      next_effective_value(:password_auth_enabled, attrs) == false
+    current_password_auth_enabled?() and
+      next_effective_value(:password_auth_enabled, attrs) == false and
+      Auth.any_admin_uses_password_auth?()
   end
 
   defp current_password_auth_enabled? do

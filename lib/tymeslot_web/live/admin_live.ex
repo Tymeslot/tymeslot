@@ -92,7 +92,7 @@ defmodule TymeslotWeb.AdminLive do
 
   defp lockout_protection_message do
     gettext(
-      "Cannot disable password authentication while no OAuth provider is configured — doing so would lock every user out. Configure an OAuth provider first."
+      "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
     )
   end
 
