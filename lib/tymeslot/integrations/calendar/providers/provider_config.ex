@@ -99,7 +99,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       icon: "baikal",
       description: "PHP-based CalDAV/CardDAV server integration",
       button_text: "Connect Baikal",
-      click_event: "connect_baikal_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     google: %{
