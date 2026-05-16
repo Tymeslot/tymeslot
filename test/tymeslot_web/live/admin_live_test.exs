@@ -174,6 +174,10 @@ defmodule TymeslotWeb.AdminLiveTest do
       # The setup admin has a password_hash, so disabling password auth would
       # lock them out. The toggle should be rendered as disabled upfront —
       # never relying on the after-click flash to communicate the block.
+      # Force SSO off so the lockout guard isn't satisfied by a parallel auth
+      # path — shell env (ENABLE_GOOGLE_AUTH etc.) can otherwise enable it.
+      with_sso_disabled()
+
       {:ok, _lv, html} = live(conn, ~p"/admin/settings")
 
       assert html =~
@@ -182,12 +186,131 @@ defmodule TymeslotWeb.AdminLiveTest do
       assert html =~ "Cannot disable password authentication"
     end
 
+    test "groups settings by section with named headings", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/settings")
+
+      assert html =~ "Authentication"
+      assert html =~ "reCAPTCHA"
+      assert html =~ "Admin alerts"
+    end
+
+    test "reCAPTCHA toggle descriptions mention the key requirement",
+         %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/settings")
+
+      assert html =~ "RECAPTCHA_SITE_KEY"
+      assert html =~ "RECAPTCHA_SECRET_KEY"
+    end
+
+    test "submitting a valid score persists the value and takes effect immediately",
+         %{conn: conn} do
+      original_recaptcha = Application.get_env(:tymeslot, :recaptcha) || []
+      on_exit(fn -> Application.put_env(:tymeslot, :recaptcha, original_recaptcha) end)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+
+      html =
+        render_submit(lv, "save_setting", %{
+          "key" => "recaptcha_signup_min_score",
+          "value" => "0.7"
+        })
+
+      assert html =~ "Signup min score updated."
+
+      assert Keyword.get(Application.get_env(:tymeslot, :recaptcha), :signup_min_score) ==
+               0.7
+    end
+
+    test "submitting an out-of-range score surfaces an inline error",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+
+      html =
+        render_submit(lv, "save_setting", %{
+          "key" => "recaptcha_booking_min_score",
+          "value" => "2.0"
+        })
+
+      assert html =~ "between 0.0 and 1.0"
+    end
+
+    test "submitting a valid admin alert email persists the value",
+         %{conn: conn} do
+      original_admin_alert_email = Application.get_env(:tymeslot, :admin_alert_email)
+
+      on_exit(fn ->
+        if original_admin_alert_email == nil do
+          Application.delete_env(:tymeslot, :admin_alert_email)
+        else
+          Application.put_env(:tymeslot, :admin_alert_email, original_admin_alert_email)
+        end
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+
+      html =
+        render_submit(lv, "save_setting", %{
+          "key" => "admin_alert_email",
+          "value" => "ops@example.com"
+        })
+
+      assert html =~ "Admin alert recipient updated."
+      assert Application.get_env(:tymeslot, :admin_alert_email) == "ops@example.com"
+    end
+
+    test "submitting a malformed admin alert email surfaces an inline error",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+
+      html =
+        render_submit(lv, "save_setting", %{
+          "key" => "admin_alert_email",
+          "value" => "not-an-email"
+        })
+
+      assert html =~ "valid email address"
+    end
+
+    test "submitting a blank admin alert email clears the override",
+         %{conn: conn} do
+      {:ok, _settings} = AppSettings.update(%{admin_alert_email: "ops@example.com"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+
+      render_submit(lv, "save_setting", %{"key" => "admin_alert_email", "value" => ""})
+
+      assert %{admin_alert_email: nil} = AppSettings.get!()
+    end
+
+    test "toggling google_auth_enabled flows into the social_auth keyword list",
+         %{conn: conn} do
+      # Force a known starting state — shell env (ENABLE_GOOGLE_AUTH) can
+      # otherwise enable the toggle at boot, making the "Enabled" button
+      # render as disabled (since it matches the effective value).
+      original_social_auth = Application.get_env(:tymeslot, :social_auth) || []
+      on_exit(fn -> Application.put_env(:tymeslot, :social_auth, original_social_auth) end)
+
+      Application.put_env(
+        :tymeslot,
+        :social_auth,
+        Keyword.put(original_social_auth, :google_enabled, false)
+      )
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/settings")
+
+      lv |> setting_tag(:google_auth_enabled, "true") |> render_click()
+
+      assert Keyword.get(Application.get_env(:tymeslot, :social_auth), :google_enabled) == true
+      assert %{google_auth_enabled: true} = AppSettings.get!()
+    end
+
     test "stale set_setting event surfaces the lockout reason as a flash",
          %{conn: conn} do
       # In steady state the Disabled tag is rendered with `disabled`, so a real
       # browser can't fire this event. The server-side guard still has to hold
       # for the race where the lockout state changes between page render and
       # click — exercise it by firing the event directly.
+      with_sso_disabled()
       original_password_auth = Application.get_env(:tymeslot, :password_auth_enabled)
 
       on_exit(fn ->
@@ -390,6 +513,21 @@ defmodule TymeslotWeb.AdminLiveTest do
     element(
       lv,
       ~s|button[phx-click="set_setting"][phx-value-key="#{key}"][phx-value-state="#{state}"]|
+    )
+  end
+
+  # Forces `:social_auth` to all-disabled and restores the original on exit.
+  # Without this, shell vars like `ENABLE_GOOGLE_AUTH=true` leak through
+  # runtime.exs into the test BEAM and confuse the "no usable auth path"
+  # lockout guard, which considers any enabled SSO provider a valid fallback.
+  defp with_sso_disabled do
+    original = Application.get_env(:tymeslot, :social_auth, [])
+    on_exit(fn -> Application.put_env(:tymeslot, :social_auth, original) end)
+
+    Application.put_env(:tymeslot, :social_auth,
+      google_enabled: false,
+      github_enabled: false,
+      oauth_enabled: false
     )
   end
 end

@@ -54,6 +54,24 @@ defmodule TymeslotWeb.AdminLive do
     end
   end
 
+  # Submit handler used by score and email inputs that don't fit the
+  # two-state Enabled/Disabled toggle pattern. Score inputs autosave on blur
+  # via `phx-change`, so the handler short-circuits when the value is
+  # unchanged to avoid spurious flashes on tab-through.
+  def handle_event("save_setting", %{"key" => key} = params, socket) do
+    raw_value = Map.get(params, "value", "")
+
+    with {:ok, atom_key} <- parse_setting_key(key),
+         {:ok, value} <- parse_typed_value(atom_key, raw_value),
+         :changed <- detect_change(socket, atom_key, value) do
+      handle_typed_setting_update(socket, atom_key, value)
+    else
+      :unchanged -> {:noreply, socket}
+      :invalid -> {:noreply, put_flash(socket, :error, value_invalid_message(key))}
+      _other -> {:noreply, put_flash(socket, :error, gettext("Could not update setting."))}
+    end
+  end
+
   # --- Users tab events: role-change flow ---
 
   def handle_event("request_promote", params, socket),
@@ -108,6 +126,84 @@ defmodule TymeslotWeb.AdminLive do
 
   defp setting_change_message(key, "false"),
     do: gettext("%{name} disabled.", name: Formatters.humanise(key))
+
+  defp handle_typed_setting_update(socket, key, value) do
+    case AppSettings.update(%{key => value}) do
+      {:ok, _settings} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("%{name} updated.", name: Formatters.humanise(key)))
+         |> push_event("ts:setting-saved", %{key: Atom.to_string(key)})
+         |> load_data()}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, put_flash(socket, :error, changeset_message(changeset, key))}
+
+      {:error, _other} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not update setting."))}
+    end
+  end
+
+  defp parse_typed_value(key, raw) do
+    case Formatters.kind(key) do
+      :score -> parse_score(raw)
+      :email -> parse_email(raw)
+      :boolean -> :invalid
+    end
+  end
+
+  defp detect_change(socket, key, value) do
+    case get_in(socket.assigns, [:effective_values, key]) do
+      %{value: ^value} -> :unchanged
+      _other -> :changed
+    end
+  end
+
+  # Empty string clears the override. Trim to avoid whitespace-only inputs
+  # reaching the schema.
+  defp parse_email(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> {:ok, nil}
+      trimmed -> {:ok, trimmed}
+    end
+  end
+
+  defp parse_email(_other), do: :invalid
+
+  defp parse_score(value) when is_binary(value) do
+    case Float.parse(String.trim(value)) do
+      {score, ""} when score >= 0.0 and score <= 1.0 -> {:ok, score}
+      _other -> :invalid
+    end
+  end
+
+  defp parse_score(_other), do: :invalid
+
+  defp value_invalid_message(key) do
+    case parse_setting_key(key) do
+      {:ok, atom_key} ->
+        case Formatters.kind(atom_key) do
+          :score -> gettext("Enter a number between 0.0 and 1.0.")
+          :email -> gettext("Enter a valid email address.")
+          _other -> gettext("Could not update setting.")
+        end
+
+      _other ->
+        gettext("Could not update setting.")
+    end
+  end
+
+  # Changeset errors from validate_format ("has invalid format") and
+  # validate_number ("must be greater than or equal to 0.0", etc.) are
+  # accurate but not friendly. Map them to the same human messages the inline
+  # parser uses so admins see one consistent phrasing whichever guard catches
+  # the bad input.
+  defp changeset_message(%Ecto.Changeset{errors: errors}, key) do
+    case Keyword.get(errors, key) do
+      {_message, _meta} -> value_invalid_message(Atom.to_string(key))
+      nil -> gettext("Could not update setting.")
+    end
+  end
 
   # --- Role-change helpers ---
 
