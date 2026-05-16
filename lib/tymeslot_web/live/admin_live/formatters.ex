@@ -12,6 +12,15 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   @spec humanise(atom()) :: String.t()
   def humanise(:registration_enabled), do: gettext("Registration enabled")
   def humanise(:password_auth_enabled), do: gettext("Password authentication")
+  def humanise(:google_auth_enabled), do: gettext("Google login")
+  def humanise(:github_auth_enabled), do: gettext("GitHub login")
+  def humanise(:oauth_auth_enabled), do: gettext("Generic OIDC login")
+  def humanise(:recaptcha_signup_enabled), do: gettext("reCAPTCHA on signup")
+  def humanise(:recaptcha_booking_enabled), do: gettext("reCAPTCHA on booking")
+  def humanise(:recaptcha_signup_min_score), do: gettext("Signup min score")
+  def humanise(:recaptcha_booking_min_score), do: gettext("Booking min score")
+  def humanise(:admin_alerts_enabled), do: gettext("Admin alerts")
+  def humanise(:admin_alert_email), do: gettext("Admin alert recipient")
 
   def humanise(key),
     do: key |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
@@ -36,13 +45,67 @@ defmodule TymeslotWeb.AdminLive.Formatters do
     )
   end
 
+  def describe(:google_auth_enabled) do
+    gettext(
+      "Show the \"Continue with Google\" button on login and signup. Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to be set in the environment."
+    )
+  end
+
+  def describe(:github_auth_enabled) do
+    gettext(
+      "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
+    )
+  end
+
+  def describe(:oauth_auth_enabled) do
+    gettext(
+      "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lemonldap, etc.). Requires the OAUTH_* environment variables to be set."
+    )
+  end
+
+  def describe(:recaptcha_signup_enabled) do
+    gettext(
+      "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
+    )
+  end
+
+  def describe(:recaptcha_booking_enabled) do
+    gettext(
+      "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
+    )
+  end
+
+  def describe(:recaptcha_signup_min_score) do
+    gettext(
+      "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
+    )
+  end
+
+  def describe(:recaptcha_booking_min_score) do
+    gettext(
+      "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
+    )
+  end
+
+  def describe(:admin_alerts_enabled) do
+    gettext(
+      "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
+    )
+  end
+
+  def describe(:admin_alert_email) do
+    gettext(
+      "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
+    )
+  end
+
   def describe(_other), do: ""
 
   @doc """
   The recommended value for a setting, or `nil` if there is no recommendation.
   Rendered as a separate chip beneath the description.
   """
-  @spec recommended(atom()) :: boolean() | nil
+  @spec recommended(atom()) :: term() | nil
   def recommended(:registration_enabled), do: true
   def recommended(:password_auth_enabled), do: true
   def recommended(_other), do: nil
@@ -51,6 +114,54 @@ defmodule TymeslotWeb.AdminLive.Formatters do
   @spec recommended_label(boolean()) :: String.t()
   def recommended_label(true), do: gettext("Enabled")
   def recommended_label(false), do: gettext("Disabled")
+
+  @doc """
+  Categorises a setting key so the UI knows which control to render.
+
+    * `:boolean` — two-state Enabled/Disabled toggle (existing pattern).
+    * `:score` — numeric input bounded 0.0–1.0 (reCAPTCHA thresholds).
+    * `:email` — text input with email validation.
+  """
+  @spec kind(atom()) :: :boolean | :score | :email
+  def kind(:recaptcha_signup_min_score), do: :score
+  def kind(:recaptcha_booking_min_score), do: :score
+  def kind(:admin_alert_email), do: :email
+  def kind(_other), do: :boolean
+
+  @doc """
+  Section heading a setting row belongs under. Used to group the settings
+  page into Authentication / reCAPTCHA / Admin alerts blocks.
+  """
+  @spec section(atom()) :: :authentication | :recaptcha | :admin_alerts
+  def section(:registration_enabled), do: :authentication
+  def section(:password_auth_enabled), do: :authentication
+  def section(:google_auth_enabled), do: :authentication
+  def section(:github_auth_enabled), do: :authentication
+  def section(:oauth_auth_enabled), do: :authentication
+  def section(:recaptcha_signup_enabled), do: :recaptcha
+  def section(:recaptcha_booking_enabled), do: :recaptcha
+  def section(:recaptcha_signup_min_score), do: :recaptcha
+  def section(:recaptcha_booking_min_score), do: :recaptcha
+  def section(:admin_alerts_enabled), do: :admin_alerts
+  def section(:admin_alert_email), do: :admin_alerts
+
+  @doc "Human-readable label for a section."
+  @spec section_label(atom()) :: String.t()
+  def section_label(:authentication), do: gettext("Authentication")
+  def section_label(:recaptcha), do: gettext("reCAPTCHA")
+  def section_label(:admin_alerts), do: gettext("Admin alerts")
+
+  @doc """
+  When a setting is only meaningful while another setting is enabled, this
+  returns the parent setting key — otherwise `nil`. The UI greys out and
+  disables the dependent control when the parent's effective value is `false`.
+
+  Example: `admin_alert_email` is meaningless while `admin_alerts_enabled`
+  is off, so the recipient input is disabled until alerts are turned on.
+  """
+  @spec depends_on(atom()) :: atom() | nil
+  def depends_on(:admin_alert_email), do: :admin_alerts_enabled
+  def depends_on(_other), do: nil
 
   @doc """
   Explanation shown to an admin for why a particular setting state is
