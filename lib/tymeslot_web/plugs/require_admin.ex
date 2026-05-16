@@ -1,11 +1,23 @@
 defmodule TymeslotWeb.Plugs.RequireAdmin do
   @moduledoc """
-  Halts the request with a 404 when `conn.assigns.current_user` is missing or
-  not an admin. Returning 404 (rather than 403) keeps the existence of the
-  admin scope opaque to non-admins.
+  Gates the `/admin` scope.
+
+    * Admin user → request continues.
+    * Authenticated non-admin → redirected to `/dashboard` with an explanatory
+      flash. The user is signed in and can already see the rest of the app, so
+      a 404 would be a worse UX than telling them why they're being bounced.
+    * No `current_user` (defensive — the upstream `require_authenticated_user`
+      plug should already have caught this) → 404, so anonymous probes can't
+      tell whether the admin scope exists.
   """
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: TymeslotWeb.Endpoint,
+    router: TymeslotWeb.Router,
+    statics: TymeslotWeb.static_paths()
+
   import Plug.Conn
+
   alias Phoenix.Controller
   alias Tymeslot.Auth.UserSchema
 
@@ -15,6 +27,13 @@ defmodule TymeslotWeb.Plugs.RequireAdmin do
   @spec call(Plug.Conn.t(), Keyword.t()) :: Plug.Conn.t()
   def call(%Plug.Conn{assigns: %{current_user: %UserSchema{is_admin: true}}} = conn, _opts) do
     conn
+  end
+
+  def call(%Plug.Conn{assigns: %{current_user: %UserSchema{}}} = conn, _opts) do
+    conn
+    |> Controller.put_flash(:error, "Admin access required.")
+    |> Controller.redirect(to: ~p"/dashboard")
+    |> halt()
   end
 
   def call(conn, _opts) do
