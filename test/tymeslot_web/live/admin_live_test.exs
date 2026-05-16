@@ -36,12 +36,13 @@ defmodule TymeslotWeb.AdminLiveTest do
   end
 
   describe "access control" do
-    test "non-admin user gets a 404 from the RequireAdmin plug", %{conn: conn} do
+    test "authenticated non-admin is redirected to /dashboard with a flash", %{conn: conn} do
       user = insert(:user, is_admin: false)
       conn = log_in_user(conn, user)
 
       conn = get(conn, ~p"/admin")
-      assert conn.status == 404
+      assert redirected_to(conn) == ~p"/dashboard"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Admin access required."
     end
 
     test "unauthenticated request redirected to login", %{conn: conn} do
