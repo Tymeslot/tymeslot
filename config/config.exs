@@ -266,7 +266,6 @@ config :tymeslot, :field_validation,
 # Social Authentication Configuration moved to runtime.exs (needs runtime env vars)
 
 config :tymeslot, :transcoder, Tymeslot.Media.Transcoder
-config :tymeslot, :video_transcoding_enabled, true
 
 # Provider enable/disable switches
 config :tymeslot, :video_providers, %{

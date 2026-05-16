@@ -16,17 +16,15 @@ defmodule Tymeslot.AppSettings.AppSettingsSchema do
           id: integer() | nil,
           registration_enabled: boolean() | nil,
           password_auth_enabled: boolean() | nil,
-          video_transcoding_enabled: boolean() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
 
-  @editable_fields [:registration_enabled, :password_auth_enabled, :video_transcoding_enabled]
+  @editable_fields [:registration_enabled, :password_auth_enabled]
 
   schema "app_settings" do
     field(:registration_enabled, :boolean)
     field(:password_auth_enabled, :boolean)
-    field(:video_transcoding_enabled, :boolean)
 
     timestamps(type: :utc_datetime_usec)
   end

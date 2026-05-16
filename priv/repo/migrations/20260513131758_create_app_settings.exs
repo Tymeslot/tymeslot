@@ -5,7 +5,6 @@ defmodule Tymeslot.Repo.Migrations.CreateAppSettings do
     create table(:app_settings) do
       add(:registration_enabled, :boolean)
       add(:password_auth_enabled, :boolean)
-      add(:video_transcoding_enabled, :boolean)
 
       timestamps(type: :utc_datetime_usec)
     end

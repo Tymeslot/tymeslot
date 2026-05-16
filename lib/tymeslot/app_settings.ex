@@ -30,7 +30,7 @@ defmodule Tymeslot.AppSettings do
 
   alias Tymeslot.AppSettings.{AppSettingsQueries, AppSettingsSchema}
 
-  @type setting_key :: :registration_enabled | :password_auth_enabled | :video_transcoding_enabled
+  @type setting_key :: :registration_enabled | :password_auth_enabled
   @type effective_source :: :db | :config | :default
   @type effective_value :: %{value: term(), source: effective_source(), db_value: term() | nil}
 
@@ -114,7 +114,6 @@ defmodule Tymeslot.AppSettings do
   @spec default_for(setting_key()) :: term()
   def default_for(:registration_enabled), do: true
   def default_for(:password_auth_enabled), do: true
-  def default_for(:video_transcoding_enabled), do: true
 
   # Baseline = the config-layer value that was in effect before any DB
   # override was applied. Captured once per BEAM lifetime in `:persistent_term`
