@@ -77,10 +77,11 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
   end
 
   describe "build_event_description/1" do
-    test "returns only the base description when no attendee message or meeting URL" do
+    test "prepends attendee identity and returns only the base description otherwise" do
       meeting = %{@base_meeting | attendee_message: nil, meeting_url: nil}
 
-      assert CalendarEventBuilder.build_event_description(meeting) == "Quarterly review"
+      assert CalendarEventBuilder.build_event_description(meeting) ==
+               "Attendee: Alice <alice@example.com>\n\nQuarterly review"
     end
 
     test "appends attendee message with section header when present" do
@@ -88,7 +89,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
 
       result = CalendarEventBuilder.build_event_description(meeting)
 
-      assert result == "Quarterly review\n\nMessage from attendee:\nPlease bring slides."
+      assert result ==
+               "Attendee: Alice <alice@example.com>\n\nQuarterly review\n\nMessage from attendee:\nPlease bring slides."
     end
 
     test "appends video meeting URL with section header when present" do
@@ -100,7 +102,8 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
 
       result = CalendarEventBuilder.build_event_description(meeting)
 
-      assert result == "Quarterly review\n\nVideo meeting: https://meet.example.com/room"
+      assert result ==
+               "Attendee: Alice <alice@example.com>\n\nQuarterly review\n\nVideo meeting: https://meet.example.com/room"
     end
 
     test "appends both attendee message and video URL when both are present" do
@@ -113,7 +116,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
       result = CalendarEventBuilder.build_event_description(meeting)
 
       assert result ==
-               "Quarterly review\n\nMessage from attendee:\nSee you there!\n\nVideo meeting: https://meet.example.com/room"
+               "Attendee: Alice <alice@example.com>\n\nQuarterly review\n\nMessage from attendee:\nSee you there!\n\nVideo meeting: https://meet.example.com/room"
     end
 
     test "handles nil base description without crashing" do
@@ -121,7 +124,7 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
 
       result = CalendarEventBuilder.build_event_description(meeting)
 
-      assert result == ""
+      assert result == "Attendee: Alice <alice@example.com>\n\n"
     end
 
     test "handles nil base description with attendee message" do
@@ -129,7 +132,38 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilderTest do
 
       result = CalendarEventBuilder.build_event_description(meeting)
 
-      assert result == "\n\nMessage from attendee:\nHi!"
+      assert result == "Attendee: Alice <alice@example.com>\n\n\n\nMessage from attendee:\nHi!"
+    end
+
+    # Issue #41: this line is the only place the organiser sees the
+    # attendee's identity inside their calendar app once the ATTENDEE block
+    # is removed from the CalDAV write payload. If the prefix changes the
+    # user-facing UX breaks silently — assert the exact shape.
+    test "falls back to email-only identity when attendee_name is missing" do
+      meeting = %{
+        @base_meeting
+        | attendee_name: nil,
+          attendee_message: nil,
+          meeting_url: nil
+      }
+
+      result = CalendarEventBuilder.build_event_description(meeting)
+
+      assert result == "Attendee: alice@example.com\n\nQuarterly review"
+    end
+
+    test "omits the identity line entirely when attendee_email is missing" do
+      meeting = %{
+        @base_meeting
+        | attendee_email: nil,
+          attendee_name: nil,
+          attendee_message: nil,
+          meeting_url: nil
+      }
+
+      result = CalendarEventBuilder.build_event_description(meeting)
+
+      assert result == "Quarterly review"
     end
   end
 end

@@ -239,4 +239,76 @@ defmodule Tymeslot.Integrations.Calendar.Selection do
         path != "",
         do: path
   end
+
+  @doc """
+  Returns the entries from a `calendar_list` whose `selected` flag is truthy.
+
+  Tolerates both string and atom keys. Use this whenever you need to surface
+  only the calendars the user has actively enabled — meeting-type target
+  picker, calendar-grid event filtering, etc. Returns `[]` for nil input so
+  callers can treat absent and empty selections uniformly.
+  """
+  @spec selected_calendars([map()] | nil) :: [map()]
+  def selected_calendars(nil), do: []
+
+  def selected_calendars(calendar_list) when is_list(calendar_list) do
+    Enum.filter(calendar_list, &(Map.get(&1, "selected") || Map.get(&1, :selected)))
+  end
+
+  @doc """
+  Decides whether a cached calendar event belongs to a calendar the user
+  currently has enabled.
+
+  Returns `true` for legacy integrations that have no `calendar_list`
+  populated — they predate per-calendar selection, so show everything.
+  Otherwise picks the right matching signal for the event's provider:
+
+  - CalDAV events (`provider_event_id` is a CalDAV href starting with `/`)
+    must match a selected calendar by **path prefix**. Their
+    `provider_calendar_id` is set to the integration's first selected path
+    regardless of the event's true origin, so it is useless as a
+    discriminator.
+  - Other providers (Google, Outlook) tag every cached row with the
+    originating calendar in `provider_calendar_id`, so match that against
+    the selected entries' `id`.
+
+  Returns `false` only when the integration has a `calendar_list` and the
+  event does not match any selected entry — i.e. the user has explicitly
+  deselected the calendar this event came from.
+  """
+  @spec event_visible?(map(), map()) :: boolean()
+  def event_visible?(_event, %{calendar_list: nil}), do: true
+  def event_visible?(_event, %{calendar_list: []}), do: true
+
+  def event_visible?(event, %{calendar_list: calendar_list}) do
+    selected = selected_calendars(calendar_list)
+
+    cond do
+      selected == [] -> false
+      caldav_event?(event) -> matches_selected_calendar_path?(event, selected)
+      true -> matches_selected_calendar_id?(event, selected)
+    end
+  end
+
+  defp caldav_event?(%{provider_event_id: peid}) when is_binary(peid),
+    do: String.starts_with?(peid, "/")
+
+  defp caldav_event?(_event), do: false
+
+  defp matches_selected_calendar_id?(%{provider_calendar_id: pcid}, selected)
+       when is_binary(pcid) do
+    Enum.any?(selected, fn cal -> (cal["id"] || cal[:id]) == pcid end)
+  end
+
+  defp matches_selected_calendar_id?(_event, _selected), do: false
+
+  defp matches_selected_calendar_path?(%{provider_event_id: peid}, selected)
+       when is_binary(peid) do
+    Enum.any?(selected, fn cal ->
+      path = cal["path"] || cal[:path]
+      is_binary(path) and String.starts_with?(peid, path)
+    end)
+  end
+
+  defp matches_selected_calendar_path?(_event, _selected), do: false
 end

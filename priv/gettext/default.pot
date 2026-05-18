@@ -1137,3 +1137,24 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "We opened Stripe Checkout in a new browser tab. Once your payment is confirmed, this page updates automatically."
 msgstr ""
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:78
+#, elixir-autogen, elixir-format
+msgid "%{current} / %{total}"
+msgstr ""
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:70
+#, elixir-autogen, elixir-format
+msgid "Back"
+msgstr ""
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:93
+#, elixir-autogen, elixir-format
+msgid "Got it"
+msgstr ""
+
+#: lib/tymeslot_web/components/announcement_modal_component.ex:105
+#: lib/tymeslot_web/components/announcement_modal_component.ex:109
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr ""

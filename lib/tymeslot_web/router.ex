@@ -53,6 +53,14 @@ defmodule TymeslotWeb.Router do
     end
 
     scope "/dev", TymeslotWeb do
+      pipe_through :browser
+
+      live_session :dev_announcements_preview do
+        live "/announcements", Dev.AnnouncementsPreviewLive, :index
+      end
+    end
+
+    scope "/dev", TymeslotWeb do
       pipe_through [:browser, :require_authenticated_user]
 
       live_session :dev_onboarding,
@@ -141,7 +149,10 @@ defmodule TymeslotWeb.Router do
             Phoenix.LiveView.Socket.t()
           ) :: {:cont, Phoenix.LiveView.Socket.t()} | {:halt, Phoenix.LiveView.Socket.t()}
     def on_mount(:dashboard_hooks, params, session, socket) do
-      hooks = @dashboard_hooks ++ dashboard_additional_hooks()
+      hooks =
+        @dashboard_hooks ++
+          dashboard_additional_hooks() ++
+          [{TymeslotWeb.Hooks.AnnouncementsHook, :load_unseen_announcements}]
 
       Enum.reduce_while(hooks, {:cont, socket}, fn
         {module, function}, {:cont, socket} ->
@@ -204,6 +215,28 @@ defmodule TymeslotWeb.Router do
     end
 
     post "/dashboard/payments/connect", Dashboard.PaymentsController, :connect
+  end
+
+  # =============================================================================
+  # Admin Routes (self-hosted only — locked down in SaaS via enable_admin_ui)
+  # =============================================================================
+  scope "/admin", TymeslotWeb do
+    pipe_through [
+      :browser,
+      :require_authenticated_user,
+      TymeslotWeb.Plugs.RequireAdminUiEnabled,
+      TymeslotWeb.Plugs.RequireAdmin
+    ]
+
+    live_session :admin,
+      on_mount: [
+        {TymeslotWeb.Hooks.AuthLiveSessionHook, :ensure_authenticated},
+        TymeslotWeb.Hooks.EnsureAdminHook
+      ] do
+      live "/", AdminLive, :settings
+      live "/settings", AdminLive, :settings
+      live "/users", AdminLive, :users
+    end
   end
 
   # Onboarding routes

@@ -47,7 +47,9 @@ defmodule TymeslotWeb.Dashboard.Automation.HelpersTest do
       {:ok, socket: socket}
     end
 
-    test "returns socket unchanged for :insufficient_plan and sends error flash", %{socket: socket} do
+    test "returns socket unchanged for :insufficient_plan and sends error flash", %{
+      socket: socket
+    } do
       result = Helpers.handle_feature_access_error(socket, :insufficient_plan)
       assert result == socket
       assert_received {:flash, {:error, "Automation is available on Pro plans."}}

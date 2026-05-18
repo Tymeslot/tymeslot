@@ -11,6 +11,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
   alias Phoenix.Component
   alias Phoenix.LiveView
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
 
   require Logger
 
@@ -196,7 +197,7 @@ defmodule TymeslotWeb.OnboardingLive.CalendarHandlers do
          socket
          |> Component.assign(:caldav_form_data, form_data)
          |> Component.assign(:caldav_form_errors, %{
-           discovery: Calendar.normalize_discovery_error(reason)
+           discovery: DisplayHelpers.normalize_discovery_error(reason)
          })}
     end
   end

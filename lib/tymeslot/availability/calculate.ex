@@ -67,28 +67,14 @@ defmodule Tymeslot.Availability.Calculate do
     # Prefetch schedule data once for all adjacent-day lookups
     config = prefetch_schedule_data(config, profile_id, Date.add(date, -1), Date.add(date, 1))
 
-    # Check the selected date and its adjacent days in the owner's timezone,
-    # as they might bleed into the attendee's selected date.
     business_hours_windows =
-      Enum.flat_map([Date.add(date, -1), date, Date.add(date, 1)], fn d ->
-        case BusinessHours.get_business_hours_in_timezone(
-               d,
-               profile_id,
-               owner_timezone,
-               user_timezone,
-               config
-             ) do
-          {:ok, %{start_datetime: %DateTime{} = start_dt, end_datetime: %DateTime{} = end_dt}} ->
-            if DateTime.to_date(start_dt) == date or DateTime.to_date(end_dt) == date do
-              [%{start_dt: start_dt, end_dt: end_dt, date: d}]
-            else
-              []
-            end
-
-          _other ->
-            []
-        end
-      end)
+      BusinessHours.windows_for_target_date(
+        date,
+        profile_id,
+        owner_timezone,
+        user_timezone,
+        config
+      )
 
     if Enum.empty?(business_hours_windows) do
       {:ok, []}
@@ -101,7 +87,7 @@ defmodule Tymeslot.Availability.Calculate do
       all_available_slots =
         business_hours_windows
         |> Enum.flat_map(fn window ->
-          breaks = get_breaks_for_day(window.date, config)
+          breaks = BusinessHours.breaks_for_day(window.date, profile_id, config)
 
           all_slots =
             TimeSlots.generate_slots_for_range_with_breaks(
@@ -122,7 +108,7 @@ defmodule Tymeslot.Availability.Calculate do
           )
         end)
         |> Enum.uniq()
-        |> Enum.sort()
+        |> Enum.sort_by(&TimeSlots.parse_time_slot/1, Time)
 
       {:ok, all_available_slots}
     end
@@ -323,19 +309,6 @@ defmodule Tymeslot.Availability.Calculate do
         end_date
       )
     end)
-  end
-
-  defp get_breaks_for_day(date, config) do
-    day_of_week = Date.day_of_week(date)
-    profile_id = Map.get(config, :profile_id)
-
-    case BusinessHours.lookup_day_availability(day_of_week, profile_id, config) do
-      %{breaks: breaks} when is_list(breaks) ->
-        Enum.map(breaks, &{&1.start_time, &1.end_time})
-
-      _other ->
-        []
-    end
   end
 
   defp determine_availability(date, date_string, today, now, availability_map, config) do

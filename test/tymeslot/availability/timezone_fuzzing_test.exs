@@ -12,6 +12,7 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Tymeslot.Availability.Calculate
+  alias Tymeslot.Availability.TimeSlots
   alias Tymeslot.Repo
   alias Tymeslot.Timezones
 
@@ -101,8 +102,8 @@ defmodule Tymeslot.Availability.TimezoneFuzzingTest do
         assert is_binary(slot), "Expected string slot, got: #{inspect(slot)}"
       end
 
-      assert slots == Enum.sort(slots),
-             "Slots not sorted for #{owner_tz} -> #{user_tz}: #{inspect(slots)}"
+      assert slots == Enum.sort_by(slots, &TimeSlots.parse_time_slot/1, Time),
+             "Slots not in chronological order for #{owner_tz} -> #{user_tz}: #{inspect(slots)}"
 
       assert slots == Enum.uniq(slots),
              "Duplicate slots for #{owner_tz} -> #{user_tz}: #{inspect(slots)}"

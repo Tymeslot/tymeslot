@@ -368,7 +368,10 @@ defmodule TymeslotWeb.Dashboard.BookingsManagementComponent do
   defp prepare_refund_action(payment, %{"cancel_refund_choice" => "partial"} = params) do
     raw = params["cancel_refund_amount"]
 
-    case MeetingPayments.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => raw}) do
+    case MeetingPayments.parse_refund_amount(payment, %{
+           "refund_type" => "partial",
+           "amount" => raw
+         }) do
       {:ok, cents} ->
         {:ok, {:refund, cents}}
 

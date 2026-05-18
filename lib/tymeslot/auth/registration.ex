@@ -4,9 +4,10 @@ defmodule Tymeslot.Auth.Registration do
   """
 
   require Logger
-  alias Tymeslot.Auth.{ErrorFormatter, Helpers.AccountLogging, UserQueries}
+  alias Tymeslot.Auth.{AdminBootstrap, ErrorFormatter, Helpers.AccountLogging, UserQueries}
   alias Tymeslot.Infrastructure.{Config, PubSub}
   alias Tymeslot.Profiles
+  alias Tymeslot.Repo
   alias Tymeslot.Security.{InputProcessor, RateLimiter}
   alias TymeslotWeb.Helpers.ClientIP
 
@@ -158,7 +159,21 @@ defmodule Tymeslot.Auth.Registration do
       terms_accepted: params["terms_accepted"]
     }
 
-    case Config.user_queries_module().create_user(user_params) do
+    transaction_result =
+      Repo.transaction(fn ->
+        case Config.user_queries_module().create_user(user_params) do
+          {:ok, user} ->
+            case AdminBootstrap.maybe_promote_first_user(user) do
+              {:ok, bootstrapped_user} -> bootstrapped_user
+              {:error, changeset} -> Repo.rollback(changeset)
+            end
+
+          {:error, changeset} ->
+            Repo.rollback(changeset)
+        end
+      end)
+
+    case transaction_result do
       {:ok, user} ->
         {:ok, user}
 

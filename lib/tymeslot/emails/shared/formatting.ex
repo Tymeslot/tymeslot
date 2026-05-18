@@ -4,7 +4,7 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   helpers for Tymeslot emails.
   """
 
-  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Helpers.LocaleFormat
 
   use Gettext, backend: TymeslotWeb.Gettext
@@ -147,7 +147,7 @@ defmodule Tymeslot.Emails.Shared.Formatting do
   """
   @spec format_duration(integer() | String.t()) :: String.t()
   def format_duration(duration) do
-    DateTimeUtils.format_duration(duration)
+    Duration.format(duration)
   end
 
   @doc """

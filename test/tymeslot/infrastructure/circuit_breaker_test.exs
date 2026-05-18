@@ -58,6 +58,15 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerTest do
       assert {:ok, "string"} = CircuitBreaker.call(name, fn -> "string" end)
     end
 
+    test "bare :ok is passed through unchanged" do
+      name = start_breaker()
+
+      assert :ok = CircuitBreaker.call(name, fn -> :ok end)
+
+      assert %{success_count: 1, failure_count: 0, status: :closed} =
+               CircuitBreaker.status(name)
+    end
+
     test "exceptions are caught and counted as failures" do
       name = start_breaker(config: %{failure_threshold: 10})
 

@@ -22,23 +22,18 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   @doc """
   Whether signup reCAPTCHA checks are enabled.
 
-  This reads the RECAPTCHA_SIGNUP_ENABLED environment variable directly, allowing
-  runtime toggling without redeployment (useful for emergency disables during outages).
+  Seeded from `RECAPTCHA_SIGNUP_ENABLED` at boot and overridable at runtime
+  via the admin settings UI (`Tymeslot.AppSettings`). Useful for emergency
+  disables during outages without a redeploy.
 
   This is a *feature flag*; if enabled but keys are missing, signup verification is
   automatically disabled (and logged) so legitimate signups aren't blocked by misconfiguration.
   """
   @spec signup_enabled?() :: boolean()
   def signup_enabled? do
-    recaptcha_cfg = Application.get_env(:tymeslot, :recaptcha, [])
-
-    case Keyword.fetch(recaptcha_cfg, :signup_enabled) do
-      {:ok, value} when is_boolean(value) ->
-        value
-
-      _other ->
-        System.get_env("RECAPTCHA_SIGNUP_ENABLED", "false") == "true"
-    end
+    :tymeslot
+    |> Application.get_env(:recaptcha, [])
+    |> Keyword.get(:signup_enabled, false)
   end
 
   @spec signup_min_score() :: float()
@@ -67,32 +62,18 @@ defmodule Tymeslot.Infrastructure.Security.RecaptchaHelpers do
   @doc """
   Whether booking reCAPTCHA checks are enabled.
 
-  This setting allows runtime toggling without redeployment (useful for emergency
-  disables during outages).
-
-  ## Configuration precedence (highest to lowest)
-
-  1. Application config: `config :tymeslot, :recaptcha, booking_enabled: true`
-  2. Environment variable: `RECAPTCHA_BOOKING_ENABLED=true` (fallback only)
-
-  The application config takes precedence over the environment variable, allowing
-  compile-time defaults while still supporting runtime overrides via environment
-  variables when config is not explicitly set.
+  Seeded from `RECAPTCHA_BOOKING_ENABLED` at boot and overridable at runtime
+  via the admin settings UI (`Tymeslot.AppSettings`). Useful for emergency
+  disables during outages without a redeploy.
 
   This is a *feature flag*; if enabled but keys are missing, booking verification is
   automatically disabled (and logged) so legitimate bookings aren't blocked by misconfiguration.
   """
   @spec booking_enabled?() :: boolean()
   def booking_enabled? do
-    recaptcha_cfg = Application.get_env(:tymeslot, :recaptcha, [])
-
-    case Keyword.fetch(recaptcha_cfg, :booking_enabled) do
-      {:ok, value} when is_boolean(value) ->
-        value
-
-      _other ->
-        System.get_env("RECAPTCHA_BOOKING_ENABLED", "false") == "true"
-    end
+    :tymeslot
+    |> Application.get_env(:recaptcha, [])
+    |> Keyword.get(:booking_enabled, false)
   end
 
   # Default minimum score for booking reCAPTCHA verification.

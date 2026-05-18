@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
 
   alias Tymeslot.Timezones
   alias TymeslotWeb.Components.MeetingUtils
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.TimezoneHelpers
 
@@ -185,7 +185,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels do
                             phx-click="select_time"
                             phx-target={@target}
                             phx-value-time={slot_value}
-                            slot={%{start_time: Helpers.parse_slot_time(slot_value)}}
+                            slot={%{start_time: CalendarHelpers.parse_slot_time(slot_value)}}
                             selected={@selected_time == slot_value}
                             disabled={@loading_slots}
                           />

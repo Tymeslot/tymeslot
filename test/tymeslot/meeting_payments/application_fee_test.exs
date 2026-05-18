@@ -35,6 +35,7 @@ defmodule Tymeslot.MeetingPayments.ApplicationFeeTest do
       for price <- 1..500, bp <- [1, 33, 50, 100, 150, 200, 500] do
         float_ceil = ceil(price * bp / 10_000.0)
         expected = max(float_ceil, 1)
+
         assert ApplicationFee.calculate(price, bp) == expected,
                "mismatch at price=#{price} bp=#{bp}"
       end

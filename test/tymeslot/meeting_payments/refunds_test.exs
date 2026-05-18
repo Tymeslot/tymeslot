@@ -107,73 +107,124 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
     test "partial type with valid decimal amount returns cents" do
       payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 0})
-      assert {:ok, 1500} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "15.00"})
+
+      assert {:ok, 1500} =
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "15.00"
+               })
     end
 
     test "partial type normalises comma as decimal separator" do
       payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 0})
-      assert {:ok, 1500} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "15,00"})
+
+      assert {:ok, 1500} =
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "15,00"
+               })
     end
 
     test "partial type parses whole-number amount (no decimal point)" do
       payment = payment_stub(%{amount_cents: 10_000, refunded_amount_cents: 0})
-      assert {:ok, 1000} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "10"})
+
+      assert {:ok, 1000} =
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "10"
+               })
     end
 
     test "partial type parses sub-dollar amount correctly" do
       payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 0})
-      assert {:ok, 50} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "0.50"})
+
+      assert {:ok, 50} =
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "0.50"
+               })
     end
 
     test "partial type parses 29.99 correctly (no float rounding hazard)" do
       payment = payment_stub(%{amount_cents: 10_000, refunded_amount_cents: 0})
-      assert {:ok, 2999} = Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "29.99"})
+
+      assert {:ok, 2999} =
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "29.99"
+               })
     end
 
     test "partial type returns :invalid_amount for scientific notation" do
       payment = payment_stub()
+
       assert {:error, :invalid_amount} =
-               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "1e2"})
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "1e2"
+               })
     end
 
     test "partial type returns :invalid_amount for negative amount" do
       payment = payment_stub()
+
       assert {:error, :invalid_amount} =
-               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "-1"})
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "-1"
+               })
     end
 
     test "partial type returns :invalid_amount for sub-cent precision" do
       payment = payment_stub()
+
       assert {:error, :invalid_amount} =
-               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "10.005"})
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "10.005"
+               })
     end
 
     test "partial type returns :exceeds_remaining when amount is too large" do
       payment = payment_stub(%{amount_cents: 5000, refunded_amount_cents: 4500})
+
       assert {:error, :exceeds_remaining} =
-               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "10.00"})
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "10.00"
+               })
     end
 
     test "partial type returns :invalid_amount for zero" do
       payment = payment_stub()
+
       assert {:error, :invalid_amount} =
                Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "0"})
     end
 
     test "partial type returns :invalid_amount for zero with decimal" do
       payment = payment_stub()
+
       assert {:error, :invalid_amount} =
-               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "0.00"})
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "0.00"
+               })
     end
 
     test "partial type returns :invalid_amount for non-numeric string" do
       payment = payment_stub()
+
       assert {:error, :invalid_amount} =
-               Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => "abc"})
+               Refunds.parse_refund_amount(payment, %{
+                 "refund_type" => "partial",
+                 "amount" => "abc"
+               })
     end
 
     test "partial type returns :invalid_amount for empty string" do
       payment = payment_stub()
+
       assert {:error, :invalid_amount} =
                Refunds.parse_refund_amount(payment, %{"refund_type" => "partial", "amount" => ""})
     end
@@ -185,6 +236,7 @@ defmodule Tymeslot.MeetingPayments.RefundsTest do
 
     test "returns :choose_type for an unrecognised refund_type value" do
       payment = payment_stub()
+
       assert {:error, :choose_type} =
                Refunds.parse_refund_amount(payment, %{"refund_type" => "unknown"})
     end

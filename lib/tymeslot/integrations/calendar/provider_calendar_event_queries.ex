@@ -110,7 +110,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderCalendarEventQueries do
       query,
       [e],
       (e.all_day == false and e.start_at < ^range_end and e.end_at > ^range_start) or
-        (e.all_day == true and e.start_date < ^range_end_date and e.end_date > ^range_start_date)
+        (e.all_day == true and e.start_date <= ^range_end_date and e.end_date > ^range_start_date)
     )
   end
 

@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
   use TymeslotWeb, :live_view
 
   alias Tymeslot.Themes.{Registry, Theme}
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Core.{ErrorBoundary, EventBus, MeetingManagement, MountHelpers}
   alias TymeslotWeb.Themes.Shared.{EventHandlers, LocaleHandler, PathHandlers}
 
@@ -22,7 +22,7 @@ defmodule TymeslotWeb.Themes.Core.Dispatcher do
 
     # For all routes with username (including meeting management), resolve the username first
     if params["username"] do
-      socket = Helpers.handle_username_resolution(socket, params["username"])
+      socket = OrganizerHelpers.handle_username_resolution(socket, params["username"])
 
       case socket.assigns do
         %{organizer_profile: %{} = profile} ->

@@ -156,8 +156,7 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
          |> assign_payments_state(user)}
 
       {:error, _reason} ->
-        {:noreply,
-         put_flash(socket, :error, "Could not disconnect Stripe. Please try again.")}
+        {:noreply, put_flash(socket, :error, "Could not disconnect Stripe. Please try again.")}
     end
   end
 
@@ -266,7 +265,9 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
 
   defp parse_refund_error_message(:choose_type), do: "Choose a refund type."
   defp parse_refund_error_message(:invalid_amount), do: "Enter a valid refund amount."
-  defp parse_refund_error_message(:exceeds_remaining), do: "Amount exceeds the remaining refundable balance."
+
+  defp parse_refund_error_message(:exceeds_remaining),
+    do: "Amount exceeds the remaining refundable balance."
 
   defp process_refund(socket, payment, amount_cents) do
     user = socket.assigns.current_user
@@ -599,5 +600,4 @@ defmodule TymeslotWeb.Dashboard.PaymentsLive do
   defp format_status("pending"), do: "Pending"
   defp format_status("failed"), do: "Failed"
   defp format_status(other), do: other
-
 end

@@ -139,6 +139,7 @@ defmodule TymeslotWeb.Themes.Quill.PaymentProcessingTest do
         end
       end)
 
-    assert received_sources == [], "Data-loading queries fired during dead render: #{inspect(received_sources)}"
+    assert received_sources == [],
+           "Data-loading queries fired during dead render: #{inspect(received_sources)}"
   end
 end

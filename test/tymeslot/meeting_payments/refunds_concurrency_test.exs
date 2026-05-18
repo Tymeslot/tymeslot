@@ -81,7 +81,9 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
 
       # Final state: the row must reflect the sum of all successful refunds.
       reloaded = BookingPaymentQueries.by_charge_id(payment.stripe_charge_id)
-      total_refunded = successes |> Enum.map(fn {:ok, p} -> p.refunded_amount_cents end) |> Enum.max()
+
+      total_refunded =
+        successes |> Enum.map(fn {:ok, p} -> p.refunded_amount_cents end) |> Enum.max()
 
       assert reloaded.refunded_amount_cents == total_refunded,
              "DB refunded_amount_cents #{reloaded.refunded_amount_cents} does not match " <>
@@ -116,7 +118,10 @@ defmodule Tymeslot.MeetingPayments.RefundsConcurrencyTest do
       successes = Enum.count(results, &match?({:ok, _}, &1))
 
       rejected =
-        Enum.count(results, &match?({:error, reason} when reason in [:invalid_amount, :already_refunded], &1))
+        Enum.count(
+          results,
+          &match?({:error, reason} when reason in [:invalid_amount, :already_refunded], &1)
+        )
 
       assert successes == 1,
              "expected exactly one {:ok, _} result, got: #{inspect(results)}"

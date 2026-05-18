@@ -176,7 +176,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Helpers do
     socket
   end
 
-  def handle_feature_access_error(socket, reason) when reason in [:pro_required, :feature_disabled] do
+  def handle_feature_access_error(socket, reason)
+      when reason in [:pro_required, :feature_disabled] do
     Flash.error("This automation feature is available on the Pro plan.")
     socket
   end

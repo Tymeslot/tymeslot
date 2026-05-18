@@ -11,7 +11,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
                "radicale",
                "nextcloud",
                "zimbra",
-               "mailbox_org"
+               "mailbox_org",
+               "baikal"
              ]
     end
 
@@ -22,6 +23,33 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfigTest do
 
     test "all elements are binaries (database string shape)" do
       assert Enum.all?(ProviderConfig.caldav_based_provider_strings(), &is_binary/1)
+    end
+  end
+
+  describe "locked_url_for/1" do
+    test "atom key returns a map with :url and :tooltip for a locked provider" do
+      result = ProviderConfig.locked_url_for(:mailbox_org)
+      assert is_map(result)
+      assert Map.has_key?(result, :url)
+      assert Map.has_key?(result, :tooltip)
+      assert result.url == "https://dav.mailbox.org"
+    end
+
+    test "string key returns the same map as the atom key" do
+      assert ProviderConfig.locked_url_for("mailbox_org") ==
+               ProviderConfig.locked_url_for(:mailbox_org)
+    end
+
+    test "atom key for a provider without a locked URL returns nil" do
+      assert ProviderConfig.locked_url_for(:caldav) == nil
+    end
+
+    test "string key for an unknown provider returns nil" do
+      assert ProviderConfig.locked_url_for("unknown") == nil
+    end
+
+    test "nil returns nil" do
+      assert ProviderConfig.locked_url_for(nil) == nil
     end
   end
 

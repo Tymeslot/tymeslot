@@ -4,7 +4,7 @@ defmodule Tymeslot.MixProject do
   def project do
     [
       app: :tymeslot,
-      version: "1.0.0",
+      version: "1.0.2",
       elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -134,7 +134,7 @@ defmodule Tymeslot.MixProject do
       {:remote_ip, "~> 1.1"},
       {:stream_data, "~> 1.1", only: :test},
       {:wallaby, "~> 0.30", only: :test, runtime: false},
-      {:phoenix_ecto, "~> 4.6", only: :test}
+      {:phoenix_ecto, "~> 4.6"}
     ]
   end
 

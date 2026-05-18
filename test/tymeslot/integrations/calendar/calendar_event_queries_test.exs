@@ -77,6 +77,28 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueriesTest do
       assert result == []
     end
 
+    test "returns all-day event when its start_date equals the date of range_end midnight" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        all_day: true,
+        start_date: ~D[2026-06-15],
+        end_date: ~D[2026-06-17],
+        start_at: nil,
+        end_at: nil
+      )
+
+      result =
+        CalendarEventQueries.in_range(
+          [integration.id],
+          {~U[2026-06-10 00:00:00Z], ~U[2026-06-15 00:00:00Z]}
+        )
+
+      assert [%CalendarEvent{all_day: true, start_date: ~D[2026-06-15]}] = result
+    end
+
     test "returns empty list for empty integration_ids" do
       assert [] =
                CalendarEventQueries.in_range(
@@ -148,6 +170,50 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventQueriesTest do
         )
 
       assert result == []
+    end
+
+    test "returns all-day event when its start_date equals a single-day range" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        all_day: true,
+        start_date: ~D[2026-06-15],
+        end_date: ~D[2026-06-17],
+        start_at: nil,
+        end_at: nil
+      )
+
+      result =
+        CalendarEventQueries.in_range(
+          [integration.id],
+          {~D[2026-06-15], ~D[2026-06-15]}
+        )
+
+      assert [%CalendarEvent{all_day: true, start_date: ~D[2026-06-15]}] = result
+    end
+
+    test "returns all-day event when its start_date equals the range_end" do
+      user = insert(:user)
+      integration = insert(:calendar_integration, user: user)
+
+      insert(:provider_calendar_event,
+        calendar_integration: integration,
+        all_day: true,
+        start_date: ~D[2026-06-15],
+        end_date: ~D[2026-06-17],
+        start_at: nil,
+        end_at: nil
+      )
+
+      result =
+        CalendarEventQueries.in_range(
+          [integration.id],
+          {~D[2026-06-10], ~D[2026-06-15]}
+        )
+
+      assert [%CalendarEvent{all_day: true}] = result
     end
   end
 

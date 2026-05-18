@@ -26,6 +26,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
 
   @moduletag :auth
 
+  alias Tymeslot.Announcements.UserSeenAnnouncementSchema
   alias Tymeslot.Auth.UserQueries
   alias Tymeslot.Auth.UserSchema
   alias Tymeslot.Auth.UserSessionSchema
@@ -129,6 +130,17 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
         })
         |> Repo.insert()
 
+      # user_seen_announcements is user_id :delete_all by migration
+      # 20260508090605. Seed one directly since it has no public factory.
+      {:ok, seen_announcement} =
+        %UserSeenAnnouncementSchema{}
+        |> UserSeenAnnouncementSchema.changeset(%{
+          user_id: user.id,
+          announcement_key: "cascade_probe",
+          seen_at: ~U[2026-05-01 00:00:00Z]
+        })
+        |> Repo.insert()
+
       # Sanity: every seeded row is present before the delete.
       assert Repo.get(UserSchema, user.id)
       assert Repo.get(ProfileSchema, profile.id)
@@ -147,6 +159,7 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
       assert Repo.get(AvailabilityOverrideSchema, override.id)
       assert Repo.get(ThemeCustomizationSchema, theme.id)
       assert Repo.get(IntegrationHealthStateSchema, health_state.id)
+      assert Repo.get(UserSeenAnnouncementSchema, seen_announcement.id)
       assert Repo.get(CalendarPreferencesSchema, calendar_prefs.id)
       assert Repo.get(ProviderCalendarEventSchema, provider_event.id)
       assert Repo.get(TelegramDeliverySchema, telegram_delivery.id)
@@ -232,6 +245,9 @@ defmodule Tymeslot.Auth.AccountDeletionCascadeTest do
 
       refute Repo.get(IntegrationHealthStateSchema, health_state.id),
              "integration_health_state: expected delete-cascade"
+
+      refute Repo.get(UserSeenAnnouncementSchema, seen_announcement.id),
+             "user_seen_announcement: expected delete-cascade via user_id FK (`on_delete: :delete_all`)"
 
       # Transitive :delete_all: webhook_delivery -> webhook -> user.
       refute Repo.get(WebhookDeliverySchema, webhook_delivery.id),

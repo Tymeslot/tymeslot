@@ -93,7 +93,8 @@ defmodule Tymeslot.Emails.Templates.ChargeDisputeOpenedTest do
     end
 
     test "omits attendee email line in both bodies when attendee_email is nil (anonymised payment)" do
-      email = ChargeDisputeOpened.render(build_context(%{attendee_email: nil, attendee_name: nil}))
+      email =
+        ChargeDisputeOpened.render(build_context(%{attendee_email: nil, attendee_name: nil}))
 
       refute email.html_body =~ "Attendee email:"
       refute email.html_body =~ "@deleted.local"

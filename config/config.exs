@@ -12,6 +12,9 @@ config :tymeslot,
   # --- Feature Flags ---
   # Controls whether new user registration is allowed
   registration_enabled: true,
+  # Controls whether the self-host admin UI is mounted. SaaS overrides this
+  # to false so the /admin scope 404s in the cloud deployment.
+  enable_admin_ui: true,
   # Controls whether users must accept T&C/Privacy during registration
   enforce_legal_agreements: false,
   # Whether meeting payments (booker pays at booking time) is enabled.
@@ -81,6 +84,10 @@ config :tymeslot,
   # Dashboard Extensions
   dashboard_sidebar_extensions: [],
   dashboard_action_components: %{}
+
+# Feature Announcements - Catalog modules that contribute to the
+# what's-new modal shown on dashboard mount. SaaS appends its own catalog.
+config :tymeslot, :announcement_catalogs, [Tymeslot.Announcements.Catalog]
 
 # Feature Assigns - Default to allowing all features
 # SaaS can override these via on_mount hooks based on subscription status.
@@ -268,7 +275,6 @@ config :tymeslot, :field_validation,
 # Social Authentication Configuration moved to runtime.exs (needs runtime env vars)
 
 config :tymeslot, :transcoder, Tymeslot.Media.Transcoder
-config :tymeslot, :video_transcoding_enabled, true
 
 # Provider enable/disable switches
 config :tymeslot, :video_providers, %{
@@ -284,8 +290,13 @@ config :tymeslot, :calendar_providers, %{
   nextcloud: [enabled: true],
   zimbra: [enabled: true],
   mailbox_org: [enabled: true],
+  baikal: [enabled: true],
   google: [enabled: true],
-  outlook: [enabled: true]
+  outlook: [enabled: true],
+  # Internal providers — never user-connectable. Disabled explicitly because
+  # the runtime toggle defaults to enabled for any provider in @providers.
+  demo: [enabled: false],
+  debug: [enabled: false]
 }
 
 # Integration locking configuration

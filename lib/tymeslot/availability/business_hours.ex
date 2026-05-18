@@ -98,6 +98,60 @@ defmodule Tymeslot.Availability.BusinessHours do
     end
   end
 
+  @typedoc "A business-hours window for a single day, expressed in the user's timezone."
+  @type slot_window :: %{
+          required(:start_dt) => DateTime.t(),
+          required(:end_dt) => DateTime.t(),
+          required(:date) => Date.t()
+        }
+
+  @doc """
+  Returns the business-hours windows that can produce slots on `target_date`
+  in the user's timezone. Adjacent days are considered because business hours
+  in the owner's timezone may bleed across midnight in the user's timezone.
+  """
+  @spec windows_for_target_date(
+          Date.t(),
+          integer() | nil,
+          String.t(),
+          String.t(),
+          Calculate.availability_config()
+        ) :: [slot_window()]
+  def windows_for_target_date(target_date, profile_id, owner_timezone, user_timezone, config) do
+    Enum.flat_map([Date.add(target_date, -1), target_date, Date.add(target_date, 1)], fn d ->
+      case get_business_hours_in_timezone(d, profile_id, owner_timezone, user_timezone, config) do
+        {:ok, %{start_datetime: %DateTime{} = start_dt, end_datetime: %DateTime{} = end_dt}} ->
+          if DateTime.to_date(start_dt) == target_date or
+               DateTime.to_date(end_dt) == target_date do
+            [%{start_dt: start_dt, end_dt: end_dt, date: d}]
+          else
+            []
+          end
+
+        _other ->
+          []
+      end
+    end)
+  end
+
+  @doc """
+  Returns the breaks for a date as a list of `{start_time, end_time}` tuples,
+  reading from preloaded weekly schedule when available.
+  """
+  @spec breaks_for_day(Date.t(), integer() | nil, Calculate.availability_config()) ::
+          [{Time.t(), Time.t()}]
+  def breaks_for_day(date, profile_id, config) do
+    day_of_week = Date.day_of_week(date)
+
+    case lookup_day_availability(day_of_week, profile_id, config) do
+      %{breaks: breaks} when is_list(breaks) ->
+        Enum.map(breaks, &{&1.start_time, &1.end_time})
+
+      _other ->
+        []
+    end
+  end
+
   @doc """
   Fallback for profiles without explicit business hours configuration.
   Uses default hardcoded hours when profile_id is not provided.

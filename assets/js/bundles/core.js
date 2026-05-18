@@ -67,6 +67,23 @@ window.addEventListener("phx:reset-form", (e) => {
   if (form) form.reset();
 });
 
+// Inline "Saved" pulse for the admin settings autosave inputs. The flash
+// toast still fires top-right, but when the trigger is blur (the user has
+// already moved their focus away from the input), an adjacent visual
+// confirmation reads much faster than the toast.
+window.addEventListener("phx:ts:setting-saved", (e) => {
+  const id = `setting-input-${e.detail.key}`;
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const pulseClasses = ["ring-4", "ring-turquoise-400", "border-turquoise-500"];
+  el.classList.add(...pulseClasses);
+  clearTimeout(el.__tymeslot_savedPulseTimer);
+  el.__tymeslot_savedPulseTimer = setTimeout(() => {
+    el.classList.remove(...pulseClasses);
+  }, 1200);
+});
+
 window.addEventListener("phx:copy-to-clipboard", (e) => {
   const text = e.detail.text;
   if (navigator.clipboard) {

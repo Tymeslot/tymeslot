@@ -144,8 +144,11 @@ config :tymeslot, :calendar_providers, %{
   nextcloud: [enabled: true],
   zimbra: [enabled: true],
   mailbox_org: [enabled: true],
+  baikal: [enabled: true],
   google: [enabled: true],
-  outlook: [enabled: true]
+  outlook: [enabled: true],
+  demo: [enabled: false],
+  debug: [enabled: false]
 }
 
 # Configure reCAPTCHA for tests

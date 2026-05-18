@@ -53,7 +53,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   attr :id, :string, required: true
   attr :show, :boolean, default: false
   attr :on_cancel, JS, default: %JS{}, doc: "JS command executed when the modal is dismissed"
-  attr :size, :atom, default: :medium, values: [:small, :medium, :large, :xlarge, :full]
+
+  attr :size, :atom,
+    default: :medium,
+    values: [:xsmall, :small, :medium, :large, :xlarge, :full]
 
   slot :header, required: false
   slot :inner_block, required: true
@@ -117,6 +120,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Modal do
   end
 
   # Helper function for modal size classes
+  defp modal_size_class(:xsmall), do: "modal-content--xsmall"
   defp modal_size_class(:small), do: "modal-content--small"
   defp modal_size_class(:medium), do: "modal-content--medium"
   defp modal_size_class(:large), do: "modal-content--large"

@@ -6,8 +6,8 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   import Phoenix.LiveView, only: [put_flash: 3]
   require Logger
 
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
-  alias TymeslotWeb.Live.Scheduling.Helpers
 
   @doc """
   Handles calendar events updated via PubSub.
@@ -24,10 +24,10 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           socket
           |> assign(:available_slots, nil)
           |> assign(:selected_time, nil)
-          |> Helpers.fetch_month_availability_async()
+          |> AvailabilityHelpers.fetch_month_availability_async()
 
         _committed ->
-          Helpers.fetch_month_availability_async(socket)
+          AvailabilityHelpers.fetch_month_availability_async(socket)
       end
 
     {:noreply, socket}

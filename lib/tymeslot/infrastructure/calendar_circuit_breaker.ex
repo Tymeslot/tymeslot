@@ -80,7 +80,7 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
       ...> end)
       {:error, :circuit_open}
   """
-  @spec call(atom(), (-> any())) :: {:ok, any()} | {:error, atom()}
+  @spec call(atom(), (-> any())) :: :ok | {:ok, any()} | {:error, atom()}
   def call(provider, fun) when provider in @calendar_providers and is_function(fun, 0) do
     breaker_name = breaker_name(provider)
     CircuitBreakerHelpers.call_with_breaker(breaker_name, provider, "Calendar", fun)
@@ -94,9 +94,9 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
   Executes a calendar operation through a host-specific circuit breaker.
   Useful for CalDAV providers where individual servers may be slow or down.
   """
-  @spec call_with_host(atom(), String.t(), (-> any())) :: {:ok, any()} | {:error, atom()}
+  @spec call_with_host(atom(), String.t(), (-> any())) :: :ok | {:ok, any()} | {:error, atom()}
   def call_with_host(provider, host, fun)
-      when provider in @calendar_providers and is_binary(host) and is_function(fun, 0) do
+      when is_atom(provider) and is_binary(host) and is_function(fun, 0) do
     # Clean host name to use as part of the registry key
     safe_host = String.replace(host, ~r/[^a-zA-Z0-9]/, "_")
     breaker_id = "calendar_breaker_#{provider}_#{safe_host}"
@@ -106,6 +106,9 @@ defmodule Tymeslot.Infrastructure.CalendarCircuitBreaker do
     ensure_breaker_exists(breaker_name, provider)
 
     case CircuitBreaker.call(breaker_name, fun) do
+      :ok ->
+        :ok
+
       {:ok, result} ->
         {:ok, result}
 

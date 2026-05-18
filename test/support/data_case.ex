@@ -55,7 +55,7 @@ defmodule Tymeslot.DataCase do
     # care about the backfill get a benign no-charge response so the handler
     # logs a warning and continues without crashing.
     Mox.stub(Tymeslot.MeetingPayments.StripeAdapterMock, :retrieve_payment_intent, fn _id,
-                                                                                     _opts ->
+                                                                                      _opts ->
       {:ok, %{"latest_charge" => nil}}
     end)
 
