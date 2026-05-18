@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -74,11 +74,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                   <p class="booking-subtitle text-quill-primary">
                     <%= if @organizer_profile do %>
                       {gettext("You're booking a %{duration} meeting with %{name}",
-                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: DateTimeUtils.format_duration(@duration)),
+                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: Duration.format(@duration)),
                         name: get_organizer_name(@organizer_profile, @username_context))}
                     <% else %>
                       {gettext("You're booking a %{duration} meeting",
-                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: DateTimeUtils.format_duration(@duration)))}
+                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: Duration.format(@duration)))}
                     <% end %>
                   </p>
 

@@ -7,6 +7,7 @@ defmodule Tymeslot.Utils.DateTimeUtilsPropertyTest do
   use ExUnitProperties
 
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.Display
 
   describe "format_time_for_display/1 and parse_time_string/1 round-trip" do
     property "round-trip: parse(format(time)) recovers the original time" do
@@ -15,7 +16,7 @@ defmodule Tymeslot.Utils.DateTimeUtilsPropertyTest do
               minute <- integer(0..59)
             ) do
         time = Time.new!(hour, minute, 0)
-        formatted = DateTimeUtils.format_time_for_display(time)
+        formatted = Display.format_time_for_display(time)
         assert {:ok, parsed} = DateTimeUtils.parse_time_string(formatted)
 
         assert parsed == time,
@@ -29,7 +30,7 @@ defmodule Tymeslot.Utils.DateTimeUtilsPropertyTest do
               minute <- integer(0..59)
             ) do
         time = Time.new!(hour, minute, 0)
-        formatted = DateTimeUtils.format_time_for_display(time)
+        formatted = Display.format_time_for_display(time)
 
         assert String.ends_with?(formatted, " AM") or String.ends_with?(formatted, " PM")
       end
@@ -41,7 +42,7 @@ defmodule Tymeslot.Utils.DateTimeUtilsPropertyTest do
               minute <- integer(0..59)
             ) do
         time = Time.new!(hour, minute, 0)
-        formatted = DateTimeUtils.format_time_for_display(time)
+        formatted = Display.format_time_for_display(time)
 
         if hour < 12 do
           assert String.ends_with?(formatted, " AM")

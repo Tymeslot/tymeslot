@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels
@@ -186,7 +186,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                         <%= if @meeting_type do %>
                           {gettext("Duration: %{duration}", duration: LocalizationHelpers.format_duration(@meeting_type.duration_minutes))}
                         <% else %>
-                          {gettext("Duration: %{duration}", duration: DateTimeUtils.format_duration(@duration))}
+                          {gettext("Duration: %{duration}", duration: Duration.format(@duration))}
                         <% end %>
                       </p>
                     </div>

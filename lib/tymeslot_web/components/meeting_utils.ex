@@ -2,7 +2,7 @@ defmodule TymeslotWeb.Components.MeetingUtils do
   @moduledoc """
   Data utility functions for meeting scheduling — slot normalization and time parsing.
   """
-  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.Display
 
   # ========== CALENDAR & TIME ==========
 
@@ -29,15 +29,15 @@ defmodule TymeslotWeb.Components.MeetingUtils do
   end
 
   defp normalize_slot_value(%Time{} = slot) do
-    {:ok, DateTimeUtils.format_time_for_display(slot)}
+    {:ok, Display.format_time_for_display(slot)}
   end
 
   defp normalize_slot_value(%NaiveDateTime{} = slot) do
-    {:ok, slot |> NaiveDateTime.to_time() |> DateTimeUtils.format_time_for_display()}
+    {:ok, slot |> NaiveDateTime.to_time() |> Display.format_time_for_display()}
   end
 
   defp normalize_slot_value(%DateTime{} = slot) do
-    {:ok, slot |> DateTime.to_time() |> DateTimeUtils.format_time_for_display()}
+    {:ok, slot |> DateTime.to_time() |> Display.format_time_for_display()}
   end
 
   defp normalize_slot_value(%{} = slot) do
