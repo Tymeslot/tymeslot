@@ -6,13 +6,14 @@ defmodule TymeslotWeb.Themes.Shared.LocalizationHelpers do
   use Gettext, backend: TymeslotWeb.Gettext
   alias Calendar
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.Display
 
   @doc """
   Groups time slots by period of day with translated period names.
   """
   @spec group_slots_by_period([String.t()]) :: [{String.t(), [String.t()]}]
   def group_slots_by_period(slots) do
-    grouped = DateTimeUtils.group_slots_by_period(slots)
+    grouped = Display.group_slots_by_period(slots)
 
     [
       {gettext("Early Morning"), Map.get(grouped, "Early Morning", [])},

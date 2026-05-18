@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
   @spec handle_confirm_recurrence_scope(map(), Phoenix.LiveView.Socket.t()) ::
@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.EventRecurrence do
         socket = assign(socket, :recurrence_prompt, nil)
 
         socket =
-          EditWorkflow.update_event_async(
+          Updates.update_event_async(
             socket,
             prompt.event,
             prompt.optimistic_event,

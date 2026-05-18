@@ -7,6 +7,8 @@ defmodule Tymeslot.Application do
   require Logger
 
   alias Phoenix.PubSub
+  alias Tymeslot.AppSettings
+  alias Tymeslot.Auth.AdminBootstrap
   alias Tymeslot.Infrastructure.Logging.{FileSink, MetadataRedactor}
   alias Tymeslot.Infrastructure.{Metrics, ObanLogger}
   alias Tymeslot.Integrations.Calendar.TokenRefreshJob
@@ -126,9 +128,15 @@ defmodule Tymeslot.Application do
       {:ok, pid} ->
         Logger.info("Tymeslot application started successfully", pid: inspect(pid))
 
+        # Apply DB-backed admin overrides on top of config-layer values.
+        # Must run after Repo is started; safe in test mode (the singleton row
+        # has all nils on a fresh test DB, so load!/0 is effectively a no-op).
+        AppSettings.load!()
+
         # Schedule periodic jobs after application startup (only in non-test environments)
         if Application.get_env(:tymeslot, :environment) != :test do
           schedule_periodic_jobs()
+          AdminBootstrap.warn_if_orphaned_install()
         end
 
         {:ok, pid}

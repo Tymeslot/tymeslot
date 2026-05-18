@@ -26,7 +26,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
 
   import Phoenix.Component, only: [assign: 3]
 
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
 
   @doc """
   Fetches available slots for a given date, duration, and timezone.
@@ -64,7 +64,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent do
         _other -> duration
       end
 
-    case Helpers.get_available_slots(
+    case AvailabilityHelpers.get_available_slots(
            date,
            duration_to_fetch,
            timezone,

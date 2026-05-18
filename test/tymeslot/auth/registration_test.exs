@@ -106,6 +106,48 @@ defmodule Tymeslot.Auth.RegistrationTest do
     end
   end
 
+  describe "admin bootstrap" do
+    test "the first registered user is promoted to admin" do
+      conn = %Plug.Conn{}
+
+      params = %{
+        "email" => "first@example.com",
+        "password" => "ValidPassword123!",
+        "password_confirmation" => "ValidPassword123!",
+        "name" => "First User",
+        "terms_accepted" => "true"
+      }
+
+      assert {:ok, user, _message} = Registration.register_user(params, conn)
+      assert user.is_admin, "Expected the first registered user to be promoted to admin"
+    end
+
+    test "a second registered user is not promoted to admin" do
+      conn = %Plug.Conn{}
+
+      first_params = %{
+        "email" => "first2@example.com",
+        "password" => "ValidPassword123!",
+        "password_confirmation" => "ValidPassword123!",
+        "name" => "First User",
+        "terms_accepted" => "true"
+      }
+
+      {:ok, _first, _flash} = Registration.register_user(first_params, conn)
+
+      second_params = %{
+        "email" => "second@example.com",
+        "password" => "ValidPassword123!",
+        "password_confirmation" => "ValidPassword123!",
+        "name" => "Second User",
+        "terms_accepted" => "true"
+      }
+
+      assert {:ok, second, _message} = Registration.register_user(second_params, conn)
+      refute second.is_admin, "Expected the second registered user not to be promoted to admin"
+    end
+  end
+
   describe "password storage" do
     test "passwords are hashed before storage" do
       plain = "SecurePassword123!"

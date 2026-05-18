@@ -4,9 +4,11 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   """
   use TymeslotWeb, :html
 
-  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.{
+    BaikalConfig,
     CaldavConfig,
     MailboxOrgConfig,
     NextcloudConfig,
@@ -96,6 +98,19 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               discovery_credentials={@discovery_credentials}
               saving={@is_saving}
             />
+          <% :baikal -> %>
+            <.live_component
+              module={BaikalConfig}
+              id="baikal-config"
+              target={@myself}
+              metadata={@security_metadata}
+              form_errors={@form_errors}
+              form_values={@form_values}
+              discovered_calendars={@discovered_calendars}
+              show_calendar_selection={@show_calendar_selection}
+              discovery_credentials={@discovery_credentials}
+              saving={@is_saving}
+            />
           <% :caldav -> %>
             <.live_component
               module={CaldavConfig}
@@ -136,7 +151,9 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               saving={@is_saving}
             />
           <% _ -> %>
-            <p class="text-tymeslot-500 font-medium">Configuration form not available for this provider.</p>
+            <p class="text-tymeslot-500 font-medium">
+              Configuration form not available for this provider.
+            </p>
         <% end %>
       </div>
     </div>
@@ -183,7 +200,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             phx-target={@myself}
             class={[
               "flex items-center gap-2 px-5 py-2.5 rounded-token-xl font-bold transition-all border-2 shrink-0 shadow-sm",
-              @is_refreshing && "bg-tymeslot-50 text-tymeslot-400 border-tymeslot-100 cursor-not-allowed",
+              @is_refreshing &&
+                "bg-tymeslot-50 text-tymeslot-400 border-tymeslot-100 cursor-not-allowed",
               !@is_refreshing &&
                 "bg-white text-turquoise-600 border-turquoise-50 hover:bg-turquoise-50 hover:border-turquoise-100 hover:shadow-turquoise-500/10"
             ]}
@@ -202,7 +220,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            <%= if @is_refreshing, do: "Refreshing...", else: "Refresh All" %>
+            {if @is_refreshing, do: "Refreshing...", else: "Refresh All"}
           </button>
         </div>
 
@@ -294,7 +312,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               <h4 class="text-lg font-black text-tymeslot-900 truncate tracking-tight">
                 {@display_name}
               </h4>
-              <span :if={!@integration.is_active} class="px-2 py-0.5 rounded-full bg-tymeslot-100 text-tymeslot-500 text-token-2xs font-black uppercase tracking-widest">
+              <span
+                :if={!@integration.is_active}
+                class="px-2 py-0.5 rounded-full bg-tymeslot-100 text-tymeslot-500 text-token-2xs font-black uppercase tracking-widest"
+              >
                 Paused
               </span>
               <span
@@ -303,12 +324,15 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               >
                 Reconnect required
               </span>
-              <UIComponents.health_warning_badge
-                :if={@health_state && @health_state.status == :unhealthy}
-              />
+              <UIComponents.health_warning_badge :if={
+                @health_state && @health_state.status == :unhealthy
+              } />
               <UIComponents.no_calendars_badge :if={@no_calendars_selected?} />
             </div>
-            <p :if={@integration.provider_account_email} class="text-sm text-tymeslot-500 truncate -mt-1 mb-1">
+            <p
+              :if={@integration.provider_account_email}
+              class="text-sm text-tymeslot-500 truncate -mt-1 mb-1"
+            >
               {@integration.provider_account_email}
             </p>
 
@@ -329,19 +353,34 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             title="Upgrade Google Calendar permissions"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2.5"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
             </svg>
             Upgrade
           </button>
           <button
-            phx-click="reconnect_integration"
-            phx-value-id={@integration.id}
+            :if={@integration.provider in ["google", "outlook"]}
+            phx-click="connect_provider"
+            phx-value-provider={@integration.provider}
             phx-target={@myself}
             class="flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-700 rounded-token-xl font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
             title="Reconnect integration"
           >
-            <.icon name="hero-arrow-path" class="w-4 h-4" />
-            Reconnect
+            <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
+          </button>
+          <button
+            :if={@integration.provider not in ["google", "outlook"]}
+            phx-click="show_reconnect"
+            phx-value-id={@integration.id}
+            phx-target="#caldav-reconnect-modal"
+            class="flex items-center gap-2 px-4 py-2 bg-tymeslot-50 text-tymeslot-700 rounded-token-xl font-bold border-2 border-tymeslot-100 hover:bg-tymeslot-100 transition-all shadow-sm shadow-tymeslot-500/5"
+            title="Reconnect integration"
+          >
+            <.icon name="hero-arrow-path" class="w-4 h-4" /> Reconnect
           </button>
           <button
             phx-click="show"
@@ -351,7 +390,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
             title="Remove Connection"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
             </svg>
           </button>
           <StatusSwitch.status_switch
@@ -370,7 +414,8 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
       <div :if={@integration.is_active} class="mt-6">
         <div class="flex items-center gap-2 mb-3">
           <span class="text-token-2xs font-black uppercase tracking-widest text-tymeslot-400">
-            Syncing {(@integration.calendar_list || []) |> Enum.count(&(&1["selected"] || &1[:selected]))} Calendars
+            Syncing {(@integration.calendar_list || [])
+            |> Enum.count(&(&1["selected"] || &1[:selected]))} Calendars
           </span>
           <div class="h-px bg-tymeslot-100 flex-1"></div>
         </div>
@@ -378,7 +423,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         <div class="flex flex-wrap gap-2.5">
           <%= for calendar <- @integration.calendar_list || [] do %>
             <% calendar_id = calendar["id"] || calendar[:id] %>
-            <% calendar_name = Calendar.extract_calendar_display_name(calendar) %>
+            <% calendar_name = DisplayHelpers.extract_calendar_display_name(calendar) %>
             <% is_selected = calendar["selected"] || calendar[:selected] %>
             <% color = calendar["color"] || calendar[:color] %>
 
@@ -389,8 +434,10 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
               phx-target={@myself}
               class={[
                 "inline-flex items-center gap-2.5 px-3.5 py-2 rounded-token-xl border-2 transition-all text-xs font-bold",
-                is_selected && "bg-turquoise-50 border-turquoise-400 text-turquoise-900 shadow-sm shadow-turquoise-500/5",
-                !is_selected && "bg-white border-tymeslot-50 text-tymeslot-400 hover:border-tymeslot-200 hover:bg-tymeslot-50"
+                is_selected &&
+                  "bg-turquoise-50 border-turquoise-400 text-turquoise-900 shadow-sm shadow-turquoise-500/5",
+                !is_selected &&
+                  "bg-white border-tymeslot-50 text-tymeslot-400 hover:border-tymeslot-200 hover:bg-tymeslot-50"
               ]}
             >
               <div
@@ -399,24 +446,47 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
                 style={"background-color: #{color}"}
               />
               <span>{calendar_name}</span>
-              <span :if={calendar["primary"] || calendar[:primary]} class="text-[9px] font-black bg-tymeslot-200 px-1.5 py-0.5 rounded text-tymeslot-600 uppercase tracking-tighter">
+              <span
+                :if={calendar["primary"] || calendar[:primary]}
+                class="text-[9px] font-black bg-tymeslot-200 px-1.5 py-0.5 rounded text-tymeslot-600 uppercase tracking-tighter"
+              >
                 Primary
               </span>
-              <svg :if={is_selected} class="w-3.5 h-3.5 text-turquoise-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+              <svg
+                :if={is_selected}
+                class="w-3.5 h-3.5 text-turquoise-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </button>
           <% end %>
 
-          <div :if={!@integration.calendar_list || @integration.calendar_list == []} class="flex items-center gap-2 text-tymeslot-400 py-2">
+          <div
+            :if={!@integration.calendar_list || @integration.calendar_list == []}
+            class="flex items-center gap-2 text-tymeslot-400 py-2"
+          >
             <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
-            <span class="text-xs font-medium italic">No calendars found. Try refreshing the integration.</span>
+            <span class="text-xs font-medium italic">
+              No calendars found. Try refreshing the integration.
+            </span>
           </div>
         </div>
       </div>
-
     </div>
     """
   end
@@ -430,31 +500,81 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
 
   @spec available_providers_section(map()) :: Phoenix.LiveView.Rendered.t()
   def available_providers_section(assigns) do
+    {caldav_providers, other_providers} =
+      Enum.split_with(assigns.available_calendar_providers, fn descp ->
+        ProviderConfig.caldav_based?(descp.type)
+      end)
+
+    assigns =
+      assigns
+      |> assign(:caldav_providers, caldav_providers)
+      |> assign(:other_providers, other_providers)
+
     ~H"""
-    <div class="space-y-8 mt-16 pt-12 border-t border-tymeslot-50">
-      <div class="max-w-2xl">
-        <h2 class="text-2xl font-black text-tymeslot-900 tracking-tight">Available Providers</h2>
-        <p class="text-tymeslot-500 font-medium text-lg mt-2">
+    <div class="space-y-8 mt-12">
+      <div class="max-w-4xl">
+        <.section_header level={2} title="Available Providers" />
+        <p class="text-tymeslot-500 font-medium text-token-lg ml-1">
           Connect your favorite calendar service to sync availability and automate your scheduling workflow.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <%= for descp <- @available_calendar_providers do %>
-          <% info = Helpers.provider_card_info(descp.type) %>
-          <% has_existing = Enum.any?(@integrations, &(&1.provider == info.provider)) %>
-          <ProviderCard.provider_card
-            provider={info.provider}
-            title={descp.display_name}
-            description={info.desc}
-            button_text={if has_existing, do: "Add Another Account", else: info.btn}
-            click_event={info.click}
-            target={@myself}
-            provider_value={info.provider}
-          />
-        <% end %>
+      <div class="space-y-10">
+        <div :if={@other_providers != []} class="space-y-5">
+          <h3 class="text-token-xl font-black text-tymeslot-800 tracking-tight">
+            OAuth Providers
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <.calendar_provider_card
+              :for={descp <- @other_providers}
+              descp={descp}
+              integrations={@integrations}
+              myself={@myself}
+            />
+          </div>
+        </div>
+
+        <div :if={@caldav_providers != []} class="space-y-5">
+          <h3 class="text-token-xl font-black text-tymeslot-800 tracking-tight">
+            CalDAV Servers
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <.calendar_provider_card
+              :for={descp <- @caldav_providers}
+              descp={descp}
+              integrations={@integrations}
+              myself={@myself}
+            />
+          </div>
+        </div>
       </div>
     </div>
+    """
+  end
+
+  attr :descp, :map, required: true
+  attr :integrations, :list, required: true
+  attr :myself, :any, required: true
+
+  defp calendar_provider_card(assigns) do
+    info = Helpers.provider_card_info(assigns.descp.type)
+    has_existing = Enum.any?(assigns.integrations, &(&1.provider == info.provider))
+
+    assigns =
+      assigns
+      |> assign(:info, info)
+      |> assign(:has_existing, has_existing)
+
+    ~H"""
+    <ProviderCard.provider_card
+      provider={@info.provider}
+      title={@descp.display_name}
+      description={@info.desc}
+      button_text={if @has_existing, do: "Add Another Account", else: @info.btn}
+      click_event={@info.click}
+      target={@myself}
+      provider_value={@info.provider}
+    />
     """
   end
 
@@ -465,5 +585,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   defp format_provider_title(:caldav), do: "CalDAV"
   defp format_provider_title(:zimbra), do: "Zimbra"
   defp format_provider_title(:mailbox_org), do: "mailbox.org"
+  defp format_provider_title(:baikal), do: "Baikal"
   defp format_provider_title(_provider), do: "Calendar"
 end

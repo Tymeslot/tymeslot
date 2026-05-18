@@ -299,7 +299,9 @@ defmodule Tymeslot.Workers.SlackWorkerTest do
                    "integration_id" => integration.id,
                    "event_type" => "meeting.created",
                    "meeting_id" => meeting.id
-                 }, attempt: 5)
+                 },
+                 attempt: 5
+               )
 
       updated = Repo.get(SlackIntegrationSchema, integration.id)
       assert updated.failure_count == 1

@@ -18,6 +18,7 @@ defmodule Tymeslot.Integrations.Calendar.Shared.ErrorHandler do
           | :radicale
           | :zimbra
           | :mailbox_org
+          | :baikal
           | :generic
 
   @doc """

@@ -47,11 +47,21 @@ defmodule TymeslotWeb.E2E.DashboardCalendarTest do
     session
     |> visit("/dashboard/calendar")
     |> wait_for_live()
-    |> assert_has(css("body", text: "Original Title"))
+    |> assert_has(css("[data-event-id='#{event.id}']", text: "Original Title"))
     |> execute_script("document.querySelector(\"[data-event-id='#{event.id}']\").click()")
     |> assert_has(css("#event-title-input"))
-    |> fill_in(css("#event-title-input"), with: "Renamed In Browser")
-    |> assert_has(css("body", text: "Renamed In Browser"))
+    # Wallaby's fill_in types one key at a time, which keeps resetting the
+    # input's phx-debounce=500 timer; the test then races the debounce.
+    # Setting value directly and dispatching a single input event makes the
+    # debounce fire exactly once and keeps the assertion timing reliable.
+    |> execute_script("""
+      const input = document.getElementById('event-title-input');
+      input.focus();
+      input.setSelectionRange(0, input.value.length);
+      input.value = 'Renamed In Browser';
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+    """)
+    |> assert_has(css("[data-event-id='#{event.id}']", text: "Renamed In Browser"))
   end
 
   # Drag-to-create uses real mousedown/mousemove/mouseup events on an empty

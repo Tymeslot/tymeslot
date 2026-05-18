@@ -9,8 +9,8 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
 
   require Logger
 
-  alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
+  alias Tymeslot.Integrations.Calendar.Diagnostics
   alias Tymeslot.Integrations.HealthCheck.ProviderHelpers
   alias Tymeslot.Integrations.Video.Providers.ProviderAdapter
   alias Tymeslot.Integrations.Video.VideoIntegrationSchema
@@ -41,7 +41,7 @@ defmodule Tymeslot.Integrations.HealthCheck.Assessor do
   @spec test_integration(integration_type(), integration()) :: check_result()
   def test_integration(:calendar, integration) do
     decrypted = CalendarIntegrationSchema.decrypt_credentials(integration)
-    Calendar.test_connection(decrypted)
+    Diagnostics.test_connection(decrypted)
   rescue
     _e in [UndefinedFunctionError] -> {:error, :module_unavailable}
     e -> {:error, {:exception, Exception.message(e)}}

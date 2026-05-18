@@ -87,22 +87,23 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
 
   setup :setup_dashboard_user
 
-  describe "connect_provider_calendar navigation" do
-    for {event, label} <- [
-          {"connect_caldav_calendar", "CalDAV"},
-          {"connect_radicale_calendar", "Radicale"},
-          {"connect_nextcloud_calendar", "Nextcloud"},
-          {"connect_zimbra_calendar", "Zimbra"},
-          {"connect_mailbox_org_calendar", "mailbox.org"}
+  describe "connect_provider navigation" do
+    for {provider, label} <- [
+          {"caldav", "CalDAV"},
+          {"radicale", "Radicale"},
+          {"nextcloud", "Nextcloud"},
+          {"zimbra", "Zimbra"},
+          {"mailbox_org", "mailbox.org"},
+          {"baikal", "Baikal"}
         ] do
-      @event event
+      @provider provider
       @label label
 
       test "clicking #{label} provider card navigates to its config form", %{conn: conn} do
         {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
         view
-        |> element("button[phx-click='#{@event}']")
+        |> element("button[phx-click='connect_provider'][phx-value-provider='#{@provider}']")
         |> render_click()
 
         assert render(view) =~ @label
@@ -119,7 +120,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element("button[phx-click='connect_google_calendar']")
+      |> element("button[phx-click='connect_provider'][phx-value-provider='google']")
       |> render_click()
 
       assert_redirect(view, "https://accounts.google.com/o/oauth2/auth?fake=1")
@@ -135,7 +136,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsCompositionTest do
       {:ok, view, _html} = live(conn, ~p"/dashboard/calendar-integration")
 
       view
-      |> element("button[phx-click='connect_outlook_calendar']")
+      |> element("button[phx-click='connect_provider'][phx-value-provider='outlook']")
       |> render_click()
 
       assert_redirect(view, "https://login.microsoftonline.com/oauth?fake=1")

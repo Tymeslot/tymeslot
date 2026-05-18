@@ -4,7 +4,21 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   This module serves as the single source of truth for provider types,
   classifications, and validation across the calendar integration system.
-  Supports enabling/disabling providers via config (config.exs).
+  Supports enabling/disabling providers via config (config.exs); providers
+  listed in `@providers` are enabled by default unless explicitly turned off.
+
+  ## Internal providers
+
+  `:demo` (fake availability for the public homepage demo) and `:debug`
+  (dev/test pipeline debugging) are not user-connectable but live in this
+  module so the registry, schema validation, and DB constraint list still
+  recognise them. Because the runtime toggle defaults to enabled, each is
+  pinned off via `config :tymeslot, :calendar_providers` in all three
+  config sites — `apps/tymeslot/config/config.exs`,
+  `apps/tymeslot/config/test.exs`, and `config/test.exs` — otherwise they
+  surface as cards in `/dashboard/calendar-integration`. Add
+  `<name>: [enabled: false]` to the same three blocks when introducing
+  any further internal-only provider.
   """
 
   alias Tymeslot.Infrastructure.Config
@@ -15,10 +29,34 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @sync_window_past_days 365
   @sync_window_future_days 365
 
-  @providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :google, :outlook, :demo]
+  @providers [
+    :caldav,
+    :radicale,
+    :nextcloud,
+    :zimbra,
+    :mailbox_org,
+    :baikal,
+    :google,
+    :outlook,
+    :demo
+  ]
   @oauth_providers [:google, :outlook]
-  @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org]
+  @caldav_based_providers [:caldav, :radicale, :nextcloud, :zimbra, :mailbox_org, :baikal]
   @dev_only_providers [:debug]
+
+  # Providers whose CalDAV server URL is fixed and must never be edited by the
+  # user — both during initial connection and reconnection. A provider absent
+  # from this map allows the user to enter their own server URL.
+  @locked_url_providers %{
+    mailbox_org: %{
+      url: "https://dav.mailbox.org",
+      tooltip: "mailbox.org always uses this CalDAV server — the address cannot be changed"
+    }
+  }
+
+  @locked_url_providers_by_string Map.new(@locked_url_providers, fn {atom_key, value} ->
+                                    {Atom.to_string(atom_key), value}
+                                  end)
 
   # Provider metadata - single source of truth for all provider information
   @provider_metadata %{
@@ -26,49 +64,56 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
       icon: "caldav",
       description: "Universal CalDAV server support",
       button_text: "Connect CalDAV",
-      click_event: "connect_caldav_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     radicale: %{
       icon: "radicale",
       description: "Lightweight self-hosted calendar server",
       button_text: "Connect Radicale",
-      click_event: "connect_radicale_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     nextcloud: %{
       icon: "nextcloud",
       description: "Self-hosted Nextcloud calendar sync",
       button_text: "Connect Nextcloud",
-      click_event: "connect_nextcloud_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     zimbra: %{
       icon: "zimbra",
       description: "Enterprise Zimbra calendar integration",
       button_text: "Connect Zimbra",
-      click_event: "connect_zimbra_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     mailbox_org: %{
       icon: "mailbox_org",
       description: "Sync calendars from your mailbox.org account",
       button_text: "Connect mailbox.org",
-      click_event: "connect_mailbox_org_calendar",
+      click_event: "connect_provider",
+      circuit_breaker_enabled: true
+    },
+    baikal: %{
+      icon: "baikal",
+      description: "PHP-based CalDAV/CardDAV server integration",
+      button_text: "Connect Baikal",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     google: %{
       icon: "google",
       description: "Full OAuth integration with Google Meet support",
       button_text: "Connect Google",
-      click_event: "connect_google_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     outlook: %{
       icon: "outlook",
       description: "Microsoft 365 and Outlook.com integration",
       button_text: "Connect Outlook",
-      click_event: "connect_outlook_calendar",
+      click_event: "connect_provider",
       circuit_breaker_enabled: true
     },
     demo: %{
@@ -90,7 +135,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   @doc false
   @spec provider_enabled?(atom()) :: boolean()
   def provider_enabled?(type) when is_atom(type) do
-    ProviderToggle.enabled?(provider_settings(), type, default_enabled: false)
+    ProviderToggle.enabled?(provider_settings(), type, default_enabled: true)
   end
 
   defp effective_providers(include_dev) do
@@ -190,6 +235,24 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def caldav_based?(_provider), do: false
 
   @doc """
+  Returns the fixed CalDAV server URL for a provider, or `nil` if the user
+  is free to choose their own.
+
+  Used by both connect and reconnect UIs to render a locked, greyed-out URL
+  field for providers like mailbox.org whose server address is invariant.
+  Accepts atom or string provider identifiers (database values are strings).
+  """
+  @spec locked_url_for(atom() | String.t()) ::
+          %{url: String.t(), tooltip: String.t()} | nil
+  def locked_url_for(provider) when is_atom(provider),
+    do: Map.get(@locked_url_providers, provider)
+
+  def locked_url_for(provider) when is_binary(provider),
+    do: Map.get(@locked_url_providers_by_string, provider)
+
+  def locked_url_for(_provider), do: nil
+
+  @doc """
   Gets full metadata for a provider.
 
   Returns a map with icon, description, button_text, click_event, and circuit_breaker_enabled fields.
@@ -275,6 +338,7 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
   def display_name(:nextcloud), do: "Nextcloud"
   def display_name(:zimbra), do: "Zimbra"
   def display_name(:mailbox_org), do: "mailbox.org"
+  def display_name(:baikal), do: "Baikal"
   def display_name(:google), do: "Google Calendar"
   def display_name(:outlook), do: "Outlook Calendar"
   def display_name(:debug), do: "Debug Provider"
@@ -292,6 +356,8 @@ defmodule Tymeslot.Integrations.Calendar.ProviderConfig do
 
   def get_provider_module(:mailbox_org),
     do: Tymeslot.Integrations.Calendar.MailboxOrg.Provider
+
+  def get_provider_module(:baikal), do: Tymeslot.Integrations.Calendar.Baikal.Provider
 
   def get_provider_module(:google), do: Tymeslot.Integrations.Calendar.Google.Provider
   def get_provider_module(:outlook), do: Tymeslot.Integrations.Calendar.Outlook.Provider

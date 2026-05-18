@@ -26,11 +26,7 @@
 
 /* Action Buttons - Global Branding */
 .action-button {
-  @apply px-6 py-3 rounded-token-2xl font-bold transition-glass transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-token-base whitespace-nowrap;
-}
-
-.action-button:hover:not(:disabled) {
-  @apply -translate-y-1 shadow-xl;
+  @apply px-6 py-3 rounded-token-2xl font-bold transition-glass disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-token-base whitespace-nowrap;
 }
 
 .action-button--primary {
@@ -38,7 +34,7 @@
 }
 
 .action-button--primary:hover:not(:disabled) {
-  @apply from-turquoise-700 to-cyan-700 shadow-turquoise-500/40 scale-[1.02];
+  @apply from-turquoise-700 to-cyan-700 shadow-turquoise-500/40;
 }
 
 .action-button--secondary {
@@ -46,7 +42,7 @@
 }
 
 .action-button--secondary:hover:not(:disabled) {
-  @apply bg-turquoise-50/50 scale-[1.02];
+  @apply bg-turquoise-50/50;
 }
 
 .action-button--danger {
@@ -54,7 +50,7 @@
 }
 
 .action-button--danger:hover:not(:disabled) {
-  @apply from-red-400 to-rose-500 shadow-red-500/40 scale-[1.02];
+  @apply from-red-400 to-rose-500 shadow-red-500/40;
 }
 
 .action-button--outline {

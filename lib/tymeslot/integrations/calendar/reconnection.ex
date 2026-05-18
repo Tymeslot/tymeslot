@@ -1,25 +1,28 @@
 defmodule Tymeslot.Integrations.Calendar.Reconnection do
   @moduledoc """
   Business logic for reconnecting an existing CalDAV-family calendar
-  integration without destroying its calendar selections.
+  integration.
 
-  Two branches:
+  Reconnect is a unified two-phase flow regardless of whether the user is
+  rotating a password, swapping accounts, or coming back to add previously
+  unselected calendars:
 
-  - `:password_only` — url and username are unchanged. The caller updates
-    just the credentials and keeps the existing calendar list and primary
-    status.
+  1. `reconnect/3` runs discovery against the supplied credentials and
+     returns `{:ok, :needs_calendar_selection, payload}`. Discovery
+     implicitly validates the credentials.
+  2. `finalise_account_change/3` persists the new credentials and the
+     calendar selection chosen by the user.
 
-  - `:account_change` — url or username changed. The caller re-runs
-    discovery and asks the user to pick calendars again.
+  The caller is responsible for pre-ticking the user's existing selections
+  (typically `integration.calendar_paths`) in the picker UI so a same-
+  account reconnect keeps the prior choices unless the user changes them.
 
-  Top-level entry points are `reconnect/3` (test + branch dispatch) and
-  `finalise_account_change/3` (second step for the account-change branch).
+  `credentials_change_kind/2` is exposed as a hint so the UI can flavour
+  copy ("same account" vs "different account") without affecting flow.
   """
 
   alias Tymeslot.Integrations.Calendar
-  alias Tymeslot.Integrations.Calendar.CalDAV.Provider, as: CalDAVProvider
   alias Tymeslot.Integrations.Calendar.CalendarIntegrationSchema
-  alias Tymeslot.Integrations.Calendar.Providers.CaldavCommon
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.Shared.ErrorHandler
   alias Tymeslot.Integrations.Calendar.Shared.PathUtils
@@ -30,8 +33,7 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   @type change_kind :: :password_only | :account_change
 
   @type reconnect_ok ::
-          {:ok, :updated, integration()}
-          | {:ok, :needs_calendar_selection, %{calendars: [map()], credentials: map()}}
+          {:ok, :needs_calendar_selection, %{calendars: [map()], credentials: map()}}
 
   @type reconnect_error ::
           {:error, :invalid_credentials}
@@ -39,9 +41,10 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
           | {:error, term()}
 
   @doc """
-  Returns whether the proposed url/username constitute a password-only
-  rotation or a full account change. Accepts a decrypted integration struct
-  (virtual `username` populated).
+  Returns whether the proposed url/username are the same account
+  (`:password_only`) or a different one (`:account_change`). Used purely
+  to flavour UI copy — both cases follow the same flow. Accepts a
+  decrypted integration struct (virtual `username` populated).
   """
   @spec credentials_change_kind(integration(), params()) :: change_kind()
   def credentials_change_kind(%CalendarIntegrationSchema{} = integration, params) do
@@ -61,35 +64,25 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
   @doc """
   Reconnect an existing CalDAV-family integration.
 
+  Always runs discovery against the supplied credentials and returns the
+  full list of calendars so the caller can prompt the user to confirm or
+  adjust their selection. Discovery implicitly validates credentials —
+  an auth failure surfaces as `{:error, :invalid_credentials}`.
+
   Options (keyword):
-    * `:test_connection` — `(params -> :ok | {:error, term()})`. Defaults to a
-      real CalDAV probe via `CaldavCommon.test_connection/2`, which preserves
-      atom error reasons (e.g. `:unauthorized`) needed for credential-error
-      detection.
     * `:discover` — `(provider, url, username, password -> {:ok, %{calendars: …, discovery_credentials: …}} | {:error, term()})`.
       Defaults to `Calendar.discover_and_filter_calendars/4`.
   """
   @spec reconnect(integration(), params(), keyword()) :: reconnect_ok() | reconnect_error()
   def reconnect(%CalendarIntegrationSchema{} = integration, params, opts \\ []) do
-    test_connection = Keyword.get(opts, :test_connection, &default_test_connection/1)
     discover = Keyword.get(opts, :discover, &Calendar.discover_and_filter_calendars/4)
-
-    case credentials_change_kind(integration, params) do
-      :password_only ->
-        case test_connection.(params) do
-          :ok -> apply_password_only(integration, params)
-          {:error, :unauthorized} -> {:error, :invalid_credentials}
-          {:error, reason} -> {:error, reason}
-        end
-
-      :account_change ->
-        apply_account_change(integration, params, discover)
-    end
+    apply_account_change(integration, params, discover)
   end
 
   @doc """
-  Second step for the `:account_change` branch: persist the new URL,
-  credentials, and calendar selection after the user has picked calendars.
+  Persist the new URL, credentials, and calendar selection picked by the
+  user. Returns `{:error, :no_calendars_selected}` if the selection is
+  empty.
   """
   @spec finalise_account_change(integration(), map(), [String.t()]) ::
           {:ok, integration()}
@@ -132,39 +125,6 @@ defmodule Tymeslot.Integrations.Calendar.Reconnection do
 
     case CalendarManagement.update_calendar_integration(integration, attrs) do
       {:ok, updated} -> {:ok, updated}
-      {:error, %Ecto.Changeset{} = cs} -> {:error, {:changeset, cs}}
-    end
-  end
-
-  # Probes the CalDAV server with the supplied credentials and returns
-  # atom-based error reasons so the caller can distinguish `:unauthorized`
-  # from generic failures. Goes through `CaldavCommon.test_connection` which
-  # preserves raw atoms rather than the string-formatted errors produced by
-  # the higher-level `Calendar.discover_and_filter_calendars` pipeline.
-  defp default_test_connection(params) do
-    client =
-      CalDAVProvider.new(%{
-        base_url: Map.get(params, "url"),
-        username: Map.get(params, "username"),
-        password: Map.get(params, "password")
-      })
-
-    case CaldavCommon.test_connection(client) do
-      {:ok, _message} -> :ok
-      {:error, :unauthorized} -> {:error, :unauthorized}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp apply_password_only(integration, params) do
-    attrs = %{
-      base_url: params |> Map.get("url") |> to_string() |> PathUtils.normalize_base_url(),
-      username: Map.get(params, "username"),
-      password: Map.get(params, "password")
-    }
-
-    case CalendarManagement.update_calendar_integration(integration, attrs) do
-      {:ok, updated} -> {:ok, :updated, updated}
       {:error, %Ecto.Changeset{} = cs} -> {:error, {:changeset, cs}}
     end
   end

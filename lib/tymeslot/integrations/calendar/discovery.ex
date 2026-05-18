@@ -41,7 +41,7 @@ defmodule Tymeslot.Integrations.Calendar.Discovery do
       "nextcloud" ->
         discover_nextcloud_calendars(integration)
 
-      caldav when caldav in ["radicale", "zimbra", "mailbox_org"] ->
+      caldav when caldav in ["radicale", "zimbra", "mailbox_org", "baikal"] ->
         discover_caldav_with_decrypt(integration, caldav)
 
       _unknown ->

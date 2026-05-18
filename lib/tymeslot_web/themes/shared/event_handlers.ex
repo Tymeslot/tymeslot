@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
   require Logger
 
   alias Phoenix.LiveView
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
   import Phoenix.Component, only: [assign: 3]
 
   @doc """
@@ -68,7 +68,7 @@ defmodule TymeslotWeb.Themes.Shared.EventHandlers do
           |> assign(:duration, data)
           |> callbacks.maybe_assign_meeting_type.(data)
           # Trigger availability refresh when duration changes
-          |> Helpers.fetch_month_availability_async()
+          |> AvailabilityHelpers.fetch_month_availability_async()
 
         {:noreply, socket}
 

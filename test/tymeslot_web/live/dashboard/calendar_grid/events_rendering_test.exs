@@ -35,6 +35,56 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventsRenderingTest do
       assert html =~ "My Test Meeting"
     end
 
+    test "hides events from calendars the user has deselected", %{conn: conn, user: user} do
+      # The integration setting screen lets users toggle individual calendars
+      # on or off. That toggle is the single source of truth for what the app
+      # may surface: the grid must respect it even when previously-synced
+      # rows still linger in the cache for the deselected calendar.
+      selected_path = "/cal/work/"
+      deselected_path = "/cal/personal/"
+
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          is_active: true,
+          provider: "caldav",
+          calendar_paths: [selected_path],
+          calendar_list: [
+            %{"id" => selected_path, "path" => selected_path, "selected" => true},
+            %{"id" => deselected_path, "path" => deselected_path, "selected" => false}
+          ]
+        )
+
+      today = Date.utc_today()
+      start_at = DateTime.new!(today, ~T[10:00:00], "Etc/UTC")
+      end_at = DateTime.new!(today, ~T[11:00:00], "Etc/UTC")
+
+      insert_event(integration, %{
+        summary: "Work Meeting",
+        start_at: start_at,
+        end_at: end_at,
+        all_day: false,
+        provider: "caldav",
+        provider_calendar_id: selected_path,
+        provider_event_id: selected_path <> "work-evt.ics"
+      })
+
+      insert_event(integration, %{
+        summary: "Personal Errand",
+        start_at: start_at,
+        end_at: end_at,
+        all_day: false,
+        provider: "caldav",
+        provider_calendar_id: selected_path,
+        provider_event_id: deselected_path <> "personal-evt.ics"
+      })
+
+      {:ok, _lv, html} = live(conn, ~p"/dashboard/calendar")
+
+      assert html =~ "Work Meeting"
+      refute html =~ "Personal Errand"
+    end
+
     test "all-day event appears in banner row", %{conn: conn, user: user} do
       integration = insert(:calendar_integration, user: user, is_active: true)
 

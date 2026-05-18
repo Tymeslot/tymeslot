@@ -10,6 +10,7 @@ defmodule Tymeslot.Auth do
   require Logger
 
   alias Tymeslot.Auth.{
+    AdminRoles,
     AuthActions,
     Authentication,
     EmailChange,
@@ -278,6 +279,15 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Returns the IDs of users currently eligible to receive marketing email — i.e.
+  who have a verified email and have not unsubscribed from marketing.
+  """
+  @spec list_marketing_eligible_user_ids() :: [integer()]
+  def list_marketing_eligible_user_ids do
+    UserQueries.list_marketing_eligible_user_ids()
+  end
+
+  @doc """
   Checks if an email is available for registration.
   Returns :ok if available, {:error, reason} otherwise.
   """
@@ -312,6 +322,45 @@ defmodule Tymeslot.Auth do
   def get_user!(id) do
     UserQueries.get_user!(id)
   end
+
+  @doc """
+  Lists all users in the system, ordered by id ascending.
+  """
+  defdelegate list_users(), to: UserQueries, as: :list_all_users
+
+  @doc """
+  Counts all users in the system.
+  """
+  defdelegate count_users(), to: UserQueries
+
+  @doc """
+  Counts admin users in the system.
+  """
+  defdelegate count_admins(), to: UserQueries
+
+  @doc """
+  Returns `true` if at least one admin can sign in via email + password.
+  """
+  defdelegate any_admin_uses_password_auth?(), to: UserQueries
+
+  @doc """
+  Returns `true` if at least one admin account exists.
+  """
+  defdelegate any_admin?(), to: UserQueries
+
+  @doc """
+  Promotes the user identified by `user_id` to admin.
+
+  See `Tymeslot.Auth.AdminRoles.promote/2` for the full contract.
+  """
+  defdelegate promote_admin(actor, user_id), to: AdminRoles, as: :promote
+
+  @doc """
+  Demotes the user identified by `user_id` from admin.
+
+  See `Tymeslot.Auth.AdminRoles.demote/2` for the full contract.
+  """
+  defdelegate demote_admin(actor, user_id), to: AdminRoles, as: :demote
 
   defp user_broadcaster do
     Application.get_env(:tymeslot, :user_broadcaster, Tymeslot.Infrastructure.PubSub)

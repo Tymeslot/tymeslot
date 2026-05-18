@@ -51,6 +51,7 @@ defmodule CredoChecks.RequireDashboardSectionHeader do
       String.ends_with?(filename, "_component.ex") and
       not String.contains?(filename, [
         "/availability/",
+        "/calendar_settings/",
         "/meeting_settings/",
         "/meetings/",
         "/shared/",
