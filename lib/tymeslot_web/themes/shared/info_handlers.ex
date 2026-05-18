@@ -5,8 +5,8 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   import Phoenix.Component, only: [assign: 3]
   require Logger
 
-  alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
+  alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
 
   @doc """
   Handles calendar events updated via PubSub.
