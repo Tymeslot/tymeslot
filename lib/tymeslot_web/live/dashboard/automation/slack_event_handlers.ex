@@ -26,6 +26,9 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackEventHandlers do
   def handle("slack_validate", params, socket),
     do: FormHandlers.handle_validate(params, socket)
 
+  def handle("slack_validate_field", params, socket),
+    do: FormHandlers.handle_validate_field(params, socket)
+
   def handle("slack_toggle_event", params, socket),
     do: FormHandlers.handle_toggle_event(params, socket)
 

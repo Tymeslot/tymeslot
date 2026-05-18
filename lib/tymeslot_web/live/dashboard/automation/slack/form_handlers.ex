@@ -10,6 +10,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.FormHandlers do
   alias Tymeslot.Slack.InputValidation, as: SlackInputValidation
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Live.Shared.Flash
+  alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @doc """
   Opens the form in `:webhook_url` mode. Triggered by the "Use webhook URL"
@@ -68,22 +69,56 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.FormHandlers do
   @spec handle_validate(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}
   def handle_validate(%{"slack" => params}, socket) do
+    # Sync DOM values into the socket but do not surface errors here. Per-field
+    # blur validation (`handle_validate_field/2`) decides when to display errors
+    # so the form does not light up red while the user is still typing.
     form_values = Map.merge(socket.assigns.slack_form_values, params)
-    mode = socket.assigns.slack_form_mode
+    {:noreply, assign(socket, :slack_form_values, form_values)}
+  end
 
-    errors =
-      case SlackInputValidation.validate_form(form_values, mode: mode) do
-        {:ok, _sanitized} -> %{}
-        {:error, errs} -> errs
+  def handle_validate(_params, socket), do: {:noreply, socket}
+
+  @spec handle_validate_field(map(), Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_validate_field(%{"field" => field, "value" => value}, socket) do
+    form_values = Map.put(socket.assigns.slack_form_values, field, value)
+    mode = socket.assigns.slack_form_mode
+    allowed_fields = ~w(name webhook_url webhook_channel_hint channel_id)
+    field_atom = FormValidationHelpers.atomize_field(field, allowed_fields)
+
+    updated_errors =
+      if is_binary(value) and String.trim(value) == "" do
+        FormValidationHelpers.delete_field_error(socket.assigns.slack_form_errors, field_atom)
+      else
+        case SlackInputValidation.validate_form(form_values, mode: mode) do
+          {:ok, _sanitized} ->
+            FormValidationHelpers.delete_field_error(
+              socket.assigns.slack_form_errors,
+              field_atom
+            )
+
+          {:error, errs} ->
+            if field_error = Map.get(errs, field_atom) do
+              Map.put(socket.assigns.slack_form_errors, field_atom, field_error)
+            else
+              FormValidationHelpers.delete_field_error(
+                socket.assigns.slack_form_errors,
+                field_atom
+              )
+            end
+        end
       end
 
     {:noreply,
      socket
      |> assign(:slack_form_values, form_values)
-     |> assign(:slack_form_errors, errors)}
+     |> assign(:slack_form_errors, updated_errors)}
   end
 
-  def handle_validate(_params, socket), do: {:noreply, socket}
+  def handle_validate_field(%{"field" => field} = params, socket) do
+    value = params["value"] || Map.get(socket.assigns.slack_form_values, field, "")
+    handle_validate_field(%{"field" => field, "value" => value}, socket)
+  end
 
   @spec handle_toggle_event(map(), Phoenix.LiveView.Socket.t()) ::
           {:noreply, Phoenix.LiveView.Socket.t()}

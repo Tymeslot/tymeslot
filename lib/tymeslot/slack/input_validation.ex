@@ -14,7 +14,9 @@ defmodule Tymeslot.Slack.InputValidation do
   Validates a Slack integration form. The `:mode` option selects which fields
   are required:
 
-    * `:webhook_url` — name, `webhook_url`, events
+    * `:webhook_url` — name, `webhook_url`, events (create)
+    * `:webhook_url_existing` — name, `webhook_url`, events (update; URL is
+      pre-filled with the current value)
     * `:oauth_pending` — `channel_id`, events
     * `:oauth_existing` — name, `channel_id`, events
   """
@@ -28,7 +30,7 @@ defmodule Tymeslot.Slack.InputValidation do
 
     {extra, errors} =
       case mode do
-        :webhook_url ->
+        webhook when webhook in [:webhook_url, :webhook_url_existing] ->
           {webhook_url, errors} = validate_webhook_url(params["webhook_url"], errors)
           {channel_hint, errors} = validate_channel_hint(params["webhook_channel_hint"], errors)
           {%{webhook_url: webhook_url, webhook_channel_hint: channel_hint}, errors}

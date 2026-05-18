@@ -77,6 +77,15 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
     }
   end
 
+  defp resolve_form_values(_assigns, %{} = integration, :webhook_url_existing) do
+    %{
+      "name" => integration.name,
+      "events" => integration.events,
+      "webhook_url" => Tymeslot.Slack.SlackIntegrationSchema.webhook_url(integration) || "",
+      "webhook_channel_hint" => integration.webhook_channel_hint || ""
+    }
+  end
+
   defp resolve_form_values(_assigns, _integration, _mode) do
     %{
       "name" => "",
@@ -159,43 +168,55 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
                 name="slack[name]"
                 label="Integration Name"
                 value={Map.get(@form_values, "name", "")}
+                phx-blur={JS.push("slack_validate_field", value: %{"field" => "name"}, target: @parent_component)}
                 placeholder="Acme Slack Notifications"
                 required
                 errors={FormValidationHelpers.field_errors(@form_errors, :name)}
                 icon="hero-tag"
-              />
+              >
+                <:description>
+                  A label shown in your dashboard. Useful if you connect more than one Slack workspace.
+                </:description>
+              </.input>
             <% end %>
 
             <%= cond do %>
-              <% @mode == :webhook_url -> %>
+              <% @mode in [:webhook_url, :webhook_url_existing] -> %>
                 <.input
                   name="slack[webhook_url]"
                   type="password"
                   label="Slack Webhook URL"
                   value={Map.get(@form_values, "webhook_url", "")}
+                  phx-blur={JS.push("slack_validate_field", value: %{"field" => "webhook_url"}, target: @parent_component)}
                   placeholder="https://hooks.slack.com/services/T.../B.../..."
                   required
                   errors={FormValidationHelpers.field_errors(@form_errors, :webhook_url)}
                   icon="hero-link"
-                />
+                >
+                  <:description>
+                    Tymeslot posts notifications to this URL. The destination channel is fixed by Slack when the webhook is created — see the full setup guide on
+                    <a
+                      href="https://tymeslot.app/docs/slack"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="font-black text-turquoise-700 hover:text-turquoise-900 underline"
+                    >tymeslot.app/docs/slack</a>.
+                  </:description>
+                </.input>
 
                 <.input
                   name="slack[webhook_channel_hint]"
                   label="Channel hint (optional)"
                   value={Map.get(@form_values, "webhook_channel_hint", "")}
+                  phx-blur={JS.push("slack_validate_field", value: %{"field" => "webhook_channel_hint"}, target: @parent_component)}
                   placeholder="#bookings"
                   errors={FormValidationHelpers.field_errors(@form_errors, :webhook_channel_hint)}
                   icon="hero-hashtag"
-                />
-
-                <div class="p-4 rounded-token-xl bg-turquoise-50/50 border-2 border-turquoise-100">
-                  <p class="text-token-sm font-black text-turquoise-900">How to get an Incoming Webhook URL</p>
-                  <p class="text-token-xs text-turquoise-700 font-medium mt-0.5">
-                    In Slack, open the channel you want to notify, then create a new
-                    <strong>Incoming Webhook</strong>
-                    in your workspace's app directory. Paste the resulting URL above.
-                  </p>
-                </div>
+                >
+                  <:description>
+                    Display-only label shown in your dashboard. It does not change where messages are delivered — that is set by the webhook URL itself.
+                  </:description>
+                </.input>
 
               <% @mode in [:oauth_pending, :oauth_existing] -> %>
                 <.channel_picker
@@ -296,6 +317,10 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
         </button>
       </div>
 
+      <p class="text-token-xs text-tymeslot-500 font-medium mb-2 ml-1">
+        Tymeslot will post booking notifications to this channel. Public channels appear automatically; for a private channel, invite the Tymeslot bot in Slack (<code class="px-1 py-0.5 rounded bg-tymeslot-100 text-tymeslot-700">/invite @Tymeslot</code>), then click Refresh.
+      </p>
+
       <%= cond do %>
         <% @loading? -> %>
           <div class="flex items-center gap-3 p-4 rounded-token-xl border-2 border-tymeslot-100 bg-tymeslot-50">
@@ -347,6 +372,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
   defp form_title(:oauth_pending), do: "Finish Slack setup"
   defp form_title(:oauth_existing), do: "Edit Slack Integration"
   defp form_title(:webhook_url), do: "Add Slack via Webhook URL"
+  defp form_title(:webhook_url_existing), do: "Edit Slack Integration"
 
   defp details_subtitle(:oauth_pending),
     do: "Pick a channel for Tymeslot to post booking notifications to."
@@ -357,13 +383,18 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
   defp details_subtitle(:webhook_url),
     do: "Paste the Incoming Webhook URL Slack generated for your channel."
 
+  defp details_subtitle(:webhook_url_existing),
+    do: "Update the webhook URL or event subscriptions for this Slack integration."
+
   defp submit_event(:oauth_pending), do: "slack_save_channel"
   defp submit_event(:oauth_existing), do: "slack_update"
   defp submit_event(:webhook_url), do: "slack_save_webhook"
+  defp submit_event(:webhook_url_existing), do: "slack_update"
 
   defp submit_label(:oauth_pending), do: "Save channel"
   defp submit_label(:oauth_existing), do: "Update"
   defp submit_label(:webhook_url), do: "Save"
+  defp submit_label(:webhook_url_existing), do: "Update"
 
   defp can_submit?(assigns) do
     values = assigns.form_values
@@ -379,7 +410,7 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
       :oauth_existing ->
         base and present?(values, "name") and present?(values, "channel_id")
 
-      :webhook_url ->
+      mode when mode in [:webhook_url, :webhook_url_existing] ->
         base and present?(values, "name") and present?(values, "webhook_url")
     end
   end

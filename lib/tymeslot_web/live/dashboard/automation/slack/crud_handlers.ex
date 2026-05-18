@@ -9,6 +9,7 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
   alias Tymeslot.Security.RateLimiter
   alias Tymeslot.Slack
   alias Tymeslot.Slack.InputValidation, as: SlackInputValidation
+  alias Tymeslot.Slack.SlackIntegrationSchema
   alias TymeslotWeb.Dashboard.Automation.Helpers, as: AutomationHelpers
   alias TymeslotWeb.Dashboard.Automation.Slack.FormHandlers
   alias TymeslotWeb.Live.Shared.Flash
@@ -184,8 +185,8 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
   end
 
   defp edit_mode_for(%{app_mode: "oauth"}), do: :oauth_existing
-  defp edit_mode_for(%{app_mode: "webhook_url"}), do: :webhook_url
-  defp edit_mode_for(_other), do: :webhook_url
+  defp edit_mode_for(%{app_mode: "webhook_url"}), do: :webhook_url_existing
+  defp edit_mode_for(_other), do: :webhook_url_existing
 
   defp edit_form_values(integration, :oauth_existing) do
     %{
@@ -196,11 +197,11 @@ defmodule TymeslotWeb.Dashboard.Automation.Slack.CrudHandlers do
     }
   end
 
-  defp edit_form_values(integration, :webhook_url) do
+  defp edit_form_values(integration, :webhook_url_existing) do
     %{
       "name" => integration.name,
       "events" => integration.events,
-      "webhook_url" => "",
+      "webhook_url" => SlackIntegrationSchema.webhook_url(integration) || "",
       "webhook_channel_hint" => integration.webhook_channel_hint || ""
     }
   end
