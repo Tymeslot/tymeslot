@@ -16,8 +16,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias Tymeslot.Profiles
   alias Tymeslot.Scheduling.ThemeFlow
   alias TymeslotWeb.Helpers.ClientIP
-  alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Live.Scheduling.{AvailabilityHelpers, OrganizerHelpers, ThemeUtils}
+  alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
 
   @doc """

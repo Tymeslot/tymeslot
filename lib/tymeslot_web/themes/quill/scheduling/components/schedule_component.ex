@@ -7,8 +7,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Utils.DateTimeUtils
-  alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
+  alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 

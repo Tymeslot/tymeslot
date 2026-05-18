@@ -8,8 +8,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
 
   alias Tymeslot.Timezones
   alias TymeslotWeb.Components.MeetingUtils
-  alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Live.Scheduling.CalendarHelpers
+  alias TymeslotWeb.Live.Scheduling.CalendarNavigation
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
