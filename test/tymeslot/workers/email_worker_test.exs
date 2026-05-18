@@ -8,7 +8,6 @@ defmodule Tymeslot.Workers.EmailWorkerTest do
   import Mox
   import Tymeslot.Factory
 
-  alias Ecto.UUID
   alias Tymeslot.Emails.EmailScheduler
   alias Tymeslot.Workers.EmailWorker
 
