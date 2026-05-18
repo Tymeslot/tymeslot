@@ -11,6 +11,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.InputValidation, as: CalendarInputValidation
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Security.RateLimiter
@@ -224,7 +225,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent do
       {:error, reason} ->
         {:noreply,
          socket
-         |> assign(:form_errors, %{discovery: Calendar.normalize_discovery_error(reason)})
+         |> assign(:form_errors, %{discovery: DisplayHelpers.normalize_discovery_error(reason)})
          |> assign(:is_saving, false)}
     end
   end

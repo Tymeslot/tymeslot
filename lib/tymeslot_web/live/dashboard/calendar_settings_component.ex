@@ -5,6 +5,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.Diagnostics
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Integrations.HealthCheck.IntegrationHealthStateQueries
   alias Tymeslot.Integrations.HealthCheck.Monitor
@@ -184,7 +185,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettingsComponent do
              socket = assign(socket, :testing_integration_id, int_id),
              {:ok, integration} <-
                Calendar.get_integration(int_id, socket.assigns.current_user.id),
-             {:ok, message} <- Calendar.test_connection(integration) do
+             {:ok, message} <- Diagnostics.test_connection(integration) do
           Flash.info(message)
           {:noreply, assign(socket, :testing_integration_id, nil)}
         else

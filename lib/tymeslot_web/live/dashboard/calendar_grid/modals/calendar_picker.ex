@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
 
   use TymeslotWeb, :html
 
-  alias Tymeslot.Integrations.Calendar, as: CalendarIntegration
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias TymeslotWeb.Components.Icons.ProviderIcon
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Modals.CalendarPicker do
         <% fallback_id = default_calendar_id(calendars) %>
         <div :if={calendars != []} class="flex flex-wrap gap-1.5 pl-3.5">
           <% cal_id = fn cal -> cal["id"] || cal[:id] end %>
-          <% cal_name = fn cal -> CalendarIntegration.extract_calendar_display_name(cal) end %>
+          <% cal_name = fn cal -> DisplayHelpers.extract_calendar_display_name(cal) end %>
           <% is_selected = fn cal -> is_active_integration and calendar_selected?(cal_id.(cal), @selected_calendar_id, fallback_id) end %>
           <button
             :for={cal <- calendars}
