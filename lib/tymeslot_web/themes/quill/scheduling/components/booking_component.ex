@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
 
   alias Tymeslot.Profiles
   alias Tymeslot.Utils.DateTimeUtils
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
@@ -160,7 +160,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                         id="submit-booking-button"
                         loading={@submitting}
                         loading_text={gettext("Verifying...")}
-                        disabled={!Helpers.form_valid?(@form)}
+                        disabled={!OrganizerHelpers.form_valid?(@form)}
                         data-testid="submit-booking"
                         class="flex-1"
                         title={get_submit_title(@submitting, @form)}
@@ -187,7 +187,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   defp get_submit_title(submitting, form) do
     cond do
       submitting -> gettext("Verifying slot availability and creating your meeting...")
-      !Helpers.form_valid?(form) -> gettext("Please fill in all required fields")
+      !OrganizerHelpers.form_valid?(form) -> gettext("Please fill in all required fields")
       true -> gettext("Click to schedule your meeting")
     end
   end

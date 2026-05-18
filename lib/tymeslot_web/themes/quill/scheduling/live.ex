@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
   """
   use TymeslotWeb.Themes.Shared.SchedulingLive, theme_id: "1"
 
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
 
   alias TymeslotWeb.Themes.Quill.Scheduling.Components.{
     BookingComponent,
@@ -54,7 +54,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Live do
     |> assign(:available_slots, [])
     |> assign(:month_availability_map, nil)
     |> assign(:availability_status, :not_loaded)
-    |> Helpers.fetch_month_availability_async()
+    |> AvailabilityHelpers.fetch_month_availability_async()
   end
 
   @impl Phoenix.LiveView

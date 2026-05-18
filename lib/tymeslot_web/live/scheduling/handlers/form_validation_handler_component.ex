@@ -30,7 +30,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
   alias Phoenix.Component
   alias Tymeslot.Security.InputProcessor
   alias TymeslotWeb.Live.Scheduling.BookingConfig
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
 
   @doc """
   Validates booking form data and updates socket state.
@@ -67,7 +67,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
         socket =
           socket
           |> assign(:form, form)
-          |> Helpers.assign_form_errors(errors)
+          |> OrganizerHelpers.assign_form_errors(errors)
 
         {:error, socket}
     end
@@ -114,7 +114,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
   @spec assign_form_errors(Phoenix.LiveView.Socket.t(), map()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def assign_form_errors(socket, errors) do
-    socket = Helpers.assign_form_errors(socket, errors)
+    socket = OrganizerHelpers.assign_form_errors(socket, errors)
     {:ok, socket}
   end
 
@@ -131,7 +131,7 @@ defmodule TymeslotWeb.Live.Scheduling.Handlers.FormValidationHandlerComponent do
   @spec mark_field_touched(Phoenix.LiveView.Socket.t(), String.t()) ::
           {:ok, Phoenix.LiveView.Socket.t()}
   def mark_field_touched(socket, field_name) do
-    socket = Helpers.mark_field_touched(socket, field_name)
+    socket = OrganizerHelpers.mark_field_touched(socket, field_name)
     {:ok, socket}
   end
 

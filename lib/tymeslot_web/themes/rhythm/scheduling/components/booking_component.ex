@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Timezones
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
@@ -154,7 +154,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.BookingComponent do
                   type="submit"
                   class="submit-button"
                   data-testid="submit-booking"
-                  disabled={@submitting || !Helpers.form_valid?(@form)}
+                  disabled={@submitting || !OrganizerHelpers.form_valid?(@form)}
                 >
                   <%= if @submitting do %>
                     <svg

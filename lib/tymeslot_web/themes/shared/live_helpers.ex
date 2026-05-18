@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
   alias Tymeslot.Scheduling.ThemeFlow
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
-  alias TymeslotWeb.Live.Scheduling.{Helpers, ThemeUtils}
+  alias TymeslotWeb.Live.Scheduling.{AvailabilityHelpers, OrganizerHelpers, ThemeUtils}
   alias TymeslotWeb.Themes.Shared.Customization.Helpers, as: CustomizationHelpers
 
   @doc """
@@ -44,7 +44,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       |> ThemeUtils.assign_theme_with_preview(params)
 
     # Then handle username context (which sets meeting_types)
-    socket = Helpers.handle_username_resolution(socket, params["username"])
+    socket = OrganizerHelpers.handle_username_resolution(socket, params["username"])
 
     # Apply theme customization after organizer is resolved
     socket = maybe_assign_customization(socket)
@@ -56,7 +56,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     socket = setup_initial_state_fun.(socket, initial_state, params)
 
     # Pre-fetch month availability regardless of initial state so it's ready for the schedule step
-    socket = Helpers.fetch_month_availability_async(socket)
+    socket = AvailabilityHelpers.fetch_month_availability_async(socket)
 
     socket
   end
@@ -243,8 +243,8 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
       |> assign(:duration, normalized_duration)
 
     # Trigger month availability fetch in background if not already loading or loaded for this month
-    if Helpers.can_fetch_availability?(socket) do
-      Helpers.fetch_month_availability_async(socket)
+    if AvailabilityHelpers.can_fetch_availability?(socket) do
+      AvailabilityHelpers.fetch_month_availability_async(socket)
     else
       socket
     end
@@ -292,7 +292,7 @@ defmodule TymeslotWeb.Themes.Shared.LiveHelpers do
     form_data = ThemeFlow.build_booking_form_data(reschedule_uid, organizer_user_id)
 
     socket
-    |> Helpers.setup_form_state(form_data, as: :booking)
+    |> OrganizerHelpers.setup_form_state(form_data, as: :booking)
     |> assign(:client_ip, client_ip)
     |> assign(:submission_token, submission_token)
     |> assign(:submission_processed, false)

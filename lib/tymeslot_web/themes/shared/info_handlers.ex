@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
   require Logger
 
   alias TymeslotWeb.Live.Scheduling.Handlers.SlotFetchingHandlerComponent
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.AvailabilityHelpers
 
   @doc """
   Handles calendar events updated via PubSub.
@@ -23,10 +23,10 @@ defmodule TymeslotWeb.Themes.Shared.InfoHandlers do
           socket
           |> assign(:available_slots, nil)
           |> assign(:selected_time, nil)
-          |> Helpers.fetch_month_availability_async()
+          |> AvailabilityHelpers.fetch_month_availability_async()
 
         _committed ->
-          Helpers.fetch_month_availability_async(socket)
+          AvailabilityHelpers.fetch_month_availability_async(socket)
       end
 
     {:noreply, socket}
