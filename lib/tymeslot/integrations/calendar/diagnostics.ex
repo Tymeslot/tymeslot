@@ -196,7 +196,7 @@ defmodule Tymeslot.Integrations.Calendar.Diagnostics do
 
   ## Example
 
-      Calendar.build_ephemeral_baikal_integration(%{
+      Diagnostics.build_ephemeral_baikal_integration(%{
         url: "http://localhost:8800/dav.php",
         username: "testuser",
         password: "testpass123",
