@@ -341,16 +341,24 @@ defmodule TymeslotWeb.Dashboard.Automation.SlackFormComponent do
           </div>
 
         <% true -> %>
-          <.input
-            type="select"
+          <select
             name="slack[channel_id]"
-            value={Map.get(@form_values, "channel_id")}
-            prompt="Pick a channel..."
-            options={Enum.map(@channels, fn c ->
-              {"##{c.name}#{if c.is_private, do: " (private)", else: ""}", c.id}
-            end)}
-            errors={FormValidationHelpers.field_errors(@form_errors, :channel_id)}
-          />
+            class={[
+              "glass-dropdown",
+              FormValidationHelpers.field_errors(@form_errors, :channel_id) != [] && "input-error"
+            ]}
+          >
+            <option value="">Pick a channel...</option>
+            <%= for c <- @channels do %>
+              <option value={c.id} selected={c.id == Map.get(@form_values, "channel_id")}>
+                #<%= c.name %><%= if c.is_private, do: " (private)" %>
+              </option>
+            <% end %>
+          </select>
+
+          <%= for error <- FormValidationHelpers.field_errors(@form_errors, :channel_id) do %>
+            <p class="mt-2 text-token-sm font-semibold text-red-600">{error}</p>
+          <% end %>
 
           <%!-- Hidden channel_name pairs with the chosen channel_id; submit handler resolves it via the channels list. --%>
           <input type="hidden" name="slack[channel_name]" value={lookup_channel_name(@channels, Map.get(@form_values, "channel_id"))} />
