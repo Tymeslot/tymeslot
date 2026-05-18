@@ -79,7 +79,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
     end
 
     test "a second user created via OAuth is not promoted to admin" do
-      _first_auth_params = %{
+      first_auth_params = %{
         "email" => "first-oauth-second-test@example.com",
         "github_user_id" => "bootstrap-uid-first",
         "provider" => "github",
@@ -87,7 +87,7 @@ defmodule Tymeslot.Auth.OAuth.TransactionalUserCreationTest do
       }
 
       {:ok, %{user: _first}} =
-        TransactionalUserCreation.find_or_create_oauth_user(:github, _first_auth_params)
+        TransactionalUserCreation.find_or_create_oauth_user(:github, first_auth_params)
 
       second_auth_params = %{
         "email" => "second-oauth@example.com",
