@@ -19,6 +19,7 @@ defmodule CredoChecks.LargeModules do
     base_priority: :low,
     category: :design,
     exit_status: 0,
+    param_defaults: [max_lines: 600],
     explanations: [
       check: """
       Detects modules that are longer than the configured maximum number of lines.
@@ -32,6 +33,7 @@ defmodule CredoChecks.LargeModules do
       ]
     ]
 
+  alias Credo.Check.Params
   alias Credo.IssueMeta
   alias Credo.SourceFile
 
@@ -40,7 +42,7 @@ defmodule CredoChecks.LargeModules do
   @spec run(SourceFile.t(), any) :: list()
   def run(%SourceFile{} = source_file, params) do
     issue_meta = IssueMeta.for(source_file, params)
-    max_lines = 750
+    max_lines = Params.get(params, :max_lines, __MODULE__)
 
     lines = SourceFile.lines(source_file)
     line_count = length(lines)
