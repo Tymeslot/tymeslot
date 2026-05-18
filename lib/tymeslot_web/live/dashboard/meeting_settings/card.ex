@@ -3,7 +3,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
   Component for displaying meeting type cards with toggle and action buttons.
   """
   use Phoenix.Component
-  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias TymeslotWeb.Components.Icons.ProviderIcon
 
   @doc """
@@ -203,7 +203,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Card do
 
     name =
       if calendar do
-        Calendar.extract_calendar_display_name(calendar)
+        DisplayHelpers.extract_calendar_display_name(calendar)
       else
         "Calendar"
       end

@@ -3,11 +3,12 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Helpers do
   Helper functions for calendar settings dashboard.
   """
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   @spec format_provider_name(String.t() | atom()) :: String.t()
   def format_provider_name(provider) do
-    Calendar.format_provider_display_name(provider)
+    DisplayHelpers.format_provider_display_name(provider)
   end
 
   @spec format_token_expiry(map()) :: String.t()
@@ -40,6 +41,6 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Helpers do
   """
   @spec extract_calendar_display_name(map()) :: String.t()
   def extract_calendar_display_name(calendar) do
-    Calendar.extract_calendar_display_name(calendar)
+    DisplayHelpers.extract_calendar_display_name(calendar)
   end
 end

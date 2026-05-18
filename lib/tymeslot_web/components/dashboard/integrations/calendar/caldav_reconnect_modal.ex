@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
   use TymeslotWeb, :live_component
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.ProviderConfig
   alias Tymeslot.Utils.ChangesetUtils
   alias TymeslotWeb.Components.CoreComponents
@@ -102,7 +103,7 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.CaldavReconnect
       {:error, reason} ->
         {:noreply,
          socket
-         |> assign(:form_errors, %{generic: [Calendar.connection_error_message(reason)]})
+         |> assign(:form_errors, %{generic: [DisplayHelpers.connection_error_message(reason)]})
          |> assign(:form_values, params)
          |> assign(:is_submitting, false)}
     end

@@ -3,13 +3,21 @@ defmodule Tymeslot.Integrations.Calendar do
   Integration management for calendar providers.
 
   Owns CRUD, primary selection, discovery, validation, OAuth helpers,
-  and UI-friendly helpers for calendar integrations.
+  and the higher-level orchestration wrappers used by LiveViews and
+  controllers.
 
-  For calendar event operations (list, create, update, delete events),
-  see `Tymeslot.Integrations.Calendar.Events`.
+  Related sibling modules:
 
-  For webhook lookup and notification tracking,
-  see `Tymeslot.Integrations.Calendar.Webhooks`.
+    * `Tymeslot.Integrations.Calendar.Diagnostics` — direct provider-event
+      operations and ephemeral integration builders used by `mix calendar_audit`
+      and other diagnostic tooling.
+    * `Tymeslot.Integrations.Calendar.DisplayHelpers` — user-facing string
+      helpers (provider display names, calendar name extraction, error
+      message normalisation).
+    * `Tymeslot.Integrations.Calendar.Events` — calendar event operations
+      (list/create/update/delete events) used by the booking pipeline.
+    * `Tymeslot.Integrations.Calendar.Webhooks` — webhook lookup and
+      notification tracking.
   """
 
   alias Tymeslot.Dashboard.DashboardContext
@@ -18,19 +26,15 @@ defmodule Tymeslot.Integrations.Calendar do
   alias Tymeslot.Integrations.Calendar.Creation
   alias Tymeslot.Integrations.Calendar.Deletion
   alias Tymeslot.Integrations.Calendar.Discovery
-  alias Tymeslot.Integrations.Calendar.EventsRead
   alias Tymeslot.Integrations.Calendar.OAuth
   alias Tymeslot.Integrations.Calendar.Orchestration.Workflows
   alias Tymeslot.Integrations.Calendar.ProviderConfig
-  alias Tymeslot.Integrations.Calendar.Providers.{CaldavCommon, ProviderAdapter}
   alias Tymeslot.Integrations.Calendar.Reconnection
-  alias Tymeslot.Integrations.Calendar.Runtime.ClientManager
   alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Calendar.TokenUtils
   alias Tymeslot.Integrations.{CalendarManagement, CalendarPrimary}
   alias Tymeslot.Integrations.Providers.Directory
   alias Tymeslot.Profiles.ProfileQueries
-  alias Tymeslot.Security.Encryption
 
   @type user_id :: pos_integer()
   @type integration_id :: pos_integer()
@@ -183,195 +187,6 @@ defmodule Tymeslot.Integrations.Calendar do
     Connection.validate_connection(integration, user_id)
   end
 
-  # ---------------------------
-  # Public API: Provider facade (for developer tooling and diagnostics)
-  # ---------------------------
-
-  @doc """
-  Creates an event on the integration's calendar provider.
-
-  Returns `{:ok, event_id}` where `event_id` is a string identifier, or
-  `{:error, reason}`.
-  """
-  @spec create_provider_event(integration(), map()) :: {:ok, any()} | {:error, any()}
-  def create_provider_event(%CalendarIntegrationSchema{} = integration, event_attrs) do
-    with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
-      adapter_client.provider_module.create_event(
-        adapter_client.client,
-        normalise_event_attrs(event_attrs)
-      )
-    end
-  end
-
-  @doc """
-  Diagnostic-only: PUTs a pre-built iCalendar payload into a CalDAV-family
-  integration's primary calendar, bypassing `ICalBuilder`.
-
-  Used by `mix calendar_audit` to exercise adversarial server-generated
-  payloads (e.g. Zimbra-style `TZID="Europe/Brussels"`) that Tymeslot's own
-  writer never produces, so the audit can verify our parser handles them.
-  Not intended for application use.
-  """
-  @spec put_raw_caldav_ical(integration(), String.t(), String.t()) ::
-          {:ok, String.t()} | {:error, any()}
-  def put_raw_caldav_ical(
-        %CalendarIntegrationSchema{provider: provider} = integration,
-        uid,
-        ical_content
-      ) do
-    with {:ok, provider_atom} <- ProviderConfig.validate_provider(provider),
-         {:caldav?, true} <- {:caldav?, ProviderConfig.caldav_based?(provider_atom)},
-         {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
-      CaldavCommon.put_raw_event(adapter_client.client, uid, ical_content)
-    else
-      {:caldav?, false} -> {:error, :unsupported_provider}
-      other -> other
-    end
-  end
-
-  @doc """
-  Fetches raw events from the provider and normalises them into `CalendarEvent` structs.
-
-  Returns `{:ok, [CalendarEvent.t()]}` or `{:error, reason}`.
-  """
-  @spec fetch_and_normalise_provider_events(integration(), DateTime.t(), DateTime.t()) ::
-          {:ok, list()} | {:error, any()}
-  def fetch_and_normalise_provider_events(
-        %CalendarIntegrationSchema{} = integration,
-        range_start,
-        range_end
-      ) do
-    with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
-      context = %{
-        calendar_integration_id: integration.id,
-        provider_calendar_id: integration.default_booking_calendar_id || "",
-        synced_at: DateTime.utc_now(:microsecond)
-      }
-
-      opts = [start_time: range_start, end_time: range_end]
-
-      with {:ok, raw_events} <-
-             adapter_client.provider_module.list_events(adapter_client.client, opts) do
-        adapter_client.provider_module.normalise_events(raw_events, context)
-      end
-    end
-  end
-
-  @doc """
-  Fetches events via the fresh-fetch path — the same code path the availability
-  calculator uses at runtime. Returns plain maps (not `CalendarEvent` structs).
-
-  This is the counterpart to `fetch_and_normalise_provider_events/3`, which goes
-  through the sync/normalisation pipeline. Comparing results between the two
-  paths catches divergence bugs (e.g. one expands recurring events, the other
-  does not).
-  """
-  @spec fetch_fresh_events(integration(), DateTime.t(), DateTime.t()) ::
-          {:ok, [map()]} | {:error, term()}
-  def fetch_fresh_events(%CalendarIntegrationSchema{} = integration, range_start, range_end) do
-    clients = ClientManager.clients_for_integration(integration)
-
-    results =
-      Enum.map(clients, fn client ->
-        EventsRead.fetch_events_with_fallback(client, range_start, range_end)
-      end)
-
-    successes = for {:ok, events, _path} <- results, event <- events, do: event
-    success_count = Enum.count(results, &match?({:ok, _events, _path}, &1))
-
-    if success_count == 0 and results != [] do
-      {:error, :all_clients_failed}
-    else
-      {:ok, Enum.uniq_by(successes, &{&1[:uid], &1[:start_time]})}
-    end
-  end
-
-  @doc """
-  Updates an event on the integration's calendar provider.
-
-  Returns `:ok`, `{:ok, result}`, or `{:error, reason}`.
-  """
-  @spec update_provider_event(integration(), String.t(), map()) ::
-          :ok | {:ok, any()} | {:error, any()}
-  def update_provider_event(%CalendarIntegrationSchema{} = integration, event_id, event_attrs) do
-    with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
-      adapter_client.provider_module.update_event(
-        adapter_client.client,
-        event_id,
-        normalise_event_attrs(event_attrs)
-      )
-    end
-  end
-
-  # Normalizes outbound event attrs for provider dispatch. Currently handles
-  # the all-day `end_date == start_date` case: iCal, Google, and Outlook all
-  # treat the end as exclusive for date-only events, so a single-day event
-  # must have `end = start + 1`. Callers may pass `end = start` to express
-  # "an event on that day"; this helper bridges the intent to the wire format.
-  defp normalise_event_attrs(
-         %{start_time: %Date{} = start_date, end_time: %Date{} = end_date} = attrs
-       ) do
-    if Date.compare(start_date, end_date) == :eq do
-      %{attrs | end_time: Date.add(end_date, 1)}
-    else
-      attrs
-    end
-  end
-
-  defp normalise_event_attrs(attrs), do: attrs
-
-  @doc """
-  Deletes an event from the integration's calendar provider.
-
-  Returns `:ok`, `{:ok, result}`, or `{:error, reason}`.
-  """
-  @spec delete_provider_event(integration(), String.t()) ::
-          :ok | {:ok, any()} | {:error, any()}
-  def delete_provider_event(%CalendarIntegrationSchema{} = integration, event_id) do
-    with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration) do
-      adapter_client.provider_module.delete_event(adapter_client.client, event_id, [])
-    end
-  end
-
-  @doc """
-  Performs a quick connectivity probe against the integration's provider.
-
-  Delegates to the provider's `check_connectivity/1` callback. CalDAV providers
-  send a PROPFIND request with a short timeout to verify reachability and
-  authentication. OAuth providers return immediately since token validity is
-  checked lazily on the first real API call.
-
-  Returns `:ok` or `{:error, reason}`.
-  """
-  @spec check_provider_connectivity(integration()) :: :ok | {:error, any()}
-  def check_provider_connectivity(%CalendarIntegrationSchema{} = integration) do
-    with {:ok, adapter_client} <- ProviderAdapter.new_client_from_integration(integration),
-         {:ok, _info} <- adapter_client.provider_module.check_connectivity(adapter_client.client) do
-      :ok
-    end
-  end
-
-  @doc """
-  Tests the connection and returns display-friendly message.
-  Delegates to Connection.test_connection/1 to centralize provider resolution.
-  """
-  @spec test_connection(integration()) :: {:ok, String.t()} | {:error, any()}
-  def test_connection(integration) do
-    start_time = System.monotonic_time(:millisecond)
-
-    result = Connection.test_connection(integration)
-
-    duration = System.monotonic_time(:millisecond) - start_time
-
-    :telemetry.execute(
-      [:tymeslot, :integration, :test_connection],
-      %{duration: duration},
-      %{provider: integration.provider, type: "calendar", success: match?({:ok, _result}, result)}
-    )
-
-    result
-  end
-
   @doc """
   Returns the list of CalDAV-based provider atoms.
   See `Tymeslot.Integrations.Calendar.ProviderConfig.caldav_based_providers/0`.
@@ -518,7 +333,7 @@ defmodule Tymeslot.Integrations.Calendar do
   end
 
   # ---------------------------
-  # Additional orchestrator helpers for UI and management
+  # Public API: Orchestration helpers
   # ---------------------------
 
   @doc """
@@ -560,94 +375,6 @@ defmodule Tymeslot.Integrations.Calendar do
   end
 
   @doc """
-  Map connection/validation error atoms to user-friendly messages.
-  """
-  @spec connection_error_message(term()) :: String.t()
-  def connection_error_message(reason) do
-    case reason do
-      :timeout -> "Calendar service is not responding. Please try again later."
-      :authentication_failed -> "Authentication failed. Please reconnect your calendar."
-      :token_expired -> "Your calendar access has expired. Please reconnect."
-      :network_error -> "Unable to reach calendar service. Check your internet connection."
-      :invalid_credentials -> "Invalid calendar credentials. Please update your connection."
-      _other -> "Failed to connect to calendar. Please try again or reconnect."
-    end
-  end
-
-  @doc """
-  Format provider display name for UI consumption.
-  """
-  @spec format_provider_display_name(String.t()) :: String.t()
-  def format_provider_display_name(provider) do
-    Directory.format_provider_name(:calendar, provider)
-  end
-
-  @doc """
-  Helper to extract a friendly display name from a calendar.
-  Handles the case where Radicale calendars may have UUIDs as names.
-  """
-  @spec extract_calendar_display_name(%{
-          optional(String.t()) => term(),
-          optional(atom()) => term()
-        }) ::
-          String.t()
-  def extract_calendar_display_name(calendar) do
-    raw_name = calendar["name"] || calendar[:name]
-    path = calendar["path"] || calendar[:path] || calendar["href"] || calendar[:href]
-    id = calendar["id"] || calendar[:id]
-
-    cond do
-      # If name exists and doesn't look like a UUID, use it
-      raw_name && !uuid_like?(raw_name) ->
-        raw_name
-
-      # If path exists, try to extract a friendly name from it
-      path ->
-        extract_name_from_path(path)
-
-      # If id doesn't look like a UUID, use it
-      id && !uuid_like?(id) ->
-        id
-
-      # Last resort: use the raw name even if it's a UUID
-      raw_name ->
-        raw_name
-
-      true ->
-        "Calendar"
-    end
-  end
-
-  # Check if a string looks like a UUID
-  defp uuid_like?(str) when is_binary(str) do
-    String.match?(str, ~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
-  end
-
-  defp uuid_like?(_non_string), do: false
-
-  # Extract a friendly name from a path like "/user/calendar-name/" -> "Calendar Name"
-  defp extract_name_from_path(path) when is_binary(path) do
-    segments =
-      path
-      |> String.split("/")
-      |> Enum.reject(&(&1 == ""))
-
-    case List.last(segments) do
-      nil ->
-        "Calendar"
-
-      name ->
-        name
-        |> String.replace(~r/\.(ics|cal)$/, "")
-        |> String.replace(["_", "-"], " ")
-        |> String.split()
-        |> Enum.map_join(" ", &String.capitalize/1)
-    end
-  end
-
-  defp extract_name_from_path(_arg), do: "Calendar"
-
-  @doc """
   Discovers calendars for raw credentials and filters them for valid paths.
   """
   @spec discover_and_filter_calendars(atom() | String.t(), String.t(), String.t(), String.t()) ::
@@ -657,69 +384,9 @@ defmodule Tymeslot.Integrations.Calendar do
     Workflows.discover_and_filter_calendars(provider, url, username, password)
   end
 
-  @doc """
-  Normalizes discovery errors into user-friendly strings.
-  """
-  @spec normalize_discovery_error(any()) :: String.t()
-  def normalize_discovery_error(reason) do
-    errors =
-      reason
-      |> List.wrap()
-      |> Enum.reject(&(&1 in [nil, ""]))
-
-    case errors do
-      [] -> "Calendar discovery failed. Please check your credentials and try again."
-      errors -> Enum.map_join(errors, ", ", &to_string/1)
-    end
-  end
-
-  @doc """
-  Builds an unpersisted `CalendarIntegrationSchema` struct for a Baikal
-  ephemeral audit or test target — no database row is created or required.
-
-  Owns the encryption and virtual-field details so callers (e.g. SaaS Mix
-  tasks) only need to pass a plain config map. The returned struct is ready
-  to be passed into any runtime path that accepts an integration struct.
-
-  ## Example
-
-      Calendar.build_ephemeral_baikal_integration(%{
-        url: "http://localhost:8800/dav.php",
-        username: "testuser",
-        password: "testpass123",
-        calendar_path: "/dav.php/calendars/testuser/default/"
-      })
-
-  """
-  @spec build_ephemeral_baikal_integration(%{
-          required(:url) => String.t(),
-          required(:username) => String.t(),
-          required(:password) => String.t(),
-          required(:calendar_path) => String.t()
-        }) :: CalendarIntegrationSchema.t()
-  def build_ephemeral_baikal_integration(%{
-        url: url,
-        username: username,
-        password: password,
-        calendar_path: calendar_path
-      }) do
-    %CalendarIntegrationSchema{
-      id: 0,
-      provider: "baikal",
-      name: "#{ProviderConfig.display_name(:baikal)} (#{URI.parse(url).host})",
-      base_url: url,
-      username_encrypted: Encryption.encrypt(username),
-      password_encrypted: Encryption.encrypt(password),
-      username: username,
-      password: password,
-      calendar_paths: [calendar_path],
-      calendar_list: [],
-      default_booking_calendar_id: calendar_path,
-      verify_ssl: true,
-      is_active: true,
-      needs_reauth: false
-    }
-  end
+  # ---------------------------
+  # Public API: Reconnection
+  # ---------------------------
 
   @doc """
   Reconnect an existing CalDAV-family integration. Returns either

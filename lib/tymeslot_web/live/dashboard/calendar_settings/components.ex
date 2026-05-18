@@ -4,7 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
   """
   use TymeslotWeb, :html
 
-  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.Integrations.Calendar.ProviderConfig
 
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.{
@@ -423,7 +423,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.Components do
         <div class="flex flex-wrap gap-2.5">
           <%= for calendar <- @integration.calendar_list || [] do %>
             <% calendar_id = calendar["id"] || calendar[:id] %>
-            <% calendar_name = Calendar.extract_calendar_display_name(calendar) %>
+            <% calendar_name = DisplayHelpers.extract_calendar_display_name(calendar) %>
             <% is_selected = calendar["selected"] || calendar[:selected] %>
             <% color = calendar["color"] || calendar[:color] %>
 
