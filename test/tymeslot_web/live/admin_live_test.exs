@@ -8,6 +8,8 @@ defmodule TymeslotWeb.AdminLiveTest do
   import Tymeslot.Factory
   import Tymeslot.AuthTestHelpers
 
+  alias Ecto.Changeset
+  alias Phoenix.Flash
   alias Tymeslot.AppSettings
   alias Tymeslot.Auth
   alias Tymeslot.Auth.UserQueries
@@ -42,7 +44,7 @@ defmodule TymeslotWeb.AdminLiveTest do
 
       conn = get(conn, ~p"/admin")
       assert redirected_to(conn) == ~p"/dashboard"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Admin access required."
+      assert Flash.get(conn.assigns.flash, :error) == "Admin access required."
     end
 
     test "unauthenticated request redirected to login", %{conn: conn} do
@@ -472,7 +474,7 @@ defmodule TymeslotWeb.AdminLiveTest do
       conn = get(conn, ~p"/admin")
 
       assert redirected_to(conn) == ~p"/dashboard"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Admin access required."
+      assert Flash.get(conn.assigns.flash, :error) == "Admin access required."
     end
 
     test "after self-demote, the dashboard dropdown no longer shows Admin Settings",
@@ -480,8 +482,8 @@ defmodule TymeslotWeb.AdminLiveTest do
       # The dashboard requires onboarding to be complete before it renders.
       {:ok, admin} =
         admin
-        |> Ecto.Changeset.change(
-          onboarding_completed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        |> Changeset.change(
+          onboarding_completed_at: DateTime.utc_now(:second)
         )
         |> Repo.update()
 

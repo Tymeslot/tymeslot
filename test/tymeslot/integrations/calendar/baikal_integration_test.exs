@@ -55,7 +55,7 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
   describe "discover_calendars/2 against Baikal" do
     test "discovers the Test Calendar" do
       assert {:ok, calendars} = CaldavCommon.discover_calendars(@client)
-      assert length(calendars) >= 1
+      assert calendars != []
 
       calendar_names = Enum.map(calendars, & &1.name)
 
@@ -97,7 +97,7 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
       END:VCALENDAR
       """
 
-      assert {:ok, _} = CaldavCommon.put_raw_event(@client, uid, ical)
+      assert {:ok, _result} = CaldavCommon.put_raw_event(@client, uid, ical)
 
       # Fetch events for today + next 3 hours window
       range_start = now
@@ -131,7 +131,7 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
       END:VCALENDAR
       """
 
-      assert {:ok, _} = CaldavCommon.put_raw_event(@client, uid, ical)
+      assert {:ok, _result} = CaldavCommon.put_raw_event(@client, uid, ical)
       assert :ok = CaldavCommon.delete_event(@client, uid)
 
       range_start = now
@@ -149,10 +149,11 @@ defmodule Tymeslot.Integrations.Calendar.BaikalIntegrationTest do
   defp format_ical_dt(%DateTime{} = dt) do
     dt = DateTime.truncate(dt, :second)
 
-    :io_lib.format(
-      "~4..0B~2..0B~2..0BT~2..0B~2..0B~2..0BZ",
-      [dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second]
+    to_string(
+      :io_lib.format(
+        "~4..0B~2..0B~2..0BT~2..0B~2..0B~2..0BZ",
+        [dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second]
+      )
     )
-    |> to_string()
   end
 end

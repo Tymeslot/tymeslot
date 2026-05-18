@@ -57,7 +57,7 @@ defmodule TymeslotWeb.E2E.DashboardCalendarTest do
     |> execute_script("""
       const input = document.getElementById('event-title-input');
       input.focus();
-      input.select();
+      input.setSelectionRange(0, input.value.length);
       input.value = 'Renamed In Browser';
       input.dispatchEvent(new Event('input', {bubbles: true}));
     """)
