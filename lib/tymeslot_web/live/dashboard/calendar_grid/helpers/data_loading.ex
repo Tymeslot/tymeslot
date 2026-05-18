@@ -4,6 +4,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
   import Phoenix.Component, only: [assign: 3]
 
   alias Tymeslot.CalendarGrid
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Integrations.Video
   alias Tymeslot.Timezones
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers.PreferenceHelpers
@@ -45,13 +46,34 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.Helpers.DataLoading do
 
   @spec load_events(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()
   def load_events(socket) do
-    integration_ids = Enum.map(socket.assigns.integrations, & &1.id)
+    integrations = socket.assigns.integrations
+    integration_ids = Enum.map(integrations, & &1.id)
     {start_dt, end_dt} = range_for_view(socket.assigns)
-    events = CalendarGrid.list_events_for_range(integration_ids, start_dt, end_dt)
+
+    events =
+      integration_ids
+      |> CalendarGrid.list_events_for_range(start_dt, end_dt)
+      |> filter_events_by_selection(integrations)
 
     socket
     |> assign(:events, events)
     |> precompute_derived()
+  end
+
+  # Cached events outlive selection changes: a user can toggle a calendar
+  # off in integration settings, but rows the previous sync wrote stay in
+  # the cache until pruning runs. Filter them out here so the grid honours
+  # the user's current selection immediately rather than waiting for the
+  # next sync cycle to delete them.
+  defp filter_events_by_selection(events, integrations) do
+    integration_by_id = Map.new(integrations, &{&1.id, &1})
+
+    Enum.filter(events, fn event ->
+      case Map.fetch(integration_by_id, event.calendar_integration_id) do
+        :error -> true
+        {:ok, integration} -> Selection.event_visible?(event, integration)
+      end
+    end)
   end
 
   @spec precompute_derived(Phoenix.LiveView.Socket.t()) :: Phoenix.LiveView.Socket.t()

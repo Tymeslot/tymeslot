@@ -34,14 +34,6 @@ defmodule Tymeslot.Workers.VideoTranscoder do
   def perform(
         %Oban.Job{args: %{"theme_customization_id" => id, "video_path" => video_path}} = job
       ) do
-    if transcoding_enabled?() do
-      run_if_available(id, video_path, job)
-    else
-      {:cancel, "transcoding disabled"}
-    end
-  end
-
-  defp run_if_available(id, video_path, job) do
     transcoder = transcoder_impl()
 
     if transcoder.available?() do
@@ -120,10 +112,6 @@ defmodule Tymeslot.Workers.VideoTranscoder do
       path = base_path <> suffix
       File.rm(path)
     end)
-  end
-
-  defp transcoding_enabled? do
-    Application.get_env(:tymeslot, :video_transcoding_enabled, true)
   end
 
   defp transcoder_impl do

@@ -150,6 +150,13 @@ fi
 # Only start embedded PostgreSQL if not using external database
 if [ "$USING_EXTERNAL_DB" = false ]; then
     echo "Starting PostgreSQL service..."
+    # Remove stale postmaster.pid from an unclean container shutdown.
+    # In Docker, no PostgreSQL process survives a container stop, so any
+    # existing PID file from a previous run is guaranteed stale.
+    if [ -f "$PGDATA/postmaster.pid" ]; then
+        echo "  Removing stale postmaster.pid..."
+        rm -f "$PGDATA/postmaster.pid"
+    fi
     # Start PostgreSQL daemon and log output to a file
     if su - postgres -c "/usr/lib/postgresql/*/bin/pg_ctl -D $PGDATA -l $PGDATA/logfile start"; then
         echo "✓ PostgreSQL service started"

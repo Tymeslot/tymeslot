@@ -136,6 +136,16 @@ Wait 30-60 seconds for initialization, then visit:
 
 For production deployment with SSL/HTTPS, configure your reverse proxy (Nginx, Caddy, Traefik, etc.) separately.
 
+### 5. Becoming an admin
+
+The first user to register on a fresh install is automatically promoted to admin. To promote additional users (or recover if no admin exists), use the release helper from inside the container:
+
+```bash
+docker exec -it tymeslot bin/tymeslot rpc 'Tymeslot.Release.promote_admin("you@example.com")'
+```
+
+See [`docs/ADMIN.md`](docs/ADMIN.md) for the full guide (demote, list, recovery paths).
+
 ---
 
 ## Understanding the Deployment Scripts

@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Dashboard.CalendarSettings.RateLimitTest do
 
       # Open the CalDAV config form
       view
-      |> element("button[phx-click='connect_caldav_calendar']")
+      |> element("button[phx-click='connect_provider'][phx-value-provider='caldav']")
       |> render_click()
 
       # Submit the discovery form — should be rate-limited

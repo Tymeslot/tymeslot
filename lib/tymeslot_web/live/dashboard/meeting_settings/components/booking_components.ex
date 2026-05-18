@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
     statics: TymeslotWeb.static_paths()
 
   alias Phoenix.LiveView.JS
-  alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.DisplayHelpers
   alias Tymeslot.MeetingTypes.MeetingTypeSchema
   alias TymeslotWeb.Dashboard.MeetingSettings.Helpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
@@ -322,7 +322,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Components.BookingComponents do
                           else: "text-tymeslot-700"
                         )
                       ]}>
-                        {Calendar.extract_calendar_display_name(cal)}
+                        {DisplayHelpers.extract_calendar_display_name(cal)}
                       </span>
                     </button>
                   <% end %>

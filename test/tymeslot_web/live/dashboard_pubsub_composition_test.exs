@@ -41,6 +41,7 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
   @moduletag :meetings
   @moduletag :live
 
+  import Mox
   import Phoenix.LiveViewTest
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
@@ -58,10 +59,68 @@ defmodule TymeslotWeb.DashboardPubsubCompositionTest do
   end
 
   setup :setup_dashboard_user
+  setup :set_mox_from_context
+  setup :verify_on_exit!
 
   setup do
     DashboardCache.clear_all()
     :ok
+  end
+
+  describe "calendar_list_refreshed — selection filter at the LiveView seam" do
+    @tag :capture_log
+    test "deselected calendars are stripped before reaching MeetingTypeForm",
+         %{conn: conn, user: user} do
+      # Seed an integration whose `calendar_list` already has a mixed
+      # selection — "work" is selected, "personal" is not. The discovery
+      # mock returns the same two calendars, so `unify_discovered_with_existing`
+      # preserves the prior selection state, and the async task sends a
+      # mixed list back to the LiveView.
+      integration =
+        insert(:calendar_integration,
+          user: user,
+          provider: "google",
+          calendar_list: [
+            %{"id" => "work", "path" => "work", "name" => "Work Cal", "selected" => true},
+            %{
+              "id" => "personal",
+              "path" => "personal",
+              "name" => "Personal Cal",
+              "selected" => false
+            }
+          ]
+        )
+
+      expect(GoogleCalendarAPIMock, :list_calendars, fn _client ->
+        {:ok,
+         [
+           %{"id" => "work", "summary" => "Work Cal"},
+           %{"id" => "personal", "summary" => "Personal Cal"}
+         ]}
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard/meeting-settings")
+
+      view |> element("button", "Add Meeting Type") |> render_click()
+
+      view
+      |> element(
+        "button[phx-click*='select_calendar_integration'][phx-click*='#{integration.id}']"
+      )
+      |> render_click()
+
+      # The seam: `dashboard_live.handle_info/2` for `:calendar_list_refreshed`
+      # wraps `calendars` in `Selection.selected_calendars/1` before calling
+      # `send_update(MeetingTypeForm, available_calendars: ...)`. So after the
+      # async resolves, "Work Cal" must appear in the rendered form, and
+      # "Personal Cal" must not — even though both came back from discovery.
+      wait_until(fn ->
+        html = render(view)
+        assert html =~ "Work Cal"
+        refute html =~ "Personal Cal"
+        :ok
+      end)
+    end
   end
 
   describe "refresh_calendar_list — integration deleted mid-flight" do

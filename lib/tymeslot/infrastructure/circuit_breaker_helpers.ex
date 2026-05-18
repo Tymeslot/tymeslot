@@ -20,7 +20,8 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
     * `fun` - The zero-arity function to execute
 
   ## Returns
-    * `{:ok, result}` - Function executed successfully
+    * `:ok` - Function returned bare `:ok`
+    * `{:ok, result}` - Function returned `{:ok, result}`
     * `{:error, :circuit_open}` - Circuit breaker is open
     * `{:error, :breaker_not_found}` - Circuit breaker process not found
     * `{:error, :circuit_breaker_error}` - Unexpected error during execution
@@ -31,11 +32,14 @@ defmodule Tymeslot.Infrastructure.CircuitBreakerHelpers do
           atom(),
           String.t(),
           (-> any())
-        ) :: {:ok, any()} | {:error, atom()}
+        ) :: :ok | {:ok, any()} | {:error, atom()}
   def call_with_breaker(breaker_name, provider, service_type, fun)
       when is_function(fun, 0) do
     if breaker_exists?(breaker_name) do
       case CircuitBreaker.call(breaker_name, fun) do
+        :ok ->
+          :ok
+
         {:ok, result} ->
           {:ok, result}
 

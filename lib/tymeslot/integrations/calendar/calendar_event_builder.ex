@@ -40,12 +40,16 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
   @doc """
   Assembles a calendar event description from a meeting's fields.
 
-  Concatenates the meeting description, attendee message (if present),
-  and video meeting URL (if present).
+  The attendee identity is prepended because `ICalBuilder` deliberately
+  does not emit an `ATTENDEE` line on the CalDAV-write path (issue #41) —
+  if the description didn't carry the attendee's name and email the
+  organiser would have no way to see who the meeting is with from inside
+  their calendar app.
   """
   @spec build_event_description(map()) :: String.t()
   def build_event_description(meeting) do
     parts = [
+      attendee_identity_line(meeting),
       meeting.description,
       if(meeting.attendee_message, do: "\n\nMessage from attendee:\n#{meeting.attendee_message}"),
       if(meeting.meeting_url, do: "\n\nVideo meeting: #{meeting.meeting_url}")
@@ -55,4 +59,14 @@ defmodule Tymeslot.Integrations.Calendar.CalendarEventBuilder do
     |> Enum.filter(& &1)
     |> Enum.join()
   end
+
+  defp attendee_identity_line(%{attendee_email: email} = meeting)
+       when is_binary(email) and email != "" do
+    case Map.get(meeting, :attendee_name) do
+      name when is_binary(name) and name != "" -> "Attendee: #{name} <#{email}>\n\n"
+      _missing -> "Attendee: #{email}\n\n"
+    end
+  end
+
+  defp attendee_identity_line(_meeting), do: nil
 end

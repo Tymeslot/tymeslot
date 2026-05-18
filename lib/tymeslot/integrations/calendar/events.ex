@@ -16,7 +16,13 @@ defmodule Tymeslot.Integrations.Calendar.Events do
   require Logger
 
   @type user_id :: pos_integer()
-  @type create_context :: user_id() | MeetingSchema.t() | MeetingTypeSchema.t() | nil
+  @type integration_id :: pos_integer()
+  @type create_context ::
+          user_id()
+          | {integration_id(), user_id()}
+          | MeetingSchema.t()
+          | MeetingTypeSchema.t()
+          | nil
   @type calendar_event_data :: %{
           required(:summary) => String.t(),
           required(:start_time) => DateTime.t(),
@@ -140,6 +146,11 @@ defmodule Tymeslot.Integrations.Calendar.Events do
     case context do
       id when is_integer(id) and id > 0 ->
         behaviour_module().create_event(event_data, id)
+
+      {integration_id, user_id}
+      when is_integer(integration_id) and integration_id > 0 and
+             is_integer(user_id) and user_id > 0 ->
+        behaviour_module().create_event(event_data, {integration_id, user_id})
 
       %MeetingSchema{} = meeting ->
         behaviour_module().create_event(event_data, meeting)

@@ -6,10 +6,14 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfi
     provider: :mailbox_org,
     default_name: "My mailbox.org"
 
+  alias Tymeslot.Integrations.Calendar.ProviderConfig
+
   alias TymeslotWeb.Components.Dashboard.Integrations.Calendar.SharedFormComponents,
     as: SharedForm
 
   alias TymeslotWeb.Components.Icons.ProviderIcon
+
+  @locked_url ProviderConfig.locked_url_for(:mailbox_org)
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -75,10 +79,12 @@ defmodule TymeslotWeb.Components.Dashboard.Integrations.Calendar.MailboxOrgConfi
         suggested_name="My mailbox.org"
         name_placeholder="My mailbox.org Calendar"
         url_locked={true}
-        url_value="https://dav.mailbox.org"
-        url_locked_tooltip="mailbox.org always uses this CalDAV server — the address cannot be changed"
+        url_value={locked_url().url}
+        url_locked_tooltip={locked_url().tooltip}
       />
     </div>
     """
   end
+
+  defp locked_url, do: @locked_url
 end

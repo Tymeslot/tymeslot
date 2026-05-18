@@ -377,6 +377,17 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
 
   defp build_exdate(_event), do: nil
 
+  # Issue #41: Zimbra (and likely other CalDAV servers) silently strips
+  # `SCHEDULE-AGENT` from incoming events and runs iTIP scheduling for any
+  # event that carries an `ATTENDEE` block — re-emailing the attendee on top
+  # of Tymeslot's own notification. The only reliable way to keep CalDAV
+  # servers from auto-scheduling is to not advertise an attendee at all.
+  #
+  # We emit `CONTACT` instead (RFC 5545 §3.8.4.2), which carries the same
+  # name/email but is not part of the iTIP scheduling model. The attendee
+  # identity is also folded into the event DESCRIPTION (see
+  # `CalendarEventBuilder.build_event_description/1`) so it remains visible
+  # in calendar clients that don't render CONTACT.
   defp build_attendee_lines(%{attendees: attendees})
        when is_list(attendees) and attendees != [] do
     attendees
@@ -395,28 +406,27 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   defp format_attendee(%{"email" => email} = a),
     do: format_attendee(%{email: email, name: a["name"]})
 
-  defp format_attendee(%{email: email} = a) when is_binary(email) do
-    cn = a[:name] || email
+  defp format_attendee(%{email: email} = a) when is_binary(email) and email != "" do
+    case a[:name] do
+      name when is_binary(name) and name != "" ->
+        "CONTACT:#{escape_text(name)} <#{sanitize_ical_value(email)}>"
 
-    "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;CN=#{escape_text(cn)}:mailto:#{sanitize_ical_value(email)}"
+      _missing ->
+        "CONTACT:#{sanitize_ical_value(email)}"
+    end
   end
 
-  defp format_attendee(email) when is_binary(email) do
-    "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+  defp format_attendee(email) when is_binary(email) and email != "" do
+    "CONTACT:#{sanitize_ical_value(email)}"
   end
 
   defp format_attendee(_other), do: nil
 
-  # RFC 6638 §7.1: `SCHEDULE-AGENT=CLIENT` tells a CalDAV scheduling-aware
-  # server (Zimbra, Nextcloud/Sabre, Apple iCloud) that the client handles
-  # all scheduling; the server must not auto-send iTIP invitations.
-  # Tymeslot sends its own notification emails, so server-side scheduling
-  # would duplicate every invitation.
-  #
-  # Without an explicit ORGANIZER, scheduling-aware servers infer the
-  # calendar owner and inject one — which also triggers the iTIP pipeline.
-  # We always emit the meeting organiser so the server has no reason to
-  # guess.
+  # We still emit `ORGANIZER` on every event so scheduling-aware servers
+  # don't inject one of their own at calendar-owner level (which would
+  # itself fire iTIP). The `SCHEDULE-AGENT=CLIENT` parameter is kept as
+  # defence-in-depth for servers that honour RFC 6638 §7.1 even though
+  # Zimbra silently strips it (see issue #41).
   defp build_organizer_line(%{organizer_email: email} = event)
        when is_binary(email) and email != "" do
     case Map.get(event, :organizer_name) do
@@ -521,13 +531,13 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilder do
   defp build_attendees(%{attendees: attendees}) when is_list(attendees) do
     Enum.map_join(attendees, "\r\n", fn
       %{"email" => email} ->
-        "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+        "CONTACT:#{sanitize_ical_value(email)}"
 
       %{email: email} ->
-        "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+        "CONTACT:#{sanitize_ical_value(email)}"
 
       email when is_binary(email) ->
-        "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:#{sanitize_ical_value(email)}"
+        "CONTACT:#{sanitize_ical_value(email)}"
     end)
   end
 

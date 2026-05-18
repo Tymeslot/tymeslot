@@ -115,7 +115,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
              )
     end
 
-    test "tags attendees with SCHEDULE-AGENT=CLIENT when provided" do
+    # Issue #41: Zimbra (and other scheduling-aware CalDAV servers) strip
+    # `SCHEDULE-AGENT` on ingest and run iTIP for any event that carries an
+    # ATTENDEE block, duplicating Tymeslot's own notification email. The
+    # only reliable fix is to omit ATTENDEE entirely on the write path and
+    # surface the attendees via the (non-scheduling) CONTACT property.
+    test "emits CONTACT (never ATTENDEE) for each attendee" do
       event_data = %{
         summary: "Meeting",
         attendees: ["john@example.com", "jane@example.com"],
@@ -125,9 +130,9 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
 
       ical = ICalBuilder.build_event(event_data)
 
-      assert String.contains?(ical, "ATTENDEE;SCHEDULE-AGENT=CLIENT")
-      assert String.contains?(ical, "john@example.com")
-      assert String.contains?(ical, "jane@example.com")
+      refute String.contains?(ical, "ATTENDEE")
+      assert String.contains?(ical, "CONTACT:john@example.com")
+      assert String.contains?(ical, "CONTACT:jane@example.com")
     end
 
     test "includes status when provided" do
@@ -269,7 +274,12 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
       refute String.contains?(ical, "ORGANIZER")
     end
 
-    test "tags ATTENDEE with SCHEDULE-AGENT=CLIENT when attendee_email is present" do
+    # Issue #41: Zimbra strips `SCHEDULE-AGENT` on ingest and auto-iTIPs any
+    # event with an ATTENDEE block — empirically confirmed against a real
+    # Zimbra instance. Tymeslot now surfaces the attendee via CONTACT and
+    # the description instead. Do not re-introduce ATTENDEE on the CalDAV
+    # write path.
+    test "emits CONTACT (never ATTENDEE) when attendee_email is present" do
       event_data = %{
         summary: "Meeting",
         start_time: ~U[2024-01-15 10:00:00Z],
@@ -280,10 +290,35 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
 
       ical = ICalBuilder.build_simple_event("uid-4", event_data)
 
-      assert String.contains?(
-               ical,
-               "ATTENDEE;SCHEDULE-AGENT=CLIENT;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;CN=Guest Person:mailto:guest@example.com"
-             )
+      refute String.contains?(ical, "ATTENDEE")
+      assert String.contains?(ical, "CONTACT:Guest Person <guest@example.com>")
+    end
+
+    test "emits CONTACT without name when attendee_name is missing" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z],
+        attendee_email: "guest@example.com"
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-5", event_data)
+
+      refute String.contains?(ical, "ATTENDEE")
+      assert String.contains?(ical, "CONTACT:guest@example.com")
+    end
+
+    test "emits neither ATTENDEE nor CONTACT when attendee data is absent" do
+      event_data = %{
+        summary: "Meeting",
+        start_time: ~U[2024-01-15 10:00:00Z],
+        end_time: ~U[2024-01-15 11:00:00Z]
+      }
+
+      ical = ICalBuilder.build_simple_event("uid-6", event_data)
+
+      refute String.contains?(ical, "ATTENDEE")
+      refute String.contains?(ical, "CONTACT:")
     end
   end
 
@@ -454,241 +489,6 @@ defmodule Tymeslot.Integrations.Calendar.ICalBuilderTest do
 
       refute String.contains?(ical, "DTSTART;TZID=")
       refute String.contains?(ical, "DTEND;TZID=")
-    end
-  end
-
-  describe "build_event/1 — atom status and transparency" do
-    test "upcases atom :tentative to STATUS:TENTATIVE" do
-      event_data = %{
-        summary: "Maybe",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        status: :tentative
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      assert String.contains?(ical, "STATUS:TENTATIVE")
-    end
-
-    test "upcases atom :confirmed to STATUS:CONFIRMED" do
-      event_data = %{
-        summary: "Confirmed",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        status: :confirmed
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      assert String.contains?(ical, "STATUS:CONFIRMED")
-    end
-
-    test "silently skips an invalid atom status" do
-      event_data = %{
-        summary: "Bad Status",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        status: :unknown_status
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      refute String.contains?(ical, "STATUS:")
-    end
-
-    test "upcases atom :opaque to TRANSP:OPAQUE" do
-      event_data = %{
-        summary: "Busy",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        transparency: :opaque
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      assert String.contains?(ical, "TRANSP:OPAQUE")
-    end
-
-    test "upcases atom :transparent to TRANSP:TRANSPARENT" do
-      event_data = %{
-        summary: "Free",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        transparency: :transparent
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      assert String.contains?(ical, "TRANSP:TRANSPARENT")
-    end
-
-    test "silently skips an invalid atom transparency" do
-      event_data = %{
-        summary: "Bad Transparency",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        transparency: :unknown_transparency
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      refute String.contains?(ical, "TRANSP:")
-    end
-  end
-
-  describe "build_event/1 — visibility producing CLASS property" do
-    test "emits CLASS:PRIVATE for :private visibility" do
-      event_data = %{
-        summary: "Private Event",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        visibility: :private
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      assert String.contains?(ical, "CLASS:PRIVATE")
-    end
-
-    test "emits CLASS:PUBLIC for :public visibility" do
-      event_data = %{
-        summary: "Public Event",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        visibility: :public
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      assert String.contains?(ical, "CLASS:PUBLIC")
-    end
-
-    test "emits CLASS:CONFIDENTIAL for :confidential visibility" do
-      event_data = %{
-        summary: "Confidential Event",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        visibility: :confidential
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      assert String.contains?(ical, "CLASS:CONFIDENTIAL")
-    end
-
-    test "accepts string visibility values" do
-      event_data = %{
-        summary: "String Visibility",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        visibility: "private"
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      assert String.contains?(ical, "CLASS:PRIVATE")
-    end
-
-    test "silently skips an invalid visibility value" do
-      event_data = %{
-        summary: "Bad Visibility",
-        start_time: ~U[2026-04-18 10:00:00Z],
-        end_time: ~U[2026-04-18 11:00:00Z],
-        visibility: :internal
-      }
-
-      ical = ICalBuilder.build_event(event_data)
-
-      refute String.contains?(ical, "CLASS:")
-    end
-  end
-
-  describe "build_rrule/1" do
-    test "returns nil for nil input" do
-      assert ICalBuilder.build_rrule(nil) == nil
-    end
-
-    test "builds simple DAILY recurrence" do
-      recurrence = %{frequency: "DAILY"}
-
-      rrule = ICalBuilder.build_rrule(recurrence)
-
-      assert rrule == "RRULE:FREQ=DAILY"
-    end
-
-    test "builds WEEKLY recurrence with days" do
-      recurrence = %{
-        frequency: "WEEKLY",
-        by_day: ["MO", "WE", "FR"]
-      }
-
-      rrule = ICalBuilder.build_rrule(recurrence)
-
-      assert rrule == "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"
-    end
-
-    test "includes interval when greater than 1" do
-      recurrence = %{
-        frequency: "WEEKLY",
-        interval: 2
-      }
-
-      rrule = ICalBuilder.build_rrule(recurrence)
-
-      assert String.contains?(rrule, "INTERVAL=2")
-    end
-
-    test "includes count when provided" do
-      recurrence = %{
-        frequency: "DAILY",
-        count: 10
-      }
-
-      rrule = ICalBuilder.build_rrule(recurrence)
-
-      assert String.contains?(rrule, "COUNT=10")
-    end
-
-    test "includes until date when provided" do
-      until_date = ~U[2024-12-31 23:59:59Z]
-
-      recurrence = %{
-        frequency: "WEEKLY",
-        until: until_date
-      }
-
-      rrule = ICalBuilder.build_rrule(recurrence)
-
-      assert String.contains?(rrule, "UNTIL=")
-      assert String.contains?(rrule, "20241231T235959Z")
-    end
-
-    test "includes by_month when provided" do
-      recurrence = %{
-        frequency: "YEARLY",
-        by_month: [1, 6, 12]
-      }
-
-      rrule = ICalBuilder.build_rrule(recurrence)
-
-      assert String.contains?(rrule, "BYMONTH=1,6,12")
-    end
-
-    test "builds complex recurrence rule" do
-      recurrence = %{
-        frequency: "MONTHLY",
-        interval: 2,
-        count: 12,
-        by_day: ["MO"]
-      }
-
-      rrule = ICalBuilder.build_rrule(recurrence)
-
-      assert String.contains?(rrule, "FREQ=MONTHLY")
-      assert String.contains?(rrule, "INTERVAL=2")
-      assert String.contains?(rrule, "COUNT=12")
-      assert String.contains?(rrule, "BYDAY=MO")
     end
   end
 end

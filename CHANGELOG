@@ -1,11 +1,10 @@
 
+[1.0.2]
+* core: Prevent duplicate booking invites from CalDAV servers (closes #41)
 [1.0.1]
 * core: Correct availability and slot ordering in the booking calendar
 * core: Fix pixelated Cloudron dashboard icon
-* saas: Guard funnel sends against unverified users at delivery time
-* saas: Add onboarding email funnel for newly verified users
 [1.0.0]
-* saas: Send founder welcome email with one-click unsubscribe
 * core: Add marketing-list opt-out helpers to Auth
 [0.100.16]
 * core: Apply calendar deselection to CalDAV sync immediately
@@ -19,14 +18,10 @@
 * core: Translate location placeholder in booking confirmation emails
 * core: Fix invisible reply text in Thunderbird dark mode
 * core: Restore CalDAV booking creation when discovery omits path
-* saas: Add breaking changes callout to changelog
 [0.100.14]
 * core: Prevent CalDAV sync crash on all-day recurring events with EXDATEs
 * core: Fix Nextcloud connection test failing for bare server URLs
-* saas: Correct privacy claims to accurately reflect tracking scope
 * core: Auto-pause integrations stuck unhealthy past the configured cutoff
-* saas: Split docs filters into topic, provider, and self-hosting toggle
-* saas: Publish v1.1 of Terms and Privacy Policy
 [0.100.13]
 * core: Fix mailbox.org calendar discovery failing with unsupported provider error
 * core: Prevent crash when clicking mailbox.org calendar provider
@@ -45,10 +40,8 @@
 * core: Hide task-only CalDAV calendars from event calendar pickers
 * core: Prevent CalDAV permission errors from disconnecting calendars
 * core: Pre-fill and lock server URL in mailbox.org calendar setup
-* saas: Add per-provider CalDAV setup articles and update general guide
 * core: Add setup guide links to CalDAV provider configuration forms
 * core: Notify users immediately when integration credentials become invalid
-* saas: List mailbox.org as a supported CalDAV provider
 * core: Add mailbox.org as a CalDAV calendar provider
 * core: Load environment variables from a .env file at boot
 [0.100.12]
@@ -62,12 +55,10 @@
 * core: Add OAuth reconnect button to calendar integration cards
 [0.100.11]
 * core: Prevent reCAPTCHA tokens being corrupted during form validation
-* saas: Keep dashboard mounted when the subscription service exits
 * core: Derive with_retry_async's Task.await timeout from the retry budget
 * core: Prevent search engines from indexing booking pages
 * core: Surface timezone conversion failures from ensure_utc/1
 * core: Surface OAuth token persistence failures loudly
-* saas: Persist renewed billing period and dedupe duplicate dispute webhooks
 * core: Deliver reschedule confirmation emails without pattern mismatch
 * core: Warn when toggling a deleted calendar integration
 * core: Show validation error when break end time precedes start time
@@ -86,10 +77,8 @@
 * core: Flag calendar integrations for reauth on decryption failure
 * core: Preserve circuit-breaker state across worker restarts
 * core: Keep account lockout counter in effect across restarts
-* saas: Restrict billing portal to subscription owner
 * core: Block XSS via custom theme CSS breakout
 * core: Require OAuth callback state to match session user
-* saas: Advertise 5 supported languages on marketing site
 * core: Add Italian to supported booking and email languages
 [0.100.9]
 * core: Prevent uploaded non-media files from being served as HTML
@@ -115,19 +104,15 @@
 * core: Allow Stripe billing and checkout hosts in CSP form-action
 * core: Create default weekly schedule for OAuth users
 [0.100.6]
-* saas: Prevent duplicate Stripe customers and subscriptions on repeated checkout
 * core: Suppress CalDAV/iMIP auto-scheduling for booked events
 * core: Widen provider_calendar_events text columns to unbounded text
 * core: Handle 3-tuple api_error in Outlook fallback sync sweep
 * core: Deduplicate upsert batch by uid to prevent cardinality violation
 * core: Accept calendar server URLs without an explicit scheme
-* saas: Broaden subscription dashboard to past_due/unpaid and add post-checkout polling
 [0.100.5]
 * core: Isolate shared breaker state in bootstrap_sync circuit test
 * core: Expand recurring events in fresh-fetch availability path
-* saas: Add fresh-fetch path verification to calendar audit
 [0.100.4]
-* saas: Write boolean stable field in set_version task
 * core: Use boolean stable field in CloudronVersions.json
 [0.100.3]
 * core: Add local icon path to manifest and use boolean stable field
@@ -159,7 +144,6 @@
 * core: Rename bare _ bindings to _upserted in sync sweep worker test
 * core: Address deep review findings for Outlook sync bootstrap refactor
 * core: Decouple Outlook sync bootstrap from push subscription and land cache/security cleanups
-* saas: Populate start_time/end_time on quoted-TZID audit scenario
 * core: Handle DST transitions in convert_to_utc and expand TZID coverage
 * core: Strip quoted TZID and normalise provider timezones (closes #38)
 * core: Align booking conflict check with canonical blocking predicate
@@ -171,7 +155,6 @@
 * core: Prevent Quick Actions card overflow on mobile dashboard
 * core: Prevent logo and user dropdown overlap on mobile dashboard
 * core: Hide back-to-website button on mobile auth pages
-* saas: Audit quoted TZID handling in calendar_audit
 [0.100.0]
 * Install node_modules before building assets in umbrella Docker image
 * core: Install node_modules before building assets in Docker
@@ -180,24 +163,20 @@
 * core: Wire password toggle hook on every auth form and give each a unique id
 * core: Stop back-to-website button animating from inside auth card
 * core: Remove phantom css classes and migrate password toggle to data attributes
-* saas: Install tailwindcss-animate plugin
 * core: Install tailwindcss-animate plugin and remove dead animate classes
 * core: Remove phantom css classes with no definition
 * core: Style rhythm overview empty state
-* saas: Map multi-entry appointment email templates in coverage test
 * core: Register grid-cols-14 and grid-cols-16 in Tailwind config
 * core: Replace stale xs: breakpoint on automation card test buttons
 * core: Use turquoise scale for reCAPTCHA notice links
 * core: Remove unreachable clause in availability shift_safe
 * core: Harden 2026 email helpers against edge-case inputs
-* saas: Resolve runtime.exs paths from file location, not cwd
 * core: Render quill time slots in a responsive grid
 * core: Adapt rhythm schedule step to iframe height via flex
 * core: Preserve unspecified calendar preference fields on partial upsert
 * core: Re-centre dashboard calendar on current time after refresh
 * core: Keep cancel button icon and label on one line
 * core: Handle OAuth plain-map events in blocking? and convert_events_to_timezone
-* saas: Fix recurring event cleanup in calendar audit runner
 * core: Convert CalDAV EXDATE values to Date for cache storage
 * core: Fold created_by_tymeslot into recreate_provider_calendar_events migration
 * core: Normalize OAuth calendar events in EventsRead fetch path
@@ -209,29 +188,21 @@
 * core: Harden event fingerprinting after code review
 * core: Add @spec to where_overlapping_range
 * core: Improve Google OAuth UX and deduplicate calendar callback rate limiting
-* saas: Address code review findings from SEO improvements
 * core: Scrub PII before logging, harden hostname fallback, trim emails
 * core: Address code review findings for canonical CalendarEvent
 * core: Validate calendar discovery input before rate-limiting
 * core: Use user-id for calendar rate limits and reset is_saving on throttle
 * core: Add missing rate limits to calendar event creation and connection tests
 * core: Restore real HealthCheck module in HealthCheckTest setup
-* saas: Move Repo calls out of EmailService and OnboardingEmailWorker
-* saas: Use domain language in documentation instead of schema module names
 * core: Update stale subscription schema reference in customer lookup test
 * core: Resolve Dialyzer warnings in Profiles module
 * core: Address review findings in co-location branch
 * core: Resolve rebase conflict artifacts in email worker and onboarding
 * core: Address review findings in bounded health check changes
 * core: Bound health check job execution to prevent 10+ minute runs
-* saas: Align SaaS email templates and testing with 2026 redesign
 * core: Redesign transactional and system emails for 2026
 * core: Add periodic forced full re-sync for CalDAV integrations
 * core: Fingerprint calendar events created by Tymeslot
-* saas: Add docs cross-links to profession page integration sections
-* saas: Redesign /for hub as categorised overview page with SEO copy and schema
-* saas: Strengthen profession page H1 headlines with profession-specific value props
-* saas: SEO improvements — llms.txt, og-image, schema markup
 * core: Add og-image.png social card for Open Graph meta tags
 * core: Enrich admin alerts with structured reason and PII scrubbing
 * core: Normalise all calendar providers through canonical CalendarEvent
@@ -240,7 +211,6 @@
 * core: Add Credo check enforcing Repo call boundaries
 [0.99.40]
 * core: Extract shared Date-to-DateTime coercion into DateTimeUtils.to_datetime/1
-* saas: Exclude manual subscriptions from reconciliation discrepancy checks
 * core: Skip duplicate transaction on initial subscription invoice
 * core: Address review findings in onboarding redesign
 * core: Address review findings in TLD validation
@@ -269,7 +239,6 @@
 * core: Show empty state banner when no calendars are connected
 [0.99.39]
 * core: Add central Mox setup for HTTP client in calendar tests
-* saas: Correct Dialyzer type specs in email testing helpers
 * core: Supervise security monitoring webhook task
 * core: Correct Dialyzer type specs in security logger
 * core: Correct Dialyzer type specs across auth, bookings, emails, integrations, and security modules
@@ -329,11 +298,9 @@
 * core: Translate email location labels at render time per recipient locale
 * core: Set timezone via connect_params in availability refinement test
 * core: Set timezone via connect_params in availability refinement test
-* saas: Replace length/1 check with empty list comparison
 * core: Remove double scrollbar on time slots in constrained-height embeds
 * core: Reword comment to avoid triggering UseCoreInputs Credo check
 * core: Fix timezone dropdown height, width, and popular ordering
-* saas: Remove unimplemented daily booking limits feature
 * core: Improve Quill overview duration card visibility and avatar alignment
 * core: Prevent time slots from stretching when period has few slots
 * core: Remove HEEx comments from MJML heredoc strings
@@ -366,44 +333,29 @@
 * core: Harden availability edge cases — IDOR protection, cache invalidation, input guards
 * core: Point tzdata at writable directory on Cloudron
 [0.99.31]
-* saas: Use pattern match instead of != for non-empty list assertion
-* saas: Replace length/1 check with empty list comparison in changelog test
 * core: Use meaningful name for unused variable in maybe_extract_host
-* saas: Correct embed docs — fix wrong attributes, Shopify script instructions
 * core: Clarify embed option descriptions for non-technical users
 * core: Align embed domain tests with protocol-stripping behavior
 * core: Correct embed resize tests to match inline embed behavior
-* saas: Resolve Dialyzer type comparison warning in changelog test
 * core: Strip URL scheme/port/path in validate_domain/1
 * core: Resolve Dialyzer type comparison warning in telemetry test
-* saas: Resolve Dialyzer warnings in demo resolver and savings calculator
-* saas: Resolve credo warnings in payment_event_worker and changelog_test
 * core: Resolve credo warnings in validate_video_presets and layouts
-* saas: Implement get_range_availability in demo resolver
 * core: Compute availability over full 42-day calendar display range
-* saas: Support alphanumeric theme IDs in demo username patterns
 * core: Add missing "All rights reserved" to footer copyright
 * core: Reject domains with protocols in embed domain validation
 * core: Use Oban unique jobs for video transcoding and clean up variants on delete
 * core: Sanitize upload paths in video sources and close media query gap
 * core: Skip Telegram webhook registration outside production
-* saas: Fix footer use cases columns and expand related guides to four
 * core: Split Night period into Early Morning and Late Night
 * core: Split embed system into inline and modal modes
 * core: Responsive video transcoding for uploaded backgrounds
 * core: Add responsive video transcoding for uploaded backgrounds
 * core: Add natural sort for meeting types in LocalizationHelpers
-* saas: Add 10 new profession landing pages
-* saas: Add free plan pricing section to all for-pages
-* saas: Add integration + Calendly FAQs and keyword copy to all for-pages
 [0.99.30]
-* saas: Add missing feature icon keys to validation allowlist and emoji map
 * core: Hide reCAPTCHA v3 badge per Google's terms
 * core: Clean up iframe embedding security headers
 * core: Use signed parent_origin for embed domain verification
-* saas: 27 profession landing pages at /for/:slug
 * core: Redesign site_footer with supplemental_nav slot and column layout
-* saas: Profession landing pages at /for/:slug
 * core: Add supplemental_nav slot to site_footer for injecting extra link columns
 [0.99.29]
 * core: Fix dashboard headline position on automation and profile pages
@@ -419,7 +371,6 @@
 * core: Harden video integration edge cases — upsert on OAuth, unique constraint, graceful JSON handling
 * core: Disable async in storage tests that mutate global Application config
 * core: Harden theme customisation — error tuples, browsing_type guard, image size limit
-* saas: Add plain-text bodies to all email templates and harden edge cases
 * core: Discard permanent meeting errors and log confirmation step failures
 * core: Patch theme edge-case review findings
 * core: Guard booking step against double-submission and direct URL access
@@ -427,33 +378,26 @@
 * core: Add empty state to Rhythm overview and replace emoji icons in Quill meeting pages
 * core: Improve theme error logging and plug exception handling
 * core: Return error when all selected calendars fail in MultiCalendarFetch
-* saas: Harden payment subsystem — config, truncation, dunning resilience
 * core: Guard against non-pending transaction states in payment processing
-* saas: Harden payment edge cases across subscription lifecycle
 * core: Prevent duplicate processing of already-completed payments
 * core: Harden theme customization logic against edge cases
 * core: Harden auth security — email normalisation, token hashing, open redirect
 * core: Harden infrastructure resilience and healthcheck
-* saas: Guard HomepageLive against unknown send_to_component module
-* saas: Harden docs search and tag filtering
 * core: Normalize 3-tuple API errors to 2-tuples in ProviderCommon.discover_calendars
 * core: Decrypt CalDAV credentials and forward custom video URL in health check
 * core: Validate email format in PasswordReset.initiate_reset before anti-enumeration path
 * core: Handle invalid_input map from authenticate_user in session controller
 * core: Remove unreachable three-element error pattern in calendar primary
-* saas: Use TymeslotSaasWeb in ChangelogLive
 * core: Restore PubSub alias and canonical URL logic
 * core: Pass parent-origin to embedded iframe URL
 * core: Fall back to parent-origin param when referrer is stripped
 * core: Normalise canonical URLs to strip query params and trailing slashes
 * core: Add minimum height floor to inline embeds
 * core: Silence Tidewave compile warnings when dep is unavailable
-* saas: Eliminate flaky dispute test race condition
 * core: Handle three-tuple OAuth discovery error and move tidewave to saas
 * core: Harden embed security, accessibility, and reliability
 * core: Respect calendar event transparency (free/busy) across all providers
 * core: Wire availability overrides into business hours calculation
-* saas: Harden contact form against empty reCAPTCHA and over-limit messages
 * core: Config-driven dashboard extension system with parallel init and health check fixes
 * core: Harden iframe embed security with wildcard domains and www auto-matching
 * core: Derive PHX_HOST from CLOUDRON_APP_DOMAIN in runtime config
@@ -487,9 +431,7 @@
 * Guard summary against missing core-sync-tmp when no new commits
 * core: Use find to locate git-cliff binary after extraction
 * core: Restrict valid? to country-based timezones to prevent UTC fallback showing first list entry
-* saas: Add /features page with full feature reference
 * core: Add features_url config and safelist display token classes
-* saas: Add JSON-LD schema markup to docs pages
 * core: Add GitHub release workflows and cliff.toml
 [0.99.23]
 * core: Sync version tags to gitea-core after each push
@@ -515,40 +457,30 @@
 * core: Update embed pipeline integration test for dev/test localhost behaviour
 * core: Allow localhost embedding in dev/test without configuring allowed domains
 * core: Add iframe embedding, weekly calendar view, and shared scheduling init
-* saas: Add canonical tag and Organization/WebSite JSON-LD to homepage
 * core: Add canonical URL tag and current_url/1 layout helper
 [0.99.17]
 * core: Address code quality issues in Telegram integration
-* saas: Use already-fetched telegram_bot_token variable in runtime config
 * core: Address code review issues in Telegram integration
 * core: Skip calendar deletion for unlinked meetings and fix resolve_client fallback
-* saas: Reduce branding footer padding to reclaim viewport space
 * core: Resolve confirmation page overflow in rhythm theme
 * core: Pass attendee_locale through ContentBuilder for cancellation and reschedule emails
 * core: Add Telegram notification integration
 * core: Add Credo check for hand-rolled modal backdrops
 * core: Shared-bot Telegram wizard with link expiry and reconnect
-* saas: Configure Telegram shared bot from environment
 * core: Add Telegram notification integration
 [0.99.16]
-* saas: Precompute changelog versions at compile time
 * Request meetings.space.created scope in Google Meet OAuth flow
 * Use hexpm bookworm builder to satisfy cloudron/base OpenSSL 3.0
 * Use debian:trixie-slim runtime to satisfy OpenSSL 3.4 requirement
 * Make "Your link" box fully responsive on homepage
-* saas: Regenerate changelog files on version bump
-* saas: Add /changelog page with retrospective history
 * core: Add changelog link to site footer
 * Add Docs link to site footer
 [0.99.15]
 * core: Move circuit breaker provider lookups from compile time to runtime
 * core: Use consistent short labels for OAuth buttons on signup page
 * core: Resolve flaky booking LiveView tests caused by config pollution
-* saas: Resolve two flaky/broken SaaS tests
-* saas: Implement update_subscription_status/3 and fix refund test charge fixtures
 * core: Add update_subscription_status/3 callback to SubscriptionManager behaviour
 * core: Fix reset-password token URI matching and update OAuth tests to use session
-* saas: Derive total article count dynamically in docs filter-count tests
 * core: Add is_verified flag to OAuth email-linking test
 * core: Fill empty English translations for cancel/reschedule meeting strings
 * core: Unwrap {state, timestamp} tuple in OAuth state session test
@@ -563,30 +495,22 @@
 [0.99.14]
 * core: Validate generic OAuth config and respect email_verified claim
 * core: Dispatch meeting.rescheduled event in reschedule flow
-* saas: Add OIDC SSO documentation article and env reference
 * core: Add generic OAuth/OIDC provider support for SSO authentication
 * core: Localize meeting cancel, reschedule, and cancel-confirmed pages
 [0.99.13]
 * core: Request calendar.events scope instead of broad calendar scope
-* saas: Add floating docs table-of-contents hook
 [0.99.12]
 * core: Gate OAuth registration paths on REGISTRATION_ENABLED flag
 * core: Deduplicate registration-disabled message and gate complete-registration route
 * core: Build embed.js via esbuild and bump version to 0.99.12
-* saas: Expand docs with 18 new articles and shared components
-* saas: Add SEO-optimised author profile pages with docs bylines
-* saas: Add GitHub social preview source
-* saas: Add tag filtering and text search to docs overview
 * core: Add REGISTRATION_ENABLED feature flag
 * core: Add REGISTRATION_ENABLED flag to gate all registration paths
 [0.99.11]
 * core: Suppress gettext opaque-type Dialyzer false positives in umbrella ignore file
 * core: Name unused variable consistently in calendar workflows
-* saas: Replace broken heroicon CSS classes with IconComponents in automation upgrade prompt
 * core: Add missing in_person provider icon assets
 * core: Correct broken calendar link in meeting settings empty state
 * core: Show inactive calendar integrations in meeting settings and fix persist fallback
-* saas: Disable async in DocsLiveTest to prevent config race condition
 * core: Add arrow_right icon to IconComponents
 [0.99.10]
 * health_check: Name unused pattern variables consistently
@@ -597,16 +521,11 @@
 * test: Fix FunctionClauseError in webhook worker timeout test
 [0.99.9]
 * dialyzer: Suppress false-positive call_without_opaque in gettext.ex
-* saas: Harden worker logging and fix dispute manager user check
 * core: Harden worker logging — safe error formatting, early discard on missing meeting
 * payments: Expire superseded Stripe checkout sessions on retry
-* saas: Validate trial_ends_at before treating trialing subscription as active
-* saas/db: Remove cascade delete from subscriptions, disputes, and legal acceptances
-* saas/db: Add cascade delete FK constraints on user_id for SaaS tables
 * tzdata: Disable autoupdate to prevent crashes on read-only container filesystem
 * db: Cascade delete meetings when user is deleted
 * structured_logger: Suppress unused variable warning in log_by_phase/2
-* saas: Register LoggerMetadataHook in SaaS live_view macro
 * core: Add ObanLogger telemetry handler for job process tracing
 * core: Add LoggerMetadataHook for LiveView process tracing
 * webhooks: Store Stripe event payload and auto-nullify after 30 days
@@ -623,7 +542,6 @@
 * credo: Add logger hygiene checks (Phase 2)
 * logging: Structured logging infrastructure (Phase 1)
 [0.99.7]
-* saas: Update demo resolver duration parsing to use TimeSlots.parse_duration
 * Correctly preserve meeting duration through the booking flow (closes #17)
 * video-oauth: Use provider-specific state secrets for Google Meet and Teams
 [0.99.5]
@@ -655,16 +573,13 @@
 * core: Convert non-standard HTTP methods to uppercase strings for Finch
 * core: Left-align body text in integration unhealthy email
 * config: Fix coveralls terminal_options key and set file_column_width to 125
-* saas: Run SaaS migrations via SaasRepo and add coveralls config
 * lint: Resolve Credo warnings in CalDAV base and discovery service
 * core: Migrate CalDAV header handling to Req map format
 * core: Add Zimbra to DiscoveryService routing and path_utils
 * core: Snooze CalendarEventWorker for circuit recovery on :circuit_open
 * core: Return error when all calendar fetches fail in range queries
 * core: Register Zimbra provider in registry and add discovery case
-* saas: Add @moduletag to inline mock module in subscriptions test
 * core: Resolve Credo warnings for unused var names and thin wrapper
-* saas: Remove unused @moduletag from mock module in subscriptions test
 * core: Correct country mapping for Asia/Yangon to Myanmar
 * core: Sort availability slots chronologically within each time period
 * deploy: Make asset builds hermetic in all Dockerfiles
@@ -687,36 +602,23 @@
 * test: Add @moduletag to inline MockSubManagerForSaaSTest module
 * test: Rename bare _ to _i in for comprehension to satisfy Credo consistency check
 * test: Pre-exhaust rate limit via API to prevent clear_all race in embed settings test
-* saas: Fix compiler warning and stale test assertion
 * core: Resolve compiler warnings and Credo violations
-* saas: Alias nested modules in legal test helpers
 * core: Language switcher clickaway and lazy hook destroy collision
 * core: Guard against nil duration in maybe_assign_meeting_type
 * core: Address code review issues in embed test suite
 * core: Fix scheduling box overflow when time slots list is too long
-* saas: Remove --postcss flag and postcss.config.js from SaaS Tailwind build
-* saas: Shorten homepage meta description to under 160 chars
-* saas: Remove duplicate Tymeslot suffix from page titles
 * core: Remove duplicate Tymeslot suffix from page titles
-* saas: Add missing DashboardHelpers alias in ContactSupportComponent
-* saas: Load route-specific JS bundle from SaaS root layout
 * core: Harden password DoS guard and sanitize backslash redirects
-* saas: Rename bare _ variables to follow named convention
-* saas: Prevent duplicate app-flash-group id when rendering HomepageLive
 * railway: Add Nixpacks config for Railway deployment
-* saas: Add onboarding email funnel (verification reminder + founder welcome)
 * auth: Add regenerate_verification_token/1 to Auth context
-* saas: Add integration_unhealthy to email_testing infrastructure
 * core: Add integration_unhealthy email template tests and fix strong tag rendering
 * core: Persist integration health state and notify users on sustained failures
 * core: Add page titles and meta descriptions to auth pages
-* saas: Add mix set_version task to sync versions across all project files
 [0.99.0]
 * core: Fix failing and flaky tests across multiple test modules
 * core: Remove unused LinkAccessPolicy alias in theme integration test
 * core: Move @moduletag after use in all test modules
 * core: Add @moduletag :security to rate_limiter_dashboard_test
-* saas: Add @moduletag taxonomy tags to test modules
 * core: Add @moduletag taxonomy tags to test modules
 * core: Remove @moduletag inserted inside alias blocks in test files
 * core: Sort Tymeslot.Security aliases alphabetically in auth modules
@@ -747,7 +649,6 @@
 * security: Add spam protection to booking forms with honeypot and reCAPTCHA v3
 * security: Add rate limiting to theme customization and meeting operations
 * core: Add Zimbra calendar provider with SSRF protection
-* saas: Add PostCSS configuration and Tailwind directives
 * core: Fix proxy authentication and add verification tools
 [0.98.1]
 * security: Sanitize CSS class names in icon rendering to prevent XSS
@@ -827,7 +728,6 @@
 * embed: Build safe URLs and restore overflow
 * Stop video playback on slow connections
 * Address compilation and credo warnings
-* saas tests: Validate constraints and dispute amounts
 * utils: Improve ISO 8601 duration parsing correctness
 * Guard dashboard hook config
 * Suppress log noise during initial booking form render
@@ -963,9 +863,6 @@
 * Generate video poster frames from video start
 * Add video background posters separate from thumbnails
 * theme: Add video poster for presets
-* saas: Sync citation timing with rotation
-* saas: Record legal acceptance on signup
-* saas: Enforce legal acceptance gate
 * booking: Suppress validation errors until form interaction
 * Enhance datetime utils with more robust parsing and testing
 * Add user agent to LiveView connect_info and improve extraction
@@ -1000,7 +897,6 @@
 * Implement Stripe payments and SaaS subscription management
 * Enhance SaaS email infrastructure and dashboard integration
 * Add default reminder settings and transition to slug-based meeting types
-* saas: Update marketing site and legal compliance documents
 * Customizable multiple reminders per appointment type
 * integrations: Harden Outlook availability and Microsoft Teams OAuth
 * integrations: Enhance Microsoft (Outlook and Teams) integration
@@ -1012,7 +908,6 @@
 * emails: Redesign templates with modern design tokens and Inter font
 * ui: Overhaul dashboard UI with token-based design system and glassmorphism
 * core: Enhance availability engine and scheduling logic
-* saas: Enhance public documentation and marketing demo functionality
 * webhooks: Enhance security, delivery resilience, and atomic failure tracking
 * i18n: Implement comprehensive localization and internationalization support
 * integrations: Implement pluggable calendar architecture and improve worker resilience

@@ -21,6 +21,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.CustomConfig
   alias TymeslotWeb.Components.Dashboard.Integrations.Video.MirotalkConfig
   alias TymeslotWeb.Dashboard.CalendarSettings.Components, as: CalendarComponents
+  alias TymeslotWeb.Dashboard.CalendarSettings.ConfigViewComponent
   alias TymeslotWeb.Dashboard.CalendarSettingsComponent
 
   test "renders calendar_item correctly" do
@@ -305,7 +306,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     # track_form_change
     {:noreply, socket} =
-      CalendarSettingsComponent.handle_event(
+      ConfigViewComponent.handle_event(
         "track_form_change",
         %{"integration" => %{"name" => "My CalDAV"}},
         socket
@@ -315,7 +316,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     # validate_field
     {:noreply, socket} =
-      CalendarSettingsComponent.handle_event(
+      ConfigViewComponent.handle_event(
         "validate_field",
         %{"field" => "url", "value" => "https://example.com/dav"},
         socket
@@ -325,7 +326,7 @@ defmodule TymeslotWeb.Components.DashboardIntegrationsTest do
 
     # discover_calendars with invalid credentials
     {:noreply, socket} =
-      CalendarSettingsComponent.handle_event(
+      ConfigViewComponent.handle_event(
         "discover_calendars",
         %{
           "integration" => %{

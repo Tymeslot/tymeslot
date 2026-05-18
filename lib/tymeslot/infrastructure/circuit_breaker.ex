@@ -60,11 +60,12 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
   Executes a function through the circuit breaker.
 
   Returns:
-  - `{:ok, result}` if the function succeeds
+  - `:ok` if the function returns bare `:ok`
+  - `{:ok, result}` if the function returns `{:ok, result}` or any other non-error value
   - `{:error, :circuit_open}` if the circuit is open
   - `{:error, reason}` if the function fails
   """
-  @spec call(GenServer.server(), (-> any())) :: {:ok, any()} | {:error, any()}
+  @spec call(GenServer.server(), (-> any())) :: :ok | {:ok, any()} | {:error, any()}
   def call(breaker_name, fun) when is_function(fun, 0) do
     # Use a longer timeout to accommodate HTTP requests (max is 60s for REPORT + some buffer)
     GenServer.call(breaker_name, {:call, fun}, 70_000)
@@ -199,6 +200,10 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     state = maybe_reset_window(state, now)
 
     case execute_function(fun) do
+      :ok ->
+        new_state = %{state | success_count: state.success_count + 1}
+        {:reply, :ok, new_state}
+
       {:ok, result} ->
         new_state = %{state | success_count: state.success_count + 1}
         {:reply, {:ok, result}, new_state}
@@ -228,26 +233,11 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     new_state = %{state | half_open_attempts: state.half_open_attempts + 1}
 
     case execute_function(fun) do
-      {:ok, result} ->
-        # Success in half-open, check if we can close the circuit
-        if new_state.half_open_attempts >= state.config.half_open_requests do
-          Logger.info("Circuit breaker closing - successful recovery", name: state.name)
+      :ok ->
+        half_open_success_reply(:ok, new_state, state)
 
-          Metrics.track_circuit_breaker_state(state.name, :half_open, :closed)
-
-          closed_state = %{
-            new_state
-            | status: :closed,
-              failure_count: 0,
-              success_count: 1,
-              window_start: System.monotonic_time(:millisecond),
-              half_open_attempts: 0
-          }
-
-          {:reply, {:ok, result}, closed_state}
-        else
-          {:reply, {:ok, result}, new_state}
-        end
+      {:ok, _result} = success ->
+        half_open_success_reply(success, new_state, state)
 
       {:error, _reason} = error ->
         # Failure in half-open, go back to open
@@ -267,8 +257,29 @@ defmodule Tymeslot.Infrastructure.CircuitBreaker do
     end
   end
 
+  defp half_open_success_reply(success, new_state, state) do
+    if new_state.half_open_attempts >= state.config.half_open_requests do
+      Logger.info("Circuit breaker closing - successful recovery", name: state.name)
+      Metrics.track_circuit_breaker_state(state.name, :half_open, :closed)
+
+      closed_state = %{
+        new_state
+        | status: :closed,
+          failure_count: 0,
+          success_count: 1,
+          window_start: System.monotonic_time(:millisecond),
+          half_open_attempts: 0
+      }
+
+      {:reply, success, closed_state}
+    else
+      {:reply, success, new_state}
+    end
+  end
+
   defp execute_function(fun) do
     case fun.() do
+      :ok -> :ok
       {:ok, _result} = success -> success
       {:error, _reason} = error -> error
       # Handle non-standard returns

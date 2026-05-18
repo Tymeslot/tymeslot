@@ -23,6 +23,7 @@ sort_commits = "newest"
 
 commit_parsers = [
   { footer = "^Changelog: skip", skip = true },
+  { field = "scope", pattern = "saas", skip = true },
   { breaking = true, group = "Breaking Changes" },
   { message = "^test", skip = true },
   { message = "^refactor", skip = true },

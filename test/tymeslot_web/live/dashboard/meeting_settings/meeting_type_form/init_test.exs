@@ -160,15 +160,42 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.InitTest do
   end
 
   describe "fetch_available_calendars/2" do
-    test "returns calendar list for matching integration" do
-      calendars = [%{id: "cal-1", name: "Work"}, %{id: "cal-2", name: "Personal"}]
+    test "returns only calendars marked selected: true" do
+      calendars = [
+        %{"id" => "cal-1", "name" => "Work", "selected" => true},
+        %{"id" => "cal-2", "name" => "Personal", "selected" => false},
+        %{"id" => "cal-3", "name" => "Holidays", "selected" => true}
+      ]
+
       integrations = [%{id: 1, calendar_list: calendars}, %{id: 2, calendar_list: []}]
 
-      assert Init.fetch_available_calendars(1, integrations) == calendars
+      assert Init.fetch_available_calendars(1, integrations) == [
+               %{"id" => "cal-1", "name" => "Work", "selected" => true},
+               %{"id" => "cal-3", "name" => "Holidays", "selected" => true}
+             ]
+    end
+
+    test "returns empty list when no calendar is selected" do
+      calendars = [
+        %{"id" => "cal-1", "name" => "Work", "selected" => false},
+        %{"id" => "cal-2", "name" => "Personal", "selected" => false}
+      ]
+
+      integrations = [%{id: 1, calendar_list: calendars}]
+
+      assert Init.fetch_available_calendars(1, integrations) == []
+    end
+
+    test "tolerates atom-keyed selected flags" do
+      calendars = [%{id: "cal-1", name: "Work", selected: true}, %{id: "cal-2", selected: false}]
+      integrations = [%{id: 1, calendar_list: calendars}]
+
+      assert Init.fetch_available_calendars(1, integrations) ==
+               [%{id: "cal-1", name: "Work", selected: true}]
     end
 
     test "returns empty list when no integration matches" do
-      integrations = [%{id: 1, calendar_list: [%{id: "cal-1"}]}]
+      integrations = [%{id: 1, calendar_list: [%{"id" => "cal-1", "selected" => true}]}]
 
       assert Init.fetch_available_calendars(999, integrations) == []
     end
