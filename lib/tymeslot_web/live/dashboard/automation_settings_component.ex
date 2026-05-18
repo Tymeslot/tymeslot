@@ -499,7 +499,7 @@ defmodule TymeslotWeb.Dashboard.AutomationSettingsComponent do
               phx-target={@myself}
               class="inline-flex items-center gap-2 px-5 py-2.5 rounded-token-xl border-2 bg-white border-tymeslot-200 text-tymeslot-700 hover:border-turquoise-200 hover:bg-turquoise-50 font-bold transition-all"
             >
-              Use webhook URL instead
+              Add via webhook URL
             </button>
           </div>
         </div>
