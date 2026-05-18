@@ -557,7 +557,7 @@ defmodule Tymeslot.CalendarGridTest do
 
   describe "update_cached_event/1" do
     test "accepts second-precision synced_at from the dashboard update flow" do
-      # Regression: EditWorkflow.update_event_async / update_attendees_async /
+      # Regression: EditWorkflow.Updates.update_event_async / update_attendees_async /
       # update_field_async previously built cache rows with
       # DateTime.utc_now(:second). synced_at is :utc_datetime_usec, so the cache
       # path must upcast lower precision instead of crashing the async task in

@@ -6,6 +6,9 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   alias Tymeslot.Meetings.AttendeeNotifications
   alias Tymeslot.Security.UniversalSanitizer
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Moves
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.Updates
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync
   alias TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.Shared
   alias TymeslotWeb.Dashboard.CalendarGrid.Helpers
 
@@ -155,7 +158,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             |> assign(:selected_event, updated_event)
             |> assign(:events, updated_events)
             |> Helpers.precompute_derived()
-            |> EditWorkflow.move_event_async(event, new_id, calendar_id: cal_id)
+            |> Moves.move_event_async(event, new_id, calendar_id: cal_id)
 
           {:noreply, socket}
         else
@@ -209,7 +212,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             |> assign(:events, updated_events)
             |> assign(:attendee_input, "")
             |> Helpers.precompute_derived()
-            |> EditWorkflow.update_attendees_async(event, new_attendees)
+            |> Updates.update_attendees_async(event, new_attendees)
 
           {:noreply, socket}
         else
@@ -260,7 +263,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
     |> assign(:events, updated_events)
     |> assign(:confirm_remove_attendee, nil)
     |> Helpers.precompute_derived()
-    |> EditWorkflow.update_attendees_async(event, new_attendees)
+    |> Updates.update_attendees_async(event, new_attendees)
   end
 
   @spec handle_request_remove_attendee(map(), Phoenix.LiveView.Socket.t()) ::
@@ -383,7 +386,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
             |> assign(:selected_event, updated_event)
             |> assign(:events, updated_events)
             |> Helpers.precompute_derived()
-            |> EditWorkflow.update_field_async(event, field, trimmed)
+            |> Updates.update_field_async(event, field, trimmed)
 
           {:noreply, apply_notify_result(socket, event, updated_event)}
         else
@@ -536,7 +539,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EventHandlers.InlineEdit do
   end
 
   defp apply_notify_result(socket, original_event, updated_event) do
-    socket = EditWorkflow.sync_video_integration_async(socket, original_event, updated_event)
+    socket = VideoSync.sync_video_integration_async(socket, original_event, updated_event)
 
     attendees = updated_event.attendees || original_event.attendees || []
 

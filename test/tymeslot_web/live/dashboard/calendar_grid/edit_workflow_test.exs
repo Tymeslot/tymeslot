@@ -20,6 +20,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
   alias Tymeslot.Meetings.AttendeeNotifications.ChangeSummary
   alias Tymeslot.Meetings.AttendeeNotifications.Worker
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow
+  alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflow.VideoSync
   alias TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest.FakeRooms
 
   describe "notify_event_updated/3" do
@@ -141,7 +142,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
 
       updated_event = %{event | video_integration_id: integration_id}
 
-      _socket = EditWorkflow.sync_video_integration_async(socket, event, updated_event)
+      _socket = VideoSync.sync_video_integration_async(socket, event, updated_event)
 
       assert_receive {:video_sync_result, event_id, {:ok, "https://video.example.com/join/abc"}}
       assert event_id == event.id
@@ -162,7 +163,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
       Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
       FakeRooms.set_response({:error, :should_not_be_called})
 
-      returned_socket = EditWorkflow.sync_video_integration_async(socket, event, event)
+      returned_socket = VideoSync.sync_video_integration_async(socket, event, event)
 
       assert returned_socket == socket
       refute_receive {:video_sync_result, _, _}
@@ -182,7 +183,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
       Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
       FakeRooms.set_response({:error, :should_not_be_called})
 
-      _socket = EditWorkflow.sync_video_integration_async(socket, event, updated)
+      _socket = VideoSync.sync_video_integration_async(socket, event, updated)
 
       assert_receive {:video_sync_result, event_id, {:ok, nil}}
       assert event_id == event.id
@@ -196,7 +197,7 @@ defmodule TymeslotWeb.Dashboard.CalendarGrid.EditWorkflowTest do
       Application.put_env(:tymeslot, :video_rooms_module, FakeRooms)
       FakeRooms.set_response({:error, :provider_down})
 
-      _socket = EditWorkflow.sync_video_integration_async(socket, event, updated)
+      _socket = VideoSync.sync_video_integration_async(socket, event, updated)
 
       assert_receive {:video_sync_result, event_id, {:error, :provider_down}}
       assert event_id == event.id
