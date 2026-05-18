@@ -215,8 +215,23 @@ defmodule Tymeslot.AppSettings do
   # everything before its first admin signs in.
   defp would_cause_lockout?(attrs) do
     Auth.any_admin?() and
+      currently_has_usable_path?() and
       not password_usable_after?(attrs) and
       not sso_usable_after?(attrs)
+  end
+
+  defp currently_has_usable_path? do
+    password_currently_usable?() or sso_currently_usable?()
+  end
+
+  defp password_currently_usable? do
+    read_config(:password_auth_enabled) == true and Auth.any_admin_uses_password_auth?()
+  end
+
+  defp sso_currently_usable? do
+    read_config(:google_auth_enabled) == true or
+      read_config(:github_auth_enabled) == true or
+      read_config(:oauth_auth_enabled) == true
   end
 
   defp password_usable_after?(attrs) do
