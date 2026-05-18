@@ -146,6 +146,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias Phoenix.Naming
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Profiles
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Helpers.PageTitles
@@ -229,6 +230,7 @@ defmodule TymeslotWeb.DashboardLive do
       automations_allowed={@automations_allowed}
       full_width={@live_action == :calendar}
       sidebar_extensions={@sidebar_extensions}
+      unseen_announcements={@unseen_announcements}
     >
       <.flash_group flash={@flash} id="dashboard-flash-group" />
 
@@ -336,7 +338,7 @@ defmodule TymeslotWeb.DashboardLive do
     send_update(TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm,
       id: form_id,
       refreshing_calendars: false,
-      available_calendars: calendars
+      available_calendars: Selection.selected_calendars(calendars)
     )
 
     {:noreply, socket}
@@ -408,6 +410,12 @@ defmodule TymeslotWeb.DashboardLive do
 
         {:noreply, put_flash(socket, :error, "Invalid redirect URL")}
     end
+  end
+
+  @spec handle_info({:announcement_cta_navigate, String.t()}, Phoenix.LiveView.Socket.t()) ::
+          {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_info({:announcement_cta_navigate, path}, socket) when is_binary(path) do
+    {:noreply, push_navigate(socket, to: path)}
   end
 
   @spec handle_info({:reload_schedule}, Phoenix.LiveView.Socket.t()) ::
@@ -535,7 +543,7 @@ defmodule TymeslotWeb.DashboardLive do
     <% else %>
       <%!-- Core fallback: just show a simple message --%>
       <div class="p-8 text-center text-tymeslot-500">
-        <p>This feature (<%= @feature_name %>) is not available on your current plan.</p>
+        <p>This feature ({@feature_name}) is not available on your current plan.</p>
       </div>
     <% end %>
     """

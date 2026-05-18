@@ -35,7 +35,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
       use TymeslotWeb, :live_view
       require Logger
 
-      alias TymeslotWeb.Live.Scheduling.Helpers
+      alias TymeslotWeb.Live.Scheduling.{CalendarHelpers, OrganizerHelpers}
 
       alias TymeslotWeb.Live.Scheduling.Handlers.TimezoneHandlerComponent
 
@@ -218,8 +218,8 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
 
       defp handle_week_navigation_events(socket, event) do
         case event do
-          :prev_week -> {:noreply, Helpers.handle_week_navigation(socket, :prev)}
-          :next_week -> {:noreply, Helpers.handle_week_navigation(socket, :next)}
+          :prev_week -> {:noreply, CalendarHelpers.handle_week_navigation(socket, :prev)}
+          :next_week -> {:noreply, CalendarHelpers.handle_week_navigation(socket, :next)}
         end
       end
 
@@ -242,7 +242,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingLive do
             BookingFlow.handle_form_validation(socket, data)
 
           :field_blur ->
-            {:noreply, Helpers.mark_field_touched(socket, data)}
+            {:noreply, OrganizerHelpers.mark_field_touched(socket, data)}
 
           :submit ->
             BookingFlow.submit_booking(socket, data, &transition_to/3)

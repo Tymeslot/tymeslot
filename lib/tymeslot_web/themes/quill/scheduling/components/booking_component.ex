@@ -7,8 +7,8 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Tymeslot.Profiles
-  alias Tymeslot.Utils.DateTimeUtils
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias Tymeslot.Utils.DateTimeUtils.Duration
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
   alias TymeslotWeb.Themes.Shared.SecurityFields
@@ -74,11 +74,11 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                   <p class="booking-subtitle text-quill-primary">
                     <%= if @organizer_profile do %>
                       {gettext("You're booking a %{duration} meeting with %{name}",
-                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: DateTimeUtils.format_duration(@duration)),
+                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: Duration.format(@duration)),
                         name: get_organizer_name(@organizer_profile, @username_context))}
                     <% else %>
                       {gettext("You're booking a %{duration} meeting",
-                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: DateTimeUtils.format_duration(@duration)))}
+                        duration: if(@meeting_type, do: LocalizationHelpers.format_duration(@meeting_type.duration_minutes), else: Duration.format(@duration)))}
                     <% end %>
                   </p>
 
@@ -160,7 +160,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
                         id="submit-booking-button"
                         loading={@submitting}
                         loading_text={gettext("Verifying...")}
-                        disabled={!Helpers.form_valid?(@form)}
+                        disabled={!OrganizerHelpers.form_valid?(@form)}
                         data-testid="submit-booking"
                         class="flex-1"
                         title={get_submit_title(@submitting, @form)}
@@ -187,7 +187,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.BookingComponent do
   defp get_submit_title(submitting, form) do
     cond do
       submitting -> gettext("Verifying slot availability and creating your meeting...")
-      !Helpers.form_valid?(form) -> gettext("Please fill in all required fields")
+      !OrganizerHelpers.form_valid?(form) -> gettext("Please fill in all required fields")
       true -> gettext("Click to schedule your meeting")
     end
   end

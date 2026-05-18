@@ -6,6 +6,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
   import Mox
 
   alias Tymeslot.Integrations.Calendar
+  alias Tymeslot.Integrations.Calendar.Diagnostics
   alias Tymeslot.Integrations.Calendar.Events, as: CalendarEvents
 
   setup :verify_on_exit!
@@ -104,7 +105,7 @@ defmodule Tymeslot.Integrations.CalendarTest do
       end)
 
       assert {:ok, "Google Calendar connection successful"} =
-               Calendar.test_connection(integration)
+               Diagnostics.test_connection(integration)
     end
   end
 

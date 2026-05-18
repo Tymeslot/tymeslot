@@ -6,7 +6,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
   import Phoenix.Component, only: [assign: 3]
 
   alias Phoenix.LiveView
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.OrganizerHelpers
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine, as: QEngine
 
   @spec assign_theme_state(LiveView.Socket.t(), String.t()) :: LiveView.Socket.t()
@@ -33,7 +33,7 @@ defmodule TymeslotWeb.Themes.Shared.SchedulingInit do
     |> assign(:availability_status, :not_loaded)
     |> assign(:availability_task, nil)
     |> assign(:availability_task_ref, nil)
-    |> Helpers.setup_form_state(%{}, as: :booking)
+    |> OrganizerHelpers.setup_form_state(%{}, as: :booking)
     |> assign(:client_ip, nil)
     |> assign(:submission_token, nil)
     |> assign(:meeting_types, [])

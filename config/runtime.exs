@@ -710,10 +710,10 @@ if oauth_enabled do
 end
 
 # reCAPTCHA configuration (runtime)
-# Signup and booking protection are configurable and will automatically disable if keys are missing.
-# RECAPTCHA_SIGNUP_ENABLED and RECAPTCHA_BOOKING_ENABLED are read directly by the respective
-# enabled?() functions for runtime toggling support (useful for emergency disables during
-# Google API outages without redeployment).
+# Signup and booking protection are configurable and will automatically
+# disable if keys are missing. The flags below seed the application config
+# from the matching env vars; admins can override them at runtime via the
+# admin settings UI (which writes through Tymeslot.AppSettings).
 
 recaptcha_signup_min_score =
   case Float.parse(System.get_env("RECAPTCHA_SIGNUP_MIN_SCORE", "0.3")) do
@@ -742,6 +742,16 @@ config :tymeslot, :recaptcha,
   booking_min_score: recaptcha_booking_min_score,
   booking_action: recaptcha_booking_action,
   expected_hostnames: recaptcha_expected_hostnames
+
+# The enabled flags are seeded from env in non-test environments only — test
+# config sets them explicitly in apps/tymeslot/config/test.exs so the
+# developer shell can't accidentally enable reCAPTCHA for tests by exporting
+# RECAPTCHA_SIGNUP_ENABLED.
+if config_env() != :test do
+  config :tymeslot, :recaptcha,
+    signup_enabled: System.get_env("RECAPTCHA_SIGNUP_ENABLED", "false") == "true",
+    booking_enabled: System.get_env("RECAPTCHA_BOOKING_ENABLED", "false") == "true"
+end
 
 # Webhook base URL for inbound push notifications from calendar providers.
 # Required to enable Google Calendar push channels and Outlook Graph subscriptions.

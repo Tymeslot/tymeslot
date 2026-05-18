@@ -1,31 +1,22 @@
-defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
+defmodule TymeslotWeb.VideoOAuthControllerTest do
   use TymeslotWeb.ConnCase, async: false
   @moduletag :utils
-
-  import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
 
   alias Phoenix.Flash
   alias Tymeslot.Factory
   alias Tymeslot.Infrastructure.DashboardCache
-  alias Tymeslot.Integrations.Calendar.Google.OAuthHelper, as: GoogleCalendarOAuthHelper
-  alias Tymeslot.Integrations.Calendar.Outlook.OAuthHelper, as: OutlookCalendarOAuthHelper
   alias Tymeslot.Integrations.Common.OAuth.State
   alias Tymeslot.Integrations.Google.GoogleOAuthHelper
   alias Tymeslot.Integrations.Video.Teams.TeamsOAuthHelper
   alias Tymeslot.Integrations.Video.VideoIntegrationQueries
   alias Tymeslot.Security.RateLimiter
 
+  import Tymeslot.AuthTestHelpers, only: [log_in_user: 2]
+
   setup do
     RateLimiter.clear_all()
 
-    modules = [
-      GoogleCalendarOAuthHelper,
-      OutlookCalendarOAuthHelper,
-      GoogleOAuthHelper,
-      TeamsOAuthHelper,
-      State,
-      VideoIntegrationQueries
-    ]
+    modules = [GoogleOAuthHelper, TeamsOAuthHelper, State, VideoIntegrationQueries]
 
     for mod <- modules do
       try do
@@ -37,7 +28,7 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       :meck.new(mod, [:passthrough])
     end
 
-    # Ensure required OAuth state secrets exist (VideoOAuthController.{google,teams}_state_secret/0 can raise)
+    # VideoOAuthController.{google,teams}_state_secret/0 raises if these aren't set.
     original_google_oauth = Application.get_env(:tymeslot, :google_oauth)
     original_outlook_oauth = Application.get_env(:tymeslot, :outlook_oauth)
 
@@ -58,7 +49,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
       _pid -> :ok
     end
 
-    # Enable teams provider for tests
     original_video_providers = Application.get_env(:tymeslot, :video_providers)
     Application.put_env(:tymeslot, :video_providers, %{teams: %{enabled: true}})
 
@@ -91,106 +81,6 @@ defmodule TymeslotWeb.OAuthIntegrationsControllerTest do
     end)
 
     :ok
-  end
-
-  describe "CalendarOAuthController" do
-    test "google_callback handles success", %{conn: conn} do
-      conn = authenticate_state_user(conn, 123)
-
-      :meck.expect(GoogleCalendarOAuthHelper, :handle_callback, fn "code", _state, _uri ->
-        {:ok, %{user_id: 123}}
-      end)
-
-      conn =
-        get(conn, ~p"/auth/google/calendar/callback", %{"code" => "code", "state" => "state"})
-
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
-      assert Flash.get(conn.assigns.flash, :info) =~ "Google Calendar connected successfully"
-    end
-
-    test "outlook_callback handles success", %{conn: conn} do
-      conn = authenticate_state_user(conn, 123)
-
-      :meck.expect(OutlookCalendarOAuthHelper, :handle_callback, fn "code", _state, _uri ->
-        {:ok, %{user_id: 123}}
-      end)
-
-      conn =
-        get(conn, ~p"/auth/outlook/calendar/callback", %{"code" => "code", "state" => "state"})
-
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
-      assert Flash.get(conn.assigns.flash, :info) =~ "Outlook Calendar connected successfully"
-    end
-
-    test "google_callback handles error from provider", %{conn: conn} do
-      conn = get(conn, ~p"/auth/google/calendar/callback", %{"error" => "access_denied"})
-
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
-    end
-
-    test "google_callback handles invalid params", %{conn: conn} do
-      conn = get(conn, ~p"/auth/google/calendar/callback", %{"invalid" => "params"})
-
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Invalid authentication response"
-    end
-
-    test "outlook_callback handles error from provider", %{conn: conn} do
-      conn = get(conn, ~p"/auth/outlook/calendar/callback", %{"error" => "access_denied"})
-
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Authorization was denied"
-    end
-
-    test "outlook_callback surfaces admin consent message when AADSTS code is present", %{
-      conn: conn
-    } do
-      for code <- ~w[AADSTS65001 AADSTS90094 AADSTS90093 AADSTS90095] do
-        conn =
-          get(conn, ~p"/auth/outlook/calendar/callback", %{
-            "error" => "access_denied",
-            "error_description" =>
-              "#{code}: The user or administrator has not consented to use the application."
-          })
-
-        assert redirected_to(conn) == "/dashboard/calendar-integration"
-
-        assert Flash.get(conn.assigns.flash, :error) =~
-                 "requires admin approval"
-      end
-    end
-
-    test "outlook_callback handles exchange failure", %{conn: conn} do
-      conn = authenticate_state_user(conn, 123)
-
-      :meck.expect(OutlookCalendarOAuthHelper, :handle_callback, fn _code, _state, _uri ->
-        {:error, :invalid_code}
-      end)
-
-      conn =
-        get(conn, ~p"/auth/outlook/calendar/callback", %{"code" => "code", "state" => "state"})
-
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
-      assert Flash.get(conn.assigns.flash, :error) =~ "Failed to connect Outlook Calendar"
-    end
-
-    test "google_callback handles :calendar_scope_missing — redirects with instructional flash",
-         %{conn: conn} do
-      conn = authenticate_state_user(conn, 123)
-
-      :meck.expect(GoogleCalendarOAuthHelper, :handle_callback, fn _code, _state, _uri ->
-        {:error, :calendar_scope_missing}
-      end)
-
-      conn =
-        get(conn, ~p"/auth/google/calendar/callback", %{"code" => "code", "state" => "state"})
-
-      assert redirected_to(conn) == "/dashboard/calendar-integration"
-
-      assert Flash.get(conn.assigns.flash, :error) =~
-               "Calendar permission was not granted"
-    end
   end
 
   # These tests run State.validate for real (no mock) to verify that each callback

@@ -6,32 +6,34 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
   use ExUnitProperties
 
   alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.Display
+  alias Tymeslot.Utils.DateTimeUtils.Duration
 
   describe "parse_duration/1" do
     test "parses time durations (PT)" do
-      assert {:ok, 3600} == DateTimeUtils.parse_duration("PT1H")
-      assert {:ok, 90} == DateTimeUtils.parse_duration("PT1M30S")
-      assert {:ok, 5400} == DateTimeUtils.parse_duration("PT1H30M")
-      assert {:ok, 3661} == DateTimeUtils.parse_duration("PT1H1M1S")
+      assert {:ok, 3600} == Duration.parse("PT1H")
+      assert {:ok, 90} == Duration.parse("PT1M30S")
+      assert {:ok, 5400} == Duration.parse("PT1H30M")
+      assert {:ok, 3661} == Duration.parse("PT1H1M1S")
     end
 
     test "parses day and week durations (P)" do
-      assert {:ok, 86_400} == DateTimeUtils.parse_duration("P1D")
-      assert {:ok, 604_800} == DateTimeUtils.parse_duration("P1W")
-      assert {:ok, 691_200} == DateTimeUtils.parse_duration("P1W1D")
+      assert {:ok, 86_400} == Duration.parse("P1D")
+      assert {:ok, 604_800} == Duration.parse("P1W")
+      assert {:ok, 691_200} == Duration.parse("P1W1D")
     end
 
     test "returns error for invalid formats" do
-      assert {:error, "Invalid duration format"} == DateTimeUtils.parse_duration("invalid")
-      assert {:error, "Invalid duration format"} == DateTimeUtils.parse_duration("")
+      assert {:error, "Invalid duration format"} == Duration.parse("invalid")
+      assert {:error, "Invalid duration format"} == Duration.parse("")
 
       assert {:error, "Unsupported or invalid duration format"} ==
-               DateTimeUtils.parse_duration("P")
+               Duration.parse("P")
     end
 
     property "never crashes and returns either ok or error for random strings" do
       check all(s <- string(:ascii)) do
-        result = DateTimeUtils.parse_duration(s)
+        result = Duration.parse(s)
         assert match?({:ok, _result}, result) or match?({:error, _reason}, result)
       end
     end
@@ -44,7 +46,7 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
             ) do
         duration_str = "PT#{h}H#{m}M#{s}S"
         expected_seconds = h * 3600 + m * 60 + s
-        assert {:ok, ^expected_seconds} = DateTimeUtils.parse_duration(duration_str)
+        assert {:ok, ^expected_seconds} = Duration.parse(duration_str)
       end
     end
 
@@ -55,14 +57,14 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
             ) do
         duration_str = "P#{w}W#{d}D"
         expected_seconds = w * 604_800 + d * 86_400
-        assert {:ok, ^expected_seconds} = DateTimeUtils.parse_duration(duration_str)
+        assert {:ok, ^expected_seconds} = Duration.parse(duration_str)
       end
     end
 
     test "handles unsupported P components gracefully (e.g. months)" do
       # Now returns error for unsupported components because of regex anchors
-      assert {:error, _reason} = DateTimeUtils.parse_duration("P1M")
-      assert {:error, _reason} = DateTimeUtils.parse_duration("P1Y")
+      assert {:error, _reason} = Duration.parse("P1M")
+      assert {:error, _reason} = Duration.parse("P1Y")
     end
   end
 
@@ -153,38 +155,38 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
 
   describe "format_duration/1" do
     test "formats duration string" do
-      assert DateTimeUtils.format_duration("15min") == "15 minutes"
-      assert DateTimeUtils.format_duration("30min") == "30 minutes"
-      assert DateTimeUtils.format_duration("60min") == "1 hour"
-      assert DateTimeUtils.format_duration("90min") == "1.5 hours"
-      assert DateTimeUtils.format_duration("120min") == "2 hours"
+      assert Duration.format("15min") == "15 minutes"
+      assert Duration.format("30min") == "30 minutes"
+      assert Duration.format("60min") == "1 hour"
+      assert Duration.format("90min") == "1.5 hours"
+      assert Duration.format("120min") == "2 hours"
     end
 
     test "formats duration integer" do
-      assert DateTimeUtils.format_duration(15) == "15 minutes"
-      assert DateTimeUtils.format_duration(30) == "30 minutes"
-      assert DateTimeUtils.format_duration(60) == "1 hour"
-      assert DateTimeUtils.format_duration(90) == "1.5 hours"
-      assert DateTimeUtils.format_duration(120) == "2 hours"
+      assert Duration.format(15) == "15 minutes"
+      assert Duration.format(30) == "30 minutes"
+      assert Duration.format(60) == "1 hour"
+      assert Duration.format(90) == "1.5 hours"
+      assert Duration.format(120) == "2 hours"
     end
 
     test "returns unknown for invalid inputs" do
-      assert DateTimeUtils.format_duration("invalid") == "Unknown duration"
-      assert DateTimeUtils.format_duration(nil) == "Unknown duration"
+      assert Duration.format("invalid") == "Unknown duration"
+      assert Duration.format(nil) == "Unknown duration"
     end
   end
 
   describe "format_date_string/1" do
     test "formats ISO date string" do
-      assert DateTimeUtils.format_date_string("2024-11-25") == "November 25, 2024"
+      assert Display.format_date_string("2024-11-25") == "November 25, 2024"
     end
 
     test "returns input for invalid date" do
-      assert DateTimeUtils.format_date_string("not-a-date") == "not-a-date"
+      assert Display.format_date_string("not-a-date") == "not-a-date"
     end
 
     test "returns fallback for non-string" do
-      assert DateTimeUtils.format_date_string(nil) == "Invalid date"
+      assert Display.format_date_string(nil) == "Invalid date"
     end
   end
 
@@ -193,19 +195,19 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
       # "7:30 AM" lexicographically sorts after "11:30 AM" because "7" > "1",
       # but chronologically it must come first.
       slots = ["11:30 AM", "7:30 AM", "9:00 AM", "8:00 AM"]
-      result = DateTimeUtils.group_slots_by_period(slots)
+      result = Display.group_slots_by_period(slots)
       assert result["Morning"] == ["7:30 AM", "8:00 AM", "9:00 AM", "11:30 AM"]
     end
 
     test "early-hour times (07:30) appear before later times (11:30) in the same period" do
       slots = ["11:30 AM", "7:30 AM"]
-      result = DateTimeUtils.group_slots_by_period(slots)
+      result = Display.group_slots_by_period(slots)
       assert result["Morning"] == ["7:30 AM", "11:30 AM"]
     end
 
     test "sorts within each period independently" do
       slots = ["3:00 PM", "1:00 PM", "8:00 PM", "6:00 PM", "10:00 AM", "7:00 AM"]
-      result = DateTimeUtils.group_slots_by_period(slots)
+      result = Display.group_slots_by_period(slots)
       assert result["Morning"] == ["7:00 AM", "10:00 AM"]
       assert result["Afternoon"] == ["1:00 PM", "3:00 PM"]
       assert result["Evening"] == ["6:00 PM", "8:00 PM"]
@@ -213,35 +215,35 @@ defmodule Tymeslot.Utils.DateTimeUtilsTest do
 
     test "handles 24h format times correctly" do
       slots = ["14:00", "07:30", "09:00", "13:00"]
-      result = DateTimeUtils.group_slots_by_period(slots)
+      result = Display.group_slots_by_period(slots)
       assert result["Morning"] == ["07:30", "09:00"]
       assert result["Afternoon"] == ["13:00", "14:00"]
     end
 
     test "slots before 5am are grouped as Early Morning" do
       slots = ["02:00", "03:30", "04:45"]
-      result = DateTimeUtils.group_slots_by_period(slots)
+      result = Display.group_slots_by_period(slots)
       assert result["Early Morning"] == ["02:00", "03:30", "04:45"]
       refute Map.has_key?(result, "Night")
     end
 
     test "slots from 21:00 onwards are grouped as Late Night" do
       slots = ["21:00", "22:30", "23:45"]
-      result = DateTimeUtils.group_slots_by_period(slots)
+      result = Display.group_slots_by_period(slots)
       assert result["Late Night"] == ["21:00", "22:30", "23:45"]
       refute Map.has_key?(result, "Night")
     end
 
     test "early morning and late night slots are in separate groups" do
       slots = ["03:00", "22:00"]
-      result = DateTimeUtils.group_slots_by_period(slots)
+      result = Display.group_slots_by_period(slots)
       assert result["Early Morning"] == ["03:00"]
       assert result["Late Night"] == ["22:00"]
     end
 
     test "5:00 AM boundary falls into Morning, not Early Morning" do
       slots = ["05:00"]
-      result = DateTimeUtils.group_slots_by_period(slots)
+      result = Display.group_slots_by_period(slots)
       assert result["Morning"] == ["05:00"]
       refute Map.has_key?(result, "Early Morning")
     end

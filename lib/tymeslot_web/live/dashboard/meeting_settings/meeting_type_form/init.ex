@@ -2,6 +2,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   @moduledoc "Initialisation and form data building for MeetingTypeForm."
 
   alias Phoenix.Component
+  alias Tymeslot.Integrations.Calendar.Selection
   alias Tymeslot.Utils.ReminderUtils
 
   @doc """
@@ -94,15 +95,19 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.Init do
   def get_target_calendar_id(%{target_calendar_id: nil}), do: nil
   def get_target_calendar_id(%{target_calendar_id: id}), do: id
 
-  @doc "Fetches the available calendar list for a given integration id."
+  @doc """
+  Fetches the calendars the user may pick as the meeting type's target.
+
+  Only calendars the user has marked `selected: true` in the integration
+  settings are returned — deselected calendars must not appear here, since
+  the integration-level toggle is the single source of truth for which
+  calendars the app may write to or read from.
+  """
   @spec fetch_available_calendars(integer(), list()) :: list()
   def fetch_available_calendars(integration_id, integrations) do
-    integration = Enum.find(integrations, &(&1.id == integration_id))
-
-    if integration && integration.calendar_list do
-      integration.calendar_list
-    else
-      []
+    case Enum.find(integrations, &(&1.id == integration_id)) do
+      nil -> []
+      integration -> Selection.selected_calendars(integration.calendar_list)
     end
   end
 

@@ -134,7 +134,7 @@ defmodule Tymeslot.MixProject do
       {:remote_ip, "~> 1.1"},
       {:stream_data, "~> 1.1", only: :test},
       {:wallaby, "~> 0.30", only: :test, runtime: false},
-      {:phoenix_ecto, "~> 4.6", only: :test}
+      {:phoenix_ecto, "~> 4.6"}
     ]
   end
 

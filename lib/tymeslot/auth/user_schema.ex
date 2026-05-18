@@ -40,6 +40,7 @@ defmodule Tymeslot.Auth.UserSchema do
           google_user_id: String.t() | nil,
           onboarding_completed_at: DateTime.t() | nil,
           marketing_unsubscribed_at: DateTime.t() | nil,
+          is_admin: boolean(),
           profile: ProfileSchema.t() | Ecto.Association.NotLoaded.t() | nil,
           calendar_integrations: [CalendarIntegrationSchema.t()] | Ecto.Association.NotLoaded.t(),
           video_integrations: [VideoIntegrationSchema.t()] | Ecto.Association.NotLoaded.t(),
@@ -74,6 +75,7 @@ defmodule Tymeslot.Auth.UserSchema do
     field(:google_user_id, :string)
     field(:onboarding_completed_at, :utc_datetime)
     field(:marketing_unsubscribed_at, :utc_datetime)
+    field(:is_admin, :boolean, default: false)
 
     has_one(:profile, Tymeslot.Profiles.ProfileSchema, foreign_key: :user_id)
 
@@ -146,6 +148,16 @@ defmodule Tymeslot.Auth.UserSchema do
     |> unique_constraint([:provider, :provider_uid])
     |> unique_constraint(:github_user_id)
     |> unique_constraint(:google_user_id)
+  end
+
+  @doc """
+  Internal-only changeset for toggling admin status. Never call from user-submitted params —
+  `:is_admin` must only flip via the mix tasks, release helpers, or the admin UI which already
+  enforces an admin-only path.
+  """
+  @spec admin_changeset(t(), boolean()) :: Ecto.Changeset.t()
+  def admin_changeset(user, is_admin) when is_boolean(is_admin) do
+    change(user, %{is_admin: is_admin})
   end
 
   @spec password_reset_changeset(t(), map()) :: Ecto.Changeset.t()

@@ -155,4 +155,34 @@ defmodule Tymeslot.Auth.UserQueriesTest do
       assert is_nil(updated.marketing_unsubscribed_at)
     end
   end
+
+  describe "list_marketing_eligible_user_ids/0" do
+    test "includes verified users who have not unsubscribed" do
+      eligible = insert(:user, verified_at: DateTime.utc_now(), marketing_unsubscribed_at: nil)
+
+      ids = UserQueries.list_marketing_eligible_user_ids()
+
+      assert eligible.id in ids
+    end
+
+    test "excludes unverified users" do
+      unverified = insert(:unverified_user, marketing_unsubscribed_at: nil)
+
+      ids = UserQueries.list_marketing_eligible_user_ids()
+
+      refute unverified.id in ids
+    end
+
+    test "excludes users who have unsubscribed from marketing" do
+      unsubscribed =
+        insert(:user,
+          verified_at: DateTime.utc_now(),
+          marketing_unsubscribed_at: DateTime.utc_now()
+        )
+
+      ids = UserQueries.list_marketing_eligible_user_ids()
+
+      refute unsubscribed.id in ids
+    end
+  end
 end

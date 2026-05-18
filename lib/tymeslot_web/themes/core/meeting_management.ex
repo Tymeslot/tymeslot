@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   alias Tymeslot.Bookings.Policy
   alias Tymeslot.Meetings
   alias Tymeslot.Security.RateLimiter
-  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.Duration
   alias TymeslotWeb.Helpers.ClientIP
   alias TymeslotWeb.Themes.Core.MountHelpers
 
@@ -94,7 +94,7 @@ defmodule TymeslotWeb.Themes.Core.MeetingManagement do
   @spec assign_action_specific_data(Phoenix.LiveView.Socket.t(), atom(), map(), map()) ::
           Phoenix.LiveView.Socket.t()
   def assign_action_specific_data(socket, :reschedule, meeting, params) do
-    duration_str = DateTimeUtils.format_duration_for_url(meeting.duration)
+    duration_str = Duration.format_for_url(meeting.duration)
 
     socket
     |> MountHelpers.assign_user_timezone(params)

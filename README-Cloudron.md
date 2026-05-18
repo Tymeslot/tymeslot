@@ -105,6 +105,22 @@ Once deployed, Tymeslot will be available at:
 - **URL**: `https://tymeslot.yourdomain.com` (or your configured subdomain)
 - **SSL**: Automatically configured by Cloudron
 
+### Becoming an admin
+
+The first user to register on a fresh install is automatically promoted to admin. To promote additional users, open the app's Terminal from the Cloudron dashboard and run:
+
+```bash
+bin/tymeslot rpc 'Tymeslot.Release.promote_admin("you@example.com")'
+```
+
+Or from your workstation with the Cloudron CLI:
+
+```bash
+cloudron exec --app tymeslot.yourdomain.com -- bin/tymeslot rpc 'Tymeslot.Release.promote_admin("you@example.com")'
+```
+
+See [`docs/ADMIN.md`](docs/ADMIN.md) for the full guide (demote, list, recovery paths).
+
 ---
 
 ## Configuration

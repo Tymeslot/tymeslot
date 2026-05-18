@@ -7,7 +7,8 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   require Logger
   alias Tymeslot.Infrastructure.Metrics
   alias Tymeslot.Timezones
-  alias Tymeslot.Utils.DateTimeUtils
+  alias Tymeslot.Utils.DateTimeUtils.Duration
+  alias Tymeslot.Utils.DateTimeUtils.ICal
 
   @doc """
   Parses iCal content and returns a list of events.
@@ -293,7 +294,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   defp parse_datetime_property(nil), do: nil
 
   defp parse_datetime_property(dt_info) do
-    case DateTimeUtils.parse_datetime_with_timezone(dt_info) do
+    case ICal.parse_datetime_with_timezone(dt_info) do
       {:ok, datetime} ->
         datetime
 
@@ -324,7 +325,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
 
   defp calculate_end_time(%DateTime{} = start_time, duration_str) do
     # Parse ISO 8601 duration (simplified - only handles basic cases)
-    case DateTimeUtils.parse_duration(duration_str) do
+    case Duration.parse(duration_str) do
       {:ok, seconds} -> DateTime.add(start_time, seconds, :second)
       {:error, _reason} -> DateTime.add(start_time, 3600, :second)
     end
@@ -333,7 +334,7 @@ defmodule Tymeslot.Integrations.Calendar.ICalParser do
   defp calculate_end_time(%Date{} = start_time, duration_str) do
     # For all-day events with duration, we calculate the number of days.
     # RFC 5545 durations like PT1H30M or P1D
-    case DateTimeUtils.parse_duration(duration_str) do
+    case Duration.parse(duration_str) do
       {:ok, seconds} ->
         # Convert seconds to days, rounding up to at least 1 day
         days = div(seconds, 86_400)
