@@ -8,7 +8,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
 
   alias Tymeslot.Utils.DateTimeUtils
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Themes.Quill.Scheduling.Components.Schedule.Panels
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -233,7 +233,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                           </button>
                         </div>
                         <div class="week-day-strip">
-                          <%= for day <- Helpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone) do %>
+                          <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone) do %>
                             <button
                               class={[
                                 "week-day-cell",
@@ -314,7 +314,7 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ScheduleComponent do
                             </div>
                           </div>
                           <div class="grid grid-cols-7 gap-0.5">
-                            <%= for day <- Helpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map) do %>
+                            <%= for day <- CalendarHelpers.get_calendar_days(@user_timezone, @current_year, @current_month, @organizer_profile, @month_availability_map) do %>
                               <.calendar_day
                                 phx-click="select_date"
                                 phx-target={@myself}

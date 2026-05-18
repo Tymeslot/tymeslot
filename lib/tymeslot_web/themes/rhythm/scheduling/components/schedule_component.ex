@@ -9,7 +9,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
   alias Tymeslot.Timezones
   alias TymeslotWeb.Components.MeetingUtils
   alias TymeslotWeb.Live.Scheduling.CalendarNavigation
-  alias TymeslotWeb.Live.Scheduling.Helpers
+  alias TymeslotWeb.Live.Scheduling.CalendarHelpers
   alias TymeslotWeb.Themes.Rhythm.Shared.OrganizerHeader
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
@@ -213,7 +213,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                 </div>
 
                 <div class="calendar-grid">
-                  <%= for day <- Helpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone) do %>
+                  <%= for day <- CalendarHelpers.get_week_days(@current_week_start, @organizer_profile, @month_availability_map, @user_timezone) do %>
                     <button
                       class={[
                         "calendar-day",
@@ -267,7 +267,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                                     phx-target={@myself}
                                     disabled={@loading_slots}
                                   >
-                                    {LocalizationHelpers.format_time_by_locale(Helpers.parse_slot_time(slot_value))}
+                                    {LocalizationHelpers.format_time_by_locale(CalendarHelpers.parse_slot_time(slot_value))}
                                   </button>
                                 <% end %>
                               </div>
