@@ -7,6 +7,7 @@ defmodule Tymeslot.Bookings.CreateTest do
   alias __MODULE__.MockCalendar
   alias Tymeslot.Bookings.Create
   alias Tymeslot.MeetingTypes
+  alias Tymeslot.Meetings.MeetingSchema
 
   # Shared test setup helper
   defp setup_booking_test do
@@ -465,7 +466,7 @@ defmodule Tymeslot.Bookings.CreateTest do
       assert error_msg =~ "required"
 
       # Verify nothing was persisted
-      assert Tymeslot.Repo.aggregate(Tymeslot.Meetings.MeetingSchema, :count) == 0
+      assert Tymeslot.Repo.aggregate(MeetingSchema, :count) == 0
     end
 
     test "accepts booking when all required custom field answers are present", %{

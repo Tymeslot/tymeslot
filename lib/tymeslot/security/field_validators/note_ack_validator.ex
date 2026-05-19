@@ -8,14 +8,14 @@ defmodule Tymeslot.Security.FieldValidators.NoteAckValidator do
   @spec validate(any(), map(), keyword()) :: :ok | {:error, String.t()}
   def validate(value, definition, opts \\ [])
 
-  def validate(%{"confirmed" => true, "confirmed_at" => iso}, _, _)
+  def validate(%{"confirmed" => true, "confirmed_at" => iso}, _definition, _opts)
       when is_binary(iso) do
     case DateTime.from_iso8601(iso) do
-      {:ok, _, 0} -> :ok
-      {:ok, _, _} -> {:error, "Confirmation timestamp must be UTC"}
-      _ -> {:error, "Confirmation timestamp is invalid"}
+      {:ok, _dt, 0} -> :ok
+      {:ok, _dt, _offset} -> {:error, "Confirmation timestamp must be UTC"}
+      _err -> {:error, "Confirmation timestamp is invalid"}
     end
   end
 
-  def validate(_, _, _), do: {:error, "Please acknowledge to continue"}
+  def validate(_value, _definition, _opts), do: {:error, "Please acknowledge to continue"}
 end

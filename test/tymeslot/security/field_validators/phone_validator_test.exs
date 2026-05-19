@@ -15,7 +15,7 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidatorTest do
     end
 
     test "blank required is invalid" do
-      assert {:error, _} = PhoneValidator.validate("", required: true)
+      assert {:error, _msg} = PhoneValidator.validate("", required: true)
     end
 
     test "blank optional is ok" do
@@ -23,7 +23,7 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidatorTest do
     end
 
     test "letters reject" do
-      assert {:error, _} = PhoneValidator.validate("call me later")
+      assert {:error, _msg} = PhoneValidator.validate("call me later")
     end
 
     test "trim and accept ext / spaces / dashes" do
@@ -31,7 +31,7 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidatorTest do
     end
 
     test "nil required is invalid" do
-      assert {:error, _} = PhoneValidator.validate(nil, required: true)
+      assert {:error, _msg} = PhoneValidator.validate(nil, required: true)
     end
 
     test "nil optional is ok" do
@@ -39,7 +39,7 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidatorTest do
     end
 
     test "non-binary value returns error" do
-      assert {:error, _} = PhoneValidator.validate(12_345)
+      assert {:error, _msg} = PhoneValidator.validate(12_345)
     end
   end
 end

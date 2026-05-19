@@ -15,11 +15,11 @@ defmodule Tymeslot.Security.FieldValidators.UrlValidator do
   def validate(nil, opts), do: blank(opts)
   def validate("", opts), do: blank(opts)
 
-  def validate(value, _) when is_binary(value) do
+  def validate(value, _opts) when is_binary(value) do
     UrlValidation.validate_http_url(String.trim(value))
   end
 
-  def validate(_, _), do: {:error, "URL must be text"}
+  def validate(_value, _opts), do: {:error, "URL must be text"}
 
   defp blank(opts) do
     if Keyword.get(opts, :required, true), do: {:error, "URL is required"}, else: :ok

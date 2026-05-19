@@ -3,6 +3,7 @@ defmodule Tymeslot.CustomFields.FieldOptionTest do
 
   @moduletag :custom_fields
 
+  alias Ecto.Changeset
   alias Tymeslot.CustomFields.FieldOption
 
   describe "changeset/2" do
@@ -32,12 +33,12 @@ defmodule Tymeslot.CustomFields.FieldOptionTest do
   end
 
   defp errors_on(cs) do
-    Ecto.Changeset.traverse_errors(cs, fn {msg, opts} ->
-      Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+    Changeset.traverse_errors(cs, fn {msg, opts} ->
+      Regex.replace(~r"%{(\w+)}", msg, fn _full, key ->
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)
     end)
   end
 
-  defp get_change(cs, field), do: Ecto.Changeset.get_change(cs, field)
+  defp get_change(cs, field), do: Changeset.get_change(cs, field)
 end

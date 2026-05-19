@@ -141,9 +141,9 @@ defmodule TymeslotWeb.Live.Shared.FormValidationHelpers do
   @spec sync_changeset_field_error(map(), Ecto.Changeset.t(), atom()) :: map()
   def sync_changeset_field_error(field_errors, %Ecto.Changeset{} = changeset, field)
       when is_atom(field) do
-    case Enum.find(changeset.errors, fn {f, _} -> f == field end) do
+    case Enum.find(changeset.errors, fn {f, _error} -> f == field end) do
       nil -> Map.delete(field_errors, field)
-      {_, error_tuple} -> Map.put(field_errors, field, error_tuple)
+      {_field, error_tuple} -> Map.put(field_errors, field, error_tuple)
     end
   end
 

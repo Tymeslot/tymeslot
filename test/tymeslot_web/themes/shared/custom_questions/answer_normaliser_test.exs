@@ -17,7 +17,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.AnswerNormaliserTest do
     result = AnswerNormaliser.normalise("acknowledge")
 
     assert %{"confirmed" => true, "confirmed_at" => confirmed_at} = result
-    assert {:ok, dt, _} = DateTime.from_iso8601(confirmed_at)
+    assert {:ok, dt, _offset} = DateTime.from_iso8601(confirmed_at)
     assert dt.time_zone == "Etc/UTC"
   end
 

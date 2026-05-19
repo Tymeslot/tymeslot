@@ -9,17 +9,17 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidatorTest do
     test "integer ok", do: assert(:ok = NumberValidator.validate("42"))
     test "decimal ok", do: assert(:ok = NumberValidator.validate("3.14"))
     test "negative ok", do: assert(:ok = NumberValidator.validate("-1"))
-    test "trailing garbage rejected", do: assert({:error, _} = NumberValidator.validate("42x"))
+    test "trailing garbage rejected", do: assert({:error, _msg} = NumberValidator.validate("42x"))
 
     test "blank required fails",
-      do: assert({:error, _} = NumberValidator.validate("", required: true))
+      do: assert({:error, _msg} = NumberValidator.validate("", required: true))
 
     test "blank optional ok", do: assert(:ok = NumberValidator.validate("", required: false))
-    test "below min rejected", do: assert({:error, _} = NumberValidator.validate("0", min: 1))
-    test "above max rejected", do: assert({:error, _} = NumberValidator.validate("100", max: 50))
+    test "below min rejected", do: assert({:error, _msg} = NumberValidator.validate("0", min: 1))
+    test "above max rejected", do: assert({:error, _msg} = NumberValidator.validate("100", max: 50))
 
     test "nil required fails",
-      do: assert({:error, _} = NumberValidator.validate(nil, required: true))
+      do: assert({:error, _msg} = NumberValidator.validate(nil, required: true))
 
     test "nil optional ok", do: assert(:ok = NumberValidator.validate(nil, required: false))
 
@@ -28,7 +28,7 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidatorTest do
     end
 
     test "non-numeric non-binary value returns error" do
-      assert {:error, _} = NumberValidator.validate(:not_a_number)
+      assert {:error, _msg} = NumberValidator.validate(:not_a_number)
     end
   end
 end

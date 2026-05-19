@@ -4,8 +4,8 @@ defmodule Tymeslot.Security.FieldValidators.MultiSelectValidator do
   @spec validate(any(), map(), keyword()) :: :ok | {:error, String.t()}
   def validate(value, definition, opts \\ [])
 
-  def validate(nil, _, opts), do: blank_result(opts)
-  def validate([], _, opts), do: blank_result(opts)
+  def validate(nil, _definition, opts), do: blank_result(opts)
+  def validate([], _definition, opts), do: blank_result(opts)
 
   def validate(values, definition, opts) when is_list(values) do
     allowed = MapSet.new(allowed_keys(definition))
@@ -31,7 +31,7 @@ defmodule Tymeslot.Security.FieldValidators.MultiSelectValidator do
     end
   end
 
-  def validate(_, _, _), do: {:error, "Selections must be a list"}
+  def validate(_value, _definition, _opts), do: {:error, "Selections must be a list"}
 
   defp blank_result(opts) do
     if Keyword.get(opts, :required, true),
@@ -43,9 +43,9 @@ defmodule Tymeslot.Security.FieldValidators.MultiSelectValidator do
     Enum.map(options, fn
       %{"key" => k} -> k
       %{key: k} -> k
-      _ -> nil
+      _opt -> nil
     end)
   end
 
-  defp allowed_keys(_), do: []
+  defp allowed_keys(_definition), do: []
 end

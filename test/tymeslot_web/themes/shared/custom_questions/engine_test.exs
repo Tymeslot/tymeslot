@@ -3,12 +3,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
 
   @moduletag :custom_fields
 
+  alias Ecto.UUID
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine
 
   defp build_def(type, attrs \\ %{}) do
     Map.merge(
       %{
-        "id" => Map.get(attrs, :id, Ecto.UUID.generate()),
+        "id" => Map.get(attrs, :id, UUID.generate()),
         "type" => type,
         "label" => Map.get(attrs, :label, "Q"),
         "required" => Map.get(attrs, :required, true)
@@ -104,7 +105,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
     ]
 
     s = Engine.init([d_high, d_low])
-    [first | _] = s.definitions
+    [first | _rest] = s.definitions
     assert first["label"] == "low"
   end
 
@@ -143,7 +144,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
     assert Engine.skipped?(empty)
     # next/1 returns an error rather than crashing — the LiveView guard catches
     # skipped? before ever calling next/1.
-    assert {:error, _} = Engine.next(empty)
+    assert {:error, _msg} = Engine.next(empty)
   end
 
   test "skipped? is false for a non-empty engine (guard does not fire prematurely)" do

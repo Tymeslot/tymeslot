@@ -14,7 +14,7 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidator do
   def validate(nil, opts), do: blank_result(opts)
   def validate("", opts), do: blank_result(opts)
 
-  def validate(value, _) when is_binary(value) do
+  def validate(value, _opts) when is_binary(value) do
     trimmed = String.trim(value)
 
     # Strip a single "ext"/"x" segment so we don't count its digits as part of the main number.
@@ -38,7 +38,7 @@ defmodule Tymeslot.Security.FieldValidators.PhoneValidator do
     end
   end
 
-  def validate(_, _), do: {:error, "Phone number must be text"}
+  def validate(_value, _opts), do: {:error, "Phone number must be text"}
 
   defp blank_result(opts) do
     if Keyword.get(opts, :required, true) do

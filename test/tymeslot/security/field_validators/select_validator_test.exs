@@ -5,45 +5,45 @@ defmodule Tymeslot.Security.FieldValidators.SelectValidatorTest do
 
   alias Tymeslot.Security.FieldValidators.SelectValidator
 
-  @def %{
+  @field_def %{
     "options" => [%{"key" => "red", "label" => "Red"}, %{"key" => "blue", "label" => "Blue"}]
   }
 
   describe "validate/3" do
     test "accepts a known option key" do
-      assert :ok = SelectValidator.validate("red", @def)
+      assert :ok = SelectValidator.validate("red", @field_def)
     end
 
     test "rejects unknown option key" do
-      assert {:error, _} = SelectValidator.validate("green", @def)
+      assert {:error, _msg} = SelectValidator.validate("green", @field_def)
     end
 
     test "rejects non-binary" do
-      assert {:error, _} = SelectValidator.validate(123, @def)
+      assert {:error, _msg} = SelectValidator.validate(123, @field_def)
     end
 
     test "blank required is invalid" do
-      assert {:error, _} = SelectValidator.validate("", @def, required: true)
+      assert {:error, _msg} = SelectValidator.validate("", @field_def, required: true)
     end
 
     test "blank optional is ok" do
-      assert :ok = SelectValidator.validate("", @def, required: false)
+      assert :ok = SelectValidator.validate("", @field_def, required: false)
     end
 
     test "nil required is invalid" do
-      assert {:error, _} = SelectValidator.validate(nil, @def, required: true)
+      assert {:error, _msg} = SelectValidator.validate(nil, @field_def, required: true)
     end
 
     test "nil optional is ok" do
-      assert :ok = SelectValidator.validate(nil, @def, required: false)
+      assert :ok = SelectValidator.validate(nil, @field_def, required: false)
     end
 
     test "accepts second known option key" do
-      assert :ok = SelectValidator.validate("blue", @def)
+      assert :ok = SelectValidator.validate("blue", @field_def)
     end
 
     test "empty options list rejects any value" do
-      assert {:error, _} = SelectValidator.validate("red", %{"options" => []})
+      assert {:error, _msg} = SelectValidator.validate("red", %{"options" => []})
     end
   end
 end

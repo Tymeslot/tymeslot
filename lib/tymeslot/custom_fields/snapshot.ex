@@ -14,7 +14,7 @@ defmodule Tymeslot.CustomFields.Snapshot do
   @doc "Builds a snapshot from a meeting type struct or map."
   @spec from_meeting_type(map()) :: [map()]
   def from_meeting_type(%{custom_fields: defs}) when is_list(defs), do: from_definitions(defs)
-  def from_meeting_type(_), do: []
+  def from_meeting_type(_meeting_type), do: []
 
   @doc "Normalises a list of definitions (struct or map) to a list of plain maps."
   @spec from_definitions([FieldDefinition.t() | map()]) :: [map()]
@@ -27,7 +27,7 @@ defmodule Tymeslot.CustomFields.Snapshot do
   defp position(%FieldDefinition{position: p}), do: p || 0
   defp position(%{"position" => p}), do: p || 0
   defp position(%{position: p}), do: p || 0
-  defp position(_), do: 0
+  defp position(_field), do: 0
 
   defp to_plain_map(%FieldDefinition{} = d) do
     raw = %{
@@ -51,5 +51,5 @@ defmodule Tymeslot.CustomFields.Snapshot do
     drop_nils(stringified)
   end
 
-  defp drop_nils(map), do: Map.reject(map, fn {_, v} -> is_nil(v) end)
+  defp drop_nils(map), do: Map.reject(map, fn {_k, v} -> is_nil(v) end)
 end

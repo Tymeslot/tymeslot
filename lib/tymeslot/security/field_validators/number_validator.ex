@@ -15,17 +15,17 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidator do
   end
 
   def validate(value, opts) when is_number(value), do: check_bounds(value, opts)
-  def validate(_, _), do: {:error, "Number must be numeric"}
+  def validate(_value, _opts), do: {:error, "Number must be numeric"}
 
   defp parse(value) do
     case Float.parse(value) do
       {n, ""} ->
         {:ok, n}
 
-      _ ->
+      _err ->
         case Integer.parse(value) do
           {n, ""} -> {:ok, n}
-          _ -> :error
+          _other -> :error
         end
     end
   end

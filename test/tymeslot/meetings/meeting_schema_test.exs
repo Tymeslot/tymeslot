@@ -4,6 +4,7 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
   @moduletag :database
   @moduletag :schema
 
+  alias Ecto.{Changeset, UUID}
   alias Tymeslot.Meetings.MeetingSchema, as: Meeting
 
   @valid_base_attrs %{
@@ -27,7 +28,7 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
     end
 
     test "changeset accepts a snapshot and answers map" do
-      field_id = Ecto.UUID.generate()
+      field_id = UUID.generate()
       snap = [%{"id" => field_id, "type" => "short_text", "label" => "Company"}]
       ans = %{field_id => "Acme"}
 
@@ -40,8 +41,8 @@ defmodule Tymeslot.Meetings.MeetingSchemaTest do
       cs = Meeting.changeset(%Meeting{}, attrs)
 
       assert cs.valid?
-      assert Ecto.Changeset.get_field(cs, :custom_fields_snapshot) == snap
-      assert Ecto.Changeset.get_field(cs, :custom_field_answers) == ans
+      assert Changeset.get_field(cs, :custom_fields_snapshot) == snap
+      assert Changeset.get_field(cs, :custom_field_answers) == ans
     end
   end
 

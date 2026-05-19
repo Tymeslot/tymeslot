@@ -17,17 +17,17 @@ defmodule Tymeslot.Security.FieldValidators.YesNoValidatorTest do
       do: assert(:ok = YesNoValidator.validate(false, %{}, required: true))
 
     test "nil with required: true fails" do
-      assert {:error, _} = YesNoValidator.validate(nil, %{}, required: true)
+      assert {:error, _msg} = YesNoValidator.validate(nil, %{}, required: true)
     end
 
     test "nil with required: false is ok",
       do: assert(:ok = YesNoValidator.validate(nil, %{}, required: false))
 
-    test "string rejected", do: assert({:error, _} = YesNoValidator.validate("true", %{}))
-    test "integer rejected", do: assert({:error, _} = YesNoValidator.validate(1, %{}))
+    test "string rejected", do: assert({:error, _msg} = YesNoValidator.validate("true", %{}))
+    test "integer rejected", do: assert({:error, _msg} = YesNoValidator.validate(1, %{}))
 
     test "map value rejected" do
-      assert {:error, _} = YesNoValidator.validate(%{"value" => true}, %{})
+      assert {:error, _msg} = YesNoValidator.validate(%{"value" => true}, %{})
     end
   end
 end

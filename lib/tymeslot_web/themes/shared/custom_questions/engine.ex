@@ -98,5 +98,5 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Engine do
 
   defp position(%{"position" => p}), do: p || 0
   defp position(%{position: p}), do: p || 0
-  defp position(_), do: 0
+  defp position(_field), do: 0
 end

@@ -18,7 +18,7 @@ defmodule Tymeslot.CustomFields.FieldDefinitionTest do
         })
 
       assert cs.valid?
-      assert {:ok, _} = UUID.cast(Changeset.get_field(cs, :id))
+      assert {:ok, _uuid} = UUID.cast(Changeset.get_field(cs, :id))
     end
 
     test "label is required" do
@@ -215,7 +215,7 @@ defmodule Tymeslot.CustomFields.FieldDefinitionTest do
 
   defp errors_on(cs) do
     Changeset.traverse_errors(cs, fn {msg, opts} ->
-      Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+      Regex.replace(~r"%{(\w+)}", msg, fn _full, key ->
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)
     end)
