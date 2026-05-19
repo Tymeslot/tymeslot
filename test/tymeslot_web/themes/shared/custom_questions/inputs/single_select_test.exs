@@ -45,7 +45,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelectTest do
     html = render_input(d, "k3")
 
     assert html =~ "<select"
-    assert html =~ ~r/<option value="k3"[^>]*selected/
+    assert html =~ ~r/<option[^>]*selected[^>]*value="k3"|<option[^>]*value="k3"[^>]*selected/
     refute html =~ ~s(type="radio")
   end
 
