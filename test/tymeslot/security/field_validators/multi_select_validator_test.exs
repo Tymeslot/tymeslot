@@ -40,7 +40,9 @@ defmodule Tymeslot.Security.FieldValidators.MultiSelectValidatorTest do
     end
 
     test "max_selections enforced" do
-      assert {:error, _msg} = MultiSelectValidator.validate(["a", "b", "c"], @field_def, max_selections: 2)
+      assert {:error, _msg} =
+               MultiSelectValidator.validate(["a", "b", "c"], @field_def, max_selections: 2)
+
       assert :ok = MultiSelectValidator.validate(["a", "b"], @field_def, max_selections: 2)
     end
 
@@ -61,7 +63,8 @@ defmodule Tymeslot.Security.FieldValidators.MultiSelectValidatorTest do
     end
 
     test "duplicate values do not satisfy min_selections" do
-      assert {:error, _msg} = MultiSelectValidator.validate(["a", "a"], @field_def, min_selections: 2)
+      assert {:error, _msg} =
+               MultiSelectValidator.validate(["a", "a"], @field_def, min_selections: 2)
     end
   end
 end
