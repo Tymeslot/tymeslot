@@ -20,8 +20,7 @@ defmodule TymeslotWeb.DashboardTourAnchorsTest do
 
     _profile = insert(:profile, user: user)
 
-    {:ok, view, html} = live(log_in_user(conn, user), ~p"/dashboard")
-    _ = view
+    {:ok, _view, html} = live(log_in_user(conn, user), ~p"/dashboard")
 
     anchors =
       DashboardTour.steps()
