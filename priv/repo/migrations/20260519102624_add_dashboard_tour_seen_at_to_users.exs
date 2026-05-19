@@ -11,16 +11,7 @@ defmodule Tymeslot.Repo.Migrations.AddDashboardTourSeenAtToUsers do
     # Users mid-onboarding (onboarding_completed_at IS NULL) are left
     # untouched so they see the tour after completing onboarding.
     execute(
-      """
-      UPDATE users
-      SET dashboard_tour_seen_at = NOW()
-      WHERE onboarding_completed_at IS NOT NULL
-      """,
-      """
-      UPDATE users
-      SET dashboard_tour_seen_at = NULL
-      WHERE onboarding_completed_at IS NOT NULL
-      """
+      "UPDATE users SET dashboard_tour_seen_at = NOW() WHERE onboarding_completed_at IS NOT NULL"
     )
   end
 end
