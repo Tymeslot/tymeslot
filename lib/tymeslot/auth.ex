@@ -245,6 +245,27 @@ defmodule Tymeslot.Auth do
   end
 
   @doc """
+  Marks the post-onboarding dashboard tour as seen. Idempotent.
+  """
+  @spec mark_dashboard_tour_seen(Ecto.Schema.t()) ::
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def mark_dashboard_tour_seen(user) do
+    if dashboard_tour_seen?(user) do
+      {:ok, user}
+    else
+      UserQueries.mark_dashboard_tour_seen(user)
+    end
+  end
+
+  @doc """
+  Returns true if the user has already seen the post-onboarding dashboard tour.
+  """
+  @spec dashboard_tour_seen?(Ecto.Schema.t()) :: boolean()
+  def dashboard_tour_seen?(user) do
+    not is_nil(user.dashboard_tour_seen_at)
+  end
+
+  @doc """
   Checks if a user has unsubscribed from marketing emails.
   """
   @spec marketing_unsubscribed?(Ecto.Schema.t()) :: boolean()
