@@ -277,6 +277,86 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       assert is_binary(ics_content)
       assert String.length(ics_content) > 3000
     end
+
+    # RFC 5545 §3.1 mandates content lines no longer than 75 octets
+    # (excluding the line terminator). Custom-field answers appended to
+    # DESCRIPTION routinely exceed this limit, so the generator folds
+    # long lines with CRLF + SPACE. This test drives that requirement.
+    test "no output line exceeds 75 octets after folding (RFC 5545 §3.1)" do
+      long_answer = String.duplicate("This is a long custom field answer value. ", 20)
+
+      meeting_details = %{
+        title: "RFC 5545 line-folding compliance test",
+        description: "Some base description",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "folding-123",
+        organizer_email: "host@example.com",
+        custom_fields_snapshot: [
+          %{"id" => "f1", "type" => "short_text", "label" => "Project details"},
+          %{"id" => "f2", "type" => "short_text", "label" => "Additional notes"}
+        ],
+        custom_field_answers: %{
+          "f1" => long_answer,
+          "f2" => long_answer
+        }
+      }
+
+      ics_content = IcsGenerator.generate_ics(meeting_details)
+
+      # Split on bare LF (the heredoc terminator) — fold continuations end with
+      # CRLF+SPACE so a continuation line looks like "\r\n <content>"; after
+      # splitting on "\n" it appears as "\r" followed by " <content>" on the
+      # next element. We strip the trailing "\r" before measuring.
+      violations =
+        ics_content
+        |> String.split("\n")
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.filter(fn line ->
+          stripped = String.trim_trailing(line, "\r")
+          byte_size(stripped) > 75
+        end)
+
+      assert violations == [],
+             "Lines exceeding 75 octets found:\n#{Enum.join(violations, "\n")}"
+    end
+
+    test "line-folding preserves roundtrippable content for multi-byte UTF-8" do
+      # The fold helper must not tear multi-byte codepoints. We use a string
+      # just long enough to force a fold inside a multi-byte sequence boundary.
+      # The actual value of the reassembled description is checked by asserting
+      # the unescaped text survives in the output.
+      unicode_answer = String.duplicate("Ünïcödé answer: ", 10)
+
+      meeting_details = %{
+        title: "Unicode Folding",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "unicode-fold-123",
+        organizer_email: "host@example.com",
+        custom_fields_snapshot: [
+          %{"id" => "u1", "type" => "short_text", "label" => "Notes"}
+        ],
+        custom_field_answers: %{"u1" => unicode_answer}
+      }
+
+      ics_content = IcsGenerator.generate_ics(meeting_details)
+
+      # All lines within 75 octets
+      violations =
+        ics_content
+        |> String.split("\n")
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.filter(fn line ->
+          stripped = String.trim_trailing(line, "\r")
+          byte_size(stripped) > 75
+        end)
+
+      assert violations == []
+
+      # Content still present (folding is transparent to the value)
+      assert ics_content =~ "Ünïcödé answer:"
+    end
   end
 
   describe "generate_ics_attachment/3" do
@@ -505,6 +585,105 @@ defmodule Tymeslot.Integrations.Calendar.IcsGeneratorTest do
       ics = IcsGenerator.generate_ics(meeting_details)
 
       assert ics =~ "ORGANIZER;SCHEDULE-AGENT=CLIENT:mailto:john@example.com"
+    end
+  end
+
+  describe "custom field answers in description" do
+    test "appends label:value lines for each custom field answer" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "custom-fields-123",
+        organizer_email: "host@example.com",
+        custom_fields_snapshot: [
+          %{"id" => "f1", "type" => "short_text", "label" => "Company"},
+          %{"id" => "f2", "type" => "yes_no", "label" => "Bringing laptop"}
+        ],
+        custom_field_answers: %{"f1" => "Acme", "f2" => true}
+      }
+
+      ics = IcsGenerator.generate_ics(meeting_details)
+
+      assert ics =~ "Company: Acme"
+      assert ics =~ "Bringing laptop: Yes"
+    end
+
+    test "skips the answers block when custom_fields_snapshot is absent" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "no-custom-fields-123",
+        organizer_email: "host@example.com"
+      }
+
+      ics = IcsGenerator.generate_ics(meeting_details)
+
+      refute ics =~ "Company:"
+    end
+
+    test "skips the answers block when custom_fields_snapshot is an empty list" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "empty-snap-123",
+        organizer_email: "host@example.com",
+        custom_fields_snapshot: [],
+        custom_field_answers: %{}
+      }
+
+      ics = IcsGenerator.generate_ics(meeting_details)
+
+      refute ics =~ ": "
+    end
+
+    test "renders multi-select answers as comma-separated labels" do
+      meeting_details = %{
+        title: "Meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "multi-select-123",
+        organizer_email: "host@example.com",
+        custom_fields_snapshot: [
+          %{
+            "id" => "f1",
+            "type" => "multi_select",
+            "label" => "Topics",
+            "options" => [
+              %{"key" => "a", "label" => "Design"},
+              %{"key" => "b", "label" => "Engineering"}
+            ]
+          }
+        ],
+        custom_field_answers: %{"f1" => ["a", "b"]}
+      }
+
+      ics = IcsGenerator.generate_ics(meeting_details)
+
+      # Commas are escaped to \, in ICS
+      assert ics =~ "Topics: Design\\, Engineering"
+    end
+
+    test "answers block is separated from preceding description by a double newline" do
+      meeting_details = %{
+        title: "Meeting",
+        description: "An important meeting",
+        start_time: ~U[2026-01-15 14:00:00Z],
+        end_time: ~U[2026-01-15 15:00:00Z],
+        uid: "separator-123",
+        organizer_email: "host@example.com",
+        custom_fields_snapshot: [
+          %{"id" => "f1", "type" => "short_text", "label" => "Company"}
+        ],
+        custom_field_answers: %{"f1" => "Acme"}
+      }
+
+      ics = IcsGenerator.generate_ics(meeting_details)
+
+      # In ICS the description is escaped, so real "\n\n" becomes "\\n\\n"
+      assert ics =~ "An important meeting\\n\\nCompany: Acme"
     end
   end
 

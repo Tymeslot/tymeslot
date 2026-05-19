@@ -97,7 +97,9 @@ defmodule Tymeslot.Bookings.Policy do
           required(:view_url) => String.t(),
           required(:reschedule_url) => String.t(),
           required(:cancel_url) => String.t(),
-          required(:meeting_url) => String.t() | nil
+          required(:meeting_url) => String.t() | nil,
+          required(:custom_fields_snapshot) => [map()],
+          required(:custom_field_answers) => map()
         }
 
   @typedoc "A meeting record with the fields required by the policy checks."
@@ -169,7 +171,9 @@ defmodule Tymeslot.Bookings.Policy do
         attendee_timezone: Timezones.normalize(user_timezone),
         attendee_locale: Map.get(params, :attendee_locale) || default_locale(),
         status: "confirmed",
-        reminders: reminders
+        reminders: reminders,
+        custom_fields_snapshot: Map.get(params, :custom_fields_snapshot, []),
+        custom_field_answers: Map.get(params, :custom_field_answers, %{})
       },
       build_meeting_action_urls(meeting_uid, org_username)
     )

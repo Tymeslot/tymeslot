@@ -1,0 +1,427 @@
+defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorComponent do
+  @moduledoc """
+  Modal editor for a single `FieldDefinition`. Owns a private Ecto changeset
+  over the definition being created or updated.
+
+  Emits `{:custom_questions, :save, definition}` to the parent LiveView on a
+  valid save, or `{:custom_questions, :cancel}` when the host dismisses the
+  editor without saving.
+  """
+  use TymeslotWeb, :live_component
+  use Gettext, backend: TymeslotWeb.Gettext
+
+  alias Ecto.Changeset
+  alias Phoenix.LiveView.JS
+  alias Tymeslot.CustomFields.FieldDefinition
+  alias Tymeslot.CustomFields.FieldOption
+  alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Live.Shared.FormValidationHelpers
+
+  @allowed_error_fields ~w(label help_text body options min max)
+
+  @impl Phoenix.LiveComponent
+  def update(assigns, socket) do
+    definition = assigns[:definition] || %FieldDefinition{}
+    changeset = FieldDefinition.changeset(definition, %{})
+
+    {:ok,
+     socket
+     |> assign(assigns)
+     |> assign(:definition, definition)
+     |> assign(:changeset, changeset)
+     |> assign_new(:original_type, fn -> definition.type end)
+     |> assign_new(:pending_type_change, fn -> nil end)
+     |> assign_new(:field_errors, fn -> %{} end)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("validate", %{"definition" => params} = event_params, socket) do
+    new_type = params["type"]
+    original_type = socket.assigns.original_type
+
+    if destructive_type_change?(new_type, original_type, socket.assigns.changeset) do
+      {:noreply, assign(socket, :pending_type_change, new_type)}
+    else
+      changeset = FieldDefinition.changeset(socket.assigns.definition, params)
+
+      field_errors =
+        FormValidationHelpers.clear_target_error(
+          socket.assigns.field_errors,
+          event_params["_target"],
+          @allowed_error_fields
+        )
+
+      {:noreply,
+       socket
+       |> assign(:changeset, changeset)
+       |> assign(:field_errors, field_errors)
+       |> assign(:pending_type_change, nil)}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("cancel_type_change", _params, socket) do
+    {:noreply, assign(socket, :pending_type_change, nil)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("confirm_type_change", _params, socket) do
+    new_type = socket.assigns.pending_type_change
+    definition = socket.assigns.definition
+
+    changeset = FieldDefinition.changeset(definition, %{"type" => new_type})
+
+    {:noreply,
+     socket
+     |> assign(:changeset, changeset)
+     |> assign(:original_type, new_type)
+     |> assign(:pending_type_change, nil)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("save", %{"definition" => params}, socket) do
+    changeset = FieldDefinition.changeset(socket.assigns.definition, params)
+
+    if changeset.valid? do
+      definition = Changeset.apply_changes(changeset)
+      existing = socket.assigns.existing_fields || []
+
+      updated =
+        if Enum.any?(existing, &(&1.id == definition.id)) do
+          Enum.map(existing, fn d -> if d.id == definition.id, do: definition, else: d end)
+        else
+          existing ++ [definition]
+        end
+
+      send(self(), {:custom_questions, :fields_updated, updated, socket.assigns.form_id})
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> assign(:changeset, changeset)
+       |> assign(:field_errors, FormValidationHelpers.changeset_errors_map(changeset))}
+    end
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("cancel", _params, socket) do
+    send(self(), {:custom_questions, :cancel, socket.assigns.form_id})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("field_blur", %{"field" => field}, socket)
+      when field in @allowed_error_fields do
+    field_atom = String.to_existing_atom(field)
+
+    field_errors =
+      FormValidationHelpers.sync_changeset_field_error(
+        socket.assigns.field_errors,
+        socket.assigns.changeset,
+        field_atom
+      )
+
+    {:noreply, assign(socket, :field_errors, field_errors)}
+  end
+
+  def handle_event("field_blur", _params, socket), do: {:noreply, socket}
+
+  @impl Phoenix.LiveComponent
+  def handle_event("add_option", _params, socket) do
+    options = Changeset.get_field(socket.assigns.changeset, :options) || []
+
+    changeset =
+      Changeset.put_embed(socket.assigns.changeset, :options, options ++ [%FieldOption{}])
+
+    {:noreply, assign(socket, :changeset, changeset)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("remove_option", %{"index" => index_str}, socket) do
+    index = String.to_integer(index_str)
+    options = Changeset.get_field(socket.assigns.changeset, :options) || []
+
+    changeset =
+      Changeset.put_embed(socket.assigns.changeset, :options, List.delete_at(options, index))
+
+    {:noreply, assign(socket, :changeset, changeset)}
+  end
+
+  @impl Phoenix.LiveComponent
+  def render(assigns) do
+    ~H"""
+    <div id={"question-editor-wrapper-#{@id}"}>
+      <CoreComponents.modal
+        id={"question-editor-#{@id}"}
+        show
+        on_cancel={JS.push("cancel", target: @myself)}
+        size={:medium}
+      >
+        <:header>
+          <%= if @definition.id do %>
+            {gettext("Edit question")}
+          <% else %>
+            {gettext("Add question")}
+          <% end %>
+        </:header>
+
+        <.form
+          for={@changeset}
+          as={:definition}
+          phx-change="validate"
+          phx-submit="save"
+          phx-target={@myself}
+          class="space-y-4"
+        >
+          <CoreComponents.input
+            name="definition[label]"
+            value={field_value(@changeset, :label)}
+            id="definition_label"
+            type="text"
+            label={gettext("Label")}
+            placeholder={gettext("e.g., Company name")}
+            required
+            phx-blur="field_blur"
+            phx-value-field="label"
+            phx-target={@myself}
+            errors={FormValidationHelpers.field_errors(@field_errors, :label)}
+          >
+            <:description>{gettext("The question shown to the booker.")}</:description>
+          </CoreComponents.input>
+
+          <CoreComponents.input
+            name="definition[help_text]"
+            value={field_value(@changeset, :help_text)}
+            id="definition_help_text"
+            type="text"
+            label={gettext("Help text (optional)")}
+            placeholder={gettext("e.g., Enter your company's registered name")}
+            phx-blur="field_blur"
+            phx-value-field="help_text"
+            phx-target={@myself}
+            errors={FormValidationHelpers.field_errors(@field_errors, :help_text)}
+          >
+            <:description>{gettext("Shown below the question — use it to clarify what you're asking or give an example.")}</:description>
+          </CoreComponents.input>
+
+          <CoreComponents.input
+            name="definition[type]"
+            value={field_value(@changeset, :type)}
+            id="definition_type"
+            type="select"
+            label={gettext("Type")}
+            options={type_options()}
+          >
+            <:description>{gettext("Controls how the booker enters their answer.")}</:description>
+          </CoreComponents.input>
+
+          <CoreComponents.input
+            name="definition[required]"
+            value={field_value(@changeset, :required)}
+            id="definition_required"
+            type="checkbox"
+            label={gettext("Required")}
+          >
+            <:description>{gettext("The booker must answer this question before they can continue.")}</:description>
+          </CoreComponents.input>
+
+          <%!-- Type-specific config --%>
+          <%= case Ecto.Changeset.get_field(@changeset, :type) do %>
+            <% t when t in ["single_select", "multi_select"] -> %>
+              <.options_editor
+                changeset={@changeset}
+                field_errors={@field_errors}
+                myself={@myself}
+              />
+            <% "note" -> %>
+              <CoreComponents.input
+                name="definition[body]"
+                value={field_value(@changeset, :body)}
+                id="definition_body"
+                type="textarea"
+                label={gettext("Body text")}
+                placeholder={gettext("Text that the booker must acknowledge before proceeding")}
+                rows={4}
+                required
+                phx-blur="field_blur"
+                phx-value-field="body"
+                phx-target={@myself}
+                errors={FormValidationHelpers.field_errors(@field_errors, :body)}
+              >
+                <:description>{gettext("The notice the booker must read and confirm before they can continue.")}</:description>
+              </CoreComponents.input>
+            <% t when t in ~w(number date) -> %>
+              <div class="grid grid-cols-2 gap-3">
+                <CoreComponents.input
+                  name="definition[min]"
+                  value={field_value(@changeset, :min)}
+                  id="definition_min"
+                  type="number"
+                  label={gettext("Min")}
+                  errors={FormValidationHelpers.field_errors(@field_errors, :min)}
+                >
+                  <:description>{gettext("Lowest value the booker may enter.")}</:description>
+                </CoreComponents.input>
+                <CoreComponents.input
+                  name="definition[max]"
+                  value={field_value(@changeset, :max)}
+                  id="definition_max"
+                  type="number"
+                  label={gettext("Max")}
+                  errors={FormValidationHelpers.field_errors(@field_errors, :max)}
+                >
+                  <:description>{gettext("Highest value the booker may enter.")}</:description>
+                </CoreComponents.input>
+              </div>
+            <% _ -> %>
+              <%!-- No type-specific fields for short_text, yes_no, phone, url, time --%>
+          <% end %>
+
+          <%= if @pending_type_change do %>
+            <div role="alertdialog" aria-live="polite" class="rounded-token-lg border-2 bg-amber-50 border-amber-200 text-amber-800 p-4">
+              <p class="font-medium text-token-sm mb-3">
+                {gettext(
+                  "Changing the type will clear the configuration you've defined (options, body, min/max). Past bookings keep their original answers. Continue?"
+                )}
+              </p>
+              <div class="flex gap-2">
+                <CoreComponents.action_button
+                  type="button"
+                  variant={:secondary}
+                  phx-click="cancel_type_change"
+                  phx-target={@myself}
+                >
+                  {gettext("Cancel")}
+                </CoreComponents.action_button>
+                <CoreComponents.action_button
+                  type="button"
+                  variant={:primary}
+                  phx-click="confirm_type_change"
+                  phx-target={@myself}
+                >
+                  {gettext("Yes, change type")}
+                </CoreComponents.action_button>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <CoreComponents.action_button
+              type="button"
+              variant={:secondary}
+              phx-click="cancel"
+              phx-target={@myself}
+            >
+              {gettext("Cancel")}
+            </CoreComponents.action_button>
+            <CoreComponents.action_button type="submit" variant={:primary}>
+              {gettext("Save question")}
+            </CoreComponents.action_button>
+          </div>
+        </.form>
+      </CoreComponents.modal>
+    </div>
+    """
+  end
+
+  # Private components
+
+  attr :changeset, :any, required: true
+  attr :field_errors, :map, required: true
+  attr :myself, :any, required: true
+
+  defp options_editor(assigns) do
+    ~H"""
+    <div>
+      <label class="label">
+        {gettext("Options")}
+        <span class="text-red-500 ml-0.5">*</span>
+      </label>
+      <p class="text-token-xs text-tymeslot-500 font-medium normal-case tracking-normal -mt-1 mb-3">
+        {gettext("Each entry becomes a selectable choice for the booker.")}
+      </p>
+      <div class="space-y-2">
+        <%= for {option, index} <- Enum.with_index(options_list(@changeset)) do %>
+          <div class="flex items-center gap-2">
+            <input
+              type="hidden"
+              name={"definition[options][#{index}][key]"}
+              value={option.key || ""}
+            />
+            <input
+              type="text"
+              name={"definition[options][#{index}][label]"}
+              value={option.label || ""}
+              class="input flex-1"
+              placeholder={gettext("Option %{n}", n: index + 1)}
+              phx-blur="field_blur"
+              phx-value-field="options"
+              phx-target={@myself}
+            />
+            <button
+              type="button"
+              class="flex-shrink-0 p-1 rounded text-tymeslot-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              phx-click="remove_option"
+              phx-value-index={index}
+              phx-target={@myself}
+              aria-label={gettext("Remove option")}
+            >×</button>
+          </div>
+        <% end %>
+      </div>
+      <button
+        type="button"
+        class="mt-2 flex items-center gap-1.5 text-token-sm font-medium text-tymeslot-600 hover:text-tymeslot-900"
+        phx-click="add_option"
+        phx-target={@myself}
+      >
+        + {gettext("Add option")}
+      </button>
+      <%= for error <- FormValidationHelpers.field_errors(@field_errors, :options) do %>
+        <p class="field-error">{translate_options_error(error)}</p>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp translate_options_error({msg, _opts}), do: msg
+  defp translate_options_error(msg) when is_binary(msg), do: msg
+
+  defp field_value(changeset, field) do
+    Changeset.get_field(changeset, field)
+  end
+
+  # Returns true when the user has selected a different type AND the current
+  # changeset has non-empty type-specific config that would be silently cleared.
+  defp destructive_type_change?(new_type, original_type, changeset)
+       when is_binary(new_type) and is_binary(original_type) and new_type != original_type do
+    options = Changeset.get_field(changeset, :options)
+    has_options = is_list(options) and options != []
+    body = Changeset.get_field(changeset, :body)
+    has_body = is_binary(body) and body != ""
+    has_min = not is_nil(Changeset.get_field(changeset, :min))
+    has_max = not is_nil(Changeset.get_field(changeset, :max))
+    has_options or has_body or has_min or has_max
+  end
+
+  defp destructive_type_change?(_new_type, _original_type, _changeset), do: false
+
+  defp options_list(changeset) do
+    Changeset.get_field(changeset, :options) || []
+  end
+
+  defp type_options do
+    [
+      {gettext("Short text"), "short_text"},
+      {gettext("Number"), "number"},
+      {gettext("Single choice"), "single_select"},
+      {gettext("Multiple choice"), "multi_select"},
+      {gettext("Yes / No"), "yes_no"},
+      {gettext("Phone"), "phone"},
+      {gettext("URL"), "url"},
+      {gettext("Date"), "date"},
+      {gettext("Time"), "time"},
+      {gettext("Note for acknowledgement"), "note"}
+    ]
+  end
+end

@@ -167,6 +167,10 @@ defmodule TymeslotWeb.DashboardLive do
 
   alias TymeslotWeb.Live.Dashboard.EmbedSettingsComponent
 
+  alias Ecto.UUID
+  alias Tymeslot.CustomFields.FieldDefinition
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
+
   require Logger
 
   @impl Phoenix.LiveView
@@ -245,6 +249,7 @@ defmodule TymeslotWeb.DashboardLive do
             user_agent={@user_agent}
             live_action={@live_action}
             params={@params}
+            custom_questions_allowed={@custom_questions_allowed}
           />
         <% else %>
           <.render_feature_placeholder
@@ -335,6 +340,54 @@ defmodule TymeslotWeb.DashboardLive do
       id: form_id,
       refreshing_calendars: false,
       available_calendars: Selection.selected_calendars(calendars)
+    )
+
+    {:noreply, socket}
+  end
+
+  # -------------------------------------------------------------------------
+  # Custom questions — forwarded from MeetingTypeForm child components
+  # -------------------------------------------------------------------------
+  # Child LiveComponents (CustomQuestionsSection, QuestionEditorComponent) use
+  # `send(self(), {:custom_questions, action, …, form_id})` to bubble mutations
+  # upward to DashboardLive, which owns the LiveView process. Each handler calls
+  # `send_update/3` to push new assigns back to the correct MeetingTypeForm
+  # instance.
+  #
+  # Children compute derived state locally (e.g. the new ordered list after a
+  # delete) and send the completed result — not the raw intent. This avoids
+  # the need for DashboardLive to read component assigns.
+
+  @impl Phoenix.LiveView
+  def handle_info({:custom_questions, :open_add, form_id, current_fields}, socket) do
+    empty = %FieldDefinition{
+      id: UUID.generate(),
+      type: "short_text",
+      position: length(current_fields)
+    }
+
+    send_update(MeetingTypeForm, id: form_id, editing_question: empty)
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveView
+  def handle_info({:custom_questions, :open_edit, question, form_id}, socket) do
+    send_update(MeetingTypeForm, id: form_id, editing_question: question)
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveView
+  def handle_info({:custom_questions, :cancel, form_id}, socket) do
+    send_update(MeetingTypeForm, id: form_id, editing_question: nil)
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveView
+  def handle_info({:custom_questions, :fields_updated, updated_fields, form_id}, socket) do
+    send_update(MeetingTypeForm,
+      id: form_id,
+      custom_fields: updated_fields,
+      editing_question: nil
     )
 
     {:noreply, socket}

@@ -3,10 +3,12 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   UI components for displaying and filtering meetings in the dashboard.
   """
   use Phoenix.Component
+  use Gettext, backend: TymeslotWeb.Gettext
 
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Icons.IconComponents, as: Icons
+  alias Tymeslot.CustomFields.AnswerRenderer
 
   # Filter Tabs
   attr :active, :string, required: true
@@ -184,6 +186,39 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
               </p>
               <p class="text-tymeslot-600 font-medium leading-relaxed">{@meeting.description}</p>
             </div>
+          </div>
+
+          <% displayable_fields =
+            Enum.filter(@meeting.custom_fields_snapshot, fn field ->
+              @meeting.custom_field_answers[field["id"]]
+              |> then(&AnswerRenderer.render(field, &1))
+              |> Kernel.!=("")
+            end) %>
+          <div
+            :if={displayable_fields != []}
+            class="mt-8 p-5 bg-tymeslot-50/50 rounded-token-2xl border-2 border-tymeslot-50"
+          >
+            <div class="flex gap-4 items-start mb-4">
+              <div class="w-8 h-8 rounded-token-lg bg-white shadow-sm flex items-center justify-center flex-shrink-0 border border-tymeslot-100">
+                <Icons.icon name={:list_bullet} class="w-4 h-4 text-tymeslot-400" />
+              </div>
+              <p class="text-token-xs font-black text-tymeslot-400 uppercase tracking-widest mt-2">
+                {gettext("Custom answers")}
+              </p>
+            </div>
+            <dl class="space-y-3">
+              <div
+                :for={field <- displayable_fields}
+                class="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-x-6 gap-y-1"
+              >
+                <dt class="text-token-sm font-semibold text-tymeslot-500">
+                  {field["label"]}
+                </dt>
+                <dd class="text-token-sm text-tymeslot-700 font-medium">
+                  {AnswerRenderer.render(field, @meeting.custom_field_answers[field["id"]])}
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
 

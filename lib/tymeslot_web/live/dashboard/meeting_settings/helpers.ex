@@ -116,6 +116,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.Helpers do
          |> Component.assign(:form_errors, FormHelpers.format_context_error(:invalid_duration))
          |> Component.assign(:saving, false)}
 
+      {:error, :insufficient_plan} ->
+        Flash.error("Custom booking questions are available on Pro plans.")
+        {:noreply, Component.assign(socket, :saving, false)}
+
+      {:error, :feature_access_checker_failed} ->
+        Flash.error("Unable to verify subscription status. Please try again.")
+        {:noreply, Component.assign(socket, :saving, false)}
+
       {:error, %Ecto.Changeset{} = changeset} ->
         errors = FormHelpers.format_changeset_errors(changeset)
 
