@@ -1086,7 +1086,7 @@ msgstr "Questo sito è protetto da reCAPTCHA e si applicano le %{privacy_link} e
 #: lib/tymeslot_web/components/announcement_modal_component.ex:80
 #, elixir-autogen, elixir-format
 msgid "%{current} / %{total}"
-msgstr ""
+msgstr "%{current} / %{total}"
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex:72
 #: lib/tymeslot_web/components/tour_overlay.ex:59
@@ -1097,7 +1097,7 @@ msgstr "Indietro"
 #: lib/tymeslot_web/components/announcement_modal_component.ex:95
 #, elixir-autogen, elixir-format
 msgid "Got it"
-msgstr ""
+msgstr "Capito"
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex:102
 #: lib/tymeslot_web/components/announcement_modal_component.ex:106
@@ -1109,129 +1109,129 @@ msgstr "Avanti"
 #: lib/tymeslot_web/live/admin_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "%{name} disabled."
-msgstr ""
+msgstr "%{name} disattivato."
 
 #: lib/tymeslot_web/live/admin_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "%{name} enabled."
-msgstr ""
+msgstr "%{name} attivato."
 
 #: lib/tymeslot_web/live/admin_live.ex:135
 #, elixir-autogen, elixir-format
 msgid "%{name} updated."
-msgstr ""
+msgstr "%{name} aggiornato."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:48
 #, elixir-autogen, elixir-format
 msgid "(you)"
-msgstr ""
+msgstr "(tu)"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:68
 #, elixir-autogen, elixir-format
 msgid "Account settings and log out are here in the top-right."
-msgstr ""
+msgstr "Le impostazioni dell'account e il logout si trovano qui in alto a destra."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:37
 #, elixir-autogen, elixir-format
 msgid "Actions"
-msgstr ""
+msgstr "Azioni"
 
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:51
 #: lib/tymeslot_web/live/admin_live/components/users.ex:64
 #, elixir-autogen, elixir-format
 msgid "Admin"
-msgstr ""
+msgstr "Amministrazione"
 
 #: lib/tymeslot_web/live/admin_live.ex:289
 #, elixir-autogen, elixir-format
 msgid "Admin UI is disabled."
-msgstr ""
+msgstr "L'interfaccia di amministrazione è disattivata."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:23
 #, elixir-autogen, elixir-format
 msgid "Admin alert recipient"
-msgstr ""
+msgstr "Destinatario degli avvisi di amministrazione"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:22
 #: lib/tymeslot_web/live/admin_live/formatters.ex:152
 #, elixir-autogen, elixir-format
 msgid "Admin alerts"
-msgstr ""
+msgstr "Avvisi di amministrazione"
 
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:59
 #, elixir-autogen, elixir-format
 msgid "Admin sections"
-msgstr ""
+msgstr "Sezioni di amministrazione"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:26
 #, elixir-autogen, elixir-format
 msgid "Admins"
-msgstr ""
+msgstr "Amministratori"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:43
 #, elixir-autogen, elixir-format
 msgid "Allow log-in with email and password. When disabled, users can only authenticate through configured OAuth providers."
-msgstr ""
+msgstr "Consenti l'accesso con email e password. Quando disattivato, gli utenti possono autenticarsi solo tramite i provider OAuth configurati."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:37
 #, elixir-autogen, elixir-format
 msgid "Allow new users to sign up via the public registration page. Disable for a private install where admins create accounts manually."
-msgstr ""
+msgstr "Consenti ai nuovi utenti di registrarsi tramite la pagina di registrazione pubblica. Disattiva per un'installazione privata in cui gli amministratori creano gli account manualmente."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:150
 #, elixir-autogen, elixir-format
 msgid "Authentication"
-msgstr ""
+msgstr "Autenticazione"
 
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:33
 #, elixir-autogen, elixir-format
 msgid "Back to Dashboard"
-msgstr ""
+msgstr "Torna alla Dashboard"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:21
 #, elixir-autogen, elixir-format
 msgid "Booking min score"
-msgstr ""
+msgstr "Punteggio minimo per la prenotazione"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:35
 #, elixir-autogen, elixir-format
 msgid "Booking slug"
-msgstr ""
+msgstr "Slug di prenotazione"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:68
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Cancel"
-msgstr "Annullamento in corso..."
+msgstr "Annulla"
 
 #: lib/tymeslot_web/live/admin_live.ex:292
 #, elixir-autogen, elixir-format
 msgid "Cannot demote the last admin. Promote someone else first."
-msgstr ""
+msgstr "Impossibile rimuovere l'ultimo amministratore. Promuovi prima un altro utente."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:174
 #, elixir-autogen, elixir-format
 msgid "Cannot disable password authentication while at least one admin signs in with email and password — doing so would lock them out. Demote those admins or have them switch to an OAuth login first."
-msgstr ""
+msgstr "Impossibile disattivare l'autenticazione tramite password finché almeno un amministratore accede con email e password — farlo lo escluderebbe dal sistema. Rimuovi quegli amministratori o chiedi loro di passare prima a un accesso OAuth."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:36
 #, elixir-autogen, elixir-format
 msgid "Changes here take effect immediately and override the matching environment variables and application configuration (e.g. REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) for this install."
-msgstr ""
+msgstr "Le modifiche apportate qui hanno effetto immediato e sovrascrivono le variabili d'ambiente e la configurazione dell'applicazione corrispondenti (ad es. REGISTRATION_ENABLED, PASSWORD_AUTH_ENABLED) per questa installazione."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:57
 #, elixir-autogen, elixir-format
 msgid "Common tasks"
-msgstr ""
+msgstr "Attività comuni"
 
 #: lib/tymeslot_web/live/admin_live.ex:298
 #, elixir-autogen, elixir-format
 msgid "Could not demote user."
-msgstr ""
+msgstr "Impossibile rimuovere l'utente dal ruolo di amministratore."
 
 #: lib/tymeslot_web/live/admin_live.ex:295
 #, elixir-autogen, elixir-format
 msgid "Could not promote user."
-msgstr ""
+msgstr "Impossibile promuovere l'utente."
 
 #: lib/tymeslot_web/live/admin_live.ex:53
 #: lib/tymeslot_web/live/admin_live.ex:71
@@ -1242,7 +1242,7 @@ msgstr ""
 #: lib/tymeslot_web/live/admin_live.ex:204
 #, elixir-autogen, elixir-format
 msgid "Could not update setting."
-msgstr ""
+msgstr "Impossibile aggiornare l'impostazione."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:44
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:97
@@ -1250,48 +1250,48 @@ msgstr ""
 #: lib/tymeslot_web/live/admin_live/components/users.ex:146
 #, elixir-autogen, elixir-format
 msgid "Demote"
-msgstr ""
+msgstr "Rimuovi ruolo"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:143
 #, elixir-autogen, elixir-format
 msgid "Demote %{email} from admin"
-msgstr ""
+msgstr "Rimuovi %{email} dal ruolo di amministratore"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:87
 #, elixir-autogen, elixir-format
 msgid "Demote admin"
-msgstr ""
+msgstr "Rimuovi amministratore"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:96
 #, elixir-autogen, elixir-format
 msgid "Demote me"
-msgstr ""
+msgstr "Rimuovi il mio ruolo"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:86
 #, elixir-autogen, elixir-format
 msgid "Demote yourself"
-msgstr ""
+msgstr "Rimuovi il tuo ruolo"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:38
 #, elixir-autogen, elixir-format
 msgid "Demote yourself from admin?"
-msgstr ""
+msgstr "Vuoi rimuovere te stesso dal ruolo di amministratore?"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:100
 #, elixir-autogen, elixir-format
 msgid "Demoting..."
-msgstr ""
+msgstr "Rimozione in corso..."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:148
 #: lib/tymeslot_web/live/admin_live/formatters.ex:116
 #, elixir-autogen, elixir-format
 msgid "Disabled"
-msgstr ""
+msgstr "Disattivato"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:34
 #, elixir-autogen, elixir-format
 msgid "Display name"
-msgstr ""
+msgstr "Nome visualizzato"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:33
 #, elixir-autogen, elixir-format, fuzzy
@@ -1301,253 +1301,253 @@ msgstr "Email"
 #: lib/tymeslot_web/live/admin_live/formatters.ex:97
 #, elixir-autogen, elixir-format
 msgid "Email address that receives admin alerts when the toggle above is enabled. Leave blank to fall back to the ADMIN_ALERT_EMAIL environment variable."
-msgstr ""
+msgstr "Indirizzo email che riceve gli avvisi di amministrazione quando l'opzione qui sopra è attivata. Lascia vuoto per utilizzare la variabile d'ambiente ADMIN_ALERT_EMAIL."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:91
 #, elixir-autogen, elixir-format
 msgid "Email operational alerts (webhook failures, integration health issues, background job errors) to the admin alert recipient. Requires a recipient address to be set below."
-msgstr ""
+msgstr "Invia tramite email gli avvisi operativi (errori webhook, problemi di integrazione, errori nei job in background) al destinatario degli avvisi di amministrazione. Richiede l'impostazione di un indirizzo destinatario qui sotto."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:61
 #, elixir-autogen, elixir-format
 msgid "Enable generic OAuth 2.0 / OIDC single sign-on (Keycloak, Authentik, Lemonldap, etc.). Requires the OAUTH_* environment variables to be set."
-msgstr ""
+msgstr "Attiva il single sign-on generico OAuth 2.0 / OIDC (Keycloak, Authentik, Lemonldap, ecc.). Richiede l'impostazione delle variabili d'ambiente OAUTH_*."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:140
 #: lib/tymeslot_web/live/admin_live/formatters.ex:115
 #, elixir-autogen, elixir-format
 msgid "Enabled"
-msgstr ""
+msgstr "Attivato"
 
 #: lib/tymeslot_web/live/admin_live.ex:186
 #, elixir-autogen, elixir-format
 msgid "Enter a number between 0.0 and 1.0."
-msgstr ""
+msgstr "Inserisci un numero compreso tra 0.0 e 1.0."
 
 #: lib/tymeslot_web/live/admin_live.ex:187
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
-msgstr ""
+msgstr "Inserisci un indirizzo email valido."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:32
 #, elixir-autogen, elixir-format
 msgid "Environment / config"
-msgstr ""
+msgstr "Ambiente / configurazione"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:17
 #, elixir-autogen, elixir-format
 msgid "Generic OIDC login"
-msgstr ""
+msgstr "Accesso OIDC generico"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:16
 #, elixir-autogen, elixir-format
 msgid "GitHub login"
-msgstr ""
+msgstr "Accesso con GitHub"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:75
 #, elixir-autogen, elixir-format
 msgid "Go create your first event type — and let people book you."
-msgstr ""
+msgstr "Vai a creare il tuo primo tipo di evento — e fatti prenotare."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:15
 #, elixir-autogen, elixir-format
 msgid "Google login"
-msgstr ""
+msgstr "Accesso con Google"
 
 #: lib/tymeslot_web/live/admin_live.ex:221
 #, elixir-autogen, elixir-format
 msgid "Invalid request."
-msgstr ""
+msgstr "Richiesta non valida."
 
 #: lib/tymeslot_web/live/admin_live.ex:216
 #: lib/tymeslot_web/live/admin_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Invalid user id."
-msgstr ""
+msgstr "ID utente non valido."
 
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:53
 #, elixir-autogen, elixir-format
 msgid "Manage this self-hosted Tymeslot install."
-msgstr ""
+msgstr "Gestisci questa installazione self-hosted di Tymeslot."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:85
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a booking. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
-msgstr ""
+msgstr "Punteggio minimo reCAPTCHA v3 (0.0–1.0) richiesto per accettare una prenotazione. Valori più bassi sono più permissivi; 0.3 è il valore predefinito e corrisponde alla raccomandazione di Google per i moduli con basso rischio di abuso."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:79
 #, elixir-autogen, elixir-format
 msgid "Minimum reCAPTCHA v3 score (0.0–1.0) required to accept a signup. Lower values are more permissive; 0.3 is the default and matches Google's recommendation for forms with low abuse risk."
-msgstr ""
+msgstr "Punteggio minimo reCAPTCHA v3 (0.0–1.0) richiesto per accettare una registrazione. Valori più bassi sono più permissivi; 0.3 è il valore predefinito e corrisponde alla raccomandazione di Google per i moduli con basso rischio di abuso."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:14
 #, elixir-autogen, elixir-format
 msgid "Password authentication"
-msgstr ""
+msgstr "Autenticazione tramite password"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:51
 #, elixir-autogen, elixir-format
 msgid "Profile, availability, integrations, and automation — all one click away."
-msgstr ""
+msgstr "Profilo, disponibilità, integrazioni e automazioni — tutto a un solo clic."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:30
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:95
 #: lib/tymeslot_web/live/admin_live/components/users.ex:158
 #, elixir-autogen, elixir-format
 msgid "Promote"
-msgstr ""
+msgstr "Promuovi"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:155
 #, elixir-autogen, elixir-format
 msgid "Promote %{email} to admin"
-msgstr ""
+msgstr "Promuovi %{email} ad amministratore"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:85
 #, elixir-autogen, elixir-format
 msgid "Promote user to admin"
-msgstr ""
+msgstr "Promuovi utente ad amministratore"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:99
 #, elixir-autogen, elixir-format
 msgid "Promoting..."
-msgstr ""
+msgstr "Promozione in corso..."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:59
 #, elixir-autogen, elixir-format
 msgid "Quick links to set up your profile, availability, and meeting types. Start here."
-msgstr ""
+msgstr "Collegamenti rapidi per configurare il profilo, la disponibilità e i tipi di incontro. Inizia da qui."
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:232
 #, elixir-autogen, elixir-format
 msgid "Recommended:"
-msgstr ""
+msgstr "Consigliato:"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:13
 #, elixir-autogen, elixir-format
 msgid "Registration enabled"
-msgstr ""
+msgstr "Registrazione attivata"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:73
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public booking form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr ""
+msgstr "Richiedi un punteggio reCAPTCHA v3 sufficiente sul modulo di prenotazione pubblico. Richiede l'impostazione di RECAPTCHA_SITE_KEY e RECAPTCHA_SECRET_KEY nell'ambiente — se le chiavi non sono presenti, l'opzione viene rispettata ma la verifica viene saltata silenziosamente."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:67
 #, elixir-autogen, elixir-format
 msgid "Require a passing reCAPTCHA v3 score on the public signup form. Requires RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY to be set in the environment — when keys are missing the toggle is honoured but verification is silently skipped."
-msgstr ""
+msgstr "Richiedi un punteggio reCAPTCHA v3 sufficiente sul modulo di registrazione pubblico. Richiede l'impostazione di RECAPTCHA_SITE_KEY e RECAPTCHA_SECRET_KEY nell'ambiente — se le chiavi non sono presenti, l'opzione viene rispettata ma la verifica viene saltata silenziosamente."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:36
 #, elixir-autogen, elixir-format
 msgid "Role"
-msgstr ""
+msgstr "Ruolo"
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:205
 #, elixir-autogen, elixir-format
 msgid "Save"
-msgstr ""
+msgstr "Salva"
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:134
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:163
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:187
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Set %{name}"
-msgstr "con %{name}"
+msgstr "Imposta %{name}"
 
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:62
 #, elixir-autogen, elixir-format
 msgid "Settings"
-msgstr ""
+msgstr "Impostazioni"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:50
 #, elixir-autogen, elixir-format
 msgid "Settings live in the sidebar"
-msgstr ""
+msgstr "Le impostazioni si trovano nella barra laterale"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:55
 #, elixir-autogen, elixir-format
 msgid "Show the \"Continue with GitHub\" button on login and signup. Requires GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to be set in the environment."
-msgstr ""
+msgstr "Mostra il pulsante \"Continua con GitHub\" nelle pagine di accesso e registrazione. Richiede l'impostazione di GITHUB_CLIENT_ID e GITHUB_CLIENT_SECRET nell'ambiente."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:49
 #, elixir-autogen, elixir-format
 msgid "Show the \"Continue with Google\" button on login and signup. Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to be set in the environment."
-msgstr ""
+msgstr "Mostra il pulsante \"Continua con Google\" nelle pagine di accesso e registrazione. Richiede l'impostazione di GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET nell'ambiente."
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:20
 #, elixir-autogen, elixir-format
 msgid "Signup min score"
-msgstr ""
+msgstr "Punteggio minimo per la registrazione"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:44
 #, elixir-autogen, elixir-format
 msgid "Switch between Scheduling (your event types) and Calendar (your bookings)."
-msgstr ""
+msgstr "Passa tra Pianificazione (i tuoi tipi di evento) e Calendario (le tue prenotazioni)."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:36
 #, elixir-autogen, elixir-format
 msgid "Take 30 seconds to learn where everything lives."
-msgstr ""
+msgstr "Prenditi 30 secondi per scoprire dove si trova ogni cosa."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:50
 #, elixir-autogen, elixir-format
 msgid "They will gain access to admin settings and user management."
-msgstr ""
+msgstr "Otterrà l'accesso alle impostazioni di amministrazione e alla gestione degli utenti."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:58
 #, elixir-autogen, elixir-format
 msgid "They will lose access to admin settings and user management."
-msgstr ""
+msgstr "Perderà l'accesso alle impostazioni di amministrazione e alla gestione degli utenti."
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:25
 #, elixir-autogen, elixir-format
 msgid "Total users"
-msgstr ""
+msgstr "Utenti totali"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:42
 #, elixir-autogen, elixir-format
 msgid "Two modes"
-msgstr ""
+msgstr "Due modalità"
 
 #: lib/tymeslot_web/live/admin_live/components/users.ex:66
 #, elixir-autogen, elixir-format
 msgid "User"
-msgstr ""
+msgstr "Utente"
 
 #: lib/tymeslot_web/live/admin_live.ex:275
 #, elixir-autogen, elixir-format
 msgid "User demoted from admin."
-msgstr ""
+msgstr "Utente rimosso dal ruolo di amministratore."
 
 #: lib/tymeslot_web/live/admin_live.ex:286
 #, elixir-autogen, elixir-format
 msgid "User not found."
-msgstr ""
+msgstr "Utente non trovato."
 
 #: lib/tymeslot_web/live/admin_live.ex:246
 #, elixir-autogen, elixir-format
 msgid "User promoted to admin."
-msgstr ""
+msgstr "Utente promosso ad amministratore."
 
 #: lib/tymeslot_web/live/admin_live/components/layout.ex:65
 #, elixir-autogen, elixir-format
 msgid "Users"
-msgstr ""
+msgstr "Utenti"
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:35
 #, elixir-autogen, elixir-format
 msgid "Welcome to your Tymeslot dashboard"
-msgstr ""
+msgstr "Benvenuto nella tua Dashboard Tymeslot"
 
 #: lib/tymeslot_web/live/admin_live.ex:268
 #, elixir-autogen, elixir-format
 msgid "You have been demoted from admin."
-msgstr ""
+msgstr "Sei stato rimosso dal ruolo di amministratore."
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:53
 #, elixir-autogen, elixir-format
 msgid "You will lose access to admin settings and user management, and be returned to your dashboard."
-msgstr ""
+msgstr "Perderai l'accesso alle impostazioni di amministrazione e alla gestione degli utenti, e verrai riportato alla tua Dashboard."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:74
 #, elixir-autogen, elixir-format, fuzzy
@@ -1557,54 +1557,54 @@ msgstr "È tutto pronto!"
 #: lib/tymeslot_web/live/admin_live/components/users.ex:130
 #, elixir-autogen, elixir-format
 msgid "You're the only admin. Promote someone else before demoting yourself."
-msgstr ""
+msgstr "Sei l'unico amministratore. Promuovi qualcun altro prima di rimuovere il tuo ruolo."
 
 #: lib/tymeslot/onboarding/dashboard_tour.ex:67
 #, elixir-autogen, elixir-format
 msgid "Your account"
-msgstr ""
+msgstr "Il tuo account"
 
 #: lib/tymeslot_web/live/admin_live/components/settings.ex:195
 #, elixir-autogen, elixir-format
 msgid "admin@example.com"
-msgstr ""
+msgstr "admin@esempio.it"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:46
 #, elixir-autogen, elixir-format
 msgid "from admin?"
-msgstr ""
+msgstr "dal ruolo di amministratore?"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:151
 #, elixir-autogen, elixir-format
 msgid "reCAPTCHA"
-msgstr ""
+msgstr "reCAPTCHA"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:19
 #, elixir-autogen, elixir-format
 msgid "reCAPTCHA on booking"
-msgstr ""
+msgstr "reCAPTCHA sulla prenotazione"
 
 #: lib/tymeslot_web/live/admin_live/formatters.ex:18
 #, elixir-autogen, elixir-format
 msgid "reCAPTCHA on signup"
-msgstr ""
+msgstr "reCAPTCHA sulla registrazione"
 
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:32
 #, elixir-autogen, elixir-format
 msgid "to admin?"
-msgstr ""
+msgstr "al ruolo di amministratore?"
 
 #: lib/tymeslot_web/components/tour_overlay.ex:77
 #, elixir-autogen, elixir-format
 msgid "Finish"
-msgstr ""
+msgstr "Fine"
 
 #: lib/tymeslot_web/components/tour_overlay.ex:48
 #, elixir-autogen, elixir-format
 msgid "Skip"
-msgstr ""
+msgstr "Salta"
 
 #: lib/tymeslot_web/components/tour_overlay.ex:37
 #, elixir-autogen, elixir-format
 msgid "Step %{n} of %{total}"
-msgstr ""
+msgstr "Passaggio %{n} di %{total}"
