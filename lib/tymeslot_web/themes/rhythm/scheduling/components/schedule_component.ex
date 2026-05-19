@@ -108,12 +108,20 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
               <div class="timezone-selector-container">
                 <label class="timezone-label">{gettext("Your timezone")}:</label>
                 <div class="timezone-dropdown-wrapper">
-                  <button
-                    class="timezone-trigger"
-                    phx-click="toggle_timezone_dropdown"
-                    phx-target={@myself}
-                    type="button"
+                  <.dropdown
+                    id="rhythm-timezone-dropdown"
+                    open={@timezone_dropdown_open}
+                    on_toggle="toggle_timezone_dropdown"
+                    on_close="close_timezone_dropdown"
+                    target={@myself}
+                    position={:bottom_end}
+                    role="dialog"
+                    trigger_class="timezone-trigger"
+                    class="timezone-dropdown"
+                    unstyled={true}
+                    aria-label="Select timezone"
                   >
+                  <:trigger>
                     <div class="timezone-display">
                       <%= if country_code = Timezones.country_code(@user_timezone || "America/New_York") do %>
                         <%= if Timezones.flag_exists?(country_code) do %>
@@ -127,53 +135,48 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.ScheduleComponent do
                       </span>
                     </div>
                     <div class="timezone-arrow">▼</div>
-                  </button>
-                  <%= if @timezone_dropdown_open do %>
-                    <div
-                      class="timezone-dropdown"
-                      phx-click-away="close_timezone_dropdown"
-                      phx-target={@myself}
-                    >
-                      <div class="timezone-search-wrapper">
-                        <input
-                          id="timezone-search-input"
-                          type="text"
-                          placeholder={gettext("Search cities, countries, or timezones...")}
-                          class="timezone-search"
-                          phx-keyup="search_timezone"
-                          phx-target={@myself}
-                          name="search"
-                          value={@timezone_search}
-                          phx-hook="AutoFocus"
-                        />
-                      </div>
-                      <div class="timezone-options scroll-y">
-                        <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>
-                          <button
-                            class="timezone-option"
-                            phx-click="change_timezone"
-                            phx-value-timezone={value}
-                            phx-target={@myself}
-                            type="button"
-                          >
-                            <div class="timezone-option-content">
-                              <%= if country_code = Timezones.country_code(value) do %>
-                                <%= if Timezones.flag_exists?(country_code) do %>
-                                  <Flagpack.flag name={country_code} class="timezone-option-flag" />
-                                <% else %>
-                                  <span class="timezone-option-flag timezone-flag--fallback">🌐</span>
-                                <% end %>
-                              <% end %>
-                              <div class="timezone-option-text">
-                                <div class="timezone-option-label">{label}</div>
-                                <div class="timezone-option-offset">{offset}</div>
-                              </div>
-                            </div>
-                          </button>
-                        <% end %>
-                      </div>
+                  </:trigger>
+                  <:panel>
+                    <div class="timezone-search-wrapper">
+                      <input
+                        id="timezone-search-input"
+                        type="text"
+                        placeholder={gettext("Search cities, countries, or timezones...")}
+                        class="timezone-search"
+                        phx-keyup="search_timezone"
+                        phx-target={@myself}
+                        name="search"
+                        value={@timezone_search}
+                        phx-hook="AutoFocus"
+                      />
                     </div>
-                  <% end %>
+                    <div class="timezone-options scroll-y">
+                      <%= for {label, value, offset} <- Timezones.search(@timezone_search) do %>
+                        <button
+                          class="timezone-option"
+                          phx-click="change_timezone"
+                          phx-value-timezone={value}
+                          phx-target={@myself}
+                          type="button"
+                        >
+                          <div class="timezone-option-content">
+                            <%= if country_code = Timezones.country_code(value) do %>
+                              <%= if Timezones.flag_exists?(country_code) do %>
+                                <Flagpack.flag name={country_code} class="timezone-option-flag" />
+                              <% else %>
+                                <span class="timezone-option-flag timezone-flag--fallback">🌐</span>
+                              <% end %>
+                            <% end %>
+                            <div class="timezone-option-text">
+                              <div class="timezone-option-label">{label}</div>
+                              <div class="timezone-option-offset">{offset}</div>
+                            </div>
+                          </div>
+                        </button>
+                      <% end %>
+                    </div>
+                  </:panel>
+                </.dropdown>
                 </div>
               </div>
             </div>
