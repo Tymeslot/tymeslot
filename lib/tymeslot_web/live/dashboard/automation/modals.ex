@@ -349,6 +349,90 @@ defmodule TymeslotWeb.Dashboard.Automation.Modals do
     """
   end
 
+  attr :show, :boolean, default: false
+  attr :on_cancel, :any, required: true
+  attr :on_confirm, :any, required: true
+
+  @spec delete_slack_modal(map()) :: Phoenix.LiveView.Rendered.t()
+  def delete_slack_modal(assigns) do
+    ~H"""
+    <CoreComponents.modal
+      id="delete-slack-modal"
+      show={@show}
+      on_cancel={@on_cancel}
+      size={:small}
+    >
+      <:header>
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          Delete Slack Integration?
+        </div>
+      </:header>
+
+      <div class="text-center sm:text-left">
+        <p class="text-tymeslot-600 font-medium">
+          This action cannot be undone. All delivery logs for this integration will also be deleted.
+        </p>
+      </div>
+
+      <:footer>
+        <div class="flex justify-end gap-3">
+          <CoreComponents.action_button
+            variant={:secondary}
+            phx-click={@on_cancel}
+          >
+            Cancel
+          </CoreComponents.action_button>
+          <CoreComponents.action_button
+            variant={:danger}
+            phx-click={@on_confirm}
+          >
+            Delete Integration
+          </CoreComponents.action_button>
+        </div>
+      </:footer>
+    </CoreComponents.modal>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :show, :boolean, default: false
+  attr :integration, :map, required: true
+  attr :deliveries, :list, required: true
+  attr :stats, :map, default: nil
+  attr :on_close, :any, required: true
+
+  @spec slack_deliveries_modal(map()) :: Phoenix.LiveView.Rendered.t()
+  def slack_deliveries_modal(assigns) do
+    ~H"""
+    <CoreComponents.modal id={@id} show={@show} on_cancel={@on_close} size={:large}>
+      <:header>
+        Delivery History — <%= @integration.name %>
+      </:header>
+
+      <div class="space-y-8">
+        <.delivery_stats_grid stats={@stats} />
+        <.delivery_list deliveries={@deliveries} />
+      </div>
+
+      <:footer>
+        <div class="flex justify-end">
+          <CoreComponents.action_button variant={:primary} phx-click={@on_close}>
+            Close
+          </CoreComponents.action_button>
+        </div>
+      </:footer>
+    </CoreComponents.modal>
+    """
+  end
+
   # ============================================================================
   # Shared Delivery Components
   # ============================================================================

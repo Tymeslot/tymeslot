@@ -122,6 +122,8 @@ config :tymeslot, :oban_queues,
   webhooks: 5,
   # Telegram message delivery
   telegram_messages: 10,
+  # Slack message delivery
+  slack_messages: 10,
   # Payment processing (used by SaaS)
   payments: 5,
   # Video room creation and management
@@ -368,6 +370,13 @@ config :tymeslot, :reconciliation,
   alert_admins: true,
   # Number of days to look back when fetching subscriptions for reconciliation
   days_back: 7
+
+# Slack notifications — credentials supplied via env at runtime
+config :tymeslot,
+  slack_notifications_allowed: false,
+  slack_oauth_available: false,
+  slack_client_id: nil,
+  slack_client_secret: nil
 
 # Import environment specific config
 import_config "#{config_env()}.exs"

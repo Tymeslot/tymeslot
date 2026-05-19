@@ -110,7 +110,7 @@ AES-encrypted credentials at rest, no third-party analytics or tracking pixels, 
 </tr>
 </table>
 
-Plus: two themes (Quill, Rhythm) with dark mode, five languages (English, German, Ukrainian, French, Italian), white-label option, Telegram notifications, drag-and-drop calendar dashboard, attendee-driven reschedule flow, integration health alerts, and **optional paid bookings via Stripe Connect** (see [Meeting payments](#meeting-payments) below).
+Plus: two themes (Quill, Rhythm) with dark mode, five languages (English, German, Ukrainian, French, Italian), white-label option, Slack and Telegram notifications, drag-and-drop calendar dashboard, attendee-driven reschedule flow, integration health alerts, and **optional paid bookings via Stripe Connect** (see [Meeting payments](#meeting-payments) below).
 
 ---
 

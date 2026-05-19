@@ -32,6 +32,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
     domain: [
       # Core scheduling & user features
       :auth,
+      :automation,
       :availability,
       :bookings,
       :calendar,
@@ -53,6 +54,7 @@ defmodule Tymeslot.Test.TagTaxonomy do
       :video,
       :workers,
       :seo,
+      :slack,
       :telegram
     ],
     web_layer: [

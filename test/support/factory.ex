@@ -23,6 +23,8 @@ defmodule Tymeslot.Factory do
   alias Tymeslot.Security.Encryption
   alias Tymeslot.Security.Password
   alias Tymeslot.Security.Token
+  alias Tymeslot.Slack.SlackDeliverySchema
+  alias Tymeslot.Slack.SlackIntegrationSchema
   alias Tymeslot.Telegram.TelegramDeliverySchema
   alias Tymeslot.Telegram.TelegramIntegrationSchema
   alias Tymeslot.ThemeCustomizations.ThemeCustomizationSchema
@@ -278,12 +280,40 @@ defmodule Tymeslot.Factory do
     }
   end
 
+  @spec slack_integration_factory() :: SlackIntegrationSchema.t()
+  def slack_integration_factory do
+    %SlackIntegrationSchema{
+      name: sequence(:slack_name, &"Slack #{&1}"),
+      app_mode: "oauth",
+      bot_token_encrypted: Encryption.encrypt("xoxb-test-token"),
+      team_id: sequence(:slack_team_id, &"T#{&1 + 100_000}"),
+      team_name: "Test Workspace",
+      channel_id: sequence(:slack_channel_id, &"C#{&1 + 100_000}"),
+      channel_name: "#bookings",
+      events: ["meeting.created", "meeting.cancelled", "meeting.rescheduled"],
+      is_active: true,
+      user: build(:user)
+    }
+  end
+
   @spec telegram_delivery_factory() :: TelegramDeliverySchema.t()
   def telegram_delivery_factory do
     %TelegramDeliverySchema{
       integration: build(:telegram_integration),
       event_type: "meeting.created",
       message_text: "Test message",
+      response_status: 200,
+      attempt_count: 1,
+      inserted_at: DateTime.utc_now()
+    }
+  end
+
+  @spec slack_delivery_factory() :: SlackDeliverySchema.t()
+  def slack_delivery_factory do
+    %SlackDeliverySchema{
+      integration: build(:slack_integration),
+      event_type: "meeting.created",
+      message_blocks: %{"blocks" => []},
       response_status: 200,
       attempt_count: 1,
       inserted_at: DateTime.utc_now()

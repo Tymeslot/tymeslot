@@ -58,6 +58,7 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
   slot :inner_block
   slot :leading_icon
   slot :trailing_icon
+  slot :description, doc: "Optional helper text rendered between the label and the input."
 
   @spec input(map()) :: Phoenix.LiveView.Rendered.t()
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -86,6 +87,12 @@ defmodule TymeslotWeb.Components.CoreComponents.Forms do
             <span class="text-red-500 ml-0.5">*</span>
           <% end %>
         </.label>
+      <% end %>
+
+      <%= if @description != [] do %>
+        <p class="text-token-xs text-tymeslot-500 font-medium normal-case tracking-normal -mt-1 mb-2">
+          {render_slot(@description)}
+        </p>
       <% end %>
 
       <div class="relative group">
