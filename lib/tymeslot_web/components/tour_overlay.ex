@@ -7,7 +7,7 @@ defmodule TymeslotWeb.Components.TourOverlay do
   is handled by the `DashboardTour` JS hook. The server owns step-index state
   and dispatches `tour:*` events to the parent LiveView.
   """
-  use Phoenix.LiveComponent
+  use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
   @impl Phoenix.LiveComponent
@@ -40,42 +40,31 @@ defmodule TymeslotWeb.Components.TourOverlay do
         <p class="dashboard-tour__body">{@step.body}</p>
 
         <div class="dashboard-tour__actions">
-          <button
-            type="button"
-            class="dashboard-tour__btn dashboard-tour__btn--ghost"
-            phx-click="tour:skip"
-          >
+          <.action_button variant={:outline} phx-click="tour:skip">
             {gettext("Skip")}
-          </button>
+          </.action_button>
 
           <div class="dashboard-tour__spacer"></div>
 
-          <button
-            :if={@step_index > 0}
-            type="button"
-            class="dashboard-tour__btn dashboard-tour__btn--secondary"
-            phx-click="tour:back"
-          >
+          <.action_button :if={@step_index > 0} variant={:secondary} phx-click="tour:back">
             {gettext("Back")}
-          </button>
+          </.action_button>
 
-          <button
+          <.action_button
             :if={@step_index < @total_steps - 1}
-            type="button"
-            class="dashboard-tour__btn dashboard-tour__btn--primary"
+            variant={:primary}
             phx-click="tour:next"
           >
             {gettext("Next")}
-          </button>
+          </.action_button>
 
-          <button
+          <.action_button
             :if={@step_index == @total_steps - 1}
-            type="button"
-            class="dashboard-tour__btn dashboard-tour__btn--primary"
+            variant={:primary}
             phx-click="tour:finish"
           >
             {gettext("Finish")}
-          </button>
+          </.action_button>
         </div>
       </div>
     </div>
