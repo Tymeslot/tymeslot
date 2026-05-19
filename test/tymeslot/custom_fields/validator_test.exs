@@ -27,10 +27,11 @@ defmodule Tymeslot.CustomFields.ValidatorTest do
       assert {:ok, ""} = Validator.validate("", d)
     end
 
-    test "yes_no requires true when required" do
-      d = %{"type" => "yes_no", "required" => true, "label" => "Agree"}
+    test "yes_no accepts both true and false; missing answer fails when required" do
+      d = %{"type" => "yes_no", "required" => true, "label" => "Attending?"}
       assert {:ok, true} = Validator.validate(true, d)
-      assert {:error, _} = Validator.validate(false, d)
+      assert {:ok, false} = Validator.validate(false, d)
+      assert {:error, _} = Validator.validate(nil, d)
     end
 
     test "single_select must be a known key" do
