@@ -10,8 +10,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
-  alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerNormaliser
-  alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine
+  alias TymeslotWeb.Themes.Shared.CustomQuestions.Events
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
 
   @impl Phoenix.LiveComponent
@@ -20,50 +19,11 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
   end
 
   @impl Phoenix.LiveComponent
-  def handle_event("answer", params, socket) do
-    %Engine{} = engine = socket.assigns.engine
-    id = Engine.current_definition(engine)["id"]
-    raw = Map.get(params, "value", params)
-    value = AnswerNormaliser.normalise(raw)
-    send(self(), {:step_event, :questions, :answer, {id, value}})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("multi_toggle", %{"value" => key}, socket) do
-    %Engine{} = engine = socket.assigns.engine
-    id = Engine.current_definition(engine)["id"]
-    current = Map.get(engine.answers, id) || []
-    next = if key in current, do: List.delete(current, key), else: [key | current]
-    send(self(), {:step_event, :questions, :answer, {id, next}})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("next", _params, socket) do
-    send(self(), {:step_event, :questions, :next, nil})
-    {:noreply, socket}
-  end
-
-  @impl Phoenix.LiveComponent
-  def handle_event("back", _params, socket) do
-    send(self(), {:step_event, :questions, :back, nil})
-    {:noreply, socket}
-  end
+  defdelegate handle_event(event, params, socket), to: Events
 
   @impl Phoenix.LiveComponent
   def render(assigns) do
-    engine = assigns.engine
-    d = Engine.current_definition(engine)
-
-    assigns =
-      assigns
-      |> assign(:definition, d)
-      |> assign(:value, Map.get(engine.answers, d["id"]))
-      |> assign(:error, Map.get(engine.errors, d["id"]))
-      |> assign(:index, engine.current_index)
-      |> assign(:total, Engine.total(engine))
-      |> assign(:last?, engine.current_index == Engine.total(engine) - 1)
+    assigns = Events.assign_render_state(assigns)
 
     ~H"""
     <div class="scheduling-box" data-locale={@locale}>
