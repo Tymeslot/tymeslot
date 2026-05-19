@@ -65,4 +65,22 @@ defmodule Tymeslot.Onboarding.DashboardTourTest do
       assert DashboardTour.count() == length(DashboardTour.steps())
     end
   end
+
+  describe "step_at/1" do
+    test "returns the first step at index 0" do
+      assert %{id: :welcome} = DashboardTour.step_at(0)
+    end
+
+    test "returns the last step at the final index" do
+      last_index = DashboardTour.count() - 1
+      last_step = DashboardTour.step_at(last_index)
+      assert is_map(last_step)
+      assert Map.has_key?(last_step, :id)
+    end
+
+    test "returns nil for an out-of-range index" do
+      assert is_nil(DashboardTour.step_at(DashboardTour.count()))
+      assert is_nil(DashboardTour.step_at(999))
+    end
+  end
 end

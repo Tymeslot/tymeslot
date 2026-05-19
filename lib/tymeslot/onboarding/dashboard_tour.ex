@@ -79,4 +79,7 @@ defmodule Tymeslot.Onboarding.DashboardTour do
 
   @spec count() :: non_neg_integer()
   def count, do: length(steps())
+
+  @spec step_at(non_neg_integer()) :: step() | nil
+  def step_at(index), do: Enum.at(steps(), index)
 end
