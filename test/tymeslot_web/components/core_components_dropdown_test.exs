@@ -61,14 +61,11 @@ defmodule TymeslotWeb.Components.CoreComponents.DropdownTest do
     assert html =~ "Items"
   end
 
-  test "phx-click-away is wired when open" do
-    html = render_dropdown(%{open: true})
-    assert html =~ ~s(phx-click-away="close")
-  end
-
-  test "phx-click-away is omitted when closed" do
-    html = render_dropdown(%{open: false})
-    refute html =~ "phx-click-away"
+  test "phx-click-away is always wired so the binding is registered at mount" do
+    open_html = render_dropdown(%{open: true})
+    closed_html = render_dropdown(%{open: false})
+    assert open_html =~ ~s(phx-click-away="close")
+    assert closed_html =~ ~s(phx-click-away="close")
   end
 
   test "panel has id derived from dropdown id" do
@@ -160,13 +157,12 @@ defmodule TymeslotWeb.Components.CoreComponents.DropdownTest do
     assert html =~ ~s(phx-target="#comp")
   end
 
-  test "phx-target appears on container only when open" do
+  test "phx-target is on container and trigger regardless of open state" do
     open_html = render_dropdown(%{open: true, target: "#comp"})
     closed_html = render_dropdown(%{open: false, target: "#comp"})
-    # open: container + button = 2 occurrences, so split gives 3 parts
+    # container + button = 2 occurrences in both states, split into 3 parts
     assert length(String.split(open_html, ~s(phx-target="#comp"))) == 3
-    # closed: button only = 1 occurrence, split gives 2 parts
-    assert length(String.split(closed_html, ~s(phx-target="#comp"))) == 2
+    assert length(String.split(closed_html, ~s(phx-target="#comp"))) == 3
   end
 
   test "dropdown_item renders label" do

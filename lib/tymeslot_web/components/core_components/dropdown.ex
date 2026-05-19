@@ -41,10 +41,10 @@ defmodule TymeslotWeb.Components.CoreComponents.Dropdown do
     <div
       id={@id}
       class="relative"
-      phx-click-away={if @open, do: @on_close, else: nil}
+      phx-click-away={@on_close}
       phx-window-keydown={@open && @on_close}
       phx-key="escape"
-      phx-target={if @open and @target, do: @target}
+      phx-target={@target}
     >
       <button
         type="button"
