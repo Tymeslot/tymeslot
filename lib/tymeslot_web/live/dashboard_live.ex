@@ -143,8 +143,10 @@ defmodule TymeslotWeb.DashboardLive do
 
   use TymeslotWeb, :live_view
 
+  alias Ecto.UUID
   alias Phoenix.Naming
   alias Tymeslot.Auth
+  alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.Dashboard.DashboardContext
   alias Tymeslot.Integrations.Calendar
   alias Tymeslot.Integrations.Calendar.Selection
@@ -152,6 +154,7 @@ defmodule TymeslotWeb.DashboardLive do
   alias Tymeslot.Profiles
   alias TymeslotWeb.Components.DashboardLayout
   alias TymeslotWeb.Components.TourOverlay
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Helpers.PageTitles
 
   alias TymeslotWeb.Dashboard.{
@@ -169,10 +172,6 @@ defmodule TymeslotWeb.DashboardLive do
   }
 
   alias TymeslotWeb.Live.Dashboard.EmbedSettingsComponent
-
-  alias Ecto.UUID
-  alias Tymeslot.CustomFields.FieldDefinition
-  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
 
   require Logger
 
