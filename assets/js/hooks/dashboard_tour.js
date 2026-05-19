@@ -93,10 +93,12 @@ export const DashboardTour = {
   },
 
   applyCenteredLayout() {
+    const backdrop = this.el.querySelector(".dashboard-tour__backdrop");
     const spotlight = this.el.querySelector(".dashboard-tour__spotlight");
     const tooltip = this.el.querySelector(".dashboard-tour__tooltip");
     if (!spotlight || !tooltip) return;
 
+    if (backdrop) backdrop.style.display = "block";
     spotlight.style.display = "none";
 
     tooltip.style.position = "fixed";
@@ -106,9 +108,12 @@ export const DashboardTour = {
   },
 
   applySpotlightLayout(target, placement) {
+    const backdrop = this.el.querySelector(".dashboard-tour__backdrop");
     const spotlight = this.el.querySelector(".dashboard-tour__spotlight");
     const tooltip = this.el.querySelector(".dashboard-tour__tooltip");
     if (!spotlight || !tooltip) return;
+
+    if (backdrop) backdrop.style.display = "none";
 
     target.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
 

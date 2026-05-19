@@ -2,10 +2,10 @@
    Dashboard Tour — Overlay, spotlight, and tooltip
    ==========================================================================
 
-   Post-onboarding guided tour. The dim effect is produced entirely by the
-   spotlight's massive box-shadow — the `__backdrop` element is unused in v1
-   but kept in the markup for future styling. Positioning of the spotlight
-   and tooltip is driven by the `DashboardTour` JS hook.
+   Post-onboarding guided tour. Dimming is produced by either:
+     - the spotlight's massive box-shadow (anchored / spotlit steps), OR
+     - the full-viewport `__backdrop` element (centered steps with no anchor).
+   The JS hook toggles which element is visible per step.
    ========================================================================== */
 
 .dashboard-tour {
@@ -16,8 +16,14 @@
 }
 
 .dashboard-tour__backdrop {
-  /* Unused in v1 — the spotlight box-shadow provides the dim. */
-  display: none;
+  /* Visible by default so the welcome step (first paint) shows a dimmed
+     dashboard immediately. The JS hook hides it for spotlit steps where
+     the spotlight's box-shadow provides the dim instead. */
+  position: fixed;
+  inset: 0;
+  display: block;
+  background: rgba(20, 20, 40, 0.55);
+  pointer-events: none;
 }
 
 .dashboard-tour__spotlight {
@@ -34,6 +40,14 @@
 }
 
 .dashboard-tour__tooltip {
+  /* Default to centred so the welcome step renders correctly on the
+     first paint. The JS hook overrides position/transform for spotlit
+     steps. Prevents a flash of top-left positioning before JS runs. */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
   pointer-events: auto;
   max-width: 22rem;
   padding: var(--spacing-5) var(--spacing-6);
