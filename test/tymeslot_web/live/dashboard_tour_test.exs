@@ -76,6 +76,14 @@ defmodule TymeslotWeb.DashboardTourTest do
       assert view |> element("#dashboard-tour") |> render() =~ "data-step-index=\"0\""
     end
 
+    test "tour:back after tour:next returns to step 0", %{view: view} do
+      render_click(view, "tour:next")
+      assert view |> element("#dashboard-tour") |> render() =~ "data-step-index=\"1\""
+
+      render_click(view, "tour:back")
+      assert view |> element("#dashboard-tour") |> render() =~ "data-step-index=\"0\""
+    end
+
     test "tour:next past the last step dismisses the overlay", %{view: view} do
       for _step <- 1..(DashboardTour.count() - 1), do: render_click(view, "tour:next")
 
@@ -86,9 +94,10 @@ defmodule TymeslotWeb.DashboardTourTest do
       refute has_element?(view, "#dashboard-tour")
     end
 
-    test "tour:skip dismisses the overlay", %{view: view} do
+    test "tour:skip dismisses the overlay", %{view: view, user: user} do
       render_click(view, "tour:skip")
       refute has_element?(view, "#dashboard-tour")
+      assert %DateTime{} = Repo.reload!(user).dashboard_tour_seen_at
     end
 
     test "tour:finish dismisses the overlay", %{view: view, user: user} do
@@ -96,8 +105,25 @@ defmodule TymeslotWeb.DashboardTourTest do
 
       render_click(view, "tour:finish")
       refute has_element?(view, "#dashboard-tour")
+      assert %DateTime{} = Repo.reload!(user).dashboard_tour_seen_at
+    end
 
-      _user = user
+    test "tour:skip-step advances the step on a non-final step", %{view: view} do
+      assert view |> element("#dashboard-tour") |> render() =~ "data-step-index=\"0\""
+
+      render_click(view, "tour:skip-step")
+
+      assert view |> element("#dashboard-tour") |> render() =~ "data-step-index=\"1\""
+    end
+
+    test "tour:skip-step on the final step dismisses the overlay", %{view: view} do
+      for _step <- 1..(DashboardTour.count() - 1), do: render_click(view, "tour:next")
+
+      assert has_element?(view, "#dashboard-tour")
+
+      render_click(view, "tour:skip-step")
+
+      refute has_element?(view, "#dashboard-tour")
     end
   end
 
@@ -111,14 +137,14 @@ defmodule TymeslotWeb.DashboardTourTest do
       assert %DateTime{} = Repo.reload!(user).dashboard_tour_seen_at
     end
 
-    test "tour:viewport-too-small marks seen and dismisses", %{conn: conn} do
+    test "tour:viewport-too-small dismisses the overlay without marking seen", %{conn: conn} do
       user = insert_fresh_dashboard_user(dashboard_tour_seen_at: nil)
 
       {:ok, view, _html} = live(log_in_user(conn, user), ~p"/dashboard")
       render_hook(view, "tour:viewport-too-small", %{})
 
       refute has_element?(view, "#dashboard-tour")
-      assert %DateTime{} = Repo.reload!(user).dashboard_tour_seen_at
+      assert is_nil(Repo.reload!(user).dashboard_tour_seen_at)
     end
   end
 end
