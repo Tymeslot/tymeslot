@@ -12,6 +12,7 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
 
   alias TymeslotWeb.Themes.Shared.CustomQuestions.AnswerNormaliser
   alias TymeslotWeb.Themes.Shared.CustomQuestions.Engine
+  alias TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.Renderer, as: InputRenderer
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
@@ -25,6 +26,16 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
     raw = Map.get(params, "value", params)
     value = AnswerNormaliser.normalise(raw)
     send(self(), {:step_event, :questions, :answer, {id, value}})
+    {:noreply, socket}
+  end
+
+  @impl Phoenix.LiveComponent
+  def handle_event("multi_toggle", %{"value" => key}, socket) do
+    %Engine{} = engine = socket.assigns.engine
+    id = Engine.current_definition(engine)["id"]
+    current = Map.get(engine.answers, id) || []
+    next = if key in current, do: List.delete(current, key), else: [key | current]
+    send(self(), {:step_event, :questions, :answer, {id, next}})
     {:noreply, socket}
   end
 
@@ -83,10 +94,9 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
               <p class="rhythm-questions-help">{@definition["help_text"]}</p>
             <% end %>
 
-            <.field_input
+            <InputRenderer.render
               definition={@definition}
               value={@value}
-              error={@error}
               myself={@myself}
             />
 
@@ -100,9 +110,8 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
                 class="prev-button"
                 phx-click="back"
                 phx-target={@myself}
-                disabled={@index == 0}
               >
-                ← {gettext("back")}
+                <span class="custom-question-cta-nowrap">← {gettext("back")}</span>
               </button>
 
               <button
@@ -111,220 +120,18 @@ defmodule TymeslotWeb.Themes.Rhythm.Scheduling.Components.CustomQuestionsCompone
                 phx-click="next"
                 phx-target={@myself}
               >
-                <%= if @last? do %>
-                  {gettext("Continue to your details")}
-                <% else %>
-                  {gettext("next")} →
-                <% end %>
+                <span class="custom-question-cta-nowrap">
+                  <%= if @last? do %>
+                    {gettext("Continue")} →
+                  <% else %>
+                    {gettext("next")} →
+                  <% end %>
+                </span>
               </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
-    """
-  end
-
-  attr :definition, :map, required: true
-  attr :value, :any, required: true
-  attr :error, :any, required: true
-  attr :myself, :any, required: true
-
-  defp field_input(%{definition: %{"type" => "short_text"}} = assigns) do
-    ~H"""
-    <input
-      type="text"
-      name="value"
-      value={@value}
-      phx-debounce="blur"
-      phx-blur="answer"
-      phx-target={@myself}
-      phx-keydown="next"
-      phx-key="Enter"
-      class="custom-question-input"
-      autocomplete="off"
-      autofocus
-      aria-label={@definition["label"]}
-      aria-required={to_string(@definition["required"] == true)}
-    />
-    """
-  end
-
-  defp field_input(%{definition: %{"type" => "number"}} = assigns) do
-    ~H"""
-    <input
-      type="number"
-      name="value"
-      value={@value}
-      phx-blur="answer"
-      phx-target={@myself}
-      phx-keydown="next"
-      phx-key="Enter"
-      class="custom-question-input"
-      autofocus
-      aria-label={@definition["label"]}
-      aria-required={to_string(@definition["required"] == true)}
-    />
-    """
-  end
-
-  defp field_input(%{definition: %{"type" => "phone"}} = assigns) do
-    ~H"""
-    <input
-      type="tel"
-      name="value"
-      value={@value}
-      phx-blur="answer"
-      phx-target={@myself}
-      phx-keydown="next"
-      phx-key="Enter"
-      class="custom-question-input"
-      autofocus
-      aria-label={@definition["label"]}
-      aria-required={to_string(@definition["required"] == true)}
-    />
-    """
-  end
-
-  defp field_input(%{definition: %{"type" => "url"}} = assigns) do
-    ~H"""
-    <input
-      type="url"
-      name="value"
-      value={@value}
-      phx-blur="answer"
-      phx-target={@myself}
-      phx-keydown="next"
-      phx-key="Enter"
-      class="custom-question-input"
-      autofocus
-      aria-label={@definition["label"]}
-      aria-required={to_string(@definition["required"] == true)}
-    />
-    """
-  end
-
-  defp field_input(%{definition: %{"type" => "date"}} = assigns) do
-    ~H"""
-    <input
-      type="date"
-      name="value"
-      value={@value}
-      phx-blur="answer"
-      phx-target={@myself}
-      phx-keydown="next"
-      phx-key="Enter"
-      class="custom-question-input"
-      autofocus
-      aria-label={@definition["label"]}
-      aria-required={to_string(@definition["required"] == true)}
-    />
-    """
-  end
-
-  defp field_input(%{definition: %{"type" => "time"}} = assigns) do
-    ~H"""
-    <input
-      type="time"
-      name="value"
-      value={@value}
-      phx-blur="answer"
-      phx-target={@myself}
-      phx-keydown="next"
-      phx-key="Enter"
-      class="custom-question-input"
-      autofocus
-      aria-label={@definition["label"]}
-      aria-required={to_string(@definition["required"] == true)}
-    />
-    """
-  end
-
-  defp field_input(%{definition: %{"type" => "yes_no"}} = assigns) do
-    ~H"""
-    <label class="custom-question-checkbox">
-      <input
-        type="checkbox"
-        name="value"
-        checked={@value == true}
-        phx-click="answer"
-        phx-value-value={!(@value == true)}
-        phx-target={@myself}
-      />
-      <span>{@definition["label"]}</span>
-    </label>
-    """
-  end
-
-  defp field_input(%{definition: %{"type" => "single_select", "options" => opts}} = assigns)
-       when length(opts) <= 5 do
-    ~H"""
-    <fieldset class="custom-question-radios">
-      <legend class="sr-only">{@definition["label"]}</legend>
-      <%= for opt <- @definition["options"] do %>
-        <label class="custom-question-radio">
-          <input
-            type="radio"
-            name="value"
-            value={opt["key"]}
-            checked={@value == opt["key"]}
-            phx-click="answer"
-            phx-value-value={opt["key"]}
-            phx-target={@myself}
-          />
-          <span>{opt["label"]}</span>
-        </label>
-      <% end %>
-    </fieldset>
-    """
-  end
-
-  defp field_input(%{definition: %{"type" => "single_select"}} = assigns) do
-    ~H"""
-    <select name="value" phx-change="answer" phx-target={@myself} class="custom-question-input">
-      <option value="">{gettext("Select…")}</option>
-      <%= for opt <- @definition["options"] do %>
-        <option value={opt["key"]} selected={@value == opt["key"]}>{opt["label"]}</option>
-      <% end %>
-    </select>
-    """
-  end
-
-  defp field_input(%{definition: %{"type" => "multi_select"}} = assigns) do
-    ~H"""
-    <fieldset class="custom-question-checkboxes">
-      <legend class="sr-only">{@definition["label"]}</legend>
-      <%= for opt <- @definition["options"] do %>
-        <label class="custom-question-checkbox">
-          <input
-            type="checkbox"
-            value={opt["key"]}
-            checked={opt["key"] in (@value || [])}
-            phx-click="answer"
-            phx-value-value={opt["key"]}
-            phx-target={@myself}
-          />
-          <span>{opt["label"]}</span>
-        </label>
-      <% end %>
-    </fieldset>
-    """
-  end
-
-  defp field_input(%{definition: %{"type" => "note"}} = assigns) do
-    ~H"""
-    <div class="custom-question-note">
-      <p class="custom-question-note-body">{@definition["body"]}</p>
-      <label class="custom-question-checkbox">
-        <input
-          type="checkbox"
-          checked={match?(%{"confirmed" => true}, @value)}
-          phx-click="answer"
-          phx-value-value="acknowledge"
-          phx-target={@myself}
-        />
-        <span>{gettext("I acknowledge the above")}</span>
-      </label>
     </div>
     """
   end

@@ -379,3 +379,227 @@
   color: var(--theme-text-secondary);
   font-size: var(--theme-font-size-sm);
 }
+
+/* Yes / No tile pair — visually distinct from the prev/submit button row. */
+.custom-question-yes-no {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin: var(--space-sm) 0 var(--space-md);
+  padding: 0;
+  border: 0;
+}
+
+.custom-question-yes-no-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  min-height: 7.5rem;
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  border: var(--border-width-thin) solid var(--border-strong);
+  background: var(--surface-light);
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  transition: border-color var(--transition-normal), background var(--transition-normal), color var(--transition-normal), transform var(--transition-normal);
+}
+
+.custom-question-yes-no-tile:hover {
+  color: var(--theme-text);
+  border-color: var(--theme-primary);
+  background: var(--surface-strong);
+  transform: translateY(-2px);
+}
+
+.custom-question-yes-no-tile:focus-within {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25);
+}
+
+.custom-question-yes-no-tile.is-selected {
+  color: white;
+  border-color: var(--theme-primary);
+  background: var(--theme-primary);
+}
+
+.custom-question-yes-no-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: var(--border-width-thin) solid currentColor;
+  transition: var(--transition-normal);
+}
+
+.custom-question-yes-no-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.custom-question-yes-no-tile.is-selected .custom-question-yes-no-icon {
+  background: white;
+  border-color: white;
+  color: var(--theme-primary);
+}
+
+.custom-question-yes-no-label {
+  font-size: var(--theme-font-size-base);
+  font-weight: var(--font-weight-medium);
+}
+
+.custom-question-cta-nowrap {
+  white-space: nowrap;
+}
+
+/* Override CoreComponents .input class so inputs sit on the Rhythm gradient
+   rather than appearing as solid white slabs from the global app stylesheet. */
+.rhythm-theme-wrapper .input,
+.rhythm-theme-wrapper input.input,
+.rhythm-theme-wrapper textarea.input,
+.rhythm-theme-wrapper select.input {
+  width: 100%;
+  max-width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: var(--border-width-thin) solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-light);
+  color: var(--theme-text);
+  transition: border-color var(--transition-normal), background var(--transition-normal), box-shadow var(--transition-normal);
+  box-sizing: border-box;
+}
+
+.rhythm-theme-wrapper .input::placeholder,
+.rhythm-theme-wrapper input.input::placeholder,
+.rhythm-theme-wrapper textarea.input::placeholder {
+  color: var(--theme-text-secondary);
+}
+
+.rhythm-theme-wrapper .input:hover,
+.rhythm-theme-wrapper input.input:hover,
+.rhythm-theme-wrapper textarea.input:hover,
+.rhythm-theme-wrapper select.input:hover {
+  background: var(--surface-strong);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.rhythm-theme-wrapper .input:focus,
+.rhythm-theme-wrapper input.input:focus,
+.rhythm-theme-wrapper textarea.input:focus,
+.rhythm-theme-wrapper select.input:focus {
+  outline: none;
+  background: var(--surface-strong);
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25);
+}
+
+/* Date and time inputs render their browser-native picker indicators in
+   default (dark) colours — invert them so they stay visible on the
+   translucent dark surface. */
+.rhythm-theme-wrapper .input::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.7);
+  cursor: pointer;
+}
+
+/* Branded option-card stack — used by single-select, multi-select and the note ack. */
+.custom-question-option-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0 var(--space-md);
+  padding: 0;
+  border: 0;
+}
+
+.custom-question-option-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 3.25rem;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-lg);
+  border: var(--border-width-thin) solid var(--border-strong);
+  background: var(--surface-light);
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  transition: border-color var(--transition-normal), background var(--transition-normal), color var(--transition-normal), transform var(--transition-normal);
+}
+
+.custom-question-option-card:hover {
+  color: var(--theme-text);
+  background: var(--surface-strong);
+  border-color: var(--theme-primary);
+  transform: translateY(-1px);
+}
+
+.custom-question-option-card:focus-within {
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25);
+}
+
+.custom-question-option-card.is-selected {
+  color: white;
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+}
+
+.custom-question-option-indicator {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid currentColor;
+  color: var(--theme-text-secondary);
+  transition: var(--transition-normal);
+}
+
+.custom-question-option-indicator.is-radio {
+  border-radius: 50%;
+}
+
+.custom-question-option-indicator.is-check {
+  border-radius: 0.375rem;
+}
+
+.custom-question-option-indicator svg {
+  width: 1rem;
+  height: 1rem;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: var(--transition-normal);
+}
+
+.custom-question-option-card:hover .custom-question-option-indicator {
+  color: var(--theme-text);
+}
+
+.custom-question-option-card.is-selected .custom-question-option-indicator {
+  background: white;
+  border-color: white;
+  color: var(--theme-primary);
+}
+
+.custom-question-option-card.is-selected .custom-question-option-indicator.is-radio::after {
+  content: "";
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--theme-primary);
+}
+
+.custom-question-option-card.is-selected .custom-question-option-indicator.is-check svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.custom-question-option-label {
+  font-size: var(--theme-font-size-base);
+  line-height: 1.35;
+}

@@ -252,6 +252,25 @@ defmodule TymeslotWeb.Live.Scheduling.CustomFieldsBookingFlowTest do
       # The booking details form is gone.
       refute html =~ "Enter Your Details"
     end
+
+    @tag :capture_log
+    test "pressing back on the first question returns to the schedule step",
+         %{conn: conn, profile: profile} do
+      view = navigate_to_booking_form_with_questions(conn, profile)
+
+      # We're on the first (and only) question — the back button must work,
+      # taking the booker back to time-slot selection rather than being a
+      # dead-end.
+      assert render(view) =~ "Company"
+
+      view |> element("button[phx-click='back'][phx-target]") |> render_click()
+
+      html = render(view)
+
+      refute html =~ "Company"
+      assert has_element?(view, "button.time-slot-button")
+      assert has_element?(view, "button[phx-click='next_step']")
+    end
   end
 
   describe "submission rejects when custom-field answers are missing at booking time" do
