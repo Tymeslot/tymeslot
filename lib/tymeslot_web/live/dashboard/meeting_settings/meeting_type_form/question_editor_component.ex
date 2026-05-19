@@ -3,18 +3,27 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
   Modal editor for a single `FieldDefinition`. Owns a private Ecto changeset
   over the definition being created or updated.
 
-  Emits `{:custom_questions, :save, definition}` to the parent LiveView on a
-  valid save, or `{:custom_questions, :cancel}` when the host dismisses the
-  editor without saving.
+  On a valid save, the component merges the updated definition into the
+  existing `custom_fields` list and pushes both `custom_fields` and
+  `editing_question: nil` directly into the parent `MeetingTypeForm` via
+  `Phoenix.LiveView.send_update/2`. On cancel, it pushes only
+  `editing_question: nil` to close the modal. This single-hop approach keeps
+  `LiveViewTest` helpers like `render_click/1` deterministic.
+
+  The `mode` assign (`:add` or `:edit`) controls the modal header. It is set
+  by `CustomQuestionsSection` and forwarded through `MeetingTypeForm` —
+  do not derive it from `@definition.id`, which is always populated.
   """
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
   alias Ecto.Changeset
+  alias Phoenix.LiveView
   alias Phoenix.LiveView.JS
   alias Tymeslot.CustomFields.FieldDefinition
   alias Tymeslot.CustomFields.FieldOption
   alias TymeslotWeb.Components.CoreComponents
+  alias TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm
   alias TymeslotWeb.Live.Shared.FormValidationHelpers
 
   @allowed_error_fields ~w(label help_text body options min max)
@@ -29,6 +38,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
      |> assign(assigns)
      |> assign(:definition, definition)
      |> assign(:changeset, changeset)
+     |> assign_new(:mode, fn -> :add end)
      |> assign_new(:original_type, fn -> definition.type end)
      |> assign_new(:pending_type_change, fn -> nil end)
      |> assign_new(:field_errors, fn -> %{} end)}
@@ -93,7 +103,12 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
           existing ++ [definition]
         end
 
-      send(self(), {:custom_questions, :fields_updated, updated, socket.assigns.form_id})
+      LiveView.send_update(MeetingTypeForm,
+        id: socket.assigns.form_id,
+        custom_fields: updated,
+        editing_question: nil
+      )
+
       {:noreply, socket}
     else
       {:noreply,
@@ -105,7 +120,11 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
 
   @impl Phoenix.LiveComponent
   def handle_event("cancel", _params, socket) do
-    send(self(), {:custom_questions, :cancel, socket.assigns.form_id})
+    LiveView.send_update(MeetingTypeForm,
+      id: socket.assigns.form_id,
+      editing_question: nil
+    )
+
     {:noreply, socket}
   end
 
@@ -158,7 +177,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.QuestionEditorCo
         size={:medium}
       >
         <:header>
-          <%= if @definition.id do %>
+          <%= if @mode == :edit do %>
             {gettext("Edit question")}
           <% else %>
             {gettext("Add question")}
