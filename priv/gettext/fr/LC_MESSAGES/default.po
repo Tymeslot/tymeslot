@@ -1089,6 +1089,7 @@ msgid "%{current} / %{total}"
 msgstr ""
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex:72
+#: lib/tymeslot_web/components/tour_overlay.ex:59
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Back"
 msgstr "Retour"
@@ -1100,6 +1101,7 @@ msgstr ""
 
 #: lib/tymeslot_web/components/announcement_modal_component.ex:102
 #: lib/tymeslot_web/components/announcement_modal_component.ex:106
+#: lib/tymeslot_web/components/tour_overlay.ex:68
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Next"
 msgstr "Suivant"
@@ -1590,4 +1592,19 @@ msgstr ""
 #: lib/tymeslot_web/live/admin_live/components/confirm_role_change_modal.ex:32
 #, elixir-autogen, elixir-format
 msgid "to admin?"
+msgstr ""
+
+#: lib/tymeslot_web/components/tour_overlay.ex:77
+#, elixir-autogen, elixir-format
+msgid "Finish"
+msgstr ""
+
+#: lib/tymeslot_web/components/tour_overlay.ex:48
+#, elixir-autogen, elixir-format
+msgid "Skip"
+msgstr ""
+
+#: lib/tymeslot_web/components/tour_overlay.ex:37
+#, elixir-autogen, elixir-format
+msgid "Step %{n} of %{total}"
 msgstr ""
