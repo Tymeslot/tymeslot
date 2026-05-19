@@ -250,7 +250,11 @@ defmodule Tymeslot.Auth do
   @spec mark_dashboard_tour_seen(Ecto.Schema.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def mark_dashboard_tour_seen(user) do
-    UserQueries.mark_dashboard_tour_seen(user)
+    if dashboard_tour_seen?(user) do
+      {:ok, user}
+    else
+      UserQueries.mark_dashboard_tour_seen(user)
+    end
   end
 
   @doc """

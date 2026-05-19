@@ -362,8 +362,10 @@ defmodule Tymeslot.Auth.UserQueries do
   end
 
   @doc """
-  Marks the post-onboarding dashboard tour as seen for `user`. Idempotent —
-  callers may invoke this regardless of the current value.
+  Sets `dashboard_tour_seen_at` to the current UTC time for `user`.
+
+  This is an unconditional write — idempotence is enforced at the context level
+  by `Auth.mark_dashboard_tour_seen/1`.
   """
   @spec mark_dashboard_tour_seen(UserSchema.t()) ::
           {:ok, UserSchema.t()} | {:error, Changeset.t()}
