@@ -131,6 +131,12 @@ config :tymeslot, :radicale,
 # Configure auth for test
 config :tymeslot, :auth, success_redirect_path: "/dashboard"
 
+# OAuth state secrets for test (signs/validates the `state` parameter).
+# Tests typically mock State.validate/2, but OAuthStateGuard still reads
+# these configs to pass them through, so they must be present.
+config :tymeslot, :google_oauth, state_secret: "test-google-state-secret"
+config :tymeslot, :outlook_oauth, state_secret: "test-outlook-state-secret"
+
 # Enable all providers for testing
 config :tymeslot, :video_providers, %{
   mirotalk: [enabled: true],
