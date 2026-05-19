@@ -52,6 +52,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
      |> assign(:reminder_confirmation, nil)
      |> assign(:custom_fields, [])
      |> assign(:editing_question, nil)
+     |> assign(:custom_questions_allowed, true)
      |> assign(:__initialized__, false)}
   end
 
@@ -164,9 +165,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
         id={"custom-questions-section-#{@id}"}
         custom_fields={@custom_fields}
         form_id={@id}
+        allowed={@custom_questions_allowed}
+        current_user={@current_user}
       />
 
-      <%!-- Hidden inputs serialising custom_fields into the form submission --%>
+      <%!-- Hidden inputs serialising custom_fields into the form submission.
+           When custom questions are paywalled, we deliberately omit these so
+           the form does not post `custom_fields` at all — Ecto's cast_embed
+           leaves the existing embed untouched, preserving any prior questions. --%>
+      <%= if @custom_questions_allowed do %>
       <%= for {field, fi} <- Enum.with_index(@custom_fields) do %>
         <input type="hidden" name={"meeting_type[custom_fields][#{fi}][id]"} value={field.id} />
         <input type="hidden" name={"meeting_type[custom_fields][#{fi}][type]"} value={field.type} />
@@ -219,6 +226,7 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm do
             value={opt.label}
           />
         <% end %>
+      <% end %>
       <% end %>
 
       <%!-- Hidden fields --%>

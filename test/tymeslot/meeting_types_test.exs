@@ -4,10 +4,20 @@ defmodule Tymeslot.MeetingTypesTest do
   Focuses on basic create, read, update, delete, toggle, and reorder operations.
   """
 
-  use Tymeslot.DataCase, async: true
+  use Tymeslot.DataCase, async: false
   @moduletag :meeting_types
 
+  import Tymeslot.ConfigTestHelpers
+
   alias Tymeslot.MeetingTypes
+
+  setup do
+    # When the SaaS app is compiled alongside Core, its config sets the
+    # FeatureAccessChecker to one that denies non-paying users. Pin to the
+    # Core default so domain-level tests are not affected by SaaS gating.
+    setup_config(:tymeslot, feature_access_checker: Tymeslot.Features.DefaultAccessChecker)
+    :ok
+  end
 
   # =====================================
   # Retrieving Meeting Types Behaviors
@@ -413,6 +423,108 @@ defmodule Tymeslot.MeetingTypesTest do
         )
 
       assert updated.custom_fields == []
+    end
+  end
+
+  describe "custom_questions feature gating" do
+    defmodule DenyAccessChecker do
+      @behaviour Tymeslot.Features.CheckerBehaviour
+      @impl true
+      def check_access(_user_id, :custom_questions_allowed), do: {:error, :insufficient_plan}
+      def check_access(_user_id, _feature), do: :ok
+    end
+
+    setup do
+      setup_config(:tymeslot, feature_access_checker: DenyAccessChecker)
+      :ok
+    end
+
+    test "blocks creation when params include non-empty custom_fields" do
+      user = insert(:user)
+
+      assert {:error, :insufficient_plan} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 %{
+                   "name" => "Gated",
+                   "duration" => "30",
+                   "description" => "",
+                   "is_active" => "true",
+                   "calendar_integration_id" => "",
+                   "target_calendar_id" => nil,
+                   "custom_fields" => [
+                     %{
+                       "id" => "f1",
+                       "type" => "short_text",
+                       "label" => "Company",
+                       "required" => true
+                     }
+                   ]
+                 },
+                 %{
+                   meeting_mode: "in_person",
+                   selected_video_integration_id: nil,
+                   selected_icon: "none"
+                 }
+               )
+    end
+
+    test "allows creation without a custom_fields key" do
+      user = insert(:user)
+
+      assert {:ok, _meeting_type} =
+               MeetingTypes.create_meeting_type_from_form(
+                 user.id,
+                 %{
+                   "name" => "No Questions",
+                   "duration" => "30",
+                   "description" => "",
+                   "is_active" => "true",
+                   "calendar_integration_id" => "",
+                   "target_calendar_id" => nil
+                 },
+                 %{
+                   meeting_mode: "in_person",
+                   selected_video_integration_id: nil,
+                   selected_icon: "none"
+                 }
+               )
+    end
+
+    test "allows update that omits custom_fields, preserving the existing list" do
+      user = insert(:user)
+      # Bypass the gate by inserting directly — simulates a meeting type that
+      # was created while the user had a Pro plan.
+      {:ok, meeting_type} =
+        MeetingTypes.create_meeting_type(%{
+          name: "Has Questions",
+          duration_minutes: 30,
+          user_id: user.id,
+          custom_fields: [
+            %{id: "f1", type: "short_text", label: "Company", required: true, position: 0}
+          ]
+        })
+
+      assert {:ok, updated} =
+               MeetingTypes.update_meeting_type_from_form(
+                 meeting_type,
+                 %{
+                   "name" => "Has Questions",
+                   "duration" => "45",
+                   "description" => "",
+                   "is_active" => "true",
+                   "calendar_integration_id" => "",
+                   "target_calendar_id" => nil
+                 },
+                 %{
+                   meeting_mode: "in_person",
+                   selected_video_integration_id: nil,
+                   selected_icon: "none"
+                 }
+               )
+
+      assert length(updated.custom_fields) == 1
+      assert updated.duration_minutes == 45
     end
   end
 end
