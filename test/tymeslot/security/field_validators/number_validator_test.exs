@@ -16,7 +16,9 @@ defmodule Tymeslot.Security.FieldValidators.NumberValidatorTest do
 
     test "blank optional ok", do: assert(:ok = NumberValidator.validate("", required: false))
     test "below min rejected", do: assert({:error, _msg} = NumberValidator.validate("0", min: 1))
-    test "above max rejected", do: assert({:error, _msg} = NumberValidator.validate("100", max: 50))
+
+    test "above max rejected",
+      do: assert({:error, _msg} = NumberValidator.validate("100", max: 50))
 
     test "nil required fails",
       do: assert({:error, _msg} = NumberValidator.validate(nil, required: true))
