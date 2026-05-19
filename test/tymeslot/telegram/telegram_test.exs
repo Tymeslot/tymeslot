@@ -9,6 +9,7 @@ defmodule Tymeslot.TelegramTest do
 
   alias Tymeslot.Telegram
   alias Tymeslot.Telegram.TelegramIntegrationSchema
+  alias Tymeslot.Telegram.TelegramQueries
 
   setup do
     setup_config(:tymeslot,
@@ -260,6 +261,34 @@ defmodule Tymeslot.TelegramTest do
       events = Telegram.available_events()
       assert length(events) == 3
       assert Enum.all?(events, &Map.has_key?(&1, :value))
+    end
+  end
+
+  describe "TelegramQueries.list_active_integrations_for_event/2 — chat_id exclusion" do
+    test "excludes integrations with chat_id nil even when otherwise active" do
+      user = insert(:user)
+
+      # Integration with chat_id: nil — pending_link status; must not appear
+      insert(:telegram_integration,
+        user: user,
+        chat_id: nil,
+        is_active: true,
+        events: ["meeting.created"]
+      )
+
+      # Integration with a real chat_id — must appear in results
+      linked =
+        insert(:telegram_integration,
+          user: user,
+          chat_id: "999888777",
+          is_active: true,
+          events: ["meeting.created"]
+        )
+
+      results = TelegramQueries.list_active_integrations_for_event(user.id, "meeting.created")
+
+      assert length(results) == 1
+      assert hd(results).id == linked.id
     end
   end
 end
