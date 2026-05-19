@@ -5,7 +5,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.OptionCard do
 
   Visually consistent with the yes/no tile pair: rounded surface, accent
   fill when selected, glyph indicator on the leading edge. The native
-  `<input type="radio|checkbox">` is rendered visually hidden so
+  input element (radio or checkbox) is rendered visually hidden so
   keyboard/screen-reader users get the standard semantics.
   """
   use Phoenix.Component

@@ -7,12 +7,12 @@ defmodule Tymeslot.Security.FieldValidators.NoteAckValidatorTest do
 
   describe "validate/3" do
     test "confirmed: true with valid iso timestamp is ok" do
-      ts = DateTime.utc_now() |> DateTime.to_iso8601()
+      ts = DateTime.to_iso8601(DateTime.utc_now())
       assert :ok = NoteAckValidator.validate(%{"confirmed" => true, "confirmed_at" => ts}, %{})
     end
 
     test "confirmed: false is rejected" do
-      ts = DateTime.utc_now() |> DateTime.to_iso8601()
+      ts = DateTime.to_iso8601(DateTime.utc_now())
 
       assert {:error, _msg} =
                NoteAckValidator.validate(%{"confirmed" => false, "confirmed_at" => ts}, %{})

@@ -5,14 +5,15 @@ defmodule Tymeslot.CustomFields.SnapshotInsulationTest do
 
   import Tymeslot.Factory
 
-  alias Tymeslot.MeetingTypes
+  alias Ecto.UUID
   alias Tymeslot.Meetings.MeetingSchema
+  alias Tymeslot.MeetingTypes
   alias Tymeslot.Repo
 
   describe "booking snapshot is insulated from meeting type edits" do
     setup do
       user = insert(:user)
-      field_id = Ecto.UUID.generate()
+      field_id = UUID.generate()
 
       meeting_type = insert(:meeting_type, user: user)
 

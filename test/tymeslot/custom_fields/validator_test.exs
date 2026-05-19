@@ -48,7 +48,7 @@ defmodule Tymeslot.CustomFields.ValidatorTest do
 
     test "note returns confirmed_at as a UTC ISO string when ok" do
       d = %{"type" => "note", "label" => "Terms", "body" => "Be nice."}
-      ts = DateTime.utc_now() |> DateTime.to_iso8601()
+      ts = DateTime.to_iso8601(DateTime.utc_now())
       payload = %{"confirmed" => true, "confirmed_at" => ts}
       assert {:ok, ^payload} = Validator.validate(payload, d)
     end

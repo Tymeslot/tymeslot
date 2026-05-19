@@ -5,10 +5,10 @@ defmodule TymeslotWeb.Components.Dashboard.Meetings.MeetingListComponents do
   use Phoenix.Component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CustomFields.AnswerRenderer
   alias TymeslotWeb.Components.CoreComponents
   alias TymeslotWeb.Components.Dashboard.Meetings.Helpers
   alias TymeslotWeb.Components.Icons.IconComponents, as: Icons
-  alias Tymeslot.CustomFields.AnswerRenderer
 
   # Filter Tabs
   attr :active, :string, required: true

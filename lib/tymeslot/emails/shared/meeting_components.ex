@@ -22,10 +22,10 @@ defmodule Tymeslot.Emails.Shared.MeetingComponents do
   - `attendee_message_box/1` — the callout for a booker's attendee note.
   """
 
+  alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Emails.Shared.{Formatting, Sanitise, Styles, Urls}
   alias Tymeslot.Emails.Shared.Styles.Tokens
   alias Tymeslot.Security.{UniversalSanitizer, UrlValidation}
-  alias Tymeslot.CustomFields.AnswerRenderer
 
   @type attendee_info :: %{
           required(:name) => String.t(),
