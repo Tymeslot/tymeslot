@@ -27,8 +27,8 @@ defmodule Tymeslot.CustomFields.FieldOptionTest do
 
     test "auto-generates a key when missing" do
       cs = FieldOption.changeset(%FieldOption{}, %{"label" => "Bright Red"})
-      assert get_change(cs, :key) |> is_binary()
-      assert String.length(get_change(cs, :key)) > 0
+      assert is_binary(Changeset.get_change(cs, :key))
+      assert String.length(Changeset.get_change(cs, :key)) > 0
     end
   end
 
@@ -39,6 +39,4 @@ defmodule Tymeslot.CustomFields.FieldOptionTest do
       end)
     end)
   end
-
-  defp get_change(cs, field), do: Changeset.get_change(cs, field)
 end

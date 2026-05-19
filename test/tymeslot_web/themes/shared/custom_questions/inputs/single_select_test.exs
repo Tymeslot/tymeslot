@@ -1,3 +1,4 @@
+# credo:disable-for-this-file CredoChecks.UseCoreInputs
 defmodule TymeslotWeb.Themes.Shared.CustomQuestions.Inputs.SingleSelectTest do
   use ExUnit.Case, async: true
 

@@ -110,7 +110,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     method_line = if method == :none, do: "", else: "METHOD:PUBLISH\n"
     status = status_for(method, event.status)
 
-    """
+    fold_lines("""
     BEGIN:VCALENDAR
     VERSION:2.0
     #{method_line}PRODID:-//Tymeslot//Tymeslot 1.0//EN
@@ -127,8 +127,7 @@ defmodule Tymeslot.Integrations.Calendar.IcsGenerator do
     #{attendee_line}STATUS:#{status}
     END:VEVENT
     END:VCALENDAR
-    """
-    |> fold_lines()
+    """)
   end
 
   # RFC 5545 §3.1 — content lines must not exceed 75 octets (excluding line

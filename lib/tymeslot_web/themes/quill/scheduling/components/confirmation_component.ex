@@ -6,9 +6,9 @@ defmodule TymeslotWeb.Themes.Quill.Scheduling.Components.ConfirmationComponent d
   use TymeslotWeb, :live_component
   use Gettext, backend: TymeslotWeb.Gettext
 
+  alias Tymeslot.CustomFields.AnswerRenderer
   alias Tymeslot.Profiles
   alias Tymeslot.Timezones
-  alias Tymeslot.CustomFields.AnswerRenderer
   alias TymeslotWeb.Themes.Shared.LocalizationHelpers
 
   import TymeslotWeb.Components.CoreComponents

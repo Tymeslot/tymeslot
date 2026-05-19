@@ -35,13 +35,13 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
 
   test "answer/3 stores the raw value for the current question" do
     [d1, d2] = [build_def("short_text"), build_def("short_text")]
-    s = Engine.init([d1, d2]) |> Engine.answer(d1["id"], "Acme")
+    s = Engine.answer(Engine.init([d1, d2]), d1["id"], "Acme")
     assert s.answers[d1["id"]] == "Acme"
   end
 
   test "next/1 advances when current question is valid" do
     [d1, d2] = [build_def("short_text"), build_def("short_text")]
-    s = Engine.init([d1, d2]) |> Engine.answer(d1["id"], "Acme")
+    s = Engine.answer(Engine.init([d1, d2]), d1["id"], "Acme")
     {:ok, s2} = Engine.next(s)
     assert s2.current_index == 1
   end
@@ -55,7 +55,7 @@ defmodule TymeslotWeb.Themes.Shared.CustomQuestions.EngineTest do
 
   test "prev/1 goes back without validating" do
     [d1, d2] = [build_def("short_text"), build_def("short_text")]
-    s = Engine.init([d1, d2]) |> Engine.answer(d1["id"], "Acme")
+    s = Engine.answer(Engine.init([d1, d2]), d1["id"], "Acme")
     {:ok, s2} = Engine.next(s)
     s3 = Engine.prev(s2)
     assert s3.current_index == 0
