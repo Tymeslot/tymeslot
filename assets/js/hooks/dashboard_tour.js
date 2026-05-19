@@ -19,22 +19,34 @@ const MIN_VIEWPORT_PX = 1024;
 
 export const DashboardTour = {
   mounted() {
-    if (!window.matchMedia(`(min-width: ${MIN_VIEWPORT_PX}px)`).matches) {
+    if (this.viewportTooSmall()) {
       this.pushEvent("tour:viewport-too-small", {});
       return;
     }
 
     this.pushEvent("tour:shown", {});
 
-    this.onReposition = () => this.position();
-    window.addEventListener("resize", this.onReposition, { passive: true });
-    window.addEventListener("scroll", this.onReposition, { passive: true, capture: true });
+    this.onResize = () => {
+      if (this.viewportTooSmall()) {
+        this.pushEvent("tour:viewport-too-small", {});
+        return;
+      }
+      this.position();
+    };
+    this.onScroll = () => this.position();
+    window.addEventListener("resize", this.onResize, { passive: true });
+    window.addEventListener("scroll", this.onScroll, { passive: true, capture: true });
 
-    this.position();
+    this.position({ scroll: true });
   },
 
   updated() {
-    this.position();
+    const anchor = this.el.dataset.anchor;
+    const placement = this.el.dataset.placement || "bottom";
+
+    if (anchor === this.lastAnchor && placement === this.lastPlacement) return;
+
+    this.position({ scroll: true });
   },
 
   destroyed() {
@@ -42,16 +54,28 @@ export const DashboardTour = {
       clearInterval(this.anchorInterval);
       this.anchorInterval = null;
     }
-    if (this.onReposition) {
-      window.removeEventListener("resize", this.onReposition);
-      window.removeEventListener("scroll", this.onReposition, { capture: true });
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    if (this.onResize) {
+      window.removeEventListener("resize", this.onResize);
+      window.removeEventListener("scroll", this.onScroll, { capture: true });
     }
   },
 
-  position() {
+  viewportTooSmall() {
+    return !window.matchMedia(`(min-width: ${MIN_VIEWPORT_PX}px)`).matches;
+  },
+
+  position({ scroll = false } = {}) {
     if (this.anchorInterval) {
       clearInterval(this.anchorInterval);
       this.anchorInterval = null;
+    }
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
     }
 
     const anchor = this.el.dataset.anchor;
@@ -63,7 +87,7 @@ export const DashboardTour = {
     }
 
     this.findAnchor(anchor)
-      .then((target) => this.applySpotlightLayout(target, placement))
+      .then((target) => this.applySpotlightLayout(target, placement, scroll))
       .catch(() => this.pushEvent("tour:skip-step", {}));
   },
 
@@ -107,7 +131,7 @@ export const DashboardTour = {
     tooltip.style.transform = "translate(-50%, -50%)";
   },
 
-  applySpotlightLayout(target, placement) {
+  applySpotlightLayout(target, placement, scroll) {
     const backdrop = this.el.querySelector(".dashboard-tour__backdrop");
     const spotlight = this.el.querySelector(".dashboard-tour__spotlight");
     const tooltip = this.el.querySelector(".dashboard-tour__tooltip");
@@ -115,10 +139,13 @@ export const DashboardTour = {
 
     if (backdrop) backdrop.style.display = "none";
 
-    target.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+    if (scroll) {
+      target.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+    }
 
     // Use an animation frame so the scroll has at least begun before measuring.
-    requestAnimationFrame(() => {
+    this.rafId = requestAnimationFrame(() => {
+      this.rafId = null;
       const rect = target.getBoundingClientRect();
 
       spotlight.style.display = "block";
@@ -129,6 +156,8 @@ export const DashboardTour = {
       spotlight.style.height = `${rect.height + SPOTLIGHT_PADDING_PX * 2}px`;
 
       this.placeTooltip(tooltip, rect, placement);
+      this.lastAnchor = this.el.dataset.anchor;
+      this.lastPlacement = this.el.dataset.placement || "bottom";
     });
   },
 
