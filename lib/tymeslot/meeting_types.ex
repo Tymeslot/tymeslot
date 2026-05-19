@@ -2,6 +2,7 @@ defmodule Tymeslot.MeetingTypes do
   @moduledoc """
   Context for managing meeting types.
   """
+  alias Tymeslot.Features
   alias Tymeslot.Integrations.CalendarManagement
   alias Tymeslot.Integrations.CalendarPrimary
   alias Tymeslot.Integrations.Video
@@ -218,6 +219,7 @@ defmodule Tymeslot.MeetingTypes do
           {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
   def create_meeting_type_from_form(user_id, form_params, ui_state) do
     with {:ok, attrs} <- build_meeting_type_attrs(form_params, ui_state),
+         :ok <- gate_custom_fields_change(user_id, attrs),
          :ok <- validate_video_integration(attrs, user_id),
          :ok <- validate_calendar_integration(attrs, user_id) do
       create_meeting_type(Map.put(attrs, :user_id, user_id))
@@ -231,6 +233,7 @@ defmodule Tymeslot.MeetingTypes do
           {:ok, Ecto.Schema.t()} | {:error, atom() | Ecto.Changeset.t()}
   def update_meeting_type_from_form(meeting_type, form_params, ui_state) do
     with {:ok, attrs} <- build_meeting_type_attrs(form_params, ui_state),
+         :ok <- gate_custom_fields_change(meeting_type.user_id, attrs),
          :ok <- validate_video_integration(attrs, meeting_type.user_id),
          :ok <- validate_calendar_integration(attrs, meeting_type.user_id) do
       update_meeting_type(meeting_type, attrs)
@@ -349,6 +352,19 @@ defmodule Tymeslot.MeetingTypes do
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(value), do: value
+
+  # Custom booking questions are gated behind the :custom_questions_allowed
+  # feature flag. Core's default checker always allows access, so self-hosted
+  # deployments are unaffected; SaaS overrides this to require a Pro plan.
+  # Only writes that would add or modify a non-empty question list are gated —
+  # an absent or empty list (the no-questions path) is always allowed.
+  defp gate_custom_fields_change(user_id, attrs) do
+    case Map.get(attrs, :custom_fields) do
+      nil -> :ok
+      fields when fields == [] or fields == %{} -> :ok
+      _non_empty -> Features.check_access(user_id, :custom_questions_allowed)
+    end
+  end
 
   defp validate_video_integration(%{allow_video: true, video_integration_id: nil}, _user_id) do
     {:error, :video_integration_required}

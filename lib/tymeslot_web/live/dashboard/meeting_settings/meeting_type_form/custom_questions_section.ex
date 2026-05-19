@@ -15,10 +15,40 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
 
   @impl Phoenix.LiveComponent
   def update(assigns, socket) do
+    assigns =
+      assigns
+      |> Map.put_new(:allowed, true)
+      |> Map.put(:placeholder_component, placeholder_component())
+
     {:ok, assign(socket, assigns)}
   end
 
   @impl Phoenix.LiveComponent
+  def render(%{allowed: false, placeholder_component: nil} = assigns) do
+    # SaaS hasn't registered a placeholder component — render a minimal lock
+    # notice rather than nothing, so the operator notices the misconfiguration.
+    ~H"""
+    <section class="card-glass py-6 text-center">
+      <p class="text-token-sm text-tymeslot-500">
+        {gettext("Custom booking questions are not available on your current plan.")}
+      </p>
+    </section>
+    """
+  end
+
+  def render(%{allowed: false} = assigns) do
+    ~H"""
+    <section>
+      <.live_component
+        module={@placeholder_component}
+        id={"custom-questions-upgrade-#{@form_id}"}
+        feature={:custom_questions}
+        current_user={@current_user}
+      />
+    </section>
+    """
+  end
+
   def render(assigns) do
     ~H"""
     <section class="space-y-4">
@@ -182,4 +212,15 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.MeetingTypeForm.CustomQuestionsS
   defp human_type("time"), do: gettext("Time")
   defp human_type("note"), do: gettext("Note")
   defp human_type(other), do: other
+
+  defp placeholder_component do
+    # The :feature_placeholder_components config can be either a keyword list
+    # (the natural shape when written in Mix config) or a map, so we use
+    # bracket access which works for both. SaaS sets this; Core standalone
+    # leaves it unset (nil), which short-circuits the locked branch.
+    case Application.get_env(:tymeslot, :feature_placeholder_components) do
+      nil -> nil
+      placeholders -> placeholders[:custom_questions]
+    end
+  end
 end

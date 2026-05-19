@@ -249,6 +249,7 @@ defmodule TymeslotWeb.DashboardLive do
             user_agent={@user_agent}
             live_action={@live_action}
             params={@params}
+            custom_questions_allowed={@custom_questions_allowed}
           />
         <% else %>
           <.render_feature_placeholder

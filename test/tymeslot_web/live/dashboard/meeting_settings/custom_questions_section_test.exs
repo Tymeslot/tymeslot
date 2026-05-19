@@ -4,12 +4,13 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
   form. Covers the host-facing CRUD actions: add, edit, and delete. Drag-and-
   drop reorder requires JS execution and is not exercised here.
   """
-  use TymeslotWeb.LiveCase, async: true
+  use TymeslotWeb.LiveCase, async: false
 
   @moduletag :custom_fields
   @moduletag :live
   @moduletag :meeting_types
 
+  import Tymeslot.ConfigTestHelpers
   import Tymeslot.DashboardTestHelpers
   import Tymeslot.Factory
 
@@ -17,6 +18,14 @@ defmodule TymeslotWeb.Dashboard.MeetingSettings.CustomQuestionsSectionTest do
   alias Tymeslot.Repo
 
   setup :setup_dashboard_user
+
+  setup do
+    # When SaaS is compiled alongside Core, its FeatureAccessChecker gates
+    # custom questions behind a Pro subscription. These tests exercise the
+    # Core happy path, so pin the checker back to the unrestricted default.
+    setup_config(:tymeslot, feature_access_checker: Tymeslot.Features.DefaultAccessChecker)
+    :ok
+  end
 
   # Helper — opens the meeting type form for a given meeting type via the edit
   # action and removes the default reminder so the form's hidden
